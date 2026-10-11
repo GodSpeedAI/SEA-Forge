@@ -1,0 +1,46 @@
+# T16 outcome record — round-5 (post-confirmation correction; supersedes the round-4 outcome)
+schema: godspeed-bounded-judgment.t16-outcome
+date: "2026-09-18"
+providers: {A: "DeepSeek 4.1 Flash via ClinePass (opencode)", B: "prime-agent -p --offline"}
+rounds: "r1 codex-quota; r2 scoring T01-vocabulary + unmapped truth (preserved); r3 parser-dispatch fix that did not take (preserved); r4 first complete measurement (outcome superseded by NOT_CONFIRM); r5 this corrected record"
+
+confirmation_history:
+  - "independent adversarial verification round-1: NOT_CONFIRM — falsified layers: scoring (baseline truth-field asymmetry) and provenance (addendum hash frozen pre-finalization)"
+  - "corrections applied per the verifier's own minimal specification, then self-verified (deterministic regeneration; no provider re-calls): see D-2026-09-18-T16-06/07"
+  - "re-confirmation: OUTSTANDING (see below)"
+
+result:
+  baseline_face_value_accuracy_vs_truth_label: 0.667
+  baseline_degeneration: >-
+    the preregistered rule's premise (documents claiming state=completed)
+    never fires on this corpus — every document carries state=admitted — so
+    the rule degenerates to the constant not_settled predictor: 6/9 correct.
+  deepseek_clinepass: {contract_failures: 0, accuracy: 0.667, abstention: 0.222, entropy_nats: 0.831}
+  prime_agent: {contract_failures: 0, accuracy: 0.556, abstention: 0.222, entropy_nats: 0.388}
+  capable_vs_capable_disagreement: "3/9 rows"
+
+decision_letter: C
+rule_application: >-
+  unchanged and mechanically re-verified: the 0.8 D-bar unmet (0.667/0.556);
+  contract/abstention/entropy legs pass; letter C.
+honest_reading_corrected:
+  retracted: "the round-4 narrative 'careful reading beats the face-value baseline' — under the corrected scoring the face-value rule (a constant not_settled prior) scores 0.667, Tying DeepSeek and EXCEEDING Prime"
+  stands: >-
+    NO provider adds material information over the trivial class prior on
+    this corpus at N=9. DeepSeek ties the constant predictor (its honest-
+    settled accuracy offset by the lying-claim error and abstentions); Prime
+    is worse than the prior. Outcome C's own rationale is literally true.
+claim_narrowing:
+  earned: "the controlled corpus and harness family discriminate consequence classes and expose provider differences (Prime below prior; DeepSeek at prior with a lying-claim vulnerability)"
+  not_earned: "any promotion of uncertainty-preserving judgment for this surface; any claim that providers read consequence-bearing distinctions reliably"
+consequence:
+  - "NO promotion for THIS surface; T06 remains blocked (conservative direction — unchanged from before confirmation)"
+  - "the capability-class question remains ESCALATED, not rejected (spec REQ-JUDG-023; N=9, one surface)"
+  - "the judgment slice terminates at this evidence unless a new discriminating move is authorized"
+confirmation:
+  status: "OUTSTANDING — re-confirmation of the corrected record required (the verifier pre-validated that these corrections leave the letter C unchanged and strengthen its rationale)"
+  resume: "fresh verifier on: corrected remeasure-report.yml, round-5 harness sha256 289e0fbdb75c291121ef696b527af466a4bbf7e573ecb2636af095e15b179130, the provenance-closure reconstruction, and the NOT_CONFIRM verdict's own two falsified layers"
+hygiene_applied:
+  - "entropy reported in nats (was mislabeled bits)"
+  - "dead vocabulary-check loop superseded by parse_t16"
+  - "shuffle tooth recorded as NOT IMPLEMENTED in the T16 harness — it could never have satisfied the prereg D-leg (e); recorded as a measurement limitation that does not affect C"

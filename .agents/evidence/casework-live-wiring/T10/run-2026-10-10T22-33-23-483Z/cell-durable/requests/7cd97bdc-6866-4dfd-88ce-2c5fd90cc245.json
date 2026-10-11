@@ -1,0 +1,14 @@
+{
+  "request_id": "7cd97bdc-6866-4dfd-88ce-2c5fd90cc245",
+  "method": "case.add_item",
+  "status": "completed",
+  "submitted_at": "2026-10-10T22:35:12.541547740+00:00",
+  "completed_at": "2026-10-10T22:35:12.618044134+00:00",
+  "outcome": {
+    "case_id": "case_20261010T223406Z_3a805f",
+    "ok": true,
+    "plan_item_id": "item-disc-70272380",
+    "proposed_by": "operator_local"
+  },
+  "payload_hash": "bff162a45a0625e59fa68f9986a9558f9c403418c6587d8c34c4572b3671a2dc"
+}

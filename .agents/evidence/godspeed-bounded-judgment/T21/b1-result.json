@@ -1,0 +1,44 @@
+{
+  "task": "T21",
+  "builder": "B1",
+  "status": "complete",
+  "deliverables": [
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/IN-FLIGHT.md", "sha256": "05b5609bec26b4e13c0557e8483f8dcf9fa0dcd061c266c72d1e6d6401b59bfd"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/b1-progress.md", "sha256": "a22e0fd23e6e680ad9d21f9ff0af1479800b3009569b243ac070898c8998dd98"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/route_contracts.py", "sha256": "0d8023877846c606bb1359d1c4ae8a683706caf7f4e0d7318165c124dac7fe8c"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/admission.py", "sha256": "8608b495eebb6e281f50e41ee7c22317260b4219263247161789870d792bf49b"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/selection_policy.py", "sha256": "9b25b0c8c9a65ce0771f1821b4f34b4161adfdb11dd5c5aa1da620c7b19ff5ef"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/verify_contract.py", "sha256": "92b16ac59573148484ef9e645574fa98ab2b4f644fe7b933b39ec14d6178a657"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/operations_catalog.yaml", "sha256": "85327cb23ac35df21e767c4cfe603cd287a7724906e453f4ab1d589731fec7dd"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T21/evidence-manifest.yml", "sha256": "f013249da49e5bdadd56717ed048de8df33b6634278aeca69bbf377f899e17d3"}
+  ],
+  "verification": [
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T21/verify_contract.py  (cwd /home/sprime01/projects/sea-rs)",
+      "exit": 0,
+      "summary": "PASS 67/67 checks: 24 schema round-trip checks (8 record types, lossless YAML and JSON), 15 schema refusal vectors each with a named reason (shell_plan/command fields, non-catalog operation, scenario outside domain, max_rounds 0/9, missing correlation identity, label outside frozen answer domain, hand-authored mechanism, unknown classification, retained-not-eligible, fingerprint mismatch, fabricated acceptance, route-depth over bound), 7 admission classification vectors (one per classification incl. both denied forms), 8 selection-policy unit vectors (baseline beats boundary, exactly one retained, midpoint wins, tie to smaller rounds, tie to lexicographic id, r*-1 priority over midpoint, ineligible-but-judgment-preferred not retained, zero payment retains nothing), provider-capability source scan of admission.py and selection_policy.py clean, catalog integrity (24 ops, full 3x8 coverage, provenance pinned and files exist on disk), prereg frozen sha256 matches disk, and evidence-manifest hash check verified all 5 frozen files (fail-closed path active)."
+    },
+    {
+      "command": "cd /home/sprime01/projects/gauntlet && just ruler",
+      "exit": 0,
+      "summary": "verify-ruler.sh: PASS - answer key and manifest digests match the frozen lock (.gauntlet/reference.lock). Read-only digest tripwire; ruler untouched."
+    },
+    {
+      "command": "cd /home/sprime01/projects/sea-rs && python3 -c \"import yaml; yaml.safe_load(open('.agents/evidence/godspeed-bounded-judgment/T21/operations_catalog.yaml'))\"",
+      "exit": 0,
+      "summary": "operations_catalog.yaml parses as valid YAML."
+    }
+  ],
+  "deviations": [
+    "Ordering rules 1-3 implemented as tiered precedence: rule 1 (completes an unmet route-goal prerequisite) > rule 3 (r*-1 boundary priority) > rule 2 (midpoint heuristic) > other candidates. The prereg lists the rules 1-3 and gives rule 3 the wording 'has boundary priority'; we read it as outranking the rule-2 midpoint heuristic because otherwise the frozen boundary goal (both r* and r*-1 probed on this route) could not close. Recorded in the selection_policy docstring and b1-progress.md.",
+    "insufficient_evidence clause: 'whose consequence would be cited by the settlement criterion' is read as covering all three expected_roles (route_goal_frozen cites baseline, discriminator, and boundary consequences), so insufficient_evidence always disqualifies retention.",
+    "redundant is defined as (scenario, max_rounds) already probed on THIS route (neighborhood rule (a)); the prereg freezes no automatic cross-route duplicate rejection ('duplicates are measured and recorded; no automatic rejection is frozen in this slice'), so novelty-required is route-local.",
+    "Admission classification precedence is fixed and documented (non-mapping invalid; authority violations denied before schema-invalid; then prior-denial denied, unreachable, unaffordable, redundant, admitted). The prereg does not order overlapping violations; each gate vector exercises exactly one violation so the frozen expected outcomes are independent of this choice.",
+    "unreachable = the candidate's scenario does not resolve to a pinned fixture path in the operations catalog (the gate separately verifies those pinned files exist on disk). admission.py performs no filesystem access, keeping it free of os-path/provider capability.",
+    "probe_observation.terminal_class uses the task-contract vocabulary settled|budget_exhausted|other-nonsettlement|run_error while judgment labels use the frozen answer domain; the coarse-to-fine terminal-to-label mapping is T22's judgment adapter and is intentionally not implemented in T21.",
+    "selection_record.policy_version is pinned to 'selection-policy-v1' by schema; a selection record declaring any other policy version is refused (corrections would use an append-only addendum and round-2+ paths).",
+    "A candidate dict missing identity fields still yields a schema-valid admission_decision using the placeholder identity 'unknown-candidate'/'unidentifiable-input' with the defect named in the reason, because every emitted decision must itself be a typed record.",
+    "route_state enforces the frozen bounds (max 5 retained moves, max 12 probes, probes_remaining 0..12) as schema constraints; the prereg freezes these bounds but does not say where they are enforced."
+  ],
+  "notes": "T21 contract freeze complete with zero execution: no route loop, no probe, no provider call, no gauntlet run, and no cargo/nextest/just besides the single read-only `just ruler` tripwire. Deliverables implement the frozen prereg (sha256 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5, recomputed from disk and pinned in evidence-manifest.yml): route_contracts.py (8 inert typed records with strict field sets, named refusal reasons, lossless YAML/JSON round-trips, route_fingerprint helper for the novelty metric), operations_catalog.yaml (24 run_case operations, full 3x8 coverage, per-operation derivation provenance pointing at the existing mock_runner_scenarios fixtures and the GAUNTLET.md max_rounds lever, neighborhood_rule restated as data), admission.py (classify() returning schema-valid admission_decision records; denied/invalid decisions are plain data with no execution path - the T22 loop executes only 'admitted'), selection_policy.py (selection-policy-v1 exactly as preregistered; consumes only typed records validated through route_contracts; no provider interface - enforced by source scan), verify_contract.py (the gate; manifest hash check fails closed on any mismatch). No script was modified after the manifest freeze; the gate passed 67/67 on its first and only official run. T22 next move: author loop.py/verify_loop.py under T22/ and execute one real route advance using these frozen modules unchanged."
+}

@@ -1,0 +1,165 @@
+[
+  {
+    "name": "system.hello",
+    "request": "{\"client\":\"golden-capture\",\"protocol_version\":\"1\",\"verb\":\"system_hello\"}",
+    "response": "{\"implemented_methods\":[\"system.hello\",\"system.describe\",\"system.get_schema\",\"request.get_status\",\"events.subscribe\",\"events.unsubscribe\",\"events.get_range\",\"readiness.get\",\"identity.get\",\"thoth.ask\",\"case.entry_options\",\"case.preflight\",\"case.commit\",\"case.list\",\"case.get_overview\",\"case.get_horizon\",\"approval.list\",\"approval.decide\",\"run.list\",\"run.get\",\"asset.list\",\"delegation.preview\",\"delegation.list\",\"case.add_item\",\"case.reopen\",\"case.terminate\",\"case.advance\",\"item.execute\",\"human_task.complete\",\"artifact.get\"],\"protocol_version\":\"1\",\"server_protocol_version\":\"1\"}\n"
+  },
+  {
+    "name": "readiness.get",
+    "request": "{\"verb\":\"readiness_get\"}",
+    "response": "{\"foundations\":[{\"category\":\"foundation\",\"id\":\"self_model_integrity\",\"name\":\"Self-model integrity\",\"next_lawful_action\":\"Initialize or rebuild the self-model, then re-check readiness\",\"reason\":\"No committed self-model snapshot is available to prove this standing\",\"status\":\"unknown\"}],\"operational_capabilities\":[{\"category\":\"operational_capability\",\"id\":\"local_governed_execution\",\"name\":\"Local governed execution\",\"next_lawful_action\":\"Initialize or rebuild the self-model, then re-check readiness\",\"reason\":\"Blocked: self-model foundation is not currently proven\",\"status\":\"blocked\"},{\"category\":\"operational_capability\",\"id\":\"external_delegation\",\"name\":\"External delegation\",\"next_lawful_action\":\"Run a governed endpoint probe and inspect its committed settlement\",\"reason\":\"No committed endpoint verification record is available\",\"status\":\"unknown\"}],\"overall\":\"unknown\",\"recent_invalidations\":[]}\n"
+  },
+  {
+    "name": "identity.get",
+    "request": "{\"verb\":\"identity_get\"}",
+    "response": "{\"available\":[{\"actor_id\":\"operator_local\",\"roles\":[\"operator\"]}],\"configured\":true,\"uid\":1000}\n"
+  },
+  {
+    "name": "request.get_status.unknown",
+    "request": "{\"request_id\":\"req-never-issued\",\"verb\":\"request_get_status\"}",
+    "response": "{\"request_id\":\"req-never-issued\",\"status\":\"unknown\"}\n"
+  },
+  {
+    "name": "case.entry_options",
+    "request": "{\"verb\":\"case_entry_options\"}",
+    "response": "{\"templates\":[{\"description\":\"Two sandboxed tasks chained by a settlement_status sentry, closed by a required all-of rollup milestone. Parameters are substituted into the governed write's path, content, and required artifacts.\",\"parameters\":{\"dataset_label\":{\"default\":\"e2e\",\"param_type\":\"string\",\"required\":false},\"dataset_name\":{\"param_type\":\"string\",\"required\":true},\"max_rows\":{\"default\":\"10\",\"param_type\":\"int\",\"required\":false},\"out_dir\":{\"default\":\"work\",\"param_type\":\"path\",\"required\":false}},\"template_ref\":\"e2e-sentry-chain@0.1.0\"},{\"description\":\"A governed draft write followed by a human sign-off gate (ItemKind HumanTask with require_approval) that parks the case for an operator decision.\",\"parameters\":{\"change_summary\":{\"param_type\":\"string\",\"required\":true}},\"template_ref\":\"e2e-signoff-gate@0.1.0\"}]}\n"
+  },
+  {
+    "name": "case.preflight",
+    "request": "{\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"verb\":\"case_preflight\"}",
+    "response": "{\"items\":[{\"item_kind\":\"SandboxedTask\",\"name\":\"prepare dataset\",\"plan_item_id\":\"task_prepare\"},{\"item_kind\":\"SandboxedTask\",\"name\":\"publish dataset report\",\"plan_item_id\":\"task_publish\"},{\"item_kind\":\"Milestone\",\"name\":\"chain accepted\",\"plan_item_id\":\"ms_chain_accepted\"}],\"ok\":true,\"precondition\":{\"expected_digest\":\"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd\",\"ref\":\"template:e2e-sentry-chain@0.1.0\"},\"template_ref\":\"e2e-sentry-chain@0.1.0\"}\n"
+  },
+  {
+    "name": "case.commit",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"entity\":\"operator_local\",\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"policy\":\"authority/active-policy.json\",\"preconditions\":{\"records\":[{\"expected_digest\":\"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd\",\"ref\":\"template:e2e-sentry-chain@0.1.0\"}]},\"process\":\"golden_capture\",\"request_id\":\"req-golden-commit-1\",\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"timeout\":60,\"verb\":\"case_commit\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"exit_code\":5,\"state\":\"active\"}\n"
+  },
+  {
+    "name": "request.get_status.completed",
+    "request": "{\"request_id\":\"req-golden-commit-1\",\"verb\":\"request_get_status\"}",
+    "response": "{\"method\":\"case.commit\",\"outcome\":{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"exit_code\":5,\"state\":\"active\"},\"request_id\":\"req-golden-commit-1\",\"status\":\"completed\"}\n"
+  },
+  {
+    "name": "case.list",
+    "request": "{\"verb\":\"case_list\"}",
+    "response": "{\"cases\":[{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"case_state\":\"active\",\"created_at\":\"2026-09-25T20:16:22.770925313+00:00\",\"run_count\":0,\"summary\":\"Execute plan drafts/draft_1a50aa.json\"}],\"unreadable\":[]}\n"
+  },
+  {
+    "name": "case.get_overview",
+    "request": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"verb\":\"case_get_overview\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"case_state\":\"active\",\"created_at\":\"2026-09-25T20:16:22.770925313+00:00\",\"item_count\":3,\"plan_ref\":\"plan_01\",\"run_ids\":[],\"settlements\":[],\"stages\":[],\"summary\":\"Execute plan drafts/draft_1a50aa.json\",\"template_ref\":\"e2e-sentry-chain@0.1.0\"}\n"
+  },
+  {
+    "name": "case.get_horizon",
+    "request": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"verb\":\"case_get_horizon\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"case_state\":\"active\",\"events_folded\":2,\"items\":[{\"depends_on\":[],\"execution\":\"enabled\",\"item_kind\":\"sandboxed_task\",\"last_event_at\":\"2026-09-25T20:16:22.771772079+00:00\",\"name\":\"prepare dataset\",\"plan_item_id\":\"task_prepare\",\"run_ids\":[\"case\"],\"settlement\":\"unsettled\"},{\"depends_on\":[],\"execution\":\"pending\",\"item_kind\":\"sandboxed_task\",\"name\":\"publish dataset report\",\"plan_item_id\":\"task_publish\",\"run_ids\":[],\"settlement\":\"unsettled\"},{\"depends_on\":[],\"execution\":\"pending\",\"item_kind\":\"milestone\",\"name\":\"chain accepted\",\"plan_item_id\":\"ms_chain_accepted\",\"run_ids\":[],\"settlement\":\"unsettled\"}],\"last_event_id\":\"cev_000002\"}\n"
+  },
+  {
+    "name": "approval.list",
+    "request": "{\"verb\":\"approval_list\"}",
+    "response": "{\"approvals\":[]}\n"
+  },
+  {
+    "name": "case.add_item",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"item\":{\"depends_on\":[\"task_prepare\"],\"item_kind\":\"sandboxed_task\",\"max_instances\":1,\"name\":\"golden discretionary report\",\"operations\":[{\"content_hint\":\"golden discretionary output\",\"kind\":\"write_file\",\"path\":\"work/golden.md\"}],\"plan_item_id\":\"golden_extra\",\"sandbox_class\":\"local\",\"settlement_criteria\":{\"required_artifacts\":[\"work/golden.md\"]}},\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-add-1\",\"verb\":\"case_add_item\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"ok\":true,\"plan_item_id\":\"golden_extra\",\"proposed_by\":\"operator_local\"}\n"
+  },
+  {
+    "name": "case.add_item.cycle_refused",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"item\":{\"depends_on\":[\"golden_cycle\"],\"item_kind\":\"sandboxed_task\",\"name\":\"self-dependent item\",\"plan_item_id\":\"golden_cycle\",\"settlement_criteria\":{}},\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-cycle-1\",\"verb\":\"case_add_item\"}",
+    "response": "{\"error\":\"plan_schema_error: sandboxed task golden_cycle must declare at least one operation\",\"error_class\":\"plan_schema_error\"}\n"
+  },
+  {
+    "name": "item.execute",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"item_id\":\"task_prepare\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-exec-1\",\"timeout\":60,\"verb\":\"item_execute\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"episodes\":[{\"item_id\":\"task_prepare\",\"run_id\":\"run_20260925T201622Z_419e86\",\"settlement_status\":\"accepted\"}],\"ok\":true,\"state\":\"blocked\"}\n"
+  },
+  {
+    "name": "artifact.get",
+    "request": "{\"digest\":\"aaca8feb20f8533c360c93f56eb50184c847daa59c1d824eb88ef2640fc18f5a\",\"verb\":\"artifact_get\"}",
+    "response": "{\"content\":\"dataset: orders-q3 (label: t05, max_rows: 25)\",\"digest\":\"aaca8feb20f8533c360c93f56eb50184c847daa59c1d824eb88ef2640fc18f5a\",\"evidence_id\":\"evi_0002\",\"run_id\":\"run_20260925T201622Z_419e86\",\"size_bytes\":45,\"uri\":\"artifacts/work/dataset.md\"}\n"
+  },
+  {
+    "name": "artifact.get.not_found",
+    "request": "{\"digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"verb\":\"artifact_get\"}",
+    "response": "{\"error\":\"artifact_not_found: no evidence record in this cell carries digest aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"error_class\":\"input_error\"}\n"
+  },
+  {
+    "name": "case.commit.signoff",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"entity\":\"operator_local\",\"params\":{\"change_summary\":\"golden capture\"},\"policy\":\"authority/active-policy.json\",\"process\":\"golden_capture\",\"request_id\":\"req-golden-commit-2\",\"template_ref\":\"e2e-signoff-gate@0.1.0\",\"verb\":\"case_commit\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_e2c87d\",\"exit_code\":5,\"state\":\"active\"}\n"
+  },
+  {
+    "name": "human_task.complete",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_e2c87d\",\"item_id\":\"signoff_release\",\"justification\":\"golden capture sign-off\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-human-1\",\"verb\":\"human_task_complete\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_e2c87d\",\"exit_code\":5,\"item_id\":\"signoff_release\",\"ok\":true}\n"
+  },
+  {
+    "name": "case.commit.third",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"entity\":\"operator_local\",\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"policy\":\"authority/active-policy.json\",\"process\":\"golden_capture\",\"request_id\":\"req-golden-commit-3\",\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"verb\":\"case_commit\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"exit_code\":5,\"state\":\"active\"}\n"
+  },
+  {
+    "name": "case.terminate",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"policy\":\"authority/active-policy.json\",\"reason\":\"golden capture termination\",\"request_id\":\"req-golden-term-1\",\"verb\":\"case_terminate\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"case_state\":\"terminated\",\"close_reason\":\"operator_terminated:golden capture termination\",\"ok\":true}\n"
+  },
+  {
+    "name": "case.reopen",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-reopen-1\",\"verb\":\"case_reopen\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"case_state\":\"active\",\"ok\":true}\n"
+  },
+  {
+    "name": "case.terminate.empty_reason_refused",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"policy\":\"authority/active-policy.json\",\"reason\":\"  \",\"request_id\":\"req-golden-term-2\",\"verb\":\"case_terminate\"}",
+    "response": "{\"error\":\"case.terminate requires a non-empty reason\",\"error_class\":\"input_error\"}\n"
+  },
+  {
+    "name": "case.terminate.second",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"policy\":\"authority/active-policy.json\",\"reason\":\"closed again\",\"request_id\":\"req-golden-term-3\",\"verb\":\"case_terminate\"}",
+    "response": "{\"case_id\":\"case_20260925T201622Z_5ea1d7\",\"case_state\":\"terminated\",\"close_reason\":\"operator_terminated:closed again\",\"ok\":true}\n"
+  },
+  {
+    "name": "case.commit.identity_not_bound",
+    "request": "{\"actor\":{\"actor_id\":\"intruder\",\"role\":\"operator\"},\"entity\":\"intruder\",\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-refuse-1\",\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"verb\":\"case_commit\"}",
+    "response": "{\"error\":\"actor `intruder` is not bound to uid 1000 in this cell\",\"error_class\":\"identity_not_bound\",\"next_lawful_action\":\"Use an actor bound to this operating-system user\",\"no_side_effect\":true}\n"
+  },
+  {
+    "name": "case.commit.identity_delegation_refused",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"entity\":\"operator_a\",\"on_behalf_of\":{\"actor_id\":\"operator_a\",\"role\":\"operator\"},\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-golden-refuse-2\",\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"verb\":\"case_commit\"}",
+    "response": "{\"error\":\"delegated identity refused: this cell configures no `gateway` principal, so no connection may send `on_behalf_of` (uid 1000 did)\",\"error_class\":\"identity_delegation_refused\",\"next_lawful_action\":\"Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role\",\"no_side_effect\":true}\n"
+  },
+  {
+    "name": "case.commit.durable_locator_required",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"entity\":\"operator_local\",\"params\":{\"dataset_label\":\"t05\",\"dataset_name\":\"orders-q3\",\"max_rows\":\"25\",\"out_dir\":\"work\"},\"policy\":\"authority/active-policy.json\",\"template_ref\":\"e2e-sentry-chain@0.1.0\",\"verb\":\"case_commit\"}",
+    "response": "{\"error\":\"this durable mutation requires a non-empty request_id before admission\",\"error_class\":\"durable_locator_required\",\"no_side_effect\":true}\n"
+  },
+  {
+    "name": "events.subscribe.ack",
+    "request": "{\"verb\":\"events_subscribe\"}",
+    "response": "{\"ok\":true,\"replayed\":13,\"subscribed\":true}\n"
+  },
+  {
+    "name": "events.subscribe.pushed_event",
+    "request": "{\"verb\":\"events_subscribe\"}",
+    "response": "{\"event\":{\"case_id\":\"case_20260925T201623Z_6789c3\",\"committed_at\":\"2026-09-25T20:16:23.060861095+00:00\",\"cursor\":\"01M3D3CFGMX09GXXDQYA0PCMJH\",\"detail\":{\"state\":\"active\"},\"kind\":\"case.submitted\"},\"type\":\"event\"}\n",
+    "event": true
+  },
+  {
+    "name": "events.subscribe.replay_burst_first_line",
+    "request": "{\"verb\":\"events_subscribe\"}",
+    "response": "{\"event\":{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.772537050+00:00\",\"cursor\":\"01M3D3CF7MKJV8KN3RHM9H7PEZ\",\"detail\":{\"state\":\"active\"},\"kind\":\"case.submitted\"},\"type\":\"event\"}\n",
+    "note": "replayed frames precede the ack on the wire"
+  },
+  {
+    "name": "events.get_range",
+    "request": "{\"limit\":5,\"verb\":\"events_get_range\"}",
+    "response": "{\"events\":[{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.772537050+00:00\",\"cursor\":\"01M3D3CF7MKJV8KN3RHM9H7PEZ\",\"detail\":{\"state\":\"active\"},\"kind\":\"case.submitted\"},{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.794888750+00:00\",\"cursor\":\"01M3D3CF8ADDG86N1GQCK5PPX3\",\"detail\":{\"actor_id\":\"operator_local\",\"event_id\":\"cev_000003\",\"kind\":\"plan_mutated\",\"payload\":{\"operation\":\"add_task\"},\"plan_item_id\":\"golden_extra\",\"run_id\":\"case\",\"timestamp\":\"2026-09-25T20:16:22.793156559+00:00\",\"version\":\"0.1\"},\"kind\":\"case.trace.plan_mutated\"},{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.799409399+00:00\",\"cursor\":\"01M3D3CF8F9X56BNWHNJEEMT47\",\"detail\":{\"actor_id\":\"case_engine\",\"event_id\":\"cev_000004\",\"kind\":\"item_activated\",\"payload\":{\"dispatch_ordinal\":1,\"episode_kind\":\"sandboxed_task\",\"instance\":1,\"run_id\":\"run_20260925T201622Z_419e86\"},\"plan_item_id\":\"task_prepare\",\"run_id\":\"case\",\"timestamp\":\"2026-09-25T20:16:22.798054409+00:00\",\"version\":\"0.1\"},\"kind\":\"case.trace.item_activated\"},{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.807919055+00:00\",\"cursor\":\"01M3D3CF8QSM00R06MH83SZYKP\",\"detail\":{\"actor_id\":\"case_engine\",\"event_id\":\"cev_000005\",\"kind\":\"settlement_recorded\",\"payload\":{\"instance\":1,\"run_id\":\"run_20260925T201622Z_419e86\",\"settlement_ordinal\":1,\"status\":\"accepted\"},\"plan_item_id\":\"task_prepare\",\"run_id\":\"case\",\"timestamp\":\"2026-09-25T20:16:22.806227683+00:00\",\"version\":\"0.1\"},\"kind\":\"case.trace.settlement_recorded\"},{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"committed_at\":\"2026-09-25T20:16:22.809513050+00:00\",\"cursor\":\"01M3D3CF8SRTXZ9FP7Q31MZJH1\",\"detail\":{\"actor_id\":\"case_engine\",\"event_id\":\"cev_000006\",\"kind\":\"item_completed\",\"payload\":{\"instance\":1,\"settlement\":\"accepted\"},\"plan_item_id\":\"task_prepare\",\"run_id\":\"case\",\"timestamp\":\"2026-09-25T20:16:22.807074074+00:00\",\"version\":\"0.1\"},\"kind\":\"case.trace.item_completed\"}]}\n"
+  },
+  {
+    "name": "case.add_item.unknown_verb_simulated",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"item\":{\"item_kind\":\"sandboxed_task\",\"name\":\"x\",\"plan_item_id\":\"x\",\"settlement_criteria\":{}},\"request_id\":\"req-golden-old-1\",\"verb\":\"case_add_item\"}",
+    "response": "{\"error\":\"bad request: unknown variant `case_add_item`, expected one of submit, status\"}",
+    "note": "simulated: the parse failure an older server returns for a verb it predates (no error_class)"
+  }
+]

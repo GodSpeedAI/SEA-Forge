@@ -1,0 +1,175 @@
+# Behavioral IR: CJ07 Execute Governed Work
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ07"
+  slug: "execute_governed_work"
+  title: "Execute Governed Work"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - execution
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - plan_item_enabled
+    - authority_request_granted
+    - executor_and_sandbox_bound
+  actor_roles:
+    - Operator
+    - CaseOwner
+    - AutomatedActor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - committed_case_id
+      - enabled_item_id
+      - authority_grant_token
+      - sandbox_and_environment_spec
+      - execution_limits
+    context_scope: "Granted resource boundary, timeout ceiling, tool whitelist, secret access list"
+
+  IS2_preflight:
+    checks:
+      - authority_grant_token_valid_and_unexpired
+      - executor_and_provider_available
+      - sandbox_containment_verified
+      - execution_limits_strictly_within_cell_policy
+    readiness_classification:
+      expected: "ready | authority_missing | provider_unavailable | sandbox_violation"
+      failure_action: "deny_before_side_effects_on_any_preflight_failure"
+
+  IS3_authority_resolution:
+    required_role: "Operator"
+    alternate_role: "CaseOwner"
+    grant_scope: "execute_bound_item_within_sandbox"
+    separation_of_duty: "Authority must be granted prior to process or container launch; executor cannot expand its own grant"
+    approval:
+      status: "implemented"
+      note: "Explicit grant check precedes runtime invocation"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "work.execute"
+      invoked_capabilities:
+        - "authority_decision"
+        - "sandbox_realization"
+        - "environment_provision"
+        - "command_and_projection_execution"
+        - "delegation.preview"
+        - "http_and_acp_agent_execution"
+        - "swe_seed_route_and_proof_harvesting"
+        - "artifact_capture"
+        - "settlement_handoff"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / sea-forge-jail"
+    bounds:
+      network_access: "deny_by_default"
+      filesystem_isolation: "chroot_or_bwrap"
+      timeout_seconds: 300
+      max_tokens: 16384
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "item_enabled"
+      to: "execution_terminated_with_evidence"
+      alternative_states:
+        - "execution_denied"
+        - "execution_escalated"
+        - "execution_running"
+        - "execution_timed_out"
+        - "execution_cancelled"
+        - "sandbox_violated"
+        - "provider_disconnected"
+    artifacts:
+      - "run_record"
+      - "sandbox_and_environment_snapshot"
+      - "progress_and_output_events"
+      - "generated_output_artifacts"
+      - "transcript_summary_or_retained_transcript"
+      - "termination_reason_descriptor"
+      - "execution_evidence_packet"
+    mutation_rule: "Output becomes candidate evidence for settlement; execution never marks itself settled"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "run_execution_record"
+        evidence_class: "observed"
+      - item: "process_exit_code_or_agent_stop_reason"
+        evidence_class: "observed"
+      - item: "output_artifact_hashes"
+        evidence_class: "observed"
+      - item: "resource_utilization_metrics"
+        evidence_class: "observed"
+    integrity_verification:
+      sandbox_boundary_intact: true
+      untrusted_output_sanitized: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "Execution terminates within the granted boundary and leaves complete outcome evidence for settlement, including governed denial or failure; only settlement may accept the work."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "execution_terminated_cleanly"
+        - "execution_terminated_with_error"
+        - "execution_halted_on_timeout"
+        - "execution_aborted_on_sandbox_violation"
+    settlement_vs_termination: "CRITICAL: Process exit 0 or agent narration is merely execution termination, NOT settlement. Settle in CJ09."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "evaluate_and_settle_outcome"
+        target_journey: "CJ09"
+        condition: "outcome == execution_terminated_cleanly || outcome == execution_terminated_with_error"
+      - id: "monitor_or_cancel_active_work"
+        target_journey: "CJ08"
+        condition: "state == execution_running"
+      - id: "retry_via_successor_run"
+        action: "spawn_successor_attempt"
+        condition: "outcome == execution_terminated_with_error || outcome == execution_halted_on_timeout"
+    blocked_affordances:
+      - id: "promote_output_to_accepted_truth"
+        target_journey: "CJ11"
+        reason: "no_settlement_access"
+        explanation: "Unsettled execution output cannot be promoted or adopted without CJ09 settlement"
+
+recovery_paths:
+  - condition: "authority_denial"
+    remedy: "Deny before effects; record denial in ledger; do not launch sandbox"
+  - condition: "timeout_or_sandbox_violation"
+    remedy: "Retain evidence; terminate process tree; record violation; prepare successor attempt"
+  - condition: "provider_disconnect"
+    remedy: "Preserve partial outputs; record connection failure; allow resume or retry"
+
+unresolved_bindings:
+  - component: "external_acp_host_evidence"
+    status: "unresolved_in_source"
+    impact: "ACP external host execution exercised portably; live host evidence release-gated"
+  - component: "swe_seed_live_federation_receipts"
+    status: "unresolved"
+    impact: "SWE_SEED integration mocked in CI; full signed federation receipts pending"

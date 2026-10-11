@@ -1,0 +1,410 @@
+[
+  {
+    "journey_id": "L0",
+    "title": "Readiness and identity",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "the stack is the real, non-fixture, authenticated one",
+    "unlocks": [
+      "L1"
+    ],
+    "steps": [
+      {
+        "journey": "L0",
+        "name": "served bundle has no fixture adapter (disk scan + HTTP scan)",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L0",
+        "name": "gateway is the live non-fixture build and the kernel is ready",
+        "ok": true,
+        "ms": 274
+      },
+      {
+        "journey": "L0",
+        "name": "unauthenticated browser sees the LoginScreen (live source label)",
+        "ok": true,
+        "ms": 2709
+      },
+      {
+        "journey": "L0",
+        "name": "operator signs in through the LoginScreen; identity is the gateway-verified one",
+        "ok": true,
+        "ms": 7043
+      },
+      {
+        "journey": "L0",
+        "name": "the browser loaded only live-adapter scripts (no fixture adapter at runtime)",
+        "ok": true,
+        "ms": 2047
+      }
+    ],
+    "total_ms": 14163
+  },
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "PASS",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "steps": [
+      {
+        "journey": "L1",
+        "name": "home offers Design case; the picker lists the published templates",
+        "ok": true,
+        "ms": 3189
+      },
+      {
+        "journey": "L1",
+        "name": "select template, fill parameters; submit stays disabled before preflight",
+        "ok": true,
+        "ms": 5482
+      },
+      {
+        "journey": "L1",
+        "name": "preflight passes with a digest; only then is submit enabled",
+        "ok": true,
+        "ms": 2409
+      },
+      {
+        "journey": "L1",
+        "name": "editing a parameter invalidates the preflight and disables submit again",
+        "ok": true,
+        "ms": 5078
+      },
+      {
+        "journey": "L1",
+        "name": "durable: commit writes case_created + item_enabled to the new case's case-events.jsonl and its plan.json",
+        "ok": true,
+        "ms": 1047
+      },
+      {
+        "journey": "L1",
+        "name": "UI: the panel closes and the new case's world is the one shown",
+        "ok": true,
+        "ms": 3422
+      }
+    ],
+    "total_ms": 24137
+  },
+  {
+    "journey_id": "L2",
+    "title": "Horizon standing",
+    "status": "PASS",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI shows the case's real standing, not an invented one",
+    "unlocks": [
+      "L3",
+      "L4"
+    ],
+    "steps": [
+      {
+        "journey": "L2",
+        "name": "durable: the kernel's own files say task_prepare is enabled and the rest are pending",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L2",
+        "name": "UI: the world shows exactly the plan's items, each with the standing the durable fold implies",
+        "ok": true,
+        "ms": 1072
+      },
+      {
+        "journey": "L2",
+        "name": "UI: a pending item says why it waits; the ready one says it is ready",
+        "ok": true,
+        "ms": 571
+      },
+      {
+        "journey": "L2",
+        "name": "UI: only the enabled item offers Execute (role-filtered, standing-driven)",
+        "ok": true,
+        "ms": 549
+      },
+      {
+        "journey": "L2",
+        "name": "a real pointer click focuses the item and the outline lists it with its standing and Execute",
+        "ok": true,
+        "ms": 14057
+      }
+    ],
+    "total_ms": 19573
+  },
+  {
+    "journey_id": "L3",
+    "title": "Discretionary add",
+    "status": "PASS",
+    "depends_on": [
+      "L2"
+    ],
+    "settles": "an operator-proposed item is durably in the plan with its proposer, and the UI shows it",
+    "unlocks": [
+      "L4"
+    ],
+    "steps": [
+      {
+        "journey": "L3",
+        "name": "the anchor item offers 'Add discretionary work'; clicking it opens the drawer with the operator as proposer",
+        "ok": true,
+        "ms": 12794
+      },
+      {
+        "journey": "L3",
+        "name": "an empty proposal is refused client-side with no durable effect",
+        "ok": true,
+        "ms": 10695
+      },
+      {
+        "journey": "L3",
+        "name": "durable: submitting writes exactly one plan_mutated (actor operator_local) and a plan item with proposed_by",
+        "ok": true,
+        "ms": 5891
+      },
+      {
+        "journey": "L3",
+        "name": "UI: the drawer reports the kernel's acceptance and still names the operator as proposer",
+        "ok": true,
+        "ms": 2044
+      },
+      {
+        "journey": "L3",
+        "name": "UI: the proposed item arrives in the world through the live stream (no reload), waiting on its anchor",
+        "ok": true,
+        "ms": 8689
+      }
+    ],
+    "total_ms": 43289
+  },
+  {
+    "journey_id": "L4",
+    "title": "Execute through the UI",
+    "status": "PASS",
+    "depends_on": [
+      "L2",
+      "L3"
+    ],
+    "settles": "an executed item is durably active, settled and completed, and its downstream unlocks over SSE without a reload",
+    "unlocks": [
+      "L5"
+    ],
+    "steps": [
+      {
+        "journey": "L4",
+        "name": "precondition: sentry-gated downstream is blocked; Execute is offered only on the enabled item",
+        "ok": true,
+        "ms": 965
+      },
+      {
+        "journey": "L4",
+        "name": "UI: Execute chip opens the judgment panel offering exactly Execute (not discretionary work); confirming sends the intent",
+        "ok": true,
+        "ms": 15477
+      },
+      {
+        "journey": "L4",
+        "name": "durable: item_activated, settlement_recorded (accepted), item_completed, then item_enabled for the downstream item",
+        "ok": true,
+        "ms": 3
+      },
+      {
+        "journey": "L4",
+        "name": "durable: the run's own trace shows authority, workspace, captured artifact and no command events; settlement.json accepted",
+        "ok": true,
+        "ms": 1
+      },
+      {
+        "journey": "L4",
+        "name": "UI: pill settles and the downstream item unlocks with no reload, no snapshot refetch, no fake progress",
+        "ok": true,
+        "ms": 7582
+      }
+    ],
+    "total_ms": 27814
+  },
+  {
+    "journey_id": "L5",
+    "title": "Sign-off: operator denied, R-SO approves in a separate session",
+    "status": "PASS",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "an approval opened by the operator's execution is resolved only by a distinct R-SO principal, with both principals visible in the durable record",
+    "unlocks": [
+      "L6",
+      "L7"
+    ],
+    "steps": [
+      {
+        "journey": "L5",
+        "name": "guard: the operator and the R-SO drive distinct agent-browser sessions",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L5",
+        "name": "operator designs a sign-off case through the UI; the kernel parks the human gate and enables the draft",
+        "ok": true,
+        "ms": 21335
+      },
+      {
+        "journey": "L5",
+        "name": "operator executes the draft; the kernel escalates it and opens a pending approval requested for this case",
+        "ok": true,
+        "ms": 14990
+      },
+      {
+        "journey": "L5",
+        "name": "operator is denied: no Approve/Reject is offered and an approve intent posted anyway is refused, durable state unchanged",
+        "ok": true,
+        "ms": 5931
+      },
+      {
+        "journey": "L5",
+        "name": "guard: after both sign in, the two sessions hold different cookies and different principals",
+        "ok": true,
+        "ms": 12198
+      },
+      {
+        "journey": "L5",
+        "name": "R-SO (separate session) sees the same case with Approve/Reject on the draft; Approve without a reason is stopped in the panel",
+        "ok": true,
+        "ms": 26078
+      },
+      {
+        "journey": "L5",
+        "name": "durable: R-SO approves with a reason; approvals.jsonl shows the request and a decision by rso_local",
+        "ok": true,
+        "ms": 7113
+      },
+      {
+        "journey": "L5",
+        "name": "durable: the kernel records the resolution in the case ledger under rso_local; and the case trace gains nothing it did not emit",
+        "ok": true,
+        "ms": 1
+      },
+      {
+        "journey": "L5",
+        "name": "UI: both sessions follow the approval over the stream with no reload; the decision is no longer offered",
+        "ok": true,
+        "ms": 7041
+      }
+    ],
+    "total_ms": 101636
+  },
+  {
+    "journey_id": "L6",
+    "title": "Settlement and the evidence dock",
+    "status": "PASS",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "a settled item's captured artifact opens in the dock with a verified digest, and only the needed renderer chunk is fetched",
+    "unlocks": [
+      "L7"
+    ],
+    "steps": [
+      {
+        "journey": "L6",
+        "name": "durable: SettlementRecorded (accepted), the run's settlement.json, and the stored artifact bytes match the evidence journal",
+        "ok": true,
+        "ms": 4
+      },
+      {
+        "journey": "L6",
+        "name": "UI: a fresh page load of the case shows the settled standing at once (no stream event needed)",
+        "ok": true,
+        "ms": 10656
+      },
+      {
+        "journey": "L6",
+        "name": "UI: pill -> execution panel lists the captured artifact as evidence, bound by the snapshot (not invented)",
+        "ok": true,
+        "ms": 9701
+      },
+      {
+        "journey": "L6",
+        "name": "UI: opening the evidence resolves it through artifact.get; the dock shows the digest of the stored bytes",
+        "ok": true,
+        "ms": 11327
+      },
+      {
+        "journey": "L6",
+        "name": "network: the HAR shows artifact.get once and ONLY the needed renderer chunk (VAR-006)",
+        "ok": true,
+        "ms": 1065
+      }
+    ],
+    "total_ms": 38779
+  },
+  {
+    "journey_id": "L7",
+    "title": "Lifecycle: close, reopen, terminate",
+    "status": "PASS",
+    "depends_on": [
+      "L5",
+      "L6"
+    ],
+    "settles": "a case closes when its work completes, reopens with a reason, and a second case is terminated with a reason, all as durable kernel events offered only by the snapshot",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "L7",
+        "name": "case A is active: the snapshot offers Terminate and not Reopen, on the Core only",
+        "ok": true,
+        "ms": 4561
+      },
+      {
+        "journey": "L7",
+        "name": "durable: executing the last item completes it, achieves the milestone and appends case_closed; case.json is completed",
+        "ok": true,
+        "ms": 19185
+      },
+      {
+        "journey": "L7",
+        "name": "UI: with no reload the Core now offers Reopen and no longer offers Terminate",
+        "ok": true,
+        "ms": 5367
+      },
+      {
+        "journey": "L7",
+        "name": "durable: Reopen needs a reason in the panel; case_reopened is appended carrying it and by whom; case.json is active again",
+        "ok": true,
+        "ms": 31344
+      },
+      {
+        "journey": "L7",
+        "name": "UI: after the reopen the Core offers Terminate again and not Reopen",
+        "ok": true,
+        "ms": 1999
+      },
+      {
+        "journey": "L7",
+        "name": "durable: the operator completes the sign-off human task with a justification; human_task_completed is appended",
+        "ok": true,
+        "ms": 26164
+      },
+      {
+        "journey": "L7",
+        "name": "durable: Terminate on case B needs a reason; case_terminated carries it; case.json is terminated",
+        "ok": true,
+        "ms": 35108
+      },
+      {
+        "journey": "L7",
+        "name": "UI: the terminated case offers Reopen only, and no work can be executed or approved on it",
+        "ok": true,
+        "ms": 2739
+      }
+    ],
+    "total_ms": 132998
+  }
+]

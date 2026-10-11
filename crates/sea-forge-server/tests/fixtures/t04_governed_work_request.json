@@ -1,0 +1,74 @@
+{
+  "context_packet": {
+    "event_id": "7848736d-d356-42a2-8b79-5d3ba8810a45",
+    "event_type": "ContextPacketCreated",
+    "idempotency_key": "d4f6ee099ca7183729e183407f39484496384c83b6a2525a5f38a21adf80e8fb",
+    "occurred_at": "2026-10-05T03:33:09+00:00",
+    "payload": {
+      "citations": [
+        {
+          "sha256": "041ab86fbaaa651aba7ce051f1b5d2af69353d7f28960102fd3dd155392fbde9",
+          "source": "runbook://deploy/blue-green"
+        }
+      ],
+      "context_packet_id": "ctx_01J9T04PACKET0000000000",
+      "context_requirement_id": "cr-t04",
+      "domain_model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+      "namespace": "agentic_capability_loop",
+      "retrieval_completeness": "complete",
+      "work_request_id": "wr-gsf-001",
+      "world_ref": "world:t04@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "provenance": {
+      "chain": [
+        "domain_model_hash:e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18"
+      ],
+      "origin": "swe-seed"
+    },
+    "schema_version": "v1",
+    "source_agent": "context-kernel"
+  },
+  "domain_model_sha256": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+  "request": {
+    "event_id": "cd00f254-1491-474e-9ad6-bcb3c04637bf",
+    "event_type": "GovernedWorkRequest",
+    "idempotency_key": "8483dcae69d6668a6164801fe06a904538f62ef524d509247c799e32347feec6",
+    "occurred_at": "2026-10-05T03:33:09+00:00",
+    "payload": {
+      "actor": {
+        "actor_id": "agent-operator",
+        "role": "R-AA"
+      },
+      "affordance_id": "aff-blue-green-001",
+      "context_packet_ref": "ctx_01J9T04PACKET0000000000",
+      "domain_model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+      "domain_model_ref": {
+        "model_hash": "e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+        "namespace": "agentic_capability_loop"
+      },
+      "intent": "rotate deploy to blue-green and verify health gates",
+      "namespace": "agentic_capability_loop",
+      "proof_contract": {
+        "command": "just proof --route route-blue-green",
+        "criterion": "live proof exits 0 with health checks green",
+        "proof_type": "live"
+      },
+      "settlement_criteria": [
+        "health check green",
+        "zero-downtime observed"
+      ],
+      "work_request_id": "wr-gsf-001",
+      "world_ref": "world:t04@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "provenance": {
+      "chain": [
+        "domain_model_hash:e6ddccfeed5eb835c91bdccfcd12b0b51775f9dcaf9a9c0f06e128260e86fd18",
+        "caused_by:52207d4a-71f6-4781-b662-18eda55f591a",
+        "caused_by:7848736d-d356-42a2-8b79-5d3ba8810a45"
+      ],
+      "origin": "swe-seed"
+    },
+    "schema_version": "v1",
+    "source_agent": "swe-seed"
+  }
+}

@@ -1,0 +1,17 @@
+tooth: late_domain
+outcome_vocabulary_observed:
+- PASS
+domain_that_would_be_derived_after_observation:
+- insufficient_evidence
+frozen_domain:
+- satisfied
+- not_satisfied
+- insufficient_evidence
+frozen_domain_where: frozen in preregistration before any run (sha256 recorded in decision log)
+expected: constructing the answer domain AFTER observing outcomes fails the label-leakage check and the task does not proceed
+  to scoring on it
+behaved_as_specified: true
+enforcement: the executed domain is hash-frozen in the preregistration; a post-hoc domain cannot match the frozen hash and
+  assert_no_leakage bars outcome-derived labels from provider input
+mode: late-domain
+executed_at: '2026-09-18T00:09:41.434128+00:00'

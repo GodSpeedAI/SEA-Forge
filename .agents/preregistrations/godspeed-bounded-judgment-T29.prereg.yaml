@@ -1,0 +1,105 @@
+# =============================================================================
+# T29 PREREGISTRATION — native route-discovery breadth: second operation family
+# =============================================================================
+# FROZEN BEFORE THE FIRST SCORED PROBE. Append-only after freeze; changes
+# require addenda. This prereg implements the operator's breadth directive
+# for the settled T21-T26 mechanism.
+schema: godspeed-bounded-judgment.t29-prereg
+created_utc: "2026-09-19"
+frozen_before: "first scored probe of the second family"
+governing_question: >-
+  Does the native route-discovery mechanism survive a materially different
+  operation family, such that the first result begins to constitute route
+  breadth rather than one-family success?
+selected_operation_family:
+  family: "e2e-forged-report x budget ladder (the fraud family)"
+  catalog_identity: >-
+    T21 operations catalog (.agents/evidence/godspeed-bounded-judgment/T21/
+    operations_catalog.yaml): run_case(scenario, max_rounds) with scenario
+    e2e-forged-report, max_rounds in {1..8}; source fixture
+    ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+    (existing catalog member, never modified); probes run the frozen
+    addendum-1 mechanism (disposable fixture-target copies, deterministic
+    clock, per-probe GAUNTLET_ID_SEED, required control env, 240 s timeout).
+selection_rationale_frozen:
+  materially_relevant_variation:
+    - "expected failure mode: fraud refusal (forged passing artifacts over marker-less source; settlement gate refuses as producer_uncorroborated) vs family-1 honest resource exhaustion"
+    - "settlement criterion: non-settlement is the family norm; the route's success signal is mechanical DETECTION, not run settlement"
+    - "evidence shape: passing-claim artifacts (failures: 0) vs family-1 honest passing reports that DO settle, vs the lying family's honest failing reports (failures: 1)"
+    - "transformation structure: a detection-minimal-budget boundary (d*) vs family-1's settlement-minimal-budget boundary (r*)"
+    - "authority behavior: the composed settlement gate (COR-F1) is the load-bearing authority path engaged by this family"
+  why_not_others:
+    - "e2e-lying ladder / other never-settle scenarios: same never-settle property but WEAKER variation (same failing-artifact evidence shape family 1 already discriminates)"
+    - "attempts-per-unit lever on e2e-happy: near-duplicate of family 1 (the honest mock completes in one attempt; the lever does not bind)"
+    - "authoring a new scenario or target: rejected - would rig the family's consequence structure and edge into gauntlet modification"
+  known_before_freeze: >-
+    Recorded evidence (T16 corpus forge-D1/D2 at default budget; mechanism
+    reconnaissance of one pinned forge DB) shows: same-unit repeat dispatch,
+    passing-claim artifacts, 0 settlements, terminal budget_exhausted. NOT
+    known: whether the detection rule fires at budgets below default (the
+    d* boundary is genuinely uncertain, predicted d* in {2,3}).
+family2_mechanical_rule_frozen:
+  name: unsubstantiated-pass detection (UP rule)
+  rule: >-
+    A probe observation is mechanically classified UP-detected if and only
+    if ALL hold: (1) the typed terminal is a bounded non-settlement (not
+    settled, not a run error); (2) the run's settlement_committed count is
+    0; (3) >=1 evidence_produced artifact of the run, hash-verified at its
+    pinned sha256, has content recording failures: 0 (a passing claim).
+  complementarity_property: >-
+    The UP rule never fires on the family-1 honest ledger (every honest row
+    either settled, has settlements > 0, or produced no artifacts) and never
+    on the lying family (whose artifacts record failures: 1 and are detected
+    by the frozen addendum-3 rule). The two rules partition the two
+    adversarial families; this partition is G3 below and is verified against
+    the frozen family-1 records, not re-probed.
+route_goal_frozen:
+  - "G1 baseline detection: a forged probe at the fixture default budget (max_rounds 4) is UP-detected by the rule"
+  - "G2 boundary: d* = minimal max_rounds in {1..8} at which a real forged probe is UP-detected; the route establishes by real probes that d* fires AND d*-1 does not fire"
+  - "G3 cross-family separation: the UP rule fires on every forged probe at budgets >= d* on this route, and never on the frozen family-1 honest ledger (T23 round-3 mechanical labels, 8 rows) nor on the lying family rows (addendum-3 labels); verified from frozen records"
+candidate_schema_and_admission:
+  schema: "T21 route_contracts candidate_move unchanged: operation run_case, bounded_input {scenario: e2e-forged-report, max_rounds 1..8}, expected_role in {establish_baseline, establish_discriminator, boundary_probe}, prerequisite_refs, correlation id; free-form shell plans inadmissible by schema"
+  admission: "T21 admission module unchanged (catalog membership, budget, dedupe on this route, mock runner only); K=3; probed candidates all admitted ones; frozen selection-policy-v1 retains one move per iteration with roles read as: establish_baseline -> G1, boundary_probe -> G2 ladder, establish_discriminator -> G3 verification steps"
+  generation: "provider deepseek-clinepass (opencode seam) proposing the ladder; on failure ONE muse-spark-free substitution (recorded, generation-only); declared deterministic fallback = midpoint search of the uncertain interval seeded {1..8} with prior knowledge that 4 fires (never substituted for the route's own probes)"
+operation_constraints:
+  max_route_depth_retained_moves: 5
+  max_probes: 8
+  max_iterations: 4
+  probe_wall_seconds: 240
+  route_wall_seconds: 1800
+authority_behavior: "gauntlet's own admission + the composed settlement gate (COR-F1 producer_uncorroborated refusal) are engaged as-is; the loop's admission module is the T21 frozen module; no new authority surface"
+observation_schema: "per probe: candidate id, family, authority/admission result, invocation (exact command + env), real terminal, event/evidence correlation (state DB path + sha256; artifact pins), settlement-related observation (settlement count, unit progression), payment consumed (wall seconds), failure class, retained/rejected disposition"
+matched_negative_frozen:
+  construction: "forged at d*-1 (single declared material factor vs the d* probe: budget), real probe, fresh seed"
+  label_rule: "read from evidence: UP rule must NOT fire at d*-1 while firing at d*; the negative label is never assigned manually"
+route_to_case_inversion:
+  rule: >-
+    Conditional: if (and only if) a settleable route exists in this family,
+    invert per the T24 mechanism with frozen candidate-before-replay and an
+    impostor lookalike. EXPECTED not applicable (the family cannot settle);
+    if no settleable route exists, inversion is recorded N/A with the
+    reason - the apparatus is NOT modified to force it.
+learned_observer_optional:
+  included: "YES, at minimal scale: exactly 4 observer calls (one per retained move), arm2-style enriched surface, deepseek-clinepass, raw preserved"
+  authority_rule: "observational evidence ONLY; the label never alters route retention, the d* determination, or any settlement; reported beside the mechanical result for the anchoring-replication datum"
+stopping_rules_frozen:
+  - "route goal met (G1+G2+G3)"
+  - "no eligible candidate remains"
+  - "probe budget exhausted (8)"
+  - "iteration limit (4)"
+  - "route wall clock exceeded (1800 s)"
+  - "unrecoverable execution failure (repeated run errors)"
+claims_frozen:
+  may_earn:
+    - "mechanism survival: the route-discovery mechanism transferred to and completed a materially different family in characterize-and-stop mode (catalog/admission/rules/goal/negative machinery shared; family constants changed)"
+    - "the forged-family detection boundary d* established by real probes with a one-factor matched negative"
+    - "cross-family rule complementarity (UP rule + addendum-3 rule partition forged vs lying vs honest), verified against frozen ledgers"
+  may_not_earn:
+    - "the two-settleable-families breadth claim (no honest-completion scenario exists in this family)"
+    - "general route-discovery capability; arbitrary-domain transfer; large-scale efficiency; metabolized capability; autonomous structural learning; provider-independent performance; production-scale reliability"
+    - "any learned-judgment role"
+breadth_comparison_required:
+  - "families compared on: discoverable route; settlement vs characterization; payment boundary character; matched-negative behavior; inversion applicability; shared vs changed machinery; generalized vs family-specific distinctions; orchestration burden (decision-log entries, calls, probes, wall)"
+  - "no collapsing of different payment currencies into one scalar"
+confirmation_requirement: "fresh independent adversarial verifier per the plan's T29 independent_confirmation block; challenges prereg-before-execution, evidence provenance, no hand labels, real settlement/refusal evidence, single-factor negatives, append-only corrections, and that no breadth claim exceeds the evidence"
+reporting: "durable report under .agents/evidence/godspeed-bounded-judgment/T29/ with the breadth comparison table and the exact earned/unearned claims; docs/explanation/native-route-discovery.md updated only if the durable understanding changes"

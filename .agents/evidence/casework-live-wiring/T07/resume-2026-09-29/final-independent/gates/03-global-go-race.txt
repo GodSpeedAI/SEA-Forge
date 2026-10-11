@@ -1,0 +1,4 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go test -race -count=1 ./...
+Working directory: apps/godspeed-casework-go
+Exit: 1, same four server test failures as focused gate; all other listed Go packages passed.
+RAM/process precheck before run: 3.9 GiB available; no Go/Cargo compiler processes.

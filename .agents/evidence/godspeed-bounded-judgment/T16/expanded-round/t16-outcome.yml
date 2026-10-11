@@ -1,0 +1,89 @@
+# T16 outcome — expanded corpus (N=25), rounds 5-6 measurement + substitution
+schema: godspeed-bounded-judgment.t16-outcome-expanded
+date: "2026-09-18"
+
+providers:
+  A: "DeepSeek 4.1 Flash via ClinePass (opencode run -m cline-pass/cline-pass/deepseek-v4.1-flash)"
+  B: "Muse Spark 1.3 contributor-free via opencode (substituted for quota-blocked prime-agent; operator-directed; substitution-2 addendum frozen)"
+
+corpus: "expanded manifest 9bc65fb9... (25 runs: 12 settled / 13 not_settled; all single-run; mechanisms verified)"
+
+results:
+  baseline:
+    rule: "face-value: all documents claim completed -> settled"
+    observed_behavior: "degenerates to constant settled predictor on this fixture (every document claims completed)"
+    accuracy: 0.48 (12/25 = exactly the class prior)
+  deepseek_clinepass:
+    contract_failures: 1 (provider_timeout on 1 row; 24/25 ok)
+    accuracy_vs_truth: 0.833 (20/24 non-abstaining correct)
+    abstention: 3/25 = 0.12 (all on not_settled rows — responsible abstention)
+    entropy_nats: 0.779
+    confusion:
+      settled_truth: "11/12 correctly identified as settled; 1 missed (a lying-builder row)"
+      not_settled_truth: "9/13 correctly identified as not_settled; 3 responsibly abstained"
+    exact_permutation_tooth:
+      observed: 20/24 non-abstaining correct
+      null_max: 21/24
+      exact_p: 9.4e-6 (49/5,200,300)
+      verdict: "PASSES — the observed accuracy is in the extreme upper tail of the label-permutation null"
+  muse_spark_free:
+    contract_failures: 0
+    accuracy_vs_truth: 0.28 (7/25; at/below the 0.48 class prior)
+    abstention: 0.68 (17/25 — excessive, uninformative)
+    entropy_nats: 0.363
+    exact_permutation_tooth:
+      observed: 7/25
+      null_max: 8/25
+      exact_p: 0.039
+      verdict: "FAILS — the observed score is within the label-permutation noise band"
+
+outcome_letter: C
+rule_application: >-
+  The frozen D-unlock rule requires: 0 contract failures for both; accuracy
+  >= 0.8 non-abstaining for both; abstention <= 0.5; entropy > 0. DeepSeek
+  has 1 timeout (contract leg fails); Muse fails accuracy (0.28 < 0.8),
+  abstention (0.68 > 0.5), and shows shuffle-tooth noise-level performance.
+  Outcome C: no promotion for this surface under the two-provider frozen
+  rule. T06 remains blocked.
+
+narrowed_finding_per_directive_E:
+  deepseek_alone: >-
+    0.833 non-abstaining accuracy, exact permutation p = 9.4e-6, responsible
+    abstention pattern, single lying-claim error. REAL consequence-grounded
+    discrimination on THIS surface by THIS provider — the strongest single-
+    provider evidence in the plan. The shuffle tooth confirms this is NOT
+    label noise (p = 9.4e-6 means only 49 of 5.2M permutations reach 20/24).
+  muse: "no demonstrated discrimination (0.28 at/below the 0.48 class prior)"
+  scope: "provider-specific, surface-specific, corpus-specific — no capability-class or model-generalization claim"
+
+developmental_evidence:
+  deepseek_error_analysis: >-
+    1 lying-claim error + 3 responsible abstentions on not_settled rows.
+    The lying-claim error means the provider was taken in by a builder
+    claiming success — the claim-vs-consequence distinction the surface
+    tests. The 3 abstentions were RESPONSIBLE (correctly identified hard
+    cases).
+  muse_error_analysis: >-
+    17/25 abstentions is uninformative; the 7 non-abstaining answers
+    performed at chance. This is a provider-capability limitation, not
+    a surface defect.
+
+representation_hypothesis_unchanged: >-
+  The claim-vs-observation distinction remains the top-ranked next
+  representational experiment, now supported by DeepSeek's lying-claim
+  error being its ONLY settled-class error. But it remains a SEPARATE
+  future experiment, not baked into this result.
+
+what_was_NOT_claimed:
+  - "no capability-class rejection"
+  - "no claim that probabilistic judgment is useless"
+  - "no calibration or generalization claim"
+  - "no claim about Codex (untested on this corpus)"
+  - "no claim about provider independence beyond what was recorded"
+  - "no promotion of uncertainty-preserving judgment for this or any surface"
+
+what_WAS_earned:
+  - "DeepSeek-via-ClinePass showed real, permutation-confirmed consequence-grounded discrimination on THIS surface (0.833 non-abstaining, p = 9.4e-6)"
+  - "Muse-Spark-via-opencode did NOT discriminate on this surface"
+  - "the face-value baseline (constant settled) achieved 0.48 — DeepSeek beat it (0.833), Muse did not (0.28)"
+  - "the two-provider frozen D-bar was not met; T06 remains blocked"

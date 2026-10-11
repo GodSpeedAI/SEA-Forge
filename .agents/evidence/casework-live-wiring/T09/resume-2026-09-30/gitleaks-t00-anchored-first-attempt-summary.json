@@ -1,0 +1,6 @@
+{
+  "attempt": "20261005T231801Z",
+  "exit": 0,
+  "findings": 0,
+  "disposition": "setup inconclusive; no-T00 control failed to detect candidate content; the old redacted marker could not be recovered; no selector conclusion inferred"
+}

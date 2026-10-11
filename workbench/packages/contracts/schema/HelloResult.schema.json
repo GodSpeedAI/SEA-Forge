@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelloResult",
+  "description": "`system.hello` result body.",
+  "type": "object",
+  "properties": {
+    "implemented_methods": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "protocol_version": {
+      "description": "Echo of the version the client requested and that was accepted.",
+      "type": "string"
+    },
+    "server_protocol_version": {
+      "description": "The server's own supported protocol version.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "server_protocol_version",
+    "implemented_methods"
+  ]
+}

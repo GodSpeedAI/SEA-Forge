@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RequestRecord",
+  "description": "The persisted correlation record for one `request_id`.",
+  "type": "object",
+  "properties": {
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "locator": {
+      "description": "The durable artifact this admitted request was bound to, written BEFORE\nthe effect's first ledger write. For `case.commit` this is the minted\ncase id; the startup settlement uses it to reconcile a crash that landed\nafter the commit's durable append (whose honest outcome is \"completed\",\nnot \"interrupted\"). Additive and optional.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "method": {
+      "type": "string"
+    },
+    "outcome": {
+      "description": "The original response value once the request reached a terminal state."
+    },
+    "payload_hash": {
+      "description": "Hash of the request payload this id was first used for (SF-006).\nAdditive and optional: records written before SF-006 have none, and a\nrecord without one is not dedupeable (see [`RequestCorrelationStore::check`]).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RequestStatus"
+    },
+    "submitted_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "method",
+    "status",
+    "submitted_at"
+  ],
+  "$defs": {
+    "RequestStatus": {
+      "description": "Lifecycle status of a correlated request.",
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ]
+    }
+  }
+}

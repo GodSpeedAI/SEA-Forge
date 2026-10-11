@@ -1,0 +1,5 @@
+=== RUN   TestLiveExecutionProducesAcceptedArtifacts
+    live_execution_test.go:26: keeping cell at /tmp/sfwp-live-debug-709598585
+--- PASS: TestLiveExecutionProducesAcceptedArtifacts (0.11s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.121s

@@ -1,0 +1,6 @@
+VERIFY-BREADTH: FAIL (5 findings, 187 checks)
+  - T29 evidence-manifest.yml missing
+  - d* mismatch: recorded 3 != recomputed 2
+  - g3-separation.yaml d_star disagrees with recomputation
+  - route record must record d*-1 as not firing
+  - observer: route-record.yaml changed after the route closed (observer contamination)

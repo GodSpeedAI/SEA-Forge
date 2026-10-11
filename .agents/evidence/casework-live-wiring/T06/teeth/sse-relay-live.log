@@ -1,0 +1,9 @@
+=== RUN   TestLiveSSERelayOfKernelFramesWithResume
+    server_live_test.go:163: collected first snapshot; events seen so far: [snapshot id=01M3DBK2AWM7N0TQ9PAWV2TCDV]
+--- PASS: TestLiveSSERelayOfKernelFramesWithResume (0.45s)
+=== RUN   TestLiveTemplateEndpoints
+live preflight digest: sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd
+--- PASS: TestLiveTemplateEndpoints (0.04s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.490s
+EXIT=0

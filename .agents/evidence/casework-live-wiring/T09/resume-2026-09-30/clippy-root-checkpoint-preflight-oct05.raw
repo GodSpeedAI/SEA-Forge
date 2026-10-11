@@ -1,0 +1,144 @@
+Mon Oct  5 17:34:26 UTC 2026
+MemTotal:        8132712 kB
+MemAvailable:    3185796 kB
+SwapTotal:      12582912 kB
+SwapFree:        1583404 kB
+    PID COMMAND           RSS
+ 393814 .cline          1031580
+   1709 node            408456
+ 383827 node            396020
+  38102 codex           322356
+   1528 node            286088
+   1613 node            280208
+   4442 claude          252524
+   2559 language_server 170504
+    703 MainThread      150260
+ 384376 language_server 126076
+   5511 node            89660
+  38680 codex           77344
+  39399 node-MainThread 71212
+   1562 node            68584
+1541351 node-MainThread 59400
+1541828 node-MainThread 58664
+   5695 zcode-cli       50556
+1541349 node-MainThread 49020
+1541347 node-MainThread 47708
+1541372 node-MainThread 43876
+ 404946 .cline          37620
+  38911 node-MainThread 36944
+     48 systemd-journal 30356
+   4679 bun             24824
+1472686 codex-code-mode 23988
+    337 MainThread      21224
+ 383828 node            18128
+ 280671 node            18012
+    203 snapd           17720
+   3252 node            14740
+ 470172 node            14044
+ 384078 node            12620
+    165 snapfuse        12552
+  39543 node-MainThread 12428
+1541311 serena          12416
+  39104 node-MainThread 12364
+ 471033 node            11792
+ 471026 node            11272
+ 471128 node            11204
+1580978 git-remote-http 10632
+1580983 git-remote-http 10520
+   4851 node-MainThread  9532
+1541296 node             9456
+1541302 node             8872
+1541304 node             8572
+1541804 node             8388
+  38204 codex            8320
+1541297 node             8296
+      1 systemd          7864
+1575008 sleep            7732
+    294 systemd          6356
+   5751 zcode-node-repl  6160
+1580976 git              5388
+1580979 git              5356
+     83 systemd-udevd    5160
+  38019 xdg-desktop-por  5000
+1552635 polkitd          4972
+ 384922 node-MainThread  4896
+ 385612 chrome-devtools  4832
+ 393694 node-MainThread  4820
+    338 MainThread       4816
+1580987 ps               4320
+  38041 xdg-desktop-por  4312
+  38929 node-MainThread  4308
+    204 systemd-logind   4300
+  38928 node-MainThread  4292
+  39360 node-MainThread  4284
+  39364 node-MainThread  4244
+  39363 node-MainThread  4112
+    282 unattended-upgr  4060
+  38915 node-MainThread  4052
+     80 systemd-resolve  3968
+    196 dbus-daemon      3956
+  39308 serena           3944
+  38873 serena           3932
+   3558 chrome-devtools  3924
+   4647 serena           3912
+1463466 bash             3844
+  38029 xdg-document-po  3792
+   4766 node-MainThread  3744
+  38017 dbus-daemon      3744
+1580977 git              3732
+1580981 git              3712
+    200 networkd-dispat  3700
+    215 rsyslogd         3696
+   3624 node-MainThread  3680
+1580982 bash             3488
+ 392648 bash             3476
+ 384251 bash             3464
+  38083 dbus-daemon      3408
+    261 chronyd          3372
+  38074 at-spi-bus-laun  3360
+   1833 bash             3280
+  38088 at-spi2-registr  3184
+   1831 bash             3100
+    456 login            3036
+   1489 bash             2976
+  38024 xdg-permission-  2964
+    195 cron             2692
+  39079 node             2668
+   3529 node             2652
+ 393656 node             2644
+   3441 node             2632
+ 384834 node             2632
+  38869 node             2628
+  39315 node             2628
+   4822 node             2624
+  39327 node             2624
+  39330 node             2616
+  39316 node             2608
+   1825 bash             2596
+ 385514 node             2596
+  38868 node             2588
+  38872 node             2588
+  38877 node             2588
+   4757 node             2584
+  39537 node             2584
+    239 agetty           2476
+   2504 bash             2320
+    534 bash             2268
+  38035 fusermount3      2148
+    194 chronyd-starter  1888
+   1518 sh               1888
+    151 snapfuse         1532
+    305 (sd-pam)         1512
+    152 snapfuse         1464
+    275 chronyd          1448
+    162 snapfuse         1392
+1433926 nix-daemon        752
+      7 init              728
+      2 init-systemd(Ub   612
+   1487 Relay(1489)       540
+      3 init-watcher      420
+   5510 Relay(5511)       416
+   1485 SessionLeader     288
+   5509 SessionLeader     288
+   2726 node                0
+ 384651 node                0

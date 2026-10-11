@@ -1,0 +1,114 @@
+# Atomic UI View: case_horizon_and_adaptation
+# Upstream Behavioral Source: CJ05 Navigate and Adapt a Live Case
+
+view:
+  id: case_horizon_and_adaptation
+  purpose: Orient to live committed case work, explain transitions from evidence, inspect dependencies, and append authorized adaptations.
+
+sources:
+  journey: CJ05
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    case_identity: persistent
+    actor_identity: persistent
+    case_plan_version: persistent_across_views
+
+regions:
+  - id: case_header
+    responsibility: anchor_case_identity_status_and_intent
+  - id: plan_horizon_graph
+    responsibility: project_stages_milestones_and_sentry_dependencies
+  - id: active_items_table
+    responsibility: list_active_waiting_and_blocked_items
+  - id: run_episodes_timeline
+    responsibility: track_attempts_successors_and_retries
+  - id: adaptation_controls
+    responsibility: admit_discretionary_work_or_append_lifecycle_events
+
+elements:
+  # Case Header Region
+  - id: case_id_display
+    primitive: identity
+    region: case_header
+    binds: { entity: case_plan, field: case_id }
+
+  - id: case_status_badge
+    primitive: status
+    region: case_header
+    binds: { field: lifecycle_standing }
+
+  - id: case_intent_statement
+    primitive: value
+    region: case_header
+    binds: { field: original_intent }
+
+  # Plan Horizon Graph Region
+  - id: horizon_dependency_graph
+    primitive: graph
+    region: plan_horizon_graph
+    binds: { entity: plan_horizon }
+
+  - id: sentry_condition_inspector
+    primitive: inspector
+    region: plan_horizon_graph
+    binds: { entity: selected_sentry }
+
+  # Active Items Region
+  - id: plan_items_collection
+    primitive: collection
+    region: active_items_table
+    binds: { entity: enabled_and_waiting_items }
+
+  - id: item_blocker_message
+    primitive: message
+    region: active_items_table
+    binds: { field: blocking_sentry_explanation }
+
+  # Run Episodes Timeline Region
+  - id: episodes_history_timeline
+    primitive: timeline
+    region: run_episodes_timeline
+    binds: { entity: run_episodes }
+
+  - id: episode_evidence_receipt
+    primitive: evidence_item
+    region: run_episodes_timeline
+    binds: { field: episode_settlement_receipt }
+
+  # Adaptation Controls Region
+  - id: start_enabled_work_action
+    primitive: action
+    region: adaptation_controls
+    semantic_action: start_enabled_work
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: retry_as_successor_action
+    primitive: action
+    region: adaptation_controls
+    semantic_action: retry_failed_item_as_successor
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: append_replan_action
+    primitive: action
+    region: adaptation_controls
+    semantic_action: replan_or_reopen_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: terminate_case_action
+    primitive: action
+    region: adaptation_controls
+    semantic_action: case.terminate
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: case_horizon_loading }
+  ready: { when: case_active_and_horizon_projected }
+  blocked: { when: case_parked_waiting_sentry }
+  settled: { when: case_completed_or_terminated }
+  error: { when: case_fetch_failed }

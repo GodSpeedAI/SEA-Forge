@@ -1,0 +1,22 @@
+experiment_id: repeatability-deepseek-v4.1-flash
+N: 25
+R: 5
+single_call_mean_accuracy: 0.808
+per_rep_accuracy:
+- 0.8
+- 0.76
+- 0.8
+- 0.88
+- 0.8
+accuracy_stable: true
+unanimous_fraction: 0.64
+overall_answered_accuracy: 0.808
+aggregate_accuracy: 0.8
+baseline_accuracy: 0.48
+baseline_note: constant settled predictor (class prior)
+case_stability:
+  stable_correct: 15
+  stable_wrong: 1
+  stable_abstain: 0
+  unstable: 9
+interpretation: R1

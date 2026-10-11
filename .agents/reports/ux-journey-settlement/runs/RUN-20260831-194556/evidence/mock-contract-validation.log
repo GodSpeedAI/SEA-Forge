@@ -1,0 +1,49 @@
+[OK]   sfwp_query verb=readiness_get -> ReadinessView
+[OK]   sfwp_query verb=identity_get -> IdentityView
+[OK]   sfwp_query verb=case_entry_options -> EntryOptionsResult
+[OK]   sfwp_query verb=case_list -> CaseListResult
+[OK]   sfwp_query verb=case_get_overview -> CaseOverview
+[OK]   sfwp_query verb=case_get_horizon -> CaseHorizon
+[OK]   sfwp_query verb=approval_list -> ApprovalListResult
+[OK]   sfwp_query verb=run_list -> RunListResult
+[OK]   sfwp_query verb=run_get -> RunRecord
+[OK]   sfwp_query verb=asset_list -> AssetListResult
+[OK]   sfwp_query verb=delegation_preview -> DelegationPreviewResult
+[OK]   sfwp_query verb=delegation_list -> DelegationListResult
+[OK]   sfwp_query verb=case_preflight -> PreflightResult
+
+All mocked IPC responses are schema-valid against the real generated contracts.
+unknown format "uint32" ignored in schema at path "#/properties/uid"
+unknown format "uint32" ignored in schema at path "#/properties/uid"
+unknown format "uint" ignored in schema at path "#/$defs/CaseSummary/properties/run_count"
+unknown format "uint" ignored in schema at path "#/$defs/CaseSummary/properties/run_count"
+unknown format "uint" ignored in schema at path "#/properties/item_count"
+unknown format "uint" ignored in schema at path "#/properties/item_count"
+unknown format "uint" ignored in schema at path "#/properties/events_folded"
+unknown format "uint" ignored in schema at path "#/properties/events_folded"
+unknown format "uint" ignored in schema at path "#/properties/evidence_count"
+unknown format "uint" ignored in schema at path "#/properties/evidence_count"
+unknown format "uint64" ignored in schema at path "#/$defs/RecordPresence/properties/bytes"
+unknown format "uint64" ignored in schema at path "#/$defs/RecordPresence/properties/bytes"
+unknown format "int64" ignored in schema at path "#/$defs/RunTermination/properties/exit_code"
+unknown format "int64" ignored in schema at path "#/$defs/RunTermination/properties/exit_code"
+unknown format "uint64" ignored in schema at path "#/properties/instruction_bytes"
+unknown format "uint64" ignored in schema at path "#/properties/instruction_bytes"
+unknown format "uint64" ignored in schema at path "#/properties/max_request_bytes"
+unknown format "uint64" ignored in schema at path "#/properties/max_request_bytes"
+unknown format "uint64" ignored in schema at path "#/properties/max_response_bytes"
+unknown format "uint64" ignored in schema at path "#/properties/max_response_bytes"
+unknown format "uint32" ignored in schema at path "#/properties/max_turns"
+unknown format "uint32" ignored in schema at path "#/properties/max_turns"
+unknown format "uint64" ignored in schema at path "#/properties/timeout_secs"
+unknown format "uint64" ignored in schema at path "#/properties/timeout_secs"
+unknown format "uint64" ignored in schema at path "#/properties/token_budget"
+unknown format "uint64" ignored in schema at path "#/properties/token_budget"
+unknown format "uint32" ignored in schema at path "#/properties/max_turns"
+unknown format "uint32" ignored in schema at path "#/properties/max_turns"
+unknown format "uint64" ignored in schema at path "#/properties/token_budget"
+unknown format "uint64" ignored in schema at path "#/properties/token_budget"
+unknown format "uint32" ignored in schema at path "#/properties/tool_calls"
+unknown format "uint32" ignored in schema at path "#/properties/tool_calls"
+unknown format "uint32" ignored in schema at path "#/properties/turns_used"
+unknown format "uint32" ignored in schema at path "#/properties/turns_used"

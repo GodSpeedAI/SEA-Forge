@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.5, "distribution": {"settled": 0.5, "not_settled": 0.25, "insufficient_evidence": 0.25}, "reason": "No invocations, corrections, or evidence records are present, so the outcome cannot be judged from the provided records."}

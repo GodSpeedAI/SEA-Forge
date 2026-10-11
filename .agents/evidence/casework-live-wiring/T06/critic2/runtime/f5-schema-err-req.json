@@ -1,0 +1,19 @@
+{
+  "intent_id": "critic2-schema-err-2",
+  "kind": "CONSEQUENTIAL_CASE",
+  "action_name": "ADD_DISCRETIONARY_WORK",
+  "target_object_id": "",
+  "case_id": "case_20260926T014412Z_1b967f",
+  "client_cursor": "01M3DPB0PFANGCRYGEE8SC2WGP",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "parameters": {
+    "case_id": "case_20260926T014412Z_1b967f",
+    "stage_id": "no-such-stage",
+    "kind": "sandboxed_task",
+    "title": "Critic2 Bogus Anchor",
+    "justification": "Probing the plan_schema_error mapping."
+  }
+}

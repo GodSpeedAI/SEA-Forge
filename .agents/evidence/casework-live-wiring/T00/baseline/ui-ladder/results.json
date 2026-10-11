@@ -1,0 +1,250 @@
+[
+  {
+    "journey_id": "J0",
+    "title": "Boot / orientation substrate",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "A stable CORE-centred orientation surface from which selection is possible",
+    "unlocks": [
+      "J1"
+    ],
+    "steps": [
+      {
+        "journey": "J0",
+        "name": "app opens through the contract port",
+        "ok": true,
+        "ms": 17575
+      },
+      {
+        "journey": "J0",
+        "name": "CORE persists as a single rendered anchor",
+        "ok": true,
+        "ms": 4703
+      },
+      {
+        "journey": "J0",
+        "name": "VAR-001 quiet world stays sparse while data is hidden",
+        "ok": true,
+        "ms": 6109
+      },
+      {
+        "journey": "J0",
+        "name": "no heavy artifact renderer is loaded",
+        "ok": true,
+        "ms": 2396
+      },
+      {
+        "journey": "J0",
+        "name": "VAR-002 waking surfaces the consequential object among routine ones",
+        "ok": true,
+        "ms": 19867
+      },
+      {
+        "journey": "J0",
+        "name": "composer and chrome are available; work objects are selectable",
+        "ok": true,
+        "ms": 9945
+      }
+    ],
+    "total_ms": 62583
+  },
+  {
+    "journey_id": "J1",
+    "title": "Focus substrate",
+    "status": "FAIL",
+    "depends_on": [
+      "J0"
+    ],
+    "settles": "Focus is a reusable primitive that preserves CORE as orientation and object identity",
+    "unlocks": [
+      "J2",
+      "J3"
+    ],
+    "steps": [
+      {
+        "journey": "J1",
+        "name": "select a work object and fly into it",
+        "ok": true,
+        "ms": 39542
+      },
+      {
+        "journey": "J1",
+        "name": "CORE remains the home anchor and is not recreated",
+        "ok": true,
+        "ms": 3925
+      },
+      {
+        "journey": "J1",
+        "name": "local relationships and details are exposed",
+        "ok": true,
+        "ms": 12243
+      },
+      {
+        "journey": "J1",
+        "name": "unfocus returns through the hierarchy to Home",
+        "ok": true,
+        "ms": 3792
+      },
+      {
+        "journey": "J1",
+        "name": "focus again: identity and state survive",
+        "ok": false,
+        "ms": 42075,
+        "error": "same objects by identity after refocus"
+      }
+    ],
+    "total_ms": 113608,
+    "error": "same objects by identity after refocus"
+  },
+  {
+    "journey_id": "J2",
+    "title": "Artifact inspection substrate",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J0",
+      "J1"
+    ],
+    "settles": "Artifacts disclose progressively (pill → excerpt → viewer) without destroying spatial context",
+    "unlocks": [
+      "J4",
+      "J5",
+      "J6",
+      "J7"
+    ],
+    "blocked_by": "J1",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J3",
+    "title": "Representation-switching substrate",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J1"
+    ],
+    "settles": "Orbital, causal and comparison are projections of the same objects (identity, selection and state carry across)",
+    "unlocks": [
+      "J4",
+      "J6"
+    ],
+    "blocked_by": "J1",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J4",
+    "title": "Temporal + comparison substrate",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J2",
+      "J3"
+    ],
+    "settles": "Time/version and comparison are trustworthy operators that never mutate source history",
+    "unlocks": [
+      "J5",
+      "J9"
+    ],
+    "blocked_by": "J2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J5",
+    "title": "Narrated semantic-beat journey",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J2",
+      "J4"
+    ],
+    "settles": "Narration composes focus, arrangement, artifacts and time through the same grammar, and is interruptible",
+    "unlocks": [
+      "J9"
+    ],
+    "blocked_by": "J2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J6",
+    "title": "Causal reasoning journey",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J2",
+      "J3"
+    ],
+    "settles": "The causal projection is a working thinking representation with inspectable evidence",
+    "unlocks": [
+      "J7",
+      "J9"
+    ],
+    "blocked_by": "J2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J7",
+    "title": "Case Design journey",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J3",
+      "J6"
+    ],
+    "settles": "Case Design is a bounded thinking/proposal environment that never mutates authoritative state",
+    "unlocks": [
+      "J9"
+    ],
+    "blocked_by": "J3",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J8",
+    "title": "Consequential-action UI journey (contract adapter)",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J2",
+      "J7"
+    ],
+    "settles": "Human and agent consequences share one intent path; authority, execution, evidence and settlement are distinct",
+    "unlocks": [
+      "J9"
+    ],
+    "blocked_by": "J2",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "J9",
+    "title": "Integrated cognitive-environment journey (contract adapter)",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J4",
+      "J5",
+      "J6",
+      "J7",
+      "J8"
+    ],
+    "settles": "The full reference path works end to end on settled primitives, with no deep links",
+    "unlocks": [
+      "RECOVERY"
+    ],
+    "blocked_by": "J4",
+    "steps": [],
+    "total_ms": 0
+  },
+  {
+    "journey_id": "RECOVERY",
+    "title": "UI-level recovery (bounded failures)",
+    "status": "BLOCKED",
+    "depends_on": [
+      "J2",
+      "J4",
+      "J5"
+    ],
+    "settles": "Failures stay bounded; authoritative frontend state and the persistent Core survive",
+    "unlocks": [],
+    "blocked_by": "J2",
+    "steps": [],
+    "total_ms": 0
+  }
+]

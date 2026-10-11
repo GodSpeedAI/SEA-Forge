@@ -1,0 +1,13 @@
+=== go test -count=1 -tags casework_fixture ./internal/... (dev fixture stack still green) ===
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	0.011s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.283s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/artifactstore	0.016s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	0.007s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	0.017s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.033s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/coordinator	0.028s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	0.003s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	0.002s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.008s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.220s
+EXIT=0

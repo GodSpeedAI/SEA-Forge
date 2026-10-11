@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CriterionCheck",
+  "description": "One declared criterion paired with what the settlement record said about it.",
+  "type": "object",
+  "properties": {
+    "basis": {
+      "description": "The exact basis token(s) from `settlement.json` that decided this row.\nEmpty when `standing` is `unavailable` — the operator can then see the\nsettlement said nothing about it, rather than inferring a verdict.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "criterion": {
+      "description": "Stable machine key: `require_exit_zero`, `required_artifact`,\n`stdout_must_contain`, `agent_output_must_contain`, `require_approval`,\n`evaluator`, `batch`.",
+      "type": "string"
+    },
+    "expected": {
+      "description": "The criterion's declared value, as committed in the plan.",
+      "type": "string"
+    },
+    "standing": {
+      "$ref": "#/$defs/CriterionStanding"
+    }
+  },
+  "required": [
+    "criterion",
+    "expected",
+    "standing"
+  ],
+  "$defs": {
+    "CriterionStanding": {
+      "description": "Whether the settlement record judged a declared criterion satisfied.",
+      "oneOf": [
+        {
+          "description": "The settlement record's basis contains this criterion's passing token.",
+          "type": "string",
+          "const": "satisfied"
+        },
+        {
+          "description": "The settlement record's basis contains this criterion's failing token.",
+          "type": "string",
+          "const": "unsatisfied"
+        },
+        {
+          "description": "Observed and recorded, but not a pass/fail input to acceptance —\nevaluator scores (§10.6). Kept out of the pass/fail vocabulary on\npurpose: an evaluator score is evidence, never standing.",
+          "type": "string",
+          "const": "recorded"
+        },
+        {
+          "description": "No settlement record yet, or it recorded no token deciding this\ncriterion. Never assumed satisfied.",
+          "type": "string",
+          "const": "unavailable"
+        }
+      ]
+    }
+  }
+}

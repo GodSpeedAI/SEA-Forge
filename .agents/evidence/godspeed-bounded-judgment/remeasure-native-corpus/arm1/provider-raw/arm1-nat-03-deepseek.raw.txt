@@ -1,0 +1,1 @@
+{"answer": "not_settled", "confidence": 0.62, "distribution": {"settled": 0.2, "not_settled": 0.62, "insufficient_evidence": 0.18}, "reason": "Three builder iterations with three corrections and only a 'mock-e2e-lying' session producing unverified claims indicate repeated correction cycles unlikely to close within budget before acceptance."}

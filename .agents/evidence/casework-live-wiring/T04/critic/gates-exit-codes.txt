@@ -1,0 +1,6 @@
+EXIT=0 (attempt 1, log: gate-3crate-attempt1.log)
+EXIT=0 (attempt 1, log: gate-mutations-attempt1.log)
+EXIT=0 (attempt 1, log: gate-supervisor-attempt1.log)
+EXIT=0 (attempt 1, log: gate-templates-attempt1.log)
+EXIT=0 (attempt 1, log: gate-fmt-attempt1.log)
+EXIT=0 (attempt 1, log: gate-no-async-kernel-attempt1.log)

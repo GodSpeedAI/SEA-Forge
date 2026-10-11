@@ -1,0 +1,11 @@
+{
+  "template_ref": "tpl-service-migration-v2",
+  "params": {
+    "environment": "staging"
+  },
+  "passed": false,
+  "reasons": [
+    "Parameter target_service is required but was not provided.",
+    "The template as instantiated would leave the load verification item blocked with no path to unlock it."
+  ]
+}

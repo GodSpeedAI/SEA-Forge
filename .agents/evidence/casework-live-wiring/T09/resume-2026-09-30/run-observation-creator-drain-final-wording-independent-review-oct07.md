@@ -1,0 +1,25 @@
+# Independent review: final creator/drain wording — 2026-10-07
+
+**Verdict: APPROVE the private document proposal for bounded TDD source preparation.** This approves only the written lifecycle contract and the already specified three held-list tests as a source-preparation basis. It is not source, implementation, compiler, runtime, or lifecycle behavior approval.
+
+## Findings against the two required clarifications
+
+The reviewed erratum is `run-observation-creator-drain-final-wording-erratum-oct07.md`, SHA-256 `cc4dc777a389ec17bdd45462c9be492348964ae4e42f84ebea8268d6a2af85af`. Its assignment is `run-observation-creator-drain-final-wording-erratum-assignment-oct07.md`, SHA-256 `037292776b29f80a94b396a376d1e643c2aff0587c062f7db63a013a8811f208`.
+
+1. **Stop applies only to watcherless entries.** Erratum lines 7–13 narrows “marks its now-ineligible batch for stop” to entries that become watcherless after this lease's exact eligible membership is removed. It explicitly preserves an entry with another eligible lease and prohibits forcing it into phase 2/3, code 4, or no-read merely because the creator caller canceled. All immutable reserved entries still launch once; a failed creator returns zero DTO/nil lease; the surviving shared worker may make its actual initial read while the surviving Prepare has `ownerReads == 0`. This matches the reverse-membership clarification: `lease.pollers` plus `!lease.draining` determine eligibility, while `entry.refs` can remain only as noneligible drain ownership until actual JOIN. The earlier broad “batch” phrase no longer transfers cancellation or read authority across leases.
+
+2. **The 16 limit is logical ownership, not process resource cap.** Erratum lines 14–20 calls it a bound on logical waiting lease-drain owners for counted cohorts, plus the single global Stop owner, and expressly disclaims an instantaneous goroutine, heap, RSS, or process-memory bound. Its finalizer-tail explanation matches the supplement's actual removal-then-close order and avoids a false resource guarantee. It preserves the safety invariant that capacity release and completion closure follow actual JOIN.
+
+There is no contradiction with creator self-join ordering. The erratum's subject is a lease-drain owner and its completion is `drainDone`; the global Stop owner closes `stopDone`. It does not redefine `creatorDone`. The final supplement explicitly says the creator closes its exact `creatorDone` and balances its registration before waiting for its own drain (lines 41–43), and that a request creator finishes before waiting on a drain that may wait for it (lines 109–110). The original proposal assignment and Unit 1 contract also require creator registration to finish before its own rollback wait. Thus actual worker JOIN governs drain completion and capacity release, while `creatorDone` remains the earlier creator-finish signal; no self-join is introduced.
+
+## Caller-cancellation and lifecycle completeness
+
+The final supplement's admission correction remains intact: `prepareDone` is a required receive-only channel, obtained outside `m.mu`; the reservation helper performs a nonblocking channel check under the mutex before any attachment/reservation with the existing manager-stopping, exact lease-draining, and exact cohort-membership checks (final supplement lines 18–32). The third held-list test releases a successful readable candidate after caller cancellation and requires typed cancellation, zero DTO, nil lease, no trace call or candidate reservation, and bridge/creator completion before cohort reuse (lines 48–74). Post-reservation cancellation remains separately handled by owned rollback, mandatory immutable-batch launch, watcherless-only cancellation, and final DTO context check (lines 34–45).
+
+The amendment is documentation only. It adds no tests/source or state beyond those already authorized in the final correction assignment: both creator channels and exact-lease finish, the required reservation channel argument, eight manual call-shape adjustments, and three held-list cases remain preserved. The original nine assertions, manager fixture, and six primitive files stay frozen (final supplement lines 48–80). The erratum authorizes no additional behavior, test, field, or public surface.
+
+## Source identity check and limits
+
+All ten frozen files were rehashed; every digest matches the source table in the accompanying assignment. The final erratum and underlying records retain their expected hashes. This review does not claim the unwired lifecycle stubs implement these semantics and does not establish compilation or runtime correctness. Subsequent source review must verify watcherless-only cancellation, survivor eligibility, exact owner/close behavior, creatorDone-before-own-drain ordering, actual worker JOIN before drain completion/capacity release, and the caller-canceled successful-list test.
+
+No source or test changes, compiler, formatter, scanner, explicit Graft build, runtime gate, or Git action was performed. Root retains implementation and architecture decisions.

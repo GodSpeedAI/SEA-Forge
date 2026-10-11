@@ -1,0 +1,22 @@
+== Tooth 1: a provider payload type must not survive in the core ==
+   ok: scanner detected all 6 injected violation(s)
+   ok: with the provider type present the gate FAILS (leakage rejected):
+         boundary_test.go:157: boundary violation: internal/ports/zz_tooth_injected_leak.go:4 core identifier sfwpEnvelope names provider vocabulary (sfwp)
+   ok: with the injection removed the gate passes again
+
+== Tooth 2: missing required credential + unavailable optional adapter ==
+   ok: preflight blast-radius tests pass (3 test(s))
+   end-to-end exit code: 2 (expect 2 = refuse to proceed)
+     godspeed-casework: configuration loaded (version 1, cell_root "/tmp/gdsp/fixture-cell", evidence_root "/tmp/gdsp/fixture-evidence", 3 capability/ies, 1 resolved secret(s))
+       degraded  artifact       kind=artifact required=false err=unavailable: no adapter is registered for capability kind artifact (artifact/preflight)
+       blocking  authority      kind=authority required=true err=unavailable: no adapter is registered for capability kind authority (authority/preflight)
+       blocking  repository     kind=repository required=true err=config: credential indirection env:GODSPEED_FIXTURE_REPO_TOKEN is not set (repository/secret)
+     godspeed-casework: ready=[] degraded=[artifact] blocking=[authority repository]
+     godspeed-casework: refusing to proceed - 2 required capability/ies blocking (authority, repository)
+   note: the CLI cannot show a READY unrelated capability until real adapters are wired (T04/T05);
+         that half of the tooth is proven at contract level by TestPreflightBlastRadius above.
+
+== React contract boundary (the contract shape T01 owes; GATE_UI is T03's) ==
+   ok: no renderer, agent-framework, transport or provider reference in the contract package
+
+TEETH RESULT: both teeth behaved as specified

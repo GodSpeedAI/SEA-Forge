@@ -1,0 +1,168 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1079:5
+     |
+1079 |     #[test]
+     |     ^^^^^^^
+     |
+     = note: `#[warn(unnameable_test_items)]` on by default
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1098:5
+     |
+1098 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1120:5
+     |
+1120 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1139:5
+     |
+1139 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1161:5
+     |
+1161 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1176:5
+     |
+1176 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1190:5
+     |
+1190 |     #[test]
+     |     ^^^^^^^
+
+warning: function `an_unconfigured_gateway_refuses_every_delegation` is never used
+    --> crates/sea-forge-server/src/identity.rs:1080:8
+     |
+1080 |     fn an_unconfigured_gateway_refuses_every_delegation() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `an_actor_outside_the_allowlist_is_refused` is never used
+    --> crates/sea-forge-server/src/identity.rs:1099:8
+     |
+1099 |     fn an_actor_outside_the_allowlist_is_refused() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `a_role_the_end_user_does_not_hold_is_refused` is never used
+    --> crates/sea-forge-server/src/identity.rs:1121:8
+     |
+1121 |     fn a_role_the_end_user_does_not_hold_is_refused() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `an_allowlisted_actor_with_no_binding_is_refused` is never used
+    --> crates/sea-forge-server/src/identity.rs:1140:8
+     |
+1140 |     fn an_allowlisted_actor_with_no_binding_is_refused() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `the_gateway_claim_must_be_the_configured_gateway_actor` is never used
+    --> crates/sea-forge-server/src/identity.rs:1162:8
+     |
+1162 |     fn the_gateway_claim_must_be_the_configured_gateway_actor() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `a_gateway_role_it_does_not_hold_is_refused` is never used
+    --> crates/sea-forge-server/src/identity.rs:1177:8
+     |
+1177 |     fn a_gateway_role_it_does_not_hold_is_refused() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `the_gateway_may_not_act_as_itself` is never used
+    --> crates/sea-forge-server/src/identity.rs:1191:8
+     |
+1191 |     fn the_gateway_may_not_act_as_itself() {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `sea-forge-server` (lib test) generated 14 warnings
+    Finished `test` profile [unoptimized] target(s) in 40.61s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_server-335b5ae014bcc92d)
+
+running 15 tests
+test identity::tests::a_claim_for_another_uids_actor_is_refused ... ok
+test identity::tests::a_bound_actor_on_its_own_uid_resolves ... ok
+test identity::tests::a_direct_resolution_carries_no_delegation ... ok
+test identity::tests::a_binding_with_no_roles_authorizes_nothing ... ok
+test identity::tests::a_malformed_actor_block_reads_as_absent ... ok
+test identity::tests::a_missing_claim_is_refused_before_anything_else ... ok
+test identity::tests::a_non_gateway_uid_sending_on_behalf_of_is_refused ... ok
+test identity::tests::a_role_the_actor_does_not_hold_is_refused ... ok
+test identity::tests::an_unconfigured_cell_refuses_every_protected_verb ... ok
+test identity::tests::an_actor_block_is_read_off_the_raw_line ... ok
+test identity::tests::an_on_behalf_of_block_is_read_off_the_raw_line ... ok
+test identity::tests::the_end_users_binding_uid_is_not_the_connection_uid ... ok
+test identity::tests::an_unverifiable_peer_is_refused_even_with_a_valid_claim ... ok
+test identity::tests::the_gateway_may_act_for_an_allowlisted_end_user ... ok
+test identity::tests::describe_delegated_reports_the_effective_actor_and_refusals ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 88 filtered out; finished in 0.00s
+

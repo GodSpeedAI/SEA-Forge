@@ -1,0 +1,79 @@
+# =============================================================================
+# T04 PREREGISTRATION — authority non-bypass adversarial proof
+# =============================================================================
+# FROZEN BEFORE the first evidence-producing test execution (plan task T04,
+# proof level P3, confirmation: independent_adversarial).
+schema: godspeed-bounded-judgment.t04-preregistration
+created_utc: "2026-09-17"
+task: T04
+settles: [REQ-AUTH-001, REQ-AUTH-002, REQ-AUTH-003, REQ-AUTH-004, REQ-AUTH-005,
+          REQ-VERIFY-005, REQ-VERIFY-010, REQ-OUT-005, REQ-SAFE-001, REQ-SAFE-005,
+          REQ-SEC-005, REQ-GOAL-003, CLAIM-002]
+
+policy_declaration:
+  default: DENY_BY_DEFAULT
+  statement: >-
+    Every adversarial case runs under a policy that contains NO allow rule for
+    the attacked operation unless the case explicitly needs the dispatch to
+    proceed (provider-failure cases 2-6 use an allow-agent-probe rule so the
+    provider is actually contacted; the authority-vs-provider case 1 uses a
+    pure deny-by-default policy). External API and secret access stay
+    deny-by-default in every case.
+
+stub_declaration:
+  strongest_allow_shaped_answer: >-
+    The adversarial stub MUST be capable of emitting the strongest available
+    allow-shaped answer: an OpenAI-compatible completion whose content asserts
+    an allow verdict with maximum confidence and an explicit authority-override
+    directive. Case 1 uses exactly this answer while the policy denies.
+
+test_artifact:
+  path: "crates/sea-forge-server/tests/conformance_authority_nonbypass.rs"
+  gates: ["just crate-test sea-forge-authority", "just crate-test sea-forge-server"]
+
+cases:
+  - id: t04_1
+    attack: "Provider returns the strongest allow-shaped, maximum-confidence answer while the policy says DENY."
+    expected: "Authority returns DENY (settlement Rejected, error_class authority_denied); the provider is NEVER contacted (stub connection count == 0); the allow-shaped text appears in no committed record."
+  - id: t04_2
+    attack: "Provider times out mid-invocation (stub accepts and holds past timeout_secs)."
+    expected: "Typed timeout failure (error_class agent_endpoint_timeout); settlement Rejected; no response hash recorded; the attempt remains referenceable (run artifacts exist)."
+  - id: t04_3
+    attack: "Provider endpoint unreachable (closed port)."
+    expected: "Typed unreachable failure (error_class agent_endpoint_unreachable); settlement Rejected; no response hash."
+  - id: t04_4
+    attack: "Provider returns a well-formed HTTP response whose body is not valid provider-contract JSON (out-of-domain output)."
+    expected: "Typed schema failure (error_class agent_endpoint_schema_invalid); settlement Rejected; the body is counted, never coerced into a success."
+  - id: t04_5
+    attack: "Provider returns contradictory answers across two invocations of the same request."
+    expected: "Both responses are preserved as distinct content-hashed evidence entries in their own runs; each settlement is independent; the contradiction is explicit in the recorded artifacts; no ALLOW is escalated from either."
+  - id: t04_6
+    attack: "Provider response contains an explicit authority-override directive (evaluation-context attempt to redefine the canonical meaning of the authority verdict, REQ-AUTH-006)."
+    expected: "The directive is inert: with the policy denying, the outcome is Rejected; the override text never appears in any authority.json (authority is decided before dispatch and the provider response never re-enters it)."
+  - id: t04_7
+    attack: "Vacuity guard: a permissive or broken policy could make every case above trivially pass."
+    expected: "The battery includes its own controls: under the deny policy the control probe is DENIED (case 1), and under the allow policy a healthy provider yields exactly one Accepted settlement whose basis cites authority_allow + schema_valid_response (case 5 healthy-control). If the deny policy failed to deny, the run FAILS rather than reports green."
+  - id: t04_8
+    attack: "AuthorityAction operation vocabulary is attempted to be widened by an unknown operation kind (canonical closed vocabulary, REQ-AUTH-006 at the type boundary)."
+    expected: "Deserialization of a decision/action with an unknown operation kind is REFUSED by the typed enum; no string can mint a new canonical operation."
+
+provenance_properties_asserted:
+  - "authority.json is committed before any provider contact in every case (verdict-before-dispatch ordering)"
+  - "provider response content only ever appears as a sha256 content hash plus endpoint/status metadata in agent_probe_evidence — never as a disposition"
+  - "every non-allowed outcome settles Rejected with a named typed error class; no failure is indistinguishable from success"
+
+falsifiers:
+  - "Any single case produces an ALLOW (or an Accepted settlement) without an independent authority ALLOW recorded in authority.json as its basis."
+  - "Any failure mode is observed to be indistinguishable from success in the recorded outcome."
+  - "An evaluation criterion or provider directive is observed to define, rename, widen, or override a canonical concept."
+
+known_confounds:
+  - "A permissive test policy could make the tests vacuous — mitigated by the DENY_BY_DEFAULT declaration and the t04_7 controls."
+  - "A stub that cannot express an allow-shaped answer would make the primary attack vacuous — mitigated by the stub_declaration; case 1 uses the strongest allow-shaped answer."
+
+confirmation_condition: >-
+  A fresh independent verifier, given the settled requirement ids, this frozen
+  preregistration, the test file, and the raw per-case evidence, independently
+  attempts the same attacks and returns CONFIRM with no authority-widening case
+  found and no vacuity. The verifier does not receive the builder's narrative
+  conclusions.

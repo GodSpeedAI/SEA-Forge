@@ -1,0 +1,29 @@
+utc=2026-10-07T22:58:52Z
+MemAvailable:=3993596 kB
+SwapFree:=8792860 kB
+               total        used        free      shared  buff/cache   available
+Mem:            7944        4044         227         542        4434        3900
+Swap:          12288        3701        8586
+competing_go_rust_compilers=0
+cwd=/home/sprime01/projects/sea-rs
+7c65be70ecf14c77df1a7749e9fa5526e28eabc1
+f9321a620ad64546e735b936d0b58b9f514eab0d7c6d0325f1e7a82f37c5e314  apps/godspeed-casework-go/internal/server/run_observation_manager.go
+f90cd397cd983e42e53498f13baa89fbfeac54e07eb3847b3228592ddd4d929f  apps/godspeed-casework-go/internal/server/run_observation_poller_worker.go
+4ff2fe1c922d6ae7e232d5a58f201298e232807437967fe22a9316dcb45aa0f3  apps/godspeed-casework-go/internal/server/run_observation_manager_failure_test.go
+af2dfcb8c83d8a53186d8e446a11de35ce51d45cac74461ea3c3f971d0da30c4  apps/godspeed-casework-go/internal/server/run_observation_manager_test.go
+a6f0114d73aefdf816d35df7fd0b18d708924c3d673f78472e79c283bef3557b  apps/godspeed-casework-go/internal/server/run_observation_key.go
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  apps/godspeed-casework-go/internal/server/run_observation_retained_version.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7  apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go
+e156c9cf0281baa4e532131be2606a280c846de2f2e3ce9b4fa3dc03509d3f28  apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+3dba418f6f4920f89bb10ec59e9b77076e3005d3a03d7504212887369b5ed3f9  apps/godspeed-casework-go/internal/server/run_observation_poller_image.go
+cf501bf7d65a413a2c575b951980be3d0e301f3515a991682680b2d3baa4f256  apps/godspeed-casework-go/internal/server/run_observation_manager_retained_image_test.go
+121:func TestRunObservationManagerFailureStopWinsBetweenReserveAndLaunch(t *testing.T) {
+172:func TestRunObservationManagerFailureDetachWinsBeforeFirstReadUsesDrainingCode4(t *testing.T) {
+215:func TestRunObservationManagerFailureClaimThenStopUsesWorkerContinuation(t *testing.T) {
+253:func TestRunObservationManagerFailureStopJoinsHeldActualRead(t *testing.T) {
+316:func TestRunObservationManagerFailureGlobalStopReleasesDistinctPendingLeases(t *testing.T) {
+395:func TestRunObservationManagerFailureCanceledPrepareLeavesAuthorizedLease(t *testing.T) {
+471:func TestRunObservationManagerFailureDetachAndSelectedAReleaseHaveOneOwner(t *testing.T) {
+538:func TestRunObservationManagerFailureSharedFirstReadErrorIsSuccessfulA(t *testing.T) {
+622:func TestRunObservationManagerFailureOversizedNilKeyIsAWithoutAdmission(t *testing.T) {
+9

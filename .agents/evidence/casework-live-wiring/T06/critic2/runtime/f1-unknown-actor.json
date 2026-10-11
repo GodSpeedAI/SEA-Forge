@@ -1,0 +1,1 @@
+{"error":{"kind":"authority_denied","note":"the kernel does not allow this connection to act as operator_c: authority_denied: delegated identity refused: actor `operator_c` is not in this cell's gateway-delegable allowlist (identity)"}}

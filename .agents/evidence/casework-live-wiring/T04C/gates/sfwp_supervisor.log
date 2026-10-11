@@ -1,0 +1,6 @@
+test supervisor_and_client_advance_serialize_on_the_same_case ... ok
+test supervisor_never_completes_human_tasks_or_creates_approvals ... ok
+test supervisor_enabled_auto_advances_ready_sandboxed_task_without_a_client ... ok
+test default_config_never_auto_advances_a_ready_sandboxed_task ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.64s
+EXIT=0

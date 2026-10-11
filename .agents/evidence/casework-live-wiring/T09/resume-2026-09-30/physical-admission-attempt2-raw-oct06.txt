@@ -1,0 +1,44 @@
+--- FAIL: TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts (0.00s)
+    client_run_get_admission_test.go:64: listen unix /tmp/sfwp-fake-1221224873/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientAdmissionCountsAllFourRunGetRetryAttempts (0.00s)
+    client_run_get_admission_test.go:88: listen unix /tmp/sfwp-fake-890299070/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission (0.00s)
+    client_run_get_admission_test.go:122: listen unix /tmp/sfwp-fake-2561324763/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestMutationTransportFailureIsNotResentThroughAdmission (0.00s)
+    client_run_get_admission_test.go:175: listen unix /tmp/sfwp-fake-3987936275/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientAdmissionMarksPayloadAndLFWriteBoundary (0.00s)
+    client_run_get_admission_test.go:203: listen unix /tmp/sfwp-fake-436214045/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure (0.00s)
+    --- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/partial_payload (0.00s)
+        client_run_get_admission_test.go:305: attempt completion accounting=[]; every started partial/LF attempt must finish before cleanup (hook currently absent)
+    --- FAIL: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/LF_write_error (0.00s)
+        client_run_get_admission_test.go:305: attempt completion accounting=[]; every started partial/LF attempt must finish before cleanup (hook currently absent)
+--- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish (0.00s)
+    --- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_payload (0.00s)
+        client_run_get_admission_test.go:399: blocked attempt did not finish exactly once after write return: [payload-write-blocked payload-write-returned] (client hook currently absent)
+    --- FAIL: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_LF (0.00s)
+        client_run_get_admission_test.go:399: blocked attempt did not finish exactly once after write return: [payload-write lf-write-blocked lf-write-returned] (client hook currently absent)
+--- FAIL: TestClientAdmissionReleaseFollowsCancellationAndConnectionRetirement (0.00s)
+    client_run_get_admission_test.go:513: connection retirement/permit release order=[connection-close connection-close connection-close], want close before release (hook currently absent)
+--- FAIL: TestRunGetLimiterContract (0.00s)
+    --- FAIL: TestRunGetLimiterContract/same_run_remains_excluded_while_a_permit_is_owned (0.00s)
+        run_get_admission_test.go:32: first same-run admission: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/matching_run_reuses_its_eligible_slot_without_falling_through (0.00s)
+        run_get_admission_test.go:49: eligible matching slot was not acquired: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/matching_cooling_slot_does_not_fall_through_to_another_eligible_slot (0.00s)
+        run_get_admission_test.go:63: matching run bypassed its cooling slot: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/unexpired_idle_and_busy_slots_are_not_evicted (0.00s)
+        run_get_admission_test.go:80: third run returned instead of waiting for eligible record: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/different_runs_have_at_most_two_simultaneous_owners (0.00s)
+        run_get_admission_test.go:95: first distinct run: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/queued_deadline_returns_typed_unavailable (0.00s)
+        run_get_admission_test.go:127: queued acquisition returned before deadline wait: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/release_before_any_write_leaves_cooldown_clear (0.00s)
+        run_get_admission_test.go:138: prewrite admission: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/cooldown_begins_at_final_attempted_write_completion (0.00s)
+        run_get_admission_test.go:152: acquire run_get: unavailable: physical run_get admission is not implemented (run_get_admission)
+    --- FAIL: TestRunGetLimiterContract/busy_same-run_wait_ignores_expired_unrelated_deadlines_and_wakes_on_permit_release (0.00s)
+        run_get_admission_test.go:176: acquire run-a owner: unavailable: physical run_get admission is not implemented (run_get_admission)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.026s
+FAIL

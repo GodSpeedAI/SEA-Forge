@@ -1,0 +1,2297 @@
+schema: agent.development_plan
+schema_version: '1.0'
+metadata:
+  id: sea-forge.trusted-daemon-target
+  title: SEA-Forge Trusted Daemon Development Settlement Plan
+  status: draft
+  version: 0.1.0
+  created: '2026-09-30'
+  purpose: Project the trusted-daemon normative specification into a dependency-ordered settlement graph that preserves the
+    current full-spec substrate, uses pinned donor repositories as local references under `.tmp/ref/`, and reaches a verified
+    end state where semantic authority, information flow, credentials, egress, containment, projection fidelity, evidence,
+    Cognate, and Gauntlet compose through one fail-closed daemon boundary.
+  execution_activation_gate: 'The source spec file currently declares `metadata.status: draft`. Before T00 can settle for
+    implementation, the user/owner MUST freeze/approve the exact spec bytes. If approval changes the file bytes (including
+    metadata), recompute the SHA-256 in this plan and revalidate traceability; do not execute against a mismatched hash.'
+source:
+  spec:
+    intended_repository_path: .agents/specs/sea-forge.trusted-daemon-target.spec.yml
+    artifact_name: sea-forge-trusted-daemon-target-spec_v0.1.0.yml
+    spec_id: sea-forge.trusted-daemon-target
+    spec_version: 0.1.0
+    sha256: 09822b59756cc842db410c91f030d373b7f3bf6e1114c9a7e7c977062492e70b
+    observed_metadata_status: draft
+    authority: normative
+  implementation_brief:
+    intended_repository_path: .agents/reports/sea-forge-trusted-daemon/implementation-brief.yaml
+    authority: non_normative_execution_context
+    conflict_rule: The normative specification governs. Any conflict MUST be surfaced as a blocked decision rather than silently
+      resolved by the implementing agent.
+  supporting_sources:
+  - path: AGENTS.md
+    role: Repository execution invariants, gates, safety boundaries, and local memory contract.
+  - path: .agents/CURRENT_STATUS.md
+    role: Mutable evidence of current implementation state; may be stale and never overrides the target spec.
+  - path: .agents/specs/spec-minimum.md
+    role: Existing minimum-kernel contracts that must not regress unless the new normative spec explicitly supersedes them.
+  - path: .agents/specs/spec-full.md
+    role: Existing full-system contracts and earned implementation evidence to preserve or explicitly supersede.
+  - path: justfile
+    role: Canonical project command surface; this plan reuses it rather than creating duplicate global gates.
+  - path: .agents/evidence/sea-forge-trusted-daemon/T00/donor-manifest.yaml
+    role: Pinned donor/reference provenance and license/copy policy created by T00.
+  - path: .agents/evidence/sea-forge-trusted-daemon/T00/donor-pattern-map.yaml
+    role: Pattern-level mapping from OpenShell, OpenAPPA, Gauntlet, and Cognate into SEA-Forge abstractions; non-normative.
+target_settlement: SEA-Forge runs as a trusted local daemon boundary for governed consequence. Every supported consequential
+  request is canonicalized, evaluated against one exact policy/semantic/trajectory snapshot, and either denied/escalated/remediated/unsupported
+  or issued an exact non-widenable EnforcementGrant. Execution proceeds only when projection fidelity and backend CapabilityReport
+  prove the required filesystem/process/network/credential/information/evidence guarantees. Information restrictions survive
+  agent/subagent trajectories; raw credentials remain behind a trusted broker; egress and containment are grant-derived; execution/evidence
+  correlate through Cognate/RealityTrace where present; Gauntlet can navigate governance outcomes without authorizing itself;
+  stale state, restart, unsupported targets, and indeterminate commits fail safely. The entire claim is replayable, adversarially
+  tested, independently confirmed, and does not depend on `.tmp/ref/` donors at runtime/build time.
+operating_contract:
+  core_principle: 'Preserve one semantic authority fabric above all adapters and enforcement mechanisms: donor patterns, application
+    policy, runtime convenience, and backend availability may narrow or implement a decision, but none may invent meaning,
+    authority, declassification, or a weaker enforcement interpretation.'
+  rules:
+  - Execute tasks by dependency, not by narrative order.
+  - Independent tasks MAY run in parallel only after all declared dependencies are settled.
+  - Every task MUST leave the repository in a coherent state with all applicable global gates green.
+  - A task is not complete because code exists, a process starts once, the builder reports success, or a happy-path test passes.
+  - A passing gate proves only what that gate actually observes.
+  - High-risk P3 work requires fresh independent/adversarial confirmation.
+  - Do not generalize from one observation unless the normative requirement is itself general.
+  - Do not silently widen domain, schema, API, config, service, or authority surfaces when an existing representation can
+    preserve the required distinction.
+  - Runtime/machine/provider-specific facts belong in the project's established config/secret hierarchy rather than scattered
+    hardcoding.
+  - Preserve failed evidence and correction history.
+  - T00 MUST copy/clone the approved donors/references into ignored `.tmp/ref/` at exact pinned commits before donor-derived
+    implementation work begins.
+  - Donor trees under `.tmp/ref/` are read-only evidence/reference inputs, never production runtime/build dependencies, submodules,
+    or sources of normative authority.
+  - When a task borrows a donor pattern or substantial code, record exact donor path, commit, license, adopted invariant,
+    SEA-Forge adaptation, and any rejected donor assumptions in task evidence.
+  - Prefer existing SEA-Forge crates/types/ports. Create a new crate or public abstraction only when the current boundary
+    would violate a normative requirement or dependency invariant.
+  - Do not change `.sea` grammar for a new backend/provider/projection unless a genuine missing semantic distinction is demonstrated
+    and the source spec is explicitly revised.
+  - Keep kernel crates synchronous and free of HTTP/async dependencies unless the repository's normative boundary is explicitly
+    changed; async/network implementation belongs in server/adapters.
+  - Authority and isolation remain distinct controls; inability to enforce one is not repaired by claiming the other.
+  - Never weaken an acceptance condition because a donor or platform cannot satisfy it; classify unsupported/narrower capability
+    instead.
+  claim_states:
+  - OBSERVED
+  - INFERRED
+  - DECIDED
+  - ASSUMED
+  - UNKNOWN
+  correction_protocol:
+  - Preserve the failed evidence.
+  - 'Classify the failure: implementation, oracle/test, representation, missing prerequisite, environmental confound, or source-spec
+    ambiguity.'
+  - Determine whether the governing requirement/invariant remains valid.
+  - Correct the smallest falsified layer.
+  - Rerun the original teeth/falsification check.
+  - Rerun the original confirmation path.
+  - Append the correction round; do not erase the failed round.
+  - Do not weaken acceptance merely because the implementation repeatedly fails it.
+  scope_control: A newly discovered issue enters the current plan only when it blocks a normative requirement or is itself
+    required by the source specification. Valuable but independent discoveries become future debt/plans. Attractive architecture
+    with no requirement is rejected from current scope.
+artifacts:
+  current_status: .agents/CURRENT_STATUS.md
+  decision_log: .agents/reports/sea-forge-trusted-daemon/decision-log.yaml
+  evidence_root: .agents/evidence/sea-forge-trusted-daemon
+  reports_root: .agents/reports/sea-forge-trusted-daemon
+  preregistration_root: .agents/preregistrations/sea-forge-trusted-daemon
+  donor_reference_root: .tmp/ref/
+  status_rule: Mutable current status is an operational projection and MUST NOT become a source of desired-state or normative
+    authority.
+verification:
+  global_gates:
+  - id: G-CONTEXT
+    command: devbox run -- just context-check
+  - id: G-CHECK
+    command: devbox run -- just check
+  - id: G-TEST
+    command: devbox run -- just test
+  - id: G-PROOF
+    command: devbox run -- just proof
+  - id: G-CI
+    command: devbox run -- just ci
+  gate_binding_rule: Reuse existing `just` recipes and crate-level cargo tests as the implementation surface. New integration
+    names MAY be added behind the existing `just integration <name>` entry point; do not duplicate fmt/lint/typecheck/security/test
+    logic in new scripts. A task-specific test may be added where the behavior does not yet have an oracle.
+  proof_levels:
+    P0: Mechanical/deterministic change. Requires a narrow direct gate plus applicable global gates.
+    P1: Normal behavioral work. Requires positive behavior, a meaningful teeth/falsification check, and applicable global
+      gates.
+    P2: Invariant-sensitive work. Requires an explicit or preregistered claim, meaningful adversarial/negative evidence, an
+      evidence artifact, applicable global gates, and review of a plausible alternate failure path.
+    P3: Settlement-critical work. Requires frozen preregistration, builder evidence, explicit adversarial attacks, fresh independent
+      confirmation, and correction/re-confirmation after any failed confirmation.
+dependency_graph:
+  edges:
+  - - T00
+    - T01
+  - - T00
+    - T02
+  - - T01
+    - T03
+  - - T02
+    - T03
+  - - T03
+    - T04
+  - - T03
+    - T05
+  - - T05
+    - T06
+  - - T03
+    - T07
+  - - T05
+    - T07
+  - - T01
+    - T08
+  - - T02
+    - T08
+  - - T08
+    - T09
+  - - T03
+    - T10
+  - - T09
+    - T10
+  - - T08
+    - T11
+  - - T09
+    - T11
+  - - T10
+    - T11
+  - - T03
+    - T12
+  - - T04
+    - T12
+  - - T05
+    - T12
+  - - T03
+    - T13
+  - - T05
+    - T13
+  - - T08
+    - T13
+  - - T09
+    - T13
+  - - T12
+    - T13
+  - - T03
+    - T14
+  - - T07
+    - T14
+  - - T08
+    - T14
+  - - T10
+    - T14
+  - - T04
+    - T15
+  - - T07
+    - T15
+  - - T10
+    - T15
+  - - T12
+    - T15
+  - - T13
+    - T15
+  - - T14
+    - T15
+  - - T04
+    - T16
+  - - T10
+    - T16
+  - - T11
+    - T16
+  - - T14
+    - T16
+  - - T04
+    - T17
+  - - T05
+    - T17
+  - - T06
+    - T17
+  - - T13
+    - T17
+  - - T03
+    - T18
+  - - T04
+    - T18
+  - - T08
+    - T18
+  - - T12
+    - T18
+  - - T13
+    - T18
+  - - T14
+    - T18
+  - - T11
+    - T19
+  - - T15
+    - T19
+  - - T16
+    - T19
+  - - T17
+    - T19
+  - - T18
+    - T19
+  - - T19
+    - T20
+  critical_path:
+  - T00
+  - T02
+  - T03
+  - T05
+  - T07
+  - T14
+  - T15
+  - T19
+  - T20
+  parallel_tracks:
+  - name: identity-and-policy-foundation
+    after: T00
+    tasks:
+    - T01
+    - T02
+    - T08
+  - name: enforcement-and-projection
+    after: T03
+    tasks:
+    - T05
+    - T06
+    - T07
+  - name: information-flow-and-delegation
+    after: T08
+    tasks:
+    - T09
+    - T10
+    - T11
+  - name: trusted-mediation
+    after: T04
+    tasks:
+    - T12
+    - T13
+  - name: integration-and-portability
+    after: T14
+    tasks:
+    - T15
+    - T16
+    - T17
+    - T18
+  settlement_sequence:
+  - Freeze baseline and donor evidence.
+  - Stabilize canonical identity, policy snapshots, and exact grants.
+  - Make enforcement capability/projection and trajectory information state explicit.
+  - Add bounded remediation, delegation confinement, credential brokering, and request-level egress.
+  - Bind evidence/correlation and prove Cognate/Gauntlet integrations.
+  - Reproduce native-platform guarantees and restart/recovery behavior.
+  - Run whole-system adversarial confirmation and cold-agent handoff.
+initial_state:
+  current_task: T00
+  last_settled_task: null
+  ready:
+  - T00
+  blocked:
+    T01:
+    - T00
+    T02:
+    - T00
+    T03:
+    - T01
+    - T02
+    T04:
+    - T03
+    T05:
+    - T03
+    T06:
+    - T05
+    T07:
+    - T03
+    - T05
+    T08:
+    - T01
+    - T02
+    T09:
+    - T08
+    T10:
+    - T03
+    - T09
+    T11:
+    - T08
+    - T09
+    - T10
+    T12:
+    - T03
+    - T04
+    - T05
+    T13:
+    - T03
+    - T05
+    - T08
+    - T09
+    - T12
+    T14:
+    - T03
+    - T07
+    - T08
+    - T10
+    T15:
+    - T04
+    - T07
+    - T10
+    - T12
+    - T13
+    - T14
+    T16:
+    - T04
+    - T10
+    - T11
+    - T14
+    T17:
+    - T04
+    - T05
+    - T06
+    - T13
+    T18:
+    - T03
+    - T04
+    - T08
+    - T12
+    - T13
+    - T14
+    T19:
+    - T11
+    - T15
+    - T16
+    - T17
+    - T18
+    T20:
+    - T19
+tasks:
+  T00:
+    title: 'T00: Freeze baseline, mirror donors, and bind proof surfaces'
+    initial_status: ready
+    depends_on: []
+    proof_level: P1
+    confirmation: builder
+    settles: []
+    changes: 'Creates the execution baseline without changing daemon semantics: records the exact SEA-Forge branch/commit
+      and gate results; copies the approved donor/reference repositories into ignored `.tmp/ref/` at pinned commits; records
+      licenses and a donor-pattern map; binds this plan to the source spec hash; and establishes task-scoped evidence/preregistration/report
+      locations.'
+    proves: A cold agent can reproduce the starting state, inspect every donor locally without network rediscovery, know which
+      donor patterns are relevant, and run the repository's existing gates before modifying the trusted boundary.
+    does_not_prove: Does not prove any new daemon capability, donor pattern correctness inside SEA-Forge, or that the current
+      implementation conforms to the target spec.
+    hot_context:
+    - AGENTS.md
+    - .agents/CURRENT_STATUS.md
+    - .agents/specs/spec-minimum.md
+    - .agents/specs/spec-full.md
+    - justfile
+    - crates/sea-forge-authority/src/lib.rs
+    - crates/sea-forge-runtime/src/lib.rs
+    - crates/sea-forge-sandbox/src/
+    - crates/sea-forge-server/src/
+    - .gitignore (`.tmp/` is already ignored)
+    - 'source spec: .agents/specs/sea-forge.trusted-daemon-target.spec.yml'
+    steps:
+    - Install/freeze the exact source spec at `.agents/specs/sea-forge.trusted-daemon-target.spec.yml`; verify SHA-256 `09822b59756cc842db410c91f030d373b7f3bf6e1114c9a7e7c977062492e70b`.
+      If bytes differ, STOP and update this plan hash rather than proceeding.
+    - Record `git status`, branch, HEAD, toolchain, and existing global-gate results in the T00 evidence record; do not assume
+      the historical CURRENT_STATUS commit is current.
+    - Create `.tmp/ref/` if absent. Treat it as disposable, read-only donor/reference space; never commit it, add it as a
+      submodule, or make production code depend on it.
+    - Mirror/pin `NVIDIA/OpenShell` to `.tmp/ref/openshell` at `912a077bd641272016fb8b2fd58209f6c7c6f194`; record Apache-2.0
+      license obligations before copying substantial code.
+    - Mirror/pin `archestra-ai/OpenAPPA` to `.tmp/ref/openappa` at `6710c7f22ba2c94ae1b269cd4c5330bc5c24d322`; record MIT
+      license obligations before copying substantial code.
+    - Mirror/pin `GodSpeedAI/Gauntlet` to `.tmp/ref/gauntlet` at `fe75108d62129ffb179b6773b67f3ee92213e44d` for its sandbox/port
+      patterns; this is an internal donor, not a runtime dependency.
+    - Mirror/pin `GodSpeedAI/Cognate` branch `cognate/harness` to `.tmp/ref/cognate` at `32ea1e8db1575f619dacca5730cf260a9090e43e`
+      as an integration reference, not a code donor by default.
+    - Write `.agents/evidence/sea-forge-trusted-daemon/T00/donor-manifest.yaml` with repo, remote, commit, license, local
+      path, relevant subsystems, and `copy_policy` (`pattern_only` vs `code_allowed_with_notice`).
+    - 'Write `.agents/evidence/sea-forge-trusted-daemon/T00/donor-pattern-map.yaml` identifying at minimum: OpenShell credential
+      broker, egress/supervisor, atomic policy snapshot, hardening; OpenAPPA trajectory IFC, remedy plans, checked subagent
+      returns, canonical tool identity, confined results; Gauntlet sandbox port/capability model; Cognate Policy/ActionPolicy/SemanticRef/RealityTrace
+      seams.'
+    - For each donor pattern, record `adopt`, `adapt`, or `reject` and the SEA-Forge abstraction it maps to. Donor architecture
+      MUST NOT silently become canonical merely because code exists.
+    - Create or validate the task-scoped evidence, preregistration, and reports roots. Update CURRENT_STATUS only after baseline
+      evidence exists.
+    gate:
+    - devbox run -- just context-check
+    - devbox run -- just proof
+    - devbox run -- just ci
+    - test "$(sha256sum .agents/specs/sea-forge.trusted-daemon-target.spec.yml | awk '{print $1}')" = "09822b59756cc842db410c91f030d373b7f3bf6e1114c9a7e7c977062492e70b"
+    - test -d .tmp/ref/openshell && test -d .tmp/ref/openappa && test -d .tmp/ref/gauntlet && test -d .tmp/ref/cognate
+    teeth:
+    - attack: Change one byte of the local source spec and rerun the SHA binding check.
+      expected: T00 refuses to settle; plan execution cannot proceed against an unbound spec.
+    - attack: Point one `.tmp/ref/*` donor at the wrong commit or omit its license/commit from donor-manifest.yaml.
+      expected: Donor baseline gate fails; later tasks may not cite or copy that donor.
+    - attack: Attempt to add `.tmp/ref/` content to git.
+      expected: Repository ignore/status check shows donor trees are not tracked; any tracked donor tree blocks T00.
+    redesign_trigger: If the current SEA-Forge branch has materially different crate boundaries or already implements a target
+      capability beyond the source spec's evidence claims, stop and reconcile the spec/plan representation before writing
+      parallel replacements.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T00/
+    done_when:
+    - Baseline global gates are recorded with exact pass/fail status.
+    - All four reference trees are present at the pinned commits or an explicit user-approved repin is recorded.
+    - Donor manifest and pattern map are reviewable and license-aware.
+    - The source spec hash is frozen and matches this plan.
+    - All applicable global gates remain green.
+  T01:
+    title: 'T01: Canonical request and operation identity'
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-GOAL-002
+    - REQ-AUTH-006
+    - REQ-OPID-001
+    - REQ-OPID-002
+    - REQ-OPID-003
+    - REQ-ADAPT-001
+    - REQ-ADAPT-002
+    - REQ-ADAPT-003
+    changes: Introduces or tightens the stable CanonicalActionRequest/OperationIdentity boundary and adapter normalization
+      so policy evaluates the same identity that execution uses.
+    proves: Host-native aliases, MCP/provider spellings, CLI names, and adapter-specific encodings cannot create a second
+      semantic identity for the same consequential action or widen an unknown action into an allowed one.
+    does_not_prove: Does not yet prove atomic policy snapshots, exact grant freshness, physical enforcement, or information-flow
+      state.
+    hot_context:
+    - crates/sea-forge-core/src/types.rs
+    - crates/sea-forge-authority/src/lib.rs
+    - crates/sea-forge-server/src/case_dispatch.rs
+    - .tmp/ref/openappa/appa-runtime-api/src/lib.rs (canonical tool identity pattern)
+    - .agents/evidence/sea-forge-trusted-daemon/T00/donor-pattern-map.yaml
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T01.prereg.yaml
+      claim: Host-native aliases, MCP/provider spellings, CLI names, and adapter-specific encodings cannot create a second
+        semantic identity for the same consequential action or widen an unknown action into an allowed one.
+      falsifier: Any supported path can evaluate one canonical identity but execute another, or any ambiguous/unknown alias
+        reaches a privileged side effect.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Inventory every current consequential entry path and the native identity it supplies to authority/execution.
+    - Define the smallest canonical operation/resource/request representation in existing core types; prefer extending established
+      AuthorityAction/Operation types over parallel domain models.
+    - Implement deterministic normalization and reject ambiguous/unknown consequential aliases.
+    - Require adapters to prove native->canonical mapping before authority; retain native spelling only for dispatch/diagnostics.
+    - At execution, compare the canonical operation/arguments/resource scope to the identity authorized; reject mismatches.
+    - Add shared adapter conformance fixtures so a replacement adapter must produce equivalent canonical requests.
+    gate:
+    - cargo test -p sea-forge-core --all-features --locked canonical
+    - cargo test -p sea-forge-authority --all-features --locked canonical
+    - cargo test -p sea-forge-server --all-features --locked canonical
+    teeth:
+    - attack: Submit the same operation through two supported native aliases.
+      expected: Both normalize to one canonical identity and receive equivalent authority behavior.
+    - attack: Use an ambiguous/unregistered alias that resembles an allowed operation.
+      expected: Request is rejected before authority/execution; no fallback to a broader operation.
+    - attack: Authorize one canonical argument/resource spelling then mutate it before dispatch.
+      expected: Execution rejects the mismatch and produces no consequential side effect.
+    redesign_trigger: If current AuthorityAction/Operation cannot represent canonical identity without conflating domain meaning
+      with transport spelling, stop and revise the source spec/core model rather than adding stringly typed alias exceptions.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T01/
+    done_when:
+    - Canonical identity is used end-to-end on all currently governed execution paths.
+    - Adapter conformance tests cover alias equivalence and ambiguity rejection.
+    - Unknown consequential operations remain fail-closed.
+    - All applicable global gates remain green.
+  T02:
+    title: 'T02: Exact PolicyRevision and atomic authorization snapshot'
+    initial_status: blocked
+    depends_on:
+    - T00
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-CONFIG-001
+    - REQ-CONFIG-004
+    - REQ-POL-001
+    - REQ-POL-002
+    - REQ-POL-003
+    - REQ-POL-004
+    - REQ-SEC-005
+    changes: Makes behaviorally relevant policy identity/revision explicit, deterministic, and durable; authorization reads
+      one coherent policy/semantic/trajectory snapshot; reload activates only fully validated revisions.
+    proves: A decision can be reconstructed against exactly one governing policy identity, and policy reload cannot create
+      mixed-generation authorization or rewrite prior evidence.
+    does_not_prove: Does not prove grant binding across execution, trajectory IFC semantics, or backend enforcement sufficiency.
+    hot_context:
+    - crates/sea-forge-authority/src/lib.rs (`hash_canonical`, AuthorityPolicyBundle, policy_bundle_hash)
+    - crates/sea-forge-server/src/config.rs
+    - crates/sea-forge-ledger/
+    - .tmp/ref/openshell (policy generation / authorization snapshot patterns)
+    - .tmp/ref/openappa/appa-runtime/src/engine.rs and appa-policy policy identity patterns
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T02.prereg.yaml
+      claim: A decision can be reconstructed against exactly one governing policy identity, and policy reload cannot create
+        mixed-generation authorization or rewrite prior evidence.
+      falsifier: A decision can be produced from mixed policy generations, or an old decision can no longer identify its exact
+        governing policy after reload.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Characterize which existing policy fields are behaviorally relevant and which deployment hints must not perturb semantic
+      identity.
+    - Create/normalize PolicyRevision with deterministic canonical policy hash and exact source identities.
+    - Bind authority evaluation to one coherent snapshot of policy, semantic source identity, and any relevant durable state
+      revision.
+    - Change reload to validate candidate revision completely before activation; preserve last-known-good on invalid reload.
+    - Persist revision/hash on decisions and durable evidence; historical records remain immutable after reload.
+    - Add concurrency tests where reload races with evaluation and ensure no mixed-generation result can be constructed.
+    gate:
+    - cargo test -p sea-forge-authority --all-features --locked policy
+    - cargo test -p sea-forge-server --all-features --locked reload
+    - cargo test -p sea-forge-ledger --all-features --locked
+    teeth:
+    - attack: Modify a behaviorally relevant policy rule without changing human version text.
+      expected: Canonical policy hash changes and new decisions carry the new PolicyRevision.
+    - attack: Change only a non-behavioral deployment hint classified outside policy identity.
+      expected: Semantic policy identity remains unchanged.
+    - attack: Race reload between policy check and metadata/decision construction.
+      expected: Decision carries one coherent generation or retries; never combines generations.
+    - attack: Reload invalid policy.
+      expected: Last valid revision remains authoritative; failure is observable and no permissive fallback occurs.
+    redesign_trigger: If policy identity cannot be defined without hashing volatile/non-semantic deployment data, separate
+      policy semantics from deployment configuration before continuing.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T02/
+    done_when:
+    - Policy identity is deterministic across byte/ordering-equivalent semantic configuration.
+    - Reload and historical-evidence behavior are proven under race and invalid-reload cases.
+    - Decision records carry exact revision/hash.
+    - All applicable global gates remain green.
+  T03:
+    title: 'T03: EnforcementGrant v2 and pre-commit freshness'
+    initial_status: blocked
+    depends_on:
+    - T01
+    - T02
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-GOAL-003
+    - REQ-OUT-002
+    - REQ-OUT-003
+    - REQ-OUT-004
+    - REQ-CONFIG-011
+    - REQ-AUTH-001
+    - REQ-AUTH-002
+    - REQ-AUTH-003
+    - REQ-AUTH-004
+    - REQ-AUTH-005
+    - REQ-SEC-001
+    - REQ-SEC-002
+    changes: 'Evolves the existing move-only ActionGrant into the target EnforcementGrant contract while preserving current
+      fail-closed controls: exact actor/operation/resource/context, policy revision/hash, semantic source identity, relevant
+      trajectory state, expiry, enforcement requirements, and evidence obligations.'
+    proves: Privileged execution cannot occur from a detached advisory allow, a forged/widened grant, or a grant whose bound
+      policy/semantic/trajectory/operation state is stale or mismatched.
+    does_not_prove: Does not prove any specific backend can satisfy every enforcement requirement; that is T05-T07/T13/T17.
+    hot_context:
+    - crates/sea-forge-authority/src/lib.rs (`ActionGrant`, `authorize_with_controls`, `authorize_execution`)
+    - crates/sea-forge-runtime/src/lib.rs
+    - crates/sea-forge-sandbox/src/lib.rs
+    - existing authority/ledger conformance tests
+    - .tmp/ref/openshell atomic authorization/grant patterns
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T03.prereg.yaml
+      claim: Privileged execution cannot occur from a detached advisory allow, a forged/widened grant, or a grant whose bound
+        policy/semantic/trajectory/operation state is stale or mismatched.
+      falsifier: Any execution path can commit after a bound identity/revision changes, or a caller can broaden the effective
+        grant.
+      known_confounds:
+      - Tests that mutate only advisory metadata rather than the values execution actually consumes.
+      - Mocks that bypass the real runtime/sandbox commitment boundary.
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Write a migration/conformance table mapping every existing ActionGrant field/invariant to EnforcementGrant v2; no proven
+      control may disappear.
+    - Add exact decision_ref, PolicyRevision, canonical actor/operation/resource, semantic source identity, relevant trajectory
+      revision/state hash, expiry, enforcement requirements, evidence obligations, and idempotency/consumption semantics.
+    - Keep the grant move-only/unforgeable within the Rust boundary; if serialization is required for daemon IPC, use an authenticated/tamper-evident
+      envelope rather than making raw fields authoritative.
+    - Centralize pre-commit validation immediately before irreversible execution, including policy, semantic source, trajectory,
+      operation/resource, expiry, projection/backend capability, and compensating controls.
+    - 'Define grant lifecycle: issued -> validated -> consumed | invalidated | expired, including single-use vs explicitly
+      idempotent behavior.'
+    - Add adversarial tests for child/caller field widening, stale policy, stale semantic digest, stale trajectory, mutated
+      arguments/resource, expired grant, replayed single-use grant, and empty/conflicting boundaries.
+    gate:
+    - cargo test -p sea-forge-authority --all-features --locked grant
+    - cargo test -p sea-forge-runtime --all-features --locked grant
+    - cargo test -p sea-forge-sandbox --all-features --locked grant
+    teeth:
+    - attack: Forge/copy a grant while changing operation, resource, workspace, env, network, credential binding, or compensating
+        controls.
+      expected: Pre-commit rejects it; no side effect.
+    - attack: Issue a grant, advance a bound policy/semantic/trajectory revision, then attempt commit.
+      expected: Grant invalidates or forces reevaluation; old grant cannot execute.
+    - attack: Replay a consumed non-idempotent grant.
+      expected: Second consequence is rejected.
+    - attack: Make governance boundary intersection empty.
+      expected: No grant is issued.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If serialization across daemon IPC makes move-only safety impossible to preserve structurally, stop
+      and define a signed/MACed opaque grant token or daemon-side grant handle; do not expose mutable authoritative fields.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T03/
+    done_when:
+    - Existing ActionGrant guarantees remain covered by migration tests.
+    - All exact-binding/stale-state attacks fail before consequence.
+    - Grant lifecycle and idempotency are durable/recoverable enough for daemon use.
+    - Fresh independent verifier reproduces the core attacks and confirms no authority widening.
+    - All applicable global gates remain green.
+    confirms:
+    - REQ-AUTH-002
+    - REQ-AUTH-003
+    - REQ-AUTH-004
+    - REQ-POL-002
+    - REQ-POL-003
+  T04:
+    title: 'T04: Trusted local daemon control boundary and typed outcomes'
+    initial_status: blocked
+    depends_on:
+    - T03
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-001
+    - REQ-OUT-001
+    - REQ-CONFIG-005
+    - REQ-CONFIG-010
+    - REQ-CONFIG-012
+    - REQ-SEC-006
+    changes: Promotes the existing server into the trusted daemon control surface with authenticated local IPC, typed governance
+      outcomes, fail-closed startup/preflight, and platform-neutral transport abstraction.
+    proves: Consequential callers can use one local trusted boundary and receive allow/deny/escalate/remediable/unsupported
+      outcomes without exposing an unauthenticated privileged control surface or silently bypassing failed preflight.
+    does_not_prove: Does not prove portable containment, credential/egress mediation, Cognate/Gauntlet integration, or complete
+      restart reconciliation.
+    hot_context:
+    - crates/sea-forge-server/src/lib.rs
+    - crates/sea-forge-server/src/config.rs
+    - crates/sea-forge-server/src/case_dispatch.rs
+    - existing Unix `.sea-forge/server.sock` behavior and tests
+    - AGENTS.md no-async-kernel invariant
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T04.prereg.yaml
+      claim: Consequential callers can use one local trusted boundary and receive allow/deny/escalate/remediable/unsupported
+        outcomes without exposing an unauthenticated privileged control surface or silently bypassing failed preflight.
+      falsifier: A caller can reach privileged daemon behavior without the configured local trust boundary, or a failed global
+        preflight still permits consequential execution.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Define one transport-neutral daemon request/response vocabulary over CanonicalActionRequest and GovernanceResult; keep
+      async/HTTP dependencies out of kernel crates.
+    - Retain Unix domain socket local transport with restrictive permissions/authenticated local principal derivation.
+    - Add a Windows-native local IPC seam (named pipe or equally native local authenticated mechanism) behind the same contract;
+      implementation proof completes in T17.
+    - 'Add typed outcome distinctions: allow/grant, deny, escalate, remediable-block, unsupported, invalid, indeterminate
+      where applicable.'
+    - Expand startup preflight to validate PolicyRevision, durable-state schema, local IPC permissions/authentication, registered
+      backend capability metadata, and credential-provider metadata without resolving raw secrets.
+    - Make local preflight failure scope explicit; global trust-state corruption stops governed consequence globally, while
+      component-local unavailability blocks only dependent operations.
+    gate:
+    - cargo test -p sea-forge-server --all-features --locked daemon
+    - cargo test -p sea-forge-server --all-features --locked preflight
+    - devbox run -- just no-async-kernel
+    teeth:
+    - attack: Connect to daemon control socket/pipe from an unauthorized local principal or with insecure permissions.
+      expected: Privileged request is rejected or daemon refuses insecure startup.
+    - attack: Break one optional credential/backend registration.
+      expected: Only dependent operations become unavailable; unrelated governed operations remain usable.
+    - attack: Corrupt global policy/state schema identity.
+      expected: Daemon stops governed consequence rather than continuing with partial trust.
+    redesign_trigger: If the current server protocol cannot carry opaque grant handles and typed outcomes without leaking
+      transport concerns into kernel types, split transport adapter from daemon application service before extending it.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T04/
+    done_when:
+    - Unix control path is locally access-controlled and typed.
+    - Windows local transport seam exists with explicit T17 proof dependency.
+    - Startup/preflight blast-radius behavior is deterministic.
+    - All applicable global gates remain green.
+  T05:
+    title: 'T05: Semantic EnforcementRequirements and backend CapabilityReport'
+    initial_status: blocked
+    depends_on:
+    - T03
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-004
+    - REQ-OUT-005
+    - REQ-CONFIG-003
+    - REQ-ENF-001
+    - REQ-ENF-002
+    - REQ-ENF-003
+    - REQ-ENF-004
+    - REQ-ENF-005
+    - REQ-SAFE-002
+    changes: Separates semantic enforcement requirements from `SandboxClass`/mechanism names and requires each backend to
+      publish an honest CapabilityReport used for selection.
+    proves: A backend is selected because it can enforce every required dimension of the grant, not because it exists or has
+      a preferred class name; unavailable stronger enforcement cannot silently downgrade to local/unconfined execution.
+    does_not_prove: Does not yet prove every native backend or target-policy projection; T06/T07/T13/T17 provide those concrete
+      proofs.
+    hot_context:
+    - crates/sea-forge-sandbox/src/lib.rs (`SandboxClass`, `NetworkPosture`, `ExecutionSandbox`)
+    - crates/sea-forge-runtime/src/lib.rs
+    - .tmp/ref/gauntlet (sandbox policy/port pattern)
+    - .tmp/ref/openshell (supervisor/enforcement capability patterns)
+    - .agents/evidence/sea-forge-trusted-daemon/T00/donor-pattern-map.yaml
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T05.prereg.yaml
+      claim: A backend is selected because it can enforce every required dimension of the grant, not because it exists or
+        has a preferred class name; unavailable stronger enforcement cannot silently downgrade to local/unconfined execution.
+      falsifier: Any requested enforcement dimension can be dropped merely because the configured/preferred backend cannot
+        express it.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Derive the minimal EnforcementRequirements dimensions from the source spec and existing ActionGrant/SandboxSpec controls;
+      do not encode mechanism names as semantics.
+    - Define CapabilityReport/CapabilityLevel in stable core/runtime vocabulary with explicit limitations and evidence refs.
+    - Teach existing Local/Jail/Microvm selection to resolve by requirements+capabilities; keep current class names only as
+      backend implementation identity where useful.
+    - Make unsupported dimensions first-class and prevent fallback to a weaker backend unless the resulting behavior is policy-permitted
+      conservative narrowing.
+    - Expose selected backend identity and capability proof in GovernanceResult/evidence.
+    - Add conformance fixtures with fake backends that lie, omit dimensions, or disappear after selection.
+    gate:
+    - cargo test -p sea-forge-runtime --all-features --locked capability
+    - cargo test -p sea-forge-sandbox --all-features --locked capability
+    teeth:
+    - attack: Request a guarantee not present in the preferred backend CapabilityReport.
+      expected: Selection returns unsupported/blocked; it does not choose Local or erase the requirement.
+    - attack: Backend advertises a capability but fails its probe/conformance evidence.
+      expected: Backend is not eligible for that dimension.
+    - attack: Child requests a weaker sandbox/backend than the grant requires.
+      expected: Resolver ignores/rejects child preference and preserves grant requirements.
+    redesign_trigger: If capability matching becomes backend-specific conditional logic, stop and refine the semantic requirements/capability
+      vocabulary before adding more backends.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T05/
+    done_when:
+    - Current backends emit explicit CapabilityReports.
+    - Selection is requirement-driven and fail-closed.
+    - Governance results expose actual backend/capability evidence.
+    - All applicable global gates remain green.
+  T06:
+    title: 'T06: Containment backend refactor and native hardening'
+    initial_status: blocked
+    depends_on:
+    - T05
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-CONT-001
+    - REQ-CONT-002
+    - REQ-CONT-003
+    - REQ-CONT-004
+    - REQ-ENV-001
+    - REQ-ENV-002
+    - REQ-ENV-003
+    changes: Recasts existing Local/Jail execution as containment backend implementations behind the semantic enforcement
+      contract, preserving current path/env/timeout/network guarantees and adding platform-appropriate hardening capability
+      reporting.
+    proves: Filesystem/process/environment/artifact constraints come only from the trusted grant; existing Landlock path/TCP
+      protections remain earned substrate rather than the long-term semantic API; environment content never grants permission
+      by itself.
+    does_not_prove: Does not settle L7 egress, credentials, or Windows/macOS target reproduction; those are later tasks.
+    hot_context:
+    - crates/sea-forge-sandbox/src/lib.rs
+    - crates/sea-forge-sandbox/src/jail.rs
+    - crates/sea-forge-sandbox/src/local.rs
+    - crates/sea-forge-sandbox/src/environment.rs
+    - .tmp/ref/gauntlet
+    - .tmp/ref/openshell OS-hardening patterns
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T06.prereg.yaml
+      claim: Filesystem/process/environment/artifact constraints come only from the trusted grant; existing Landlock path/TCP
+        protections remain earned substrate rather than the long-term semantic API; environment content never grants permission
+        by itself.
+      falsifier: Any refactor allows child/environment metadata to broaden filesystem/process/env/network authority or regresses
+        current path/Landlock behavior.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Write regression tests that pin current safe_join/safe_existing, minimal environment, timeout/process-group, artifacts-root,
+      and Landlock TCP semantics before refactor.
+    - Make containment prepare/execute/collect/destroy consume only grant-derived EnforcementRequirements/validated plan;
+      child request may narrow but not widen.
+    - Keep EnvironmentSpec content/provides separate from authority/isolation and preserve hash-pinned materialization identity.
+    - Add capability reporting for no-new-privileges/syscall/seccomp/process-group/namespace/Landlock or native equivalents
+      where actually present; absence stays explicit.
+    - Adopt donor hardening patterns selectively after comparing them to existing SEA-Forge behavior; record copied code/attribution
+      when applicable.
+    - Do not extract a generic cross-project containment crate unless shared tests demonstrate the current SEA-Forge boundary
+      is insufficient.
+    gate:
+    - cargo test -p sea-forge-sandbox --all-features --locked
+    - cargo test -p sea-forge-runtime --all-features --locked containment
+    - devbox run -- just no-async-kernel
+    teeth:
+    - attack: Try path traversal, symlink-parent escape, ambiguous `a//b`/`.` segments, or write outside authorized root.
+      expected: Rejected before mutation; no outside file exists.
+    - attack: Child adds an environment key, writable root, longer timeout, or broader network posture absent from grant.
+      expected: Rejected or narrowed; never widened.
+    - attack: Environment manifest claims a capability/permission not proven by trusted backend resolver.
+      expected: Claim does not grant authority or satisfy enforcement requirement.
+    redesign_trigger: If refactor weakens any existing full-spec containment proof, revert the abstraction shape and preserve
+      the proven path first; semantic cleanup is not worth losing an earned control.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T06/
+    done_when:
+    - Existing containment regression suite remains green.
+    - Containment consumes semantic requirements and reports honest capabilities.
+    - Environment identity and authority/isolation remain separate.
+    - All applicable global gates remain green.
+  T07:
+    title: 'T07: ProjectionBinding and no-widening enforcement projections'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T05
+    proof_level: P2
+    confirmation: fresh_target_reproduction
+    settles:
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-PROJ-004
+    - REQ-PROJ-005
+    - REQ-PROJ-006
+    - REQ-PROJ-007
+    - REQ-PROJ-008
+    - REQ-PROJ-009
+    changes: Adds ProjectionBinding and projection-fidelity evaluation so DomainForge/native projectors can emit target enforcement
+      artifacts that are identity-bound and classified exact/conservative/widening/unsupported.
+    proves: 'Target syntax/config generation cannot be mistaken for semantic equivalence: widening/unsupported projections
+      block consequence, and native versus modeled projections must pass the same behavioral contract.'
+    does_not_prove: Does not prove all future target languages; it proves the projection contract and at least representative
+      target classes. Platform-wide reproduction closes in T17.
+    hot_context:
+    - crates/sea-forge-domainforge/
+    - crates/sea-forge-spec-pipeline/
+    - current ProjectionRecord/ProjectionValidation types
+    - .agents/specs/sea-forge.trusted-daemon-target.spec.yml projection requirements
+    - .tmp/ref/openshell policy/config generation examples as non-canonical targets
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T07.prereg.yaml
+      claim: 'Target syntax/config generation cannot be mistaken for semantic equivalence: widening/unsupported projections
+        block consequence, and native versus modeled projections must pass the same behavioral contract.'
+      falsifier: A target artifact can be labeled exact/conservative while enabling a consequential action forbidden by source
+        authority.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Add ProjectionFidelity and ProjectionBinding with source model hash, target kind, artifact hash, target policy revision
+      if applicable, capabilities proven, and unsupported requirements.
+    - Define one shared behavioral conformance harness that evaluates target-permitted consequence against source semantic
+      authority, not syntax alone.
+    - Implement at least one modeled/DomainForge projection path and one native projector path over the same fixture; require
+      equivalent fidelity claims to pass identical tests.
+    - Represent required port/capability model, foreign target model, and correspondence independently; do not make target
+      structure canonical.
+    - Preserve `.sea` grammar unless a genuine new semantic distinction is proven necessary; use mappings/projections/adapters
+      for target-specific vocabulary.
+    - Bind outbound projection evidence to inward observation/evidence correlation so actual target consequence can be traced
+      back to source meaning.
+    - Add fixtures for exact, conservative, widening, and unsupported cases, including source HTTP method/path constraints
+      projected onto host/port-only target.
+    gate:
+    - cargo test -p sea-forge-domainforge --all-features --locked projection
+    - cargo test -p sea-forge-spec-pipeline --all-features --locked projection
+    - cargo test -p sea-forge-runtime --all-features --locked projection
+    teeth:
+    - attack: Project POST `/api/orders/*` authority into a target that can enforce only host:port.
+      expected: Fidelity is widening/unsupported and execution is blocked.
+    - attack: Generate a syntactically valid target artifact whose behavior allows one extra consequential action.
+      expected: Behavioral conformance catches widening despite syntax validity.
+    - attack: Implement native and modeled projectors that disagree on allowed behavior while both claim exact.
+      expected: At least one exact claim fails; they cannot both settle.
+    redesign_trigger: If fidelity cannot be decided with the current semantic source because required target distinctions
+      are genuinely absent from the language, block affected projection and revise the normative semantic model explicitly;
+      do not hide it in adapter code.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T07/
+    done_when:
+    - ProjectionBinding is attached to grant/execution evidence.
+    - All four fidelity classes have executable fixtures.
+    - Widening and unsupported cases prevent consequence.
+    - Modeled/native equivalence uses one shared behavioral oracle.
+    - All applicable global gates remain green.
+  T08:
+    title: 'T08: Durable trajectory information-state algebra'
+    initial_status: blocked
+    depends_on:
+    - T01
+    - T02
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-005
+    - REQ-IFC-001
+    - REQ-IFC-002
+    - REQ-IFC-006
+    changes: Introduces deterministic durable trajectory information state—audience, trust, provenance refs, revision/hash,
+      and only the minimal effect state needed for policy—derived from recorded events.
+    proves: What an agent/trajectory has learned can constrain future actions deterministically; ordinary joins only preserve
+      or increase restriction; the same event history and policy reproduce the same information state/decision inputs.
+    does_not_prove: Does not yet prove per-call contracts/annotations, remedies, subagent return, or credential/egress enforcement.
+    hot_context:
+    - crates/sea-forge-authority/
+    - crates/sea-forge-ledger/
+    - crates/sea-forge-trace/
+    - .tmp/ref/openappa/appa-engine/src/label.rs
+    - .tmp/ref/openappa/appa-engine/src/fact.rs
+    - .tmp/ref/openappa/appa-eventlog/
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T08.prereg.yaml
+      claim: What an agent/trajectory has learned can constrain future actions deterministically; ordinary joins only preserve
+        or increase restriction; the same event history and policy reproduce the same information state/decision inputs.
+      falsifier: Replaying the same recorded state/policy can produce different InformationState, or an ordinary join can
+        make information less restricted.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - 'Extract the minimum algebra from the donor pattern: audience intersection, trust minimum/degradation, provenance reference
+      union, deterministic trajectory revision/state hash.'
+    - Choose ownership using existing synchronous kernel boundaries; prefer an authority/ledger module before adding a new
+      crate unless dependency analysis proves separation is required.
+    - Define root trajectory open/resume and durable event application; no hidden model conversation may affect authoritative
+      information state.
+    - Ensure ordinary reads/joins cannot declassify or raise trust; transformations produce separately evidenced derivatives
+      later in T10.
+    - Add deterministic replay from durable event facts and optimistic revision/conflict handling so decisions cannot append
+      against stale state silently.
+    - Keep sensitive content out of the information-state metadata itself; store references/digests where sufficient.
+    gate:
+    - cargo test -p sea-forge-authority --all-features --locked information
+    - cargo test -p sea-forge-ledger --all-features --locked trajectory
+    teeth:
+    - attack: Read public/trusted, then internal, then suspicious external data in different equivalent event orders.
+      expected: Final lattice result is deterministically no less restrictive than every input; replay is stable.
+    - attack: Attempt to append a decision/read based on trajectory revision N after revision N+1 is committed.
+      expected: Conflict/stale-state path rejects or retries against current state.
+    - attack: Remove unrecorded prompt text while replaying the same durable facts.
+      expected: Authoritative information state/IFC input does not change.
+    redesign_trigger: If audience/trust cannot express an important information restriction without smuggling arbitrary business
+      policy into the lattice, keep the extra rule in semantic authority/operation contracts rather than overgrowing InformationState.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T08/
+    done_when:
+    - InformationState is durable, deterministic, monotonic under ordinary join, and replayable.
+    - Revision conflicts are explicit.
+    - No secret payload is required to reconstruct the state.
+    - All applicable global gates remain green.
+  T09:
+    title: 'T09: Operation contracts and bounded annotators'
+    initial_status: blocked
+    depends_on:
+    - T08
+    proof_level: P2
+    confirmation: builder_with_teeth
+    settles:
+    - REQ-IFC-003
+    - REQ-IFC-004
+    - REQ-IFC-005
+    changes: Adds pre-release operation/tool contracts that specify information requirements/deltas/effects and a bounded
+      annotation mechanism whose output is recorded input to deterministic policy rather than authority itself.
+    proves: A call cannot be released before its information behavior is known, probabilistic judgment cannot directly authorize
+      consequence, and mutating a call invalidates its annotation.
+    does_not_prove: Does not yet provide remediation/declassification, child-return semantics, credential injection, or network
+      enforcement.
+    hot_context:
+    - T08 InformationState implementation/evidence
+    - .tmp/ref/openappa/website/content/docs/contracts.md
+    - .tmp/ref/openappa/appa-engine/src/transition.rs
+    - .tmp/ref/openappa operation annotation tests
+    - current SEA-Forge authority policy surfaces
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T09.prereg.yaml
+      claim: A call cannot be released before its information behavior is known, probabilistic judgment cannot directly authorize
+        consequence, and mutating a call invalidates its annotation.
+      falsifier: A dynamic classifier can cause an action to execute without deterministic policy accepting a bounded recorded
+        annotation for the exact call.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Define OperationContract fields only for policy-relevant input requirements, output information deltas, effects, and
+      optional annotator reference.
+    - Permit static contracts and bounded dynamic annotators; record annotator identity/revision/mandate and canonical call
+      hash.
+    - Constrain annotator output to declared audience/trust/effect/requirement ranges; responses outside mandate fail closed.
+    - Evaluate the annotation with deterministic SEA-Forge authority/IFC logic; annotator never issues a grant.
+    - Require a new annotation/evaluation when canonical call identity/arguments change; exact replay may reuse a recorded
+      annotation.
+    - Add at least one deterministic rule-based annotator fixture and one mocked probabilistic annotator whose varying prose
+      cannot vary authority outside its recorded structured output.
+    gate:
+    - cargo test -p sea-forge-authority --all-features --locked contract
+    - cargo test -p sea-forge-authority --all-features --locked annotator
+    teeth:
+    - attack: Annotator returns a trust/audience claim outside its configured mandate.
+      expected: Annotation is rejected; operation remains blocked.
+    - attack: Change one policy-relevant argument after annotation and attempt dispatch.
+      expected: Recorded annotation cannot be reused; re-annotation/evaluation required.
+    - attack: Annotator says `allow` in free text while structured bounded facts fail policy.
+      expected: Free text has no authority; deterministic policy blocks.
+    redesign_trigger: If annotator schemas need arbitrary provider-specific fields to authorize actions, move those facts
+      through typed context providers/semantic policy rather than making annotation an unbounded policy engine.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T09/
+    done_when:
+    - Every governed operation can resolve a contract before release.
+    - Annotation identity and call identity are replayable.
+    - Annotators cannot directly grant authority.
+    - All applicable global gates remain green.
+  T10:
+    title: 'T10: Remedy plans, scoped transformation, and confined results'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T09
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-IFC-007
+    - REQ-REM-001
+    - REQ-REM-002
+    - REQ-REM-003
+    - REQ-REM-004
+    - REQ-CONF-001
+    - REQ-CONF-002
+    - REQ-CONF-003
+    - REQ-SEC-004
+    - REQ-SAFE-005
+    changes: Adds bounded RemedyPlan navigation for blocked actions plus scoped approval, sanitization/narrowing, isolated-read
+      hooks, missing-evidence recovery, and result confinement without globally weakening information state.
+    proves: A blocked possibility can become reachable only through an explicit, scoped, evidenced transformation; successful
+      side effects can be recorded while sensitive results remain outside untrusted context.
+    does_not_prove: Does not yet prove child fork/return confinement itself (T11), raw credential mediation (T12), or protocol-aware
+      egress (T13).
+    hot_context:
+    - T08/T09 information-flow and operation-contract implementation
+    - existing SEA-Forge approval/escalation flow
+    - .tmp/ref/openappa remedy-plan, authority, sanitizer, confined-result patterns
+    - RealityTrace/evidence distinction in source spec
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T10.prereg.yaml
+      claim: A blocked possibility can become reachable only through an explicit, scoped, evidenced transformation; successful
+        side effects can be recorded while sensitive results remain outside untrusted context.
+      falsifier: Any remedy makes unrelated future operations more permissive, or a confined result leaks its protected payload
+        to the untrusted caller.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Define RemedyPlan/RemedyStep as a response to a blocked request; the original decision remains immutable.
+    - Integrate existing approval/escalation semantics as a scoped authority remedy for exactly one request/flow.
+    - Add sanitizer/redaction/narrow-destination/missing-evidence remedy interfaces; transformation outputs become new derivatives
+      with their own information/evidence state.
+    - Define isolated-child-read as a remedy hook whose full proof waits for T11.
+    - 'Implement confined-result execution: effect/receipt/evidence committed, sensitive payload withheld, optional redacted
+      receipt returned.'
+    - Ensure failed/denied remedy leaves original request blocked and does not mutate future global authority/audience/trust.
+    gate:
+    - cargo test -p sea-forge-authority --all-features --locked remedy
+    - cargo test -p sea-forge-runtime --all-features --locked confined
+    - cargo test -p sea-forge-server --all-features --locked approval
+    teeth:
+    - attack: Approve one restricted disclosure, then repeat a different disclosure without new authority.
+      expected: Second disclosure remains blocked.
+    - attack: Sanitizer fails, times out, or emits output outside its permit.
+      expected: No declassification; blocked state remains.
+    - attack: Side-effecting operation returns secret-like payload in confined mode.
+      expected: Effect/evidence is recorded but protected output never enters untrusted caller context.
+    redesign_trigger: If remediation requires mutating the original trajectory label/decision to become more permissive, stop
+      and model a separately evidenced derivative or new request instead.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T10/
+    done_when:
+    - Blocked outcomes can carry bounded remedies with stable scope/reason.
+    - Scoped approval/sanitization cannot globally widen state.
+    - Confined-result mode preserves effect evidence while withholding protected output.
+    - All applicable global gates remain green.
+  T11:
+    title: 'T11: Subagent trajectory inheritance and checked return'
+    initial_status: blocked
+    depends_on:
+    - T08
+    - T09
+    - T10
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-DELEG-001
+    - REQ-DELEG-002
+    - REQ-DELEG-003
+    - REQ-DELEG-004
+    changes: Adds trajectory-family semantics for child/subagent fork, inheritance, checked return, fan-out where applicable,
+      and independent root fork origin snapshots.
+    proves: 'Delegation cannot launder restricted/untrusted information: a child begins no less restricted than the authorized
+      parent fork point, and every derived return is checked before entering the parent.'
+    does_not_prove: Does not by itself prove Gauntlet's concrete orchestration adapter uses the contract; T16 does.
+    hot_context:
+    - T08/T09/T10 implementation
+    - current sea-forge-server delegation.rs
+    - .tmp/ref/openappa subagent fork/return implementation and tests
+    - .tmp/ref/gauntlet subagent/orchestration behavior where relevant
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T11.prereg.yaml
+      claim: 'Delegation cannot launder restricted/untrusted information: a child begins no less restricted than the authorized
+        parent fork point, and every derived return is checked before entering the parent.'
+      falsifier: Any child can cause information unavailable to the parent policy to re-enter the parent without a checked
+        permitted transformation.
+      known_confounds:
+      - Tests that only copy labels without exercising actual child lifecycle.
+      - Sanitizers that are mocked as always safe without mandate/output verification.
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Model root, child, and origin snapshot identities with exact parent revision/fork point.
+    - At authorized child start, inherit parent information restrictions/effects required by policy; do not treat new context
+      as clean.
+    - Define return contract before child work where possible; check child result/derivative before admitting to parent.
+    - Support fan-out without sharing mutable authority incorrectly; each child return is independently checked.
+    - Define independent root fork from copied context as a new family with recorded frozen origin, no continuing synchronization
+      claim.
+    - 'Add laundering attacks: child reads secret and summarizes; nested child; fan-out; parent state changes while child
+      active; sanitized versus unsanitized return.'
+    gate:
+    - cargo test -p sea-forge-server --all-features --locked delegation
+    - cargo test -p sea-forge-authority --all-features --locked fork
+    teeth:
+    - attack: Restricted parent spawns child and asks it to paraphrase secret into a public-safe-looking string.
+      expected: Return remains restricted unless an explicitly permitted sanitizer/declassifier produces a justified derivative.
+    - attack: Spawn child before parent restriction then advance parent to more restricted state and attempt to treat child
+        as synchronized.
+      expected: Fork-point/origin semantics stay explicit; no false claim of current-parent equivalence.
+    - attack: Nested/fan-out child attempts return through sibling or alternate route.
+      expected: Every admitted return crosses its declared checked boundary.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If existing delegation lifecycle cannot identify fork point and return admission unambiguously, revise
+      that lifecycle rather than approximating inheritance from current parent state.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T11/
+    done_when:
+    - All child/fork modes have durable origin/revision identity.
+    - Laundering attacks fail.
+    - Fresh independent verifier reproduces at least the strongest nested/fan-out attack.
+    - All applicable global gates remain green.
+    confirms:
+    - REQ-IFC-001
+    - REQ-IFC-002
+    - REQ-IFC-004
+    - REQ-DELEG-001
+    - REQ-DELEG-002
+    - REQ-DELEG-003
+  T12:
+    title: 'T12: Daemon-owned CredentialBroker and reference-only secret flow'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T04
+    - T05
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-GOAL-006
+    - REQ-CONFIG-002
+    - REQ-CRED-001
+    - REQ-CRED-002
+    - REQ-CRED-003
+    - REQ-CRED-004
+    - REQ-CRED-005
+    - REQ-SEC-003
+    changes: Introduces CredentialRef and a daemon-owned credential mediation boundary that resolves/injects raw secret material
+      only at the latest trusted point and returns secret-safe receipts.
+    proves: Reference-mediated operations can use credentials without raw secrets becoming ordinary agent/application data,
+      logs, events, evidence, errors, or tool results; credential scope cannot exceed the grant.
+    does_not_prove: Does not prove full L7 egress destination/request enforcement until T13.
+    hot_context:
+    - existing secrets/SOPS mechanisms and AgentConfig credential_ref usage
+    - crates/sea-forge-agent/
+    - crates/sea-forge-server/
+    - .tmp/ref/openshell credential broker/injection patterns
+    - .tmp/ref/openappa credential-path confinement patterns for additional teeth
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T12.prereg.yaml
+      claim: Reference-mediated operations can use credentials without raw secrets becoming ordinary agent/application data,
+        logs, events, evidence, errors, or tool results; credential scope cannot exceed the grant.
+      falsifier: The synthetic raw credential appears in any prohibited surface or can be requested directly by an untrusted
+        caller in the mediated path.
+      known_confounds:
+      - Secret scanners that only inspect git and not runtime evidence.
+      - Tests using dummy strings too unlike real credential shapes to exercise redaction.
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Inventory current credential_ref/raw-env flows and mark every point raw credential can enter process/model/event/log
+      state.
+    - Define stable CredentialRef/provider binding metadata without embedding secret values.
+    - Implement broker/provider seam inside trusted daemon/adaptor layer; resolve as late as possible and scope to exact provider/operation/resource/destination
+      constraints.
+    - Prefer request/upstream injection over placing raw secret in child environment; if a legacy provider requires env injection,
+      classify that as a narrower explicit backend capability/limitation and keep it out of model/event surfaces.
+    - After trusted credential injection or policy-relevant request mutation, recompute/revalidate the effective outbound
+      request identity before dispatch.
+    - Implement redacted receipt and secret-scanning tests across prompts/context, child env where avoidable, stdout/stderr,
+      errors, logs, events, artifacts, RealityTrace payloads, and confined results.
+    - Use real or representative provider integration under a synthetic disposable credential for final proof; never place
+      production secrets in fixtures/evidence.
+    gate:
+    - cargo test -p sea-forge-server --all-features --locked credential
+    - cargo test -p sea-forge-agent --all-features --locked credential
+    - devbox run -- just security
+    teeth:
+    - attack: Agent/tool requests raw value for a CredentialRef.
+      expected: Broker refuses ordinary disclosure; only permitted mediated use is available.
+    - attack: Mutate destination/request after credential injection.
+      expected: Dispatch is revalidated and rejected if outside grant.
+    - attack: Cause provider error that echoes request headers/env.
+      expected: Secret is redacted/withheld from ordinary evidence and caller output.
+    - attack: Scan all task evidence/log/artifact surfaces for the synthetic secret.
+      expected: Zero raw-secret occurrences.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If a target provider cannot be used without exposing raw credentials to untrusted model/process state,
+      represent that provider/backend as a weaker capability and block policies requiring stronger secrecy; do not fake reference-only
+      guarantees.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T12/
+    done_when:
+    - CredentialRef is the default untrusted crossing representation.
+    - At least one real/representative mediated provider flow succeeds without secret leakage.
+    - Fresh independent secret scan/adversarial verifier confirms no raw secret in prohibited surfaces.
+    - All applicable global gates remain green.
+    confirms:
+    - REQ-CRED-001
+    - REQ-CRED-002
+    - REQ-CRED-003
+    - REQ-CRED-004
+    - REQ-CONF-001
+  T13:
+    title: 'T13: Egress supervisor with atomic request-level policy'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T05
+    - T08
+    - T09
+    - T12
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-NET-001
+    - REQ-NET-002
+    - REQ-NET-003
+    - REQ-NET-004
+    - REQ-NET-005
+    changes: Adds semantic EgressIntent/EgressDecision and trusted egress mediation capable of destination plus request-level
+      constraints where required, bound to one atomic policy snapshot and CredentialRef.
+    proves: Network access defaults deny; host/port controls are not mislabeled exact when method/path/identity matter; metadata
+      failure or policy-generation races cannot silently weaken egress.
+    does_not_prove: Does not prove every protocol; unsupported dimensions remain explicit. Portable platform enforcement closes
+      in T17.
+    hot_context:
+    - crates/sea-forge-sandbox/src/jail.rs current TCP Landlock posture
+    - T02 PolicyRevision, T05 CapabilityReport, T12 CredentialBroker
+    - .tmp/ref/openshell egress/network supervisor and policy-generation patterns
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T13.prereg.yaml
+      claim: Network access defaults deny; host/port controls are not mislabeled exact when method/path/identity matter; metadata
+        failure or policy-generation races cannot silently weaken egress.
+      falsifier: A request forbidden by source semantic egress policy reaches the external fixture because a coarser or different
+        policy generation was used.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Define EgressIntent with process/actor identity, canonical operation/resource, destination, protocol, request semantics
+      where relevant, CredentialRef, context, and PolicyRevision.
+    - Keep current Landlock TCP network posture as one coarse enforcement layer, not the full semantic egress oracle.
+    - Implement trusted egress supervisor/proxy seam that can enforce HTTP host/method/path and inject credentials after authorization
+      when policy requires it.
+    - Ensure one decision uses one atomic policy generation; do not query a second generation for metadata/action after the
+      decision is formed.
+    - Treat identity/metadata/context-provider failure as deny/unsupported, never as removal of a restriction.
+    - Record request-safe egress evidence without credentials/body secrets.
+    - Add mismatch tests where coarse backend cannot express source requirements and ensure projection/capability resolver
+      blocks rather than claims exact.
+    gate:
+    - cargo test -p sea-forge-server --all-features --locked egress
+    - cargo test -p sea-forge-sandbox --all-features --locked network
+    - cargo test -p sea-forge-runtime --all-features --locked egress
+    teeth:
+    - attack: Policy allows POST `/api/orders/*`; attempt GET or `/admin` to same host/port.
+      expected: Request-level mediator denies; coarse host/port permission is insufficient.
+    - attack: Reload policy between authorization and metadata/request enforcement.
+      expected: One coherent generation governs; no mixed-generation allow.
+    - attack: Make repository/audience/destination metadata resolver fail.
+      expected: Required restriction remains; request does not become more permissive.
+    - attack: Try outbound network with no explicit grant.
+      expected: Denied by default.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If a protocol cannot be safely parsed/identified at the trusted mediator, mark request-level enforcement
+      unsupported for that protocol rather than approximating with string matching that can be bypassed.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T13/
+    done_when:
+    - EgressIntent is semantically bound and secret-safe.
+    - At least HTTP request-level restrictions are enforced in a trusted path.
+    - Coarse-only paths advertise their limitations.
+    - Fresh adversarial verifier reproduces method/path and policy-race attacks.
+    - All applicable global gates remain green.
+  T14:
+    title: 'T14: Governance evidence and RealityTrace correlation bridge'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T07
+    - T08
+    - T10
+    proof_level: P2
+    confirmation: peer
+    settles:
+    - REQ-GOAL-007
+    - REQ-OUT-006
+    - REQ-EVID-001
+    - REQ-EVID-002
+    - REQ-EVID-003
+    - REQ-EVID-004
+    - REQ-EVID-005
+    changes: Creates the durable secret-safe correlation chain request -> information state -> authority decision -> grant
+      -> projection/backend -> execution result -> application event -> RealityTrace observation where available.
+    proves: An auditor/operator can reconstruct why an action was allowed/blocked and what enforcement actually occurred without
+      treating a delivery receipt, process exit, or observation record as domain settlement.
+    does_not_prove: Does not prove the Cognate adapter emits every field (T15) or Gauntlet uses every outcome (T16).
+    hot_context:
+    - crates/sea-forge-ledger/
+    - crates/sea-forge-evidence/
+    - crates/sea-forge-trace/
+    - crates/sea-forge-settlement/
+    - Cognate RealityTrace adapter reference under .tmp/ref/cognate
+    - current integrity-ledger and semantic-envelope tests
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T14.prereg.yaml
+      claim: An auditor/operator can reconstruct why an action was allowed/blocked and what enforcement actually occurred
+        without treating a delivery receipt, process exit, or observation record as domain settlement.
+      falsifier: A consequential action cannot be traced to its exact decision/grant/policy/projection, or an observation
+        receipt can make an unsettled outcome appear settled.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; review finds no alternate
+        path that violates the invariant.
+    steps:
+    - Define the smallest governance correlation record with request/correlation/trajectory, semantic identity, decision/grant,
+      policy, projection/backend, execution outcome, and evidence refs; exclude raw credentials/protected payload.
+    - Preserve denied/escalated/remediable/unsupported attempts as governed records when they are material; no side-effect
+      record should imply side effect occurred.
+    - Bridge successful/failed execution to existing evidence/trace machinery and optionally RealityTrace observation correlation.
+    - Represent evidence delivery state separately from evidence semantic value and domain settlement.
+    - Preserve contradiction/correction history append-only; later success never rewrites prior failure.
+    - Add backward trace query/test from observation/event to SemanticRef/source digest and decision/grant.
+    gate:
+    - cargo test -p sea-forge-evidence --all-features --locked
+    - cargo test -p sea-forge-trace --all-features --locked
+    - cargo test -p sea-forge-settlement --all-features --locked
+    - cargo test -p sea-forge-ledger --all-features --locked
+    teeth:
+    - attack: Execute successfully but omit/lose RealityTrace delivery under asynchronous mode.
+      expected: Execution is reported accurately with pending/failed observation delivery; not falsely settled.
+    - attack: Record an observation receipt without satisfying domain settlement criterion.
+      expected: Settlement remains pending/unaccepted.
+    - attack: Later run passes after an earlier contradictory failure.
+      expected: Both rounds remain reconstructable with provenance.
+    redesign_trigger: If governance evidence requires copying sensitive payload to explain a decision, redesign the evidence
+      to use stable refs/digests/typed reasons rather than weakening secret/information boundaries.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T14/
+    done_when:
+    - Backward and forward correlation are testable.
+    - Denied/failed/unsupported evidence is preserved.
+    - Observation, evidence, execution, and settlement remain distinct.
+    - All applicable global gates remain green.
+  T15:
+    title: 'T15: Cognate governed vertical slice'
+    initial_status: blocked
+    depends_on:
+    - T04
+    - T07
+    - T10
+    - T12
+    - T13
+    - T14
+    proof_level: P3
+    confirmation: independent
+    settles:
+    - REQ-COG-001
+    - REQ-COG-002
+    - REQ-COG-003
+    - REQ-COG-004
+    changes: Implements/proves the Cognate-to-SEA-Forge adapter/profile composition so a real Cognate consequential capability
+      crosses SEA-Forge authority/enforcement and returns correlated durable event/RealityTrace evidence without moving authority
+      into Cognate.
+    proves: Cognate can remain the application substrate and local narrowing/preflight surface while SEA-Forge is the final
+      governed consequence boundary; SemanticRef/source digest survive through grant and evidence.
+    does_not_prove: Does not prove Gauntlet orchestration integration or every Cognate application/profile; it proves the
+      framework seam with a representative consequential vertical slice.
+    hot_context:
+    - .tmp/ref/cognate/.agents/skills/building-with-cognate/SKILL.md
+    - .tmp/ref/cognate packages for DomainForge, RealityTrace, runtime policy/action-policy, capability invocation
+    - T14 evidence bridge
+    - T12/T13 credential/egress mediation
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T15.prereg.yaml
+      claim: Cognate can remain the application substrate and local narrowing/preflight surface while SEA-Forge is the final
+        governed consequence boundary; SemanticRef/source digest survive through grant and evidence.
+      falsifier: A Cognate consequential action can bypass SEA-Forge or Cognate can widen a SEA-Forge denial/grant while the
+        conformance journey still passes.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Before coding, verify `.tmp/ref/cognate` still matches the pinned integration contract; if Cognate has materially changed,
+      freeze a new user-approved integration reference and record the diff rather than silently chasing HEAD.
+    - Implement the SEA-Forge client/adapter side and the smallest Cognate-side composition necessary; keep Cognate kernel
+      semantics unchanged.
+    - Map Cognate principal + SemanticRef/source digest + CapabilityContract/action context into CanonicalActionRequest.
+    - Allow Cognate local eligibility/Policy/ActionPolicy to deny/narrow cheaply, but require SEA-Forge for the selected governed
+      capability before irreversible commitment.
+    - Route one representative consequential capability (prefer shell/run-code or another existing harness capability) through
+      grant, containment/egress/credential paths as applicable.
+    - Emit Cognate durable event containing secret-safe governance correlation; deliver/correlate RealityTrace observation.
+    - Run denied, stale-grant, unsupported-projection, and credential-non-disclosure cases through the real Cognate runtime,
+      not a hand-built fake.
+    gate:
+    - devbox run -- just integration cognate
+    - devbox run -- just context-check
+    teeth:
+    - attack: Cognate local Policy allows a capability that SEA-Forge denies.
+      expected: No consequential execution; SEA-Forge denial wins.
+    - attack: Cognate passes an unbound/incorrect SemanticRef or stale source digest.
+      expected: Grant is denied/invalidated or request explicitly treated as semantically unbound; no false correlation.
+    - attack: Try to bypass the SEA-Forge adapter through a direct provider/capability path in the proving app.
+      expected: Governed journey test detects/bars the bypass before claiming conformance.
+    - attack: Inspect Cognate event/RealityTrace payload for synthetic credential.
+      expected: No raw credential.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If Cognate lacks an irreversible-commit seam capable of SEA-Forge gating without duplicating kernel
+      authority, stop and make the smallest framework-level seam change in Cognate as a separate reviewed change; do not hide
+      authority in app code.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T15/
+    done_when:
+    - A real Cognate journey executes through SEA-Forge and settles its technical governance evidence.
+    - Denied/unsupported/stale cases cannot bypass the daemon.
+    - SemanticRef/source digest and governance correlation are recoverable from the event/observation.
+    - Fresh independent reviewer validates the integration against both repositories' contracts.
+    - All applicable global gates remain green.
+    confirms:
+    - REQ-COG-001
+    - REQ-COG-002
+    - REQ-COG-004
+    - REQ-EVID-002
+    - REQ-EVID-003
+  T16:
+    title: 'T16: Gauntlet governed orchestration integration'
+    initial_status: blocked
+    depends_on:
+    - T04
+    - T10
+    - T11
+    - T14
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-GAUNT-001
+    - REQ-GAUNT-002
+    - REQ-GAUNT-003
+    changes: Integrates Gauntlet orchestration with SEA-Forge outcomes/trajectory semantics so orchestration can navigate
+      deny, remedy, escalate, unsupported, execute, and settlement-pending states without authorizing itself.
+    proves: Gauntlet may choose and sequence work, including subagents, but cannot convert orchestration capability into semantic
+      authority or wash information restrictions through delegation.
+    does_not_prove: Does not prove Cognate integration or portable non-Linux backends.
+    hot_context:
+    - .tmp/ref/gauntlet
+    - current SEA-Forge delegation/case runner/server code
+    - T10 RemedyPlan
+    - T11 child trajectory contract
+    - T14 governance evidence
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T16.prereg.yaml
+      claim: Gauntlet may choose and sequence work, including subagents, but cannot convert orchestration capability into
+        semantic authority or wash information restrictions through delegation.
+      falsifier: Gauntlet can achieve a SEA-Forge-denied consequence by orchestration, alias substitution, fallback, or subagent
+        laundering.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Map Gauntlet proposed tool/action work to CanonicalActionRequest and preserve Gauntlet correlation IDs without making
+      them authority.
+    - Teach the integration to distinguish and route deny, remediable, escalate, unsupported, executed, indeterminate, and
+      settlement-pending results.
+    - Bind Gauntlet child/subagent lifecycle to SEA-Forge fork/return semantics for governed work.
+    - Ensure Gauntlet cannot self-satisfy approval/remedy/authority merely by choosing a different route/tool alias.
+    - Run a representative multi-step Gauntlet case where one blocked action becomes reachable through a valid remedy and
+      another remains terminally denied.
+    - Run a restricted-information subagent case and verify return confinement.
+    gate:
+    - devbox run -- just integration gauntlet
+    - cargo test -p sea-forge-server --all-features --locked gauntlet
+    teeth:
+    - attack: Gauntlet receives denied action and retries via alternate tool alias/provider.
+      expected: Canonical identity/authority still denies; orchestration cannot route around policy.
+    - attack: Gauntlet interprets `unsupported` as ordinary retry on Local backend.
+      expected: No unconfined fallback; route remains blocked unless an eligible stronger backend/remedy appears.
+    - attack: Subagent summarizes restricted content and parent attempts public tool.
+      expected: Checked return/IFC prevents laundering.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If Gauntlet's current result taxonomy collapses governance states that change next-affordance selection,
+      add the minimum explicit state distinction rather than encoding them as free-text errors.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T16/
+    done_when:
+    - Representative Gauntlet case uses SEA-Forge for governed consequence.
+    - Navigation reacts correctly to every governance outcome class.
+    - Independent verifier confirms no alias/retry/delegation bypass.
+    - All applicable global gates remain green.
+  T17:
+    title: 'T17: Portable local IPC and native backend conformance'
+    initial_status: blocked
+    depends_on:
+    - T04
+    - T05
+    - T06
+    - T13
+    proof_level: P3
+    confirmation: fresh_target_reproduction
+    settles:
+    - REQ-GOAL-008
+    changes: Completes the portability promise by implementing/proving native local control and containment/enforcement adapters
+      on claimed major platforms while preserving one semantic contract and honest capability differences.
+    proves: SEA-Forge remains local-first/backend-pluggable without Docker/VM as the universal default; Windows local IPC
+      is real, and native platform backends either satisfy shared requirements or explicitly report narrower capability.
+    does_not_prove: Does not require every platform to have identical mechanisms or capabilities, and does not force microVM
+      support unless separately promoted.
+    hot_context:
+    - T04 transport abstraction
+    - T05 CapabilityReport
+    - T06 containment contract
+    - T13 egress contract
+    - .tmp/ref/openshell platform/hardening patterns
+    - source spec roadmap boundary for portable native containment
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T17.prereg.yaml
+      claim: SEA-Forge remains local-first/backend-pluggable without Docker/VM as the universal default; Windows local IPC
+        is real, and native platform backends either satisfy shared requirements or explicitly report narrower capability.
+      falsifier: A claimed supported target cannot enforce a requirement it reports as supported, or a missing backend causes
+        silent weaker execution.
+      known_confounds:
+      - Running Windows/macOS code under mocks/CI shims rather than the native target.
+      - Treating process launch success as enforcement proof.
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Implement and test Windows-native local daemon IPC with access control; do not tunnel privileged control through unauthenticated
+      localhost TCP merely for portability.
+    - Implement/complete Windows native containment backend using AppContainer/restricted token/job object/firewall or the
+      minimal native combination that proves declared dimensions; exact mechanism is implementation-defined.
+    - Implement/complete macOS native containment/backend using Seatbelt/sandbox-exec or supported native mechanism if the
+      release claims macOS containment; otherwise explicitly declare the limitation and keep it out of conformance claims.
+    - Keep Linux current Landlock/bwrap-or-equivalent capabilities honest and regression-tested.
+    - Run the same semantic backend conformance suite on fresh Linux and Windows targets, plus macOS if claimed; record CapabilityReport
+      differences rather than normalizing them away.
+    - Verify unavailable stronger enforcement never becomes Local/unconfined fallback on any platform.
+    gate:
+    - devbox run -- just integration trusted-daemon-platforms
+    - devbox run -- just ci
+    teeth:
+    - attack: Request a dimension absent on Windows/macOS native backend.
+      expected: CapabilityReport makes it unsupported or selects a stronger eligible backend; no silent downgrade.
+    - attack: Make native containment backend unavailable at execution time.
+      expected: Grant does not fall back to unconfined Local.
+    - attack: Attempt unauthorized local daemon connection on Windows and Unix.
+      expected: Both transports reject or refuse insecure configuration.
+    independent_confirmation:
+      verifier_receives:
+      - source portability/enforcement requirements
+      - fresh target instructions
+      - backend capability reports
+      - conformance suite
+      - builder evidence
+      verifier_should_not_receive:
+      - pre-labeled expected platform capability results beyond the normative minimums
+      required_verdict: CONFIRM on each claimed target, with any capability differences explicitly recorded
+    redesign_trigger: If a platform cannot supply the minimum required native guarantees, narrow the declared supported capability/tier
+      or add an optional stronger backend; do not weaken the semantic contract to force parity.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T17/
+    done_when:
+    - Fresh Linux and Windows target evidence exists for shared semantic conformance.
+    - macOS claims, if any, are backed by fresh target evidence; otherwise limitation is explicit.
+    - No platform silently falls back to weaker unconfined execution.
+    - All applicable global gates remain green.
+    confirms:
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-ENF-002
+    - REQ-ENF-003
+    - REQ-ENF-004
+    - REQ-CONFIG-005
+    - REQ-CONT-003
+    - REQ-CONT-004
+  T18:
+    title: 'T18: Durable restart, indeterminate commit, and bounded recovery'
+    initial_status: blocked
+    depends_on:
+    - T03
+    - T04
+    - T08
+    - T12
+    - T13
+    - T14
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-SAFE-001
+    - REQ-SAFE-003
+    - REQ-SAFE-004
+    changes: Makes daemon restart/recovery safe for pending grants, trajectory state, mediator state, and uncertain external
+      commits; non-idempotent operations reconcile rather than blindly retry.
+    proves: Process failure cannot turn uncertainty into duplicate consequence, inferred reauthorization, erased policy history,
+      or widened fallback.
+    does_not_prove: Does not prove every external provider's reconciliation API; unsupported reconciliation remains operator-required/indeterminate.
+    hot_context:
+    - existing server durability/current status behavior
+    - crates/sea-forge-ledger/
+    - T03 grant lifecycle
+    - T08 trajectory revision
+    - T14 evidence bridge
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T18.prereg.yaml
+      claim: Process failure cannot turn uncertainty into duplicate consequence, inferred reauthorization, erased policy history,
+        or widened fallback.
+      falsifier: A crash/restart can duplicate a non-idempotent side effect, reauthorize by inference, or erase exact prior
+        policy/grant evidence.
+      known_confounds: []
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Persist only the grant/dispatch/revision state needed to reconstruct pending/consumed/invalidated/indeterminate conditions
+      without persisting raw credentials.
+    - Define restart reconciliation for issued-but-unconsumed, validated-but-not-dispatched, dispatched-with-known-result,
+      and dispatched-with-unknown-result states.
+    - Never reissue authority by inference after restart; reevaluate or restore exact valid grant handle state according to
+      the contract.
+    - For indeterminate external commits, consult idempotency/evidence/reconciliation surface before retry; non-idempotent
+      unknown outcome requires reconciliation/operator path.
+    - Test policy reload and restart combinations, including old decision evidence remaining intact.
+    - Fault-inject crashes around credential resolution, egress dispatch, external response, evidence append, and result return.
+    gate:
+    - cargo test -p sea-forge-server --all-features --locked restart
+    - cargo test -p sea-forge-runtime --all-features --locked indeterminate
+    - cargo test -p sea-forge-ledger --all-features --locked recovery
+    teeth:
+    - attack: Crash after external side effect but before local success record, then restart.
+      expected: System marks/reconciles indeterminate; it does not blindly repeat non-idempotent operation.
+    - attack: Crash after policy reload with grants from old revision.
+      expected: Historical evidence remains exact; grant validity follows explicit revision rules, never inferred current
+        allow.
+    - attack: Crash while credential material is in trusted mediator memory.
+      expected: No raw secret appears in durable recovery state/evidence.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: If an external operation offers neither idempotency nor observable reconciliation, classify that path
+      operator-required after indeterminate commit rather than inventing automatic recovery.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T18/
+    done_when:
+    - All crash points have explicit durable recovery semantics.
+    - Duplicate non-idempotent consequence is prevented in fault-injection tests.
+    - Independent verifier reproduces at least the post-commit/pre-record crash case.
+    - All applicable global gates remain green.
+  T19:
+    title: 'T19: Whole-system adversarial conformance and independent settlement'
+    initial_status: blocked
+    depends_on:
+    - T11
+    - T15
+    - T16
+    - T17
+    - T18
+    proof_level: P3
+    confirmation: independent_adversarial
+    settles:
+    - REQ-VERIFY-001
+    - REQ-VERIFY-002
+    - REQ-VERIFY-003
+    - REQ-VERIFY-004
+    - REQ-VERIFY-005
+    - REQ-VERIFY-006
+    confirms:
+    - REQ-AUTH-002
+    - REQ-AUTH-003
+    - REQ-AUTH-004
+    - REQ-POL-002
+    - REQ-POL-003
+    - REQ-IFC-001
+    - REQ-IFC-002
+    - REQ-IFC-004
+    - REQ-DELEG-001
+    - REQ-DELEG-002
+    - REQ-DELEG-003
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-ENF-002
+    - REQ-ENF-003
+    - REQ-ENF-004
+    - REQ-CRED-001
+    - REQ-CRED-002
+    - REQ-CRED-003
+    - REQ-CRED-004
+    - REQ-CONF-001
+    - REQ-COG-001
+    - REQ-COG-002
+    - REQ-COG-004
+    - REQ-EVID-002
+    - REQ-EVID-003
+    changes: Adds/finalizes one end-to-end conformance harness and evidence bundle that exercises deterministic replay, stale
+      state, denial side-effect absence, credential secrecy, projection fidelity, delegation confinement, backend failure,
+      and real Cognate/Gauntlet governed journeys.
+    proves: The target daemon capability exists as a coherent system rather than a set of locally passing subsystems, and
+      all source verification requirements hold under the declared variations/recovery cases.
+    does_not_prove: Does not prove roadmap items not promoted by the source spec, such as universal protocol coverage, mandatory
+      formal solver proofs, or microVM support.
+    hot_context:
+    - .agents/specs/sea-forge.trusted-daemon-target.spec.yml
+    - all task evidence T00-T18
+    - source spec validation_matrix and repeatability_and_variation
+    - source spec conformance_traceability high-risk groups
+    preregistration:
+      required: true
+      artifact: .agents/preregistrations/sea-forge-trusted-daemon/sea-forge.trusted-daemon-target-T19.prereg.yaml
+      claim: The target daemon capability exists as a coherent system rather than a set of locally passing subsystems, and
+        all source verification requirements hold under the declared variations/recovery cases.
+      falsifier: Any source verification requirement or applicable variation/recovery case fails, is skipped, or can be bypassed
+        through an alternate integrated path.
+      known_confounds:
+      - Builder-authored mocks standing in for required real integration.
+      - Coverage counted from task labels rather than inspectable evidence.
+      - Platform tests run on non-native emulation while claiming fresh-target enforcement.
+      confirmation_condition: The task's positive gate and declared teeth pass against the frozen claim; fresh independent
+        confirmation also returns the required verdict.
+    steps:
+    - Generate a requirement-to-evidence index from the frozen spec and settled task records; fail if any normative requirement
+      lacks evidence or references stale evidence.
+    - Build one adversarial scenario matrix covering source VAR-001..VAR-011 and RECOV-001..RECOV-006 plus all `REQ-VERIFY-*`
+      cases.
+    - Run same normalized request/state/policy replay and compare deterministic decision output.
+    - Run denial/unsupported tests with direct observation that prohibited side effect did not happen.
+    - Run secret scans across agent/application/runtime/evidence/result surfaces for the synthetic credential.
+    - Run exact/conservative/widening/unsupported projection behavior against source oracle.
+    - Run nested subagent laundering attacks.
+    - Run real Cognate and Gauntlet integration proofs and claimed target-platform conformance.
+    - Freeze builder evidence, then obtain fresh independent adversarial confirmation without using builder assertions as
+      oracle.
+    - If confirmation fails, preserve failed evidence, correct smallest falsified layer, rerun original attack and independent
+      confirmation.
+    gate:
+    - devbox run -- just proof
+    - devbox run -- just ci
+    - devbox run -- just integration cognate
+    - devbox run -- just integration gauntlet
+    - devbox run -- just integration trusted-daemon-platforms
+    teeth:
+    - attack: Run all source-spec verification/variation/recovery adversarial cases against the integrated system.
+      expected: Every required safe behavior is observed; no skipped required case is labeled pass.
+    - attack: Have independent verifier derive requirement coverage from spec rather than builder's mapping.
+      expected: Zero unmapped required requirements and zero unsupported conformance claims.
+    - attack: Attempt bypass through native alias, direct provider, stale grant, weaker backend, child return, or credential-bearing
+        output.
+      expected: Every route is blocked/narrowed consistently with canonical policy.
+    independent_confirmation:
+      verifier_receives:
+      - source requirement(s)
+      - frozen preregistration
+      - relevant implementation/diff
+      - builder evidence
+      - exact confirmation question
+      verifier_should_not_receive:
+      - builder's expected verdict before independent reproduction when practical
+      required_verdict: CONFIRM with no settlement-critical failure
+    redesign_trigger: Any failure showing two subsystems disagree on canonical meaning/authority requires correcting the shared
+      representation, not adding a one-off integration exception.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T19/
+    done_when:
+    - All REQ-VERIFY requirements are directly evidenced.
+    - All required source variations/recovery cases applicable to claimed environments pass.
+    - Requirement-to-evidence coverage is complete.
+    - Fresh independent adversarial verifier returns CONFIRM with no settlement-critical failure.
+    - All applicable global gates remain green.
+  T20:
+    title: 'T20: Closeout, documentation, and resumable handoff'
+    initial_status: blocked
+    depends_on:
+    - T19
+    proof_level: P1
+    confirmation: peer
+    settles: []
+    changes: Reconciles durable project documentation/status with the settled implementation, publishes the final requirement-to-evidence
+      index and recovery/limitations report, and removes temporary implementation scaffolding while retaining `.tmp/ref/`
+      as ignored local donor space only.
+    proves: A cold agent/operator can understand the final trusted-daemon capability, exact supported/unsupported boundaries,
+      proof locations, and next action without relying on this chat or donor repositories.
+    does_not_prove: Does not add new normative capability. If closeout discovers a capability gap, the affected earlier task/spec
+      is reopened rather than documented as complete.
+    hot_context:
+    - AGENTS.md
+    - .agents/CURRENT_STATUS.md
+    - .agents/LESSONS.md
+    - .agents/OBSERVED_DEBT.md
+    - .agents/OPEN_QUESTIONS.md
+    - ARCHITECTURE.md
+    - source spec + this plan + T19 evidence
+    steps:
+    - 'Update CURRENT_STATUS with exact settled state, verification commands/results, known limitations, and `next executable
+      action: none — plan settled` only if T19 passed.'
+    - Update ARCHITECTURE/ADRs/docs to reflect stable contracts without copying transient donor terminology into canonical
+      architecture.
+    - Publish final requirement-to-task-to-evidence index, backend capability matrix, policy/projection/grant schema versions,
+      integration versions, and recovery instructions.
+    - Record only durable project-specific lessons/debt/questions in their existing files; do not paste execution chronology.
+    - Ensure any substantial copied donor code carries required license/notice attribution; donor manifest remains evidence
+      of provenance.
+    - Run context-check after documentation/status updates and the full final gates once more.
+    gate:
+    - devbox run -- just context-check
+    - devbox run -- just ci
+    - devbox run -- just proof
+    teeth:
+    - attack: Give a cold reviewer only repo artifacts and ask which backend/projection/credential/IFC guarantees are supported
+        and where proven.
+      expected: Reviewer can answer from durable artifacts without chat or `.tmp/ref/`.
+    - attack: Delete `.tmp/ref/` and rerun build/tests/documentation checks.
+      expected: Production build and settled conformance do not depend on donor checkouts.
+    redesign_trigger: If removing `.tmp/ref/` breaks production or proof execution, donor code was accidentally made a runtime/build
+      dependency; move required owned code into SEA-Forge with proper attribution or revise dependency policy before closeout.
+    evidence: .agents/evidence/sea-forge-trusted-daemon/T20/
+    done_when:
+    - Durable docs/status match T19 evidence and do not overclaim.
+    - '`.tmp/ref/` is non-authoritative and removable.'
+    - Final handoff includes settled/unsettled/limitations/recovery/evidence index.
+    - Next action is `none — plan settled`.
+    - All applicable global gates remain green.
+final_acceptance:
+  authority_and_identity:
+  - Every governed consequential path uses one canonical operation/resource identity and exact policy/semantic/trajectory
+    snapshot.
+  - No caller, adapter, agent, backend, or donor-derived mechanism can widen SEA-Forge authority or a grant.
+  - Stale, expired, replayed, mismatched, unknown, or ambiguous authority fails before side effect.
+  information_flow_and_delegation:
+  - Trajectory information state is deterministic/replayable and ordinary joins are monotonic in restriction.
+  - Probabilistic annotators cannot grant authority; exact-call binding is enforced.
+  - Scoped remedies/declassification are local and evidenced; child/subagent return cannot launder information.
+  - Confined results preserve side-effect evidence without returning protected payload.
+  enforcement_and_secrets:
+  - Backend selection is requirements/capability driven and never silently falls back to weaker unconfined execution.
+  - Projection fidelity distinguishes exact/conservative/widening/unsupported and widening/unsupported consequence is blocked.
+  - CredentialRef mediation keeps raw secrets out of prohibited agent/application/log/evidence/result surfaces.
+  - Default network posture is deny; request-level restrictions are enforced where claimed and coarse controls are not mislabeled
+    exact.
+  - Filesystem/process/environment/artifact constraints remain grant-derived and existing safe-path/Landlock guarantees do
+    not regress.
+  integration_and_evidence:
+  - Cognate governed vertical slice carries SemanticRef/source digest through SEA-Forge decision/grant/enforcement to event/RealityTrace
+    correlation.
+  - Gauntlet navigates deny/remedy/escalate/unsupported/executed/indeterminate states without authorizing itself or bypassing
+    IFC.
+  - Execution, observation delivery, evidence, and domain settlement remain distinct.
+  - Governance evidence is append-only/correctable, secret-safe, and sufficient to reconstruct why a consequence occurred.
+  operability_and_portability:
+  - Trusted local control is access-controlled on Unix and Windows; claimed native backends pass fresh-target conformance
+    or expose limitations.
+  - Daemon restart/indeterminate external commit cannot cause blind duplicate non-idempotent consequence or inferred reauthorization.
+  - Production build/tests do not depend on `.tmp/ref/` donor trees.
+  - No roadmap-only formal prover, microVM tier, or unclaimed protocol coverage is represented as settled.
+  evidence_and_confirmation:
+  - Every REQUIRED normative spec requirement maps to at least one settled task/evidence record.
+  - Every P3 task has the required fresh independent confirmation.
+  - Failed/correction evidence has not been erased.
+  - Documentation/status claims do not exceed observed proof.
+  - All global gates exit 0.
+  - T19 independent adversarial whole-system verdict is CONFIRM and T20 cold-agent handoff succeeds.
+guardrails:
+- Do not replace the existing one-authority fabric with separate uncoordinated policy engines.
+- Do not introduce a new `.sea` grammar construct merely to model a backend/provider/runtime target; prefer projections/adapters/mappings.
+- Do not make OpenShell, OpenAPPA, Gauntlet, or Cognate donor/reference checkouts runtime/build dependencies of SEA-Forge.
+- Do not vendor/copy substantial third-party code without recording commit, path, license, and required notices.
+- Do not regress current ActionGrant move-only semantics, canonical policy hashing, safe path handling, Landlock fail-closed
+  TCP behavior, integrity ledger, environment pinning, or existing server/runtime/sandbox proofs while evolving them.
+- Do not let child-controlled input select a weaker backend, wider network/filesystem/env scope, or raw credential value.
+- Do not put raw credentials into prompts, normal child env when avoidable, events, logs, artifacts, RealityTrace payloads,
+  or errors.
+- Do not silently convert unavailable enforcement into Local/unconfined execution.
+- Do not treat policy allow, process exit 0, observation delivery, or logged evidence as domain settlement by itself.
+- Do not retry a non-idempotent operation after an indeterminate external commit without reconciliation evidence.
+- Do not merge platform-specific mechanisms into stable semantic types when CapabilityReport/adapter boundaries can preserve
+  the distinction.
+- 'Do not update CURRENT_STATUS to `settled` or `next: none` until T19 and T20 gates/confirmation pass.'
+handoff_contract:
+  must_report:
+  - settled capabilities/requirements
+  - explicitly unsettled or deferred items
+  - current operational system state
+  - requirement-to-evidence index
+  - known limitations
+  - rollback/recovery instructions where relevant
+  - important decisions/discoveries that changed the execution model
+  - exact next executable action or 'none — plan settled'
+  - donor provenance/attribution for any copied code or adapted pattern
+  - claimed platform/backend capability matrix
+  settled_next_action_rule: The next executable action MUST be set to `none — plan settled` only after the final required
+    conformance/confirmation task succeeds.
+traceability:
+  spec_requirement_count: 116
+  mapped_requirement_count: 116
+  unmapped_requirements: []
+  unknown_plan_requirement_ids: []
+  requirement_to_tasks:
+    REQ-ADAPT-001:
+    - T01
+    REQ-ADAPT-002:
+    - T01
+    REQ-ADAPT-003:
+    - T01
+    REQ-AUTH-001:
+    - T03
+    REQ-AUTH-002:
+    - T03
+    REQ-AUTH-003:
+    - T03
+    REQ-AUTH-004:
+    - T03
+    REQ-AUTH-005:
+    - T03
+    REQ-AUTH-006:
+    - T01
+    REQ-COG-001:
+    - T15
+    REQ-COG-002:
+    - T15
+    REQ-COG-003:
+    - T15
+    REQ-COG-004:
+    - T15
+    REQ-CONF-001:
+    - T10
+    REQ-CONF-002:
+    - T10
+    REQ-CONF-003:
+    - T10
+    REQ-CONFIG-001:
+    - T02
+    REQ-CONFIG-002:
+    - T12
+    REQ-CONFIG-003:
+    - T05
+    REQ-CONFIG-004:
+    - T07
+    REQ-CONFIG-005:
+    - T17
+    REQ-CONFIG-010:
+    - T12
+    REQ-CONFIG-011:
+    - T05
+    REQ-CONFIG-012:
+    - T04
+    REQ-CONT-001:
+    - T06
+    REQ-CONT-002:
+    - T06
+    REQ-CONT-003:
+    - T17
+    REQ-CONT-004:
+    - T06
+    REQ-CRED-001:
+    - T12
+    REQ-CRED-002:
+    - T12
+    REQ-CRED-003:
+    - T12
+    REQ-CRED-004:
+    - T12
+    REQ-CRED-005:
+    - T12
+    REQ-DELEG-001:
+    - T11
+    REQ-DELEG-002:
+    - T11
+    REQ-DELEG-003:
+    - T11
+    REQ-DELEG-004:
+    - T11
+    REQ-ENF-001:
+    - T05
+    REQ-ENF-002:
+    - T05
+    REQ-ENF-003:
+    - T05
+    REQ-ENF-004:
+    - T05
+    REQ-ENF-005:
+    - T05
+    REQ-ENV-001:
+    - T06
+    REQ-ENV-002:
+    - T06
+    REQ-ENV-003:
+    - T06
+    REQ-EVID-001:
+    - T14
+    REQ-EVID-002:
+    - T14
+    REQ-EVID-003:
+    - T15
+    REQ-EVID-004:
+    - T14
+    REQ-EVID-005:
+    - T14
+    REQ-GAUNT-001:
+    - T16
+    REQ-GAUNT-002:
+    - T16
+    REQ-GAUNT-003:
+    - T16
+    REQ-GOAL-001:
+    - T04
+    REQ-GOAL-002:
+    - T03
+    REQ-GOAL-003:
+    - T03
+    REQ-GOAL-004:
+    - T07
+    REQ-GOAL-005:
+    - T08
+    REQ-GOAL-006:
+    - T12
+    REQ-GOAL-007:
+    - T15
+    REQ-GOAL-008:
+    - T17
+    REQ-IFC-001:
+    - T08
+    REQ-IFC-002:
+    - T08
+    REQ-IFC-003:
+    - T09
+    REQ-IFC-004:
+    - T09
+    REQ-IFC-005:
+    - T09
+    REQ-IFC-006:
+    - T08
+    REQ-IFC-007:
+    - T10
+    REQ-NET-001:
+    - T13
+    REQ-NET-002:
+    - T13
+    REQ-NET-003:
+    - T13
+    REQ-NET-004:
+    - T13
+    REQ-NET-005:
+    - T13
+    REQ-OPID-001:
+    - T01
+    REQ-OPID-002:
+    - T01
+    REQ-OPID-003:
+    - T01
+    REQ-OUT-001:
+    - T04
+    REQ-OUT-002:
+    - T03
+    REQ-OUT-003:
+    - T03
+    REQ-OUT-004:
+    - T03
+    REQ-OUT-005:
+    - T05
+    REQ-OUT-006:
+    - T15
+    REQ-POL-001:
+    - T02
+    REQ-POL-002:
+    - T02
+    REQ-POL-003:
+    - T02
+    REQ-POL-004:
+    - T02
+    REQ-PROJ-001:
+    - T07
+    REQ-PROJ-002:
+    - T07
+    REQ-PROJ-003:
+    - T07
+    REQ-PROJ-004:
+    - T07
+    REQ-PROJ-005:
+    - T07
+    REQ-PROJ-006:
+    - T07
+    REQ-PROJ-007:
+    - T07
+    REQ-PROJ-008:
+    - T07
+    REQ-PROJ-009:
+    - T07
+    REQ-REM-001:
+    - T10
+    REQ-REM-002:
+    - T10
+    REQ-REM-003:
+    - T10
+    REQ-REM-004:
+    - T10
+    REQ-SAFE-001:
+    - T03
+    REQ-SAFE-002:
+    - T05
+    REQ-SAFE-003:
+    - T18
+    REQ-SAFE-004:
+    - T18
+    REQ-SAFE-005:
+    - T10
+    REQ-SEC-001:
+    - T03
+    REQ-SEC-002:
+    - T03
+    REQ-SEC-003:
+    - T12
+    REQ-SEC-004:
+    - T10
+    REQ-SEC-005:
+    - T07
+    REQ-SEC-006:
+    - T04
+    REQ-VERIFY-001:
+    - T19
+    REQ-VERIFY-002:
+    - T19
+    REQ-VERIFY-003:
+    - T19
+    REQ-VERIFY-004:
+    - T19
+    REQ-VERIFY-005:
+    - T19
+    REQ-VERIFY-006:
+    - T19
+  coverage_rule: Every REQUIRED normative requirement in the source specification MUST map to at least one settlement task.
+    High-risk requirements additionally require the confirmation mode defined by the specification and this plan.
+authoring_validation:
+  source_spec_sha256: 09822b59756cc842db410c91f030d373b7f3bf6e1114c9a7e7c977062492e70b
+  requirement_coverage: 116/116
+  dependency_cycle_check: pass
+  unknown_requirement_check: pass
+  placeholder_check: required before artifact handoff
+  note: Plan remains draft solely because source spec metadata remains draft; execution activation gate is explicit above.

@@ -1,0 +1,36 @@
+schema: godspeed-bounded-judgment.t01-abstention-report
+disclosure:
+  n: 17
+  independent_run_count: 6
+  class_counts:
+    PASS: 17
+  concentration_by_run: see concentration-report.yml (effective run diversity 5.898)
+  missing_attribution: 17/17 rows unattributed
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: pilot corpus of order 10^1 settled judgments; descriptive only'
+abstention_by_provider:
+- provider: codex
+  n: 17
+  abstaining_rows: 16
+  abstention_rate: 0.9411764705882353
+  rows_with_chain_gaps: 0
+  abstention_and_gap_co_occurrence: 0
+  note: descriptive co-occurrence only; N=17 is unstable and supports no inference beyond description
+- provider: prime-agent
+  n: 17
+  abstaining_rows: 12
+  abstention_rate: 0.7058823529411765
+  rows_with_chain_gaps: 0
+  abstention_and_gap_co_occurrence: 0
+  note: descriptive co-occurrence only; N=17 is unstable and supports no inference beyond description
+- provider: scripted
+  n: 17
+  abstaining_rows: 11
+  abstention_rate: 0.6470588235294118
+  rows_with_chain_gaps: 0
+  abstention_and_gap_co_occurrence: 0
+  note: descriptive co-occurrence only; N=17 is unstable and supports no inference beyond description
+interpretation_rule: abstention is the explicit insufficiency label of the frozen answer domain; a high abstention rate is
+  a SURFACE-level finding (evidence at the locator underdetermines the question) and MUST NOT be reported as provider failure
+  or capability-class evidence
+assembled_from: round-1/provider-raw-results.json + round-1/pilot-dataset.json (persisted outputs; no new provider calls)

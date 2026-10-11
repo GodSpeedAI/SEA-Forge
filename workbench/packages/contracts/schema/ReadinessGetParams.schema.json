@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReadinessGetParams",
+  "description": "Request params for `readiness.get`.",
+  "type": "object",
+  "properties": {
+    "intended_operation": {
+      "description": "Optional intended operation to foreground relevant capabilities.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntendedOperation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "IntendedOperation": {
+      "description": "The operation the operator intends to perform next, if any. Lets the view\nforeground the capabilities that operation actually depends on\n(operation-sensitivity). Mirrors the request example at\n`sea-forge-workbench-api-spec-v0.1.md:2037-2041`.",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "The SFWP method (or method family) the operator intends to invoke next.",
+          "type": "string"
+        },
+        "resource_ref": {
+          "description": "Optional resource the operation targets. A citation string in this\nslice; not resolved to a canonical record digest.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "method"
+      ]
+    }
+  }
+}

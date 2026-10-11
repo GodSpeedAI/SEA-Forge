@@ -1,0 +1,60 @@
+# Projection Pressure Observations
+# Recorded during sequential behavioral proof navigation
+# Primary input for deriving-atomic-ui-models
+# Schema: id, kind, journey, phases, observation, evidence_ref
+
+- id: "PP01"
+  kind: "persistent_context"
+  journey: "CJ01"
+  phases: ["IS1", "IS7", "IS8"]
+  observation: "Operator and auditor repeatedly require cell identity, active snapshot hash, and readiness standing across transitions; lost context forces redundant re-queries."
+  evidence_ref: "proof/tests/test_proof.py#test_happy_path_all_twelve_journeys"
+
+- id: "PP02"
+  kind: "simultaneous_comparison"
+  journey: "CJ09"
+  phases: ["IS6", "IS7"]
+  observation: "Auditor must simultaneously view immutable case criteria alongside observed run traces, output hashes, and declaration standings; sequential paging obscures criteria fulfillment gaps."
+  evidence_ref: "proof/tests/test_proof.py#test_settlement_rejection_despite_execution_success"
+
+- id: "PP03"
+  kind: "collection"
+  journey: "CJ06"
+  phases: ["IS1", "IS2", "IS8"]
+  observation: "Approver needs to scan, filter, and prioritize multiple pending approval requests, each showing requesting actor, target resource, expiry countdown, and risk rating."
+  evidence_ref: "proof/fixtures/cases.json#TC_CJ06_AUTHORITY_SELF_APPROVAL_BLOCK"
+
+- id: "PP04"
+  kind: "relationship_view"
+  journey: "CJ05"
+  phases: ["IS1", "IS2", "IS8"]
+  observation: "Committed case stages, items, milestones, and sentries form an interdependent dependency DAG; linear representation fails to show why a downstream item is blocked by an unmet upstream sentry."
+  evidence_ref: "proof/tests/test_proof.py#test_affordance_dependency_degradation"
+
+- id: "PP05"
+  kind: "temporal_view"
+  journey: "CJ08"
+  phases: ["IS1", "IS5", "IS6"]
+  observation: "Monitoring concurrent runs and restart recovery requires a monotonic timeline linking ordered event cursors, sibling runs, and successor retry episodes to diagnose causal failure."
+  evidence_ref: "proof/tests/test_proof.py#test_execution_failure_with_recovery_is4"
+
+- id: "PP06"
+  kind: "artifact_context"
+  journey: "CJ07"
+  phases: ["IS1", "IS3", "IS4"]
+  observation: "Executor and operator must keep sandbox boundary constraints (timeout, network deny, filesystem chroot) and job contract parameters visible while monitoring execution."
+  evidence_ref: "journeys/CJ07.yaml#phases.IS4_capability_invocation"
+
+- id: "PP07"
+  kind: "simultaneous_comparison"
+  journey: "CJ11"
+  phases: ["IS2", "IS6", "IS7"]
+  observation: "Maturity gate evaluation requires side-by-side inspection of source .sea model digests against projected code artifacts and predecessor TransitionTokens to prevent skipping legal stages."
+  evidence_ref: "journeys/CJ11.yaml#phases.IS6_evidence_inspection"
+
+- id: "PP08"
+  kind: "artifact_context"
+  journey: "CJ12"
+  phases: ["IS2", "IS5", "IS7"]
+  observation: "Cell administrator must inspect external bundle manifest entries, size bounds, and provenance signatures while executing atomic admission or deciding inert asset adoption."
+  evidence_ref: "journeys/CJ12.yaml#phases.IS6_evidence_inspection"

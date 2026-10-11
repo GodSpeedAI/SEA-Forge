@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/thoth-ask.schema.json",
+  "title": "ThothAsk",
+  "description": "Authenticated governed knowledge query and complete Thoth answer view. Ask may write durable question and disclosure records; ambiguous transport outcomes are not resent, and answers confer no execution authority.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/definitions/AskRequest" },
+    { "$ref": "#/definitions/ThothAnswerView" }
+  ],
+  "definitions": {
+    "AskRequest": {
+      "type": "object",
+      "description": "POST /api/ask body. The raw body is limited to 8 KiB by the route before decoding.",
+      "required": ["kind", "subject"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ask_capability", "ask_operation_requirements", "ask_authority_requirements", "ask_projection_support", "ask_environment_status", "ask_failure_explanation", "ask_evidence_for_claim", "ask_available_affordances", "ask_why_denied"]
+        },
+        "subject": { "type": "string", "minLength": 1, "description": "Must be non-empty after Unicode whitespace trimming by the route." },
+        "purpose": {
+          "type": "string",
+          "description": "Optional; when supplied, the route enforces the kernel's maximum of 500 UTF-8 bytes. JSON Schema maxLength counts characters, not UTF-8 bytes, so this limit is not expressed as maxLength."
+        },
+        "case": { "type": "string", "minLength": 1, "description": "Optional non-empty case read-scope reference." }
+      },
+      "additionalProperties": false
+    },
+    "ThothClaimView": {
+      "type": "object",
+      "required": ["claim_id", "claim_class", "subject", "status", "statement", "snapshot_ref", "evidence_refs", "settlement_refs"],
+      "properties": {
+        "claim_id": { "type": "string" },
+        "claim_class": {
+          "type": "string",
+          "enum": ["identity", "architecture", "declared_capability", "installed_capability", "demonstrated_capability", "authority_requirements", "environment_status", "failure_condition", "security_implementation", "customer_private", "credential_bearing", "policy_thresholds"]
+        },
+        "subject": { "type": "string" },
+        "status": { "type": "string", "enum": ["unknown", "unsupported", "declared", "installed", "available", "validated", "demonstrated"] },
+        "statement": { "type": "string", "description": "Template-generated from typed fields; not free-form model output." },
+        "snapshot_ref": { "type": "string" },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "settlement_refs": { "type": "array", "items": { "type": "string" } },
+        "capability_record_ref": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "ThothAnswerView": {
+      "type": "object",
+      "required": ["answer_id", "question_id", "disposition", "claims", "omitted_claim_classes", "snapshot_ref", "freshness", "assurance", "limitations", "authority_notice", "answered_at"],
+      "properties": {
+        "answer_id": { "type": "string" },
+        "question_id": { "type": "string" },
+        "disposition": { "type": "string", "enum": ["answered", "partial", "denied"] },
+        "claims": { "type": "array", "items": { "$ref": "#/definitions/ThothClaimView" } },
+        "omitted_claim_classes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["identity", "architecture", "declared_capability", "installed_capability", "demonstrated_capability", "authority_requirements", "environment_status", "failure_condition", "security_implementation", "customer_private", "credential_bearing", "policy_thresholds"] }
+        },
+        "snapshot_ref": { "type": "string" },
+        "freshness": { "type": "string", "enum": ["current", "stale"] },
+        "assurance": { "type": "string", "description": "Ledger assurance vocabulary is carried verbatim, not narrowed to a gateway enum." },
+        "limitations": { "type": "array", "items": { "type": "string" } },
+        "authority_notice": { "type": "string", "description": "Disclosure notice only; a Thoth answer confers no execution authority." },
+        "answered_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

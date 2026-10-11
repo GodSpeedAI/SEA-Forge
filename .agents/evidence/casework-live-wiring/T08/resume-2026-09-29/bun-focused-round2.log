@@ -1,0 +1,83 @@
+Command: bun test src/app/intents.test.ts src/app/live.test.ts src/adapters/http/httpCaseworkAdapter.test.ts src/adapters/http/httpTrajectory.test.ts
+Working directory: apps/godspeed-cognitive-ui
+Pre-command memory: free -m reported 2331 MiB available.
+Exit code: 1
+
+bun test v1.4.0 (34cbb9a40)
+
+src/app/live.test.ts:
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:31:18)
+
+(pass) connectLive connection recovery > marks a prolonged outage interrupted and returns live only after a source snapshot [56.39ms]
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:65:18)
+
+(pass) connectLive connection recovery > clears the interruption timer when the subscription is disposed [31.98ms]
+(pass) connectLive connection recovery > keeps a stale-refusal refresh in history when a later live snapshot arrives [4.08ms]
+
+src/app/intents.test.ts:
+69 |     expect(readArgs).toEqual([history.caseId, ACTOR.id, ACTOR.role])
+70 |     expect(result.state).toBe('refused')
+71 |     expect(result.code).toBe('STALE_PROJECTION')
+72 |     expect(result.note).toBe('This projection is stale.')
+73 |     expect(store.getState().intents.at(-1)?.code).toBe('STALE_PROJECTION')
+74 |     expect(store.getState().judgment?.outcome?.code).toBe('STALE_PROJECTION')
+                                                          ^
+error: expect(received).toBe(expected)
+
+Expected: "STALE_PROJECTION"
+Received: undefined
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/intents.test.ts:74:54)
+(fail) createIntentPath stale projection recovery > fetches one fresh snapshot, preserves the refusal, and keeps the current focus and historical position [4.02ms]
+102 |     expect(snapshotCount).toBe(1)
+103 |     expect(result.state).toBe('refused')
+104 |     expect(result.code).toBe('STALE_PROJECTION')
+105 |     expect(result.note).toContain('This projection is stale.')
+106 |     expect(result.note).toContain('Current projection refresh failed: gateway unavailable')
+107 |     expect(store.getState().judgment?.outcome?.code).toBe('STALE_PROJECTION')
+                                                           ^
+error: expect(received).toBe(expected)
+
+Expected: "STALE_PROJECTION"
+Received: undefined
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/intents.test.ts:107:59)
+(fail) createIntentPath stale projection recovery > keeps the stale refusal and reports a failed refresh without replaying the intent [2.38ms]
+(pass) createIntentPath stale projection recovery > does not merge a deferred old-case refresh after the user switches cases [3.49ms]
+(pass) createIntentPath stale projection recovery > rejects a refresh response that identifies a different case [2.06ms]
+
+src/adapters/http/httpTrajectory.test.ts:
+(pass) HttpCaseworkAdapter temporal trajectory > requests the authenticated case trajectory and returns the canonical response [1.87ms]
+(pass) HttpCaseworkAdapter temporal trajectory > surfaces typed unknown or unavailable retained history refusals [0.56ms]
+
+src/adapters/http/httpCaseworkAdapter.test.ts:
+(pass) HttpCaseworkAdapter > session() learns identity from /api/session and caches it [0.40ms]
+(pass) HttpCaseworkAdapter > getSnapshot ignores client-asserted actors and stamps the server perspective [0.40ms]
+(pass) HttpCaseworkAdapter > dispatchIntent sends the CSRF header and surfaces typed refusals verbatim [0.91ms]
+(pass) HttpCaseworkAdapter > pre-dispatch gateway refusals (rate limit) throw typed, never retry [0.41ms]
+(pass) HttpCaseworkAdapter > resolveArtifact returns the canonical authenticated payload with Unicode intact [0.89ms]
+(pass) HttpCaseworkAdapter > resolveArtifact preserves an empty artifact body [0.27ms]
+(pass) HttpCaseworkAdapter > resolveArtifact surfaces typed not-found errors from the gateway [0.31ms]
+(pass) HttpCaseworkAdapter > resolveArtifact rejects a response whose digest differs from the requested digest [0.42ms]
+(pass) HttpCaseworkAdapter > unauthenticated reads surface a sign-in refusal, not a leak [0.26ms]
+(pass) HttpCaseworkAdapter > subscribeEvents filters other cases and forwards same-case revisions [0.54ms]
+302 |     try {
+303 |       await adapter.queryTemporalTrajectory('case_1')
+304 |     } catch (err) {
+305 |       message = (err as Error).message
+306 |     }
+307 |     expect(message).toContain('not served by this deployment')
+                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "not served by this deployment"
+Received: "getaddrinfo ETIMEOUT gw.test"
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.test.ts:307:21)
+(fail) HttpCaseworkAdapter > queryTemporalTrajectory is honestly unsupported [1.15ms]
+
+ 17 pass 3 fail
+ 70 expect() calls
+Ran 20 tests across 4 files. [167.00ms]

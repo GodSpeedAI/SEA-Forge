@@ -1,0 +1,13 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -tags=live -run ^TestNativeEventSourceResyncRetryAndRetentionReplay$ -count=1 ./internal/server
+--- FAIL: TestNativeEventSourceResyncRetryAndRetentionReplay (51.53s)
+    native_events_live_test.go:205: run phase1 through the browser's native EventSource path: agent-browser eval --stdin: exit status 1 (✗ Evaluation error: Error: timed out waiting for first native EventSource error callback: []
+            at waitFor (http://127.0.0.1:42735/e2e/native-events-live.ts:26:9)
+            at async phaseOne (http://127.0.0.1:42735/e2e/native-events-live.ts:147:5)
+            at async <anonymous>:3:25) (diagnostics: /tmp/sea-t08-native-diagnostic-2900998077)
+    native_events_live_test.go:132: preserved native EventSource diagnostics at /tmp/sea-t08-native-diagnostic-2900998077
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-799881055/cell
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-1955156880/cell
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	51.779s
+FAIL
+EXIT_CODE=1

@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KTFE2F7G869QWHSFYMWYMQ",
+  "source_entry_ulids": [
+    "01M4KTFE2F7G869QWHSFYMWYMQ"
+  ],
+  "source_payload_hash": "sha256:74ff01041525aa88b1eb07e905d919c9c1d29542d0245394c6d9723edf5cee1a",
+  "view_path": "/tmp/t10-live-0KrX6I/cell/cases/case_20261010T210934Z_82a73f/plan.json",
+  "view_sha256": "sha256:77dd1c55629c4fdecb6610411e792d49ea8e0aaab45c4b19a3c65a51fd836636",
+  "status": "current",
+  "failure_class": null
+}

@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ11",
+  "oracle_name": "CJ11_ArtifactTransformationAndMaturityOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Output is validated, hash-linked, settled at actual maturity or quarantined; file creation alone != runtime readiness.",
+  "authoritative_record_inspected": "crates/sea-forge-domainforge / /artifacts route",
+  "rationale": "DomainForge crate exists with deterministic-projection tests passing (see CJ03); Workbench artifact.list preview correctly fails closed.",
+  "evidence_refs": [
+    "crates/sea-forge-domainforge",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "carried_state": {}
+}

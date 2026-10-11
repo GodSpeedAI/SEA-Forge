@@ -2,5 +2,7 @@
 # Public recipients only; private keys live outside the repository at
 # $SOPS_AGE_KEY_FILE (normally ~/.config/sops/age/keys.txt).
 creation_rules:
-  - path_regex: secrets/.*\.enc\.env$
-    age: age1mq5sj8gj4k5vqtgefkuvs05nghanzhgmcqkxxspk0vffq9hxm5ssnj93a5
+  # Match the local plaintext input and its tracked encrypted output so
+  # `sops -e secrets/dev.env > secrets/dev.enc.env` uses this same rule.
+  - path_regex: secrets/.*\.env$
+    age: age1s6dahq2552k8m9zf0njrrm0kxmchd4lmycm363zzk0ktxmz4s3qq4uwe2t

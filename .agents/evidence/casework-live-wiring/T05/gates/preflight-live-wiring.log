@@ -1,0 +1,12 @@
+{"timestamp":"2026-09-25T20:00:51.315713Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/sfwp-preflight-TLok","socket":"/tmp/sfwp-preflight-TLok/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-25T20:00:51.316857Z","level":"INFO","message":"server listening on /tmp/sfwp-preflight-TLok/server.sock"}
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/sfwp-preflight-TLok", evidence_root "", 1 capability/ies, 1 resolved secret(s))
+  ready     authority      kind=authority required=true
+godspeed-casework: ready=[authority] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+PREFLIGHT_EXIT=0
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/sfwp-preflight-TLok", evidence_root "", 1 capability/ies, 1 resolved secret(s))
+  ready     authority      kind=authority required=true
+godspeed-casework: ready=[authority] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+PREFLIGHT_ENV_EXIT=0

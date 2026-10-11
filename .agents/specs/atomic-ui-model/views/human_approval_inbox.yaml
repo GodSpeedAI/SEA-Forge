@@ -1,0 +1,108 @@
+# Atomic UI View: human_approval_inbox
+# Upstream Behavioral Source: CJ06 Resolve Human Judgment and Approval
+
+view:
+  id: human_approval_inbox
+  purpose: Triage pending human judgments, approvals, ACP prompts, and assigned human items with strict separation of duty.
+
+sources:
+  journey: CJ06
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    actor_identity: persistent
+    selected_request_id: persistent_during_review
+
+regions:
+  - id: inbox_table_panel
+    responsibility: list_sort_and_filter_pending_requests
+  - id: request_context_inspector
+    responsibility: expose_policy_context_evidence_and_downstream_effects
+  - id: separation_of_duty_banner
+    responsibility: validate_and_attest_approver_independence
+  - id: judgment_action_bar
+    responsibility: record_approve_reject_or_refuse_decisions
+
+elements:
+  # Inbox Table Region
+  - id: pending_requests_table
+    primitive: table
+    region: inbox_table_panel
+    binds: { entity: pending_approval_requests }
+
+  - id: expiry_countdown_metric
+    primitive: metric
+    region: inbox_table_panel
+    binds: { field: time_until_expiry }
+
+  - id: request_status_badge
+    primitive: status
+    region: inbox_table_panel
+    binds: { field: request_state }
+
+  # Request Context Inspector Region
+  - id: request_id_display
+    primitive: identity
+    region: request_context_inspector
+    binds: { entity: approval_request, field: request_id }
+
+  - id: request_intent_value
+    primitive: value
+    region: request_context_inspector
+    binds: { field: requested_action_scope }
+
+  - id: request_evidence_item
+    primitive: evidence_item
+    region: request_context_inspector
+    binds: { field: governance_evidence }
+
+  - id: downstream_effects_summary
+    primitive: message
+    region: request_context_inspector
+    binds: { field: downstream_unblock_summary }
+
+  # Separation of Duty Region
+  - id: independence_attestation_status
+    primitive: status
+    region: separation_of_duty_banner
+    binds: { field: anti_self_approval_standing }
+
+  - id: independence_warning_message
+    primitive: message
+    region: separation_of_duty_banner
+    binds: { field: separation_of_duty_warning }
+
+  # Judgment Action Bar Region
+  - id: rationale_input
+    primitive: input
+    region: judgment_action_bar
+    binds: { field: decision_rationale }
+
+  - id: approve_action
+    primitive: action
+    region: judgment_action_bar
+    semantic_action: approval.decide
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: reject_action
+    primitive: action
+    region: judgment_action_bar
+    semantic_action: replan_or_cancel_rejected_branch
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: escalate_approver_action
+    primitive: action
+    region: judgment_action_bar
+    semantic_action: escalate_to_alternate_approver
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: approval_requests_loading }
+  ready: { when: request_selected_and_approver_eligible }
+  empty: { when: zero_pending_requests }
+  blocked: { when: approver_ineligible_due_to_self_approval_or_expiry }
+  settled: { when: decision_committed_to_event_log }

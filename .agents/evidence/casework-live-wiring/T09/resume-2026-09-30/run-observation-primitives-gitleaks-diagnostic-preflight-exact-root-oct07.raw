@@ -1,0 +1,25 @@
+UTC 2026-10-07T22:33:47Z
+MemAvailable_KiB=3055436 required_min_KiB=1228800
+SwapFree_KiB=9821472 required_min_KiB=524288
+competing_go_rust_count=0
+HEAD=617dac3ddf78b660ca95f1c7a53fdf59b87653d5
+gitleaks_config_sha256=608a687e53ba365fc743ae6c8d2ded7a1c006e8c6b0f5f209109d055f6e5ad05
+security_recipe:
+# Supply-chain + secret scan: cargo-deny then gitleaks.
+# `cargo deny check advisories` fetches the RustSec database; the other
+# categories are offline. gitleaks scans staged + committed history.
+[group('quality')]
+deny:
+    cargo deny check
+
+[group('quality')]
+security:
+    #!/usr/bin/env bash
+    {{set}}
+    just deny
+    gitleaks detect --no-banner --redact
+
+pinned_gitleaks_version:
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "gitleaks" on /home/sprime01/projects/sea-rs
+8.30.1

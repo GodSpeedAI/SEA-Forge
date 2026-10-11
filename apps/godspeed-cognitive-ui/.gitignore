@@ -1,0 +1,3 @@
+# Installed dependencies and build output are reproducible from the committed bun.lock and source.
+node_modules/
+dist/

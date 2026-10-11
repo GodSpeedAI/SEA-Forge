@@ -1,0 +1,174 @@
+{
+  "journey_id": "CJ09",
+  "canonical_journey_name": "Evaluate, Settle, and Audit Outcomes",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "2.7",
+    "3.7",
+    "3.8",
+    "9.8",
+    "9.9",
+    "10.6",
+    "12.1",
+    "12.2",
+    "12.3",
+    "12.4",
+    "12.5",
+    "12.6",
+    "12.7",
+    "12.8",
+    "12.9",
+    "12.10",
+    "16.8"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 11,
+    "variant": 2,
+    "composition": 3
+  },
+  "implementation_maturity": {
+    "specified": 1,
+    "implemented": 0,
+    "exercised": 11,
+    "evidenced": 5
+  },
+  "actor_and_role": {
+    "primary_actor": "auditor",
+    "primary_role": "auditor",
+    "allowed_roles": [
+      "auditor",
+      "reviewer",
+      "operator"
+    ]
+  },
+  "starting_state": "Execution terminates, a claim or failure needs explanation, a reviewer must settle criteria, an assurance label needs proof, or an auditor inspects authority, disclosure, ledger, or replay history.",
+  "preconditions": [
+    "Immutable plan criteria and origins",
+    "authority, trace, evidence, artifact, transcript, declaration, settlement, and ledger records",
+    "policy-bounded disclosure",
+    "independent actor standing where required."
+  ],
+  "intention": "Prove what was intended, authorized, attempted, observed, accepted, and promoted from immutable evidence.",
+  "job": "Inspect a linked episode, compare criteria with evidence, keep execution and settlement distinct, validate provenance and integrity, and reproduce governance history.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "`run.get`",
+    "evidence and claim explanation",
+    "artifact and transcript verification",
+    "settlement evaluation",
+    "declaration weighting",
+    "provenance checks",
+    "ledger inclusion and consistency proof",
+    "deterministic replay",
+    "audit search",
+    "disclosure history",
+    "and source-record access."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_thoth_route",
+      "workbench_delegation_route",
+      "workbench_operations_route",
+      "workbench_evidence_and_run_routes",
+      "workbench_administration_route"
+    ],
+    "api": [
+      "sfwp_event_family",
+      "sfwp_thoth_family",
+      "sfwp_run_record_family",
+      "sfwp_delegation_family"
+    ],
+    "cli": [
+      "cli_run_inspection_family",
+      "cli_cell_and_self_model_family",
+      "cli_ledger_family",
+      "cli_thoth_family",
+      "cli_agent_family"
+    ],
+    "agent": [
+      "agent_thoth_epistemic_surface",
+      "agent_delegation_execution_surface",
+      "agent_delegation_control_surface"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Execution evidence becomes accepted, rejected, or escalated settlement",
+    "declarations qualify, lose weight, or are excluded",
+    "assurance becomes supported, degraded, pending, stale, or unsupported",
+    "invalid proof leads to fresh-evidence recovery rather than silent promotion."
+  ],
+  "required_artifacts_and_evidence": [
+    "Linked run records",
+    "immutable criteria",
+    "authority and configuration snapshots",
+    "traces",
+    "evidence artifacts",
+    "transcript descriptors",
+    "settlement records",
+    "declarations",
+    "provenance chains",
+    "ledger entries",
+    "checkpoints",
+    "witness receipts",
+    "replay order",
+    "disclosure plans",
+    "and typed source references."
+  ],
+  "settlement_condition": "Every outcome or assurance claim resolves to attributable, integrity-checked evidence and an independent settlement or explicit unavailability; execution termination remains separately visible.",
+  "expected_next_decisions_and_affordances": [
+    "Accept",
+    "reject",
+    "or escalate; obtain fresh qualifying proof; retry or replan; adjust capability standing; verify another record; or end at an auditable terminal condition."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Exclude mismatched criteria, broken origins, missing evidence, unauthorized declarations, and self-certification",
+    "obtain fresh proof",
+    "rebuild human-readable views from typed source records",
+    "verify ledger consistency without mutation."
+  ],
+  "expected_unavailable_states": [
+    "cross-family unified audit search is preview-only"
+  ]
+}

@@ -1,0 +1,95 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 13.38s
+     Running tests/sfwp_delegated_identity.rs (target/debug/deps/sfwp_delegated_identity-3ffd136f51e34914)
+
+running 6 tests
+test identity_get_reports_the_effective_actor ... ok
+test delegation_may_not_widen_the_end_users_roles ... FAILED
+test a_non_gateway_uid_cannot_send_on_behalf_of ... ok
+test an_ungoverned_cell_refuses_every_delegation ... ok
+test two_end_users_behind_one_gateway_are_attributed_distinctly ... FAILED
+test separation_of_duty_holds_between_end_users_behind_one_gateway ... FAILED
+
+failures:
+
+---- delegation_may_not_widen_the_end_users_roles stdout ----
+
+thread 'delegation_may_not_widen_the_end_users_roles' (2147722) panicked at crates/sea-forge-server/tests/sfwp_delegated_identity.rs:347:5:
+{"error":"delegated identity refused: actor `security_officer` is not in this cell's gateway-delegable allowlist","error_class":"identity_delegation_refused","next_lawful_action":"Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role","no_side_effect":true}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- two_end_users_behind_one_gateway_are_attributed_distinctly stdout ----
+
+thread 'two_end_users_behind_one_gateway_are_attributed_distinctly' (2147725) panicked at crates/sea-forge-server/tests/sfwp_delegated_identity.rs:278:9:
+case case_20260924T195152Z_655ad9 must record operator_a as the creator: [TraceEvent { version: "0.1", event_id: "cev_000001", run_id: "case", plan_item_id: None, kind: CaseCreated, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.867883681+00:00", payload: Object {"case_id": String("case_20260924T195152Z_655ad9")}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000002", run_id: "case", plan_item_id: Some("task_prepare"), kind: ItemEnabled, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.869377362+00:00", payload: Object {}, cell_id: None }]
+
+---- separation_of_duty_holds_between_end_users_behind_one_gateway stdout ----
+
+thread 'separation_of_duty_holds_between_end_users_behind_one_gateway' (2147724) panicked at crates/sea-forge-server/tests/sfwp_delegated_identity.rs:668:5:
+the episode must be attributed to operator_b: [TraceEvent { version: "0.1", event_id: "cev_000001", run_id: "case", plan_item_id: None, kind: CaseCreated, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.855458304+00:00", payload: Object {"case_id": String("case_20260924T195152Z_0024e4")}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000002", run_id: "case", plan_item_id: Some("task"), kind: ItemEnabled, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.856610602+00:00", payload: Object {}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000003", run_id: "case", plan_item_id: Some("disc"), kind: PlanMutated, actor_id: "operator_a", timestamp: "2026-09-24T19:51:52.884067080+00:00", payload: Object {"operation": String("add_task")}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000004", run_id: "case", plan_item_id: Some("disc"), kind: ItemActivated, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.888949142+00:00", payload: Object {"dispatch_ordinal": Number(1), "episode_kind": String("sandboxed_task"), "instance": Number(1), "run_id": String("run_20260924T195152Z_21557b")}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000005", run_id: "case", plan_item_id: Some("disc"), kind: SettlementRecorded, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.902784258+00:00", payload: Object {"instance": Number(1), "run_id": String("run_20260924T195152Z_21557b"), "settlement_ordinal": Number(1), "status": String("escalated")}, cell_id: None }, TraceEvent { version: "0.1", event_id: "cev_000006", run_id: "case", plan_item_id: Some("disc"), kind: ItemTerminated, actor_id: "case_engine", timestamp: "2026-09-24T19:51:52.904345557+00:00", payload: Object {"instance": Number(1), "settlement": String("escalated")}, cell_id: None }]
+
+
+failures:
+    delegation_may_not_widen_the_end_users_roles
+    separation_of_duty_holds_between_end_users_behind_one_gateway
+    two_end_users_behind_one_gateway_are_attributed_distinctly
+
+test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+error: test failed, to rerun pass `-p sea-forge-server --test sfwp_delegated_identity`

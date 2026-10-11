@@ -1,0 +1,68 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: classify the recorded consequence of one bounded Gauntlet probe.
+Answer domain for "label" (choose exactly one): settled_accepted | verification_failed_nonsettlement | budget_exhausted | execution_failed | insufficient_evidence
+Judge ONLY from the corrected observation record below (typed terminal; settlement_committed count and unit-level progression; unit_dispatch retry pattern; the content of produced evidence artifacts fetched by their sha256 pins; timing). Use insufficient_evidence if the record genuinely cannot decide.
+JSON shape: {"label": "<one label from the answer domain>"}
+
+Corrected observation record:
+{
+ "bounded_input": {
+  "max_rounds": 8,
+  "scenario": "e2e-lying"
+ },
+ "candidate_id": "cand-1",
+ "correlation_id": "t23-route-001-iter4",
+ "evidence_artifacts": [
+  {
+   "content": "{\"tests\": 1, \"failures\": 1, \"command\": \"scripts/check.sh --marker\"}",
+   "kind": "test_report",
+   "locator": "evidence/marker-check-report.json",
+   "sha256": "08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2"
+  }
+ ],
+ "mechanism": "t15-frozen-case-execution",
+ "operation": "run_case",
+ "probe_id": "probe-i4-cand-1",
+ "settlement_committed_count": 0,
+ "settlement_progression": [],
+ "state_db_sha256": "236f5e93b2f3a6ca470722ed547d31322f1e61641d427f10dab6115727141400",
+ "timing": {
+  "checkpoint_iterations": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   6
+  ],
+  "event_clock_first": 0,
+  "event_clock_last": 30,
+  "finished_at_utc": "2026-09-19T02:27:56.224497+00:00",
+  "started_at_utc": "2026-09-19T02:27:55.620992+00:00",
+  "wall_seconds": 0.603
+ },
+ "typed_terminal": {
+  "run_terminal_states": [
+   "budget_exhausted"
+  ],
+  "terminal_class": "budget_exhausted"
+ },
+ "unit_dispatch_pattern": {
+  "dispatch_sequence": [
+   "AK-901",
+   "AK-901",
+   "AK-901",
+   "AK-901",
+   "AK-901",
+   "AK-901"
+  ],
+  "per_unit": [
+   {
+    "dispatches": 6,
+    "settlements": 0,
+    "unit_id": "AK-901"
+   }
+  ]
+ }
+}

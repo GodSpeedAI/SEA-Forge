@@ -1,0 +1,111 @@
+# Atomic UI View: asset_transfer_and_federation
+# Upstream Behavioral Source: CJ12 Transfer and Adopt Governed Assets
+
+view:
+  id: asset_transfer_and_federation
+  purpose: Move verifiable bundles across cells atomically, enforce inert asset isolation, and decide governed local adoption.
+
+sources:
+  journey: CJ12
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    source_cell_identity: persistent
+    destination_cell_identity: persistent
+    bundle_manifest_hash: persistent_during_transfer
+
+regions:
+  - id: federation_boundary_header
+    responsibility: anchor_source_and_destination_cell_identities
+  - id: bundle_manifest_inspector
+    responsibility: inspect_manifest_signatures_checksums_and_size_bounds
+  - id: inert_assets_collection
+    responsibility: enforce_inert_status_and_display_isolated_imported_history
+  - id: transfer_and_adoption_actions
+    responsibility: execute_atomic_import_export_or_local_adoption
+
+elements:
+  # Federation Boundary Region
+  - id: source_cell_display
+    primitive: identity
+    region: federation_boundary_header
+    binds: { entity: source_cell, field: cell_id }
+
+  - id: destination_cell_display
+    primitive: identity
+    region: federation_boundary_header
+    binds: { entity: destination_cell, field: cell_id }
+
+  - id: transfer_mode_choice
+    primitive: choice
+    region: federation_boundary_header
+    binds: { field: transfer_direction }
+
+  # Bundle Manifest Region
+  - id: bundle_manifest_table
+    primitive: table
+    region: bundle_manifest_inspector
+    binds: { entity: bundle_manifest_items }
+
+  - id: bundle_size_metric
+    primitive: metric
+    region: bundle_manifest_inspector
+    binds: { field: total_bundle_bytes }
+
+  - id: cryptographic_signature_item
+    primitive: evidence_item
+    region: bundle_manifest_inspector
+    binds: { field: source_cell_signature }
+
+  # Inert Assets Region
+  - id: inert_assets_table
+    primitive: collection
+    region: inert_assets_collection
+    binds: { entity: imported_inert_assets }
+
+  - id: inertness_enforcement_status
+    primitive: status
+    region: inert_assets_collection
+    binds: { field: inert_isolation_standing }
+
+  - id: atomic_admission_receipt
+    primitive: evidence_item
+    region: inert_assets_collection
+    binds: { field: atomic_admission_token }
+
+  # Transfer and Adoption Actions Region
+  - id: import_bundle_action
+    primitive: action
+    region: transfer_and_adoption_actions
+    semantic_action: federation.transfer_and_adopt
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: adopt_asset_action
+    primitive: action
+    region: transfer_and_adoption_actions
+    semantic_action: adopt_inert_asset
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: export_selection_action
+    primitive: action
+    region: transfer_and_adoption_actions
+    semantic_action: export_additional_bundle
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: inspect_imported_history_action
+    primitive: action
+    region: transfer_and_adoption_actions
+    semantic_action: keep_inert_and_inspect
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: bundle_manifest_verification_in_progress }
+  ready: { when: bundle_verified_and_atomic_admission_ready }
+  blocked: { when: size_limit_exceeded_or_signature_mismatch }
+  settled: { when: bundle_admitted_inert_or_asset_adopted }
+  error: { when: atomic_import_rejected_cell_unmutated }

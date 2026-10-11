@@ -1,0 +1,67 @@
+=== REAL-BINARY SMOKE: gateway 42fee06+T07 serving with auth mode=dev (loopback live cell) ===
+--- 1. unauthenticated GET /api/world (expect 401 typed, no snapshot)
+HTTP 401
+{"error":{"kind":"unauthorized","note":"authentication is required: log in via POST /api/auth/login (or GET /api/auth/login in oidc mode)"}}
+
+--- 2. login POST without CSRF pair (expect 403 csrf_refused)
+HTTP 403
+{"error":{"kind":"csrf_refused","note":"login requires the X-CSRF-Token header to match the casework_csrf cookie issued by any GET (e.g. GET /api/session)"}}
+
+--- 3. GET /api/session mints the pre-login CSRF cookie
+{"authenticated":false,"auth_mode":"dev"}
+
+csrf cookie: 6f34afae3d69... (len 64)
+--- 4. login with the CSRF pair (expect 200, session cookie + mapped kernel standing)
+HTTP 200
+{"authenticated":true,"username":"operator","display_name":"Local Operator","actor_id":"operator_local","role":"operator","csrf_token":"09aadd761a070adf85cfd86a03876df511115ad1a75bbe700391b6d393f8cb71","auth_mode":"dev"}
+
+--- 5. authenticated GET /api/world (expect 200 with the session's perspective)
+HTTP 200
+{"snapshot":{"world_id":"world-empty","case_id":"","cursor":"","timestamp":"2026-09-26T03:35:18Z","perspective":{"actor_id":"operator_local","role":"operator"},"summary":{"headline":"No cases yet","phase":"idle","status_phrase":"Commit a case from a template to begin."},"visible_objects":[],"availab
+--- 6. authenticated ?actor= override attempt (expect 400 refused)
+HTTP 400
+{"error":{"kind":"invalid","note":"identity is session-bound: the ?actor=&role= override was removed in T07; log in as the user you need (the kernel verifies the delegation)"}}
+
+--- 7. login as the second user rso and read /api/session (two-user surface)
+{"authenticated":true,"username":"rso","display_name":"R-SO","actor_id":"rso_local","role":"R-SO","csrf_token":"75edc0eb233f448a9cebfb4fa720016d6b0636f5405ce87f64ffd5284895728b","auth_mode":"dev"}
+
+--- 8. GET /api/readyz (kernel readiness.get)
+{"kernel":{"capabilities":2,"foundations":1,"overall":"unknown"},"status":"not_ready"}
+
+--- 9. gateway request log line (correlation_id present)
+ts=2026-09-26T03:35:18Z correlation_id=4245682f1b40a9e1a633614892695934 method=GET path=/api/session status=200 duration_ms=0.1 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:35:18Z correlation_id=b3d1166d316947cea1a7c3a244d3e856 method=POST path=/api/auth/login status=200 duration_ms=0.1 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:35:19Z correlation_id=af023dc100a135cd246be27b9eccf910 method=GET path=/api/readyz status=503 duration_ms=407.9 remote=127.0.0.1 auth=- actor=-
+--- 8 (re-check after readyz semantics fix): GET /api/readyz on the fresh cell
+{"kernel":{"capabilities":2,"foundations":1,"overall":"unknown"},"status":"ready"}
+
+--- 10. intent through the session (rate-limited path, kernel correlation)
+HTTP 401
+{"error":{"kind":"unauthorized","note":"authentication is required: log in via POST /api/auth/login (or GET /api/auth/login in oidc mode)"}}
+
+--- 11. same intent POST without CSRF (expect 403, no kernel record)
+HTTP 401
+{"error":{"kind":"unauthorized","note":"authentication is required: log in via POST /api/auth/login (or GET /api/auth/login in oidc mode)"}}
+
+0
+kernel request store has 0 smoke-intent records
+--- 12. log lines for an AUTHENTICATED request (session + actor)
+ts=2026-09-26T03:37:09Z correlation_id=3130160a156e28fea7786fdd5561f36e method=GET path=/api/session status=200 duration_ms=0.7 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:37:09Z correlation_id=4693eaa5b7aa70e4c93f6da88f8615f2 method=GET path=/api/session status=200 duration_ms=0.0 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:37:09Z correlation_id=40bcb25057027bbcad0007a2f22f4936 method=POST path=/api/intents status=401 duration_ms=0.1 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:37:09Z correlation_id=84c61f3d181cc3b8b10b553bbc6466be method=POST path=/api/intents status=401 duration_ms=0.0 remote=127.0.0.1 auth=- actor=-
+=== re-login after gateway restart (sessions are in-memory: restart invalidates them - correct fail-closed) ===
+login HTTP 200
+--- 10 (retry). intent through the session
+HTTP 200
+{"intent_id":"smoke-intent-1","success":false,"refusal":{"refusal_kind":"INVALID","message":"no case case_none is known to the kernel; refetch the world"},"error_code":"INVALID","error_message":"no case case_none is known to the kernel; refetch the world"}
+
+--- 11 (retry). intent POST without CSRF (expect 403, no kernel record)
+HTTP 403
+{"error":{"kind":"csrf_refused","note":"a state-changing POST must carry the X-CSRF-Token header with the session's CSRF token (GET /api/session issues it)"}}
+
+kernel request records for smoke intents: 0
+--- 12. log lines (session + actor present on the admitted intent)
+ts=2026-09-26T03:37:26Z correlation_id=ad5348ad50e1c4c41f0eb61428cd6dbb method=POST path=/api/auth/login status=200 duration_ms=0.2 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:37:26Z correlation_id=smoke-intent-1 method=POST path=/api/intents status=200 duration_ms=2.1 remote=127.0.0.1 auth=- actor=-
+ts=2026-09-26T03:37:26Z correlation_id=2344aa367430eef7b4a80220bc42de06 method=POST path=/api/intents status=403 duration_ms=0.1 remote=127.0.0.1 auth=- actor=-

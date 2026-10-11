@@ -1,0 +1,7 @@
+UTC 2026-10-05 17:50:18
+MemTotal:        8132712 kB
+MemAvailable:    2566024 kB
+SwapTotal:      12582912 kB
+SwapFree:        1008544 kB
+process comm RSS scan (go/cargo/rustc/compile/bun):
+bun             24468

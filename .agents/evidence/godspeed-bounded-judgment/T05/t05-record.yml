@@ -1,0 +1,38 @@
+# T05 — loop correlation identity record
+schema: godspeed-bounded-judgment.t05-record
+executed: "2026-09-17"
+preregistration: ".agents/preregistrations/godspeed-bounded-judgment-T05.prereg.yaml (sha256 a3699182f10f4611b7959e68c4dee7868e0764bde905b150102b9a39f3a35689, frozen before implementation)"
+
+mechanism:
+  chosen: "BIND the existing ledger causal-parent chain (direct-echo family)"
+  correlation_identity: "the admission intent entry's ledger ULID; every hop joins by committed authority_refs"
+  implementation_delta: >-
+    crates/sea-forge-cli/src/pipeline.rs — settlement_event ledger commit now
+    cites committed_decisions' entry ULIDs instead of per-run 'auth_NN' labels
+    (the one broken hop found by prereg-time inspection). Payloads, views,
+    decision_ids, and the semantic envelope are untouched. No new store,
+    service, or ledger.
+  defect_found_by_inspection: >-
+    settlement_event.authority_refs carried ['auth_01','auth_02'] — per-run
+    string labels that match no ledger entry, i.e. the settlement ->
+    authority-decision hop was not joinable from the ledger before this task.
+
+harness_results:
+  tool: "joinability_test.py (round-2, sha256 in D-T05-03; round-1 failed round preserved)"
+  cases:
+    core_join_by_causal_refs_only: {behaved_as_specified: true}
+    similar_id_collision_no_false_join: {behaved_as_specified: true, detail: "same-second timestamp prefix; decision ULID sets disjoint"}
+    duplicate_external_id_no_wrong_join: {behaved_as_specified: true, detail: "labels collide (auth_01/02), ULIDs do not"}
+    restart_artifacts_still_joinable: {behaved_as_specified: true}
+    missing_hop_named_not_tolerated: {behaved_as_specified: true, detail: "join fails naming the absent cited entry"}
+    stale_mapping_rejected: {behaved_as_specified: true}
+    mismatched_pair_rejected: {behaved_as_specified: true, detail: "subject cross-check rejects a real foreign-run decision"}
+    var008_contradiction_leaves_judgment_immutable: {behaved_as_specified: true}
+  verdict: "PASS 8/8"
+
+gates:
+  - {command: "just crate-test sea-forge-core", exit_code: 0}
+  - {command: "python3 .agents/evidence/godspeed-bounded-judgment/T05/joinability_test.py", exit_code: 0}
+  - {command: "just crate-test sea-forge-cli", exit_code: 101,
+     attribution: "red solely on sea-forge-cli::conformance_m13::t13_1 (PREEXISTING_BASELINE_FAILURE, T00-confirmed; unchanged by T05; all other cli suites green)"}
+  - {command: "just proof", exit_code: 0, note: "P1-P4b green — the settlement view path is unaffected by the ledger-ref change"}

@@ -1,0 +1,4 @@
+# ./internal/server
+open /home/sprime01/.cache/go-build/40/40fccf71a9bfb0e4daf9f0682b7922abddf84900eb935e7fa9c5cb5b43932575-d: read-only file system
+FAIL	./internal/server [setup failed]
+FAIL

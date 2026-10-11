@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.6, "distribution": {"settled": 0.6, "not_settled": 0.25, "insufficient_evidence": 0.15}, "reason": "The mock-e2e-happy session with three admitted builder iterations and applied corrections suggests a converging happy-path run, though the absence of produced evidence and budget details limits certainty."}

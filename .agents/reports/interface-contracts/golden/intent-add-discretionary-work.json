@@ -1,0 +1,49 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0002",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "ADD_DISCRETIONARY_WORK",
+    "target_object_id": "stage-remediation",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000410",
+    "actor": {
+      "actor_id": "actor-op-7",
+      "role": "agent_operator"
+    },
+    "parameters": {
+      "anchor_item_id": "item-patch-14",
+      "case_id": "case-31ab",
+      "justification": "The migration needs a rollback rehearsal before the load verification.",
+      "kind": "work_item",
+      "stage_id": "stage-remediation",
+      "summary": "Rehearse the rollback path on the staging shadow, then record the outcome.",
+      "title": "Rollback rehearsal"
+    }
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0002",
+      "success": true,
+      "new_cursor": "1.0000000413",
+      "resulting_object": {
+        "id": "item-disc-22",
+        "kind": "work_item",
+        "name": "Rollback rehearsal",
+        "status": "WAITING",
+        "badge": "Proposed",
+        "explanation": "Proposed by actor-op-7; waiting for the stage to accept it.",
+        "salience": 0.5,
+        "parent_id": "stage-remediation",
+        "actions": []
+      }
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0002",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "JUSTIFICATION_REQUIRED",
+        "message": "Discretionary work is consequential: state why this work is needed before it can be proposed."
+      }
+    }
+  ]
+}

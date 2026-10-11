@@ -1,0 +1,58 @@
+# SEA Forge kernel (sea-forge-server) for the casework live stack. Plan casework-live-wiring T11.
+# Install: see .agents/reports/casework-live-wiring/config-reference.md ("Packaging").
+#
+# The server takes no CLI arguments: it is configured only by SEA_FORGE_ROOT / SEA_FORGE_SOCKET
+# (from EnvironmentFile) and <root>/server.yaml. It holds an exclusive flock on <root>/.server.lock
+# and <socket>.lock for its lifetime, so a second instance fails to start instead of corrupting the
+# ledgers, and it publishes its socket 0600 (owner only) from the first instant it is reachable.
+[Unit]
+Description=SEA Forge kernel (sea-forge-server)
+Documentation=file:///usr/share/doc/sea-forge/config-reference.md
+After=local-fs.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sea-forge
+Group=sea-forge
+EnvironmentFile=/etc/sea-forge/server.env
+ExecStart=/usr/local/bin/sea-forge-server
+# State: the cell (ledgers, cases, approvals, requests, artifacts, keys, server.yaml).
+StateDirectory=sea-forge
+StateDirectoryMode=0750
+# Socket directory: reachable only by the service group; the server itself makes the socket 0600.
+RuntimeDirectory=sea-forge
+RuntimeDirectoryMode=0750
+UMask=0027
+
+# SIGTERM is a clean shutdown (the server removes its socket); SIGKILL after the grace period.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=2
+
+# Hardening. The kernel needs the cell, its runtime dir and private temp space; nothing else.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sea-forge
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

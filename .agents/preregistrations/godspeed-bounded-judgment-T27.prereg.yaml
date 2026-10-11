@@ -1,0 +1,402 @@
+schema: godspeed-bounded-judgment.t27-prereg
+created_utc: "2026-09-19"
+frozen_before: "any condition-A or condition-B provider call of T27"
+task: T27
+plan_version_at_freeze: 1.7.0
+parent_evidence:
+  t16_measurement: ".agents/evidence/godspeed-bounded-judgment/T16/expanded-round/ (Outcome C, D-2026-09-18-T16-17/18)"
+  t18_negative: ".agents/evidence/godspeed-bounded-judgment/T18/paired-report.yml + D-2026-09-18-T18-03/-04 (cross-session confound lesson)"
+  repeatability: ".agents/evidence/godspeed-bounded-judgment/repeatability/ (R1 stable-accurate; per-case partition)"
+  repeatability_prereg: ".agents/preregistrations/godspeed-bounded-judgment-repeatability.prereg.yaml"
+
+hypothesis: >-
+  H_REPRESENTATION_T27: structurally distinguishing claims (what a source
+  asserts) from observations (what was independently recorded) in the judge's
+  input representation improves bounded-judgment correctness on the identified
+  discrimination frontier without degrading judgment on stable-correct
+  control cases. The treatment is the REPRESENTATION only; no substantive
+  information, criterion, domain, or wording beyond the structural typing
+  differs between conditions.
+
+# ---------------------------------------------------------------------------
+# 1. CORPUS SELECTION (deterministic; frozen before any condition-B result)
+# ---------------------------------------------------------------------------
+corpus_source:
+  root: "~/.local/share/godspeed-t16-corpus/runs"
+  provenance: >-
+    The 25-case T16 expanded corpus (manifest
+    .agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml,
+    12 settled / 13 budget_exhausted, class basis = run_terminal event written
+    by the gauntlet controller) was regenerated in persistent storage after the
+    /tmp wipe recorded in D-2026-09-18-T18-01; the regenerated DBs are the
+    corpus the completed DeepSeek repeatability experiment actually measured.
+    The frozen T16 manifest sha256s refer to the pre-wipe /tmp DBs and do NOT
+    match the persistent DBs (verified 2026-09-19: 0/25 match). T27 therefore
+    freezes the ACTUAL persistent-DB identity below, per case, as its corpus
+    identity. Case IDs, truth mapping (settled->settled,
+    budget_exhausted->not_settled) and class basis are unchanged from the T16
+    manifest.
+  identity_note: >-
+    Any change to a selected DB sha256 after this freeze invalidates the run
+    (stop condition S4).
+  selected_dbs_sha256:
+    accepted-A1: 8d419e023118775f777abeacf1497521be10aef8b00e08ab022ab5325759c2d5
+    accepted-A2: e284bb0ed8d6f197b63bda677482828eee21053eec89205c9d4869c291dd88ba
+    accepted-A4: 50b0b8a0795e45d17a21c77eb9efde6ee10aec857b4eaeef65b8c4f705cb5ac5
+    accepted-A10: 3c169cfaa9cbe896e9cdf8bf72de3ae0b206563a074039b9b6ef25facf33dea7
+    accepted-A11: 58a7461bdee8ca6fedf900aa46e086eed45c058572facb824c2eab1bb5ac3b51
+    accepted-A12: 93c544f2375955ca5617baed8952c43f0c4ea0da0f3876815977ea60f5e5b13d
+    budget-C1: 8706a12a4df2a957b5327665a35a6ee62d779c533a4c781ab5655472dbb5c0f0
+    budget-C2: 1db0a710ab8b86a30bead02ffc5a974803d258342d5958ef00819914d2f62424
+    budget-C3: bed986f7f134a9d2f6b96c752549623c191d27f8e18883568d6e43de81402109
+    budget-C4: b8ac779a391feedaec7696e79a5685194d7bcae4ddb57df40b96d9c43b08dfe3
+    budget-C5: 01dbb9cbd7ee022a9654f2f673befab1a5a6cf2e39b45cbbdbe67a307c2eac5c
+    forge-D1: 3bd599dd69639b45136ee6b53b5ef17b4c7754305db8d49dc71ae2f4d46d1037
+    forge-D2: c7fbfa3e981826ebdddacb2a6b03df67804df0c6eb03b5c83daf12afda9bc4e3
+    lying-B1: ab6cc686ed3bf18f4e15e8d05b4e691aaffe80ff6f9432e17d6cd48768485b04
+
+selection_rule:
+  basis: >-
+    Per-case stability partition from the completed DeepSeek repeatability
+    experiment (repeatability/per-case.json; 25 cases x R=5): stable_correct
+    (15), stable_wrong (1: budget-C3), unstable (9), stable_abstain (0).
+  frontier_cases: >-
+    ALL of: the 1 stable-wrong case (budget-C3) + all 9 unstable cases
+    (accepted-A4, accepted-A10, accepted-A11, accepted-A12, budget-C1,
+    budget-C2, budget-C4, budget-C5, forge-D2). 10 cases.
+  control_cases_rule: >-
+    Frozen deterministic rule, declared before observing ANY condition-B
+    result: from each case family represented among the stable-correct cases
+    (accepted, forge, lying), select the lexicographically smallest case_id;
+    then fill remaining control slots up to 4 by lexicographic order among
+    the remaining stable-correct cases. This yields {accepted-A1, forge-D1,
+    lying-B1, accepted-A2}. Rationale: controls span all three
+    stable-correct families so regression detection covers
+    acceptance-reading, lie-detection, and forgery-detection behaviors; the
+    rule is mechanical and cannot select for expected treatment support.
+  controls: [accepted-A1, accepted-A2, forge-D1, lying-B1]
+  total_n: 14
+  smallest_set_note: >-
+    4 controls is the plan minimum ("at least 4 stable-correct controls");
+    no larger control set is used.
+
+# ---------------------------------------------------------------------------
+# 2. CONDITIONS (exact representations; frozen)
+# ---------------------------------------------------------------------------
+answer_domain:
+  id: t16-settlement-outcome/v1
+  labels: [settled, not_settled, insufficient_evidence]
+  abstention_label: insufficient_evidence
+  identical_across_conditions: true
+
+judgment_question: >-
+  Will this run settle accepted, or end non-settled (budget exhausted)?
+
+truth_basis: >-
+  run_terminal event state per case DB, mapped settled->settled,
+  budget_exhausted->not_settled (identical to T16/repeatability). The
+  terminal event and any post-judgment artifact NEVER enter any prompt
+  (leakage cut, same as T16).
+
+condition_A:
+  name: "undifferentiated (the established T16/repeatability judgment surface)"
+  content: >-
+    json.dumps({"invocations": [{"result_document": <role_invocation payload>},
+    ...], "corrections": <int count of correction_selection records>},
+    default=str), truncated to the first 12000 characters. Byte-for-byte the
+    blob construction of repeatability/run.py load_cases() and T16
+    run_remeasure.py main(). No verification_record, evidence_produced,
+    terminal, or settlement content is included (it never was).
+  prompt_template: |
+    You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+    Question: Will this run settle accepted, or end non-settled (budget exhausted)?
+    Answer domain: settled, not_settled, insufficient_evidence.
+    JSON shape: {"answer": <label>, "confidence": <0..1>, "distribution": {<label>: <prob> for all three}, "reason": <one sentence>}
+
+    <blob>
+  reference_only: >-
+    The T16 persisted answers
+    (.agents/evidence/godspeed-bounded-judgment/T16/expanded-round/provider-raw-results.json)
+    are a COMPARABILITY REFERENCE ONLY. Per D-2026-09-18-T18-03, persisted
+    answers are incompatible with a fresh paired arm (cross-session
+    stochasticity confound); T27's condition A is re-acquired fresh in the
+    same acquisition session as condition B.
+
+condition_B:
+  name: "epistemically typed (claim vs observation, with provenance and derived relation)"
+  vocabulary_roles: [CLAIM, OBSERVATION, EXPECTED, PROVENANCE]
+  vocabulary_relation: [supports, contradicts, unresolved]
+  vocabulary_rules:
+    - >-
+      Roles and relation values are correctness-neutral: no role or relation
+      label may contain or imply a truth label, correctness judgment, or
+      outcome prediction (validator enforces a banned-token list: settled,
+      not_settled, budget, exhausted, pass, fail, correct, wrong, true,
+      false, valid, invalid, success, successful, lying, forged, honest,
+      deceptive, accept, accepted, reject, rejected).
+    - >-
+      EXPECTED is declared in the vocabulary but has NO instance on this
+      surface (no per-case preregistered prediction exists in the corpus
+      content); the renderer emits no EXPECTED section. Declared here so the
+      vocabulary freeze is complete.
+    - >-
+      The relation field is computed ONLY by mechanical within-case
+      comparison of claim content against observation content, by the frozen
+      rules R1-R3 below; where no rule applies it is "unresolved". The
+      renderer never emits a final judgment, verdict, or conclusion.
+  content: >-
+    THE SAME factual content as condition A (identical role_invocation
+    payloads and identical correction count), re-presented with structural
+    typing. Every scalar fact present in A's blob is present in B; B adds
+    only role labels, provenance attributions, sequence structure already
+    implied by the array, and the mechanically derived relation annotations.
+  renderer_spec: |
+    Given the case's records:
+      invs = role_invocation payloads ordered by seq
+      k    = count of correction_selection records
+    Emit:
+      For each invocation i (1-based over invs), one CLAIM block per
+      self-describing field, and shared OBSERVATION blocks:
+        [CLAIM | source: session_ref of role_invocation #i]
+          text: "The session of this run is declared as <session_ref>."
+        [CLAIM | source: state field of role_invocation #i]
+          text: "Invocation #<i> is declared with state <state>."
+        [CLAIM | source: role field of role_invocation #i]
+          text: "The actor of invocation #<i> declares role <role>."
+        [PROVENANCE] invocation #<i>: full role_invocation payload as JSON
+          (identical field set and values as appear inside A's blob).
+      [OBSERVATION | source: role_invocation records, sequence]
+        text: "Observed invocation trace: " +
+              (", ".join("iteration <n> declared admitted at t=<admitted_at>"
+                          for each invocation) if any) +
+              "; no further invocations are recorded in this run's pre-terminal records."
+        (For zero invocations: "Observed invocation trace: none recorded.")
+      [OBSERVATION | source: correction_selection records, count]
+        text: "Observed correction selections recorded: <k>."
+      [RELATION] For each distinct CLAIM emitted, one line:
+        "claim(<verbatim claim text>) vs observed trace: <supports|contradicts|unresolved>"
+        computed by the frozen rules R1-R3; a claim with no applicable rule
+        is "unresolved".
+    Emitted above the shared judgment header (below).
+  relation_rules:
+    - R1: >-
+      A state claim "state <s>" for invocation #i is "supports" iff the
+      observed trace contains an invocation #i whose recorded iteration_no is
+      a positive integer and whose admitted_at is present; "contradicts" iff
+      invocation #i exists but lacks a well-formed iteration_no or
+      admitted_at; else "unresolved". (Well-formedness check only; no
+      semantic interpretation.)
+    - R2: >-
+      A role claim "role <r>" is "supports" iff the provenance payload of
+      invocation #i indeed carries role == <r>; "contradicts" iff it carries
+      a different role value; else "unresolved". (Tautology-guard: for these
+      records this is expected to be "supports"; the rule exists so the
+      relation is always mechanically derived, never asserted.)
+    - R3: >-
+      A session claim is compared against the within-case observation that
+      all recorded invocations carry the same session_ref value:
+      "supports" iff uniform AND at least one invocation exists; "unresolved"
+      otherwise (no within-case rule relates a session name to expected
+      trace shape; the renderer must NOT invent one).
+  prompt_template: |
+    You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+    Question: Will this run settle accepted, or end non-settled (budget exhausted)?
+    Answer domain: settled, not_settled, insufficient_evidence.
+    JSON shape: {"answer": <label>, "confidence": <0..1>, "distribution": {<label>: <prob> for all three}, "reason": <one sentence>}
+    The information below is TYPED by epistemic role. [CLAIM] = what a source
+    ASSERTS about the run (it may or may not be accurate). [OBSERVATION] =
+    what was independently recorded. [PROVENANCE] = the source record each
+    item comes from. [RELATION] = whether observed records mechanically
+    support, contradict, or leave each claim unresolved. These labels
+    describe the structure of the records only; judge the question on the
+    records as presented.
+
+    <typed body>
+
+treatment_boundaries:
+  no_new_facts: "B adds zero scalar facts absent from A (tooth T27-1 enforces atom-set equality, both directions)."
+  no_truth_leakage: "No terminal, settlement, truth label, or outcome vocabulary enters either condition's input (tooth T27-3 enforces)."
+  no_coaching: >-
+    The B header paragraph defines the role labels only. It contains no
+    statement that any claim is false, that observations outweigh claims,
+    nor any decision guidance beyond the structural definitions.
+  identical_elsewhere: >-
+    Answer domain, judgment question, JSON shape, provider, decoding path,
+    call mechanics, and scoring are byte-identical across conditions.
+
+# ---------------------------------------------------------------------------
+# 3. PROVIDER / EXECUTION (frozen)
+# ---------------------------------------------------------------------------
+provider:
+  id: deepseek-v4.1-flash-via-clinepass
+  cmd: ["opencode", "run", "-m", "cline-pass/cline-pass/deepseek-v4.1-flash", "<prompt>"]
+  identity: "the exact endpoint/provider family of the completed repeatability experiment"
+  substitution: "NONE. If the endpoint is unavailable, preserve the infrastructure failure and stop (S1). No fallback provider inside T27."
+repetitions:
+  per_condition_per_case: 5
+  rationale: >-
+    R=5 matches the frozen repeatability scheme; the case-level readout
+    (unique modal of 5) is the established repeatable aggregate on this
+    provider. Single-call pairing is rejected by the prereg because 9/25
+    cases are single-call-unstable; a single-call McNemar could not
+    attribute discordance to representation rather than sampling noise.
+  total_calls: "14 cases x 2 conditions x 5 reps = 140"
+  independence: >-
+    Every call is a fresh provider process with no conversational carryover;
+    calls are independent. Repetitions differ only by provider sampling.
+acquisition:
+  order: >-
+    For each case (sorted case_id), for each rep 0..4: condition A call, then
+    condition B call, interleaved so both conditions sample the same session
+    window (the D-2026-09-18-T18-03 within-session requirement).
+  persistence: >-
+    Every raw response is parsed and appended (JSONL, fsync) to
+    .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl BEFORE
+    any scoring; records are keyed by
+    sha256(prereg_sha256|case_id|condition|rep|prompt_hash)[:16].
+  retry: "Bounded retry (3 attempts, 5s gap) for infrastructure errors only; a call that exhausts retries is persisted as provider_error/timeout and handled by S2."
+
+normalization: >-
+  Parse: extract first {...} JSON object (regex, DOTALL); status=schema_failure
+  if none/invalid; status=out_of_domain if answer not in the frozen domain;
+  else record answer, confidence clamped to [0,1], distribution clamped and
+  re-normalized to sum 1 (0-vector left as-is), reason truncated to 300 chars.
+  Identical to the T16/T18/repeatability parser.
+
+scoring:
+  per_call: "correct iff parsed answer == truth; insufficient_evidence counted as abstention."
+  case_level_readout: >-
+    For each case x condition: the unique modal answer across its 5 valid
+    calls; if no valid calls, or the modal is not unique (tie), or any call
+    is a contract failure reducing valid calls below 4, the case-level
+    readout is insufficient_evidence (abstain). Mirrors the repeatability
+    aggregation rule (unique modal, else abstain).
+  primary_metric: "case-level correctness (readout == truth) per condition."
+  baseline: "constant settled predictor on the 14 selected cases = 4/14 (frozen, reported beside results)."
+
+# ---------------------------------------------------------------------------
+# 4. ANALYSIS (frozen)
+# ---------------------------------------------------------------------------
+paired_analysis:
+  unit: "case (14 paired case-level outcomes: A readout vs B readout)"
+  discordant_counts:
+    b: "cases A-wrong -> B-right (corrections)"
+    c: "cases A-right -> B-wrong (regressions)"
+  mcnemar_exact_two_sided: >-
+    p = min(1.0, 2 * sum_{k=0..min(b,c)} C(b+c, k) / 2^(b+c)); PRIMARY.
+  mcnemar_exact_one_sided_improvement: "p = sum_{k=0..min(b,c)} C(b+c, k) / 2^(b+c); reported alongside, not substituted."
+  alpha: 0.05
+  class_split: "All totals reported separately for frontier (10) and control (4) cases, and by case family."
+  transitions_reported: >-
+    A-wrong->B-right, A-right->B-wrong, unchanged-correct, unchanged-wrong,
+    and abstention transitions (A-abstain->B-answer, A-answer->B-abstain,
+    abstain->abstain) are tabulated explicitly. Corrections/regressions are
+    counted only between DECIDED answers (abstain->decided is an abstention
+    transition, not a correction).
+practical_effect_criterion:
+  definition: >-
+    The effect is PRACTICALLY MEANINGFUL iff net corrections (b - c) >= 3 of
+    14 (>= 0.21 accuracy delta) AND frontier net (b_f - c_f) >= 2.
+  rationale: "3/14 is the smallest whole-case net change that plausibly matters on a 14-case subset whose 10 frontier cases are the actual target of the hypothesis."
+regression_guard:
+  definition: "c_ctrl = number of CONTROL cases (4) that are A-right -> B-wrong at the case-level readout."
+  hard_line: "c_ctrl >= 2 (half the controls) is an unacceptable regression -> C4 regardless of significance."
+  soft_line: "c_ctrl == 1 blocks C1 and C2 (recorded prominently); only c_ctrl == 0 passes the guard."
+interpretation_C1_C5:
+  order: "Evaluate steps 0..5 in order; FIRST match wins; no post-hoc reinterpretation."
+  step_0_validity: >-
+    If corpus identity verification fails, any expected observation is
+    missing, teeth fail, or prereg freeze cannot be proven to precede all
+    treatment calls -> C5 (experiment invalid; preserve defect evidence).
+  step_1_C4: "c_ctrl >= 2 OR (c > b AND one-sided harm p = P(X <= c | Bin(c+b, 0.5)) < 0.05) -> C4 (improvement purchased with unacceptable regressions; if c > b with harm-significance there is no improvement to weigh)."
+  step_2_C1: >-
+    two-sided McNemar p < 0.05 AND (b - c) >= 3 AND frontier net (b_f - c_f)
+    >= 2 AND c_ctrl == 0 -> C1 (claim-vs-observation representation earns
+    general support under the frozen effect and regression criteria).
+  step_3_C2: >-
+    target case budget-C3 corrects (A-wrong -> B-right) AND frontier net
+    (b_f - c_f) >= 2 AND c_ctrl == 0 (and step 2 not met) -> C2 (target case
+    improves; transferable class-level evidence insufficient).
+  step_4_C3: "T==0 AND b_f == 0 AND c_f == 0 AND c_ctrl == 0 -> C3 (no meaningful treatment effect)."
+  step_5_C5: >-
+    Otherwise -> C5 (genuinely inconclusive; record which criteria were
+    boundary). A two-sided p exactly at 0.05 is a boundary: treat as
+    not significant.
+  exploratory_allotment: >-
+    Additional analyses (per-repetition pairing, per-family splits, entropy
+    and confidence shifts, abstention-pattern changes) are permitted only
+    AFTER the preregistered result is recorded, and must be labeled
+    exploratory in the report.
+
+# ---------------------------------------------------------------------------
+# 5. TEETH (frozen; each must be executed and recorded)
+# ---------------------------------------------------------------------------
+teeth:
+  T27-1_content_equivalence:
+    attack: "Condition B adds a scalar fact absent from condition A (simulated: inject a fabricated evidence digest into B's body)."
+    check: >-
+      Atom-set equality both directions between A's blob atoms and B's
+      payload atoms (structural labels/prose excluded by construction);
+      the simulated injection must be rejected; the real B must pass.
+    expected: "Checker rejects the injected variant; real A/B pass; tooth recorded PASS only if both hold."
+  T27-2_role_vocabulary:
+    attack: "Role vocabulary encodes correctness (simulated: render with a 'CONTRADICTED_CLAIM' role label and a relation value 'claim_is_false')."
+    check: "Role validator accepts only the frozen vocabularies and rejects banned outcome/correctness tokens; simulated variant must FAIL."
+    expected: "Real rendering passes; simulated variant rejected; tooth recorded PASS only if both hold."
+  T27-3_temporal_horizon:
+    attack: "Post-judgment artifact enters condition B input (simulated: append the case's run_terminal state to B's body)."
+    check: >-
+      Assembler asserts neither prompt contains run_terminal /
+      settlement_committed substrings nor any truth-label vocabulary token
+      ('settled'/'not_settled'/'budget_exhausted' as content tokens outside
+      the fixed answer-domain line); simulated variant must FAIL.
+    expected: "Real prompts pass; simulated variant rejected; tooth recorded PASS only if both hold."
+  T27-4_case_identity:
+    attack: "Typed representation swapped between cases (simulated: swap budget-C3 and accepted-A1 B bodies)."
+    check: >-
+      Every persisted observation is keyed by (case_id, condition, rep,
+      prompt_hash); scorer recomputes each case's prompt hash and rejects
+      any record whose stored prompt_hash does not match; the simulated swap
+      must produce mismatches and be rejected.
+    expected: "Real store passes; simulated swap rejected; tooth recorded PASS only if both hold."
+
+# ---------------------------------------------------------------------------
+# 6. STOP / INVALIDATION CONDITIONS (frozen)
+# ---------------------------------------------------------------------------
+stop_conditions:
+  S1_provider_unavailable: >-
+    The DeepSeek endpoint is unreachable/failing at acquisition start, or
+    fails for >20% of calls: preserve the infrastructure failure evidence,
+    execute NO substitution, end the run as ENVIRONMENTAL (not C1-C5).
+  S2_call_integrity: >-
+    Any case/condition cell ends with fewer than 4 valid calls after bounded
+    retries: the case-level readout degenerates to insufficient_evidence per
+    the frozen scoring rule AND the run is flagged degraded; if >2 cells are
+    degraded the run is invalid -> C5.
+  S3_corpus_identity: "Any selected DB sha256 differs from this freeze at execution time -> stop, preserve, invalid."
+  S4_leakage: "Any assembled prompt is found to contain terminal/settlement/truth material -> stop, preserve, invalid (also tooth T27-3)."
+  S5_freeze_violation: >-
+    Any condition output is observed before this preregistration's sha256 is
+    recorded in the decision log -> the run identity is void; restart under a
+    clean run identity per governance.
+
+# ---------------------------------------------------------------------------
+# 7. EVIDENCE LOCATIONS (frozen)
+# ---------------------------------------------------------------------------
+evidence:
+  dir: ".agents/evidence/godspeed-bounded-judgment/T27/"
+  observations: ".agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl"
+  gate: ".agents/evidence/godspeed-bounded-judgment/T27/run_claim_obs.py"
+  report: ".agents/evidence/godspeed-bounded-judgment/T27/t27-paired-report.yml"
+  settlement_report: ".agents/evidence/godspeed-bounded-judgment/T27/t27-settlement-report.md"
+  teeth_log: ".agents/evidence/godspeed-bounded-judgment/T27/teeth-results.yml"
+  decisions: ".agents/evidence/godspeed-bounded-judgment/decisions.yml"
+
+scope_and_boundaries:
+  proves: "Whether representing claims and observations as distinct epistemic roles changes bounded-judgment behavior on THIS 14-case subset, THIS provider, THIS surface."
+  does_not_prove: >-
+    Truth establishment; provider authority; that a correct judgment equals
+    SEA-Forge settlement; a common cause for all unstable frontier cases;
+    transfer via one fixed lying-claim case; nor any warrant for .sea grammar
+    changes. T28 (independent confirmation/disposition) consumes this
+    evidence; it is NOT executed here.

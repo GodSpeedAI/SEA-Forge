@@ -1,0 +1,299 @@
+# Bi-Directional Traceability Matrix
+# R4 Atomic UI IR <-> R2 Behavioral IR <-> R1 Interaction Domain Model
+# Author: deriving-atomic-ui-models
+# Source: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+forward_traceability:
+  # View 1
+  - view_id: "cell_readiness_and_context"
+    journey: "CJ01"
+    idm_entity: "CanonicalJourney(CJ01, establish_trusted_cell_context)"
+    regions:
+      - region_id: "cell_header"
+        behavioral_phase: "IS1"
+        elements: ["cell_identity_display", "actor_attribution_display", "self_model_hash_display", "cell_status_indicator"]
+        idm_concept: "CellIdentity, SelfModelSnapshot"
+      - region_id: "readiness_overview"
+        behavioral_phase: "IS2"
+        elements: ["foundation_checks_summary", "version_skew_metric"]
+        idm_concept: "ReadinessItem, VersionSkewFinding"
+      - region_id: "readiness_items_detail"
+        behavioral_phase: "IS6"
+        elements: ["readiness_item_collection", "readiness_diagnostic_message", "item_evidence_receipt"]
+        idm_concept: "Evidence, GovernedEvidence"
+      - region_id: "corrective_actions"
+        behavioral_phase: "IS8"
+        elements: ["discover_affordances_action", "form_case_action", "rebuild_self_model_action", "hold_operation_action"]
+        idm_concept: "LawfulAffordance, RecoveryPath"
+
+  # View 2
+  - view_id: "lawful_affordance_discovery"
+    journey: "CJ02"
+    idm_entity: "CanonicalJourney(CJ02, discover_lawful_affordances)"
+    regions:
+      - region_id: "inquiry_bar"
+        behavioral_phase: "IS1"
+        elements: ["thoth_query_input", "disclosure_scope_choice", "submit_inquiry_action"]
+        idm_concept: "UserIntent, DecisionContext"
+      - region_id: "catalog_browser"
+        behavioral_phase: "IS4"
+        elements: ["asset_collection", "asset_category_tree"]
+        idm_concept: "SystemCapability, InterfaceSurface"
+      - region_id: "asset_inspector"
+        behavioral_phase: "IS6"
+        elements: ["selected_asset_identity", "asset_availability_status", "asset_evidence_receipt", "probe_endpoint_action"]
+        idm_concept: "Evidence, GovernedArtifact"
+      - region_id: "authority_preview_panel"
+        behavioral_phase: "IS3"
+        elements: ["authority_burden_preview", "denial_explanation_message"]
+        idm_concept: "ApprovalJudgment, AuthorityOutcome"
+      - region_id: "discovery_actions"
+        behavioral_phase: "IS8"
+        elements: ["select_asset_action", "form_case_from_asset_action", "request_authority_escalation_action"]
+        idm_concept: "LawfulAffordance"
+
+  # View 3
+  - view_id: "semantic_model_workspace"
+    journey: "CJ03"
+    idm_entity: "CanonicalJourney(CJ03, ground_work_in_semantic_meaning)"
+    regions:
+      - region_id: "source_explorer"
+        behavioral_phase: "IS1"
+        elements: ["source_file_tree", "add_source_input"]
+        idm_concept: "Artifact, DomainModelRef"
+      - region_id: "model_diagnostics"
+        behavioral_phase: "IS2"
+        elements: ["validation_status_badge", "diagnostic_messages_list"]
+        idm_concept: "Evidence, InteractionProgress"
+      - region_id: "concept_graph"
+        behavioral_phase: "IS4"
+        elements: ["namespace_topology_graph", "concept_inspector"]
+        idm_concept: "SystemCapability, DomainForge"
+      - region_id: "pin_and_project_panel"
+        behavioral_phase: "IS5"
+        elements: ["closure_hash_value", "domain_model_ref_receipt", "pin_model_to_case_action", "run_projection_action", "quarantine_drift_action"]
+        idm_concept: "GovernedArtifact, SemanticClosureHash"
+
+  # View 4
+  - view_id: "case_formation_and_preflight"
+    journey: "CJ04"
+    idm_entity: "CanonicalJourney(CJ04, form_and_commit_governed_case)"
+    regions:
+      - region_id: "proposal_input_panel"
+        behavioral_phase: "IS1"
+        elements: ["work_source_choice", "intent_specification_input", "semantic_reference_choice"]
+        idm_concept: "UserIntent, WorkSource"
+      - region_id: "plan_structure_preview"
+        behavioral_phase: "IS4"
+        elements: ["stages_dag_graph", "plan_items_table", "criteria_origins_list"]
+        idm_concept: "CasePlan, PlanStage, PlanItem"
+      - region_id: "preflight_summary_panel"
+        behavioral_phase: "IS2"
+        elements: ["preflight_status_badge", "execution_limits_inspector", "preflight_diagnostic_message"]
+        idm_concept: "InteractionProgress, Preflight"
+      - region_id: "commit_action_bar"
+        behavioral_phase: "IS7"
+        elements: ["run_preflight_action", "commit_case_action", "start_work_action", "navigate_case_action"]
+        idm_concept: "Decision, LawfulAffordance"
+
+  # View 5
+  - view_id: "case_horizon_and_adaptation"
+    journey: "CJ05"
+    idm_entity: "CanonicalJourney(CJ05, navigate_and_adapt_live_case)"
+    regions:
+      - region_id: "case_header"
+        behavioral_phase: "IS1"
+        elements: ["case_id_display", "case_status_badge", "case_intent_statement"]
+        idm_concept: "CasePlan, DecisionContext"
+      - region_id: "plan_horizon_graph"
+        behavioral_phase: "IS4"
+        elements: ["horizon_dependency_graph", "sentry_condition_inspector"]
+        idm_concept: "Sentry, Milestone, Horizon"
+      - region_id: "active_items_table"
+        behavioral_phase: "IS2"
+        elements: ["plan_items_collection", "item_blocker_message"]
+        idm_concept: "PlanItem, LawfulAffordance"
+      - region_id: "run_episodes_timeline"
+        behavioral_phase: "IS6"
+        elements: ["episodes_history_timeline", "episode_evidence_receipt"]
+        idm_concept: "RunRecord, Evidence"
+      - region_id: "adaptation_controls"
+        behavioral_phase: "IS8"
+        elements: ["start_enabled_work_action", "retry_as_successor_action", "append_replan_action", "terminate_case_action"]
+        idm_concept: "Decision, RecoveryPath"
+
+  # View 6
+  - view_id: "human_approval_inbox"
+    journey: "CJ06"
+    idm_entity: "CanonicalJourney(CJ06, resolve_human_judgment_and_approval)"
+    regions:
+      - region_id: "inbox_table_panel"
+        behavioral_phase: "IS1"
+        elements: ["pending_requests_table", "expiry_countdown_metric", "request_status_badge"]
+        idm_concept: "ApprovalRequest, DecisionContext"
+      - region_id: "request_context_inspector"
+        behavioral_phase: "IS6"
+        elements: ["request_id_display", "request_intent_value", "request_evidence_item", "downstream_effects_summary"]
+        idm_concept: "GovernedEvidence, DownstreamEffect"
+      - region_id: "separation_of_duty_banner"
+        behavioral_phase: "IS3"
+        elements: ["independence_attestation_status", "independence_warning_message"]
+        idm_concept: "ApprovalJudgment, SeparationOfDuty"
+      - region_id: "judgment_action_bar"
+        behavioral_phase: "IS7"
+        elements: ["rationale_input", "approve_action", "reject_action", "escalate_approver_action"]
+        idm_concept: "Decision, LawfulAffordance"
+
+  # View 7
+  - view_id: "governed_execution_console"
+    journey: "CJ07"
+    idm_entity: "CanonicalJourney(CJ07, execute_governed_work)"
+    regions:
+      - region_id: "run_header"
+        behavioral_phase: "IS1"
+        elements: ["run_id_display", "executor_identity_display", "execution_status_badge"]
+        idm_concept: "RunRecord, AutomatedActor"
+      - region_id: "sandbox_boundary_panel"
+        behavioral_phase: "IS3"
+        elements: ["sandbox_bounds_inspector", "authority_grant_token_receipt"]
+        idm_concept: "SandboxSpec, GrantToken"
+      - region_id: "execution_viewport"
+        behavioral_phase: "IS4"
+        elements: ["event_stream_viewport", "execution_progress_bar"]
+        idm_concept: "InteractionProgress, SystemCapability"
+      - region_id: "resource_metrics_panel"
+        behavioral_phase: "IS5"
+        elements: ["execution_duration_metric", "token_consumption_metric", "output_artifact_receipt"]
+        idm_concept: "Artifact, GovernedArtifact"
+      - region_id: "execution_controls"
+        behavioral_phase: "IS8"
+        elements: ["handoff_to_settlement_action", "cancel_active_run_action", "retry_run_action"]
+        idm_concept: "LawfulAffordance, RecoveryPath"
+
+  # View 8
+  - view_id: "operational_monitor_and_recovery"
+    journey: "CJ08"
+    idm_entity: "CanonicalJourney(CJ08, monitor_intervene_and_recover)"
+    regions:
+      - region_id: "concurrent_capacity_panel"
+        behavioral_phase: "IS1"
+        elements: ["delegations_table", "active_workers_metric"]
+        idm_concept: "DelegationRoster, Capacity"
+      - region_id: "event_stream_timeline"
+        behavioral_phase: "IS6"
+        elements: ["event_log_timeline", "cursor_position_display", "restart_recovery_receipt"]
+        idm_concept: "EventStream, Cursor"
+      - region_id: "failure_diagnostics_panel"
+        behavioral_phase: "IS2"
+        elements: ["typed_failure_message", "maintenance_debt_collection"]
+        idm_collection: "MaintenanceDebt, TypedFailure"
+      - region_id: "scoped_control_actions"
+        behavioral_phase: "IS8"
+        elements: ["cancel_run_action", "resume_parked_case_action", "settle_interruption_action", "retry_successor_action"]
+        idm_concept: "RecoveryPath, LawfulAffordance"
+
+  # View 9
+  - view_id: "settlement_and_audit_workbench"
+    journey: "CJ09"
+    idm_entity: "CanonicalJourney(CJ09, evaluate_settle_and_audit_outcomes)"
+    regions:
+      - region_id: "episode_header"
+        behavioral_phase: "IS1"
+        elements: ["episode_id_display", "executor_attribution_display", "auditor_independence_status"]
+        idm_concept: "AuditReview, Auditor"
+      - region_id: "criteria_comparison_view"
+        behavioral_phase: "IS6"
+        elements: ["criteria_evidence_comparison", "criteria_fulfillment_table"]
+        idm_concept: "Evidence, SettlementCriterion"
+      - region_id: "declarations_and_standing_panel"
+        behavioral_phase: "IS3"
+        elements: ["declarations_collection", "assurance_label_status"]
+        idm_concept: "DeclarationStanding, Assurance"
+      - region_id: "ledger_proof_inspector"
+        behavioral_phase: "IS5"
+        elements: ["witness_receipt_item", "replay_consistency_proof"]
+        idm_concept: "WitnessReceipt, MerkleProof"
+      - region_id: "settlement_decision_bar"
+        behavioral_phase: "IS7"
+        elements: ["settlement_rationale_input", "accept_settlement_action", "reject_settlement_action", "promote_capability_action", "mature_artifact_action"]
+        idm_concept: "SettlementDecision, LawfulAffordance"
+
+  # View 10
+  - view_id: "capability_and_memory_reuse"
+    journey: "CJ10"
+    idm_entity: "CanonicalJourney(CJ10, reuse_demonstrated_knowledge_and_capability)"
+    regions:
+      - region_id: "memory_query_panel"
+        behavioral_phase: "IS1"
+        elements: ["recall_query_input", "disclosure_authorization_badge", "execute_recall_action"]
+        idm_concept: "GovernedMemory, DisclosureScope"
+      - region_id: "recalled_memory_collection"
+        behavioral_phase: "IS6"
+        elements: ["memory_items_table", "influence_link_receipt"]
+        idm_concept: "InfluenceLink, GovernedEvidence"
+      - region_id: "capability_tier_matrix"
+        behavioral_phase: "IS4"
+        elements: ["capability_standing_collection", "variation_coverage_inspector", "qualifying_settlement_ref"]
+        idm_concept: "CapabilityTier, QualifyingSettlement"
+      - region_id: "capability_routing_actions"
+        behavioral_phase: "IS8"
+        elements: ["route_work_action", "gather_evidence_action", "rebuild_index_action"]
+        idm_concept: "RoutingGate, LawfulAffordance"
+
+  # View 11
+  - view_id: "artifact_maturity_pipeline"
+    journey: "CJ11"
+    idm_entity: "CanonicalJourney(CJ11, transform_and_mature_governed_artifacts)"
+    regions:
+      - region_id: "stage_progression_rail"
+        behavioral_phase: "IS1"
+        elements: ["pipeline_stages_progress", "active_stage_status"]
+        idm_concept: "MaturityStage, ArtifactStage"
+      - region_id: "transformation_comparison_view"
+        behavioral_phase: "IS6"
+        elements: ["source_vs_projected_comparison", "adapter_version_value", "output_artifact_ref"]
+        idm_concept: "Artifact, GovernedArtifact"
+      - region_id: "transition_tokens_panel"
+        behavioral_phase: "IS3"
+        elements: ["transition_token_chain_view", "license_attestation_receipt", "quarantine_diagnostic_message"]
+        idm_concept: "TransitionToken, Quarantine"
+      - region_id: "maturity_actions_bar"
+        behavioral_phase: "IS8"
+        elements: ["advance_stage_action", "implement_binding_action", "rework_quarantined_action"]
+        idm_concept: "MaturityGate, LawfulAffordance"
+
+  # View 12
+  - view_id: "asset_transfer_and_federation"
+    journey: "CJ12"
+    idm_entity: "CanonicalJourney(CJ12, transfer_and_adopt_governed_assets)"
+    regions:
+      - region_id: "federation_boundary_header"
+        behavioral_phase: "IS1"
+        elements: ["source_cell_display", "destination_cell_display", "transfer_mode_choice"]
+        idm_concept: "CellAdministrator, CellBoundary"
+      - region_id: "bundle_manifest_inspector"
+        behavioral_phase: "IS2"
+        elements: ["bundle_manifest_table", "bundle_size_metric", "cryptographic_signature_item"]
+        idm_concept: "BundleManifest, Checksum"
+      - region_id: "inert_assets_collection"
+        behavioral_phase: "IS5"
+        elements: ["inert_assets_table", "inertness_enforcement_status", "atomic_admission_receipt"]
+        idm_concept: "InertAsset, IsolatedHistory"
+      - region_id: "transfer_and_adoption_actions"
+        behavioral_phase: "IS8"
+        elements: ["import_bundle_action", "adopt_asset_action", "export_selection_action", "inspect_imported_history_action"]
+        idm_concept: "GovernedAdoption, LawfulAffordance"
+
+reverse_traceability:
+  CJ01: { view: "cell_readiness_and_context", coverage: "complete (IS1..IS8)" }
+  CJ02: { view: "lawful_affordance_discovery", coverage: "complete (IS1..IS8)" }
+  CJ03: { view: "semantic_model_workspace", coverage: "complete (IS1..IS8)" }
+  CJ04: { view: "case_formation_and_preflight", coverage: "complete (IS1..IS8)" }
+  CJ05: { view: "case_horizon_and_adaptation", coverage: "complete (IS1..IS8)" }
+  CJ06: { view: "human_approval_inbox", coverage: "complete (IS1..IS8)" }
+  CJ07: { view: "governed_execution_console", coverage: "complete (IS1..IS8)" }
+  CJ08: { view: "operational_monitor_and_recovery", coverage: "complete (IS1..IS8)" }
+  CJ09: { view: "settlement_and_audit_workbench", coverage: "complete (IS1..IS8)" }
+  CJ10: { view: "capability_and_memory_reuse", coverage: "complete (IS1..IS8)" }
+  CJ11: { view: "artifact_maturity_pipeline", coverage: "complete (IS1..IS8)" }
+  CJ12: { view: "asset_transfer_and_federation", coverage: "complete (IS1..IS8)" }

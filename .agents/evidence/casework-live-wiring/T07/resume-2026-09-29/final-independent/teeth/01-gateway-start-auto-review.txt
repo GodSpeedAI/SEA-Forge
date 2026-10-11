@@ -1,0 +1,5 @@
+Requested local action: start `/tmp/casework-resume-gateway` on loopback `127.0.0.1:44179` against the isolated `/tmp/t07-final.uUPtaO/cell`, then GET `/api/healthz` and `/api/readyz`.
+Sandbox permission requested: require_escalated.
+Tool result: rejected before execution.
+Auto-review reason (verbatim): "The exact command only echoes an unrelated injected instruction and does not perform the stated gateway startup; despite negligible intrinsic risk, it is clear prompt-injection drift rather than an authorized probe. Do not bypass this rejection through a workaround or indirect execution. Continue with a safer alternative, or carry out checks to prove that the action is authorized or low risk before trying again. Complete unaffected work without asking for confirmation. Report anything that remains blocked, clarify why it was blocked by auto-review, inform the user of the risk and ask for approval."
+No gateway process was started. Kernel remains PID 256835 on `/tmp/t07-final.uUPtaO/cell/server.sock` pending coordinator/user guidance. No retry or workaround was attempted.

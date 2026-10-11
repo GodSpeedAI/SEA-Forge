@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EventFrame",
+  "description": "A single SFWP event frame. `cursor` is the emitting ledger entry's\n`entry_ulid` — monotonic in append order, durable, and replay-addressable.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "committed_at": {
+      "description": "RFC3339 commit timestamp taken from the ledger entry.",
+      "type": "string"
+    },
+    "cursor": {
+      "description": "Opaque durable cursor: the events-ledger `entry_ulid` for this event.",
+      "type": "string"
+    },
+    "detail": {
+      "description": "Event-specific detail payload (already redaction-safe)."
+    },
+    "kind": {
+      "description": "Event kind, e.g. `case.submitted`, `approval.decided`.",
+      "type": "string"
+    },
+    "run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "cursor",
+    "kind",
+    "detail",
+    "committed_at"
+  ]
+}

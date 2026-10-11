@@ -1,0 +1,14 @@
+{
+  "request_id": "8c8e9ec0-3c49-49e4-a656-149406ab7a4a",
+  "method": "case.commit",
+  "status": "completed",
+  "submitted_at": "2026-10-10T17:49:59.561797621+00:00",
+  "completed_at": "2026-10-10T17:49:59.595209384+00:00",
+  "outcome": {
+    "case_id": "case_20261010T174959Z_b8ae2d",
+    "exit_code": 5,
+    "state": "active"
+  },
+  "payload_hash": "eb109400739108b086e15827a2102708f256d07d9cae7c9954db46107d52396d",
+  "locator": "case_20261010T174959Z_b8ae2d"
+}

@@ -1,0 +1,410 @@
+{
+  "schema_version": "1.0",
+  "inspected_commit": "8361f25ff0bbfc13c56c96ccb82161f317b4d0e6",
+  "branch": "frontend",
+  "generated_by": "pass-3-packaging",
+  "generated_at": "2026-07-27",
+  "packets": [
+    {
+      "id": "SF-001",
+      "title": "Distribution and cell contract",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "medium",
+      "parallelization_class": "sequential",
+      "dependencies": [],
+      "blocks": ["SF-002", "SF-005", "SF-012"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "workbench/apps/desktop/src-tauri/src/lib.rs",
+        "workbench/apps/desktop/src-tauri/tauri.conf.json",
+        "crates/sea-forge-server/src/config.rs",
+        "crates/sea-forge-server/src/main.rs"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server config",
+        "cargo test -p sea-forge-server --test conformance_sfwp",
+        "cargo build --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml"
+      ],
+      "integration_checkpoint": "Startup matrix: one root, one socket, version handshake",
+      "user_decision": "U-06 (proceeds on provisional default: separately installed server)"
+    },
+    {
+      "id": "SF-002",
+      "title": "Fail-closed service lifecycle",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "medium",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-001"],
+      "blocks": ["SF-008", "SF-012"],
+      "parallelizable_with": ["SF-003", "SF-007"],
+      "affected_paths": [
+        "crates/sea-forge-server/src/main.rs",
+        "crates/sea-forge-server/src/config.rs",
+        "crates/sea-forge-server/src/lib.rs",
+        "crates/sea-forge-server/tests/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server -- --test-threads=1",
+        "cargo test -p sea-forge-server --test conformance_sfwp"
+      ],
+      "integration_checkpoint": "Invalid-config blocks startup; reload atomic; timeout preserves status",
+      "user_decision": null
+    },
+    {
+      "id": "SF-003",
+      "title": "Canonical episode pipeline",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "large",
+      "parallelization_class": "sequential",
+      "dependencies": [],
+      "blocks": ["SF-004", "SF-009", "SF-010", "SF-011"],
+      "parallelizable_with": ["SF-002", "SF-007"],
+      "affected_paths": [
+        "crates/sea-forge-server/src/case_dispatch.rs",
+        "crates/sea-forge-case-runner/src/",
+        "crates/sea-forge-server/tests/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server",
+        "cargo test -p sea-forge-case-runner",
+        "devbox run -- just proof",
+        "cargo test --workspace --all-features --locked --no-fail-fast"
+      ],
+      "integration_checkpoint": "Denial leaves no side effect; false success rejected; P1-P4b green",
+      "user_decision": null,
+      "sole_file_ownership": ["crates/sea-forge-server/src/case_dispatch.rs"]
+    },
+    {
+      "id": "SF-004",
+      "title": "Run locator and compatibility migration",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "medium",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-003"],
+      "blocks": ["SF-009"],
+      "parallelizable_with": ["SF-005", "SF-006", "SF-007"],
+      "affected_paths": [
+        "crates/sea-forge-server/src/sfwp/run_views.rs",
+        "crates/sea-forge-server/src/sfwp/case_views.rs",
+        "crates/sea-forge-cli/src/commands/migrate.rs",
+        "crates/sea-forge-server/tests/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server sfwp",
+        "cargo test -p sea-forge-cli migrate",
+        "devbox run -- just proof"
+      ],
+      "integration_checkpoint": "Every case-horizon run link opens a complete record before and after restart",
+      "user_decision": null
+    },
+    {
+      "id": "SF-005",
+      "title": "Identity and authority context",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "medium",
+      "parallelization_class": "coordinated",
+      "dependencies": ["SF-001"],
+      "blocks": ["SF-008", "SF-009", "SF-010"],
+      "parallelizable_with": ["SF-003", "SF-004", "SF-007"],
+      "affected_paths": [
+        "crates/sea-forge-server/src/lib.rs",
+        "crates/sea-forge-server/src/sfwp/mod.rs",
+        "crates/sea-forge-server/src/sfwp/approvals.rs",
+        "workbench/apps/desktop/src-tauri/src/bridge.rs",
+        "workbench/apps/desktop/src/router.tsx",
+        "workbench/apps/desktop/src/shell/",
+        "workbench/apps/desktop/src/hooks/",
+        "workbench/packages/contracts/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server sfwp",
+        "cd workbench && bun run check && bun run test",
+        "cargo test -p sea-forge-server --test conformance_sfwp"
+      ],
+      "integration_checkpoint": "Two actors, SoD enforced, UI shows resolved identity",
+      "user_decision": "U-07 (proceeds on provisional default: minimal internal actor context)"
+    },
+    {
+      "id": "SF-006",
+      "title": "Idempotent SFWP operations",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "medium",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-005"],
+      "blocks": ["SF-009", "SF-010"],
+      "parallelizable_with": ["SF-007"],
+      "affected_paths": [
+        "crates/sea-forge-server/src/sfwp/correlation.rs",
+        "crates/sea-forge-server/src/lib.rs",
+        "workbench/apps/desktop/src-tauri/src/bridge.rs",
+        "workbench/apps/desktop/src/machines/caseAuthoringMachine.ts",
+        "crates/sea-forge-server/tests/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server correlation",
+        "cargo test -p sea-forge-server --test conformance_sfwp",
+        "cd workbench && bun run test"
+      ],
+      "integration_checkpoint": "Dropped response → one mutation, same terminal outcome",
+      "user_decision": null
+    },
+    {
+      "id": "SF-007",
+      "title": "Contract and generated-zone gate",
+      "priority": "P0",
+      "stage": 1,
+      "scope": "small",
+      "parallelization_class": "independent",
+      "dependencies": [],
+      "blocks": ["SF-008", "SF-012"],
+      "parallelizable_with": ["SF-002", "SF-003", "SF-004", "SF-005"],
+      "affected_paths": [
+        "justfile",
+        "workbench/packages/contracts/scripts/generate.ts",
+        "workbench/packages/sea-forge-ui-tokens/scripts/check-drift.mjs",
+        "workbench/apps/desktop/src-tauri/Cargo.toml"
+      ],
+      "acceptance_commands": [
+        "just workbench-check",
+        "just no-async-kernel"
+      ],
+      "integration_checkpoint": "Drift fails; regeneration zero-diff; Tauri boundary holds",
+      "user_decision": null
+    },
+    {
+      "id": "SF-008",
+      "title": "Readiness, identity, and affordance slice",
+      "priority": "P0",
+      "stage": 2,
+      "scope": "medium",
+      "parallelization_class": "coordinated",
+      "dependencies": ["SF-002", "SF-005", "SF-007"],
+      "blocks": ["SF-009"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "crates/sea-forge-server/src/sfwp/readiness.rs",
+        "crates/sea-forge-server/src/sfwp/mod.rs",
+        "crates/sea-forge-self-model/src/",
+        "crates/sea-forge-thoth/src/",
+        "workbench/packages/contracts/",
+        "workbench/apps/desktop/src/hooks/useReadiness.ts",
+        "workbench/apps/desktop/src/pages/ReadinessPage.tsx",
+        "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server readiness",
+        "cargo test -p sea-forge-thoth",
+        "cd workbench && bun run check && bun run test",
+        "just workbench-check"
+      ],
+      "integration_checkpoint": "First 3 journey steps on real stack",
+      "user_decision": null
+    },
+    {
+      "id": "SF-009",
+      "title": "Case to settled run slice",
+      "priority": "P0",
+      "stage": 2,
+      "scope": "large",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-003", "SF-004", "SF-005", "SF-006", "SF-008"],
+      "blocks": ["SF-010", "SF-011"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "crates/sea-forge-server/src/case_dispatch.rs",
+        "crates/sea-forge-server/src/lib.rs",
+        "crates/sea-forge-server/src/sfwp/case.rs",
+        "crates/sea-forge-server/src/sfwp/case_views.rs",
+        "crates/sea-forge-server/src/sfwp/run_views.rs",
+        "crates/sea-forge-server/src/sfwp/mod.rs",
+        "workbench/apps/desktop/src/machines/caseAuthoringMachine.ts",
+        "workbench/apps/desktop/src/pages/CaseCreationWorkbench.tsx",
+        "workbench/apps/desktop/src/pages/CaseHorizonPage.tsx",
+        "workbench/apps/desktop/src/pages/RunRecordPage.tsx"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server sfwp",
+        "cd workbench && bun run check && bun run test",
+        "just workbench-check",
+        "cargo test --workspace --all-features --locked --no-fail-fast"
+      ],
+      "integration_checkpoint": "Primary journey reaches honest accepted or rejected settlement",
+      "user_decision": null
+    },
+    {
+      "id": "SF-010",
+      "title": "Approval, intervention, and recovery slice",
+      "priority": "P0",
+      "stage": 2,
+      "scope": "medium",
+      "parallelization_class": "coordinated",
+      "dependencies": ["SF-006", "SF-009"],
+      "blocks": ["SF-011"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "crates/sea-forge-server/src/lib.rs",
+        "crates/sea-forge-server/src/delegation.rs",
+        "crates/sea-forge-server/src/sfwp/approvals.rs",
+        "crates/sea-forge-server/src/sfwp/correlation.rs",
+        "crates/sea-forge-server/src/sfwp/events.rs",
+        "crates/sea-forge-server/src/sfwp/delegations.rs",
+        "workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx",
+        "workbench/apps/desktop/src/pages/OperationsPage.tsx",
+        "workbench/apps/desktop/src/pages/DelegationRoster.tsx"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-server approvals",
+        "cargo test -p sea-forge-server delegation",
+        "cd workbench && bun run check && bun run test"
+      ],
+      "integration_checkpoint": "Safe intervention, cancel, approve, and recover",
+      "user_decision": null
+    },
+    {
+      "id": "SF-011",
+      "title": "Evidence, settlement, and reuse slice",
+      "priority": "P0",
+      "stage": 2,
+      "scope": "medium",
+      "parallelization_class": "coordinated",
+      "dependencies": ["SF-009", "SF-010"],
+      "blocks": ["SF-012"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "crates/sea-forge-evidence/src/",
+        "crates/sea-forge-settlement/src/",
+        "crates/sea-forge-capability/src/",
+        "crates/sea-forge-self-model/src/",
+        "crates/sea-forge-artifact-ip/src/",
+        "crates/sea-forge-server/src/sfwp/mod.rs",
+        "crates/sea-forge-server/src/sfwp/",
+        "workbench/apps/desktop/src/pages/EvidencePage.tsx",
+        "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+        "workbench/packages/contracts/"
+      ],
+      "acceptance_commands": [
+        "cargo test -p sea-forge-evidence",
+        "cargo test -p sea-forge-settlement",
+        "cargo test -p sea-forge-capability",
+        "cargo test -p sea-forge-server sfwp",
+        "cd workbench && bun run check && bun run test"
+      ],
+      "integration_checkpoint": "Auditor inspects complete evidence; honest capability reuse",
+      "user_decision": null
+    },
+    {
+      "id": "SF-012",
+      "title": "Packaged real-stack E2E",
+      "priority": "P0",
+      "stage": 3,
+      "scope": "large",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-001", "SF-002", "SF-007", "SF-011"],
+      "blocks": ["SF-013"],
+      "parallelizable_with": [],
+      "affected_paths": [
+        "workbench/apps/desktop/src-tauri/tauri.conf.json",
+        "workbench/apps/desktop/src-tauri/capabilities/",
+        "workbench/apps/desktop/src-tauri/src/lib.rs",
+        "workbench/apps/desktop/playwright.config.ts",
+        "workbench/apps/desktop/e2e/"
+      ],
+      "acceptance_commands": [
+        "cd workbench && bun run tauri build",
+        "cd workbench && bunx playwright test e2e/ --workers=1"
+      ],
+      "integration_checkpoint": "Clean Linux host completes 12-scenario journey through real stack",
+      "user_decision": "U-06 confirmation (proceeds on default if not answered)"
+    },
+    {
+      "id": "SF-013",
+      "title": "CI and release artifacts",
+      "priority": "P0",
+      "stage": 5,
+      "scope": "medium",
+      "parallelization_class": "sequential",
+      "dependencies": ["SF-012"],
+      "blocks": [],
+      "parallelizable_with": [],
+      "affected_paths": [
+        ".github/workflows/",
+        "justfile",
+        "README.md",
+        "ARCHITECTURE.md"
+      ],
+      "acceptance_commands": [
+        "devbox run -- just check",
+        "devbox run -- just test",
+        "just workbench-check"
+      ],
+      "integration_checkpoint": "Aggregate CI green; checksummed artifacts; honest docs",
+      "user_decision": "Owner authorization required for CI/release changes"
+    }
+  ],
+  "critical_path": [
+    "SF-001",
+    "SF-005",
+    "SF-006",
+    "SF-009",
+    "SF-011",
+    "SF-012",
+    "SF-013"
+  ],
+  "parallel_lanes_after_SF001": {
+    "lane_A_backend_pipeline": ["SF-003", "SF-004"],
+    "lane_B_server_lifecycle": ["SF-002"],
+    "lane_C_identity_idempotency": ["SF-005", "SF-006"],
+    "lane_D_contract_gate": ["SF-007"]
+  },
+  "high_conflict_files": [
+    {
+      "path": "crates/sea-forge-server/src/lib.rs",
+      "editors": ["SF-002", "SF-005", "SF-006", "SF-009", "SF-010"],
+      "sequencing_rule": "SF-002 before SF-006; slices merge sequentially"
+    },
+    {
+      "path": "crates/sea-forge-server/src/sfwp/mod.rs",
+      "editors": ["SF-005", "SF-006", "SF-008", "SF-009", "SF-010", "SF-011"],
+      "sequencing_rule": "Merge each slice's contract before the next begins"
+    },
+    {
+      "path": "crates/sea-forge-server/src/case_dispatch.rs",
+      "editors": ["SF-003"],
+      "sequencing_rule": "SOLE ownership; no concurrent edits"
+    },
+    {
+      "path": "workbench/apps/desktop/src-tauri/src/bridge.rs",
+      "editors": ["SF-005", "SF-006"],
+      "sequencing_rule": "SF-005 before SF-006"
+    }
+  ],
+  "integration_checkpoints": [
+    {"after": "SF-001", "name": "Cell contract live", "evidence": "One root, one socket, version handshake"},
+    {"after": "SF-002", "name": "Lifecycle fail-closed", "evidence": "Invalid-config blocks; reload atomic; timeout preserves status"},
+    {"after": "SF-003", "name": "Episode pipeline real", "evidence": "Denial no side effect; false success rejected; P1-P4b green"},
+    {"after": "SF-004", "name": "Run locator unified", "evidence": "Case-linked run resolves before and after restart"},
+    {"after": "SF-005", "name": "Identity resolved", "evidence": "Two actors, SoD enforced, real identity in UI"},
+    {"after": "SF-006", "name": "Idempotency proven", "evidence": "Dropped response, one mutation, same terminal outcome"},
+    {"after": "SF-007", "name": "Contract gate closed", "evidence": "Drift fails; zero-diff regen; boundary holds"},
+    {"after": "SF-008", "name": "Readiness slice", "evidence": "First 3 journey steps on real stack"},
+    {"after": "SF-009", "name": "Case slice", "evidence": "Journey reaches honest settlement"},
+    {"after": "SF-010", "name": "Recovery slice", "evidence": "Safe intervention and recovery"},
+    {"after": "SF-011", "name": "Reuse slice", "evidence": "Honest evidence and capability"},
+    {"after": "SF-012", "name": "Packaged E2E", "evidence": "Clean-host 12-scenario journey"},
+    {"after": "SF-013", "name": "Release", "evidence": "Aggregate CI, checksums, honest docs"}
+  ],
+  "abort_conditions": [
+    "P1-P4b proofs break and cannot be restored without weakening a conformance test",
+    "A persisted schema change cannot preserve existing record IDs or readable history",
+    "The async-isolation invariant (just no-async-kernel) cannot be preserved",
+    "Acceptance criteria require changing a public contract without owner authorization",
+    "DomainForge exact-pinned version must change to complete the journey",
+    "A user-decision checkpoint answer invalidates a prior packet contract"
+  ]
+}

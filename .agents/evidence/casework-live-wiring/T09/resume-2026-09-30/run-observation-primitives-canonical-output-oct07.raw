@@ -1,0 +1,4 @@
+mise WARN  tracking config: failed to ln -sf /tmp/sea-casework-primitives-74f86f0-oct07/mise.toml /home/sprime01/.local/state/mise/tracked-configs/8a8fe643984212f7: Read-only file system (os error 30)
+casework-go-check: gofmt would rewrite:
+internal/server/run_observation_retained_policy_test.go
+error: recipe `casework-go-check` failed with exit code 1

@@ -1,0 +1,5 @@
+=== RUN   TestLiveDiscretionaryAddProducesAnAcceptedKernelWrite
+livetest-relay: relay: rebuild of case_20260926T014635Z_a57613 at 01M3DP93X9A4FYK85PCXFVFWVJ failed: unavailable: the connection to the governed authority failed (read): EOF
+--- PASS: TestLiveDiscretionaryAddProducesAnAcceptedKernelWrite (0.18s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	1.279s

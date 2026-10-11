@@ -1,0 +1,20 @@
+{
+  "version": "0.1",
+  "case_id": "case_20261010T180820Z_302e84",
+  "intent": {
+    "intent_id": "int_bbb3ef",
+    "summary": "Execute plan drafts/draft_45a180.json",
+    "actor_id": "operator_local",
+    "process_id": "godspeed-casework-go",
+    "created_at": "2026-10-10T18:08:20.465423522+00:00"
+  },
+  "state": "terminated",
+  "plan_ref": "plan_01",
+  "run_ids": [
+    "run_20261010T180844Z_2c09ed"
+  ],
+  "stages": [],
+  "close_reason": "operator_terminated:L7: the release was withdrawn",
+  "created_at": "2026-10-10T18:08:20.465456706+00:00",
+  "closed_at": "2026-10-10T18:12:32.740396314+00:00"
+}

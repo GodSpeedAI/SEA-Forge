@@ -1,0 +1,16 @@
+{
+  "journey_id": "CJ04",
+  "oracle_name": "CJ04_GovernedCaseCommitOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Exact accepted plan, parameters, criteria, and digests committed before execution.",
+  "authoritative_record_inspected": "cases/case_01mockcase.json",
+  "rationale": "Case case_01mockcase committed immutably with 1 stages, state=active, preflight_digest=sha256:17a4c917a...",
+  "evidence_refs": [
+    "cases/case_01mockcase.json"
+  ],
+  "carried_state": {
+    "case_id": "case_01mockcase",
+    "state": "active",
+    "stages_count": 1
+  }
+}

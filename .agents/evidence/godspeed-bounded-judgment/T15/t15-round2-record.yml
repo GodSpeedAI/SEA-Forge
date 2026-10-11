@@ -1,0 +1,23 @@
+# T15 round-2 record — controlled corpus: partial mechanism success + one real finding
+schema: godspeed-bounded-judgment.t15-record
+date: "2026-09-18"
+round: 2 (round-1 preserved: batch-round1-failed.sh — missing control env)
+
+case_outcomes:
+  budget-C1: {terminal: budget_exhausted, events: 3, valid: true, class: budget_exhausted}
+  budget-C2: {terminal: budget_exhausted, events: 3, valid: true, class: budget_exhausted}
+  budget-C3: {terminal: budget_exhausted, events: 6, valid: true, class: budget_exhausted, note: "marginal: 1 unit attempted-and-timed-out vs 0 — graduated budget effect"}
+  lying-B1..B3: {terminal: budget_exhausted, events: 26, valid: true, class: verification_failed_nonsettlement, detail: "6 dispatches each with evidence_produced every iteration; the verifier ladder repeatedly recorded FAIL decisions against the lying builder's artifacts (artifact reports record the failures); correction could not repair; loop ended non-settled on budget. The instrument discriminated the lie — the intended mechanism FIRED, though the terminal kind is budget exhaustion rather than a typed verification terminal."}
+  affordable-A1..A3: {terminal: escalated, valid: false, EXCLUDED_PER_PREREG: "mechanism did not fire: the e2e-happy mock dispatch times out in the headless gauntlet run path ('AK-9011 timed out twice — session reference mock-e2e-happy preserved'); the mock's session hook is a deliberately non-public test fixture (mock adapter lib.rs:40), so the intended settled_accepted class cannot be produced headlessly"}
+
+finding:
+  statement: >-
+    Headless `gauntlet run` + mock runner cannot produce the settled-accepted
+    class: honest-work dispatches time out without the TUI/prime session
+    stack. This is a mechanism-availability gap in the headless path, now
+    recorded as the next explicit affordable move (a public headless mock
+    session hook, or prime-session-driven corpus generation).
+  valid_corpus: "6 runs, 2 distinguishable classes (B: lying-with-FAIL-evidence; C: honest-timeout budget death), balanced 3v3, provenance complete"
+
+disposition:
+  T16: "NOT STARTED. The reduced corpus can descriptively test face-value-vs-careful-reading on N=6, but cannot answer the full architecture question (the accepted/lying discrimination — the most valuable cell — is unproducible headlessly). Per the amendment decision rule, the honest state is: corpus partially valid; the architecture decision remains unaffordable until the headless settled-accepted class exists."

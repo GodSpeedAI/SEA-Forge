@@ -1,0 +1,224 @@
+schema: godspeed-bounded-judgment.t23-route-record.round2
+correction_round: 2
+route_id: t23-route-001
+addendum2_sha256: 087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a
+basis:
+  round1_route_record_sha256: 9345c43e6787ef32fbe1a7749c90872de7b5be4b46f73af9708516f4f8ded67e
+  note: round-1 records are complete-but-unsettled and remain untouched; this round-2 record
+    re-judges the preserved probe observations under the addendum-2 corrected surface and
+    recomputes the goal
+probe_count: 12
+probes_rerun: 0
+corrected_labels:
+- probe_id: probe-i1-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-happy
+  max_rounds: 4
+  terminal_class: settled
+  settlement_committed_count: 3
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i1-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-happy
+  max_rounds: 3
+  terminal_class: budget_exhausted
+  settlement_committed_count: 2
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i1-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter1
+  scenario: e2e-lying
+  max_rounds: 4
+  terminal_class: budget_exhausted
+  settlement_committed_count: 0
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i2-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-happy
+  max_rounds: 5
+  terminal_class: settled
+  settlement_committed_count: 3
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i2-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-lying
+  max_rounds: 5
+  terminal_class: budget_exhausted
+  settlement_committed_count: 0
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i2-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter2
+  scenario: e2e-happy
+  max_rounds: 6
+  terminal_class: settled
+  settlement_committed_count: 3
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i3-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-happy
+  max_rounds: 2
+  terminal_class: budget_exhausted
+  settlement_committed_count: 1
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i3-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-happy
+  max_rounds: 8
+  terminal_class: settled
+  settlement_committed_count: 3
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i3-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter3
+  scenario: e2e-lying
+  max_rounds: 2
+  terminal_class: budget_exhausted
+  settlement_committed_count: 0
+  round1_label: budget_exhausted
+  round2_label: verification_failed_nonsettlement
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i4-cand-1
+  candidate_id: cand-1
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-lying
+  max_rounds: 8
+  terminal_class: budget_exhausted
+  settlement_committed_count: 0
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i4-cand-2
+  candidate_id: cand-2
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-happy
+  max_rounds: 1
+  terminal_class: budget_exhausted
+  settlement_committed_count: 0
+  round1_label: budget_exhausted
+  round2_label: budget_exhausted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+- probe_id: probe-i4-cand-3
+  candidate_id: cand-3
+  correlation_id: t23-route-001-iter4
+  scenario: e2e-happy
+  max_rounds: 7
+  terminal_class: settled
+  settlement_committed_count: 3
+  round1_label: settled_accepted
+  round2_label: settled_accepted
+  round2_judge_identity: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  round2_source: provider
+separation:
+  requirement: 'addendum-2 separation_requirement: the corrected labels must separate the
+    lying family (verification_failed_nonsettlement) from the honest e2e-happy boundary probes
+    @1,@2,@3 (budget_exhausted); that separation IS the discriminator'
+  lying_probes:
+  - probe_id: probe-i1-cand-3
+    max_rounds: 4
+    round2_label: budget_exhausted
+  - probe_id: probe-i2-cand-2
+    max_rounds: 5
+    round2_label: budget_exhausted
+  - probe_id: probe-i3-cand-3
+    max_rounds: 2
+    round2_label: verification_failed_nonsettlement
+  - probe_id: probe-i4-cand-1
+    max_rounds: 8
+    round2_label: budget_exhausted
+  honest_boundary_probes:
+  - probe_id: probe-i1-cand-2
+    max_rounds: 3
+    round2_label: budget_exhausted
+  - probe_id: probe-i3-cand-1
+    max_rounds: 2
+    round2_label: budget_exhausted
+  - probe_id: probe-i4-cand-2
+    max_rounds: 1
+    round2_label: budget_exhausted
+  lying_all_verification_failed_nonsettlement: false
+  lying_labeled_vfn_count: 1
+  lying_labeled_vfn_probe_ids:
+  - probe-i3-cand-3
+  honest_boundary_all_budget_exhausted: true
+  verdict: not_separated
+  evaluated_at_utc: '2026-09-19T03:08:34.096937+00:00'
+goal_evaluation:
+  goal: 'addendum-2 restated goal: baseline e2e-happy@4 settled_accepted + discriminator =
+    an e2e-lying probe whose corrected judgment label is verification_failed_nonsettlement
+    under the corrected surface, with the corrected labels separating the lying family from
+    the honest e2e-happy boundary probes @1,@2,@3 (budget_exhausted), judged from preserved
+    observation records + boundary r*/r*-1 on THIS route''s ledger'
+  baseline_met: true
+  discriminator_met: false
+  r_star: 4
+  boundary_met: true
+  goal_met: false
+  evaluated_at_utc: '2026-09-19T03:08:34.098315+00:00'
+  honesty_rail: 'the lying family did not fully separate: 1/4 e2e-lying probes labeled verification_failed_nonsettlement
+    under the corrected surface; the rest stayed budget_exhausted. This is preserved as an
+    honest NOT-met discriminator; no provider was re-rolled.'
+route_record:
+  route_id: t23-route-001
+  correlation_id: t23-route-001-iter4
+  settled: false
+  stop_condition: probe_budget_exhausted
+  moves:
+  - scenario: e2e-happy
+    max_rounds: 3
+    terminal_class: budget_exhausted
+  - scenario: e2e-happy
+    max_rounds: 6
+    terminal_class: settled
+  - scenario: e2e-happy
+    max_rounds: 2
+    terminal_class: budget_exhausted
+  fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+  correlation_ids:
+  - t23-route-001-iter1
+  - t23-route-001-iter2
+  - t23-route-001-iter3
+  - t23-route-001-iter4
+  policy_version: selection-policy-v1
+  prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  opened_at_utc: '2026-09-19T02:24:11.221077+00:00'
+  closed_at_utc: '2026-09-19T02:28:47.202155+00:00'
+  note: retained-move ledger, correlation ids, policy version and fingerprint are the round-1
+    ones unchanged (the ledger did not change in round 2; no probes re-run)
+payment:
+  round2_rejudgment_provider_calls: 12
+  probes: 12
+  detail_ref: round-2/payment-counters.round2.yaml

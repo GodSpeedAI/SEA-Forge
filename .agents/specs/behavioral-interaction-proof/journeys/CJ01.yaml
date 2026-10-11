@@ -1,0 +1,166 @@
+# Behavioral IR: CJ01 Establish Trusted Cell Context
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ01"
+  slug: "establish_trusted_cell_context"
+  title: "Establish Trusted Cell Context"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "epistemic"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - uninitialized
+    - returning_cell
+    - legacy_cell
+    - substrate_changed
+  actor_roles:
+    - Operator
+    - CellAdministrator
+    - AgentSponsor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - cell_root_path
+      - actor_identity
+      - configuration_inputs
+      - existing_ledger_history_when_present
+    context_scope: "Cell boundary, attributable actor, foundation configuration digests, release/toolchain substrate"
+
+  IS2_preflight:
+    checks:
+      - cell_root_readable_and_writable
+      - identity_keys_present_and_uncompromised
+      - foundation_policy_and_ledger_inputs_valid
+      - version_skew_and_compatibility_clean
+    readiness_classification:
+      expected: "ready | degraded | stale | blocked"
+      failure_action: "fail_closed_on_identity_or_policy_conflict"
+
+  IS3_authority_resolution:
+    required_role: "CellAdministrator"
+    alternate_role: "Operator"
+    grant_scope: "cell_readiness_and_context_inspection"
+    separation_of_duty: "Sponsorship requires distinct accountable sponsor for automated actors"
+    approval:
+      status: "unresolved_in_source"
+      note: "Automated actor sponsorship protocol remains specified rather than fully implemented"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "cell.initialize_and_validate"
+      invoked_capabilities:
+        - "cell_initialization_and_migration"
+        - "startup_validation"
+        - "identity.get"
+        - "readiness.get"
+        - "policy_inspection"
+        - "self_model.validate_or_rebuild"
+        - "version_skew_detection"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-cell / sea-forge-self-model"
+    bounds:
+      filesystem_scope: "cell_root"
+      network_access: "disabled"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "unknown_or_legacy_context"
+      to: "validated_current_context"
+      alternative_states:
+        - "stale_verifiable_context"
+        - "degraded_context"
+        - "blocked_context"
+    artifacts:
+      - "cell_identity_record"
+      - "migration_receipt_when_applicable"
+      - "policy_and_configuration_digests"
+      - "self_model_snapshot_hash_pinned"
+      - "readiness_item_inventory"
+      - "compatibility_findings"
+    mutation_rule: "Append-only; historical records preserved without re-keying"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "actor_attribution_record"
+        evidence_class: "observed"
+      - item: "self_model_snapshot_sha256"
+        evidence_class: "observed"
+      - item: "configuration_digests"
+        evidence_class: "observed"
+      - item: "readiness_evidence_items"
+        evidence_class: "observed"
+    integrity_verification:
+      local_digest_checked: true
+      tamper_evidence_checked: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The actor is attributable, the governing snapshots and integrity state are explicit, and the cell states whether the intended operation is ready, degraded, stale, or blocked with evidence."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "cell_context_trusted"
+        - "cell_context_degraded"
+        - "cell_context_blocked"
+    settlement_vs_termination: "Process exit with 0 is insufficient; self-model snapshot hash and readiness items must settle context."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "discover_lawful_affordances"
+        target_journey: "CJ02"
+        condition: "readiness == ready || readiness == degraded"
+      - id: "form_governed_case"
+        target_journey: "CJ04"
+        condition: "readiness == ready"
+      - id: "repair_failed_foundation"
+        action: "rebuild_self_model_or_reprobe"
+        condition: "readiness == degraded || readiness == stale"
+      - id: "hold_incompatible_operation"
+        action: "quarantine_or_stop"
+        condition: "readiness == blocked"
+    blocked_affordances:
+      - id: "execute_governed_work"
+        target_journey: "CJ07"
+        reason: "missing_precondition"
+        explanation: "Cannot execute work before case formation and authority grant"
+
+recovery_paths:
+  - condition: "identity_conflict"
+    remedy: "Refuse protected work; preserve prior verifiable snapshots"
+  - condition: "version_skew_detected"
+    remedy: "Migrate compatible history without re-keying; follow readiness item to bounded repair"
+  - condition: "foundation_probe_failure"
+    remedy: "Rebuild or reprobe changed foundations deterministically"
+
+unresolved_bindings:
+  - component: "agent_sponsorship"
+    status: "unresolved_in_source"
+    impact: "Sponsorship protocol specified in model but incomplete in runtime surface"
+  - component: "endpoint_lifecycle_inspection"
+    status: "unresolved"
+    impact: "Endpoint probe surfaced only in partial diagnostic routes"

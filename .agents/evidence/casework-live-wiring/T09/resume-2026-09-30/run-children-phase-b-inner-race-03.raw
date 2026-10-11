@@ -1,0 +1,10 @@
+--- FAIL: TestScopedRunsListRefusalRemainsTyped (0.01s)
+    scoped_runs_test.go:173: refusal error = internal: run list refused (run_list): unavailable: run list refused, want typed unavailable
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.197s
+--- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts (0.00s)
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/record-ref (0.00s)
+        scoped_live_test.go:126: scoped/legacy calls = 0/0, want exactly 1/0
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.015s
+FAIL

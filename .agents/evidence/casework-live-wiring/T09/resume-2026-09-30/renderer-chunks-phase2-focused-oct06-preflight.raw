@@ -1,0 +1,11 @@
+               total        used        free      shared  buff/cache   available
+Mem:      8327897088  4749484032   110440448     7393280  3677065216  3578413056
+Swap:    12884901888 10066776064  2818125824
+Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2803007488 1360941056  68% /tmp
+1.4.0
+52cdf00b9650f0413c91e4375c0ce5b6527b63ad9f09219f2102383dca4dec64  src/build/rendererChunkContract.ts
+95c287317aa4028a1976c145124f918d0d856a3bb0ca60802f31abd909e901ea  vite.config.ts
+25b74d25318ce97659c91f3d734ca9b2cd794d0b4d90b1ec54c045b7ce022d08  src/build/rendererChunkContract.test.ts
+85044b7b0619f390791f87d089a84463610814cc199f705662207f00337e2f54  package.json
+9e3725c9ebd21566fb6499fe1df6f2fecf7230307b489dc6700ea768d7e39744  bun.lock

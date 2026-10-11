@@ -1,0 +1,129 @@
+[
+  {
+    "version": "0.2",
+    "decision_id": "auth_01",
+    "run_id": "run_20261010T173817Z_7444a6",
+    "plan_item_id": "task_draft",
+    "action_id": "act_c7dca8",
+    "correlation_id": "run_20261010T173817Z_7444a6",
+    "operation": {
+      "kind": "write_file",
+      "path": "review/draft.md",
+      "content_hint": "sha256:b0f171922d4506e522d5dd7ac50b56a253cf0ff4735d844d4bb18459eae48557"
+    },
+    "outcome": "escalate",
+    "verdict": "escalate",
+    "normalized_disposition": "escalate",
+    "matched_rule": "escalate-e2e-signoff-gate-write",
+    "reason_codes": [
+      "policy_escalate"
+    ],
+    "reason": "policy_escalate",
+    "policy_refs": [
+      "local-policy:escalate-e2e-signoff-gate-write"
+    ],
+    "required_next_steps": [
+      "require-human-approval",
+      "resolve-authority-engine"
+    ],
+    "identity_binding": {
+      "identity_id": "identity:operator_local",
+      "principal": "operator_local",
+      "roles": [
+        "operator"
+      ],
+      "actor_type": "human",
+      "binding_resolution": "exact",
+      "identity_binding_source": "local-slice-default",
+      "source": "local-slice-default",
+      "sponsor": null,
+      "issued_at": null,
+      "expires_at": null,
+      "identity_binding_hash": "0822d401e4a47a80924adefe50bbc9917347369c06f7f373b6c693cc46c4685e"
+    },
+    "determinism": {
+      "policy_bundle_hash": "sha256:5d8227e7f23149f69a87c5e6ee6204832da7a5e464cc3d40e1b77b8913204157",
+      "action_request_hash": "sha256:73a0f6f4fff21c06dbe9113d84fb93fdadc9c70a8858fdd8e97540a325ab8f60",
+      "identity_binding_hash": "sha256:9b2fc935b6bde3e26402a18670d8e9736ea1c0c6b748a8ed26538e6314c16775"
+    },
+    "action_request": {
+      "schema_version": "cam.v1",
+      "action_id": "act_c7dca8",
+      "correlation_id": "run_20261010T173817Z_7444a6",
+      "timestamp_utc": "2026-10-10T17:38:17.946668009+00:00",
+      "actor": {
+        "actor_id": "operator_local",
+        "actor_type": "human",
+        "principal": "operator_local"
+      },
+      "action": {
+        "operation": "write_file",
+        "parameters": {
+          "content_sha256": "b0f171922d4506e522d5dd7ac50b56a253cf0ff4735d844d4bb18459eae48557",
+          "path": "review/draft.md"
+        },
+        "resource_id": "review/draft.md",
+        "resource_type": "file",
+        "tool_name": "sea-forge-cli"
+      },
+      "context": {
+        "artifacts_root": "/tmp/t10-live-0smEny/cell/cases/case_20261010T173800Z_64e69e/runs/run_20261010T173817Z_7444a6/artifacts",
+        "branch": null,
+        "channel": "cli",
+        "domain_model_ref": null,
+        "env_keys": [
+          "HOME",
+          "PATH"
+        ],
+        "environment": "local-slice",
+        "plan_item_id": "task_draft",
+        "repo": null,
+        "run_id": "run_20261010T173817Z_7444a6",
+        "source_platform": "cli",
+        "timeout_secs": 900,
+        "workspace_root": "/tmp/t10-live-0smEny/cell/cases/case_20261010T173800Z_64e69e/runs/run_20261010T173817Z_7444a6/workspace"
+      },
+      "evidence": {
+        "identity_binding_source": "local-slice-default",
+        "payload_hash": "sha256:9c9c5ef7d6ef41776fc602c9fc3cc260bf404c0f130cda97f9af03dc21948682",
+        "tool_trace_ref": null
+      }
+    },
+    "audit_record": {
+      "engine": "sea-forge-authority",
+      "disposition": "escalate",
+      "subject": "file:review/draft.md",
+      "reason": "policy_escalate",
+      "evidence_refs": [],
+      "recorded_at": "2026-10-10T17:38:17.946668009+00:00",
+      "decision_id": "auth_01",
+      "case_id": "case_20261010T173800Z_64e69e",
+      "run_id": "run_20261010T173817Z_7444a6",
+      "policy_bundle_hash": "sha256:5d8227e7f23149f69a87c5e6ee6204832da7a5e464cc3d40e1b77b8913204157",
+      "action_request_hash": "sha256:73a0f6f4fff21c06dbe9113d84fb93fdadc9c70a8858fdd8e97540a325ab8f60",
+      "identity_binding_hash": "sha256:9b2fc935b6bde3e26402a18670d8e9736ea1c0c6b748a8ed26538e6314c16775"
+    },
+    "decided_at": "2026-10-10T17:38:17.946668009+00:00",
+    "candidate_verdicts": [
+      {
+        "engine": "local",
+        "disposition": "escalate",
+        "subject": "review/draft.md",
+        "reason": "policy_escalate",
+        "evidence_refs": [
+          "local-policy:escalate-e2e-signoff-gate-write"
+        ],
+        "recorded_at": "2026-10-10T17:38:17.946668009+00:00",
+        "boundary_constraints": {},
+        "compensating_controls": []
+      }
+    ],
+    "winning_source": "local",
+    "precedence_reason": "typed deterministic candidate resolution",
+    "sandbox_class_granted": null,
+    "approval_request_id": "approval_1",
+    "opaque_constraint_id": "opaque_827795b3f4100e3c",
+    "boundary_constraints": {},
+    "compensating_controls": []
+  }
+]

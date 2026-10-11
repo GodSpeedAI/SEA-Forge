@@ -1,0 +1,1 @@
+{"intent_id":"critic2-signoff-approve-self-1","kind":"CONSEQUENTIAL_CASE","action_name":"APPROVE_HUMAN_TASK","target_object_id":"task_draft","case_id":"case_20260926T014907Z_f90434","client_cursor":"01M3DPE1V44G7EEGP1E1Q725G9","actor":{"actor_id":"operator_local","role":"operator"},"justification":"self approval attempt"}

@@ -1,0 +1,35 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t29-route-001-iter1",
+    "judge_identity": "deterministic-terminal-mapping-v1 (mechanics-only; family-2 selection input only; the route goal is evaluated by the frozen UP rule)",
+    "judged_at_utc": "2026-09-19T15:21:53.071505+00:00",
+    "judgment_id": "judg-cand-1",
+    "label": "budget_exhausted",
+    "observation_refs": [
+      "probe-i1-cand-1"
+    ]
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t29-route-001-iter1",
+    "judge_identity": "deterministic-terminal-mapping-v1 (mechanics-only; family-2 selection input only; the route goal is evaluated by the frozen UP rule)",
+    "judged_at_utc": "2026-09-19T15:21:53.278882+00:00",
+    "judgment_id": "judg-cand-2",
+    "label": "budget_exhausted",
+    "observation_refs": [
+      "probe-i1-cand-2"
+    ]
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t29-route-001-iter1",
+    "judge_identity": "deterministic-terminal-mapping-v1 (mechanics-only; family-2 selection input only; the route goal is evaluated by the frozen UP rule)",
+    "judged_at_utc": "2026-09-19T15:21:53.787250+00:00",
+    "judgment_id": "judg-cand-3",
+    "label": "budget_exhausted",
+    "observation_refs": [
+      "probe-i1-cand-3"
+    ]
+  }
+]

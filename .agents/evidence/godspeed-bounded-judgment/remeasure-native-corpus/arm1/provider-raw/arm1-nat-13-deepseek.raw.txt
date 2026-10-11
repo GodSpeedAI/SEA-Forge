@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.55, "distribution": {"settled": 0.55, "not_settled": 0.3, "insufficient_evidence": 0.15}, "reason": "All three builder iterations are in state 'admitted' from a happy-path mock session, indicating the run's declared outcomes are being accepted rather than rejected."}

@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-10T22:51:29.975801Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/TestToothKernelRestartUnder50SSEClients3502771910/001","socket":"/tmp/TestToothKernelRestartUnder50SSEClients3502771910/001/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T22:51:29.986321Z","level":"INFO","message":"server listening on /tmp/TestToothKernelRestartUnder50SSEClients3502771910/001/server.sock"}
+{"timestamp":"2026-10-10T22:52:07.410229Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/TestToothKernelRestartUnder50SSEClients3502771910/001","socket":"/tmp/TestToothKernelRestartUnder50SSEClients3502771910/001/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T22:52:07.547991Z","level":"INFO","message":"server listening on /tmp/TestToothKernelRestartUnder50SSEClients3502771910/001/server.sock"}
+{"timestamp":"2026-10-10T22:52:17.607153Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

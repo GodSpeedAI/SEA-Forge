@@ -1,0 +1,239 @@
+# =============================================================================
+# T21 OPERATIONS CATALOG — the bounded, represented operation surface
+# =============================================================================
+# Frozen data derived from existing fixture mechanisms only. No new fixture,
+# no ToolGrad/LangGraph/LangChain dependency, no product change. The catalog
+# pins the derivation of every representable operation; its sha256 is recorded
+# in the T21 evidence manifest before first execution.
+schema: godspeed-bounded-judgment.t21-operations-catalog
+catalog_version: "t21-operations-catalog-v1"
+frozen_utc: "2026-09-18"
+prereg_ref:
+  path: .agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+  sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+
+operation_surface:
+  operation: run_case
+  bounded_input:
+    scenario_domain: [e2e-happy, e2e-lying, e2e-forged-report]
+    max_rounds_domain: [1, 2, 3, 4, 5, 6, 7, 8]
+  representable_operations: 24  # 3 scenarios x 8 budget values
+
+mechanism_provenance:
+  case_execution_mechanism: .agents/evidence/godspeed-bounded-judgment/T15/batch-round1-failed.sh
+  mechanism_note: >-
+    Exactly the frozen T15 case-execution mechanism: each probe copies
+    ../gauntlet/examples/demo-calculator to a fresh disposable target, seds
+    runners.default to mock-agent (and, for budget-lever probes, max_rounds to
+    the probe's value), exports GAUNTLET_STATE_DIR / GAUNTLET_ARTIFACT_DIR /
+    GAUNTLET_TOOL_TEST / GAUNTLET_MOCK_SCENARIO / GAUNTLET_MAX_ATTEMPTS_PER_UNIT=2,
+    and runs one headless `gauntlet run "Build and verify the calculator page"`
+    with a 240 s timeout. The typed terminal from gauntlet's own event log is
+    the only ground truth.
+
+derivation_provenance:
+  scenarios:
+    e2e-happy:
+      fixture_path: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      derivation: >-
+        existing mock replay scenario fixture, selected once per run via
+        GAUNTLET_MOCK_SCENARIO (T15 frozen mechanism); honest-builder baseline
+        whose honest run settles.
+    e2e-lying:
+      fixture_path: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      derivation: >-
+        existing mock replay scenario fixture, selected once per run via
+        GAUNTLET_MOCK_SCENARIO (T15 frozen mechanism); lying builder whose
+        honest verification fails (the discriminator).
+    e2e-forged-report:
+      fixture_path: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      derivation: >-
+        existing mock replay scenario fixture, selected once per run via
+        GAUNTLET_MOCK_SCENARIO (T15 frozen mechanism); forged-report builder
+        whose fabrication is caught by the instrument.
+  max_rounds:
+    lever_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+    lever: >-
+      the GAUNTLET.md budget lever (default max_rounds: 8); budget-lever probes
+      sed max_rounds to the probe's value exactly as the T15 frozen mechanism
+      does. max_rounds in 1..8 is the whole representable budget neighborhood.
+
+neighborhood_rule: |-
+  The bounded neighborhood presented to the generator at iteration t is the
+  set of catalog operations that are (a) not yet probed on this route, (b)
+  affordable under the remaining probe budget (1 probe unit per probe), (c)
+  admission-compatible (mock replay runner only; disposable copy; no
+  credentials; no network), and (d) not excluded by a prior denial on this
+  route. The generator never sees the universe outside this catalog.
+  Frozen wording: operation_surface.neighborhood_rule of the preregistration
+  referenced above (sha256 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5).
+
+operations:
+  - op_id: run_case:e2e-happy:1
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 1
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:2
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 2
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:3
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 3
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:4
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 4
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:5
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 5
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:6
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 6
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:7
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 7
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-happy:8
+    operation: run_case
+    scenario: e2e-happy
+    max_rounds: 8
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-happy.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:1
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 1
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:2
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 2
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:3
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 3
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:4
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 4
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:5
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 5
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:6
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 6
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:7
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 7
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-lying:8
+    operation: run_case
+    scenario: e2e-lying
+    max_rounds: 8
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-lying.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:1
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 1
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:2
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 2
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:3
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 3
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:4
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 4
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:5
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 5
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:6
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 6
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:7
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 7
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md
+  - op_id: run_case:e2e-forged-report:8
+    operation: run_case
+    scenario: e2e-forged-report
+    max_rounds: 8
+    provenance:
+      scenario_fixture: ../gauntlet/tests/fixtures/mock_runner_scenarios/e2e-forged-report.yaml
+      max_rounds_source: ../gauntlet/examples/demo-calculator/GAUNTLET.md

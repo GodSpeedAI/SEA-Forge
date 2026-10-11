@@ -1,0 +1,467 @@
+schema: godspeed-bounded-judgment.remeasure-native-corpus-manifest
+created_utc: '2026-09-19T12:57:15.596937+00:00'
+prereg:
+  path: .agents/preregistrations/godspeed-bounded-judgment-native-corpus-remeasure.prereg.yaml
+  sha256: 8142c0a52537f9b600d4853afd4871d5ec04dc29acffba58fe67c7f7616d1f6e
+  decision_parent: D-2026-09-19-RM-01
+truth_rule: 'frozen mechanical rule (prereg truth_derivation + addendum-3): settled terminal -> settled_accepted;
+  bounded-non-settlement terminal AND 0 settlements AND >=1 sha256-verified failing artifact -> verification_failed_nonsettlement;
+  any other bounded non-settlement -> budget_exhausted; run error -> execution_failed (none expected); truth is
+  derived from the pinned DBs and artifact objects, never hand-assigned'
+verification:
+  db_pins_verified: 15
+  db_pin_mismatches: 0
+  truth_mismatches_vs_prereg: 0
+class_counts:
+  settled_accepted: 6
+  budget_exhausted: 5
+  verification_failed_nonsettlement: 4
+rows:
+- id: nat-01
+  source: t23-iter1
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-observations.json
+    sha256: 6850b3567a50f79b8f0c17224c27658642da3e5db57d06e4db402d4605d17685
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-run-meta.yaml
+    sha256: 5c9a5d4353e57901f17d9cb2fdabc5f30a9e48ca17168b165e964f2303c6ef88
+  probe:
+    scenario: e2e-happy
+    max_rounds: 4
+  probe_id: probe-i1-cand-1
+  identity:
+    candidate_id: cand-1
+    correlation_id: t23-route-001-iter1
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db
+  db_sha256: 87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.506
+- id: nat-02
+  source: t23-iter1
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-observations.json
+    sha256: 6850b3567a50f79b8f0c17224c27658642da3e5db57d06e4db402d4605d17685
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-run-meta.yaml
+    sha256: 5c9a5d4353e57901f17d9cb2fdabc5f30a9e48ca17168b165e964f2303c6ef88
+  probe:
+    scenario: e2e-happy
+    max_rounds: 3
+  probe_id: probe-i1-cand-2
+  identity:
+    candidate_id: cand-2
+    correlation_id: t23-route-001-iter1
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-2/state/gauntlet-state.db
+  db_sha256: 468612b9fc06a7516e9fb85b0a41bd58691a8f9bc3c0dcd8bffbb99f1c675c18
+  truth_class: budget_exhausted
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 2
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: true
+      c2: false
+      c3: false
+  actual_settled_units: 2
+  wall_seconds: 0.303
+- id: nat-03
+  source: t23-iter1
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-observations.json
+    sha256: 6850b3567a50f79b8f0c17224c27658642da3e5db57d06e4db402d4605d17685
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-1/probe-run-meta.yaml
+    sha256: 5c9a5d4353e57901f17d9cb2fdabc5f30a9e48ca17168b165e964f2303c6ef88
+  probe:
+    scenario: e2e-lying
+    max_rounds: 4
+  probe_id: probe-i1-cand-3
+  identity:
+    candidate_id: cand-3
+    correlation_id: t23-route-001-iter1
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db
+  db_sha256: 28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f
+  truth_class: verification_failed_nonsettlement
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 0
+    failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+    rule_clauses:
+      c1: true
+      c2: true
+      c3: true
+  actual_settled_units: 0
+  wall_seconds: 0.303
+- id: nat-04
+  source: t23-iter2
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-observations.json
+    sha256: a14ba4515becf11e7b35724ae5eddae994ebccc2c9be3f1f867e6ef628af4562
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-run-meta.yaml
+    sha256: 2d796502415102292db82bab6ecab4ff18d3d00d3cf3af83c7569a84460965f4
+  probe:
+    scenario: e2e-happy
+    max_rounds: 5
+  probe_id: probe-i2-cand-1
+  identity:
+    candidate_id: cand-1
+    correlation_id: t23-route-001-iter2
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-1/state/gauntlet-state.db
+  db_sha256: 913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.607
+- id: nat-05
+  source: t23-iter2
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-observations.json
+    sha256: a14ba4515becf11e7b35724ae5eddae994ebccc2c9be3f1f867e6ef628af4562
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-run-meta.yaml
+    sha256: 2d796502415102292db82bab6ecab4ff18d3d00d3cf3af83c7569a84460965f4
+  probe:
+    scenario: e2e-lying
+    max_rounds: 5
+  probe_id: probe-i2-cand-2
+  identity:
+    candidate_id: cand-2
+    correlation_id: t23-route-001-iter2
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-2/state/gauntlet-state.db
+  db_sha256: 0586e79455ea80360ffdeee64d9c8f6932c9d641cd7f9fc34eaddc97638ac010
+  truth_class: verification_failed_nonsettlement
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 0
+    failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+    rule_clauses:
+      c1: true
+      c2: true
+      c3: true
+  actual_settled_units: 0
+  wall_seconds: 0.504
+- id: nat-06
+  source: t23-iter2
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-observations.json
+    sha256: a14ba4515becf11e7b35724ae5eddae994ebccc2c9be3f1f867e6ef628af4562
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-2/probe-run-meta.yaml
+    sha256: 2d796502415102292db82bab6ecab4ff18d3d00d3cf3af83c7569a84460965f4
+  probe:
+    scenario: e2e-happy
+    max_rounds: 6
+  probe_id: probe-i2-cand-3
+  identity:
+    candidate_id: cand-3
+    correlation_id: t23-route-001-iter2
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-3/state/gauntlet-state.db
+  db_sha256: 05747e4f7e463a1f6dae8979696109b911e47f414d2b13283262668f01f6c157
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.404
+- id: nat-07
+  source: t23-iter3
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-observations.json
+    sha256: 30ee502ec189843b20bbed3b9818a7b5ef74c3db694a93d49cd72ed24e2e7ac1
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-run-meta.yaml
+    sha256: 680559a81c5801285b45abbd372374ae65035984f22cde77f03ac31f6ad964f5
+  probe:
+    scenario: e2e-happy
+    max_rounds: 2
+  probe_id: probe-i3-cand-1
+  identity:
+    candidate_id: cand-1
+    correlation_id: t23-route-001-iter3
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-1/state/gauntlet-state.db
+  db_sha256: d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937
+  truth_class: budget_exhausted
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 1
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: true
+      c2: false
+      c3: false
+  actual_settled_units: 1
+  wall_seconds: 0.204
+- id: nat-08
+  source: t23-iter3
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-observations.json
+    sha256: 30ee502ec189843b20bbed3b9818a7b5ef74c3db694a93d49cd72ed24e2e7ac1
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-run-meta.yaml
+    sha256: 680559a81c5801285b45abbd372374ae65035984f22cde77f03ac31f6ad964f5
+  probe:
+    scenario: e2e-happy
+    max_rounds: 8
+  probe_id: probe-i3-cand-2
+  identity:
+    candidate_id: cand-2
+    correlation_id: t23-route-001-iter3
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-2/state/gauntlet-state.db
+  db_sha256: d9b0b43e9461c54996d11546febea0b43cfb33fc6e8d12acc4dbb575fe532f10
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.404
+- id: nat-09
+  source: t23-iter3
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-observations.json
+    sha256: 30ee502ec189843b20bbed3b9818a7b5ef74c3db694a93d49cd72ed24e2e7ac1
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-3/probe-run-meta.yaml
+    sha256: 680559a81c5801285b45abbd372374ae65035984f22cde77f03ac31f6ad964f5
+  probe:
+    scenario: e2e-lying
+    max_rounds: 2
+  probe_id: probe-i3-cand-3
+  identity:
+    candidate_id: cand-3
+    correlation_id: t23-route-001-iter3
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-3/state/gauntlet-state.db
+  db_sha256: 292f60d43c4ef436ffbb7c4fec012b10634ddff72f987d94c21583336e88dde2
+  truth_class: verification_failed_nonsettlement
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 0
+    failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+    rule_clauses:
+      c1: true
+      c2: true
+      c3: true
+  actual_settled_units: 0
+  wall_seconds: 0.304
+- id: nat-10
+  source: t23-iter4
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-observations.json
+    sha256: 3bdb9973093f373fd25ae17c8fa3f943549fd9336d98549d5ba90f3ad9dad3cb
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-run-meta.yaml
+    sha256: 3e6d79682b3ac8877cc5e0496a99aeb75c17b6b1804065108de77e3ed9abc624
+  probe:
+    scenario: e2e-lying
+    max_rounds: 8
+  probe_id: probe-i4-cand-1
+  identity:
+    candidate_id: cand-1
+    correlation_id: t23-route-001-iter4
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-1/state/gauntlet-state.db
+  db_sha256: 236f5e93b2f3a6ca470722ed547d31322f1e61641d427f10dab6115727141400
+  truth_class: verification_failed_nonsettlement
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 0
+    failing_artifact_sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+    rule_clauses:
+      c1: true
+      c2: true
+      c3: true
+  actual_settled_units: 0
+  wall_seconds: 0.603
+- id: nat-11
+  source: t23-iter4
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-observations.json
+    sha256: 3bdb9973093f373fd25ae17c8fa3f943549fd9336d98549d5ba90f3ad9dad3cb
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-run-meta.yaml
+    sha256: 3e6d79682b3ac8877cc5e0496a99aeb75c17b6b1804065108de77e3ed9abc624
+  probe:
+    scenario: e2e-happy
+    max_rounds: 1
+  probe_id: probe-i4-cand-2
+  identity:
+    candidate_id: cand-2
+    correlation_id: t23-route-001-iter4
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-2/state/gauntlet-state.db
+  db_sha256: 678ffdd7bed7b375ac71f6c343de191a1d3bdd76d0a9d329840ea27c9c3cceb3
+  truth_class: budget_exhausted
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 0
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: true
+      c2: true
+      c3: false
+  actual_settled_units: 0
+  wall_seconds: 0.204
+- id: nat-12
+  source: t23-iter4
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-observations.json
+    sha256: 3bdb9973093f373fd25ae17c8fa3f943549fd9336d98549d5ba90f3ad9dad3cb
+  - path: .agents/evidence/godspeed-bounded-judgment/T23/route/iteration-4/probe-run-meta.yaml
+    sha256: 3e6d79682b3ac8877cc5e0496a99aeb75c17b6b1804065108de77e3ed9abc624
+  probe:
+    scenario: e2e-happy
+    max_rounds: 7
+  probe_id: probe-i4-cand-3
+  identity:
+    candidate_id: cand-3
+    correlation_id: t23-route-001-iter4
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: frozen probe-observations.json entry
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-3/state/gauntlet-state.db
+  db_sha256: c56b7d5a14b5285d4cc34fdc26a40f9f24c8a4169850f4b2fe9ca84b6843218d
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.404
+- id: nat-13
+  source: t24-replay
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T24/replay-record.yaml
+    sha256: 4717856e1c6c3afe57cb681c50636cf7d777ce92659490f08b11ad1eadc83430
+  - path: .agents/evidence/godspeed-bounded-judgment/T24/accepted-case.yaml
+    sha256: 02927ee42a4bf1858083a9179b4d812c2313657fac6a503cae8578643010ed58
+  probe:
+    scenario: e2e-happy
+    max_rounds: 4
+  probe_id: probe-t24-case-001-replay-r1
+  identity:
+    candidate_id: t24-case-001
+    correlation_id: t24-case-001
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: T24/replay-record.yaml observation block
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db
+  db_sha256: 5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc
+  truth_class: settled_accepted
+  truth_derivation:
+    terminal_state: settled
+    settlement_committed_count: 3
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: false
+      c2: false
+      c3: false
+  actual_settled_units: 3
+  wall_seconds: 0.505
+- id: nat-14
+  source: t24-tooth-t7
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T24/teeth.yaml
+    sha256: 1a34c5dcdd35e21e51b37e147f55c2250f643fcdddf401574afa895c7d0e1ef7
+  probe:
+    scenario: e2e-happy
+    max_rounds: 2
+  probe_id: probe-t24-t7-attack
+  identity:
+    candidate_id: t24-case-t7-attack
+    correlation_id: t24-t7-attack
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: 'T24/teeth.yaml attack_observation (provenance labeled: tooth run, included per prereg nat-14
+    provenance_note)'
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/runs/t7-attack/state/gauntlet-state.db
+  db_sha256: 7136ad9c9333586ceb2f0e8671ca77066f9fa9d6e0d9f59ca11ced1f8a99841d
+  truth_class: budget_exhausted
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 1
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: true
+      c2: false
+      c3: false
+  actual_settled_units: 1
+  wall_seconds: 0.204
+- id: nat-15
+  source: t25-negative
+  source_records:
+  - path: .agents/evidence/godspeed-bounded-judgment/T25/matched-pair.yaml
+    sha256: aa0af3c641776b41144c8fa0944506a1235c890a2326855dc03a0f42f490ec06
+  probe:
+    scenario: e2e-happy
+    max_rounds: 3
+  probe_id: probe-t25-negative-r1
+  identity:
+    candidate_id: t25-negative-r1
+    correlation_id: t25-negative-r1
+    operation: run_case
+    mechanism: t15-frozen-case-execution
+  identity_source: T25/matched-pair.yaml negative block; identity fields (candidate_id/correlation_id/operation/mechanism)
+    pinned from the frozen T25/run_negative.py observation construction
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/state/gauntlet-state.db
+  db_sha256: 097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88
+  truth_class: budget_exhausted
+  truth_derivation:
+    terminal_state: budget_exhausted
+    settlement_committed_count: 2
+    failing_artifact_sha256: null
+    rule_clauses:
+      c1: true
+      c2: false
+      c3: false
+  actual_settled_units: 2
+  wall_seconds: 0.303

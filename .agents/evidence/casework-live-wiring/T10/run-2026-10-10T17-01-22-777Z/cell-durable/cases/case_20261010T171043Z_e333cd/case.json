@@ -1,0 +1,21 @@
+{
+  "version": "0.1",
+  "case_id": "case_20261010T171043Z_e333cd",
+  "intent": {
+    "intent_id": "int_cbaaad",
+    "summary": "Execute plan drafts/draft_167311.json",
+    "actor_id": "operator_local",
+    "process_id": "godspeed-casework-go",
+    "created_at": "2026-10-10T17:10:44.004250633+00:00"
+  },
+  "state": "completed",
+  "plan_ref": "plan_01",
+  "run_ids": [
+    "run_20261010T171105Z_b9ad39",
+    "run_20261010T171247Z_37070b"
+  ],
+  "stages": [],
+  "close_reason": null,
+  "created_at": "2026-10-10T17:10:44.008347607+00:00",
+  "closed_at": "2026-10-10T17:12:47.238861736+00:00"
+}

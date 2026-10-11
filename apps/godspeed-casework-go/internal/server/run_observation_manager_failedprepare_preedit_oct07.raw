@@ -1,0 +1,158 @@
+package server
+
+import (
+	"context"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract"
+	"github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports"
+)
+
+// This is a test-first compile seam only. It is not wired into Server or an SSE
+// path and deliberately has no manager state machine yet.
+const (
+	runObservationCohortLimit = 16
+	runObservationPollerLimit = 16
+)
+
+type runObservationListReader interface {
+	RunsListForCase(context.Context, ports.CaseRef) (ports.RunListResult, error)
+}
+
+// runObservationCaller contains only the authenticated standing and session
+// locator needed for a later Current check. It never retains a bearer token,
+// CSRF token, or mutable auth.Session pointer.
+type runObservationCaller struct {
+	source    string
+	sessionID string
+	claim     ports.ActorClaim
+}
+
+type runObservationSessionCurrent interface {
+	Current(string) (auth.CurrentSessionState, bool)
+}
+
+type runObservationAuthorize func(
+	context.Context,
+	runObservationCaller,
+	string,
+	runObservationSessionCurrent,
+	PerspectiveVerifier,
+) error
+type runObservationGuard func(string) (runObservationPresentContext, error)
+
+type runObservationManager struct {
+	mu        sync.Mutex
+	pollers   map[runObservationPollerKey]*runObservationPoller
+	list      runObservationListReader
+	traces    ports.RunTracePort
+	sessions  runObservationSessionCurrent
+	verifier  PerspectiveVerifier
+	authorize runObservationAuthorize
+	guard     runObservationGuard
+	now       func() time.Time
+}
+
+// runObservationPollerKey is the exact source identity used to share a poller.
+type runObservationPollerKey struct {
+	caseID     string
+	runID      string
+	planItemID string
+}
+
+// runObservationPoller is the private ownership record required by the future
+// manager. All ref membership and state transitions are protected by the
+// owning manager mutex. The lifecycle channels belong to the real worker
+// contract: ready publishes initialization, ctx/cancel own shared worker
+// lifetime, and workerDone proves actual worker join. Shared work is canceled
+// only after its final lease ref leaves.
+type runObservationPoller struct {
+	key        runObservationPollerKey
+	refs       map[*runObservationLease]struct{}
+	ready      chan struct{}
+	ctx        context.Context
+	cancel     context.CancelFunc
+	workerDone chan struct{}
+}
+
+type runObservationLease struct {
+	manager *runObservationManager
+	pollers map[runObservationPollerKey]*runObservationPoller
+}
+
+func newRunObservationManager(
+	list runObservationListReader,
+	traces ports.RunTracePort,
+	sessions runObservationSessionCurrent,
+	verifier PerspectiveVerifier,
+	authorize runObservationAuthorize,
+	guard runObservationGuard,
+	now func() time.Time,
+) *runObservationManager {
+	if now == nil {
+		now = time.Now
+	}
+	return &runObservationManager{
+		pollers: make(map[runObservationPollerKey]*runObservationPoller),
+		list:    list, traces: traces, sessions: sessions, verifier: verifier,
+		authorize: authorize, guard: guard, now: now,
+	}
+}
+
+func runObservationCallerFromRequest(identity *requestIdentity) (runObservationCaller, error) {
+	if identity == nil {
+		return runObservationCaller{}, runObservationUnavailable("authenticated request identity is unavailable")
+	}
+	caller := runObservationCaller{source: identity.Source, claim: identity.Identity.Claim()}
+	if identity.Session != nil {
+		caller.sessionID = identity.Session.ID
+	}
+	if (caller.source != "session" && caller.source != "bearer") ||
+		caller.claim.ActorID == "" || caller.claim.Role == "" ||
+		(caller.source == "session" && (identity.Session == nil || strings.TrimSpace(caller.sessionID) == "")) ||
+		(caller.source == "bearer" && identity.Session != nil) {
+		return runObservationCaller{}, runObservationUnavailable("authenticated request identity is unavailable")
+	}
+	return caller, nil
+}
+
+// Prepare is intentionally unwired in this test-first unit. The future
+// implementation must reserve/rollback all owned state before returning.
+func (m *runObservationManager) prepare(
+	ctx context.Context,
+	caseID string,
+	identity *requestIdentity,
+) (contract.RunTraceObservationEvent, *runObservationLease, error) {
+	caller, err := runObservationCallerFromRequest(identity)
+	if err != nil {
+		return contract.RunTraceObservationEvent{}, nil, err
+	}
+	if m == nil || m.authorize == nil || m.guard == nil || m.list == nil || m.traces == nil {
+		return contract.RunTraceObservationEvent{}, nil, runObservationUnavailable("run observation manager is unavailable")
+	}
+	if err := m.authorize(ctx, caller, caseID, m.sessions, m.verifier); err != nil {
+		return contract.RunTraceObservationEvent{}, nil, err
+	}
+	if _, err := m.guard(caseID); err != nil {
+		return contract.RunTraceObservationEvent{}, nil, err
+	}
+	return contract.RunTraceObservationEvent{}, nil,
+		runObservationUnavailable("run observation manager unit 1 is not wired")
+}
+
+func (m *runObservationManager) stopAndDrain(context.Context) error {
+	return runObservationUnavailable("run observation manager unit 1 is not wired")
+}
+
+func (l *runObservationLease) detachAndDrain(context.Context) error {
+	return runObservationUnavailable("run observation manager unit 1 is not wired")
+}
+
+func runObservationUnavailable(message string) error {
+	return apperr.New(apperr.KindUnavailable, "", "run_observation", message)
+}
+

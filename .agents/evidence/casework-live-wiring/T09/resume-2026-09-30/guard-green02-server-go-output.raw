@@ -1,0 +1,26 @@
+--- FAIL: TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 25 [running]:
+testing.tRunner.func1.2({0xf46168, 0xc0015080a0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x419
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x65f
+panic({0xf46168?, 0xc0015080a0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0x165
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xfa5918, 0xc0000ab220})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x2c
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.newLiveHarness(0xc00014a488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/server_test.go:165 +0x917
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective(0xc00014a488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/artifact_test.go:40 +0x319
+testing.tRunner(0xc00014a488, 0xfaa0d0)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0x21d
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0xb13
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.149s
+FAIL

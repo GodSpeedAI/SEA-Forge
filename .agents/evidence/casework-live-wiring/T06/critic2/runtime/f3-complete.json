@@ -1,0 +1,17 @@
+{
+  "intent_id": "critic2-signoff-complete-2",
+  "kind": "CONSEQUENTIAL_CASE",
+  "action_name": "COMPLETE_HUMAN_TASK",
+  "target_object_id": "signoff_release",
+  "case_id": "case_20260926T014907Z_f90434",
+  "client_cursor": "01M3DPFJ2ADBHG405QAJE5WAZ9",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "parameters": {
+    "item_id": "signoff_release",
+    "justification": "The R-SO approved the escalated draft; the sign-off gate is satisfied."
+  },
+  "justification": "The R-SO approved the escalated draft; the sign-off gate is satisfied."
+}

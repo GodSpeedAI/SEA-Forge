@@ -1,0 +1,257 @@
+{
+	"version": 1,
+	"plans": {
+		"CURRENT_STATUS": {
+			"slug": "CURRENT_STATUS",
+			"title": "Current Status",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/CURRENT_STATUS.md",
+			"addedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-27T00:24:01.393Z",
+			"commitHash": null
+		},
+		"OBSERVED_DEBT": {
+			"slug": "OBSERVED_DEBT",
+			"title": "Observed Debt",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/OBSERVED_DEBT.md",
+			"addedAt": "2026-07-26T16:06:06.779Z",
+			"updatedAt": "2026-07-27T00:22:43.521Z",
+			"commitHash": null
+		},
+		"WORKBENCH-SLICE-PROMPT": {
+			"slug": "WORKBENCH-SLICE-PROMPT",
+			"title": "Workbench slice prompt",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/WORKBENCH-SLICE-PROMPT.md",
+			"addedAt": "2026-07-27T03:40:03.414Z",
+			"updatedAt": "2026-07-27T03:40:03.414Z",
+			"commitHash": null
+		},
+		"CELL_CONTRACT": {
+			"slug": "CELL_CONTRACT",
+			"title": "Cell root and socket contract",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/CELL_CONTRACT.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"SF-002": {
+			"slug": "SF-002",
+			"title": "SF-002 — Fail-Closed Service Lifecycle",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-002.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"SF-003": {
+			"slug": "SF-003",
+			"title": "SF-003 — Canonical Episode Pipeline",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-003.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"SF-007": {
+			"slug": "SF-007",
+			"title": "SF-007 — Contract and Generated-Zone Gate",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-007.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"SF-004": {
+			"slug": "SF-004",
+			"title": "SF-004 — Run Locator and Compatibility Migration",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/work-packets/SF-004.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"REMAINING_BLOCKERS": {
+			"slug": "REMAINING_BLOCKERS",
+			"title": "Remaining Blockers",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/REMAINING_BLOCKERS.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T12:51:49.381Z",
+			"commitHash": null
+		},
+		"FINAL_ARCHITECTURE_STATE": {
+			"slug": "FINAL_ARCHITECTURE_STATE",
+			"title": "Final Architecture State",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/FINAL_ARCHITECTURE_STATE.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T01:40:54.303Z",
+			"commitHash": null
+		},
+		"OPERATIONS_AND_STARTUP": {
+			"slug": "OPERATIONS_AND_STARTUP",
+			"title": "Operations and Startup",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/OPERATIONS_AND_STARTUP.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T12:51:49.381Z",
+			"commitHash": null
+		},
+		"USER_JOURNEY_EVIDENCE": {
+			"slug": "USER_JOURNEY_EVIDENCE",
+			"title": "User Journey Evidence",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/USER_JOURNEY_EVIDENCE.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T12:51:49.381Z",
+			"commitHash": null
+		},
+		"FINAL_VERIFICATION_RESULTS": {
+			"slug": "FINAL_VERIFICATION_RESULTS",
+			"title": "Final Verification Results",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/FINAL_VERIFICATION_RESULTS.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T12:51:49.381Z",
+			"commitHash": null
+		},
+		"DECISION_REGISTER": {
+			"slug": "DECISION_REGISTER",
+			"title": "Decision Register",
+			"sourcePath": "/home/sprime01/projects/sea-rs/docs/execution/DECISION_REGISTER.md",
+			"addedAt": "2026-07-31T01:40:54.303Z",
+			"updatedAt": "2026-07-31T12:51:49.381Z",
+			"commitHash": null
+		},
+		"bootstrap-config-audit": {
+			"slug": "bootstrap-config-audit",
+			"title": "Bootstrap / Configuration Audit — SEA-rs",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/bootstrap-config-audit.md",
+			"addedAt": "2026-08-31T23:38:31.601Z",
+			"updatedAt": "2026-08-31T23:38:31.601Z",
+			"commitHash": null
+		},
+		"GodSpeed_Cognitive_Environment_DESIGN": {
+			"slug": "GodSpeed_Cognitive_Environment_DESIGN",
+			"title": "GodSpeed Cognitive Environment — DESIGN.md",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.tmp/SEA-Forge-UI-mocks/GodSpeed_Cognitive_Environment_DESIGN.md",
+			"addedAt": "2026-09-22T23:37:52.711Z",
+			"updatedAt": "2026-09-22T23:37:52.711Z",
+			"commitHash": null
+		},
+		"RUN_PLAN": {
+			"slug": "RUN_PLAN",
+			"title": "Cognitive Environment: Unattended Build Run Plan",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/specs/cognitive-environment/RUN_PLAN.md",
+			"addedAt": "2026-09-22T23:47:43.422Z",
+			"updatedAt": "2026-09-23T03:42:34.801Z",
+			"commitHash": null
+		},
+		"01-SCENE-INVENTORY": {
+			"slug": "01-SCENE-INVENTORY",
+			"title": "Cognitive UI: scene inventory and representation mapping (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/01-SCENE-INVENTORY.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"03-CONTRACT-PORTS-AND-SEAMS": {
+			"slug": "03-CONTRACT-PORTS-AND-SEAMS",
+			"title": "Cognitive UI: contract ports, local adapter and seams (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/03-CONTRACT-PORTS-AND-SEAMS.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"02-JOURNEY-CUBE": {
+			"slug": "02-JOURNEY-CUBE",
+			"title": "Cognitive UI: affordance-dependency ladder and Journey Cube (2026-09-23)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/godspeed-cognitive-ui-functional/02-JOURNEY-CUBE.md",
+			"addedAt": "2026-09-23T17:47:39.257Z",
+			"updatedAt": "2026-09-23T17:47:39.257Z",
+			"commitHash": null
+		},
+		"2026-09-23-case-engine-frontend-e2e-journey-mapping": {
+			"slug": "2026-09-23-case-engine-frontend-e2e-journey-mapping",
+			"title": "SEA-Forge End-to-End User Journey, Case Engine & Frontend Contract Mapping Report",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md",
+			"addedAt": "2026-09-24T00:54:16.249Z",
+			"updatedAt": "2026-09-24T01:05:48.700Z",
+			"commitHash": null
+		},
+		"stage0-migration-map": {
+			"slug": "stage0-migration-map",
+			"title": "CEP / world_ref migration — Stage 0 migration map",
+			"sourcePath": "/home/sprime01/projects/sea-rs-cep-migration/.agents/reports/cep-world-migration/stage0-migration-map.md",
+			"addedAt": "2026-10-04T15:25:55.358Z",
+			"updatedAt": "2026-10-04T15:25:55.358Z",
+			"commitHash": null
+		},
+		"DEBT": {
+			"slug": "DEBT",
+			"title": "Debt ledger — CEP / world_ref migration (Stages 0–6)",
+			"sourcePath": "/home/sprime01/projects/sea-rs/.agents/DEBT.md",
+			"addedAt": "2026-10-05T01:38:40.211Z",
+			"updatedAt": "2026-10-05T01:38:40.211Z",
+			"commitHash": null
+		}
+	},
+	"skills": {
+		"claude:doctor": {
+			"source": "claude",
+			"skill": "doctor",
+			"entryPaths": [
+				"command"
+			],
+			"invocations": [
+				{
+					"at": "2026-09-02T02:19:51.818Z",
+					"bodyChars": 44667,
+					"ok": true
+				}
+			],
+			"invocationCount": 1,
+			"firstUsedAt": "2026-09-02T02:19:51.818Z",
+			"lastUsedAt": "2026-09-02T02:19:51.818Z",
+			"usage": {
+				"input": 44,
+				"cached": 85149,
+				"output": 31936,
+				"confidence": "attributed"
+			},
+			"usageBySession": {
+				"claude:f50457cf-9063-4002-964d-1ec65d5896d5": {
+					"input": 44,
+					"cached": 85149,
+					"output": 31936,
+					"confidence": "attributed"
+				}
+			},
+			"sourcePath": "/home/sprime01/projects/sea-rs/.jolli/jollimemory/skills/claude/doctor-72f4be89.md",
+			"commitHash": null
+		},
+		"claude:agent-browser": {
+			"source": "claude",
+			"skill": "agent-browser",
+			"entryPaths": [
+				"tool"
+			],
+			"invocations": [
+				{
+					"at": "2026-09-23T15:50:58.384Z",
+					"bodyChars": 15320,
+					"ok": true
+				}
+			],
+			"invocationCount": 1,
+			"firstUsedAt": "2026-09-23T15:50:58.384Z",
+			"lastUsedAt": "2026-09-23T15:50:58.384Z",
+			"usage": {
+				"input": 1918,
+				"cached": 454568,
+				"output": 101397,
+				"confidence": "attributed"
+			},
+			"usageBySession": {
+				"claude:68755a62-33c0-4892-b86b-95827f57c221": {
+					"input": 1918,
+					"cached": 454568,
+					"output": 101397,
+					"confidence": "attributed"
+				}
+			},
+			"sourcePath": "/home/sprime01/projects/sea-rs/.jolli/jollimemory/skills/claude/agent-browser-b7c8dd11.md",
+			"commitHash": null
+		}
+	}
+}

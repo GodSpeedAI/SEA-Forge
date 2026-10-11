@@ -1,0 +1,4343 @@
+{
+ "schema": "godspeed-bounded-judgment.remeasure-native-corpus-results",
+ "created_utc": "2026-09-19T13:17:43.605712+00:00",
+ "execution_passes": [
+  {
+   "pass": "round-1 (run_arms.py)",
+   "arms_executed": [
+    "arm1"
+   ],
+   "note": "arm1 executed to completion (15/15 deepseek calls, raw outputs preserved under arm1/provider-raw/, payment wall time recorded); the pass then crashed at the first arm2 prompt write, before any arm2/arm2b provider call (DV-4)"
+  },
+  {
+   "pass": "round-2 (run_arms.round2.py, this pass)",
+   "arms_executed": [
+    "arm2",
+    "arm2b"
+   ],
+   "note": "arm1 records carried over from the preserved round-1 file after re-validation against the preserved raw outputs; arm2/arm2b execute fresh"
+  },
+  {
+   "pass": "round-3 (run_arms.round3.py, resume of the interrupted round-2 pass)",
+   "arms_executed": [
+    "arm2 (completion)",
+    "arm2b"
+   ],
+   "note": "preserved arm2 raw outputs re-used verbatim, never re-rolled (including the completed muse substitution of nat-02-s2); the remaining arm2 calls and all arm2b calls execute fresh under the frozen substitution policy; results file updated in place (DV-5)"
+  }
+ ],
+ "prereg": {
+  "path": ".agents/preregistrations/godspeed-bounded-judgment-native-corpus-remeasure.prereg.yaml",
+  "sha256": "8142c0a52537f9b600d4853afd4871d5ec04dc29acffba58fe67c7f7616d1f6e"
+ },
+ "corpus_manifest": {
+  "path": ".agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/corpus-manifest.yaml",
+  "sha256": "e2419c2ccd79cd84761354471a796141196a85b8ffe34322531339b74220be36",
+  "decision": "D-2026-09-19-RM-02"
+ },
+ "provider_policy": {
+  "scored_provider": "deepseek-clinepass",
+  "scored_model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+  "substitution_provider": "muse-spark-free",
+  "substitution_model": "opencode/muse-spark-1.3-contributor-free",
+  "substitution_rule": "ONE muse-spark-free substitution per call on provider_timeout/provider_error; recorded per-call; substituted rows are a separate provider-qualified slice, never pooled; parse failures are typed rejections, never substituted",
+  "total_failure_rule": "deepseek arm recorded NOT_RUN_PROVIDER when every deepseek call of the arm fails; muse slice reported provider-qualified",
+  "no_reroll": "a preserved raw output file is reused, never re-rolled"
+ },
+ "templates": {
+  "arm1": {
+   "source": "T16/run_remeasure.py PROMPT (verbatim import)",
+   "sha256": "e7ac52b1a4852b0f02e48d6f0a45b717c826a0a2afed59f78188b43aa789ca38",
+   "records_cap_chars": 12000,
+   "records_blob": "json.dumps({\"invocations\": [{result_document}...], \"corrections\": N}) \u2014 exactly the T16 main() assembly; the unit_dispatch/evidence_produced kinds are loaded by the T16 loader but enter no prompt, as in T16"
+  },
+  "arm2": {
+   "template_prefix_sha256": "0e6db5b5caadce20bd88a0d5edc418a37fa55ec35afaa254a7979d157a9f5458",
+   "source_files": [
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-1-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-2-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-3-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-1-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-2-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-3-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-1-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-2-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-3-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-1-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-2-primary.prompt.txt",
+    ".agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-3-primary.prompt.txt"
+   ],
+   "source_probes": [
+    "probe-i1-cand-1",
+    "probe-i1-cand-2",
+    "probe-i1-cand-3",
+    "probe-i2-cand-1",
+    "probe-i2-cand-2",
+    "probe-i2-cand-3",
+    "probe-i3-cand-1",
+    "probe-i3-cand-2",
+    "probe-i3-cand-3",
+    "probe-i4-cand-1",
+    "probe-i4-cand-2",
+    "probe-i4-cand-3"
+   ],
+   "blob_rule": "json.dumps(surface, sort_keys=True, indent=1); only the records blob is substituted; verified to round-trip against all 12 preserved round-2 prompts"
+  },
+  "arm2b": {
+   "template_prefix_sha256": "bf31c7467fac972c16c6c96f331d61d34d0e9a52ead4081745e98a6a472fe9bb",
+   "extends": "arm2 template",
+   "replaced_text": "JSON shape: {\"label\": \"<one label from the answer domain>\"}\n",
+   "added_text": "JSON shape: {\"label\": \"<one label from the answer domain>\", \"settled_units_estimate\": <integer or null>}\nExploratory addendum (clearly marked exploratory, outside the scored label domain): \"settled_units_estimate\" is your estimate of the number of units that will have committed settlement in this run's recorded consequence; give an integer, or null if you cannot estimate.\n"
+  }
+ },
+ "arm_status": {
+  "arm1": "run",
+  "arm2": "run",
+  "arm2b": "run"
+ },
+ "rows": [
+  {
+   "id": "nat-01",
+   "source": "t23-iter1",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 4
+   },
+   "probe_id": "probe-i1-cand-1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+   "db_sha256": "87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": "settled_accepted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-01.prompt.txt",
+    "prompt_sha256": "774b99b279fa379cd7b3a3427b3c6960bd0929c420ede0b40f1be97813223d20",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:05:31.157856+00:00",
+      "duration_seconds": 18.214,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-01-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-01-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.65,
+     "distribution": {
+      "settled": 0.65,
+      "not_settled": 0.25,
+      "insufficient_evidence": 0.1
+     },
+     "reason": "All three builder iterations were admitted with no rejected states and a happy-path session reference, indicating the run is converging toward an accepted settlement rather than exhausting budget."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-01.surface.json",
+    "surface_sha256": "de3a81f92a5024a0dd8522140ddcca335c6c6be62f675968447d4776370f31e0",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01.prompt.txt",
+    "prompt_sha256": "a8f4637b045aeeaba9b2b5c64fda99fa5e5bfb4dcd1b46e561f2ef3b09cd8af2",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:17:43.633035+00:00",
+        "duration_seconds": 12.349,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:17:55.982430+00:00",
+        "duration_seconds": 8.947,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:18:04.929927+00:00",
+        "duration_seconds": 8.53,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-01-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-01.prompt.txt",
+    "prompt_sha256": "9bfe8cbd766356382799c988bb09966fe60c0ce14ce7091a34f8d67b32ef02e6",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:08:35.012496+00:00",
+      "duration_seconds": 10.554,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-01-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-01-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-02",
+   "source": "t23-iter1",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 3
+   },
+   "probe_id": "probe-i1-cand-2",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-2/state/gauntlet-state.db",
+   "db_sha256": "468612b9fc06a7516e9fb85b0a41bd58691a8f9bc3c0dcd8bffbb99f1c675c18",
+   "truth_class": "budget_exhausted",
+   "truth_mapped_arm1": "not_settled",
+   "family": "honest",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 2,
+     "corrections": 2,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-02.prompt.txt",
+    "prompt_sha256": "132192b40bcf80ad3c9bd35be43e9a28c6999ef8fb79258894cd595303aa7948",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:05:49.374058+00:00",
+      "duration_seconds": 9.345,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-02-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-02-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.62,
+     "distribution": {
+      "settled": 0.65,
+      "not_settled": 0.22,
+      "insufficient_evidence": 0.13
+     },
+     "reason": "Both builder iterations were admitted with no recorded rejection and the session ref is 'mock-e2e-happy', consistent with a designed happy path that closes accepted."
+    },
+    "label": "settled",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-02.surface.json",
+    "surface_sha256": "1a9e7f3fa052c500f6f9020b18797f7a80ff49a0df377b0cf595b79f60b78e79",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02.prompt.txt",
+    "prompt_sha256": "25e4b3ef7d94ef7f230005d2ea16aeb600d21e3b79330ffa2f4ac1b7434b3f8a",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:18:13.464516+00:00",
+        "duration_seconds": 18.466,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "provider_timeout",
+        "started_at_utc": "2026-09-19T13:18:31.930628+00:00",
+        "duration_seconds": 300.149,
+        "error_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s2-deepseek.error.txt"
+       },
+       {
+        "call": 2,
+        "provider": "muse-spark-free",
+        "model": "opencode/muse-spark-1.3-contributor-free",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:23:32.087003+00:00",
+        "duration_seconds": 39.41,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s2-muse.raw.txt"
+       }
+      ],
+      "provider_used": "muse-spark-free",
+      "substituted": true,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s2-muse.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": false
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:24:11.504826+00:00",
+        "duration_seconds": 15.878,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-02-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "settled_accepted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 2,
+     "settled_accepted": 1
+    },
+    "majority_correct": true,
+    "single1_label": "budget_exhausted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 2,
+    "agreement_rate": 0.6666666666666666,
+    "all_three_agree": false
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-02.prompt.txt",
+    "prompt_sha256": "d1ab96bc6885483c585f01de9436d047cd17e07ba8d84370d0a30ceb43be8ee5",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:08:45.577123+00:00",
+      "duration_seconds": 56.664,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-02-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-02-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 2,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 2,
+    "estimate_status": "valid",
+    "actual_settled_units": 2,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-03",
+   "source": "t23-iter1",
+   "probe": {
+    "scenario": "e2e-lying",
+    "max_rounds": 4
+   },
+   "probe_id": "probe-i1-cand-3",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+   "db_sha256": "28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f",
+   "truth_class": "verification_failed_nonsettlement",
+   "truth_mapped_arm1": "not_settled",
+   "family": "adversarial",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-03.prompt.txt",
+    "prompt_sha256": "a169fc91acc71cbd45038ba176decd6781833cb4f43d1d2306a89131ebb96d08",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:05:58.721279+00:00",
+      "duration_seconds": 10.547,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-03-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-03-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "not_settled",
+     "confidence": 0.62,
+     "distribution": {
+      "settled": 0.2,
+      "not_settled": 0.62,
+      "insufficient_evidence": 0.18
+     },
+     "reason": "Three builder iterations with three corrections and only a 'mock-e2e-lying' session producing unverified claims indicate repeated correction cycles unlikely to close within budget before acceptance."
+    },
+    "label": "not_settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-03.surface.json",
+    "surface_sha256": "0f71322385f72cb9fcfcb0b898e76f62f4ae143e8d72a1014a5349f305240c35",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03.prompt.txt",
+    "prompt_sha256": "9dee1c6141304c60d670f1abfdf22242165de18b7897fc36eb66d3646a379b41",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:24:27.433003+00:00",
+        "duration_seconds": 19.782,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:24:47.215696+00:00",
+        "duration_seconds": 7.54,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:24:54.756275+00:00",
+        "duration_seconds": 67.444,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": false,
+    "single1_label": "budget_exhausted",
+    "single1_correct": false,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03.prompt.txt",
+    "prompt_sha256": "75fda74c4665613cdb474b61b3bc65d6042b8aa30b59c1d97b5d5bbda5b2ebbb",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "provider_timeout",
+      "started_at_utc": "2026-09-19T14:09:42.249562+00:00",
+      "duration_seconds": 300.08,
+      "error_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03-deepseek.error.txt"
+     },
+     {
+      "call": 2,
+      "provider": "muse-spark-free",
+      "model": "opencode/muse-spark-1.3-contributor-free",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:14:42.333219+00:00",
+      "duration_seconds": 23.753,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03-muse.raw.txt"
+     }
+    ],
+    "provider_used": "muse-spark-free",
+    "substituted": true,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-03-muse.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 0,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual_settled_units": 0,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-04",
+   "source": "t23-iter2",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 5
+   },
+   "probe_id": "probe-i2-cand-1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-1/state/gauntlet-state.db",
+   "db_sha256": "913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": "settled_accepted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-04.prompt.txt",
+    "prompt_sha256": "4a14503a1164628d787a1d091a7d550c3b37b1c97cf1b0f56a286f3ce5dede24",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:06:09.269059+00:00",
+      "duration_seconds": 137.548,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-04-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-04-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.6,
+     "distribution": {
+      "settled": 0.6,
+      "not_settled": 0.25,
+      "insufficient_evidence": 0.15
+     },
+     "reason": "The mock-e2e-happy session with three admitted builder iterations and applied corrections suggests a converging happy-path run, though the absence of produced evidence and budget details limits certainty."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-04.surface.json",
+    "surface_sha256": "f7ff0f32450ce1ae5a0ca907fb466ab7b5422ae1ece97d7fc5f7d28dfbfb9ac2",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04.prompt.txt",
+    "prompt_sha256": "1fc2cc61beedf16761bdfdc0932f04fa71b78c78541fdc1de1639c7d9bad2675",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:26:02.217544+00:00",
+        "duration_seconds": 10.614,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:26:12.831634+00:00",
+        "duration_seconds": 9.317,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:26:22.148734+00:00",
+        "duration_seconds": 13.026,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-04-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-04.prompt.txt",
+    "prompt_sha256": "b0e039da51936c5e3f9be15d86af82d8f79b569ca74a0a00a8eb46cb670b13ce",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:15:06.124732+00:00",
+      "duration_seconds": 10.491,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-04-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-04-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-05",
+   "source": "t23-iter2",
+   "probe": {
+    "scenario": "e2e-lying",
+    "max_rounds": 5
+   },
+   "probe_id": "probe-i2-cand-2",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-2/state/gauntlet-state.db",
+   "db_sha256": "0586e79455ea80360ffdeee64d9c8f6932c9d641cd7f9fc34eaddc97638ac010",
+   "truth_class": "verification_failed_nonsettlement",
+   "truth_mapped_arm1": "not_settled",
+   "family": "adversarial",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 4,
+     "corrections": 4,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-05.prompt.txt",
+    "prompt_sha256": "2a405d27dcb33a20114ca8f90eb7909f00b1ea83612e6003e7f610e03a84f76d",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:08:26.819390+00:00",
+      "duration_seconds": 11.905,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-05-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-05-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "not_settled",
+     "confidence": 0.68,
+     "distribution": {
+      "settled": 0.15,
+      "not_settled": 0.7,
+      "insufficient_evidence": 0.15
+     },
+     "reason": "The mock-e2e-lying session shows four admitted builder claims each met with a correction and no produced evidence, indicating repeated unverified claims that will exhaust iteration budget without settlement."
+    },
+    "label": "not_settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-05.surface.json",
+    "surface_sha256": "a0d51eaa9b0c5673cab5eab8a528f285399d82193c972a15939a0160a5034704",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05.prompt.txt",
+    "prompt_sha256": "51f451929b3adff8cb72586c2ceca7fc68a78ab79e9214f2f123287803ab4199",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw (preserved; never re-rolled)",
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s1-deepseek.raw.txt",
+        "started_at_utc": null,
+        "duration_seconds": null,
+        "duration_lost_in_interruption": true
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw (preserved; never re-rolled)",
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s2-deepseek.raw.txt",
+        "started_at_utc": null,
+        "duration_seconds": null,
+        "duration_lost_in_interruption": true
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:46:19.804451+00:00",
+        "duration_seconds": 13.215,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": false,
+    "single1_label": "budget_exhausted",
+    "single1_correct": false,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-05.prompt.txt",
+    "prompt_sha256": "29a33d2e22bd74faabae02ec984ad9a231632ea46643682baac0e4d8d02c1871",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:15:16.628291+00:00",
+      "duration_seconds": 10.739,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-05-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-05-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 0,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual_settled_units": 0,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-06",
+   "source": "t23-iter2",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 6
+   },
+   "probe_id": "probe-i2-cand-3",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i2-cand-3/state/gauntlet-state.db",
+   "db_sha256": "05747e4f7e463a1f6dae8979696109b911e47f414d2b13283262668f01f6c157",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": "settled_accepted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-06.prompt.txt",
+    "prompt_sha256": "0295864a87c460491d30b9af7b8ca65f84e87ea4df0fae0177c53452a7f0bd70",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:08:38.725542+00:00",
+      "duration_seconds": 173.364,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-06-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-06-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.55,
+     "distribution": {
+      "settled": 0.55,
+      "not_settled": 0.3,
+      "insufficient_evidence": 0.15
+     },
+     "reason": "The mock-e2e-happy session shows three admitted builder results with matching corrections, suggesting the loop converged rather than died, but without evidence or terminal state the call remains uncertain."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-06.surface.json",
+    "surface_sha256": "d790c7bccab493f2b9b52a6ed2192a5d3668a9d20618daa99b95314bd6aa7b20",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06.prompt.txt",
+    "prompt_sha256": "c9118d379e3af1bdfd71308ac3ab3aa5d138519883e6d98fdf27691077239f68",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:46:33.029542+00:00",
+        "duration_seconds": 7.774,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:46:40.803536+00:00",
+        "duration_seconds": 12.206,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:46:53.010007+00:00",
+        "duration_seconds": 10.736,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-06-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-06.prompt.txt",
+    "prompt_sha256": "5c87213061d3031fe7bfa279d339aa113ea60461eb33ff1728f5f0820c3fcc24",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:15:27.377620+00:00",
+      "duration_seconds": 8.877,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-06-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-06-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-07",
+   "source": "t23-iter3",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 2
+   },
+   "probe_id": "probe-i3-cand-1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-1/state/gauntlet-state.db",
+   "db_sha256": "d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937",
+   "truth_class": "budget_exhausted",
+   "truth_mapped_arm1": "not_settled",
+   "family": "honest",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 1,
+     "corrections": 1,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-07.prompt.txt",
+    "prompt_sha256": "2419a023e5ae54c2140b14966852ff851102d53c1c542531ead48ad1d10cd930",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:11:32.091113+00:00",
+      "duration_seconds": 16.621,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-07-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-07-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "insufficient_evidence",
+     "confidence": 0.5,
+     "distribution": {
+      "settled": 0.3,
+      "not_settled": 0.3,
+      "insufficient_evidence": 0.4
+     },
+     "reason": "The records show only an admitted mock-agent builder invocation and a single correction with no claims, evidence, or settlement outcome, so they cannot decide whether the run closes accepted."
+    },
+    "label": "insufficient_evidence",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-07.surface.json",
+    "surface_sha256": "8b680ca35d6489c0ba17062b7c84c13b4d08a161fc009aa86e31b44c53a666e8",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07.prompt.txt",
+    "prompt_sha256": "c192a6a401ba12fe76c834f8dd8635b4a3f53294e344f986171f6cd389396e47",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:47:03.752352+00:00",
+        "duration_seconds": 10.501,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:47:14.253197+00:00",
+        "duration_seconds": 170.626,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:50:04.880640+00:00",
+        "duration_seconds": 31.232,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-07-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "budget_exhausted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-07.prompt.txt",
+    "prompt_sha256": "3638371aead109f5beaeb735b50a870e7677447e4c114bab7107d9782065f7b5",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:15:36.267595+00:00",
+      "duration_seconds": 22.869,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-07-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-07-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 1,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 1,
+    "estimate_status": "valid",
+    "actual_settled_units": 1,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-08",
+   "source": "t23-iter3",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 8
+   },
+   "probe_id": "probe-i3-cand-2",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-2/state/gauntlet-state.db",
+   "db_sha256": "d9b0b43e9461c54996d11546febea0b43cfb33fc6e8d12acc4dbb575fe532f10",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": "settled_accepted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-08.prompt.txt",
+    "prompt_sha256": "81691385c05d2f8c9c3837a24dbb170f1ca47f8457c15bbe5900be8ec15e7ed0",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:11:48.713842+00:00",
+      "duration_seconds": 15.278,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-08-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-08-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.6,
+     "distribution": {
+      "settled": 0.6,
+      "not_settled": 0.3,
+      "insufficient_evidence": 0.1
+     },
+     "reason": "All three builder iterations were admitted under a happy-path mock session, and the records show no rejection, failure, or authority breach that would force non-settlement."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-08.surface.json",
+    "surface_sha256": "819bfa80e9e0d19d62d2d2fb4485c060df74c4c48dffc9b0e0b22e20170024d2",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08.prompt.txt",
+    "prompt_sha256": "c0549dffc9e54c425f2668cc2dbeb27898241cbd7fa9077abce446c784930cb2",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:50:36.140139+00:00",
+        "duration_seconds": 10.852,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:50:46.992690+00:00",
+        "duration_seconds": 14.61,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:51:01.603068+00:00",
+        "duration_seconds": 8.716,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-08-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-08.prompt.txt",
+    "prompt_sha256": "b30c786b0743116b1c8229f314e0d8cf5e949534ba81bf021ba46c3d2c4f7173",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:15:59.204180+00:00",
+      "duration_seconds": 15.718,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-08-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-08-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-09",
+   "source": "t23-iter3",
+   "probe": {
+    "scenario": "e2e-lying",
+    "max_rounds": 2
+   },
+   "probe_id": "probe-i3-cand-3",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i3-cand-3/state/gauntlet-state.db",
+   "db_sha256": "292f60d43c4ef436ffbb7c4fec012b10634ddff72f987d94c21583336e88dde2",
+   "truth_class": "verification_failed_nonsettlement",
+   "truth_mapped_arm1": "not_settled",
+   "family": "adversarial",
+   "historical_round2_label": "verification_failed_nonsettlement",
+   "arm1": {
+    "view": {
+     "n_result_documents": 1,
+     "corrections": 1,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-09.prompt.txt",
+    "prompt_sha256": "119fd4259fc2928b52790623e0a40d3d51b90696b04e8601c64a91afe5e04489",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:12:03.993165+00:00",
+      "duration_seconds": 26.536,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-09-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-09-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "insufficient_evidence",
+     "confidence": 0.45,
+     "distribution": {
+      "settled": 0.25,
+      "not_settled": 0.35,
+      "insufficient_evidence": 0.4
+     },
+     "reason": "Records show only a single admitted mock-agent claim with one correction and no produced evidence or settlement outcome, so closure cannot be determined."
+    },
+    "label": "insufficient_evidence",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-09.surface.json",
+    "surface_sha256": "300d9586eca436e5834fa6bbddc8d81e8f69ffe154fdb4830bc2c41101c7f93c",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09.prompt.txt",
+    "prompt_sha256": "e6567525e33ec697b6d6f45919b642fd1750cfc8ad00ac60ef6b754f28cdc697",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:51:10.329233+00:00",
+        "duration_seconds": 19.244,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:51:29.573154+00:00",
+        "duration_seconds": 266.147,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "verification_failed_nonsettlement",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "verification_failed_nonsettlement",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:55:55.722812+00:00",
+        "duration_seconds": 120.67,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "verification_failed_nonsettlement",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 2,
+     "verification_failed_nonsettlement": 1
+    },
+    "majority_correct": false,
+    "single1_label": "budget_exhausted",
+    "single1_correct": false,
+    "agreement_modal_of_cast": 2,
+    "agreement_rate": 0.6666666666666666,
+    "all_three_agree": false
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-09.prompt.txt",
+    "prompt_sha256": "755649db6e24f11d4f129bb9766cd9f41afd039e13434d022b2cc7516e58dbf8",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:16:14.941242+00:00",
+      "duration_seconds": 133.603,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-09-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-09-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 0,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual_settled_units": 0,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-10",
+   "source": "t23-iter4",
+   "probe": {
+    "scenario": "e2e-lying",
+    "max_rounds": 8
+   },
+   "probe_id": "probe-i4-cand-1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-1/state/gauntlet-state.db",
+   "db_sha256": "236f5e93b2f3a6ca470722ed547d31322f1e61641d427f10dab6115727141400",
+   "truth_class": "verification_failed_nonsettlement",
+   "truth_mapped_arm1": "not_settled",
+   "family": "adversarial",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 6,
+     "corrections": 6,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-10.prompt.txt",
+    "prompt_sha256": "94ffcfbcd1edd7e3800db644b54ed38c9dad1a2a7f99e96d3cd1edd22788b4c2",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:12:30.531119+00:00",
+      "duration_seconds": 12.055,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-10-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-10-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "not_settled",
+     "confidence": 0.62,
+     "distribution": {
+      "settled": 0.18,
+      "not_settled": 0.62,
+      "insufficient_evidence": 0.2
+     },
+     "reason": "Six admitted builder iterations with 6 corrections and no produced evidence or verification records suggests repeated rejection, pointing toward budget exhaustion rather than settlement."
+    },
+    "label": "not_settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-10.surface.json",
+    "surface_sha256": "9d25b54aea5416000b6f971b776707a3da94dbf3188b23befcdb9f05ccccafb3",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10.prompt.txt",
+    "prompt_sha256": "c4a55a857d0c58591cfaed197732b110585d826de51d7506f496ed77efbac233",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:57:56.468840+00:00",
+        "duration_seconds": 14.252,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:58:10.723928+00:00",
+        "duration_seconds": 25.2,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:58:35.924220+00:00",
+        "duration_seconds": 15.821,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": false
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": false,
+    "single1_label": "budget_exhausted",
+    "single1_correct": false,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-10.prompt.txt",
+    "prompt_sha256": "3716b23eee915678c6b89668b59eed5fafc02642fa9d9c45e68eb849833f8262",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:18:28.578769+00:00",
+      "duration_seconds": 65.602,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-10-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-10-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 0,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual_settled_units": 0,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-11",
+   "source": "t23-iter4",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 1
+   },
+   "probe_id": "probe-i4-cand-2",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-2/state/gauntlet-state.db",
+   "db_sha256": "678ffdd7bed7b375ac71f6c343de191a1d3bdd76d0a9d329840ea27c9c3cceb3",
+   "truth_class": "budget_exhausted",
+   "truth_mapped_arm1": "not_settled",
+   "family": "honest",
+   "historical_round2_label": "budget_exhausted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 0,
+     "corrections": 0,
+     "kinds_seen": [],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-11.prompt.txt",
+    "prompt_sha256": "2d5f9696b4fe9fe40a8b337cc8389416621dc86e9f253848584e0f80c20311bc",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:12:42.587152+00:00",
+      "duration_seconds": 12.857,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-11-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-11-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.5,
+     "distribution": {
+      "settled": 0.5,
+      "not_settled": 0.25,
+      "insufficient_evidence": 0.25
+     },
+     "reason": "No invocations, corrections, or evidence records are present, so the outcome cannot be judged from the provided records."
+    },
+    "label": "settled",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-11.surface.json",
+    "surface_sha256": "6243bf6944be245c8bc17f9ea6a864d93e72c5a4f5f6e11af56967af6b6c0e03",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11.prompt.txt",
+    "prompt_sha256": "5998feae2fba06c54afc958d50cb77f69aea243254694f2b317991cb5bd19c7f",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:58:51.758291+00:00",
+        "duration_seconds": 11.775,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:59:03.534018+00:00",
+        "duration_seconds": 12.862,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:59:16.405343+00:00",
+        "duration_seconds": 15.646,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-11-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "budget_exhausted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-11.prompt.txt",
+    "prompt_sha256": "55c7d3358c39664a5e8b49f8f5d64a5fdc7439fc8513b7e72a4c9d361a552a51",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:19:34.191436+00:00",
+      "duration_seconds": 12.18,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-11-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-11-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 0,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual_settled_units": 0,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-12",
+   "source": "t23-iter4",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 7
+   },
+   "probe_id": "probe-i4-cand-3",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i4-cand-3/state/gauntlet-state.db",
+   "db_sha256": "c56b7d5a14b5285d4cc34fdc26a40f9f24c8a4169850f4b2fe9ca84b6843218d",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": "settled_accepted",
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-12.prompt.txt",
+    "prompt_sha256": "9d6ec82f8b25cab4032eacbc0667690911f40ed4be4b5afbae722d2dac588cc8",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:12:55.445405+00:00",
+      "duration_seconds": 12.871,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-12-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-12-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.68,
+     "distribution": {
+      "settled": 0.68,
+      "not_settled": 0.22,
+      "insufficient_evidence": 0.1
+     },
+     "reason": "All three builder iterations were admitted under the contained envelope in a session explicitly labeled happy-path mock-e2e, with no failure, rejection, or sandbox-unavailable signals, so the represented work is on track to close accepted."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-12.surface.json",
+    "surface_sha256": "facf4a16825372b4396f88cb3dd525ecdccdad46cff30e646b9b88b3a13fe9a7",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12.prompt.txt",
+    "prompt_sha256": "5e05fe46087ee5a79bb607cffa96b886479bfb34a0e1a0db695c8f5f582d6f9c",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:59:32.070087+00:00",
+        "duration_seconds": 13.512,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:59:45.581958+00:00",
+        "duration_seconds": 11.889,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T13:59:57.472410+00:00",
+        "duration_seconds": 15.196,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-12-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-12.prompt.txt",
+    "prompt_sha256": "a950edc747923f14f814183ef568760d13a2c713947ee791a691873b51ad8a04",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:19:46.382628+00:00",
+      "duration_seconds": 9.812,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-12-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-12-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-13",
+   "source": "t24-replay",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 4
+   },
+   "probe_id": "probe-t24-case-001-replay-r1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db",
+   "db_sha256": "5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc",
+   "truth_class": "settled_accepted",
+   "truth_mapped_arm1": "settled",
+   "family": "honest",
+   "historical_round2_label": null,
+   "arm1": {
+    "view": {
+     "n_result_documents": 3,
+     "corrections": 3,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-13.prompt.txt",
+    "prompt_sha256": "d687899e66d457ffd57bb07ea82fd6822503ae977855bf477dff2e4c0ecb4ec3",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:13:08.317716+00:00",
+      "duration_seconds": 20.012,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-13-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-13-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.55,
+     "distribution": {
+      "settled": 0.55,
+      "not_settled": 0.3,
+      "insufficient_evidence": 0.15
+     },
+     "reason": "All three builder iterations are in state 'admitted' from a happy-path mock session, indicating the run's declared outcomes are being accepted rather than rejected."
+    },
+    "label": "settled",
+    "correct": true,
+    "baseline_label": "not_settled",
+    "baseline_correct": false
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-13.surface.json",
+    "surface_sha256": "a52697068b61e5c2b0d750afc3e6836e844d6b4dfc24195f1195767b501700ce",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13.prompt.txt",
+    "prompt_sha256": "735d1d570ccd6f2abba18db74b0862febdbb22b6837e993ed3dc334a0d673cb7",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:00:12.690199+00:00",
+        "duration_seconds": 10.299,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:00:22.989096+00:00",
+        "duration_seconds": 14.978,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:00:37.968346+00:00",
+        "duration_seconds": 9.604,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-13-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "majority_label": "settled_accepted",
+    "majority_tally": {
+     "settled_accepted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-13.prompt.txt",
+    "prompt_sha256": "1921d0e772eae71d820e99a7ee1d70d61457ffdb6e58a19e7cbc58630db63494",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:19:56.204923+00:00",
+      "duration_seconds": 119.78,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-13-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-13-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled_accepted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 3,
+     "estimate_status": "valid"
+    },
+    "label": "settled_accepted",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual_settled_units": 3,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-14",
+   "source": "t24-tooth-t7",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 2
+   },
+   "probe_id": "probe-t24-t7-attack",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/runs/t7-attack/state/gauntlet-state.db",
+   "db_sha256": "7136ad9c9333586ceb2f0e8671ca77066f9fa9d6e0d9f59ca11ced1f8a99841d",
+   "truth_class": "budget_exhausted",
+   "truth_mapped_arm1": "not_settled",
+   "family": "honest",
+   "historical_round2_label": null,
+   "arm1": {
+    "view": {
+     "n_result_documents": 1,
+     "corrections": 1,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-14.prompt.txt",
+    "prompt_sha256": "416e9ed00a79cfa69e7acf5ab0ea571d7822f05304b52f67a2512b8cf92eb131",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:13:28.331927+00:00",
+      "duration_seconds": 12.463,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-14-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-14-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.55,
+     "distribution": {
+      "settled": 0.55,
+      "not_settled": 0.35,
+      "insufficient_evidence": 0.1
+     },
+     "reason": "A single builder result was admitted under a happy-path mock session with only one correction, suggesting the represented work closes, though the sparse records and lack of explicit settlement evidence leave some doubt."
+    },
+    "label": "settled",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-14.surface.json",
+    "surface_sha256": "e3d8d2678e306c7b41fa0c464b0d9c8615737dce776e8533e1ead56093b5eb63",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14.prompt.txt",
+    "prompt_sha256": "46fa68978cb8587c8fb432fec707087093e8cc37dcb0d73076e445d415b0013a",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "provider_timeout",
+        "started_at_utc": "2026-09-19T14:00:47.590659+00:00",
+        "duration_seconds": 300.229,
+        "error_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1-deepseek.error.txt"
+       },
+       {
+        "call": 2,
+        "provider": "muse-spark-free",
+        "model": "opencode/muse-spark-1.3-contributor-free",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:05:47.842809+00:00",
+        "duration_seconds": 68.273,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1-muse.raw.txt"
+       }
+      ],
+      "provider_used": "muse-spark-free",
+      "substituted": true,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s1-muse.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "settled_accepted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "settled_accepted",
+      "correct": false
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:06:56.116390+00:00",
+        "duration_seconds": 13.343,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:07:09.460072+00:00",
+        "duration_seconds": 33.466,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-14-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "settled_accepted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "settled_accepted": 1,
+     "budget_exhausted": 2
+    },
+    "majority_correct": true,
+    "single1_label": "settled_accepted",
+    "single1_correct": false,
+    "agreement_modal_of_cast": 2,
+    "agreement_rate": 0.6666666666666666,
+    "all_three_agree": false
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-14.prompt.txt",
+    "prompt_sha256": "96a6134fe0a1867b7303d31f15daa5453449bd459f4be2fa356af70fef313c89",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:21:55.997582+00:00",
+      "duration_seconds": 22.447,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-14-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-14-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 1,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 1,
+    "estimate_status": "valid",
+    "actual_settled_units": 1,
+    "abs_error": 0
+   }
+  },
+  {
+   "id": "nat-15",
+   "source": "t25-negative",
+   "probe": {
+    "scenario": "e2e-happy",
+    "max_rounds": 3
+   },
+   "probe_id": "probe-t25-negative-r1",
+   "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/state/gauntlet-state.db",
+   "db_sha256": "097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88",
+   "truth_class": "budget_exhausted",
+   "truth_mapped_arm1": "not_settled",
+   "family": "honest",
+   "historical_round2_label": null,
+   "arm1": {
+    "view": {
+     "n_result_documents": 2,
+     "corrections": 2,
+     "kinds_seen": [
+      "unit_dispatch",
+      "evidence_produced",
+      "unit_dispatch",
+      "evidence_produced"
+     ],
+     "terminal_excluded": true
+    },
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-15.prompt.txt",
+    "prompt_sha256": "b6fb4e3742940cb17a3ee67ddb5af1ae6fe1290b5f5bb8b1f7618ea48dd8c029",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T13:13:40.804446+00:00",
+      "duration_seconds": 14.869,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-15-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm1/provider-raw/arm1-nat-15-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "settled",
+     "confidence": 0.72,
+     "distribution": {
+      "settled": 0.72,
+      "not_settled": 0.18,
+      "insufficient_evidence": 0.1
+     },
+     "reason": "Two admitted builder results on a 'mock-e2e-happy' session with corrections resolved indicate a converged happy path, though the absence of explicit terminal settlement or budget records caps confidence."
+    },
+    "label": "settled",
+    "correct": false,
+    "baseline_label": "not_settled",
+    "baseline_correct": true
+   },
+   "arm2": {
+    "surface_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/surfaces/nat-15.surface.json",
+    "surface_sha256": "09cf74f94225fd31f9dbc0f651294918dbde01e0498542ab63d3e821683be3a2",
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15.prompt.txt",
+    "prompt_sha256": "458df1d64c24bb0ae136b3c79197c688441be81ee6e83161c31da996fe8556a1",
+    "samples": [
+     {
+      "sample": 1,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:07:42.951041+00:00",
+        "duration_seconds": 14.641,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s1-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s1-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 2,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:07:57.592783+00:00",
+        "duration_seconds": 20.649,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s2-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s2-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     },
+     {
+      "sample": 3,
+      "calls": [
+       {
+        "call": 1,
+        "provider": "deepseek-clinepass",
+        "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+        "status": "raw",
+        "started_at_utc": "2026-09-19T14:08:18.242899+00:00",
+        "duration_seconds": 16.74,
+        "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s3-deepseek.raw.txt"
+       }
+      ],
+      "provider_used": "deepseek-clinepass",
+      "substituted": false,
+      "status": "ok",
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-15-s3-deepseek.raw.txt",
+      "parsed": {
+       "status": "ok",
+       "answer": "budget_exhausted",
+       "confidence": 0.0,
+       "distribution": {
+        "settled_accepted": 0.0,
+        "verification_failed_nonsettlement": 0.0,
+        "budget_exhausted": 0.0,
+        "execution_failed": 0.0,
+        "insufficient_evidence": 0.0
+       },
+       "reason": ""
+      },
+      "label": "budget_exhausted",
+      "correct": true
+     }
+    ],
+    "labels_ok": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "majority_correct": true,
+    "single1_label": "budget_exhausted",
+    "single1_correct": true,
+    "agreement_modal_of_cast": 3,
+    "agreement_rate": 1.0,
+    "all_three_agree": true
+   },
+   "arm2b": {
+    "prompt_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-15.prompt.txt",
+    "prompt_sha256": "13b1ea3e83eb9b5df39e4934156ba57d140b9ed252222afb01bdd75f42426ec9",
+    "calls": [
+     {
+      "call": 1,
+      "provider": "deepseek-clinepass",
+      "model": "cline-pass/cline-pass/deepseek-v4.1-flash",
+      "status": "raw",
+      "started_at_utc": "2026-09-19T14:22:18.455029+00:00",
+      "duration_seconds": 23.743,
+      "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-15-deepseek.raw.txt"
+     }
+    ],
+    "provider_used": "deepseek-clinepass",
+    "substituted": false,
+    "status": "ok",
+    "raw_path": "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2b/provider-raw/arm2b-nat-15-deepseek.raw.txt",
+    "parsed": {
+     "status": "ok",
+     "answer": "budget_exhausted",
+     "confidence": 0.0,
+     "distribution": {
+      "settled_accepted": 0.0,
+      "verification_failed_nonsettlement": 0.0,
+      "budget_exhausted": 0.0,
+      "execution_failed": 0.0,
+      "insufficient_evidence": 0.0
+     },
+     "reason": "",
+     "settled_units_estimate": 2,
+     "estimate_status": "valid"
+    },
+    "label": "budget_exhausted",
+    "estimate": 2,
+    "estimate_status": "valid",
+    "actual_settled_units": 2,
+    "abs_error": 0
+   }
+  }
+ ],
+ "deviations": [
+  {
+   "id": "DV-1",
+   "issue": "prereg arm2b says the settled_units_estimate is asked 'on the honest-family rows' while the operator execution directive pins 1 sample/row = 15 calls",
+   "reading": "arm2b runs on all 15 rows (operator directive); the honest-family slice is reported separately beside the full-corpus comparison-8 numbers, matching the prereg's scoring wording",
+   "kind": "scope-reading"
+  },
+  {
+   "id": "DV-2",
+   "issue": "prereg aggregation_frozen does not pin how failed (unparseable) samples enter the 3-sample majority",
+   "reading": "most restrictive: a label needs >=2 of the 3 cast votes to win; ties and rows with fewer than 2 parseable samples resolve to insufficient_evidence (never fabricated)",
+   "kind": "most-restrictive-reading"
+  },
+  {
+   "id": "DV-3",
+   "issue": "prereg reporting.mutable_state says CURRENT_STATUS is updated after the report; the operator directive scopes writes to the remeasure directory plus the decision-log append",
+   "reading": "this executor does not modify .agents/current_status.yml (orchestrator-owned); the recommendation is recorded in the durable report and b1-result for the orchestrator to settle",
+   "kind": "scope-reading"
+  },
+  {
+   "id": "DV-4",
+   "issue": "the round-1 pass of run_arms.py completed arm1 (15/15 deepseek calls, all raw outputs preserved) and then crashed at the FIRST arm2 prompt write (arm2/provider-raw directory not yet created), BEFORE any arm2 or arm2b provider call",
+   "reading": "no provider call was lost or re-rolled; arm1 records are carried over from the preserved round-1 results file (remeasure-results.round1-arm1.json, sha256 9be29eea53b60bd2ae44703d82cc1033a777dff0543d7fbcfceb7527d6ff82cf) after re-validation against the preserved raw outputs; the correction (create provider-raw directories before prompt writes) is confined to run_arms.round2.py; arm2 and arm2b calls all execute fresh in this round-2 pass",
+   "kind": "execution-interruption-recovery"
+  },
+  {
+   "id": "DV-5",
+   "issue": "the round-2 pass was interrupted mid-arm2 (after nat-05 sample 2, before sample 3): 14 of 45 arm2 call slots had completed with preserved raw outputs (including the nat-02-s2 slot whose deepseek leg timed out and whose single muse substitution completed), but the results file had only persisted the arm2 blocks of nat-01..nat-04 \u2014 the per-call wall-time metadata of the two completed nat-05 slots (s1, s2) was lost with the interrupted process",
+   "reading": "resume as round-3 (run_arms.round3.py): preserved raw outputs are re-used verbatim and never re-rolled (a naive re-run of run_arms.round2.py would have re-rolled the nat-02-s2 deepseek leg because only its error file and muse raw are on disk); any interrupted slot's un-attempted single substitution is completed exactly once; the two nat-05 call records are reconstructed from their preserved raw outputs with duration_lost_in_interruption: true, so arm2 wall time is an honest lower bound; the results file is updated in place",
+   "kind": "execution-interruption-recovery"
+  }
+ ],
+ "arm1_scoring": {
+  "slice_rule": "deepseek slice is the scored measurement; the substituted slice is reported beside it, never pooled",
+  "deepseek_slice": {
+   "n": 15,
+   "n_answered": 15,
+   "k_correct": 9,
+   "accuracy": 0.6,
+   "ci95": [
+    0.3228697662062817,
+    0.8366356761404865
+   ],
+   "accuracy_all_rows_rejection_is_wrong": 0.6,
+   "contract_failures": 0,
+   "abstentions": 2,
+   "abstention_rate": 0.13333333333333333,
+   "typed_rejections": 0,
+   "typed_rejection_rate": 0.0,
+   "confusion_pred_to_truth": {
+    "settled": {
+     "settled": 6,
+     "not_settled": 4
+    },
+    "not_settled": {
+     "not_settled": 3
+    },
+    "insufficient_evidence": {
+     "not_settled": 2
+    }
+   },
+   "family_honest": {
+    "n": 11,
+    "n_answered": 11,
+    "k_correct": 6,
+    "accuracy": 0.5454545454545454,
+    "ci95": [
+     0.23379359765934515,
+     0.8325119059362927
+    ]
+   },
+   "family_adversarial": {
+    "n": 4,
+    "n_answered": 4,
+    "k_correct": 3,
+    "accuracy": 0.75,
+    "ci95": [
+     0.19412044968324338,
+     0.9936905367902902
+    ]
+   },
+   "errors": [
+    {
+     "id": "nat-02",
+     "truth": "not_settled",
+     "label": "settled"
+    },
+    {
+     "id": "nat-07",
+     "truth": "not_settled",
+     "label": "insufficient_evidence"
+    },
+    {
+     "id": "nat-09",
+     "truth": "not_settled",
+     "label": "insufficient_evidence"
+    },
+    {
+     "id": "nat-11",
+     "truth": "not_settled",
+     "label": "settled"
+    },
+    {
+     "id": "nat-14",
+     "truth": "not_settled",
+     "label": "settled"
+    },
+    {
+     "id": "nat-15",
+     "truth": "not_settled",
+     "label": "settled"
+    }
+   ]
+  },
+  "substituted_slice_never_pooled": {
+   "n": 0,
+   "n_answered": 0,
+   "k_correct": 0,
+   "accuracy": null,
+   "ci95": [
+    null,
+    null
+   ],
+   "accuracy_all_rows_rejection_is_wrong": null,
+   "contract_failures": 0,
+   "abstentions": 0,
+   "abstention_rate": null,
+   "typed_rejections": 0,
+   "typed_rejection_rate": null,
+   "confusion_pred_to_truth": {},
+   "family_honest": {
+    "n": 0,
+    "n_answered": 0,
+    "k_correct": 0,
+    "accuracy": null,
+    "ci95": [
+     null,
+     null
+    ]
+   },
+   "family_adversarial": {
+    "n": 0,
+    "n_answered": 0,
+    "k_correct": 0,
+    "accuracy": null,
+    "ci95": [
+     null,
+     null
+    ]
+   },
+   "errors": []
+  },
+  "mcnemar_learned_vs_baseline": {
+   "comparison": "learned arm1 vs face-value baseline, paired rows",
+   "n_paired": 15,
+   "learned_right_baseline_wrong": 6,
+   "learned_wrong_baseline_right": 6,
+   "p_exact_two_sided": 1.0
+  },
+  "baseline_face_value_deepseek_slice": {
+   "rule": "face-value: all result documents claim completed -> settled (T16 rule verbatim, same mapped truth)",
+   "n": 15,
+   "k_correct": 9,
+   "accuracy": 0.6,
+   "ci95": [
+    0.3228697662062817,
+    0.8366356761404865
+   ],
+   "triviality_note": "baseline never reads artifact contents"
+  }
+ },
+ "payment": {
+  "arm1": {
+   "deepseek_calls": 15,
+   "deepseek_failed": 0,
+   "muse_substitutions": 0
+  },
+  "arm2": {
+   "deepseek_calls": 43,
+   "deepseek_failed": 2,
+   "muse_substitutions": 2
+  },
+  "arm2b": {
+   "deepseek_calls": 14,
+   "deepseek_failed": 1,
+   "muse_substitutions": 1
+  },
+  "wall_seconds_by_arm": {
+   "arm1": 504.485,
+   "arm2": 1866.356,
+   "arm2b": 846.912
+  },
+  "total_calls_by_arm": {
+   "arm1": 15,
+   "arm2": 47,
+   "arm2b": 16
+  },
+  "mechanical_layer_provider_calls": 0,
+  "learned_layer_total_provider_calls": 78,
+  "note": "call counts include scored deepseek calls, recorded deepseek failures and muse substitutions; the mechanical consequence layer requires zero provider calls; arm2 wall time is a lower bound: the two completed nat-05 slots reconstructed at resume carry no duration (DV-5)"
+ },
+ "arm2_scoring": {
+  "aggregation_rule": "majority over the 3 samples; >=2 of 3 cast votes needed; ties and rows with <2 parseable samples -> insufficient_evidence (DV-2)",
+  "single_sample1_deepseek_slice": {
+   "n": 13,
+   "n_answered": 13,
+   "k_correct": 9,
+   "accuracy": 0.6923076923076923,
+   "ci95": [
+    0.3857383382492947,
+    0.9090796054279033
+   ],
+   "accuracy_all_rows_rejection_is_wrong": 0.6923076923076923,
+   "contract_failures": 0,
+   "abstentions": 0,
+   "abstention_rate": 0.0,
+   "typed_rejections": 0,
+   "typed_rejection_rate": 0.0,
+   "confusion_pred_to_truth": {
+    "settled_accepted": {
+     "settled_accepted": 6
+    },
+    "budget_exhausted": {
+     "verification_failed_nonsettlement": 4,
+     "budget_exhausted": 3
+    }
+   },
+   "family_honest": {
+    "n": 9,
+    "n_answered": 9,
+    "k_correct": 9,
+    "accuracy": 1.0,
+    "ci95": [
+     0.6637328831200571,
+     1.0
+    ]
+   },
+   "family_adversarial": {
+    "n": 4,
+    "n_answered": 4,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "ci95": [
+     0.0,
+     0.6023646356164742
+    ]
+   },
+   "errors": [
+    {
+     "id": "nat-03",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-05",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-09",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-10",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    }
+   ]
+  },
+  "majority_deepseek_slice": {
+   "n": 13,
+   "n_answered": 13,
+   "k_correct": 9,
+   "accuracy": 0.6923076923076923,
+   "ci95": [
+    0.3857383382492947,
+    0.9090796054279033
+   ],
+   "accuracy_all_rows_rejection_is_wrong": 0.6923076923076923,
+   "contract_failures": 0,
+   "abstentions": 0,
+   "abstention_rate": 0.0,
+   "typed_rejections": 0,
+   "typed_rejection_rate": 0.0,
+   "confusion_pred_to_truth": {
+    "settled_accepted": {
+     "settled_accepted": 6
+    },
+    "budget_exhausted": {
+     "verification_failed_nonsettlement": 4,
+     "budget_exhausted": 3
+    }
+   },
+   "family_honest": {
+    "n": 9,
+    "n_answered": 9,
+    "k_correct": 9,
+    "accuracy": 1.0,
+    "ci95": [
+     0.6637328831200571,
+     1.0
+    ]
+   },
+   "family_adversarial": {
+    "n": 4,
+    "n_answered": 4,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "ci95": [
+     0.0,
+     0.6023646356164742
+    ]
+   },
+   "errors": [
+    {
+     "id": "nat-03",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-05",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-09",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    },
+    {
+     "id": "nat-10",
+     "truth": "verification_failed_nonsettlement",
+     "label": "budget_exhausted"
+    }
+   ]
+  },
+  "substituted_slice_never_pooled": {
+   "n_rows": 2,
+   "row_ids": [
+    "nat-02",
+    "nat-14"
+   ],
+   "single_sample1": {
+    "n": 2,
+    "n_answered": 2,
+    "k_correct": 1,
+    "accuracy": 0.5,
+    "ci95": [
+     0.012579117093425053,
+     0.9874208829065749
+    ],
+    "accuracy_all_rows_rejection_is_wrong": 0.5,
+    "contract_failures": 0,
+    "abstentions": 0,
+    "abstention_rate": 0.0,
+    "typed_rejections": 0,
+    "typed_rejection_rate": 0.0,
+    "confusion_pred_to_truth": {
+     "budget_exhausted": {
+      "budget_exhausted": 1
+     },
+     "settled_accepted": {
+      "budget_exhausted": 1
+     }
+    },
+    "family_honest": {
+     "n": 2,
+     "n_answered": 2,
+     "k_correct": 1,
+     "accuracy": 0.5,
+     "ci95": [
+      0.012579117093425053,
+      0.9874208829065749
+     ]
+    },
+    "family_adversarial": {
+     "n": 0,
+     "n_answered": 0,
+     "k_correct": 0,
+     "accuracy": null,
+     "ci95": [
+      null,
+      null
+     ]
+    },
+    "errors": [
+     {
+      "id": "nat-14",
+      "truth": "budget_exhausted",
+      "label": "settled_accepted"
+     }
+    ]
+   },
+   "majority": {
+    "n": 2,
+    "n_answered": 2,
+    "k_correct": 2,
+    "accuracy": 1.0,
+    "ci95": [
+     0.158113883008419,
+     1.0
+    ],
+    "accuracy_all_rows_rejection_is_wrong": 1.0,
+    "contract_failures": 0,
+    "abstentions": 0,
+    "abstention_rate": 0.0,
+    "typed_rejections": 0,
+    "typed_rejection_rate": 0.0,
+    "confusion_pred_to_truth": {
+     "budget_exhausted": {
+      "budget_exhausted": 2
+     }
+    },
+    "family_honest": {
+     "n": 2,
+     "n_answered": 2,
+     "k_correct": 2,
+     "accuracy": 1.0,
+     "ci95": [
+      0.158113883008419,
+      1.0
+     ]
+    },
+    "family_adversarial": {
+     "n": 0,
+     "n_answered": 0,
+     "k_correct": 0,
+     "accuracy": null,
+     "ci95": [
+      null,
+      null
+     ]
+    },
+    "errors": []
+   }
+  },
+  "stability": {
+   "definition": "per-row agreement rate = modal-label count of the 3 cast samples / 3",
+   "per_row_agreement_rate": {
+    "nat-01": 1.0,
+    "nat-03": 1.0,
+    "nat-04": 1.0,
+    "nat-05": 1.0,
+    "nat-06": 1.0,
+    "nat-07": 1.0,
+    "nat-08": 1.0,
+    "nat-09": 0.6666666666666666,
+    "nat-10": 1.0,
+    "nat-11": 1.0,
+    "nat-12": 1.0,
+    "nat-13": 1.0,
+    "nat-15": 1.0
+   },
+   "mean_agreement_rate_deepseek_rows": 0.9743589743589743,
+   "rows_all_three_agree": 12,
+   "n_deepseek_rows": 13
+  },
+  "majority_vs_single_material_change": {
+   "accuracy_single": 0.6923076923076923,
+   "accuracy_majority": 0.6923076923076923,
+   "rows_changed_label": []
+  },
+  "comparison7_error_list_majority": [
+   {
+    "id": "nat-03",
+    "truth": "verification_failed_nonsettlement",
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "raw_paths": [
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s1-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s2-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-03-s3-deepseek.raw.txt"
+    ]
+   },
+   {
+    "id": "nat-05",
+    "truth": "verification_failed_nonsettlement",
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "raw_paths": [
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s1-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s2-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-05-s3-deepseek.raw.txt"
+    ]
+   },
+   {
+    "id": "nat-09",
+    "truth": "verification_failed_nonsettlement",
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 2,
+     "verification_failed_nonsettlement": 1
+    },
+    "raw_paths": [
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s1-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s2-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-09-s3-deepseek.raw.txt"
+    ]
+   },
+   {
+    "id": "nat-10",
+    "truth": "verification_failed_nonsettlement",
+    "majority_label": "budget_exhausted",
+    "majority_tally": {
+     "budget_exhausted": 3
+    },
+    "raw_paths": [
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s1-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s2-deepseek.raw.txt",
+     "/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/remeasure-native-corpus/arm2/provider-raw/arm2-nat-10-s3-deepseek.raw.txt"
+    ]
+   }
+  ],
+  "historical_freshness_lying_rows": [
+   {
+    "id": "nat-03",
+    "probe_id": "probe-i1-cand-3",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-05",
+    "probe_id": "probe-i2-cand-2",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-09",
+    "probe_id": "probe-i3-cand-3",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "verification_failed_nonsettlement",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "verification_failed_nonsettlement",
+    "fresh_matches_preserved": false
+   },
+   {
+    "id": "nat-10",
+    "probe_id": "probe-i4-cand-1",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   }
+  ],
+  "historical_freshness_route_rows": [
+   {
+    "id": "nat-01",
+    "probe_id": "probe-i1-cand-1",
+    "truth": "settled_accepted",
+    "fresh_majority_label": "settled_accepted",
+    "fresh_labels": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "preserved_round2_label": "settled_accepted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-02",
+    "probe_id": "probe-i1-cand-2",
+    "truth": "budget_exhausted",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "settled_accepted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-03",
+    "probe_id": "probe-i1-cand-3",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-04",
+    "probe_id": "probe-i2-cand-1",
+    "truth": "settled_accepted",
+    "fresh_majority_label": "settled_accepted",
+    "fresh_labels": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "preserved_round2_label": "settled_accepted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-05",
+    "probe_id": "probe-i2-cand-2",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-06",
+    "probe_id": "probe-i2-cand-3",
+    "truth": "settled_accepted",
+    "fresh_majority_label": "settled_accepted",
+    "fresh_labels": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "preserved_round2_label": "settled_accepted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-07",
+    "probe_id": "probe-i3-cand-1",
+    "truth": "budget_exhausted",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-08",
+    "probe_id": "probe-i3-cand-2",
+    "truth": "settled_accepted",
+    "fresh_majority_label": "settled_accepted",
+    "fresh_labels": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "preserved_round2_label": "settled_accepted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-09",
+    "probe_id": "probe-i3-cand-3",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "verification_failed_nonsettlement",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "verification_failed_nonsettlement",
+    "fresh_matches_preserved": false
+   },
+   {
+    "id": "nat-10",
+    "probe_id": "probe-i4-cand-1",
+    "truth": "verification_failed_nonsettlement",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-11",
+    "probe_id": "probe-i4-cand-2",
+    "truth": "budget_exhausted",
+    "fresh_majority_label": "budget_exhausted",
+    "fresh_labels": [
+     "budget_exhausted",
+     "budget_exhausted",
+     "budget_exhausted"
+    ],
+    "preserved_round2_label": "budget_exhausted",
+    "fresh_matches_preserved": true
+   },
+   {
+    "id": "nat-12",
+    "probe_id": "probe-i4-cand-3",
+    "truth": "settled_accepted",
+    "fresh_majority_label": "settled_accepted",
+    "fresh_labels": [
+     "settled_accepted",
+     "settled_accepted",
+     "settled_accepted"
+    ],
+    "preserved_round2_label": "settled_accepted",
+    "fresh_matches_preserved": true
+   }
+  ],
+  "historical_freshness_route_summary": {
+   "n_route_rows": 12,
+   "n_fresh_matches_preserved": 11,
+   "pooling_note": "fresh labels are reported beside the preserved round-2 labels; no pooling in either direction"
+  }
+ },
+ "arm2b_scoring": {
+  "status": "exploratory; excluded from the primary verdicts",
+  "deepseek_slice_all_rows": {
+   "n_rows": 14,
+   "n_valid_estimates": 14,
+   "mae": 0.0,
+   "exact_hits": 14,
+   "exact_hit_rate": 1.0,
+   "exact_hit_ci95": [
+    0.7683642383498832,
+    1.0
+   ],
+   "estimate_status_counts": {
+    "valid": 14
+   }
+  },
+  "deepseek_slice_honest_family": {
+   "n_rows": 11,
+   "n_valid_estimates": 11,
+   "mae": 0.0,
+   "exact_hits": 11,
+   "exact_hit_rate": 1.0,
+   "exact_hit_ci95": [
+    0.7150858470818455,
+    1.0
+   ],
+   "estimate_status_counts": {
+    "valid": 11
+   }
+  },
+  "per_row": [
+   {
+    "id": "nat-01",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-02",
+    "family": "honest",
+    "estimate": 2,
+    "estimate_status": "valid",
+    "actual": 2,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-04",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-05",
+    "family": "adversarial",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual": 0,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-06",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-07",
+    "family": "honest",
+    "estimate": 1,
+    "estimate_status": "valid",
+    "actual": 1,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-08",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-09",
+    "family": "adversarial",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual": 0,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-10",
+    "family": "adversarial",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual": 0,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-11",
+    "family": "honest",
+    "estimate": 0,
+    "estimate_status": "valid",
+    "actual": 0,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-12",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-13",
+    "family": "honest",
+    "estimate": 3,
+    "estimate_status": "valid",
+    "actual": 3,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-14",
+    "family": "honest",
+    "estimate": 1,
+    "estimate_status": "valid",
+    "actual": 1,
+    "abs_error": 0
+   },
+   {
+    "id": "nat-15",
+    "family": "honest",
+    "estimate": 2,
+    "estimate_status": "valid",
+    "actual": 2,
+    "abs_error": 0
+   }
+  ]
+ }
+}

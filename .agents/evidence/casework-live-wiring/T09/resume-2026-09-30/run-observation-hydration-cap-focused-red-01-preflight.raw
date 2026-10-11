@@ -1,0 +1,13 @@
+UTC 2026-10-06T15:42:35Z
+MemAvailableMiB 2340
+SwapFreeMiB 3359
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.5Gi       126Mi       9.3Mi       2.4Gi       2.3Gi
+Swap:           12Gi       8.7Gi       3.3Gi
+NAME     TYPE      SIZE USED PRIO
+/dev/sdc partition  12G 8.7G   -2
+Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2809556992 1354391552  68% /tmp
+GOCACHE present /tmp/sea-casework-go-build-cache-e8859aa2-setupfix1
+1ebfa2e2a002b3c86ca4fd8b599e8b572929feb8ebaa192326658b3c3b8227d7  apps/godspeed-casework-go/internal/server/run_observation_hydration_cap.go
+0e3b1774303fa6b155269e45adb0703262b789611a81993d4c2b63bd9e8140f9  apps/godspeed-casework-go/internal/server/run_observation_hydration_cap_test.go

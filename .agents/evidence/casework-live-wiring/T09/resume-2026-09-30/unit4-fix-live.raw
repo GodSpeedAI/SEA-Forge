@@ -1,0 +1,7 @@
+=== RUN   TestLiveRunScope
+    scoped_runs_live_test.go:49: case case_20261001T205149Z_4243bc task_prepare run run_20261001T205149Z_23ecf7 settlement report "accepted"
+    scoped_runs_live_test.go:49: case case_20261001T205149Z_fb5ab7 task_prepare run run_20261001T205149Z_e85eb0 settlement report "accepted"
+--- PASS: TestLiveRunScope (0.07s)
+PASS
+livetest-relay: relay: rebuild of case_20261001T205149Z_fb5ab7 at 01M3WKSPJCAMBSR5MR0YTCW086 failed: unavailable: the live authority client is closed (client)
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.173s

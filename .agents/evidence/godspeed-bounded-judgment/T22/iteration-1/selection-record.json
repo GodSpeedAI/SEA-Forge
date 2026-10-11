@@ -1,0 +1,22 @@
+{
+  "correlation_id": "t22-route-001-iter1",
+  "decided_at_utc": "2026-09-19T01:36:44.178319+00:00",
+  "eligible_candidate_ids": [],
+  "ineligible": [
+    {
+      "candidate_id": "cand-1",
+      "reason": "probe ended in a run error (execution_failed); ineligible for retention"
+    },
+    {
+      "candidate_id": "cand-2",
+      "reason": "probe ended in a run error (execution_failed); ineligible for retention"
+    },
+    {
+      "candidate_id": "cand-3",
+      "reason": "probe ended in a run error (execution_failed); ineligible for retention"
+    }
+  ],
+  "iteration": 1,
+  "policy_version": "selection-policy-v1",
+  "retained_candidate_id": ""
+}

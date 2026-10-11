@@ -1,0 +1,187 @@
+[
+  {
+    "journey_id": "L0",
+    "title": "Readiness and identity",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "the stack is the real, non-fixture, authenticated one",
+    "unlocks": [
+      "L1"
+    ],
+    "steps": [
+      {
+        "journey": "L0",
+        "name": "served bundle has no fixture adapter (disk scan + HTTP scan)",
+        "ok": true,
+        "ms": 2
+      },
+      {
+        "journey": "L0",
+        "name": "gateway is the live non-fixture build and the kernel is ready",
+        "ok": true,
+        "ms": 405
+      },
+      {
+        "journey": "L0",
+        "name": "unauthenticated browser sees the LoginScreen (live source label)",
+        "ok": true,
+        "ms": 4572
+      },
+      {
+        "journey": "L0",
+        "name": "operator signs in through the LoginScreen; identity is the gateway-verified one",
+        "ok": true,
+        "ms": 10686
+      },
+      {
+        "journey": "L0",
+        "name": "the browser loaded only live-adapter scripts (no fixture adapter at runtime)",
+        "ok": true,
+        "ms": 3180
+      }
+    ],
+    "total_ms": 22818
+  },
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "PASS",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "steps": [
+      {
+        "journey": "L1",
+        "name": "home offers Design case; the picker lists the published templates",
+        "ok": true,
+        "ms": 6058
+      },
+      {
+        "journey": "L1",
+        "name": "select template, fill parameters; submit stays disabled before preflight",
+        "ok": true,
+        "ms": 8727
+      },
+      {
+        "journey": "L1",
+        "name": "preflight passes with a digest; only then is submit enabled",
+        "ok": true,
+        "ms": 4086
+      },
+      {
+        "journey": "L1",
+        "name": "editing a parameter invalidates the preflight and disables submit again",
+        "ok": true,
+        "ms": 8300
+      },
+      {
+        "journey": "L1",
+        "name": "durable: commit writes case_created + item_enabled to the new case's case-events.jsonl and its plan.json",
+        "ok": true,
+        "ms": 1812
+      },
+      {
+        "journey": "L1",
+        "name": "UI: the panel closes and the new case's world is the one shown",
+        "ok": true,
+        "ms": 5347
+      }
+    ],
+    "total_ms": 40247
+  },
+  {
+    "journey_id": "L2",
+    "title": "Horizon standing",
+    "status": "PASS",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI shows the case's real standing, not an invented one",
+    "unlocks": [
+      "L3",
+      "L4"
+    ],
+    "steps": [
+      {
+        "journey": "L2",
+        "name": "durable: the kernel's own files say task_prepare is enabled and the rest are pending",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L2",
+        "name": "UI: the world shows exactly the plan's items, each with the standing the durable fold implies",
+        "ok": true,
+        "ms": 1832
+      },
+      {
+        "journey": "L2",
+        "name": "UI: a pending item says why it waits; the ready one says it is ready",
+        "ok": true,
+        "ms": 796
+      },
+      {
+        "journey": "L2",
+        "name": "UI: only the enabled item offers Execute (role-filtered, standing-driven)",
+        "ok": true,
+        "ms": 856
+      },
+      {
+        "journey": "L2",
+        "name": "a real pointer click focuses the item and the outline lists it with its standing and Execute",
+        "ok": true,
+        "ms": 20421
+      }
+    ],
+    "total_ms": 29952
+  },
+  {
+    "journey_id": "L3",
+    "title": "Discretionary add",
+    "status": "FAIL",
+    "depends_on": [
+      "L2"
+    ],
+    "settles": "an operator-proposed item is durably in the plan with its proposer, and the UI shows it",
+    "unlocks": [
+      "L4"
+    ],
+    "steps": [
+      {
+        "journey": "L3",
+        "name": "the anchor item offers 'Add discretionary work'; clicking it opens the drawer with the operator as proposer",
+        "ok": true,
+        "ms": 17739
+      },
+      {
+        "journey": "L3",
+        "name": "an empty proposal is refused client-side with no durable effect",
+        "ok": false,
+        "ms": 219,
+        "error": "eval failed: "
+      }
+    ],
+    "total_ms": 20971,
+    "error": "eval failed: "
+  },
+  {
+    "journey_id": "L4",
+    "title": "Execute through the UI",
+    "status": "BLOCKED",
+    "depends_on": [
+      "L2",
+      "L3"
+    ],
+    "settles": "an executed item is durably active, settled and completed, and its downstream unlocks over SSE without a reload",
+    "unlocks": [
+      "L5"
+    ],
+    "blocked_by": "L3",
+    "steps": [],
+    "total_ms": 0
+  }
+]

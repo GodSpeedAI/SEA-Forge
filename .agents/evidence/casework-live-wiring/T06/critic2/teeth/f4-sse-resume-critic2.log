@@ -1,0 +1,5 @@
+=== RUN   TestLiveSSERelayOfKernelFramesWithResume
+    server_live_test.go:166: collected first post-mutation snapshot; events seen so far: [snapshot id=01M3DPNPT8H7262AF5NKFE62FD]
+--- PASS: TestLiveSSERelayOfKernelFramesWithResume (0.50s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.549s

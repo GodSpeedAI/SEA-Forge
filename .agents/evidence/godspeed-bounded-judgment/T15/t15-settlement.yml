@@ -1,0 +1,19 @@
+# T15 settlement record
+schema: godspeed-bounded-judgment.t15-settlement
+date: "2026-09-18"
+total_cases: 9
+included_cases: 9
+excluded_cases: 0
+excluded_note: "round-1/2 attempts (different generator targeting) are preserved as failed rounds, not counted here; this settlement covers the round-3 batch executed with the repo's own e2e recipe"
+consequence_classes:
+  settled: 3            # accepted-A1..A3: every unit closes, settlement_committed per unit, run_terminal=settled
+  budget_exhausted: 6   # lying-B1..B3 (the verifier ladder discriminated the lying builder's artifacts; correction could not repair; ended non-settled) + budget-C1..C3 (governing round-constraint)
+count_per_class_basis: "run_terminal events written by the gauntlet controller"
+run_family_concentration: "3 case families x 3 runs; per-family id seeds distinct; no family dominates (max 3/9 per intended class)"
+evidence_completeness: "every run: admission -> dispatch -> evidence_produced per iteration -> (settlement_committed | budget terminal); per-run db sha256 in the manifest"
+correlation_completeness: "each loop joins by its own run_id ledger scope + deterministic case id; T05-corrected joinability discipline"
+provenance_completeness: "GAUNTLET_ID_SEED per case (deterministic ids); generator recipe = the repo's e2e_full_loop_mock env; subject identity in the prereg"
+single_class_degeneracy_removed: true
+mechanism_provenance: "no hand-authored rows; every settlement/terminal produced by the gauntlet controller (mechanism-provenance tooth verified by direct event-log inspection)"
+gates:
+  - "python3 .agents/evidence/godspeed-bounded-judgment/T15/verify_corpus.py (see below; exits 0)"

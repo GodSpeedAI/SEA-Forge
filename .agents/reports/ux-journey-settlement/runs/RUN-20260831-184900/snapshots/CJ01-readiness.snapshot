@@ -1,0 +1,191 @@
+- generic [ref=e1] clickable [onclick]
+  - link "Skip to governed focus" [ref=e2]
+  - banner
+    - strong
+      - StaticText "SEA Forge"
+    - StaticText "No cell resolved"
+    - button "Active actor and role" [ref=e5]
+      - StaticText "Actor"
+      - strong
+        - StaticText "Unresolved"
+    - button "Active cell" [ref=e6]
+      - StaticText "Cell"
+      - strong
+        - StaticText "Unresolved"
+    - button "Integrity state" [ref=e7]
+      - strong
+        - StaticText "Integrity unknown"
+    - button "Open command search" [ref=e8]
+    - button "Open approval inbox: Unknown" [ref=e9]
+      - StaticText "Inbox"
+      - strong
+        - StaticText "Unknown"
+    - button "Toggle active work evidence" [ref=e10]
+      - StaticText "Active work"
+      - strong
+        - StaticText "None running"
+  - navigation "Primary navigation" [ref=e3]
+    - StaticText "OPERATE"
+    - link "Readiness R" [ref=e11]
+      - StaticText "Readiness"
+      - StaticText "R"
+    - link "Thoth" [ref=e12]
+      - StaticText "Thoth"
+    - link "Assets" [ref=e13]
+      - StaticText "Assets"
+    - link "Delegation" [ref=e14]
+      - StaticText "Delegation"
+    - link "Domain Models" [ref=e15]
+      - StaticText "Domain Models"
+    - link "Cases" [ref=e16]
+      - StaticText "Cases"
+    - link "Inbox 1" [ref=e17]
+      - StaticText "Inbox"
+      - StaticText "1"
+    - link "Operations" [ref=e18]
+      - StaticText "Operations"
+    - StaticText "INSPECT"
+    - link "Evidence" [ref=e19]
+      - StaticText "Evidence"
+    - link "Memory" [ref=e20]
+      - StaticText "Memory"
+    - link "Capabilities" [ref=e21]
+      - StaticText "Capabilities"
+    - link "Artifacts" [ref=e22]
+      - StaticText "Artifacts"
+    - link "Federation" [ref=e23]
+      - StaticText "Federation"
+    - link "Administration" [ref=e24]
+      - StaticText "Administration"
+  - generic "Governed journey"
+    - strong
+      - StaticText "Readiness"
+    - StaticText "›"
+    - StaticText "Authority"
+    - StaticText "›"
+    - StaticText "Domain"
+    - StaticText "›"
+    - StaticText "Draft"
+    - StaticText "›"
+    - StaticText "Preflight"
+    - StaticText "›"
+    - StaticText "Execution"
+    - StaticText "›"
+    - StaticText "Evidence"
+    - StaticText "›"
+    - StaticText "Settlement"
+  - main
+    - region "Readiness Overview" [ref=e25]
+      - heading "Readiness Overview" [level=1, ref=e30]
+      - StaticText "▲"
+      - StaticText "READINESS UNKNOWN"
+      - paragraph
+        - StaticText "Readiness projection unavailable. Reconnect to inspect current conditions."
+      - button "Source freshness: Offline record · readiness.get" [ref=e31]
+        - StaticText "Offline record · readiness.get"
+      - StaticText "Projection: readiness / "
+      - StaticText "agent_run.start"
+      - button "Inspect source" [disabled, ref=e32]
+      - button "Why this state" [ref=e33]
+      - button "Run checks" [ref=e34]
+    - region "What do you intend to do?" [ref=e26]
+      - paragraph
+        - StaticText "OPERATION-SENSITIVE READINESS"
+      - heading "What do you intend to do?" [level=2, ref=e35]
+      - StaticText "I"
+      - radiogroup "Intended operation"
+        - radio "Run local governed work" [checked=false, ref=e42]
+        - radio "Delegate to external agent" [checked=true, ref=e43]
+        - radio "Import governed bundle" [checked=false, ref=e44]
+      - paragraph
+        - StaticText "This path needs a verified endpoint and an allowed authority boundary before commitment."
+    - region "Critical foundations" [ref=e27]
+      - paragraph
+        - StaticText "REQUIRED CONDITIONS"
+      - heading "Critical foundations" [level=2, ref=e36]
+      - StaticText "0"
+      - StaticText " verified · "
+      - StaticText "0"
+      - StaticText " "
+      - StaticText "limitations"
+      - table "Critical foundations"
+        - row
+          - columnheader "Foundation" [ref=e55]
+          - columnheader "State" [ref=e56]
+          - columnheader "Reason" [ref=e57]
+          - columnheader "Source" [ref=e58]
+    - region "Operational capabilities" [ref=e28]
+      - paragraph
+        - StaticText "CURRENT AFFORDANCES"
+      - heading "Operational capabilities" [level=2, ref=e37]
+      - button "Inspect all capabilities" [ref=e38]
+    - complementary "Endpoint verification required"
+      - generic
+        - paragraph
+          - StaticText "CURRENT LIMITATION"
+        - heading "Endpoint verification required" [level=2, ref=e45]
+        - paragraph
+          - StaticText "No active limitation is present in the current readiness projection."
+        - DescriptionList
+          - term "Affects"
+          - definition
+            - StaticText "Agent task start"
+          - term "Authority"
+          - definition
+            - StaticText "Operator may probe"
+          - term "Settlement"
+          - definition
+            - StaticText "Not yet applicable"
+        - button "Open limitation evidence" [disabled, ref=e46]
+      - generic
+        - paragraph
+          - StaticText "NEXT LAWFUL ACTION"
+        - heading "Create case" [level=2, ref=e47]
+        - button "Create case" [disabled, ref=e48]
+          - StaticText "Create case"
+          - status
+        - StaticText "identity_unresolved: This cell has not resolved an actor for this connection. No case will be created until a server-derived actor is resolved."
+        - button "Inspect identity bindings" [ref=e49]
+      - generic
+        - heading "Recent invalidations" [level=2, ref=e50]
+        - StaticText "0"
+        - paragraph
+          - StaticText "No verified state has been invalidated in this projection."
+  - contentinfo
+    - StaticText "Cell unreachable — Cannot read properties of undefined (reading 'invoke')"
+    - StaticText "Keyboard: R run checks · I intended work · B blocker · E evidence"
+  - generic [ref=e4] clickable [onclick]
+    - complementary "Context and evidence" [ref=e29] clickable [onclick]
+      - paragraph
+        - StaticText "CONTEXT / EVIDENCE"
+      - heading "Evidence inspection" [level=2, ref=e39]
+      - button "Close evidence drawer" [ref=e40]
+        - StaticText "×"
+      - tablist "Evidence views"
+        - tab "Why" [selected, ref=e51]
+        - tab "Evidence" [ref=e52]
+        - tab "Provenance" [ref=e53]
+        - tab "Record" [ref=e54]
+      - tabpanel [ref=e41] focusable [tabindex]
+        - generic
+          - paragraph
+            - StaticText "CURRENT STATE"
+          - heading "Selected evidence" [level=3, ref=e59]
+          - paragraph
+            - StaticText "Select an evidence link or record to inspect its source and standing."
+        - generic
+          - heading "Governing condition" [level=3, ref=e60]
+          - paragraph
+            - StaticText "The displayed state is derived from SEA Forge records and remains non-authoritative in the renderer."
+        - generic
+          - heading "Next lawful paths" [level=3, ref=e61]
+          - list
+            - listitem [level=1]
+              - StaticText "Inspect supporting evidence."
+            - listitem [level=1]
+              - StaticText "Review provenance and freshness."
+            - listitem [level=1]
+              - StaticText "Take only an action shown as lawful on the current surface."
+        - StaticText "NO EVIDENCE SELECTED"
+        - paragraph
+          - StaticText "Select an evidence link or record to inspect cryptographic evidence and ledger position."

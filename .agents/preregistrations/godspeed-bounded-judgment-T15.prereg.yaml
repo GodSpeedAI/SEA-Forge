@@ -1,0 +1,42 @@
+# =============================================================================
+# T15 PREREGISTRATION — controlled consequence-backed variation corpus
+# =============================================================================
+schema: godspeed-bounded-judgment.t15-prereg
+created_utc: "2026-09-18"
+frozen_before: "first case execution"
+subject_identity:
+  gauntlet_commit: "3a9955fa331de8b88db6d4025b91096b313f0d5e (sources read-only)"
+  sea_rs_base_commit: "72348237412dc000533c05b6a36e01066ca3baed"
+  sea_rs_canonical_patch_hash: "17dea17afb50b323ffc42df2f22c1e13621bda3b2818cce8e7607aef527683bf"
+  gauntlet_binary: "target/debug/gauntlet (built at the gauntlet revision above; built on 2026-09-17/18 from its lockfile)"
+generator:
+  mechanism: >-
+    Each case = one controlled target (a copy of examples/demo-calculator with
+    a frozen GAUNTLET.md front matter) + frozen env (GAUNTLET_STATE_DIR,
+    GAUNTLET_ARTIFACT_DIR, GAUNTLET_TOOL_TEST, GAUNTLET_MOCK_SCENARIO,
+    GAUNTLET_MAX_ATTEMPTS_PER_UNIT) + one headless 'gauntlet run'. The agent
+    is the deterministic mock replay runner (GAUNTLET_MOCK_SCENARIO), so the
+    ONLY varying causes are the frozen config dimensions. Ground truth is the
+    run's observed terminal consequence through gauntlet's own
+    verify/settlement path. Hand-authored settlement rows are fabrication and
+    are rejected by verify_corpus.py's mechanism-provenance check.
+case_grid:
+  - {id: affordable-A1..A3, scenario: e2e-happy, budget: defaults, intended_class: settled_accepted, dimension: "honest work + sufficient budget closes"}
+  - {id: lying-B1..B3, scenario: e2e-lying, budget: defaults, intended_class: verification_failed_nonsettlement, dimension: "claims say pass; artifacts record failure; the instrument discriminates"}
+  - {id: budget-C1..C3, scenario: e2e-happy, budget: "max_rounds 1 (C1,C2) / 2 (C3, marginal)", intended_class: budget_exhausted, dimension: "governing resource constraint prevents closure; C3 marginal"}
+answer_domain_t16:
+  labels: [settled_accepted, verification_failed_nonsettlement, budget_exhausted, execution_failed, insufficient_evidence]
+  abstention: "insufficient_evidence is the explicit insufficiency label (spec AnswerDomain)"
+deterministic_baseline:
+  rule: "preregistered crude rule: if the builder's result claims all-pass AND max_rounds >= 2 then predict settled_accepted else predict budget_exhausted; never inspects artifact contents"
+  purpose: "the baseline is deliberately face-value; the question is whether careful reading of observation records (which record artifact contents) adds consequence-grounded information over face-value"
+providers: {codex: "codex exec (frozen identity as T01)", prime_agent: "prime-agent -p --offline (frozen identity as T01; corpus-producer-lineage confound disclosed)", scripted: "mechanics-only face-value rule; never counted as real substitution"}
+exclusion_criteria: "any case whose intended mechanism did not fire (e.g. budget never reached, wrong terminal kind) is excluded with reason by verify_corpus.py"
+duplicate_retry_rules: "no retries; a case that errors as a run error (not a typed terminal) is excluded with reason; ids unique per case"
+falsification_scope: "this corpus and surface only (spec REQ-JUDG-023); no capability-class claim from N~9"
+teeth_expected:
+  - "hand-authored settlement row -> mechanism-provenance rejection"
+  - "mechanism did not fire -> exclusion"
+  - "single-class corpus -> verify_corpus FAILS class coverage"
+notes:
+  - "the 'unrepresented' blockage class (VAR-004) is NOT operationalizable with the deterministic mock (the mock does not read the reference, so a reference-omission cannot objectively bind); preserved as evidence per the amendment; three classes are operationalized"

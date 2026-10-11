@@ -1,0 +1,76 @@
+--- FAIL: TestScopedRunsListUsesCaseRequestAndMapsEveryField (0.00s)
+    scoped_runs_test.go:32: listen unix /tmp/t09-run-children-tmp/sfwp-fake-3014208535/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRejectsBlankCaseBeforeWireContact (0.00s)
+    scoped_runs_test.go:80: listen unix /tmp/t09-run-children-tmp/sfwp-fake-1944291277/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows (0.00s)
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-runs (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-545368745/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-runs (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-3309343273/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-3540729273/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-3573990297/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-run-id (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-910827533/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-case (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-156123372/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/foreign-case (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-916255190/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-item (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-141900710/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-execution (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-248593922/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-settlement (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-2700563552/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/bad-timestamp (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-695747217/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/negative-evidence (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-2212620072/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-run-id (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-272826180/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-237770305/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/overlap (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-2701414860/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/t09-run-children-tmp/sfwp-fake-3945578127/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRefusalRemainsTyped (0.00s)
+    scoped_runs_test.go:163: listen unix /tmp/t09-run-children-tmp/sfwp-fake-781744931/fake.sock: setsockopt: operation not permitted
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.033s
+--- FAIL: TestLiveSourceUsesOnlyScopedRunListAndRetainsUnreadableIDs (0.00s)
+    scoped_live_test.go:67: internal: legacy unscoped runs list must not be called (test)
+--- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls (0.00s)
+    --- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls/#00 (0.00s)
+        scoped_live_test.go:92: invalid case contacted authority: case-list=1 scoped=0 legacy=0
+    --- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls/___ (0.00s)
+        scoped_live_test.go:92: invalid case contacted authority: case-list=1 scoped=0 legacy=0
+--- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts (0.01s)
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/record-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = invalid: no case case_1 exists on the authority (world), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/overview-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/horizon-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/foreign-readable-case (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-run-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-item-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/missing-actual-parent (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/duplicate-readable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/duplicate-unreadable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-unreadable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/readable-unreadable-overlap (0.01s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+--- FAIL: TestStoreDeepCopiesUnreadableRunIDs (0.00s)
+    unreadable_runs_test.go:25: append retained mutable unreadable IDs: [mutated source]
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection\t0.031s
+FAIL

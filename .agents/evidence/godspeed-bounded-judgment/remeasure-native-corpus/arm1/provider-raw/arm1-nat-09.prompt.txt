@@ -1,0 +1,8 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: Will this Gauntlet run settle accepted, or end non-settled (budget exhausted)?
+Answer domain for "answer": settled, not_settled, insufficient_evidence.
+You see the run's records BEFORE its terminal event: the dispatched builder's result documents (claims), correction selections, and produced evidence. Judge whether the represented work will close under the run's constraints. Use insufficient_evidence if the records genuinely cannot decide.
+JSON shape: {"answer": <label>, "confidence": <0..1>, "distribution": {<label>: <prob> for all three}, "reason": <one sentence>}
+
+Run records:
+{"invocations": [{"result_document": {"id": "0Z7SC74823W7BJ44WB8ASHQ271", "run_id": "246NRY4D11F6KY4VS7A3X605W0", "iteration_no": 1, "role": "builder", "runner": "mock-agent", "model": null, "permissions": "builder-envelope", "context_envelope_digest": "sha256:80583c4295fba87626958bdc15abf5c18b81f650d6ea79c1ad96c65a8d5e3a0f", "workspace_ref": "246NRY4D11F6KY4VS7A3X605W0.AK-901.000000", "tier": "contained", "sandbox_policy_ref": null, "result_contract_path": "246NRY4D11F6KY4VS7A3X605W0-0Z7SC74823W7BJ44WB8ASHQ271-result", "state": "admitted", "admitted_at": 0, "session_ref": "mock-e2e-lying"}}], "corrections": 1}

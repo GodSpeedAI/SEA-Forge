@@ -1,0 +1,2 @@
+{"version":"0.1","evidence_id":"evi_0001","run_id":"run_20261010T212107Z_ef9228","kind":"authority_decision","uri":"auth_01","sha256":null,"source_event_id":"tev_0001"}
+{"version":"0.1","evidence_id":"evi_0002","run_id":"run_20261010T212107Z_ef9228","kind":"artifact","uri":"artifacts/work/dataset.md","sha256":"1fac467f5e22d2ab24e05d4cdf6c46c377816fab988a8c5bbc6b4d61781dcd89","source_event_id":"tev_0003","metadata":{"artifact_role":"execution_evidence"}}

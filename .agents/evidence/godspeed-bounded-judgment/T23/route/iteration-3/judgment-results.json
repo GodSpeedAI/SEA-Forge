@@ -1,0 +1,35 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter3",
+    "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+    "judged_at_utc": "2026-09-19T02:27:17.819999+00:00",
+    "judgment_id": "judg-cand-1",
+    "label": "budget_exhausted",
+    "observation_refs": [
+      "probe-i3-cand-1"
+    ]
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter3",
+    "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+    "judged_at_utc": "2026-09-19T02:27:30.682824+00:00",
+    "judgment_id": "judg-cand-2",
+    "label": "settled_accepted",
+    "observation_refs": [
+      "probe-i3-cand-2"
+    ]
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter3",
+    "judge_identity": "deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash",
+    "judged_at_utc": "2026-09-19T02:27:42.300653+00:00",
+    "judgment_id": "judg-cand-3",
+    "label": "budget_exhausted",
+    "observation_refs": [
+      "probe-i3-cand-3"
+    ]
+  }
+]

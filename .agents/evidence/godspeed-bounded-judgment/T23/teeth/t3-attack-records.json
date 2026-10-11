@@ -1,0 +1,106 @@
+{
+  "construction": "four fabricated probe_observation records claiming settled_accepted: (A) with no state database at the pinned path; (B) with a hand-edited sha256 over the real settled database; (C) with the real path+digest but zero settlement_committed events behind the settled claim; (D) with a real path+digest over a database whose own terminal is budget_exhausted. Each was passed through provenance.validate \u2014 the same mechanism-provenance gate the route runs at absorb time \u2014 and (C) additionally through the frozen route_contracts probe_observation cross rule.",
+  "expected": "mechanism-provenance validation refuses every fabricated success; no settlement; no route advance",
+  "expected_vs_observed": "MATCH - all 4 fabricated-success variants refused by provenance.validate (the route's own absorb-time gate); variant C additionally refused by the frozen route_contracts cross rule",
+  "id": "T3-fabricated-success",
+  "marked": "ATTACK \u2014 never part of the route ledger",
+  "observed": "all 4 fabricated-success variants refused by provenance.validate (the route's own absorb-time gate); variant C additionally refused by the frozen route_contracts cross rule",
+  "validator": "T23/provenance.py validate/recompute (shared with the route absorb gate and verify_route.py)",
+  "variants": {
+    "A_no_state_db": {
+      "claimed": "settled_accepted with 1 settlement_committed event",
+      "pinned_state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/t3-fabricated/state/gauntlet-state.db",
+      "provenance_refused": true,
+      "raw_observation": {
+        "bounded_input": {
+          "max_rounds": 4,
+          "scenario": "e2e-happy"
+        },
+        "candidate_id": "t3-attack-a",
+        "correlation_id": "t23-t3-attack",
+        "finished_at_utc": "2026-09-19T02:34:19.421190+00:00",
+        "mechanism": "t15-frozen-case-execution",
+        "operation": "run_case",
+        "probe_id": "probe-t3-attack-a",
+        "settlement_committed_count": 1,
+        "started_at_utc": "2026-09-19T02:34:19.421139+00:00",
+        "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/t3-fabricated/state/gauntlet-state.db",
+        "state_db_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "terminal_class": "settled"
+      },
+      "refusal_reason": "no state database at the pinned path: /home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/t3-fabricated/state/gauntlet-state.db"
+    },
+    "B_hand_edited_digest": {
+      "actual_digest": "87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953",
+      "claimed": "settled_accepted with a fabricated state-db digest",
+      "pinned_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "pinned_state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+      "provenance_refused": true,
+      "raw_observation": {
+        "bounded_input": {
+          "max_rounds": 4,
+          "scenario": "e2e-happy"
+        },
+        "candidate_id": "t3-attack-b",
+        "correlation_id": "t23-t3-attack",
+        "finished_at_utc": "2026-09-19T02:34:19.421211+00:00",
+        "mechanism": "t15-frozen-case-execution",
+        "operation": "run_case",
+        "probe_id": "probe-t3-attack-b",
+        "settlement_committed_count": 1,
+        "started_at_utc": "2026-09-19T02:34:19.421209+00:00",
+        "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+        "state_db_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "terminal_class": "settled"
+      },
+      "refusal_reason": "state database digest mismatch: pinned bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb != actual 87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953; settlement_committed_count mismatch: recorded 1 != database 3"
+    },
+    "C_settled_with_zero_settlement_events": {
+      "claimed": "settled_accepted with settlement_committed_count=0",
+      "pinned_state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+      "provenance_refused": true,
+      "raw_observation": {
+        "bounded_input": {
+          "max_rounds": 4,
+          "scenario": "e2e-happy"
+        },
+        "candidate_id": "t3-attack-c",
+        "correlation_id": "t23-t3-attack",
+        "finished_at_utc": "2026-09-19T02:34:19.422521+00:00",
+        "mechanism": "t15-frozen-case-execution",
+        "operation": "run_case",
+        "probe_id": "probe-t3-attack-c",
+        "settlement_committed_count": 0,
+        "started_at_utc": "2026-09-19T02:34:19.422513+00:00",
+        "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+        "state_db_sha256": "87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953",
+        "terminal_class": "settled"
+      },
+      "refusal_reason": "settlement_committed_count mismatch: recorded 0 != database 3",
+      "route_contracts_cross_refusal": "settled terminal requires at least one settlement_committed event"
+    },
+    "D_settled_claim_over_exhausted_db": {
+      "claimed": "settled_accepted over a database whose run_terminal is budget_exhausted",
+      "pinned_state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+      "provenance_refused": true,
+      "raw_observation": {
+        "bounded_input": {
+          "max_rounds": 4,
+          "scenario": "e2e-lying"
+        },
+        "candidate_id": "t3-attack-d",
+        "correlation_id": "t23-t3-attack",
+        "finished_at_utc": "2026-09-19T02:34:19.423226+00:00",
+        "mechanism": "t15-frozen-case-execution",
+        "operation": "run_case",
+        "probe_id": "probe-t3-attack-d",
+        "settlement_committed_count": 3,
+        "started_at_utc": "2026-09-19T02:34:19.423222+00:00",
+        "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+        "state_db_sha256": "28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f",
+        "terminal_class": "settled"
+      },
+      "refusal_reason": "terminal_class mismatch: recorded 'settled' != database 'budget_exhausted'; settlement_committed_count mismatch: recorded 3 != database 0"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DescribeResult",
+  "description": "`system.describe` result body: method catalog with interaction classes.",
+  "type": "object",
+  "properties": {
+    "methods": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MethodInfo"
+      }
+    },
+    "protocol_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "methods"
+  ],
+  "$defs": {
+    "MethodInfo": {
+      "description": "A single described method.",
+      "type": "object",
+      "properties": {
+        "class": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "class"
+      ]
+    }
+  }
+}

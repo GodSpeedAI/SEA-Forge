@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RecordPresence",
+  "description": "Whether a canonical run-record file was present on disk.",
+  "type": "object",
+  "properties": {
+    "bytes": {
+      "description": "Size in bytes when present — enough for an operator to tell an empty\njournal from a populated one without opening it.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    },
+    "present": {
+      "type": "boolean"
+    },
+    "record": {
+      "description": "Filename relative to `<root>/runs/<run_id>/`.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "record",
+    "present"
+  ]
+}

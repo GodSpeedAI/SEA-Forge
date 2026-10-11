@@ -1,0 +1,3 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -count=1 ./internal/projection
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.019s
+EXIT_CODE=0

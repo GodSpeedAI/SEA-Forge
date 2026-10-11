@@ -1,0 +1,2061 @@
+{
+ "provenance": "fixture:northstar",
+ "liveCursor": 1150,
+ "revisions": [
+  {
+   "cursor": 900,
+   "at": "2026-09-15T09:00:00Z",
+   "summary": "Scoping - assumed standard claims only",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.4,
+     "note": "Scoping"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal upcoming"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Intro call held"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Idea logged"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.6,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.3,
+     "note": "Discovery starting",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-assumption",
+     "kind": "assumption",
+     "label": "Assumption - standard claims only",
+     "position": {
+      "x": 2.4,
+      "y": 0.2,
+      "depth": 0.5
+     },
+     "salience": 0.72,
+     "note": "No external lookups expected",
+     "parentId": "eng-northstar"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    }
+   ]
+  },
+  {
+   "cursor": 940,
+   "at": "2026-09-17T11:30:00Z",
+   "summary": "Interview recorded - secondary coverage is mandatory",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.55,
+     "note": "Discovery under way"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal upcoming"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Awaiting access"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Draft outline"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.6,
+     "note": "Interview recorded",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-assumption",
+     "kind": "assumption",
+     "label": "Assumption - standard claims only",
+     "position": {
+      "x": 2.4,
+      "y": 0.2,
+      "depth": 0.5
+     },
+     "salience": 0.4,
+     "note": "Challenged - secondary coverage is real",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.9,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    }
+   ]
+  },
+  {
+   "cursor": 980,
+   "at": "2026-09-19T14:10:00Z",
+   "summary": "Workflow observation found the secondary branch",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.62,
+     "note": "Requirements settled"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal drafted"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Data requested"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Model v1"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.66,
+     "note": "Interview and workflow observation",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-assumption",
+     "kind": "assumption",
+     "label": "Assumption - standard claims only",
+     "position": {
+      "x": 2.4,
+      "y": 0.2,
+      "depth": 0.5
+     },
+     "salience": 0.24,
+     "note": "Withdrawn - replaced by observed workflow",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.62,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-observation",
+     "kind": "observation",
+     "label": "Workflow observation",
+     "position": {
+      "x": -2.0,
+      "y": -4.0,
+      "depth": 0.9
+     },
+     "salience": 0.84,
+     "note": "Secondary branch calls an external lookup",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-workflow",
+     "kind": "workflow",
+     "label": "Customer workflow",
+     "position": {
+      "x": -1.2,
+      "y": -3.0,
+      "depth": 0.5
+     },
+     "salience": 0.7,
+     "note": "Secondary branch discovered",
+     "parentId": "eng-northstar"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "ns-goal",
+     "to": "ns-workflow",
+     "kind": "expressed-as"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    }
+   ]
+  },
+  {
+   "cursor": 1030,
+   "at": "2026-09-22T10:05:00Z",
+   "summary": "Implementation under way",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.7,
+     "note": "Building"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal in review"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Partial data received"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Model v1.1"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.55,
+     "note": "Interview and workflow observation",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-implementation",
+     "kind": "implementation",
+     "label": "Implementation",
+     "position": {
+      "x": 2.8,
+      "y": 1.8,
+      "depth": 0.5
+     },
+     "salience": 0.92,
+     "note": "Merged - checks green",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-migration",
+     "kind": "migration",
+     "label": "Session migration",
+     "position": {
+      "x": 0.6,
+      "y": 3.2,
+      "depth": 0.5
+     },
+     "salience": 0.74,
+     "note": "Legacy replay compatibility",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-implementation",
+     "kind": "implementation",
+     "label": "Implementation",
+     "position": {
+      "x": 2.8,
+      "y": 1.8,
+      "depth": 0.5
+     },
+     "salience": 0.88,
+     "note": "In progress",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-claims-api",
+     "kind": "component",
+     "label": "Claims API",
+     "position": {
+      "x": 1.6,
+      "y": 0.6,
+      "depth": 1.0
+     },
+     "salience": 0.55,
+     "note": "In progress",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-secondary",
+     "kind": "component",
+     "label": "Secondary coverage",
+     "position": {
+      "x": 4.2,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.6,
+     "note": "Planned from observation",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-customer-replay",
+     "kind": "component",
+     "label": "Customer replay",
+     "position": {
+      "x": 2.2,
+      "y": 3.0,
+      "depth": 1.0
+     },
+     "salience": 0.5,
+     "note": "Sessions recorded",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.62,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-observation",
+     "kind": "observation",
+     "label": "Workflow observation",
+     "position": {
+      "x": -2.0,
+      "y": -4.0,
+      "depth": 0.9
+     },
+     "salience": 0.56,
+     "note": "Secondary branch calls an external lookup",
+     "parentId": "ns-evidence"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-implementation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-validation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-rollout",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-goal",
+     "to": "ns-workflow",
+     "kind": "expressed-as"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-claims-api",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-secondary",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-customer-replay",
+     "kind": "comprises"
+    }
+   ]
+  },
+  {
+   "cursor": 1070,
+   "at": "2026-09-23T16:40:00Z",
+   "summary": "Pilot exercised - 5/10 paths run",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.78,
+     "note": "Pilot running"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal in review"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Data received"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Model v1.1"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.55,
+     "note": "Interview and workflow observation",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-workflow",
+     "kind": "workflow",
+     "label": "Customer workflow",
+     "position": {
+      "x": -1.2,
+      "y": -3.0,
+      "depth": 0.5
+     },
+     "salience": 0.82,
+     "note": "Secondary coverage path raises an exception",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-implementation",
+     "kind": "implementation",
+     "label": "Implementation",
+     "position": {
+      "x": 2.8,
+      "y": 1.8,
+      "depth": 0.5
+     },
+     "salience": 0.92,
+     "note": "Merged - checks green",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-validation",
+     "kind": "validation",
+     "label": "Validation",
+     "position": {
+      "x": 3.4,
+      "y": -1.4,
+      "depth": 0.5
+     },
+     "salience": 0.88,
+     "note": "9/10 paths verified - 1 unresolved",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-migration",
+     "kind": "migration",
+     "label": "Session migration",
+     "position": {
+      "x": 0.6,
+      "y": 3.2,
+      "depth": 0.5
+     },
+     "salience": 0.74,
+     "note": "Legacy replay compatibility",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-rollout",
+     "kind": "rollout",
+     "label": "Production rollout",
+     "position": {
+      "x": 4.6,
+      "y": 3.0,
+      "depth": 0.6
+     },
+     "salience": 0.48,
+     "note": "Held until migration is proven",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.62,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-observation",
+     "kind": "observation",
+     "label": "Workflow observation",
+     "position": {
+      "x": -2.0,
+      "y": -4.0,
+      "depth": 0.9
+     },
+     "salience": 0.56,
+     "note": "Secondary branch calls an external lookup",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-claims-api",
+     "kind": "component",
+     "label": "Claims API",
+     "position": {
+      "x": 1.6,
+      "y": 0.6,
+      "depth": 1.0
+     },
+     "salience": 0.55,
+     "note": "Stable",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-secondary",
+     "kind": "component",
+     "label": "Secondary coverage",
+     "position": {
+      "x": 4.2,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.9,
+     "note": "External record lookup - unresolved",
+     "parentId": "ns-implementation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-customer-replay",
+     "kind": "component",
+     "label": "Customer replay",
+     "position": {
+      "x": 2.2,
+      "y": 3.0,
+      "depth": 1.0
+     },
+     "salience": 0.5,
+     "note": "Sessions recorded",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-pr-491",
+     "kind": "pull-request",
+     "label": "PR #491 - coverage guard",
+     "position": {
+      "x": 3.6,
+      "y": 0.8,
+      "depth": 1.2
+     },
+     "salience": 0.8,
+     "note": "Checks passed - approved",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-checks",
+     "kind": "check-suite",
+     "label": "Nightly checks",
+     "position": {
+      "x": 5.0,
+      "y": 1.6,
+      "depth": 1.2
+     },
+     "salience": 0.58,
+     "note": "9/10 green",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-path-10",
+     "kind": "test-path",
+     "label": "Path 10 - secondary coverage",
+     "position": {
+      "x": 3.8,
+      "y": -2.6,
+      "depth": 1.1
+     },
+     "salience": 0.95,
+     "note": "Unresolved - external record absent",
+     "parentId": "ns-validation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-paths-1-9",
+     "kind": "test-path-group",
+     "label": "Paths 1-9",
+     "position": {
+      "x": 2.6,
+      "y": -2.2,
+      "depth": 1.1
+     },
+     "salience": 0.28,
+     "note": "Verified",
+     "parentId": "ns-validation"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-implementation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-validation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-rollout",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-goal",
+     "to": "ns-workflow",
+     "kind": "expressed-as"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-claims-api",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-secondary",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-customer-replay",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-pr-491",
+     "kind": "produced"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-checks",
+     "kind": "verified-by"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-path-10",
+     "kind": "exercises"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-paths-1-9",
+     "kind": "exercises"
+    }
+   ]
+  },
+  {
+   "cursor": 1110,
+   "at": "2026-09-24T13:20:00Z",
+   "summary": "Path 10 unresolved - external record absent",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 0.86,
+     "note": "One path unresolved",
+     "attention": "notable"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal approved"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Data received"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Model v1.1"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.55,
+     "note": "Interview and workflow observation",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-workflow",
+     "kind": "workflow",
+     "label": "Customer workflow",
+     "position": {
+      "x": -1.2,
+      "y": -3.0,
+      "depth": 0.5
+     },
+     "salience": 0.82,
+     "note": "Secondary coverage path raises an exception",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-implementation",
+     "kind": "implementation",
+     "label": "Implementation",
+     "position": {
+      "x": 2.8,
+      "y": 1.8,
+      "depth": 0.5
+     },
+     "salience": 0.92,
+     "note": "Merged - checks green",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-validation",
+     "kind": "validation",
+     "label": "Validation",
+     "position": {
+      "x": 3.4,
+      "y": -1.4,
+      "depth": 0.5
+     },
+     "salience": 0.88,
+     "note": "9/10 paths verified - 1 unresolved",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-migration",
+     "kind": "migration",
+     "label": "Session migration",
+     "position": {
+      "x": 0.6,
+      "y": 3.2,
+      "depth": 0.5
+     },
+     "salience": 0.74,
+     "note": "Legacy replay compatibility",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-rollout",
+     "kind": "rollout",
+     "label": "Production rollout",
+     "position": {
+      "x": 4.6,
+      "y": 3.0,
+      "depth": 0.6
+     },
+     "salience": 0.48,
+     "note": "Held until migration is proven",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.62,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-observation",
+     "kind": "observation",
+     "label": "Workflow observation",
+     "position": {
+      "x": -2.0,
+      "y": -4.0,
+      "depth": 0.9
+     },
+     "salience": 0.56,
+     "note": "Secondary branch calls an external lookup",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-claims-api",
+     "kind": "component",
+     "label": "Claims API",
+     "position": {
+      "x": 1.6,
+      "y": 0.6,
+      "depth": 1.0
+     },
+     "salience": 0.55,
+     "note": "Stable",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-secondary",
+     "kind": "component",
+     "label": "Secondary coverage",
+     "position": {
+      "x": 4.2,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.9,
+     "note": "External record lookup - unresolved",
+     "parentId": "ns-implementation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-customer-replay",
+     "kind": "component",
+     "label": "Customer replay",
+     "position": {
+      "x": 2.2,
+      "y": 3.0,
+      "depth": 1.0
+     },
+     "salience": 0.5,
+     "note": "Sessions recorded",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-pr-491",
+     "kind": "pull-request",
+     "label": "PR #491 - coverage guard",
+     "position": {
+      "x": 3.6,
+      "y": 0.8,
+      "depth": 1.2
+     },
+     "salience": 0.8,
+     "note": "Checks passed - approved",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-checks",
+     "kind": "check-suite",
+     "label": "Nightly checks",
+     "position": {
+      "x": 5.0,
+      "y": 1.6,
+      "depth": 1.2
+     },
+     "salience": 0.58,
+     "note": "9/10 green",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-path-10",
+     "kind": "test-path",
+     "label": "Path 10 - secondary coverage",
+     "position": {
+      "x": 3.8,
+      "y": -2.6,
+      "depth": 1.1
+     },
+     "salience": 0.95,
+     "note": "Unresolved - external record absent",
+     "parentId": "ns-validation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-paths-1-9",
+     "kind": "test-path-group",
+     "label": "Paths 1-9",
+     "position": {
+      "x": 2.6,
+      "y": -2.2,
+      "depth": 1.1
+     },
+     "salience": 0.28,
+     "note": "Verified",
+     "parentId": "ns-validation"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-implementation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-validation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-rollout",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-goal",
+     "to": "ns-workflow",
+     "kind": "expressed-as"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-claims-api",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-secondary",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-customer-replay",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-pr-491",
+     "kind": "produced"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-checks",
+     "kind": "verified-by"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-path-10",
+     "kind": "exercises"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-paths-1-9",
+     "kind": "exercises"
+    }
+   ]
+  },
+  {
+   "cursor": 1150,
+   "at": "2026-09-25T08:05:00Z",
+   "summary": "Overnight - implementation merged; one engagement needs judgment",
+   "surfaces": [
+    {
+     "id": "surface-orientation",
+     "label": "Current world",
+     "objectIds": [
+      "eng-northstar",
+      "eng-helix",
+      "eng-acme",
+      "eng-internal"
+     ]
+    },
+    {
+     "id": "surface-northstar",
+     "label": "Northstar pilot",
+     "objectIds": [
+      "ns-goal",
+      "ns-evidence",
+      "ns-workflow",
+      "ns-implementation",
+      "ns-validation",
+      "ns-migration",
+      "ns-rollout"
+     ]
+    }
+   ],
+   "objects": [
+    {
+     "id": "eng-northstar",
+     "kind": "engagement",
+     "label": "Northstar Health",
+     "position": {
+      "x": 5.2,
+      "y": 1.4,
+      "depth": 0.5
+     },
+     "salience": 1.0,
+     "note": "Claims pilot - one path unresolved",
+     "attention": "notable"
+    },
+    {
+     "id": "eng-helix",
+     "kind": "engagement",
+     "label": "Helix Corp",
+     "position": {
+      "x": -3.4,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.2,
+     "note": "Renewal booked overnight"
+    },
+    {
+     "id": "eng-acme",
+     "kind": "engagement",
+     "label": "Acme Logistics",
+     "position": {
+      "x": -2.2,
+      "y": -2.8,
+      "depth": 1.0
+     },
+     "salience": 0.18,
+     "note": "Customer data arrived overnight"
+    },
+    {
+     "id": "eng-internal",
+     "kind": "initiative",
+     "label": "Pricing model study",
+     "position": {
+      "x": 2.6,
+      "y": -3.0,
+      "depth": 1.0
+     },
+     "salience": 0.16,
+     "note": "Model v2 drafted overnight"
+    },
+    {
+     "id": "ns-goal",
+     "kind": "goal",
+     "label": "Customer goal",
+     "position": {
+      "x": -2.6,
+      "y": 2.4,
+      "depth": 0.4
+     },
+     "salience": 0.62,
+     "note": "Straight-through claims without losing coverage accuracy",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-evidence",
+     "kind": "evidence",
+     "label": "Customer evidence",
+     "position": {
+      "x": -3.0,
+      "y": -1.8,
+      "depth": 0.4
+     },
+     "salience": 0.55,
+     "note": "Interview and workflow observation",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-workflow",
+     "kind": "workflow",
+     "label": "Customer workflow",
+     "position": {
+      "x": -1.2,
+      "y": -3.0,
+      "depth": 0.5
+     },
+     "salience": 0.82,
+     "note": "Secondary coverage path raises an exception",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-implementation",
+     "kind": "implementation",
+     "label": "Implementation",
+     "position": {
+      "x": 2.8,
+      "y": 1.8,
+      "depth": 0.5
+     },
+     "salience": 0.92,
+     "note": "Merged - checks green",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-validation",
+     "kind": "validation",
+     "label": "Validation",
+     "position": {
+      "x": 3.4,
+      "y": -1.4,
+      "depth": 0.5
+     },
+     "salience": 0.88,
+     "note": "9/10 paths verified - 1 unresolved",
+     "parentId": "eng-northstar",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-migration",
+     "kind": "migration",
+     "label": "Session migration",
+     "position": {
+      "x": 0.6,
+      "y": 3.2,
+      "depth": 0.5
+     },
+     "salience": 0.74,
+     "note": "Legacy replay compatibility",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-rollout",
+     "kind": "rollout",
+     "label": "Production rollout",
+     "position": {
+      "x": 4.6,
+      "y": 3.0,
+      "depth": 0.6
+     },
+     "salience": 0.48,
+     "note": "Held until migration is proven",
+     "parentId": "eng-northstar"
+    },
+    {
+     "id": "ns-interview",
+     "kind": "interview",
+     "label": "Interview - clinical ops lead",
+     "position": {
+      "x": -4.2,
+      "y": -1.2,
+      "depth": 0.9
+     },
+     "salience": 0.62,
+     "note": "Secondary coverage is mandatory",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-observation",
+     "kind": "observation",
+     "label": "Workflow observation",
+     "position": {
+      "x": -2.0,
+      "y": -4.0,
+      "depth": 0.9
+     },
+     "salience": 0.56,
+     "note": "Secondary branch calls an external lookup",
+     "parentId": "ns-evidence"
+    },
+    {
+     "id": "ns-claims-api",
+     "kind": "component",
+     "label": "Claims API",
+     "position": {
+      "x": 1.6,
+      "y": 0.6,
+      "depth": 1.0
+     },
+     "salience": 0.55,
+     "note": "Stable",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-secondary",
+     "kind": "component",
+     "label": "Secondary coverage",
+     "position": {
+      "x": 4.2,
+      "y": 2.6,
+      "depth": 1.0
+     },
+     "salience": 0.9,
+     "note": "External record lookup - unresolved",
+     "parentId": "ns-implementation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-customer-replay",
+     "kind": "component",
+     "label": "Customer replay",
+     "position": {
+      "x": 2.2,
+      "y": 3.0,
+      "depth": 1.0
+     },
+     "salience": 0.5,
+     "note": "Sessions recorded",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-pr-491",
+     "kind": "pull-request",
+     "label": "PR #491 - coverage guard",
+     "position": {
+      "x": 3.6,
+      "y": 0.8,
+      "depth": 1.2
+     },
+     "salience": 0.8,
+     "note": "Checks passed - approved",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-checks",
+     "kind": "check-suite",
+     "label": "Nightly checks",
+     "position": {
+      "x": 5.0,
+      "y": 1.6,
+      "depth": 1.2
+     },
+     "salience": 0.58,
+     "note": "9/10 green",
+     "parentId": "ns-implementation"
+    },
+    {
+     "id": "ns-path-10",
+     "kind": "test-path",
+     "label": "Path 10 - secondary coverage",
+     "position": {
+      "x": 3.8,
+      "y": -2.6,
+      "depth": 1.1
+     },
+     "salience": 0.95,
+     "note": "Unresolved - external record absent",
+     "parentId": "ns-validation",
+     "attention": "requires-judgment"
+    },
+    {
+     "id": "ns-paths-1-9",
+     "kind": "test-path-group",
+     "label": "Paths 1-9",
+     "position": {
+      "x": 2.6,
+      "y": -2.2,
+      "depth": 1.1
+     },
+     "salience": 0.28,
+     "note": "Verified",
+     "parentId": "ns-validation"
+    }
+   ],
+   "relationships": [
+    {
+     "from": "eng-northstar",
+     "to": "ns-goal",
+     "kind": "intends"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-evidence",
+     "kind": "informed-by"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-implementation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-validation",
+     "kind": "comprises"
+    },
+    {
+     "from": "eng-northstar",
+     "to": "ns-rollout",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-goal",
+     "to": "ns-workflow",
+     "kind": "expressed-as"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-interview",
+     "kind": "records"
+    },
+    {
+     "from": "ns-evidence",
+     "to": "ns-observation",
+     "kind": "records"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-claims-api",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-secondary",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-customer-replay",
+     "kind": "comprises"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-pr-491",
+     "kind": "produced"
+    },
+    {
+     "from": "ns-implementation",
+     "to": "ns-checks",
+     "kind": "verified-by"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-path-10",
+     "kind": "exercises"
+    },
+    {
+     "from": "ns-validation",
+     "to": "ns-paths-1-9",
+     "kind": "exercises"
+    }
+   ]
+  }
+ ],
+ "artifacts": [
+  {
+   "ref": "art-interview-quote",
+   "kind": "quotation",
+   "title": "Interview - clinical ops lead",
+   "boundObject": "ns-interview",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "Secondary coverage is not optional."
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "\"Secondary coverage is not optional. If the external record is missing we hold the claim for a human, we never auto-deny.\" - clinical operations lead, 2026-09-17."
+    },
+    {
+     "level": "source",
+     "mediaType": "text/plain",
+     "text": "INTERVIEW TRANSCRIPT (EXCERPT) - Clinical operations lead, Northstar Health, 2026-09-17\n\nQ: What happens today when a claim includes secondary coverage?\nA: Secondary coverage is not optional. If the external record is missing we hold the claim for a human, we never auto-deny.\n\nQ: How often is the external record missing?\nA: Often enough to matter. The provider has no availability commitment; outages happen monthly.\n\nQ: What should automation do in that case?\nA: Hold and route to review. Speed matters, but a wrong denial costs more than a delay."
+    }
+   ]
+  },
+  {
+   "ref": "art-workflow-fragment",
+   "kind": "document",
+   "title": "Customer workflow - secondary branch",
+   "boundObject": "ns-workflow",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/html",
+     "text": "<p>When <strong>secondary coverage</strong> is present, the workflow calls <code>lookupSecondaryCoverage(external: true)</code> and waits for the record before deciding.</p>"
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/html",
+     "text": "<p>The customer workflow has two branches. The primary branch is fully internal. <strong>The secondary branch calls an external record lookup and blocks until it answers</strong>; if the record is absent the claim is held for human review.</p>"
+    },
+    {
+     "level": "source",
+     "mediaType": "text/html",
+     "text": "<h3>Customer workflow - intake through decision</h3><p><strong>Step 1.</strong> Claim arrives with structured coverage fields.</p><p><strong>Step 2.</strong> Primary coverage validated against the internal policy engine (sub-second).</p><p id=\"hit\"><strong>Step 3.</strong> <mark>When secondary coverage is present, the workflow calls <code>lookupSecondaryCoverage(external: true)</code> and waits for the record before deciding.</mark> The provider is called synchronously; there is no timeout branch.</p><p><strong>Step 4.</strong> If the record is present, auto-adjudicate. <strong>If the record is absent, hold the claim for human review.</strong> The hold queue is reviewed within one business day.</p><p><strong>Step 5.</strong> Decision and evidence are written to the claim record.</p>"
+    }
+   ]
+  },
+  {
+   "ref": "art-observation-note",
+   "kind": "document",
+   "title": "Workflow observation note",
+   "boundObject": "ns-observation",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "The secondary branch is real and synchronous."
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "Observed 14 claims end to end. 9 used the primary branch only; 5 included secondary coverage and all 5 waited on the external lookup (median 1.8 s, max 41 s)."
+    },
+    {
+     "level": "source",
+     "mediaType": "text/plain",
+     "text": "WORKFLOW OBSERVATION - 2026-09-19, Northstar claims intake (shadow session)\n\nMethod: passive observation of 14 consecutive claims with operations staff.\n\nPrimary branch: 9/14 claims, fully internal, median 0.6 s to decision.\nSecondary branch: 5/14 claims. Each called the external record lookup synchronously.\n  Lookup latency: median 1.8 s, p95 12 s, max 41 s.\n  Record present: 4/5. Record ABSENT: 1/5 - claim held for human review, resolved next morning.\n\nInterview cross-check: staff confirmed the hold path is correct behavior, not an error.\nImplication: automation must treat an absent record as a hold condition, never a denial."
+    }
+   ]
+  },
+  {
+   "ref": "art-diff-491",
+   "kind": "diff",
+   "title": "PR #491 - coverage guard",
+   "boundObject": "ns-pr-491",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "1 file changed - +34 -8"
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "src/claims/secondary.rs - guard the external lookup with a bounded wait and an explicit HoldForReview outcome instead of an exception."
+    },
+    {
+     "level": "source",
+     "mediaType": "text/x-diff",
+     "text": "--- a/src/claims/secondary.rs\n+++ b/src/claims/secondary.rs\n@@ -18,13 +18,34 @@ pub fn adjudicate(claim: &Claim) -> Decision {\n-    let record = external_registry\n-        .lookup(claim.coverage.secondary.as_ref())\n-        .expect(\"secondary record must exist\");\n-    if record.matches_policy(&claim.policy) {\n-        Decision::Approve(record.summary())\n-    } else {\n-        Decision::Deny(record.reason())\n-    }\n+    let Some(secondary) = claim.coverage.secondary.as_ref() else {\n+        return Decision::Approve(primary_summary(claim));\n+    };\n+\n+    // The provider carries no availability commitment: an absent record is a\n+    // HOLD, never a denial (interview 2026-09-17, observation 2026-09-19).\n+    let record = match external_registry.lookup_bounded(secondary, WAIT_LIMIT) {\n+        LookupOutcome::Present(record) => record,\n+        LookupOutcome::Absent | LookupOutcome::Timeout => {\n+            telemetry::hold(secondary);\n+            return Decision::HoldForReview {\n+                reason: HoldReason::ExternalRecordUnavailable,\n+                evidence: telemetry::last_lookup_trace(),\n+            };\n+        }\n+    };\n+\n+    if record.matches_policy(&claim.policy) {\n+        Decision::Approve(record.summary())\n+    } else {\n+        Decision::Deny(record.reason())\n+    }"
+    }
+   ]
+  },
+  {
+   "ref": "art-checks-table",
+   "kind": "table",
+   "title": "Nightly checks - 10 paths",
+   "boundObject": "ns-checks",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/csv",
+     "text": "path,result,duration_ms\n1,pass,640"
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/csv",
+     "text": "path,result,duration_ms\n1,pass,640\n2,pass,715\n10,UNRESOLVED,"
+    },
+    {
+     "level": "source",
+     "mediaType": "text/csv",
+     "text": "path,name,result,duration_ms,checked_at\n1,primary-simple,pass,640,2026-09-25T02:01Z\n2,primary-multi-line,pass,715,2026-09-25T02:02Z\n3,primary-attachment,pass,688,2026-09-25T02:03Z\n4,primary-correction,pass,701,2026-09-25T02:04Z\n5,secondary-record-present,pass,2410,2026-09-25T02:06Z\n6,secondary-policy-match,pass,2280,2026-09-25T02:07Z\n7,secondary-partial-record,pass,2350,2026-09-25T02:08Z\n8,secondary-retry,pass,2620,2026-09-25T02:10Z\n9,secondary-late-record,pass,3140,2026-09-25T02:12Z\n10,secondary-record-absent,UNRESOLVED,,2026-09-25T02:14Z"
+    }
+   ]
+  },
+  {
+   "ref": "art-checks-chart",
+   "kind": "chart",
+   "title": "Validation - duration by path",
+   "boundObject": "ns-validation",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "application/json",
+     "text": "{\"series\":[{\"point\":10,\"value\":0}],\"note\":\"9/10 verified\"}"
+    },
+    {
+     "level": "summary",
+     "mediaType": "application/json",
+     "text": "{\"series\":[{\"point\":1,\"value\":640},{\"point\":2,\"value\":715},{\"point\":3,\"value\":688},{\"point\":4,\"value\":701},{\"point\":5,\"value\":2410},{\"point\":6,\"value\":2280},{\"point\":7,\"value\":2350},{\"point\":8,\"value\":2620},{\"point\":9,\"value\":3140},{\"point\":10,\"value\":0}],\"note\":\"path 10 unresolved\"}"
+    },
+    {
+     "level": "source",
+     "mediaType": "application/json",
+     "text": "{\"series\":[{\"point\":1,\"label\":\"primary-simple\",\"value\":640,\"result\":\"pass\"},{\"point\":2,\"label\":\"primary-multi-line\",\"value\":715,\"result\":\"pass\"},{\"point\":3,\"label\":\"primary-attachment\",\"value\":688,\"result\":\"pass\"},{\"point\":4,\"label\":\"primary-correction\",\"value\":701,\"result\":\"pass\"},{\"point\":5,\"label\":\"secondary-record-present\",\"value\":2410,\"result\":\"pass\"},{\"point\":6,\"label\":\"secondary-policy-match\",\"value\":2280,\"result\":\"pass\"},{\"point\":7,\"label\":\"secondary-partial-record\",\"value\":2350,\"result\":\"pass\"},{\"point\":8,\"label\":\"secondary-retry\",\"value\":2620,\"result\":\"pass\"},{\"point\":9,\"label\":\"secondary-late-record\",\"value\":3140,\"result\":\"pass\"},{\"point\":10,\"label\":\"secondary-record-absent\",\"value\":0,\"result\":\"UNRESOLVED\"}],\"note\":\"durations in ms; path 10 never completed because the external record was absent\"}"
+    }
+   ]
+  },
+  {
+   "ref": "art-external-api",
+   "kind": "document",
+   "title": "External record API - availability contract",
+   "boundObject": "ns-secondary",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "No availability commitment exists."
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "GET /records/{coverageId} returns 200 with the record, 404 when absent, 503 during provider outages. The contract documents no uptime commitment and no timeout guarantee."
+    },
+    {
+     "level": "source",
+     "mediaType": "text/html",
+     "text": "<h3>External record API - provider contract (excerpt)</h3><p><strong>GET /records/{coverageId}</strong></p><ul><li><strong>200</strong> - record present (JSON body, see schema)</li><li><strong>404</strong> - record absent; <em>absence is a valid steady state, not an error</em></li><li><strong>503</strong> - provider outage; observed monthly, duration minutes to hours</li></ul><p><mark>Availability: no uptime commitment is documented. No timeout guarantee is documented.</mark> Consumers must tolerate indefinite absence.</p><p>Rate limits: 10 rps per client key. Auth: client certificate, rotated quarterly.</p>"
+    }
+   ]
+  },
+  {
+   "ref": "art-pilot-report",
+   "kind": "pdf",
+   "title": "Claims pilot report - draft",
+   "boundObject": "eng-northstar",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "Pilot report - draft, 1 page."
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "Draft report: implementation merged, checks 9/10, path 10 unresolved pending the external-record condition; recommends a read-through compatibility layer."
+    },
+    {
+     "level": "source",
+     "mediaType": "application/pdf",
+     "bytesBase64": "JVBERi0xLjQKMSAwIG9iaiA8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4gZW5kb2JqCjIgMCBvYmogPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4gZW5kb2JqCjMgMCBvYmogPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvQ29udGVudHMgNSAwIFIgPj4gZW5kb2JqCjQgMCBvYmogPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+IGVuZG9iago1IDAgb2JqIDw8IC9MZW5ndGggNjU1ID4+CnN0cmVhbQpCVAovRjEgMTYgVGYgNzIgNzgwIFRkIChOb3J0aHN0YXIgSGVhbHRoKSBUagovRjEgMTEgVGYgNzIgNzU4IFRkIChDbGFpbXMgQXV0b21hdGlvbiBQaWxvdCBSZXBvcnQgLSBEcmFmdCkgVGoKL0YxIDkgVGYgNzIgNzQyIFRkICgyMDI2LTA5LTI1KSBUagovRjEgMTAgVGYgNzIgNzAwIFRkIChTY29wZTogc3RyYWlnaHQtdGhyb3VnaCBjbGFpbXMgd2l0aCBzZWNvbmRhcnkgY292ZXJhZ2UgYWNjdXJhY3kuKSBUagovRjEgMTAgVGYgNzIgNjgyIFRkIChTdGF0dXM6IGltcGxlbWVudGF0aW9uIG1lcmdlZCwgY2hlY2tzIDkvMTAgZ3JlZW4uKSBUagovRjEgMTAgVGYgNzIgNjY0IFRkIChVbnJlc29sdmVkOiBwYXRoIDEwIChzZWNvbmRhcnkgY292ZXJhZ2UpIHJlcXVpcmVzIHRoZSBleHRlcm5hbCkgVGoKL0YxIDEwIFRmIDcyIDY1MCBUZCAocmVjb3JkIGxvb2t1cDsgdGhlIHByb3ZpZGVyIGNvbnRyYWN0IGhhcyBubyBhdmFpbGFiaWxpdHkgY2xhdXNlLikgVGoKL0YxIDEwIFRmIDcyIDYyMCBUZCAoUmVjb21tZW5kYXRpb246IHJlYWQtdGhyb3VnaCBjb21wYXRpYmlsaXR5IGxheWVyIGJlaGluZCB0aGUpIFRqCi9GMSAxMCBUZiA3MiA2MDYgVGQgKGV4aXN0aW5nIHdvcmtmbG93OyBkbyBub3QgY2hhbmdlIHRoZSBjdXN0b21lciB3b3JrZmxvdy4pIFRqCkVUCmVuZHN0cmVhbSBlbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzMTEgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgoxMDE3CiUlRU9G"
+    }
+   ]
+  },
+  {
+   "ref": "art-assumption-note",
+   "kind": "quotation",
+   "title": "Initial assumption",
+   "boundObject": "ns-assumption",
+   "levels": [
+    {
+     "level": "minimal",
+     "mediaType": "text/plain",
+     "text": "Assumed standard claims only."
+    },
+    {
+     "level": "summary",
+     "mediaType": "text/plain",
+     "text": "The pilot was scoped assuming standard claims only: no external lookups, no secondary coverage branch."
+    },
+    {
+     "level": "source",
+     "mediaType": "text/plain",
+     "text": "SCOPING NOTE - 2026-09-15\n\nWorking assumption: claims follow the standard path; coverage is single-line; all data is internal.\n\nBasis: initial customer summary deck (slide 4). Not yet verified against operations."
+    }
+   ]
+  }
+ ]
+}

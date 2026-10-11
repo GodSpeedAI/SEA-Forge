@@ -1,0 +1,110 @@
+cargo test -p "sea-forge-core" --locked ""
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-core v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-core)
+    Finished `test` profile [unoptimized] target(s) in 6.25s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_core-5d4b8814e94fb321)
+
+running 17 tests
+test approvals::tests::a_cell_with_no_journal_has_no_approvals_rather_than_an_error ... ok
+test canonical::tests::keys_are_not_nfc_normalized_documented_asymmetry ... ok
+test canonical::tests::arrays_keep_order_and_nested_objects_sort ... ok
+test approvals::tests::a_status_lookup_does_not_answer_from_another_case ... ok
+test canonical::tests::keys_are_sorted_and_values_nfc_normalized ... ok
+test approvals::tests::a_later_decision_supersedes_the_original_request ... ok
+test approvals::tests::resolving_one_case_does_not_clear_the_same_ordinal_in_another ... ok
+test canonical::tests::nfc_equivalent_spellings_hash_identically ... ok
+test ids::tests::ids_follow_the_persisted_grammar ... ok
+test path::tests::id_segment_grammar ... ok
+test path::tests::accepts_canonical_and_bare_dot ... ok
+test path::tests::normalization_collapses_aliases ... ok
+test path::tests::prefix_is_segment_aware ... ok
+test path::tests::rejects_traversal_and_ambiguous_spellings ... ok
+test types::tests::agent_probe_operation_uses_additive_tag ... ok
+test types::tests::operation_uses_tagged_snake_case_json ... ok
+test types::tests::settlement_status_round_trips ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/origin_ref_boundary.rs (target/debug/deps/origin_ref_boundary-af63f895409a427a)
+
+running 2 tests
+test legacy_origin_ref_without_domain_model_ref_round_trips ... ok
+test old_reader_rejects_desired_outcome_variant_cleanly ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/projection_kind_boundary.rs (target/debug/deps/projection_kind_boundary-4771a1f59c1b19ef)
+
+running 6 tests
+test old_reader_rejects_new_variants_cleanly_without_panic ... ok
+test new_variants_round_trip_in_current_reader ... ok
+test self_model_error_class_is_distinct ... ok
+test snapshot_id_uses_smsnap_prefix ... ok
+test unknown_projection_kind_string_is_rejected_not_silently_accepted ... ok
+test legacy_records_still_deserialize_in_old_reader ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/version_skew.rs (target/debug/deps/version_skew-93e31afe1876a326)
+
+running 1 test
+test exact_v01_minimum_record_readers_ignore_v02_additive_fields ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+core gate exit=0

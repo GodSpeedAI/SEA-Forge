@@ -1,0 +1,10 @@
+2026-10-06 04:25:33 UTC
+               total        used        free      shared  buff/cache   available
+Mem:            7942        5390         370          76        2449        2551
+Swap:          12288       10402        1885
+    PID    PPID STAT     ELAPSED COMMAND
+      1       0 Ss         00:00 codex
+      2       1 S          00:00 bash
+      5       2 R          00:00 ps
+      6       2 R          00:00 sort
+GOCACHE exists

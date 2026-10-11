@@ -1,0 +1,25 @@
+PREFLIGHT: focused poller image RED; UTC, resources, competing compilers, and seven source hashes
+UTC=2026-10-07T18:17:38Z
+RESOURCE_SOURCE=/proc/meminfo; available RAM and free swap in KiB
+MemAvailableKiB=3281160
+SwapFreeKiB=11346088
+               total        used        free      shared  buff/cache   available
+Mem:            7944        4740         364         143        3175        3204
+Swap:          12288        1207       11080
+COMPETING_COMPILER_CHECK: ps -eo pid,stat,comm; reject go/compile/link/rustc/cargo processes
+    PID STAT COMMAND
+      1 Ss   codex
+      2 S    bash
+      6 R    ps
+COMPETING_COMPILERS=none
+GO_VERSION
+go version go1.27.1 linux/amd64
+SOURCE_HASHES: two new files plus five frozen files
+32f57bd8aa6edb9c20b645e3138b4b9e9fc02076518a34587253a3af31af328e  apps/godspeed-casework-go/internal/server/run_observation_poller_image.go
+8e741f7604f49bf28674e669f820ec9e696abd84ad4c60bb2a145b36123496f8  apps/godspeed-casework-go/internal/server/run_observation_manager_retained_image_test.go
+fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d  apps/godspeed-casework-go/internal/server/run_observation_manager.go
+af2dfcb8c83d8a53186d8e446a11de35ce51d45cac74461ea3c3f971d0da30c4  apps/godspeed-casework-go/internal/server/run_observation_manager_test.go
+2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd  apps/godspeed-casework-go/internal/server/run_observation_retained_version.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7  apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go
+4c70bc853ae73f4025b177b5fb505d8a456c89c41b1b13ac86faed5cba9620e7  apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 go test -v -race -count=1 -parallel=1 -timeout=60s ./internal/server -run ^TestRunObservationPollerImage

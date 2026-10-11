@@ -1,0 +1,3 @@
+# Final review wording erratum
+
+This additive correction applies to `run-observation-initial-lease-bookkeeping-final-independent-review-oct09.md` (SHA-256 `58a7073cb25f1f2bf52261d2879344ae9df6fad9548d0dacb5a224ed78fae726`). Its final sentence incorrectly says that no tests were made “for this review.” The three independent gate runs documented in that review were performed for this review under the explicit grants. The intended statement is: no source edits, formatter writes, or Git changes were made; the three authorized test/gate runs are the evidence reported above. No other conclusion or evidence is changed.

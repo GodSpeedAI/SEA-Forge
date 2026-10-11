@@ -1,0 +1,12 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -tags=live -run ^TestNativeEventSourceResyncRetryAndRetentionReplay$ -count=1 ./internal/server
+--- FAIL: TestNativeEventSourceResyncRetryAndRetentionReplay (47.36s)
+    native_events_live_test.go:205: run phase1 through the browser's native EventSource path: agent-browser eval --stdin: exit status 1 (✗ Evaluation error: TypeError: Cannot read properties of null (reading 'length')
+            at phaseOne (http://127.0.0.1:43335/e2e/native-events-live.ts:93:39)
+            at async <anonymous>:3:25) (diagnostics: /tmp/sea-t08-native-diagnostic-319413266)
+    native_events_live_test.go:132: preserved native EventSource diagnostics at /tmp/sea-t08-native-diagnostic-319413266
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-3470350203/cell
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-2106866849/cell
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	48.033s
+FAIL
+EXIT_CODE=1

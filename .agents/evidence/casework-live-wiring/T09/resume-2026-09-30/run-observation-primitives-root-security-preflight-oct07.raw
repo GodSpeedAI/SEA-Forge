@@ -1,0 +1,8 @@
+Wed Oct  7 22:43:09 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:         8135492     5018668      236788      597204     3673836     3116824
+Swap:       12582912     2993072     9589840
+617dac3ddf78b660ca95f1c7a53fdf59b87653d5
+2f3871937b16dd663af46b0d166f349978a517a0bf581ff681b68fb226585fef  .gitleaksignore
+608a687e53ba365fc743ae6c8d2ded7a1c006e8c6b0f5f209109d055f6e5ad05  .gitleaks.toml
+a01e407282ee11342884381f4a9ef59a7c346c981775652cfc2079c92dedcbcd  docs/security/gitleaks-exceptions.md

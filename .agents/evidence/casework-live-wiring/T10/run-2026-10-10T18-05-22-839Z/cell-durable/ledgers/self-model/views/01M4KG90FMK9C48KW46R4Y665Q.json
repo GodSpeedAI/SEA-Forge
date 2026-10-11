@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KG90FMK9C48KW46R4Y665Q",
+  "source_entry_ulids": [
+    "01M4KG90FMK9C48KW46R4Y665Q"
+  ],
+  "source_payload_hash": "sha256:f6ca50bdc7fe34511a9a971e0cab04ff1868cfc7f2bfb32d22875d54fae93cb3",
+  "view_path": "/tmp/t10-live-KNh2in/cell/self-model/realization/cell.json",
+  "view_sha256": "sha256:221ec34fd7f95b9f2d7e2cc029529bddb8c784b9df05b6ddb138281518525e00",
+  "status": "current",
+  "failure_class": null
+}

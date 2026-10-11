@@ -1,0 +1,45 @@
+{
+  "construction": "synthetic ATTACK route state (route_id t23-t6-attack) with several unprobed operations, the boundary interval still open (e2e-happy@4 settled, r*-1 unprobed), and useful candidate moves proposed; the frozen selection-policy-v1 was invoked as-is with payment=0 (variant A) and payment=1 (variant B); all attack records are honestly marked synthetic",
+  "expected": "the route stops honestly (retains nothing under payment 0) or selects an affordable alternative (exactly one move under payment 1); no hidden budget override",
+  "expected_vs_observed": "MATCH - variant A (payment 0): retained='', all 3 candidates ineligible with payment reasons ['probe cost 1 unit does not fit the remaining payment 0']; variant B (payment 1): retained='t6-attack-cand-1' of ['t6-attack-cand-1', 't6-attack-cand-2', 't6-attack-cand-3'] (exactly one affordable move)",
+  "id": "T6-budget-exhaustion",
+  "marked": "ATTACK \u2014 never part of the route ledger",
+  "note": "in real driving, payment 0 is the probe_budget_exhausted stop condition the route itself records",
+  "observed": "variant A (payment 0): retained='', all 3 candidates ineligible with payment reasons ['probe cost 1 unit does not fit the remaining payment 0']; variant B (payment 1): retained='t6-attack-cand-1' of ['t6-attack-cand-1', 't6-attack-cand-2', 't6-attack-cand-3'] (exactly one affordable move)",
+  "policy_version": "selection-policy-v1",
+  "variant_a_selection_record": {
+    "correlation_id": "t23-t6-attack",
+    "decided_at_utc": "2026-09-19T02:34:19.834098+00:00",
+    "eligible_candidate_ids": [],
+    "ineligible": [
+      {
+        "candidate_id": "t6-attack-cand-1",
+        "reason": "probe cost 1 unit does not fit the remaining payment 0"
+      },
+      {
+        "candidate_id": "t6-attack-cand-2",
+        "reason": "probe cost 1 unit does not fit the remaining payment 0"
+      },
+      {
+        "candidate_id": "t6-attack-cand-3",
+        "reason": "probe cost 1 unit does not fit the remaining payment 0"
+      }
+    ],
+    "iteration": 0,
+    "policy_version": "selection-policy-v1",
+    "retained_candidate_id": ""
+  },
+  "variant_b_selection_record": {
+    "correlation_id": "t23-t6-attack",
+    "decided_at_utc": "2026-09-19T02:34:19.834190+00:00",
+    "eligible_candidate_ids": [
+      "t6-attack-cand-1",
+      "t6-attack-cand-2",
+      "t6-attack-cand-3"
+    ],
+    "ineligible": [],
+    "iteration": 0,
+    "policy_version": "selection-policy-v1",
+    "retained_candidate_id": "t6-attack-cand-1"
+  }
+}

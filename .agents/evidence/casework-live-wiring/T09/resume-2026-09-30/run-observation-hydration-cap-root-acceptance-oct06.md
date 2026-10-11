@@ -1,0 +1,9 @@
+# Hydration cap root acceptance
+
+Root read complete implementation, fixture changes and independent final source/runtime verdicts. Final production3dfa2993004676a13b1dd9c449965c3b531a199885db325a6fd14941a90f501a and fixture0e3b1774303fa6b155269e45adb0703262b789611a81993d4c2b63bd9e8140f9 match actual files. Root independently compared all twelve GREEN preflight/run/exit archives against their actual `/tmp` originals: byte-exact, all test exits0. Sessions72410/29681/42743/54587 joined; focused race/full server race/full module race/canonical format-vet-tests passed.
+
+Root accepts this private helper prerequisite: exact1MiB JSON cap, globally oldest parsed-time/full-ID prefix removal, bounded binary exact-size search, correct counts including emptied runs and prior ring omissions, unchanged caller data and independent output arrays/pointers, typed unavailable/no partial output for assigned invalid bounds/counts/times or irreducible metadata. Positive post-success assertions reached in GREEN. Negative tests now exercise implementation validation rather than the old stub alone.
+
+Scope: caller must supply a well-formed DTO with valid enums/identities and nonnil arrays. The helper preserves nil slice shape and is not a complete wire validator. No production manager callsite is wired or approved. JSON envelope cap is not a total transport/heap bound. Server/module gates used authorized local listening; canonical scratch used JUST_TEMPDIR=/tmp. Initial source rejection/rereview and expected RED remain preserved. No live manager/SSE/UI or T09 settlement claim.
+
+Next: Graft refresh, explicit unit checkpoint with normal hooks and meaningful push, then continue manager/UI independent design and implementation loops. Eleven excluded staged identities and operator hooks preserved; debt remains unstaged.

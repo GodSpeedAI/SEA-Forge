@@ -1,0 +1,140 @@
+{
+  "journey_id": "CJ12",
+  "canonical_journey_name": "Transfer and Adopt Governed Assets",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "15.1",
+    "15.2",
+    "15.3",
+    "15.4",
+    "15.5",
+    "15.6",
+    "15.7"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 5,
+    "variant": 1,
+    "composition": 0
+  },
+  "implementation_maturity": {
+    "specified": 0,
+    "implemented": 1,
+    "exercised": 6,
+    "evidenced": 0
+  },
+  "actor_and_role": {
+    "primary_actor": "cell_administrator",
+    "primary_role": "cell administrator",
+    "allowed_roles": [
+      "cell administrator",
+      "operator"
+    ]
+  },
+  "starting_state": "A cell administrator needs to export selected records or assets, inspect an external bundle, import it, or decide whether imported content may become locally usable.",
+  "preconditions": [
+    "Explicit source and destination cells",
+    "selected records, runs, templates, environments, or descriptors",
+    "a verifiable manifest, hashes, versions, size bounds, dependencies, and local authority context."
+  ],
+  "intention": "Move verifiable records and assets across cell boundaries while preserving provenance and withholding local usability until governed adoption.",
+  "job": "Preview and export a bounded bundle, verify and import it atomically, keep imported content isolated and inert, and deliberately adopt or reject each asset.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "Bundle export and verification",
+    "atomic import",
+    "imported-history isolation",
+    "inactive-asset enforcement",
+    "manifest inspection",
+    "compatibility checks",
+    "governed template or environment adoption",
+    "and bounded rejection."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_unavailable_record_routes"
+    ],
+    "api": [],
+    "cli": [
+      "cli_federation_family",
+      "sea-forge-cell"
+    ],
+    "agent": []
+  },
+  "expected_consequential_state_transitions": [
+    "Local selected content becomes an export bundle",
+    "verified external bundle becomes isolated imported history and inert assets",
+    "an inert verified asset becomes locally usable only after adoption",
+    "invalid input becomes rejected with the existing cell unchanged."
+  ],
+  "required_artifacts_and_evidence": [
+    "Export selections and previews",
+    "bundle manifests",
+    "hashes",
+    "source-cell identity",
+    "imported records and runs",
+    "inactive templates and environments",
+    "compatibility findings",
+    "adoption records",
+    "provenance links",
+    "and rejection evidence."
+  ],
+  "settlement_condition": "The transfer is either rejected atomically or admitted with provenance intact and assets inert; a separately authorized adoption is required before local usability.",
+  "expected_next_decisions_and_affordances": [
+    "Adopt a compatible asset",
+    "keep it inert",
+    "repair or replace an incompatible bundle",
+    "reject it",
+    "or export another bounded selection."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Reject tampered, incomplete, oversized, semantically invalid, or incompatible bundles before partial admission",
+    "leave the destination unchanged",
+    "repeat verification after repair",
+    "never count imported history as local capability proof."
+  ],
+  "expected_unavailable_states": [
+    "workbench federation surface (/federation) is preview-only"
+  ]
+}

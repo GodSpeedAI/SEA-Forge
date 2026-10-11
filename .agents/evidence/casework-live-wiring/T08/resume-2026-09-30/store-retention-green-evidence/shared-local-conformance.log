@@ -1,0 +1,23 @@
+COMMAND: bun test src/adapters/local/localAdapter.test.ts
+bun test v1.4.0 (34cbb9a40)
+
+src/adapters/local/localAdapter.test.ts:
+(pass) LocalContractAdapter > shared CaseworkPort behavioral conformance [549.10ms]
+(pass) LocalContractAdapter > duplicate intent_id returns DUPLICATE_IN_FLIGHT [363.62ms]
+(pass) LocalContractAdapter > unauthorized role agent_operator returns AUTHORITY_DENIED [184.12ms]
+(pass) LocalContractAdapter > unauthorized role developer returns UNAUTHORIZED_ROLE [182.61ms]
+(pass) LocalContractAdapter > ESCALATE_OR_OVERRIDE without justification returns JUSTIFICATION_REQUIRED [182.41ms]
+(pass) LocalContractAdapter > unknown target returns INVALID [183.56ms]
+(pass) LocalContractAdapter > unavailable action on target returns UNAVAILABLE [182.46ms]
+(pass) LocalContractAdapter > resolveArtifact returns independent clones [3.19ms]
+(pass) LocalContractAdapter > failArtifacts rejects with error [3.70ms]
+(pass) LocalContractAdapter > corruptArtifacts returns malformed content [3.68ms]
+(pass) LocalContractAdapter > getSnapshot with agent_operator role has no consequential actions [2.44ms]
+(pass) LocalContractAdapter > accepted intent completion precedes settlement [334.19ms]
+(pass) LocalContractAdapter > accepted intent emits snapshot, execution progress, and settlement events [283.31ms]
+
+ 13 pass
+ 0 fail
+ 21 expect() calls
+Ran 13 tests across 1 file. [2.47s]
+EXIT_CODE=0

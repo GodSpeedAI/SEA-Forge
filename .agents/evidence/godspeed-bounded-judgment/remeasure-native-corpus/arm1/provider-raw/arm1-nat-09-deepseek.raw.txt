@@ -1,0 +1,1 @@
+{"answer": "insufficient_evidence", "confidence": 0.45, "distribution": {"settled": 0.25, "not_settled": 0.35, "insufficient_evidence": 0.4}, "reason": "Records show only a single admitted mock-agent claim with one correction and no produced evidence or settlement outcome, so closure cannot be determined."}

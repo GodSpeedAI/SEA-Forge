@@ -1,0 +1,32 @@
+{
+  "all_expected_scenarios_detected": true,
+  "checks": {
+    "commit1:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl": true,
+    "commit1:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl": true,
+    "commit1:.agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl": true,
+    "commit1:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt": true,
+    "commit1:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log": true,
+    "commit1:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log": true,
+    "commit2:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log": true,
+    "commit1:prefix_path": true,
+    "commit2:prefix_path": true,
+    "commit1:suffix_path": true,
+    "commit2:suffix_path": true,
+    "commit1:unlisted_path": true,
+    "commit2:unlisted_path": true,
+    "unlisted-commit:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl": true,
+    "github-pat:commit1": true,
+    "github-pat:commit2": true
+  },
+  "findings": 21,
+  "rules": {
+    "generic-api-key": 19,
+    "github-pat": 2
+  },
+  "marker_line_sha256": "c2d7793179976fec96329a56d807aa169aa1a1e77ef3a39cd1502b4759bba821"
+}

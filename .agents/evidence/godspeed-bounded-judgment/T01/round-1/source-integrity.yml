@@ -1,0 +1,4 @@
+files_watched: 648
+drifted_after_run: []
+gauntlet_unmodified: true
+verification: hashes verified pre-run (manifest + 632-file sidecar) and mtimes/sizes compared post-run

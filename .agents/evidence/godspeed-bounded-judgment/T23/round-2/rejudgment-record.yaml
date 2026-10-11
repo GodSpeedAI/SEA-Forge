@@ -1,0 +1,148 @@
+# T23 round-2 re-judgment record (addendum-2)
+schema: godspeed-bounded-judgment.t23-round2-rejudgment-record
+route_id: t23-route-001
+correction_round: 2
+addendum2_sha256: 087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a
+judge_input_rule: corrected judgment surfaces only (typed terminal; settlement count
+  + unit progression; unit_dispatch retry pattern; produced evidence artifact contents
+  by sha256 pin; timing); never the route goal, never round-1 labels, never the addendum
+  label-semantics wording, never any narrative
+ladder:
+  primary: deepseek-clinepass:cline-pass/cline-pass/deepseek-v4.1-flash
+  substitution: muse-spark-free:opencode/muse-spark-1.3-contributor-free
+  fallback: abstention-fallback-v1 (mechanics-only, insufficient_evidence)
+one_pass_rule: one ladder pass per probe; raw outputs preserved verbatim before parsing;
+  resumed runs reuse preserved raws and never re-roll
+probe_judgments:
+- probe_id: probe-i1-cand-1
+  candidate_id: cand-1
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-1-primary.raw.txt
+    started_at_utc: '2026-09-19T03:03:28.708800+00:00'
+    duration_seconds: 23.52
+    abstention: false
+- probe_id: probe-i1-cand-2
+  candidate_id: cand-2
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-2-primary.raw.txt
+    started_at_utc: '2026-09-19T03:03:52.229405+00:00'
+    duration_seconds: 16.044
+    abstention: false
+- probe_id: probe-i1-cand-3
+  candidate_id: cand-3
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i1-cand-3-primary.raw.txt
+    started_at_utc: '2026-09-19T03:04:08.273583+00:00'
+    duration_seconds: 12.646
+    abstention: false
+- probe_id: probe-i2-cand-1
+  candidate_id: cand-1
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-1-primary.raw.txt
+    started_at_utc: '2026-09-19T03:04:20.920881+00:00'
+    duration_seconds: 11.547
+    abstention: false
+- probe_id: probe-i2-cand-2
+  candidate_id: cand-2
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-2-primary.raw.txt
+    started_at_utc: '2026-09-19T03:04:32.468182+00:00'
+    duration_seconds: 13.219
+    abstention: false
+- probe_id: probe-i2-cand-3
+  candidate_id: cand-3
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i2-cand-3-primary.raw.txt
+    started_at_utc: '2026-09-19T03:04:45.688731+00:00'
+    duration_seconds: 11.631
+    abstention: false
+- probe_id: probe-i3-cand-1
+  candidate_id: cand-1
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-1-primary.raw.txt
+    started_at_utc: '2026-09-19T03:04:57.320788+00:00'
+    duration_seconds: 14.578
+    abstention: false
+- probe_id: probe-i3-cand-2
+  candidate_id: cand-2
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-2-primary.raw.txt
+    started_at_utc: '2026-09-19T03:05:11.899462+00:00'
+    duration_seconds: 12.554
+    abstention: false
+- probe_id: probe-i3-cand-3
+  candidate_id: cand-3
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i3-cand-3-primary.raw.txt
+    started_at_utc: '2026-09-19T03:05:24.454228+00:00'
+    duration_seconds: 23.379
+    abstention: false
+- probe_id: probe-i4-cand-1
+  candidate_id: cand-1
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-1-primary.raw.txt
+    started_at_utc: '2026-09-19T03:05:47.834321+00:00'
+    duration_seconds: 25.113
+    abstention: false
+- probe_id: probe-i4-cand-2
+  candidate_id: cand-2
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-2-primary.raw.txt
+    started_at_utc: '2026-09-19T03:06:12.948380+00:00'
+    duration_seconds: 10.398
+    abstention: false
+- probe_id: probe-i4-cand-3
+  candidate_id: cand-3
+  attempts:
+  - attempt: primary
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: ok
+    raw_output_path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/r2-judgment-probe-i4-cand-3-primary.raw.txt
+    started_at_utc: '2026-09-19T03:06:23.346922+00:00'
+    duration_seconds: 8.982
+    abstention: false

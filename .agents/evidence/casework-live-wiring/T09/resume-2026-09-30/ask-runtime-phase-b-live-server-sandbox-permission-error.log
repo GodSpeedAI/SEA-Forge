@@ -1,0 +1,2 @@
+{"timestamp":"2026-10-01T05:42:55.914656Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/a/TestLiveProtectedAskUsesSessionAndMatchesCommittedDisclosure2660336225/001","socket":"/tmp/a/TestLiveProtectedAskUsesSessionAndMatchesCommittedDisclosure2660336225/001/server.sock","max_concurrent":4}
+Error: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }

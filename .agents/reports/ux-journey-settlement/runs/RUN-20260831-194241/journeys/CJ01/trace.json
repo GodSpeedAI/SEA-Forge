@@ -1,0 +1,131 @@
+{
+  "run_id": "RUN-20260831-194241",
+  "timestamp": "2026-08-31T19:43:09.592902+00:00",
+  "journey_id": "CJ01",
+  "journey_name": "Establish Trusted Cell Context",
+  "source_story_ids": [
+    "1.1",
+    "1.2",
+    "1.3",
+    "1.4",
+    "1.5",
+    "1.6",
+    "1.7",
+    "2.1",
+    "2.2",
+    "2.3",
+    "2.4",
+    "16.1",
+    "16.2",
+    "16.3",
+    "16.5"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "operator",
+    "role": "operator"
+  },
+  "starting_state": "A user opens or creates a cell, returns to existing or legacy history, starts the service, enters protected work, or changes the release or execution substrate.",
+  "actor_visible_observations": [
+    {
+      "step": 1,
+      "observation": "Readiness route loaded",
+      "source_element": "#main-content"
+    }
+  ],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ01-001-entry.png",
+      "relative_path": "screenshots/CJ01/CJ01-001-entry.png",
+      "moment_kind": "entry",
+      "description": "Workbench readiness route entry"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ01-002-affordance-foundation-inspection.png",
+      "relative_path": "screenshots/CJ01/CJ01-002-affordance-foundation-inspection.png",
+      "moment_kind": "affordance_discovery",
+      "description": "Cell foundations and readiness items visible"
+    },
+    {
+      "sequence": 3,
+      "name": "CJ01-003-admin-cell-context.png",
+      "relative_path": "screenshots/CJ01/CJ01-003-admin-cell-context.png",
+      "moment_kind": "state_transition",
+      "description": "Cell admin & identity view"
+    }
+  ],
+  "snapshot_references": [
+    {
+      "relative_path": "snapshots/CJ01-readiness.snapshot",
+      "snapshot_type": "accessibility"
+    }
+  ],
+  "interface_projections_encountered": [
+    "workbench_readiness_routes",
+    "workbench_administration_route"
+  ],
+  "capability_bindings_invoked": [
+    "Cell initialization and bundle-aware migration",
+    "startup validation",
+    "`identity.get`",
+    "`readiness.get`",
+    "policy inspection",
+    "self-model validation or rebuild",
+    "lifecycle inspection",
+    "and version-skew detection."
+  ],
+  "execution_identifiers": {},
+  "evidence_references": [
+    "crates/sea-forge-server/src/sfwp/readiness.rs",
+    "crates/sea-forge-self-model"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ01",
+    "oracle_name": "CJ01_TrustedCellContextOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Actor is attributable, snapshots explicit, readiness classified with evidence.",
+    "authoritative_record_inspected": "/home/sprime01/projects/sea-rs",
+    "rationale": "Foundation source records exist on disk; /readiness rendered an explicit classification; /admin rendered attributable identity content.",
+    "evidence_refs": [
+      "crates/sea-forge-server/src/sfwp/readiness.rs",
+      "crates/sea-forge-self-model"
+    ],
+    "carried_state": {}
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}

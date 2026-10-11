@@ -1,0 +1,36 @@
+=== RUN   TestBoundRunObservationHydrationPreservesEmptyAndShortPayloads
+--- PASS: TestBoundRunObservationHydrationPreservesEmptyAndShortPayloads (0.00s)
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne/exact_cap_remains_unchanged
+=== RUN   TestBoundRunObservationHydrationExactCapAndCapPlusOne/cap_plus_one_omits_the_explicitly_oldest_frame
+--- PASS: TestBoundRunObservationHydrationExactCapAndCapPlusOne (0.83s)
+    --- PASS: TestBoundRunObservationHydrationExactCapAndCapPlusOne/exact_cap_remains_unchanged (0.64s)
+    --- PASS: TestBoundRunObservationHydrationExactCapAndCapPlusOne/cap_plus_one_omits_the_explicitly_oldest_frame (0.20s)
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/global_timestamp_order_preserves_unsorted_per-run_order
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_instants_with_differing_offsets_use_complete_run_ID_bytes
+=== RUN   TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_run_and_instant_use_complete_event_ID_bytes
+--- PASS: TestBoundRunObservationHydrationSelectsOldestDeterministically (0.40s)
+    --- PASS: TestBoundRunObservationHydrationSelectsOldestDeterministically/global_timestamp_order_preserves_unsorted_per-run_order (0.18s)
+    --- PASS: TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_instants_with_differing_offsets_use_complete_run_ID_bytes (0.13s)
+    --- PASS: TestBoundRunObservationHydrationSelectsOldestDeterministically/equal_run_and_instant_use_complete_event_ID_bytes (0.09s)
+=== RUN   TestBoundRunObservationHydrationOversizedFramesAcrossRuns
+--- PASS: TestBoundRunObservationHydrationOversizedFramesAcrossRuns (0.17s)
+=== RUN   TestBoundRunObservationHydrationPreservesRingOmissionsAndMetadata
+--- PASS: TestBoundRunObservationHydrationPreservesRingOmissionsAndMetadata (0.08s)
+=== RUN   TestBoundRunObservationHydrationDoesNotAliasCallerData
+--- PASS: TestBoundRunObservationHydrationDoesNotAliasCallerData (0.00s)
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/metadata_alone_exceeds_cap
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_eight_runs
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_1024_frames_in_one_run
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/inconsistent_frame_counts
+=== RUN   TestBoundRunObservationHydrationRejectsUnrepresentableInputs/unparseable_timestamp
+--- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs (0.03s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/metadata_alone_exceeds_cap (0.02s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_eight_runs (0.00s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/more_than_1024_frames_in_one_run (0.01s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/inconsistent_frame_counts (0.00s)
+    --- PASS: TestBoundRunObservationHydrationRejectsUnrepresentableInputs/unparseable_timestamp (0.00s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	3.033s

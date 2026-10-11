@@ -1,0 +1,17 @@
+# T09 cap review errata: Ask transport recovery
+
+This append-only errata corrects the downstream Ask paragraph in `cap-implementation-independent-review.md`. The original review record remains immutable. This correction does not change the cap source verdict, cap implementation, or cap test results.
+
+## Verified source facts
+
+- `Request::Ask` at `crates/sea-forge-server/src/lib.rs:727-745` has `kind`, `subject`, `purpose`, `case`, and `actor_id`; it has no `request_id` field. The exhaustive `request_id` helper at `lib.rs:1429-1448` returns `None` for Ask. `requires_durable_locator` at lines 1451-1476 also excludes Ask, while `identity::is_protected` at `crates/sea-forge-server/src/identity.rs:803-820` includes it. Ask is therefore protected without being a caller-correlated durable mutation.
+- Ask nevertheless has side effects: `crates/sea-forge-server/src/lib.rs:2267-2304` dispatches to `sea_forge_thoth::service::ask`; `crates/sea-forge-thoth/src/service.rs:321-340,342-376` commits the question, then the plan, decision, and answer records. An ambiguous transport failure may therefore occur after durable writes, but there is no request ID with which to query their outcome.
+- `RequestGetStatus` at `lib.rs:763-764` requires a request ID, and its handler at lines 2334-2348 consults the correlation store using that ID. Ask cannot use this recovery endpoint.
+- The client distinguishes a correlated mutation from an inspect retry today: `apps/godspeed-casework-go/internal/adapters/sfwp/frame.go:82-110` exposes `RequestID` and `IsMutation`, with `mutationVerbs` matching server verbs that require a durable locator. `client.go:400-432` resolves a transport-failed mutation only when `RequestID()` is nonempty, and retries transport failures when `!req.IsMutation()`. Consequently, adding Ask to the current safe-inspect fallback by leaving it unclassified would resend a side-effecting Ask. Adding it to `mutationVerbs` would suppress that resend when no ID exists, but would misstate that Ask is correlated/recoverable and would conflict with the current classifier's documented purpose.
+- There is a distinct, safe refusal retry: admission rejection in `lib.rs:1719-1732` returns `error_class: "server_busy"` together with `no_side_effect: true`. The client handles that response in `client.go:381-390` through `transportRefusalKind` (`frame.go:520-523`) and retries once. This pre-admission refusal retry does not imply that an ambiguous EOF, timeout, or response-line overflow can safely resend Ask.
+
+## Correct downstream requirement
+
+When the later Go Ask route/client is implemented, distinguish transport-retry safety from the existing durable-correlated-mutation classifier. After one Ask send, an ambiguous EOF, timeout, or response-line overflow must return typed `unavailable` without resending Ask and without calling `request_get_status`; the kernel exposes no correlation handle for that operation. Preserve the existing bounded retry for an explicit `server_busy` response because the server emits it before admission with `no_side_effect: true`. Do not add a kernel request ID or change the Rust correlation API under this T09 scope.
+
+The earlier sentence saying Ask should be classified as a durable mutation “so oversized Ask responses follow correlation recovery” is incorrect and is superseded by this errata. The cap implementation itself only supplies the per-line overflow behavior; Ask retry classification remains a later integration requirement.

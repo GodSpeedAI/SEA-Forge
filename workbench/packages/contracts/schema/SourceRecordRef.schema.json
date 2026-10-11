@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SourceRecordRef",
+  "description": "A content-addressed, ledger-committed source record behind a view.\n\nThis deliberately cannot hold a source file path or code citation.  A\nrenderer may show implementation location as explanatory material, but a\nreadiness standing must resolve to a committed record and digest.",
+  "type": "object",
+  "properties": {
+    "digest": {
+      "type": "string"
+    },
+    "entry_id": {
+      "type": "string"
+    },
+    "freshness": {
+      "$ref": "#/$defs/SourceFreshness"
+    },
+    "ledger_id": {
+      "type": "string"
+    },
+    "rebuild_standing": {
+      "$ref": "#/$defs/RebuildStanding"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "record_kind": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ledger_id",
+    "entry_id",
+    "record_kind",
+    "record_id",
+    "digest",
+    "freshness",
+    "rebuild_standing"
+  ],
+  "$defs": {
+    "RebuildStanding": {
+      "description": "Whether the committed source can presently be rebuilt and verified.",
+      "type": "string",
+      "enum": [
+        "verified",
+        "rebuild_required"
+      ]
+    },
+    "SourceFreshness": {
+      "description": "Freshness of the canonical record behind a projection.",
+      "type": "string",
+      "enum": [
+        "current",
+        "stale"
+      ]
+    }
+  }
+}

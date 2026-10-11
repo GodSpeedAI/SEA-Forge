@@ -1,0 +1,15 @@
+== Tooth 1: no donor-product ontology in application-contract surfaces ==
+   inspecting definitions in: .agents/plans/godspeed-casework-cognitive-environment.implementation.md
+   ok: no donor marker in any contract definition, import path, or namespaced reference
+   (mentions in decision prose are expected and are not counted - the tooth separates
+    'the decision names the donor' from 'the contract depends on the donor')
+
+== Tooth 2: no donor checkout, no copied donor code ==
+   searched roots: $HOME/projects, $HOME, /opt (depth-limited); donor roots below
+   ok: neither Open MCT nor OpenMontage checkout is reachable from the searched roots
+   -- copied-code / provenance check over this plan's implementation paths --
+   ok: apps/ does not exist, so no donor file can have been copied into an application
+   -- dependency boundary (T02 admits no dependency) --
+   ok: no dependency manifest changed by this task's uncommitted work
+
+TEETH RESULT: both teeth behaved as specified

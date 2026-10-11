@@ -15,7 +15,15 @@ pub enum ForgeError {
         source: io::Error,
     },
     Serialization(String),
+    Plan {
+        class: &'static str,
+        message: String,
+    },
     Internal(String),
+    /// M9 (E11) self-model integrity failure: bundled model missing/drifted,
+    /// DomainForge validation failure, or snapshot-source drift. Blast radius
+    /// is self-model consumers and `ask`; runs and all other work are unaffected.
+    SelfModel(String),
     Run {
         run_id: String,
         source: Box<ForgeError>,
@@ -37,8 +45,9 @@ impl ForgeError {
             Self::UnsafePath(_) => "unsafe_path_error",
             Self::Io { .. } => "io_error",
             Self::Serialization(_) => "serialization_error",
-            Self::Internal(_) => "internal_error",
-            Self::Run { .. } => "internal_error",
+            Self::Plan { class, .. } => class,
+            Self::Internal(_) | Self::Run { .. } => "internal_error",
+            Self::SelfModel(_) => "self_model_error",
         }
     }
 
@@ -64,7 +73,9 @@ impl fmt::Display for ForgeError {
             | Self::UnknownIntent(message)
             | Self::UnsafePath(message)
             | Self::Serialization(message)
-            | Self::Internal(message) => f.write_str(message),
+            | Self::Internal(message)
+            | Self::SelfModel(message) => f.write_str(message),
+            Self::Plan { class, message } => write!(f, "{class}: {message}"),
             Self::Config {
                 class,
                 path,

@@ -1,0 +1,105 @@
+schema: godspeed-bounded-judgment.t01-round2-surface2
+disclosure:
+  n: 17
+  independent_run_count: 6
+  class_counts:
+    no_chain_deficiency: 17
+  concentration_by_run: see round-1 concentration-report.yml (same rows)
+  missing_attribution: 17/17 rows unattributed
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: pilot corpus of order 10^1; descriptive only'
+surface2:
+  question: Which verification-chain deficiency, if any, does this record's chain exhibit?
+  domain:
+  - no_chain_deficiency
+  - missing_evidence_object
+  - unresolvable_reference
+  - instrument_mismatch
+  - insufficient_provenance
+  deterministic_baseline: mechanical_classify() over reconstructed chain facts (rule frozen in prereg-round2-addendum.yml)
+providers:
+- provider: codex
+  n_ok: 17
+  contract_failures: 0
+  accuracy_vs_mechanical_baseline: 1.0
+  confusion_rows_provider_cols_baseline:
+    no_chain_deficiency:
+      no_chain_deficiency: 17
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    missing_evidence_object:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    unresolvable_reference:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    instrument_mismatch:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    insufficient_provenance:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+  mean_entropy_bits: 0.06958317034263564
+  cross_capable_disagreement_rows: 0
+- provider: prime-agent
+  n_ok: 17
+  contract_failures: 0
+  accuracy_vs_mechanical_baseline: 1.0
+  confusion_rows_provider_cols_baseline:
+    no_chain_deficiency:
+      no_chain_deficiency: 17
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    missing_evidence_object:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    unresolvable_reference:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    instrument_mismatch:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+    insufficient_provenance:
+      no_chain_deficiency: 0
+      missing_evidence_object: 0
+      unresolvable_reference: 0
+      instrument_mismatch: 0
+      insufficient_provenance: 0
+  mean_entropy_bits: 0.06956318222065971
+  cross_capable_disagreement_rows: null
+authorization:
+  rule: 'authorization requires ALL of: 0 contract failures for both capable providers; mechanical baseline has >=2 distinct
+    classes on this corpus; each capable provider scores accuracy >= 0.8 vs the mechanical baseline with mean entropy > 0'
+  contract_leg: true
+  baseline_nondegenerate_leg: false
+  baseline_class_counts:
+    no_chain_deficiency: 17
+  agreement_leg: true
+  authorized: false
+source_integrity:
+  drifted: []

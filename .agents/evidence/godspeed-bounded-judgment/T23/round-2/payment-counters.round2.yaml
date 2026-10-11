@@ -1,0 +1,62 @@
+schema: godspeed-bounded-judgment.t23-round2-payment-counters
+task: T23
+correction_round: 2
+probes_run: 12
+probes_rerun: 0
+note: 'round-2 re-judgment only: probes unchanged at 12, none re-run; provider calls
+  below are re-judgment calls on preserved surfaces'
+tool_executions: 0
+failed_executions: 0
+provider_calls:
+  count: 12
+  by_identity:
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i1-cand-1
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i1-cand-2
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i1-cand-3
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i2-cand-1
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i2-cand-2
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i2-cand-3
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i3-cand-1
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i3-cand-2
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i3-cand-3
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i4-cand-1
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i4-cand-2
+    outcome: ok
+  - provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    purpose: round2_rejudgment:probe-i4-cand-3
+    outcome: ok
+tokens_and_cost: 'n/a: the frozen provider seam (opencode run) does not expose token
+  accounting (honest gap, same as round 1)'

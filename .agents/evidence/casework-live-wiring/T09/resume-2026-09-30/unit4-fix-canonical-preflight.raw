@@ -1,0 +1,5 @@
+2026-10-01T20:52:30Z
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.5Gi       284Mi       774Mi       2.9Gi       2.2Gi
+Swap:           12Gi       6.8Gi       5.2Gi
+2109808 bun             bun /home/sprime01/projects/cognate/validation/reconstructions/deepseek-harness/cognate/src/server.ts

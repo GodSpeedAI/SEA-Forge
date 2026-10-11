@@ -1,0 +1,10 @@
+--- FAIL: TestScopedRunsListPreservesOtherRefusalKinds (0.03s)
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/invalid_input (0.00s)
+        scoped_runs_test.go:207: refusal class "input_error" kind = unavailable, want invalid: unavailable: the authority refused the scoped run list (run_list): invalid: run list refused (run_list): input_error: run list refused
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/identity_denial (0.00s)
+        scoped_runs_test.go:207: refusal class "identity_required" kind = unavailable, want authority_denied: unavailable: the authority refused the scoped run list (run_list): authority_denied: run list refused (run_list): identity_required: run list refused
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/unknown_refusal (0.01s)
+        scoped_runs_test.go:207: refusal class "unknown_refusal" kind = unavailable, want internal: unavailable: the authority refused the scoped run list (run_list): internal: run list refused (run_list): unknown_refusal: run list refused
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.035s
+FAIL

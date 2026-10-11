@@ -1,0 +1,79 @@
+{
+  "description": "Chronological sequence of Server-Sent Events (SSE) illustrating live updates, disconnection, and resynchronization",
+  "events": [
+    {
+      "sequence": 1,
+      "event_type": "snapshot",
+      "cursor": "1.0000000040",
+      "timestamp": "2026-09-20T10:14:00Z",
+      "payload": {
+        "world_id": "ws-case-auth-v2-001-1.0000000040",
+        "case_id": "case-auth-v2-001",
+        "summary": { "headline": "Authentication Gateway Refactor", "status_phrase": "Ready to begin" }
+      }
+    },
+    {
+      "sequence": 2,
+      "event_type": "execution_progress",
+      "cursor": "1.0000000041",
+      "timestamp": "2026-09-20T10:14:30Z",
+      "payload": {
+        "run_id": "run-ed25519-bridge-20260920101500",
+        "phase": "builder",
+        "progress_percent": 0.5,
+        "log_line": "Builder generating file transformations in isolated worktree"
+      }
+    },
+    {
+      "sequence": 3,
+      "event_type": "settlement_recorded",
+      "cursor": "1.0000000042",
+      "timestamp": "2026-09-20T10:15:35Z",
+      "payload": {
+        "settlement_id": "set-case-auth-v2-001-4b5c6d7e8f9a",
+        "decision": "ACCEPTED",
+        "plan_item_id": "pi-stage_impl-004",
+        "consequence_summary": "Task marked COMPLETED. Security signoff gate unlocked."
+      }
+    },
+    {
+      "sequence": 4,
+      "event_type": "patch",
+      "cursor": "1.0000000043",
+      "timestamp": "2026-09-20T10:15:36Z",
+      "payload": {
+        "updated_object": {
+          "id": "obj-gate-security",
+          "status": "ACTION_REQUIRED",
+          "badge": "Needs Decision"
+        }
+      }
+    },
+    {
+      "sequence": 5,
+      "client_action": "Client experiences network disconnection. Client reconnects with header Last-Event-ID: 1.0000000010 (cursor from 2 hours ago, purged from server ring buffer)"
+    },
+    {
+      "sequence": 6,
+      "event_type": "resync_required",
+      "cursor": "1.0000000043",
+      "timestamp": "2026-09-20T10:16:00Z",
+      "payload": {
+        "requested_cursor": "1.0000000010",
+        "oldest_available_cursor": "1.0000000035",
+        "reason": "Requested cursor has been purged from memory ring buffer. Full snapshot resynchronization required."
+      }
+    },
+    {
+      "sequence": 7,
+      "event_type": "snapshot",
+      "cursor": "1.0000000043",
+      "timestamp": "2026-09-20T10:16:01Z",
+      "payload": {
+        "world_id": "ws-case-auth-v2-001-1.0000000043",
+        "case_id": "case-auth-v2-001",
+        "summary": { "headline": "Authentication Gateway Refactor", "status_phrase": "Action Required: Security signoff pending" }
+      }
+    }
+  ]
+}

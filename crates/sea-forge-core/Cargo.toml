@@ -3,6 +3,7 @@ name = "sea-forge-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 license-file.workspace = true
 repository.workspace = true
 description = "SEA Forge governed capability-execution kernel types and lifecycle."
@@ -16,6 +17,9 @@ serde_yaml.workspace = true
 sha2.workspace = true
 unicode-normalization.workspace = true
 wait-timeout.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

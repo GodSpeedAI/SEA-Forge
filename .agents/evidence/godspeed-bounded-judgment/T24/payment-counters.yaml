@@ -1,0 +1,20 @@
+schema: godspeed-bounded-judgment.t24-payment-counters
+task: T24
+stage: generation
+wall_clock_seconds: 23.737
+provider_calls:
+  count: 1
+  by_identity:
+  - seq: 1
+    purpose: case_derivation
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T04:07:41.055950+00:00'
+    duration_seconds: 23.725
+generator_path: deepseek-clinepass primary
+tool_executions: 0
+note: generation makes NO gauntlet executions; the replay and the T7 tooth executions are counted in their own records
+tokens_and_cost: 'n/a: the frozen provider seam (opencode run) does not expose token/cost accounting; honest gap
+  per prereg payment_counters_frozen.tokens_and_cost'
+operator_decisions: 0

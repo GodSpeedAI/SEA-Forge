@@ -1,0 +1,102 @@
+# E2E ladder template A — the sandboxed sentry chain (plan
+# casework-live-wiring-production T03, resolves GAP-D).
+#
+# Purpose in the ladder: this is the template CJ04 ("commit a case from a
+# template") commits, and the one whose horizon proves that downstream
+# unlocking is REAL — item 2 cannot run until item 1's settlement is accepted,
+# and the required rollup milestone cannot fire until both are.
+#
+# Standing after a case.commit (before any item execution, i.e. before T04's
+# item.execute): task_prepare is `enabled` (manual activation; entry criteria
+# trivially met), task_publish and ms_chain_accepted are `pending`, blocked by
+# their sentries. Executing task_prepare to an accepted settlement fires the
+# settlement_status sentry and unlocks task_publish.
+#
+# Both tasks are manual-activation SandboxedTasks on purpose: the governed
+# write only happens when an operator drives it (T04 case.advance/item.execute
+# against the cell's authority policy), so committing this template never
+# silently writes into the cell.
+name: e2e-sentry-chain
+version: 0.1.0
+description: >-
+  Two sandboxed tasks chained by a settlement_status sentry, closed by a
+  required all-of rollup milestone. Parameters are substituted into the
+  governed write's path, content, and required artifacts.
+parameters:
+  dataset_name:
+    type: string
+    required: true
+  dataset_label:
+    type: string
+    required: false
+    default: "e2e"
+  max_rows:
+    type: int
+    required: false
+    default: "10"
+  out_dir:
+    type: path
+    required: false
+    default: "work"
+plan:
+  items:
+    # Item 1 — governed write, manual activation.
+    - plan_item_id: task_prepare
+      name: prepare dataset
+      item_kind: sandboxed_task
+      sandbox_class: local
+      markers:
+        required: true
+        manual_activation: true
+      operations:
+        - kind: write_file
+          path: "${out_dir}/dataset.md"
+          content_hint: "dataset: ${dataset_name} (label: ${dataset_label}, max_rows: ${max_rows})"
+      settlement_criteria:
+        required_artifacts: ["${out_dir}/dataset.md"]
+    # Item 2 — the sentry-gated downstream task. The entry criteria name
+    # item 1 as the trigger source and only unlock on its ACCEPTED
+    # settlement; anything else (rejected, escalated, not yet settled)
+    # leaves this item blocked.
+    - plan_item_id: task_publish
+      name: publish dataset report
+      item_kind: sandboxed_task
+      sandbox_class: local
+      markers:
+        required: true
+        manual_activation: true
+      entry_criteria:
+        - on:
+            source: task_prepare
+            event: settlement_status
+          if:
+            kind: settlement_status
+            status: accepted
+      operations:
+        - kind: write_file
+          path: "${out_dir}/report.md"
+          content_hint: "report over ${dataset_name} (label: ${dataset_label})"
+      settlement_criteria:
+        required_artifacts: ["${out_dir}/report.md"]
+    # Required rollup milestone — the chain's completion gate. All-of mode:
+    # it fires only when BOTH tasks have settled accepted.
+    - plan_item_id: ms_chain_accepted
+      name: chain accepted
+      item_kind: milestone
+      markers:
+        required: true
+      entry_criteria_mode: all
+      entry_criteria:
+        - on:
+            source: task_prepare
+            event: settlement_status
+          if:
+            kind: settlement_status
+            status: accepted
+        - on:
+            source: task_publish
+            event: settlement_status
+          if:
+            kind: settlement_status
+            status: accepted
+      settlement_criteria: {}

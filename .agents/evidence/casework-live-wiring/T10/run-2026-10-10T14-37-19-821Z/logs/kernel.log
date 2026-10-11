@@ -1,0 +1,8 @@
+{"timestamp":"2026-10-10T14:37:21.027534Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t10-live-lSpWuC/cell","socket":"/tmp/t10-live-lSpWuC/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T14:37:21.041653Z","level":"INFO","message":"server listening on /tmp/t10-live-lSpWuC/cell/server.sock"}
+{"timestamp":"2026-10-10T14:37:31.497757Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T14:37:41.701744Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T14:37:52.105099Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T14:37:55.418539Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T14:38:02.912570Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T14:38:14.518046Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

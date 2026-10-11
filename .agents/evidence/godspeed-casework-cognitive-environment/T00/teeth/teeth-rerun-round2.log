@@ -1,0 +1,27 @@
+== Tooth 1: one-byte spec mutation must be detected and block ==
+-- control: unmutated copy must PASS --
+   control exit=0 (expected) :: PASS: spec hash, 86/86 requirements, 15-task DAG, gate activation, and UI removal
+-- attack: flip exactly one byte of the copied spec --
+   mutated byte at offset 19: 0x73 -> 0x74
+   attack exit non-zero (expected: blocked) :: FAIL: frozen spec SHA-256 differs from current bytes
+   divergence named explicitly: frozen spec SHA-256 differs from current bytes
+
+== Tooth 2: a claim that an absent capability already exists must be contradicted ==
+   INVENTORY CONTRADICTS CLAIM: Go toolchain (claim: available)
+   INVENTORY CONTRADICTS CLAIM: Go module apps/godspeed-casework-go (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: React app apps/godspeed-cognitive-ui (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: Casework Go/UI just recipes (claim: exist)
+   INVENTORY CONTRADICTS CLAIM: SFWP repository-fact method (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: GitHub REST/webhook client inside the server crate (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: Open MCT / OpenMontage donor checkout (claim: present)
+   INVENTORY CONTRADICTS CLAIM: SFWP lease/claim/reserve method (claim: exists)
+   INVENTORY CONTRADICTS CLAIM: SFWP artifact-persistence method (claim: exists)
+   INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR authority action (AuthorityAction::GithubPr)
+   INVENTORY CONFIRMS (corrected) PRESENT: GitHub PR policy surface (github_pr, default escalate)
+-- dependent tasks stay blocked (plan DAG at initial_state) --
+   ready at plan start: ['T00']
+   T03 blocked_on=['T01'] (Go-gated; T01 owns GATE_GO)
+   T04 blocked_on=['T01'] (Go-gated; T01 owns GATE_GO)
+   all absent seams remain recorded as absent
+
+TEETH RESULT: both teeth behaved as specified

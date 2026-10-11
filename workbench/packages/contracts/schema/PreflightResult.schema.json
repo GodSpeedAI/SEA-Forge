@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PreflightResult",
+  "description": "`case.preflight` result body. `ok: false` means `errors` is non-empty and\n`items`/`precondition` describe the rejected draft (still useful for the\nUI to show what would need to change).",
+  "type": "object",
+  "properties": {
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PlanItemSummary"
+      }
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "precondition": {
+      "description": "Carry this into `case.commit`'s `preconditions.records` unchanged.\n`None` when the template itself could not be loaded (nothing to pin).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecordDigest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "template_ref": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "template_ref",
+    "items"
+  ],
+  "$defs": {
+    "PlanItemSummary": {
+      "description": "Non-authoritative summary of one instantiated plan item — a projection for\ndisplay, never source truth (`derived view ≠ source truth`).",
+      "type": "object",
+      "properties": {
+        "item_kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "plan_item_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_item_id",
+        "name",
+        "item_kind"
+      ]
+    },
+    "RecordDigest": {
+      "description": "A single `{ref, expected_digest}` precondition entry.",
+      "type": "object",
+      "properties": {
+        "expected_digest": {
+          "description": "The sha256 digest the caller expects the referenced record to have.",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "expected_digest"
+      ]
+    }
+  }
+}

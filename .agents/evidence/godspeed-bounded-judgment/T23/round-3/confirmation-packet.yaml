@@ -1,0 +1,205 @@
+# =============================================================================
+# T23 round-3 confirmation packet — everything an independent verifier needs
+# to re-derive the addendum-3 mechanical separation and the route goal
+# WITHOUT trusting this builder.
+#
+# Path conventions:
+#   repo:  = /home/sprime01/projects/sea-rs          (sea-rs repo root)
+#   data:  = /home/sprime01/.local/share/godspeed-route-discovery/T23
+#            (pinned probe data root, $HOME-scoped)
+# Every repo: path below is relative to the sea-rs repo root; data: paths
+# are absolute.
+#
+# TRUST POLICY: the verifier should NOT trust ANY item in this packet
+# without recomputation. verify_trust_mode is "recompute_everything":
+# every listed file must be re-hashed against its manifest pin, every
+# consequence re-derived from the pinned state DBs, every label re-derived
+# by the frozen rule, and the goal recomputed — exactly what
+# round-3/verify_route.round3.py does (exit 0 = all recomputations agree).
+# =============================================================================
+schema: godspeed-bounded-judgment.t23-round3-confirmation-packet
+task: T23
+builder: B3
+correction_round: 3
+route_id: t23-route-001
+verify_trust_mode: recompute_everything
+trust_no_item_without_recomputation: true
+
+frozen_rule_authority:
+  trust: recompute_everything
+  items:
+    - path: repo:.agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+      sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+      role: base prereg (route_goal_frozen wording; discriminator as consequence fact)
+    - path: repo:.agents/preregistrations/godspeed-bounded-judgment-T21.prereg.addendum-1.yaml
+      sha256: c472d1b63248ff5895433df16c545c4e145c8171e9d475a8f4b0732fa1c0cea8
+      role: corrected fixture mechanism + corrected baseline e2e-happy@4
+    - path: repo:.agents/preregistrations/godspeed-bounded-judgment-T21.prereg.addendum-2.yaml
+      sha256: 087887c27cc50c6c989fcf7bb214e77aca62ea74d7e32a868ef0f7dd211e4c5a
+      role: corrected judgment surface (round-2 re-judgment input; its separation_requirement superseded as GOAL term by addendum-3)
+    - path: repo:.agents/preregistrations/godspeed-bounded-judgment-T21.prereg.addendum-3.yaml
+      sha256: 1c13889ae0c2a9621b7f0b803b327ee6dd76a16983c9ed72b00ff309f59c6ddb
+      role: FROZEN mechanical discriminator rule + symmetry property (the round-3 goal term)
+    - path: repo:.agents/plans/godspeed-bounded-judgment-plan.yaml
+      sha256: not_pinned_here (plan is v1.5.0; verify its own integrity at the repo level)
+      role: task T23 definition, guardrails, T26 teeth declarations
+
+t21_frozen_modules:
+  trust: recompute_everything
+  manifest: repo:.agents/evidence/godspeed-bounded-judgment/T21/evidence-manifest.yml
+  items:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T21/route_contracts.py
+    - repo:.agents/evidence/godspeed-bounded-judgment/T21/admission.py
+    - repo:.agents/evidence/godspeed-bounded-judgment/T21/selection_policy.py
+    - repo:.agents/evidence/godspeed-bounded-judgment/T21/operations_catalog.yaml
+    - repo:.agents/evidence/godspeed-bounded-judgment/T21/verify_contract.py
+  note: importable modules for schema validation, fingerprinting, and the answer domain; the gate re-hashes each against the T21 manifest before import.
+
+dependency_result_contracts:
+  trust: recompute_everything
+  items:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T22/b1-result.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T22/round-2/route-record.yaml
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/b1-result.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/b2-result.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/b3-result.json (written last; this round's result contract)
+  note: b1/b2/b3 completion claims carry no settlement authority; they orient the verifier only.
+
+round1_route_ledger:
+  trust: recompute_everything
+  manifest: repo:.agents/evidence/godspeed-bounded-judgment/T23/evidence-manifest.yml
+  route_record: repo:.agents/evidence/godspeed-bounded-judgment/T23/route/route-record.yaml
+  route_record_sha256: 9345c43e6787ef32fbe1a7749c90872de7b5be4b46f73af9708516f4f8ded67e
+  iterations: 'for i in 1..4: repo:.agents/evidence/godspeed-bounded-judgment/T23/route/iteration-i/{candidates.json,admission-decisions.json,probe-observations.json,judgment-surfaces.json,judgment-results.json,judgment-record.yaml,selection-record.json,neighborhood.yaml,generation-record.yaml,probe-run-meta.yaml,route-state-after.yaml}'
+  provider_raw: repo:.agents/evidence/godspeed-bounded-judgment/T23/route/provider-raw/ (24 files)
+  payment: repo:.agents/evidence/godspeed-bounded-judgment/T23/route/payment-counters.yaml (16 round-1 provider calls)
+  gate_script: repo:.agents/evidence/godspeed-bounded-judgment/T23/verify_route.py
+  validator: repo:.agents/evidence/godspeed-bounded-judgment/T23/provenance.py
+  teeth:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/teeth/attacks.yaml
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/teeth/t3-attack-records.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/teeth/t4-attack-records.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/teeth/t6-attack-records.json
+
+round2_rejudgment_preserved:
+  trust: recompute_everything
+  manifest: repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/evidence-manifest.round2.yml
+  items:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/surfaces/corrected-surfaces.json (+ 12 per-probe surface files)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/rejudgment-record.yaml
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/rejudgment-results.json
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/separation-verdict.json (verdict not_separated, 1/4 — the PRESERVED finding)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/route-record.round2.yaml
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/payment-counters.round2.yaml (12 re-judgment calls)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/provider-raw/ (24 prompt+raw files, verbatim)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/build_surfaces.py, rejudge_surfaces.py, compute_round2_record.py, verify_route.round2.py
+
+round3_mechanical_evaluation:
+  trust: recompute_everything
+  items:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/mechanical-labels.yaml (12 rows + separation verdict)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/route-record.round3.yaml (goal evaluation, unchanged fingerprint, preserved finding, payment)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/confirmation-packet.yaml (this file)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/verify_route.round3.py (the round-3 gate; exit 0 required)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/evidence-manifest.round3.yml (pins all round-3 files except itself)
+
+state_databases:
+  trust: recompute_everything
+  note: each DB's sha256 is pinned in the corresponding round-1 probe-observations.json entry; re-verify the pin, then read the event log READ-ONLY.
+  items:
+    - {probe_id: probe-i1-cand-1, scenario: e2e-happy@4,
+       db: "data:route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+       sha256: 87cfeb2d38a853d3bb5a29621a22802631616e24366056683d1e3b6ca68e5953}
+    - {probe_id: probe-i1-cand-2, scenario: e2e-happy@3,
+       db: "data:route-001-r1/runs/i1-cand-2/state/gauntlet-state.db",
+       sha256: 468612b9fc06a7516e9fb85b0a41bd58691a8f9bc3c0dcd8bffbb99f1c675c18}
+    - {probe_id: probe-i1-cand-3, scenario: e2e-lying@4,
+       db: "data:route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+       sha256: 28be5692bee0714a11e01a54f9be5cf5084651f9069a2038b809efc0ea2caf4f}
+    - {probe_id: probe-i2-cand-1, scenario: e2e-happy@5,
+       db: "data:route-001-r1/runs/i2-cand-1/state/gauntlet-state.db",
+       sha256: 913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba}
+    - {probe_id: probe-i2-cand-2, scenario: e2e-lying@5,
+       db: "data:route-001-r1/runs/i2-cand-2/state/gauntlet-state.db",
+       sha256: 0586e79455ea80360ffdeee64d9c8f6932c9d641cd7f9fc34eaddc97638ac010}
+    - {probe_id: probe-i2-cand-3, scenario: e2e-happy@6,
+       db: "data:route-001-r1/runs/i2-cand-3/state/gauntlet-state.db",
+       sha256: 05747e4f7e463a1f6dae8979696109b911e47f414d2b13283262668f01f6c157}
+    - {probe_id: probe-i3-cand-1, scenario: e2e-happy@2,
+       db: "data:route-001-r1/runs/i3-cand-1/state/gauntlet-state.db",
+       sha256: d587d0a1127fe855f89814a19cc637164dcba8627550f8e82f251d68e2ff2937}
+    - {probe_id: probe-i3-cand-2, scenario: e2e-happy@8,
+       db: "data:route-001-r1/runs/i3-cand-2/state/gauntlet-state.db",
+       sha256: d9b0b43e9461c54996d11546febea0b43cfb33fc6e8d12acc4dbb575fe532f10}
+    - {probe_id: probe-i3-cand-3, scenario: e2e-lying@2,
+       db: "data:route-001-r1/runs/i3-cand-3/state/gauntlet-state.db",
+       sha256: 292f60d43c4ef436ffbb7c4fec012b10634ddff72f987d94c21583336e88dde2}
+    - {probe_id: probe-i4-cand-1, scenario: e2e-lying@8,
+       db: "data:route-001-r1/runs/i4-cand-1/state/gauntlet-state.db",
+       sha256: 236f5e93b2f3a6ca470722ed547d31322f1e61641d427f10dab6115727141400}
+    - {probe_id: probe-i4-cand-2, scenario: e2e-happy@1,
+       db: "data:route-001-r1/runs/i4-cand-2/state/gauntlet-state.db",
+       sha256: 678ffdd7bed7b375ac71f6c343de191a1d3bdd76d0a9d329840ea27c9c3cceb3}
+    - {probe_id: probe-i4-cand-3, scenario: e2e-happy@7,
+       db: "data:route-001-r1/runs/i4-cand-3/state/gauntlet-state.db",
+       sha256: c56b7d5a14b5285d4cc34fdc26a40f9f24c8a4169850f4b2fe9ca84b6843218d}
+
+artifact_objects:
+  trust: recompute_everything
+  layout: >-
+    content-addressed per run: data:route-001-r1/runs/<run>/evidence/objects/<aa>/<bb>/<sha256>
+    (a sibling <sha256>.kind file records the artifact kind); every artifact
+    referenced by an evidence_produced event must be re-hashed at that path.
+  failing_artifact:
+    sha256: 08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+    kind: test_report
+    content: '{"tests": 1, "failures": 1, "command": "scripts/check.sh --marker"}'
+    produced_by: [probe-i1-cand-3, probe-i2-cand-2, probe-i3-cand-3, probe-i4-cand-1]
+    paths:
+      - data:route-001-r1/runs/i1-cand-3/evidence/objects/08/c3/08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+      - data:route-001-r1/runs/i2-cand-2/evidence/objects/08/c3/08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+      - data:route-001-r1/runs/i3-cand-3/evidence/objects/08/c3/08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+      - data:route-001-r1/runs/i4-cand-1/evidence/objects/08/c3/08c3dff5cc3c6601f930a6923a8e30e9686e784e3d2afe1d4959d02627e5e0d2
+  passing_artifact_family:
+    sha256s:
+      - '2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e = {"tests": 3, "failures": 0, "command": "scripts/check.sh --all"}'
+      - '873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41 = {"tests": 2, "failures": 0, "command": "scripts/check.sh"}'
+      - '98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12 = {"tests": 1, "failures": 0, "command": "scripts/check.sh --marker"}'
+    note: >-
+      these three test_report artifacts are the ONLY evidence_produced refs in
+      the e2e-happy runs' DBs (all failures: 0); each run's objects dir also
+      holds other evidence kinds (facet_evidence, observation_bundle,
+      settlement_authority_decision, gate_admission, dispatch_truncated,
+      work_product_promoted) that are NOT referenced by evidence_produced
+      events and therefore not rule inputs. The gate re-hashes whatever each
+      DB's evidence_produced events pin, so the verifier need not trust this
+      list.
+
+payment_counters:
+  trust: recompute_everything
+  items:
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/route/payment-counters.yaml (round 1: 16 provider calls, 12 probes)
+    - repo:.agents/evidence/godspeed-bounded-judgment/T23/round-2/payment-counters.round2.yaml (round 2: 12 re-judgment calls, 0 re-runs)
+    - round-3 block in repo:.agents/evidence/godspeed-bounded-judgment/T23/round-3/route-record.round3.yaml (12 probes, 0 re-runs, 0 round-3 provider calls)
+
+verifier_receives_also:
+  - the frozen T21 preregistration and contract modules (above)
+  - the T22/T23 route, probe, judgment, and selection records (above)
+  - the gauntlet state databases and manifests needed to recompute terminal consequences (above)
+  - the frozen selection policy and its version (selection-policy-v1, in T21/selection_policy.py)
+
+verifier_should_not_receive:
+  - the builder narrative or any provider reasoning transcript (round-2 raw provider outputs are evidence records, NOT builder reasoning; they enter only through re-parsing)
+
+recompute_instructions:
+  - command: python3 .agents/evidence/godspeed-bounded-judgment/T23/verify_route.round3.py
+    cwd: /home/sprime01/projects/sea-rs
+    expect: exit 0, all checks pass
+    covers: >-
+      (a) all 12 DB sha256 pins; (b) independent re-derivation of every
+      mechanical label from DBs + hash-verified artifacts; (c) the symmetry
+      property; (d) goal recomputation from labels + round-1 records;
+      (e) fingerprint vs round-1; (f) round-1/round-2 unmodifiedness via
+      their manifests (fail-closed); (g) round-3 manifest hashes (both
+      directions).
+  - env: PYTHONDONTWRITEBYTECODE=1 recommended (the gate sets sys.dont_write_bytecode itself)

@@ -1,0 +1,532 @@
+mise WARN  tracking config: failed to ln -sf /tmp/sea-casework-primitives-74f86f0-oct07/mise.toml /home/sprime01/.local/state/mise/tracked-configs/8a8fe643984212f7: Read-only file system (os error 30)
+mise WARN  tracking config: failed to ln -sf /tmp/sea-casework-primitives-74f86f0-oct07/mise.toml /home/sprime01/.local/state/mise/tracked-configs/8a8fe643984212f7: Read-only file system (os error 30)
+mise WARN  tracking config: failed to ln -sf /tmp/sea-casework-primitives-74f86f0-oct07/mise.toml /home/sprime01/.local/state/mise/tracked-configs/8a8fe643984212f7: Read-only file system (os error 30)
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	0.002s
+--- FAIL: TestAskAdapterMapsQuestionIdentityAndCompleteAnswer (0.00s)
+    ask_adapter_test.go:14: listen unix /tmp/sfwp-fake-2358911188/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestAskAdapterKeepsOmittedCaseAbsentAndAcceptsLegitimateEmptyArrays (0.00s)
+    ask_adapter_test.go:64: listen unix /tmp/sfwp-fake-348039879/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure (0.00s)
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/unknown_disposition (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-4261124237/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/unknown_freshness (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-2585626063/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/missing_required_claims (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-3063515665/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/null_required_claims (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-2051177603/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/unknown_omitted_class (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-1450719758/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/unknown_claim_status (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-2010337467/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/claim_missing_references (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-4155606378/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestAskAdapterRejectsMalformedOrUnsupportedDisclosure/null_optional_capability_reference (0.00s)
+        ask_adapter_test.go:114: listen unix /tmp/sfwp-fake-2024982595/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestUncertainAskEOFIsUnavailableWithoutResendOrStatusLookup (0.00s)
+    ask_transport_test.go:73: listen unix /tmp/sfwp-fake-2624549836/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestUncertainAskTimeoutIsUnavailableWithoutResendOrStatusLookup (0.00s)
+    ask_transport_test.go:104: listen unix /tmp/sfwp-fake-3309141299/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestUncertainAskResponseOverflowIsUnavailableWithoutResendOrStatusLookup (0.00s)
+    ask_transport_test.go:129: listen unix /tmp/sfwp-fake-2753557754/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestExplicitServerBusyAskGetsOneSeparateSafeRetry (0.00s)
+    ask_transport_test.go:154: listen unix /tmp/sfwp-fake-3889996781/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts (0.00s)
+    client_run_get_admission_test.go:65: listen unix /tmp/sfwp-fake-2941243126/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientAdmissionCountsAllFourRunGetRetryAttempts (0.00s)
+    client_run_get_admission_test.go:89: listen unix /tmp/sfwp-fake-1837787928/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission (0.00s)
+    client_run_get_admission_test.go:122: listen unix /tmp/sfwp-fake-560604783/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestMutationTransportFailureIsNotResentThroughAdmission (0.00s)
+    client_run_get_admission_test.go:175: listen unix /tmp/sfwp-fake-573692806/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestClientAdmissionMarksPayloadAndLFWriteBoundary (0.00s)
+    client_run_get_admission_test.go:203: listen unix /tmp/sfwp-fake-2501387349/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestUnknownVerbIsTypedUnavailableWithoutRetryStorm (0.00s)
+    client_test.go:129: listen unix /tmp/sfwp-fake-2063288947/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestIdentityRefusalKeepsClass (0.00s)
+    client_test.go:167: listen unix /tmp/sfwp-fake-3388778223/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestSeveredMutationIsRecoveredNotResent (0.00s)
+    client_test.go:198: listen unix /tmp/sfwp-fake-1480157679/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestSeveredMutationReturnsRecordedOutcome (0.00s)
+    client_test.go:244: listen unix /tmp/sfwp-fake-2733177919/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestInspectRetriesOnceOnTransportFailure (0.00s)
+    client_test.go:287: listen unix /tmp/sfwp-fake-1401315807/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestMutationRequiresRequestID (0.00s)
+    client_test.go:335: listen unix /tmp/sfwp-fake-700864425/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestRequestAfterIdleGapUsesAFreshConnection (0.00s)
+    client_test.go:387: listen unix /tmp/sfwp-idle-2034063811/idle.sock: setsockopt: operation not permitted
+--- FAIL: TestSubscriptionResumesFromLastCursor (0.00s)
+    client_test.go:489: listen unix /tmp/sfwp-sub-940868032/sub.sock: setsockopt: operation not permitted
+--- FAIL: TestLowerResponseLineLimitAppliesToRPC (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/exact_configured_boundary (0.00s)
+        response_limit_test.go:98: listen unix /tmp/sfwp-fake-1285963659/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/one_byte_over_is_unavailable_after_the_safe_inspect_retry (0.00s)
+        response_limit_test.go:116: listen unix /tmp/sfwp-fake-936881894/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestLowerResponseLineLimitAppliesToSubscription (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/exact_configured_boundary (0.00s)
+        response_limit_test.go:145: listen unix /tmp/sfwp-fake-1141653700/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/one_byte_over_is_rejected_before_delivery (0.00s)
+        response_limit_test.go:145: listen unix /tmp/sfwp-fake-2830797800/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (0.00s)
+    response_limit_test.go:253: listen unix /tmp/sfwp-fake-541943006/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestOverLimitMutationAndRecoveryResponsesNeverResendMutation (0.00s)
+    response_limit_test.go:291: listen unix /tmp/sfwp-fake-3535171908/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix (0.00s)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/exact_ownership_and_request_identity (0.00s)
+        run_trace_test.go:265: listen unix /tmp/sfwp-run-trace-250881207/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/source_order_and_original_timestamp_text (0.00s)
+        run_trace_test.go:275: listen unix /tmp/sfwp-run-trace-4042918041/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-101976397/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"_\t" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-634898074/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"foreign_identity" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-607579056/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_run_id (0.00s)
+        run_trace_test.go:291: listen unix /tmp/sfwp-run-trace-3680825481/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-595484670/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"_\t" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-3318233706/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"foreign_identity" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-3813592008/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_case_id (0.00s)
+        run_trace_test.go:291: listen unix /tmp/sfwp-run-trace-1567106282/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-1065671412/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"_\t" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-3966192193/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"foreign_identity" (0.00s)
+        run_trace_test.go:286: listen unix /tmp/sfwp-run-trace-4090257365/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_plan_item_id (0.00s)
+        run_trace_test.go:291: listen unix /tmp/sfwp-run-trace-3148349182/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_case_identity/"foreign_case" (0.00s)
+        run_trace_test.go:297: listen unix /tmp/sfwp-run-trace-2906131422/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_run_identity/"foreign_run" (0.00s)
+        run_trace_test.go:302: listen unix /tmp/sfwp-run-trace-1440494348/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_item_identity/"foreign_item" (0.00s)
+        run_trace_test.go:307: listen unix /tmp/sfwp-run-trace-3450534602/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-193850342/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-3059799548/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-1621279368/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-777113125/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-848025007/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-679783184/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-492930541/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-1312156102/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-3820147292/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2369561111/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-3554120906/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2065570084/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-951910136/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2434155975/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-1123204458/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2442855682/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-3069499567/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2587001800/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-933338694/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-563050824/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/unsettled (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-174735095/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/accepted (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2143491151/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/rejected (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-502110122/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/escalated (0.00s)
+        run_trace_test.go:317: listen unix /tmp/sfwp-run-trace-2011076908/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/unknown_execution (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-1262465622/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/null_execution (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-3111683450/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/wrong_execution_shape (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-2472359814/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/unknown_settlement (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-3301196998/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/null_settlement (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-4129746186/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/wrong_settlement_shape (0.00s)
+        run_trace_test.go:333: listen unix /tmp/sfwp-run-trace-4113714192/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/absent_execution (0.00s)
+        run_trace_test.go:338: listen unix /tmp/sfwp-run-trace-737475039/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/absent_settlement (0.00s)
+        run_trace_test.go:338: listen unix /tmp/sfwp-run-trace-746579286/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention (0.00s)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_started (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-603197193/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_activated (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-2384018750/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/command_started (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-2899144174/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/command_finished (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-2457407610/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_completed (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-4163787069/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_failed (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-1221672174/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_terminated (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-3678534941/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/human_task_completed (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-2036129270/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_halted (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-711523220/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_finished (0.00s)
+        run_trace_test.go:349: listen unix /tmp/sfwp-run-trace-551959321/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_malformed_fields_and_selected_id_collision_are_omitted (0.00s)
+        run_trace_test.go:357: listen unix /tmp/sfwp-run-trace-1843290799/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_missing_event_id_is_ignored (0.00s)
+        run_trace_test.go:372: listen unix /tmp/sfwp-run-trace-3428139905/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_null_event_id_is_ignored (0.00s)
+        run_trace_test.go:372: listen unix /tmp/sfwp-run-trace-3759814910/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_wrong-type_event_id_is_ignored (0.00s)
+        run_trace_test.go:372: listen unix /tmp/sfwp-run-trace-2860251863/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_event_kind (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2075821417/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_event_kind (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-4079828189/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/numeric_selected_event_kind (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2227837757/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/boolean_selected_event_kind (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-214357064/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/blank_selected_event_id (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1591293170/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_event_id (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2717667412/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_event_id (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-404265533/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/wrong-type_selected_event_id (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1266470813/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/blank_selected_timestamp (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-4002380319/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_timestamp (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-21343137/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_timestamp (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-873005639/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/wrong-type_selected_timestamp (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-3892130871/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/malformed_selected_timestamp (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1005515525/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/comma_fractional_timestamp_is_not_RFC3339 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1027216593/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/single-digit_hour_is_not_RFC3339 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-3852102681/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/single-digit_minute_is_not_RFC3339 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-4115371063/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/single-digit_second_is_not_RFC3339 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2812673858/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/fraction_requires_digits (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-404063557/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/single-digit_offset_hour_is_not_RFC3339 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1975955943/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/offset_requires_colon (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1248430212/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/offset_hour_must_be_below_24 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-3232568054/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/offset_minute_must_be_below_60 (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-539853538/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/offset_hour_and_minute_ranges_are_independently_checked (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-1450667282/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_trace_row (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2255323315/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/scalar_trace_row (0.00s)
+        run_trace_test.go:404: listen unix /tmp/sfwp-run-trace-2833025775/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/valid_RFC3339_timestamp_preserved/2026-10-05T12:13:14Z (0.00s)
+        run_trace_test.go:420: listen unix /tmp/sfwp-run-trace-725277116/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/valid_RFC3339_timestamp_preserved/2026-10-05T12:13:14.1+00:00 (0.00s)
+        run_trace_test.go:420: listen unix /tmp/sfwp-run-trace-343594137/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/valid_RFC3339_timestamp_preserved/2026-10-05T12:13:14.123456789-00:00 (0.00s)
+        run_trace_test.go:420: listen unix /tmp/sfwp-run-trace-3698845484/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/valid_RFC3339_timestamp_preserved/2026-10-05T12:13:14.123456789+23:59 (0.00s)
+        run_trace_test.go:420: listen unix /tmp/sfwp-run-trace-2565125763/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/valid_RFC3339_timestamp_preserved/2026-10-05T12:13:14-23:59 (0.00s)
+        run_trace_test.go:420: listen unix /tmp/sfwp-run-trace-843291251/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/duplicate_selected_id_invalidates_response (0.00s)
+        run_trace_test.go:427: listen unix /tmp/sfwp-run-trace-2997644929/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/selected_duplicate_beyond_retained_newest_1024_is_invalid (0.00s)
+        run_trace_test.go:439: listen unix /tmp/sfwp-run-trace-1067880440/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_0_and_newest_retention (0.00s)
+        run_trace_test.go:460: listen unix /tmp/sfwp-run-trace-2375298426/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_1024_and_newest_retention (0.00s)
+        run_trace_test.go:460: listen unix /tmp/sfwp-run-trace-3753967548/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_1027_and_newest_retention (0.00s)
+        run_trace_test.go:460: listen unix /tmp/sfwp-run-trace-3225600506/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary (0.00s)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/empty_returned_rows_zero_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2130847791/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/empty_returned_rows_positive_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3909250357/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/nonempty_returned_rows_zero_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3629865189/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/nonempty_returned_prefix_positive_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-813716353/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-707516658/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-109311433/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong_trace_shape (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2877642037/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_records (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3378509270/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_records (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2573680851/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong_records_shape (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-510224898/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_record_array_entry (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-305805781/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/scalar_trace_record_array_entry (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3307772075/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_record_name (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-4243708550/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_record_name (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-1075319103/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_record (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-443578873/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/duplicate_trace_records (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2402867835/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/absent_trace_record (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2042603529/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/false_trace_presence (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-2849735934/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_presence (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3797676270/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_presence (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-668825607/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong-type_trace_presence (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3395936050/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3028140428/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3534295007/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/negative_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-1955665623/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/fractional_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3403639145/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/boolean_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-1745944042/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/string_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-1079273342/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/malformed_record_entry (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3882070954/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/exact_u64_maximum_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3065266259/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/u64_overflow_bytes (0.00s)
+        run_trace_test.go:521: listen unix /tmp/sfwp-run-trace-3696922184/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/returned_prefix_count_is_not_a_source_journal_total (0.00s)
+        run_trace_test.go:528: listen unix /tmp/sfwp-run-trace-967752105/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON (0.00s)
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/invalid_JSON_text (0.00s)
+        run_trace_test.go:544: listen unix /tmp/sfwp-run-trace-2108057405/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/null_JSON_root (0.00s)
+        run_trace_test.go:544: listen unix /tmp/sfwp-run-trace-4261335886/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/array_JSON_root (0.00s)
+        run_trace_test.go:544: listen unix /tmp/sfwp-run-trace-4009857099/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/string_JSON_root (0.00s)
+        run_trace_test.go:544: listen unix /tmp/sfwp-run-trace-922305052/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/number_JSON_root (0.00s)
+        run_trace_test.go:544: listen unix /tmp/sfwp-run-trace-2356594194/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3CommandMetadataProjection (0.00s)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/missing_payload (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-1052096258/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_payload (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2018715711/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/scalar_payload (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-799107970/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/array_payload (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-3241859675/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/object_missing_execution (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-33971324/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_execution (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-3050843007/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/execution_missing_optionals (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-3036593845/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_status_and_exit (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2356901167/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_completed (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2153598170/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_spawn_failed (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-361162760/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_timed_out (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2072711906/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_sandbox_violation (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-4292518837/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_suspected_sandbox_violation (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-1943383432/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/exit_only (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2567490215/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/safe_lower_exit_boundary (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2237176089/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/safe_upper_exit_boundary (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-104624768/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/execution_wrong_shape (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2965699190/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unknown_status (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-261928116/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/nonstring_status (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2039696107/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unsafe_adjacent_upper (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-4180611966/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unsafe_adjacent_lower (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2439151975/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/int64_positive_overflow (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-2796546697/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/int64_negative_overflow (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-1704382255/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/fraction_exit (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-3364068191/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/string_exit (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-1306118331/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/boolean_exit (0.00s)
+        run_trace_test.go:596: listen unix /tmp/sfwp-run-trace-1792403255/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/other_kinds_ignore_all_payload_metadata (0.00s)
+        run_trace_test.go:603: listen unix /tmp/sfwp-run-trace-908669076/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/semantic_serialization_contains_only_safe_fields (0.00s)
+        run_trace_test.go:612: listen unix /tmp/sfwp-run-trace-707110099/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial (0.00s)
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_case (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-3117462402/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_case (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-4038959924/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_run (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-2976963091/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_run (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-3250477042/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_item (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-3659671382/authority.sock: setsockopt: operation not permitted
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_item (0.00s)
+        run_trace_test.go:652: listen unix /tmp/sfwp-run-trace-1562283526/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3PreservesAuthorityRefusalClass (0.00s)
+    run_trace_test.go:671: listen unix /tmp/sfwp-run-trace-539256998/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestReadRunTraceV3PreservesInternalAuthorityRefusal (0.00s)
+    run_trace_test.go:687: listen unix /tmp/sfwp-run-trace-2793668308/authority.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListUsesCaseRequestAndMapsEveryField (0.00s)
+    scoped_runs_test.go:32: listen unix /tmp/sfwp-fake-2833579969/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRejectsBlankCaseBeforeWireContact (0.00s)
+    scoped_runs_test.go:80: listen unix /tmp/sfwp-fake-709320061/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows (0.00s)
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-runs (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-2787859212/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-runs (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-3033349379/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-3854606834/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-133782869/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-run-id (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-491751916/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-case (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-3338735507/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/foreign-case (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-550538974/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-item (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-483584291/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-execution (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-2720633569/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-settlement (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-1575664495/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/bad-timestamp (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-3106637643/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/negative-evidence (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-857069751/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-run-id (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-1235006549/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-2510699815/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/overlap (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-4131728550/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-unreadable (0.00s)
+        scoped_runs_test.go:142: listen unix /tmp/sfwp-fake-3428420800/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListRefusalRemainsTyped (0.00s)
+    scoped_runs_test.go:163: listen unix /tmp/sfwp-fake-148362399/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestScopedRunsListPreservesOtherRefusalKinds (0.00s)
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/invalid_input (0.00s)
+        scoped_runs_test.go:197: listen unix /tmp/sfwp-fake-2501968637/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/identity_denial (0.00s)
+        scoped_runs_test.go:197: listen unix /tmp/sfwp-fake-3931241219/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/unsupported_version (0.00s)
+        scoped_runs_test.go:197: listen unix /tmp/sfwp-fake-714460033/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestScopedRunsListPreservesOtherRefusalKinds/unknown_refusal (0.00s)
+        scoped_runs_test.go:197: listen unix /tmp/sfwp-fake-4111720671/fake.sock: setsockopt: operation not permitted
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.602s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+--- FAIL: TestOIDCDiscoveryAndFlowConstruction (0.02s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 249 [running]:
+testing.tRunner.func1.2({0xc0c108, 0x125375aa4650})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0xc0c108?, 0x125375aa4650?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0xd9
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xc66180, 0x125376e2a000})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x25
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.newTestOIDCProvider(0x125375ae0d88)
+	/tmp/sea-casework-primitives-74f86f0-oct07/apps/godspeed-casework-go/internal/auth/oidc_test.go:89 +0x256
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.TestOIDCDiscoveryAndFlowConstruction(0x125375ae0d88)
+	/tmp/sea-casework-primitives-74f86f0-oct07/apps/godspeed-casework-go/internal/auth/oidc_test.go:152 +0x27
+testing.tRunner(0x125375ae0d88, 0xc6ab50)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	0.546s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	0.004s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	0.003s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.003s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	0.005s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	0.002s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.003s
+--- FAIL: TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 9 [running]:
+testing.tRunner.func1.2({0xc25dd0, 0x2302ab9f8be0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0xc25dd0?, 0x2302ab9f8be0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0xd9
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xc83038, 0x2302ab9bf6c0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x25
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.newLiveHarness(0x2302aa5e0488)
+	/tmp/sea-casework-primitives-74f86f0-oct07/apps/godspeed-casework-go/internal/server/server_test.go:165 +0x50e
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective(0x2302aa5e0488)
+	/tmp/sea-casework-primitives-74f86f0-oct07/apps/godspeed-casework-go/internal/server/artifact_test.go:40 +0x175
+testing.tRunner(0x2302aa5e0488, 0xc877d0)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.097s
+FAIL
+error: recipe `casework-go-check` failed with exit code 1

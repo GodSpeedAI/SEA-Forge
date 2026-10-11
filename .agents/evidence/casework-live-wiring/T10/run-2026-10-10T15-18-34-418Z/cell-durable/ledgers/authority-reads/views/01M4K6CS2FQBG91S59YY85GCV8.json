@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4K6CS2FQBG91S59YY85GCV8",
+  "source_entry_ulids": [
+    "01M4K6CS2FQBG91S59YY85GCV8"
+  ],
+  "source_payload_hash": "sha256:8d18b2cff9918917c87cf147c734b5921c10f2baee1e4d1eb04313b290b6b6fe",
+  "view_path": "/tmp/t10-live-kCNqZF/cell/authority/audit.jsonl",
+  "view_sha256": "sha256:17b11aab0846c712a65435217b267484876fb381f889730492c9fc50e8afe807",
+  "status": "current",
+  "failure_class": null
+}

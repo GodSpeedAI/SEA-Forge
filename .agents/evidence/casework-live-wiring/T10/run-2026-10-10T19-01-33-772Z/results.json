@@ -1,0 +1,50 @@
+[
+  {
+    "journey_id": "L5",
+    "title": "Sign-off: operator denied, R-SO approves in a separate session",
+    "status": "FAIL",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "an approval opened by the operator's execution is resolved only by a distinct R-SO principal, with both principals visible in the durable record",
+    "unlocks": [
+      "L6",
+      "L7"
+    ],
+    "steps": [
+      {
+        "journey": "L5",
+        "name": "guard: the operator and the R-SO drive distinct agent-browser sessions",
+        "ok": true,
+        "ms": 0
+      },
+      {
+        "journey": "L5",
+        "name": "operator designs a sign-off case through the UI; the kernel parks the human gate and enables the draft",
+        "ok": true,
+        "ms": 10483
+      },
+      {
+        "journey": "L5",
+        "name": "operator executes the draft; the kernel escalates it and opens a pending approval requested for this case",
+        "ok": true,
+        "ms": 16376
+      },
+      {
+        "journey": "L5",
+        "name": "operator is denied: no Approve/Reject is offered and an approve intent posted anyway is refused, durable state unchanged",
+        "ok": true,
+        "ms": 6306
+      },
+      {
+        "journey": "L5",
+        "name": "guard: after both sign in, the two sessions hold different cookies and different principals",
+        "ok": false,
+        "ms": 13753,
+        "error": "shared session identity: \"operator\" and \"rso\" present the same casework_session cookie; shared session identity: \"operator\" and \"rso\" are both signed in as operator_local"
+      }
+    ],
+    "total_ms": 58974,
+    "error": "shared session identity: \"operator\" and \"rso\" present the same casework_session cookie; shared session identity: \"operator\" and \"rso\" are both signed in as operator_local"
+  }
+]

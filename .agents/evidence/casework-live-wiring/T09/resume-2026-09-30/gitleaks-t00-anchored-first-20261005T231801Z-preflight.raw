@@ -1,0 +1,59 @@
+utc=2026-10-05T23:18:29Z
+MemTotal:        8132712 kB
+MemFree:          158336 kB
+MemAvailable:    2584020 kB
+Buffers:          583064 kB
+Cached:          1521412 kB
+SwapCached:        65856 kB
+Active:          4426852 kB
+Inactive:        1957464 kB
+Active(anon):    2964816 kB
+Inactive(anon):  1443768 kB
+Active(file):    1462036 kB
+Inactive(file):   513696 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:      12582912 kB
+SwapFree:        4203488 kB
+Dirty:              1468 kB
+Writeback:             0 kB
+AnonPages:       4216180 kB
+Mapped:           418368 kB
+Shmem:            127160 kB
+KReclaimable:     728648 kB
+Slab:             975072 kB
+SReclaimable:     728648 kB
+SUnreclaim:       246424 kB
+KernelStack:       22448 kB
+PageTables:       204060 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    16649268 kB
+Committed_AS:   20857956 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:      148408 kB
+VmallocChunk:          0 kB
+Percpu:             4000 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:      8192 kB
+FilePmdMapped:         0 kB
+Unaccepted:            0 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+DirectMap4k:       58368 kB
+DirectMap2M:     4134912 kB
+DirectMap1G:    13631488 kB
+    PID COMMAND           RSS
+      1 codex           18936
+      2 bash             3476
+      5 ps               3992

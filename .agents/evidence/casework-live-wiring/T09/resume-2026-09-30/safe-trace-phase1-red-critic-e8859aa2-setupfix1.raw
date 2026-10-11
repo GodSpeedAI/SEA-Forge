@@ -1,0 +1,4 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp.test]
+internal/adapters/sfwp/run_trace_test.go:109:8: f.client.Close() (no value) used as value
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp [build failed]
+FAIL

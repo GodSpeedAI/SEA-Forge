@@ -1,0 +1,22 @@
+=== RUN   TestRunObservationPollerImageNilCurrentHasOnlyKeyAndControls
+--- PASS: TestRunObservationPollerImageNilCurrentHasOnlyKeyAndControls (0.00s)
+=== RUN   TestRunObservationPollerImageCurrentIsRawObjectAndKeyAppearsOnce
+--- PASS: TestRunObservationPollerImageCurrentIsRawObjectAndKeyAppearsOnce (0.00s)
+=== RUN   TestRunObservationPollerImageCombinedExactLimitAndOneByteOver
+--- PASS: TestRunObservationPollerImageCombinedExactLimitAndOneByteOver (0.21s)
+=== RUN   TestRunObservationPollerImageMarkerControlsKeepExactPriorWidth
+--- PASS: TestRunObservationPollerImageMarkerControlsKeepExactPriorWidth (0.53s)
+=== RUN   TestRunObservationPollerImageOversizedNilCurrentReturnsGenericRefusal
+--- PASS: TestRunObservationPollerImageOversizedNilCurrentReturnsGenericRefusal (0.15s)
+=== RUN   TestRunObservationPollerImageDoesNotMutateStateOrAliasBytes
+--- PASS: TestRunObservationPollerImageDoesNotMutateStateOrAliasBytes (0.00s)
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_phase
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_initializer_result
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/current_key_mismatch
+--- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_phase (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_initializer_result (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/current_key_mismatch (0.00s)
+PASS
+ok   github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server 2.124s

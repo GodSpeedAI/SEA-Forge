@@ -1,0 +1,155 @@
+--- FAIL: TestGoldenRoundTrip (0.02s)
+    golden_test.go:132: ask-answer-answered.json: round-trip is not byte-stable; the Go json tags and the fixture disagree.
+        --- fixture ---
+        {
+          "answer_id": "tha-t09-answered",
+          "question_id": "thq-t09-answered",
+          "disposition": "answered",
+          "claims": [
+            {
+              "claim_id": "claim-t09-domain-rust",
+              "claim_class": "demonstrated_capability",
+              "subject": "domain-rust",
+              "status": "demonstrated",
+              "statement": "SEA Forge has demonstrated Rust implementation capability.",
+              "snapshot_ref": "snapshot-self-model-t09",
+              "evidence_refs": ["evi-t09-build"],
+              "settlement_refs": ["set-t09-build"],
+              "capability_record_ref": "cap-domain-rust"
+            }
+          ],
+          "omitted_claim_classes": [],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "current",
+          "assurance": "local_tamper_evident",
+          "limitations": [],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:05Z"
+        }
+        
+        --- re-marshaled ---
+        {
+          "answer_id": "tha-t09-answered",
+          "question_id": "thq-t09-answered",
+          "disposition": "answered",
+          "claims": [
+            {
+              "claim_id": "claim-t09-domain-rust",
+              "claim_class": "demonstrated_capability",
+              "subject": "domain-rust",
+              "status": "demonstrated",
+              "statement": "SEA Forge has demonstrated Rust implementation capability.",
+              "snapshot_ref": "snapshot-self-model-t09",
+              "evidence_refs": [
+                "evi-t09-build"
+              ],
+              "settlement_refs": [
+                "set-t09-build"
+              ],
+              "capability_record_ref": "cap-domain-rust"
+            }
+          ],
+          "omitted_claim_classes": [],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "current",
+          "assurance": "local_tamper_evident",
+          "limitations": [],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:05Z"
+        }
+    golden_test.go:132: ask-answer-denied.json: round-trip is not byte-stable; the Go json tags and the fixture disagree.
+        --- fixture ---
+        {
+          "answer_id": "tha-t09-denied",
+          "question_id": "thq-t09-denied",
+          "disposition": "denied",
+          "claims": [],
+          "omitted_claim_classes": ["credential_bearing", "customer_private"],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "current",
+          "assurance": "local_tamper_evident",
+          "limitations": ["No claim class is permitted for this actor."],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:07Z"
+        }
+        
+        --- re-marshaled ---
+        {
+          "answer_id": "tha-t09-denied",
+          "question_id": "thq-t09-denied",
+          "disposition": "denied",
+          "claims": [],
+          "omitted_claim_classes": [
+            "credential_bearing",
+            "customer_private"
+          ],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "current",
+          "assurance": "local_tamper_evident",
+          "limitations": [
+            "No claim class is permitted for this actor."
+          ],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:07Z"
+        }
+    golden_test.go:132: ask-answer-partial.json: round-trip is not byte-stable; the Go json tags and the fixture disagree.
+        --- fixture ---
+        {
+          "answer_id": "tha-t09-partial",
+          "question_id": "thq-t09-partial",
+          "disposition": "partial",
+          "claims": [
+            {
+              "claim_id": "claim-t09-architecture",
+              "claim_class": "architecture",
+              "subject": "casework-live",
+              "status": "declared",
+              "statement": "The live casework architecture is declared in the source-backed specification.",
+              "snapshot_ref": "snapshot-self-model-t09",
+              "evidence_refs": ["evi-t09-spec"],
+              "settlement_refs": []
+            }
+          ],
+          "omitted_claim_classes": ["security_implementation"],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "stale",
+          "assurance": "local_tamper_evident",
+          "limitations": ["The self-model snapshot is stale."],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:06Z"
+        }
+        
+        --- re-marshaled ---
+        {
+          "answer_id": "tha-t09-partial",
+          "question_id": "thq-t09-partial",
+          "disposition": "partial",
+          "claims": [
+            {
+              "claim_id": "claim-t09-architecture",
+              "claim_class": "architecture",
+              "subject": "casework-live",
+              "status": "declared",
+              "statement": "The live casework architecture is declared in the source-backed specification.",
+              "snapshot_ref": "snapshot-self-model-t09",
+              "evidence_refs": [
+                "evi-t09-spec"
+              ],
+              "settlement_refs": []
+            }
+          ],
+          "omitted_claim_classes": [
+            "security_implementation"
+          ],
+          "snapshot_ref": "snapshot-self-model-t09",
+          "freshness": "stale",
+          "assurance": "local_tamper_evident",
+          "limitations": [
+            "The self-model snapshot is stale."
+          ],
+          "authority_notice": "This answer confers no execution authority.",
+          "answered_at": "2026-09-23T10:17:06Z"
+        }
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.031s
+FAIL

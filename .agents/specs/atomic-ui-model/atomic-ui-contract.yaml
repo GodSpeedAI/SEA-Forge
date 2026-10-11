@@ -1,0 +1,88 @@
+# Atomic UI IR Contract
+# Source Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+# Behavioral Authority: /home/sprime01/projects/sea-rs/.agents/specs/behavioral-interaction-proof/contract.yaml
+# Skill: /home/sprime01/projects/project-topology-architect/skills/deriving-atomic-ui-models
+
+version: "1.0.0"
+layer: "R4_atomic_ui_ir"
+upstream:
+  r1_domain_model: ".sea/interaction/interaction-model.sea"
+  r2_behavioral_ir: ".agents/specs/behavioral-interaction-proof/contract.yaml"
+  r3_sequential_proof: ".agents/specs/behavioral-interaction-proof/proof-report.md"
+
+composition_levels:
+  element:
+    definition: "Smallest meaningful interface responsibility (identity, status, value, action, evidence item, bounded input)."
+  group:
+    definition: "Cohesive cluster of elements serving one local responsibility (case summary, action cluster, evidence card, metadata panel)."
+  region:
+    definition: "Persistent or spatially meaningful zone for one behavioral responsibility (context, evidence, inspector, navigation, command)."
+  view:
+    definition: "Bounded interface state composing regions for a purposeful interaction; traceable to Behavioral IR responsibilities."
+
+primitives:
+  # Structural / Identity
+  - identity: "Displays stable entity or cell identity with cryptographic or attributable provenance"
+  - label: "Human-readable semantic descriptor for a field, state, or relationship"
+  - value: "Rendered scalar or structured content bound to a validated data model field"
+  - status: "Semantic state indicator (ready, degraded, blocked, complete, pending, quarantined)"
+  - metric: "Quantitative resource or performance measurement (tokens, duration, size, memory)"
+  - message: "Informational, warning, or diagnostic statement linked to validation or policy"
+  
+  # Governance / Evidence
+  - evidence_item: "Individual verifiable evidence artifact, digest, signature, or attestation"
+  - artifact_reference: "Attributable pointer to an immutable file, projection, or ledger record"
+  
+  # Interaction / Control
+  - action: "Affordance invoking a semantic operation; availability strictly sourced from behavioral IR"
+  - choice: "Selection among bounded mutually-exclusive or multi-select options"
+  - input: "Bounded data entry for unmodeled parameters, filters, or query terms"
+  - command: "Keyboard-addressable command entry or hotkey accelerator"
+  - navigation: "Next-affordance transition between views or cases"
+  - notification: "Actionable operational alert or event signal with direct record link"
+
+  # Rich / Structured Collections (Representation-Test Required)
+  - collection: "Comparative set of entities supporting sorting, filtering, and triage"
+  - tree: "Hierarchical concept or artifact directory structure"
+  - table: "Tabular multi-attribute entity projection"
+  - graph: "Topological node-and-edge view for dependency DAGs (stages, sentries, concepts)"
+  - timeline: "Monotonically ordered sequence of events, retries, and milestones"
+  - progress: "Bounded execution progress indicator within granted limits"
+  - inspector: "Detail drilldown panel maintaining simultaneous visibility with active item"
+  - comparison: "Side-by-side operand comparison (expected vs observed, source vs projected)"
+  - workspace: "Coordinated multi-region layout for complex authoring or Casework"
+  - viewport: "Bounded scrollable or virtualized event/log buffer"
+
+affordance_projection_rules:
+  - rule: "UI actions project Behavioral IR affordances; they never become enabled merely because the renderer can trigger them."
+  - rule: "UI enablement rules must never duplicate or compete with domain business logic."
+  - rule: "Blocked actions must retain their semantic BlockedReason (missing_precondition, unauthorized, policy_prohibited, no_settlement_access)."
+  - rule: "Every consequential action must be explicitly labeled consequence: consequential and require commitment acknowledgment."
+
+representation_test:
+  rule: "Before introducing a richer primitive (graph, timeline, comparison, table, inspector), prove what behavioral burden it reduces that a simpler representation cannot."
+  burdens_tested:
+    - persistent_context: "Reduces error caused by forgetting cell or case identity during decisions"
+    - simultaneous_comparison: "Reduces cognitive load of comparing criteria against evidence across page transitions"
+    - collection: "Reduces search time when triaging many pending approvals or active runs"
+    - relationship_view: "Exposes blocking dependencies in DAGs that linear lists conceal"
+    - temporal_view: "Maintains causal event order for replay, recovery, and audit"
+    - artifact_context: "Keeps sandbox bounds and criteria visible while deciding consequential action"
+
+state_model:
+  states:
+    - uninitialized: "View context not yet bound to cell or case root"
+    - loading: "Context or record resolution in progress"
+    - ready: "All required context loaded; spendable affordances derived"
+    - empty: "Target collection or search returned zero records"
+    - blocked: "Preconditions or policy prohibit movement; blocked reason visible"
+    - partial: "Disclosure scope or capability support provides partial visibility"
+    - error: "Underlying transport or validation failure encountered"
+    - recovering: "Recovery or repair procedure in progress"
+    - settled: "Completion condition evaluated and sovereign settlement reached"
+
+accessibility_obligations:
+  - keyboard_navigation: "Every interactive element must have a deterministic focus order and key binding"
+  - non_color_status: "Glyph shape and explicit semantic label must carry status meaning before color"
+  - text_alternatives: "Graphs, DAGs, and timelines must provide linear text or table alternatives"
+  - screen_reader_labels: "All actions, status indicators, and evidence items must expose ARIA-equivalent labels"

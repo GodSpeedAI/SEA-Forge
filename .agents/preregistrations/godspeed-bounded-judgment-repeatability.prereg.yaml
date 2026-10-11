@@ -1,0 +1,42 @@
+schema: godspeed-bounded-judgment.repeatability-prereg
+experiment_id: repeatability-deepseek-v4.1-flash
+created_utc: "2026-09-18"
+frozen_before: "any scored provider call"
+question: "Is apparent bounded-judgment capability repeatable under nominally identical conditions, and does multi-sample aggregation produce materially more stable useful judgment?"
+corpus:
+  path: "$HOME/.local/share/godspeed-t16-corpus"
+  runs: 25
+  classes: {settled: 12, budget_exhausted: 13}
+  identity: "persistent regeneration of the T16 expanded corpus; same frozen recipe; new DB instances"
+  manifest_ref: ".agents/preregistrations/godspeed-bounded-judgment-T16.expanded-corpus-manifest.yml (structure; DB hashes differ due to regeneration)"
+representation: "condition A from T16 (undifferentiated role_invocation payload + correction count)"
+answer_domain: {version: "t16-settlement-outcome/v1", labels: [settled, not_settled, insufficient_evidence]}
+judgment_question: "Will this run settle accepted, or end non-settled (budget exhausted)?"
+provider_order:
+  - {id: deepseek-v4.1-flash, route: "opencode run -m cline-pass/cline-pass/deepseek-v4.1-flash", tier: free}
+  - {id: muse-spark-1.3-contributor-free, route: "opencode run -m opencode/muse-spark-1.3-contributor-free", tier: free-contributor}
+  - {id: glm-5.3-flash, route: "opencode run -m cline-pass/cline-pass/glm-5.3-flash", tier: free}
+repetitions: 5
+total_calls: 125
+isolation: "each call is an independent stateless CLI invocation; no conversational carryover; no prior answers in prompts"
+aggregation_rule:
+  frozen_before_results: true
+  steps:
+    1: "collect all 5 independent normalized judgments for a case"
+    2: "compute the modal non-abstaining answer"
+    3: "if no unique mode exists, return insufficient_evidence"
+    4: "no confidence-weighted aggregation"
+    5: "score aggregate against frozen truth"
+scoring: "accuracy vs mapped truth (budget_exhausted -> not_settled); confusion; abstention; entropy; stability metrics"
+baseline: "constant settled predictor (= class prior 12/25 = 0.48)"
+teeth:
+  - "no prior answers in later prompts (structural: fresh CLI process per call)"
+  - "no retry of semantically valid wrong answers"
+  - "infrastructure retries allowed with declared bounded rule (max 2 retries per call; preserve original failure)"
+interpretations:
+  R1_stable_accurate: "high case-level agreement + high accuracy; variance was from an uncontrolled execution factor"
+  R2_noisy_aggregation_helps: "low single-call stability but modal aggregation improves accuracy/stability"
+  R3_unstable_aggregation_weak: "low stability and aggregation doesn't help enough"
+  R4_stable_errors: "repeatable but systematically wrong on meaningful cases"
+  R5_baseline_superior: "deterministic baseline remains preferable"
+limits: "N=25 cases, R=5 repetitions, one provider; no population or capability-class claim"

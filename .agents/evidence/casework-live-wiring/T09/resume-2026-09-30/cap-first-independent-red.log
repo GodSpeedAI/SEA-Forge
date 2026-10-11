@@ -1,0 +1,21 @@
+--- FAIL: TestResponseLineLimitConfigValidationBeforeDial (0.00s)
+    --- FAIL: TestResponseLineLimitConfigValidationBeforeDial/negative (0.00s)
+        response_limit_test.go:63: New with MaxResponseLineBytes=-1 returned client=&{{unused -1 2 2000000000 1000000000 3000000000 20000000 100000000 5000000000 8000000000 <nil> 0x75d100} {{} {0 0}} [] 0 true 0xc00008c2a0 {{} {} 0} 735978} error=<nil>, want typed config error
+    --- FAIL: TestResponseLineLimitConfigValidationBeforeDial/above_hard_ceiling (0.00s)
+        response_limit_test.go:63: New with MaxResponseLineBytes=33554433 returned client=&{{unused 33554433 2 2000000000 1000000000 3000000000 20000000 100000000 5000000000 8000000000 <nil> 0x75d100} {{} {0 0}} [] 0 true 0xc00008c380 {{} {} 0} 735978} error=<nil>, want typed config error
+--- FAIL: TestLowerResponseLineLimitAppliesToRPC (0.01s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/one_byte_over_is_unavailable_after_the_safe_inspect_retry (0.00s)
+        response_limit_test.go:122: over-limit RPC response error=<nil>, want typed unavailable
+--- FAIL: TestLowerResponseLineLimitAppliesToSubscription (0.21s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/one_byte_over_is_rejected_before_delivery (0.10s)
+        response_limit_test.go:155: subscription delivered 1 events at line size 193, want 0
+--- FAIL: TestResponseLineLimitExactBoundaryAndOverflowPoison (8.87s)
+    --- FAIL: TestResponseLineLimitExactBoundaryAndOverflowPoison/one_byte_over_limit_is_typed_unavailable_and_poisons_the_connection (2.27s)
+        response_limit_test.go:215: over-limit response error=<nil>, want typed unavailable
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (1.50s)
+    response_limit_test.go:271: inspect should succeed after exactly one safe retry: internal: response line is not a JSON object (decode): invalid character 'x' looking for beginning of value
+--- FAIL: TestOverLimitMutationAndRecoveryResponsesNeverResendMutation (0.75s)
+    response_limit_test.go:317: correlation recovery did not return the recorded mutation outcome: internal: response line is not a JSON object (decode): invalid character 'x' looking for beginning of value
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	12.147s
+FAIL

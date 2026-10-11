@@ -1,0 +1,40 @@
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/sfwp_case_mutations.rs (target/debug/deps/sfwp_case_mutations-17457d6117a2192d)
+
+running 10 tests
+test case_add_item_cycle_refusal_leaves_the_plan_byte_identical ... ok
+test case_terminate_appends_case_terminated_on_an_active_case ... ok
+test case_add_item_appends_exactly_one_plan_mutated_with_the_verified_proposer ... ok
+test case_reopen_appends_case_reopened_only_after_closure ... ok
+test human_task_complete_closes_the_case_and_mandates_a_justification ... ok
+test item_execute_scopes_to_one_item_and_refuses_non_ready_targets ... ok
+test artifact_get_returns_content_addressed_bytes_and_refuses_unknown_digests ... ok
+test case_advance_runs_a_parked_sandboxed_item_end_to_end ... ok
+test subscriber_kill_and_resume_replays_without_gaps_or_duplicates ... ok
+test the_proposer_cannot_resolve_its_own_discretionary_items_approval ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+   Doc-tests sea_forge_case_runner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sea_forge_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+GATE1_EXIT=0
+test subscriber_kill_and_resume_replays_without_gaps_or_duplicates ... ok
+test the_proposer_cannot_resolve_its_own_discretionary_items_approval ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+GATE2_EXIT=0
+GATE3_EXIT=0
+ok: no async runtime or HTTP client in 19 kernel crates
+GATE4_EXIT=0

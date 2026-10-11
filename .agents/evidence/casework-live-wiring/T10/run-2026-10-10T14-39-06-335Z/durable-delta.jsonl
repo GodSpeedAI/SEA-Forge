@@ -1,0 +1,6 @@
+{"journey":"L0","at":"2026-10-10T14:39:08.078Z","step":"bundle-scan","scanned":12,"forbidden":["LocalContractAdapter","NORTHSTAR_CASE_ID","northstarData","createLocalAgent","localAdapter","localAgent","evi-case-timeline","case-northstar"],"violations":[]}
+{"journey":"L0","at":"2026-10-10T14:39:08.365Z","step":"readiness","health":{"status":"ok","provenance":"go:live:sfwp","kernel_cursor":""},"ready":{"kernel":{"capabilities":2,"foundations":1,"overall":"unknown"},"status":"ready"}}
+{"journey":"L0","at":"2026-10-10T14:39:17.729Z","step":"identity","actor_id":"operator_local","role":"operator"}
+{"journey":"L0","at":"2026-10-10T14:39:20.633Z","step":"runtime-scripts","loaded":["index-DPWdp_Kb.js","httpCaseworkAdapter-BfSkWyjN.js"]}
+{"journey":"L1","at":"2026-10-10T14:39:35.529Z","step":"preflight","digest":"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd"}
+{"journey":"L1","at":"2026-10-10T14:39:42.345Z","step":"commit","case_id":"case_20261010T143942Z_5cbbc4","events_file":"/tmp/t10-live-vT6P1Y/cell/cases/case_20261010T143942Z_5cbbc4/case-events.jsonl","kinds":["case_created","item_enabled"],"plan_items":["task_prepare","task_publish","ms_chain_accepted"],"digest":"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd"}

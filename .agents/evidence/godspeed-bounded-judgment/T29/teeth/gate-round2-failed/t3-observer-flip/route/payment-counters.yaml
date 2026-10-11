@@ -1,0 +1,33 @@
+schema: godspeed-bounded-judgment.t29-payment-counters
+task: T29
+route_id: t29-route-001
+wall_clock_seconds: 41.344
+provider_calls:
+  count: 2
+  by_identity:
+  - seq: 1
+    purpose: candidate_generation:iter1
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T15:21:30.122284+00:00'
+    duration_seconds: 22.51
+  - seq: 2
+    purpose: candidate_generation:iter2
+    provider: deepseek-clinepass
+    model: cline-pass/cline-pass/deepseek-v4.1-flash
+    outcome: responded
+    started_at_utc: '2026-09-19T15:21:53.793074+00:00'
+    duration_seconds: 15.692
+provider_calls_purpose: candidate generation ONLY (generation clause); the loop judgment is mechanics-only; observer
+  calls counted separately in observer-record.yaml
+probes_run: 6
+probes_per_iteration:
+  '1': 3
+  '2': 3
+tool_executions: 6
+failed_executions: 0
+tokens_and_cost: 'n/a: the frozen provider seam (opencode run) does not expose token/cost accounting; honest gap
+  per the frozen T21 payment convention'
+operator_decisions: 0
+probe_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1

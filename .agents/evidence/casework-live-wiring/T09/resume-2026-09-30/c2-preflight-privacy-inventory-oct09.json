@@ -1,0 +1,192 @@
+{
+  "scope": "October 9 XZ/Base64 preflight archives with data field in the named T09 evidence directory only; not a whole-history credential audit",
+  "finding": "CSRF session credential argument in language-server process command arguments; values deliberately excluded",
+  "affected_archive_count": 18,
+  "local_HEAD": "cb90b6fc6b06ff24516b3e528d7bd8f1fd006153",
+  "last_published": "9efd039e47ee095c1e6ac4a7b9d0f99fcb89beaa",
+  "historical_evidence_mutation": "none; operator approval pending",
+  "publication": "held; pending608 push approval superseded",
+  "future_preflight": "PID and process names only, no arguments",
+  "artifacts": [
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-check01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "d0b3d7871eb1d9ca417bf51e0a69e690cc0f98c0c0044be1638bd945d6c4d5cd",
+      "original_raw_bytes": 32563,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-formatted-check02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "c8c04786c1dac0be5a42d9b4d1e64a6af3c1c0ffe0cb406014b148cee2eb4ffe",
+      "original_raw_bytes": 34168,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-formatted-full02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "f360f8eba3a18f515c192ffa48af2b955852d45f1e0eca7b08c97d8eb2c294f8",
+      "original_raw_bytes": 32090,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-full01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "0101f9e7e99281fc0ff988a644e90de8cd5c000e7361af37cdb65485a84e384c",
+      "original_raw_bytes": 33746,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-green01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "7d90dce4349185434d459146bd8bcf771bf9ef4ab7a0471abe940c05fc65ef09",
+      "original_raw_bytes": 33573,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-red01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "f358e7f42ffab1fa4d3f08abbc9ab35bd1001452c50c474d9c4ac1486b2e92dd",
+      "original_raw_bytes": 35244,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-regression-red02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "7b0ea1b25177785068350d0ebddb69ecfa7474f6dd9d3fb7fc5432561f5d81fe",
+      "original_raw_bytes": 33617,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-workspace-check01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "d6867dec0a3abd95c463dbedebb5f0c2891b965a514bfa20c682d08acc04e95d",
+      "original_raw_bytes": 32550,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ledger-reader-workspace-check02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "6b1858538824706f600b2406dc61d9252335d07d004ba219fcd25feb8f22b072",
+      "original_raw_bytes": 33821,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-checkpoint01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "002f50097a032d12a8835b9a754790ad407becd501943bf5d888c8ca60c402e3",
+      "original_raw_bytes": 32448,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-focused01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "9f0ca9e8f3c4b0d28595af5c77eae19c375158a1e57175ab4c6922d14921198c",
+      "original_raw_bytes": 30889,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-focused02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "44fe92a715b45dfa172c41ceca1fd2f6a7a4b1ca08f29ad6110525efaadb7359",
+      "original_raw_bytes": 32209,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-go01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "89264883dd6bb9d941b491fb3ea2c17d6093d2410207b5510c06fc767a989055",
+      "original_raw_bytes": 32102,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-go02-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "a0717a1451f64056022593db1af9870745ff39acc4661e21d6c847699e9e6c87",
+      "original_raw_bytes": 31970,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-graft01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "81be4b8b6200b0ef3bfb9b25a2ceffd28b144d532d5510c35ff7760b46831c0c",
+      "original_raw_bytes": 32378,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-race01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "81e9e3d57e09e744bf7837e765f09923425a2275b29ed144d1bf27c3dc5b76ca",
+      "original_raw_bytes": 32085,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/next-private-red01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "fb102d15dba820cbebdc1b58eb99f03f4f474c449a4abff0de684175f52f2130",
+      "original_raw_bytes": 31873,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": true,
+      "present_in_last_published": false
+    },
+    {
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/reader-grant-checkpoint01-preflight-oct09.raw.json",
+      "archive_sha256_of_original_raw": "11e3e14f9d7b2b6006053e7d0eaa5c727f83b2df55711fa0dda74996a0242c16",
+      "original_raw_bytes": 33548,
+      "matching_process_names": [
+        "language_server"
+      ],
+      "present_in_local_HEAD": false,
+      "present_in_last_published": false
+    }
+  ]
+}

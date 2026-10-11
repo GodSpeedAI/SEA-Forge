@@ -1,0 +1,26 @@
+{
+  "findings": [],
+  "harvests": [
+    {
+      "journey": "L1",
+      "session": "journey-L1",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L1",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "end-of-run",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    }
+  ]
+}

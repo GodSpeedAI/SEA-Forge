@@ -1,0 +1,5 @@
+# ./internal/...
+pattern ./internal/...: directory prefix internal does not contain main module or its selected dependencies
+FAIL	./internal/... [setup failed]
+FAIL
+LIVE_P1_EXIT=1

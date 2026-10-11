@@ -1,0 +1,21 @@
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/t10-live-vG2VqE/cell", evidence_root "/tmp/t10-live-vG2VqE/evidence", 1 capability/ies, 0 resolved secret(s))
+  ready     authority      kind=authority required=false adapter=sfwp
+godspeed-casework: ready=[authority] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+godspeed-casework: serving LIVE cognitive projection on http://127.0.0.1:4179 (provenance go:live:sfwp; kernel socket /tmp/t10-live-vG2VqE/cell/server.sock; auth mode dev; static UI /home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/dist)
+ts=2026-10-10T17:18:15Z correlation_id="e9a88333b6c69ccd24f0b2816abe90ad" method="GET" path="/api/healthz" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="f021fe624e0cc85ab283a3e03f53f058" method="GET" path="/" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="7428be78bab41ab26068f8f369632bd0" method="GET" path="/assets/TextRenderer-B5qiAeCe.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="986a1009ad79cb7bfa558f70d32eb78f" method="GET" path="/assets/highlight-BXhsKxOJ.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="5d85498ffc71ed29d225f1717f0b12e6" method="GET" path="/assets/index-D0qlF-03.js" status=200 duration_ms=5.0 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="1adc484a54043140827efdb2478ce4a2" method="GET" path="/assets/thothNarration-CDx9AEic.js" status=200 duration_ms=0.6 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="e8b4a94cfaf09682a05a2fd1da37d8de" method="GET" path="/assets/httpCaseworkAdapter-BkFNmtCP.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="b7a79f552faf74db4152db22307a6287" method="GET" path="/assets/TimelineRenderer-uejh7rWh.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="aa22f9bab299e7799326c2ece660ab3f" method="GET" path="/assets/TraceRenderer-q7RU-FeM.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="929c5dda432c505d0191e118515fcacc" method="GET" path="/assets/GraphRenderer-B5Sd9VD9.js" status=200 duration_ms=0.3 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="7d7c18102e1e3efe43c8eba62989f3df" method="GET" path="/assets/JsonRenderer-iRqzLnR8.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="6e986f0a145243fda2280bb160ebdf23" method="GET" path="/assets/ChartRenderer-CCuB7_oy.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="874c1551023f7ea8925e96a89fa77067" method="GET" path="/assets/TableRenderer-B0LGw4QY.js" status=200 duration_ms=0.3 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="5e8adfa249eb46d55eb888acce0fab56" method="GET" path="/assets/MarkdownRenderer-DRAPg_s5.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+ts=2026-10-10T17:18:15Z correlation_id="2e7713b5bd2210bfe4f62d1ea651dfa3" method="GET" path="/assets/DiffRenderer-Er0wNX1e.js" status=200 duration_ms=0.1 remote="127.0.0.1" auth="-" actor="-"
+godspeed-casework: terminated received - shutting down

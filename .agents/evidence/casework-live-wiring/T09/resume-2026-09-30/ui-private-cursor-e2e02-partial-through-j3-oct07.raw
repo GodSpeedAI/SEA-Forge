@@ -1,0 +1,7 @@
+Checking if dev server is running at http://127.0.0.1:4178
+Dev server is ready. Running tests with base=http://127.0.0.1:4178
+Output directory: /tmp/sea-ui-private-cursor-e2e-attempt02
+[PASS] J0: Boot / orientation substrate (6/6 steps, 41238ms)
+[PASS] J1: Focus substrate (6/6 steps, 87484ms)
+[PASS] J2: Artifact inspection substrate (7/7 steps, 133279ms)
+[PASS] J3: Representation-switching substrate (6/6 steps, 110368ms)

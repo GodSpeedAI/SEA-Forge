@@ -1,0 +1,53 @@
+{
+  "attack_candidate": {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "t4-attack-cand",
+    "correlation_id": "t23-t4-attack",
+    "expected_role": "establish_baseline",
+    "generator": {
+      "identity": "t4-attack-synthetic",
+      "version": "1"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "ATTACK candidate: genuinely fails via a corrupted instrument (check.sh); never part of the route ledger"
+  },
+  "attack_observation": {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-happy"
+    },
+    "candidate_id": "t4-attack-cand",
+    "correlation_id": "t23-t4-attack",
+    "finished_at_utc": "2026-09-19T02:34:19.833189+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-t4-attack-cand",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T02:34:19.429033+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/runs/t4-attack-cand/state/gauntlet-state.db",
+    "state_db_sha256": "9956d13125e77af4402d6acc835f825338e86cf2d847c74c4dcabedac58dfcab",
+    "terminal_class": "budget_exhausted"
+  },
+  "construction": "one synthetic ATTACK candidate (schema-valid run_case e2e-happy@4) executed through the REAL frozen probe mechanism (fresh tests/fixtures/target copy, addendum env, per-probe GAUNTLET_ID_SEED, timeout 240) against a corrupted instrument: the copy's scripts/check.sh was overwritten to print a T4 diagnostic to stderr and exit 1 on every invocation.",
+  "expected": "the genuine failure is preserved as its typed terminal class (never relabeled, never converted into progress); the route does not advance on it",
+  "expected_vs_observed": "MATCH - the failure is preserved verbatim as its typed class and the route cannot advance on evidence that never entered it",
+  "id": "T4-execution-failure",
+  "marked": "ATTACK \u2014 never part of the route ledger",
+  "note": "no judgment was obtained for the attack observation: it never enters the route, so there is nothing to judge into",
+  "observed": "typed terminal_class=budget_exhausted (raw run_terminal state 'budget_exhausted'), settlement_committed_count=0, exit_code=1, wall=0.404s; the honest observation passes provenance.validate (it is real); the attack candidate/probe ids appear nowhere in the route ledger and the route record is byte-identical before/after",
+  "run_meta": {
+    "command": "timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator page",
+    "cwd": "/home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/targets/t4-attack-cand",
+    "exit_code": 1,
+    "gauntlet_id_seed": "t23-route-001-t4-attack-seed",
+    "gauntlet_stderr_tail": "",
+    "raw_terminal_state": "budget_exhausted",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T23/teeth-r1/runs/t4-attack-cand/state/gauntlet-state.db",
+    "state_db_sha256": "9956d13125e77af4402d6acc835f825338e86cf2d847c74c4dcabedac58dfcab",
+    "wall_seconds": 0.404
+  }
+}

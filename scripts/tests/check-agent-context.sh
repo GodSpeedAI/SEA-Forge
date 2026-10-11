@@ -11,29 +11,64 @@ make_repo() {
   git -C "$repo" init -q
   git -C "$repo" config user.email test@example.invalid
   git -C "$repo" config user.name "Context Test"
-  cat >"$repo/.agents/CURRENT_STATUS.md" <<'EOF'
-# Current Status
-Updated: 2026-07-10
-## Objective
-Test the context gate.
-## Worktree State
-Clean at handoff.
-## Changed Files
-- `.agents/CURRENT_STATUS.md`
-## Completed
-- Context recorded.
-## Verification
-- Test fixture created.
-## Remaining
-- None.
-## Blockers
-None.
-## Decisions
-- Keep the gate portable.
-EOF
   printf '# Agent rules\n' >"$repo/AGENTS.md"
+  printf '# Workbench rules\n' >"$repo/.agents/AGENTS.md"
+  cat >"$repo/.agents/CURRENT_STATUS.yaml" <<'EOF'
+---
+{"revision": 1, "recorded_at": "2026-10-08T18:00:00Z", "stage": "Testing stage", "summary": "Baseline test status.", "verified": ["unit tests pass"], "limits": ["none"], "next": "Continue testing", "evidence": [".agents/evidence/test.md"], "spec": "specs/test-spec.md", "ledger": ".agents/DEBT.md"}
+EOF
+  cat >"$repo/.agents/CURRENT_STATUS.md" <<'EOF'
+# Current status
+
+**Status revision:** 1
+
+**Stage:** Testing stage
+
+**Summary:** Baseline test status.
+
+**Verified:**
+- unit tests pass
+
+**Limits:**
+- none
+
+**Next:** Continue testing
+
+**Evidence:**
+- .agents/evidence/test.md
+EOF
   git -C "$repo" add .
   git -C "$repo" commit -qm baseline
+}
+
+append_status() {
+  repo=$1
+  rev=$2
+  summary=$3
+  cat >>"$repo/.agents/CURRENT_STATUS.yaml" <<EOF
+---
+{"revision": $rev, "recorded_at": "2026-10-08T18:10:00Z", "stage": "Testing stage", "summary": "$summary", "verified": ["all passed"], "limits": ["none"], "next": "Next move", "evidence": [".agents/evidence/test.md"], "spec": "specs/test-spec.md", "ledger": ".agents/DEBT.md"}
+EOF
+  cat >"$repo/.agents/CURRENT_STATUS.md" <<EOF
+# Current status
+
+**Status revision:** $rev
+
+**Stage:** Testing stage
+
+**Summary:** $summary
+
+**Verified:**
+- all passed
+
+**Limits:**
+- none
+
+**Next:** Next move
+
+**Evidence:**
+- .agents/evidence/test.md
+EOF
 }
 
 expect_pass() {
@@ -61,27 +96,58 @@ repo="$TMP_ROOT/valid"
 make_repo "$repo"
 expect_pass "complete handoff" sh -c "cd '$repo' && '$SCRIPT'"
 
-repo="$TMP_ROOT/missing-section"
+repo="$TMP_ROOT/missing-yaml"
 make_repo "$repo"
-grep -v '^## Changed Files$' "$repo/.agents/CURRENT_STATUS.md" >"$repo/status.tmp"
-mv "$repo/status.tmp" "$repo/.agents/CURRENT_STATUS.md"
-expect_fail "missing required section" sh -c "cd '$repo' && '$SCRIPT'"
+rm "$repo/.agents/CURRENT_STATUS.yaml"
+expect_fail "missing CURRENT_STATUS.yaml" sh -c "cd '$repo' && '$SCRIPT'"
+
+repo="$TMP_ROOT/missing-md"
+make_repo "$repo"
+rm "$repo/.agents/CURRENT_STATUS.md"
+expect_fail "missing CURRENT_STATUS.md" sh -c "cd '$repo' && '$SCRIPT'"
+
+repo="$TMP_ROOT/malformed-yaml-json"
+make_repo "$repo"
+cat >>"$repo/.agents/CURRENT_STATUS.yaml" <<'EOF'
+---
+{"revision": 2, invalid json
+EOF
+expect_fail "malformed json in yaml" sh -c "cd '$repo' && '$SCRIPT'"
+
+repo="$TMP_ROOT/non-monotonic-revision"
+make_repo "$repo"
+append_status "$repo" 1 "Duplicate revision."
+expect_fail "non-monotonic revision" sh -c "cd '$repo' && '$SCRIPT'"
+
+repo="$TMP_ROOT/mismatched-human-view"
+make_repo "$repo"
+sed -i 's/\*\*Status revision:\*\* 1/\*\*Status revision:\*\* 99/' "$repo/.agents/CURRENT_STATUS.md"
+expect_fail "mismatched human view" sh -c "cd '$repo' && '$SCRIPT'"
 
 repo="$TMP_ROOT/stale-dirty"
 make_repo "$repo"
 printf 'changed\n' >>"$repo/AGENTS.md"
 expect_fail "project change without handoff update" sh -c "cd '$repo' && '$SCRIPT'"
 
+repo="$TMP_ROOT/partial-dirty"
+make_repo "$repo"
+printf 'changed\n' >>"$repo/AGENTS.md"
+cat >>"$repo/.agents/CURRENT_STATUS.yaml" <<'EOF'
+---
+{"revision": 2, "recorded_at": "2026-10-08T18:10:00Z", "stage": "Testing stage", "summary": "Only yaml updated.", "verified": ["all passed"], "limits": ["none"], "next": "Next move", "evidence": [".agents/evidence/test.md"], "spec": "specs/test-spec.md", "ledger": ".agents/DEBT.md"}
+EOF
+expect_fail "project change with only yaml updated" sh -c "cd '$repo' && '$SCRIPT'"
+
 repo="$TMP_ROOT/fresh-dirty"
 make_repo "$repo"
 printf 'changed\n' >>"$repo/AGENTS.md"
-printf '\nWork in progress.\n' >>"$repo/.agents/CURRENT_STATUS.md"
-expect_pass "project and handoff changed together" sh -c "cd '$repo' && '$SCRIPT'"
+append_status "$repo" 2 "Work in progress."
+expect_pass "project and both handoff files changed together" sh -c "cd '$repo' && '$SCRIPT'"
 
 repo="$TMP_ROOT/fresh-committed"
 make_repo "$repo"
 printf 'changed\n' >>"$repo/AGENTS.md"
-printf '\nCommitted handoff.\n' >>"$repo/.agents/CURRENT_STATUS.md"
+append_status "$repo" 2 "Committed handoff."
 git -C "$repo" add .
 git -C "$repo" commit -qm change
 expect_pass "committed change includes handoff" sh -c "cd '$repo' && CONTEXT_BASE_REF=HEAD^ '$SCRIPT'"

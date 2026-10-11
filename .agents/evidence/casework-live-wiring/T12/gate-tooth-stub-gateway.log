@@ -1,0 +1,7 @@
+live ladder [tooth: stub-gateway]; evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T10/run-2026-10-11T00-20-03-106Z
+stack up: base=http://127.0.0.1:4179 cell=/tmp/t10-live-NE0Q8X/cell
+bundle: 13 JS assets scanned (disk + HTTP), no fixture adapter
+[FAIL] L1: Template to preflight to commit (4/5 steps, 56535ms)
+  Error: timed out after 30000ms waiting for a new case with kinds [case_created, item_enabled] under /tmp/t10-live-NE0Q8X/cell/cases
+TOOTH stub-gateway: PASS - L1 failed at "durable: commit writes case_created + item_enabled to the new case's case-events.jsonl and its plan.json": timed out after 30000ms waiting for a new case with kinds [case_created, item_enabled] under /tmp/t10-live-NE0Q8X/cell/cases; the cell holds no new case directory (0 cases, 0 before)
+EXIT 0 dur=60s

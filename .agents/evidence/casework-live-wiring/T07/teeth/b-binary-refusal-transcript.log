@@ -1,0 +1,10 @@
+=== tooth (b): the REAL gateway binary refuses a production config with auth.mode=dev ===
+$ ./gw-t07-tooth-b -serve -config prod-dev.json
+godspeed-casework: config error: auth.mode dev is REFUSED in the production posture: the dev surface skips password verification and may carry a static bearer token; configure auth.mode local or oidc for production
+EXIT=2
+
+=== control: the same dev config WITHOUT serve.production starts past configuration ===
+godspeed-casework: configuration loaded (version 1, cell_root "/tmp/prod-cell", evidence_root "", 0 capability/ies, 0 resolved secret(s))
+godspeed-casework: ready=[] degraded=[] blocking=[]
+godspeed-casework: preflight clear (no required capability blocking)
+control EXIT=0 (124 = kept running until the timeout: it did NOT refuse)

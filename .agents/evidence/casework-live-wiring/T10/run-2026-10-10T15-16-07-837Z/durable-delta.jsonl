@@ -1,0 +1,8 @@
+{"journey":"L0","at":"2026-10-10T15:16:09.591Z","step":"bundle-scan","scanned":12,"forbidden":["LocalContractAdapter","NORTHSTAR_CASE_ID","northstarData","createLocalAgent","localAdapter","localAgent","evi-case-timeline","case-northstar"],"violations":[]}
+{"journey":"L0","at":"2026-10-10T15:16:09.998Z","step":"readiness","health":{"status":"ok","provenance":"go:live:sfwp","kernel_cursor":""},"ready":{"kernel":{"capabilities":2,"foundations":1,"overall":"unknown"},"status":"ready"}}
+{"journey":"L0","at":"2026-10-10T15:16:23.989Z","step":"identity","actor_id":"operator_local","role":"operator"}
+{"journey":"L0","at":"2026-10-10T15:16:28.436Z","step":"runtime-scripts","loaded":["index-QnhM_62F.js","httpCaseworkAdapter-BfSkWyjN.js"]}
+{"journey":"L1","at":"2026-10-10T15:16:52.913Z","step":"preflight","digest":"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd"}
+{"journey":"L1","at":"2026-10-10T15:17:03.026Z","step":"commit","case_id":"case_20261010T151702Z_6b213b","events_file":"/tmp/t10-live-tS60cD/cell/cases/case_20261010T151702Z_6b213b/case-events.jsonl","kinds":["case_created","item_enabled"],"plan_items":["task_prepare","task_publish","ms_chain_accepted"],"digest":"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd"}
+{"journey":"L2","at":"2026-10-10T15:17:15.413Z","step":"durable-standing","case_id":"case_20261010T151702Z_6b213b","standing":{"task_prepare":{"execution":"enabled","settlement":"unsettled"},"task_publish":{"execution":"pending","settlement":"unsettled"},"ms_chain_accepted":{"execution":"pending","settlement":"unsettled"}}}
+{"journey":"L2","at":"2026-10-10T15:17:17.244Z","step":"ui-standing","shown":{"task_prepare":"Ready","task_publish":"Waiting","ms_chain_accepted":"Waiting"}}

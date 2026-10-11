@@ -1,0 +1,190 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Checking ring v0.17.14
+    Checking rustls-webpki v0.103.15
+    Checking rustls v0.23.45
+    Checking tokio-rustls v0.26.4
+    Checking hyper-rustls v0.27.9
+    Checking reqwest v0.12.28
+    Checking sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+    Checking sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `dev` profile [unoptimized] target(s) in 19.98s
+[understand-anything] commit f549bf047b9867ef565d75e41fcf674c95c083b3 changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring f549bf0] fix(casework): verify private local cursor ordering
+ 122 files changed, 16684 insertions(+), 845 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair-record-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair2-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair2-record-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair2-record-prior-written-recovery-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair3-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-bounds-fresh-repair3-record-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-focused-attempt01-test-fixture-repair-result-citation-correction-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-focused-attempt01-test-fixture-repair-result-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-fixture-repair-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-actual-red-capture-path-addendum-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-actual-red-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-actual-red2-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-actual-red2-independent-verdict-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-fresh-repair-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-freshrepair373a-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-red2-root-acceptance-resume-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-repair-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-cursor-order-phase1-root-source-acceptance-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-hostile-thrown-values-independent-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-hostile-throws-hash-correction-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-hostile-throws-repair-record-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-hostile-throws-repair-result-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-implementation-independent-source-review-citation-correction-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-implementation-independent-source-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-implementation-original-record-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-cursor-implementation-result-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-ordinary-settlement-atomicity-builder-decision-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-concrete-proposal-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-concrete-proposal-revision2-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-concrete-proposal-revision3-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-concrete-proposal-revision4-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-proposal-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision2-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision2-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision3-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision3-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision4-independent-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision4-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision4-review-citation-erratum-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision4-tests-independent-review-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/local-subscription-ordered-cursor-revision4-tests-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/localAdapter.cursorBounds.before-focused-attempt01-repair-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/localAdapter.cursorOrder.before-focused-attempt01-repair-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/localAdapter.settlementAtomicity.before-focused-attempt01-repair-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-bun-output.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-independent-verdict-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-independent-verdict-prior-written-recovery-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-independent-verdict-recovery-provenance-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-root-acceptance-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-bounds-red01-root-capture-record-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red01-bun-output-direct-original-copy.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red01-exit-direct-original-copy.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red01-preflight-direct-original-copy.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red02-bun-output.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red02-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-cursor-order-red02-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up02-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up02-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-casework-up02-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-build-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-build-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-build-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-canonical-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-canonical-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-canonical-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-checkpoint-graft-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-checkpoint-graft-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-partial-through-j3-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-partial-through-j7-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-result-copy-provenance-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-results-exact-wrapper-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-results-md-exact-wrapper-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-results-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-e2e02-results-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-focused01-bun-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-focused01-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-focused01-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-fulltest-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-fulltest-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-fulltest-retry-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-fulltest-retry-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-fulltest-retry-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-root-acceptance-manifest-count-correction-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-root-qualified-acceptance-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-runtime-verification-citation-correction-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-runtime-verification-independent-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-runtime-verification-original-assignment-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-typecheck-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-typecheck-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-cursor-typecheck-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt01-bun-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt01-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt01-fixture-repair-independent-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt01-independent-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt01-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt02-bun-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt02-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-focused-attempt02-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-independent-fulltest-attempt01-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-typecheck-attempt01-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-typecheck-attempt01-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/ui-private-typecheck-attempt01-preflight-oct07.raw
+ create mode 100644 apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorBounds.test.ts
+ create mode 100644 apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.cursorOrder.test.ts
+ create mode 100644 apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.hostileThrownValues.test.ts
+ create mode 100644 apps/godspeed-cognitive-ui/src/adapters/local/localAdapter.settlementAtomicity.test.ts

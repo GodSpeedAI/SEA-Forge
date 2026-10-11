@@ -1,0 +1,4 @@
+# RETRY POST /api/intents PROPOSE_CASE (new intent id)
+{"intent_id":"critic-propose-2","success":false,"refusal":{"refusal_kind":"UNAVAILABLE","message":"the authority has no record of request critic-propose-2 (it never crossed admission); it is safe to retry only with a NEW request id"},"error_code":"UNAVAILABLE","error_message":"the authority has no record of request critic-propose-2 (it never crossed admission); it is safe to retry only with a NEW request id"}
+
+CURL_EXIT=0

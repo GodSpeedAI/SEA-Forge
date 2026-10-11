@@ -1,0 +1,281 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-core v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-core)
+   Compiling curve25519-dalek v4.1.3
+   Compiling ed25519-dalek v2.2.0
+   Compiling thiserror v1.0.69
+   Compiling sea-forge-ledger v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-ledger)
+   Compiling domainforge-core v0.16.0
+   Compiling sea-forge-domainforge v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-domainforge)
+   Compiling sea-forge-authority v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-authority)
+   Compiling enumflags2 v0.7.12
+   Compiling landlock v0.4.5
+   Compiling sea-forge-sandbox v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-sandbox)
+   Compiling smallvec v1.15.2
+   Compiling rusqlite v0.32.1
+   Compiling sea-forge-capability v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-capability)
+   Compiling sea-forge-settlement v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-settlement)
+   Compiling sea-forge-domain v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-domain)
+   Compiling tracing v0.1.44
+   Compiling sea-forge-planner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-planner)
+   Compiling sea-forge-evidence v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-evidence)
+   Compiling sea-forge-runtime v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-runtime)
+   Compiling sea-forge-spec-pipeline v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-spec-pipeline)
+   Compiling sea-forge-self-model v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-self-model)
+   Compiling tracing-subscriber v0.3.23
+   Compiling sea-forge-thoth v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-thoth)
+   Compiling sea-forge-case-runner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-case-runner)
+   Compiling sea-forge-artifact-ip v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-artifact-ip)
+   Compiling sea-forge-cell v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cell)
+   Compiling sea-forge-extension v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-extension)
+   Compiling sea-forge-trace v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-trace)
+   Compiling sea-forge-cli v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cli)
+    Finished `test` profile [unoptimized] target(s) in 1m 45s
+     Running unittests src/main.rs (target/debug/deps/sea_forge-459a076c9cb9bde6)
+
+running 5 tests
+test commands::ledger::tests::validate_ordinals_rejects_missing_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_rejects_non_monotonic_settlement_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_rejects_duplicate_dispatch_ordinal ... ok
+test commands::ledger::tests::validate_ordinals_accepts_monotonic_sequence ... ok
+test pipeline::tests::authority_mirrors_rebuild_byte_identically ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ask_cli.rs (target/debug/deps/ask_cli-ebf7952c64b0c4e2)
+
+running 4 tests
+test ask_without_snapshot_exits_1 ... ok
+test ask_unknown_kind_exits_nonzero ... ok
+test ask_with_snapshot_but_no_policy_denies_exits_4 ... ok
+test ask_with_granted_policy_answers_real_capability ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.95s
+
+     Running tests/conformance_m0_migrate.rs (target/debug/deps/conformance_m0_migrate-35c03c6e8f75530b)
+
+running 2 tests
+test conformance_m0_migrate_imports_v01_root_losslessly_and_blocks_re_migration ... ok
+test conformance_m0_migrate_inspect_reports_legacy_digest_only ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/conformance_m10.rs (target/debug/deps/conformance_m10-44c81704a0bff052)
+
+running 2 tests
+test t10_4_tampered_builtin_template_is_rejected_before_authority_no_side_effects ... ok
+test t10_6_production_plan_with_odi_template_resolves_real_desired_outcome ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.83s
+
+     Running tests/conformance_m13.rs (target/debug/deps/conformance_m13-730a7c22bb87c04a)
+
+running 3 tests
+test serial_plan_facade_completes_through_case_runner ... ok
+test t13_2_replay_matches_persisted_order ... ok
+test t13_1_agent_task_routed_through_server_and_settles ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+
+     Running tests/conformance_m15.rs (target/debug/deps/conformance_m15-9da7836fbae3e8ff)
+
+running 10 tests
+test t15_5_every_judgment_cites_nonempty_resolvable_claim_refs ... ok
+test t15_1_stalled_case_one_iteration_proposes_and_records ... ok
+test t15_2_proposal_without_authority_is_denied_and_recorded ... ok
+test t15_4_proposer_cannot_resolve_its_own_proposed_items_approval ... ok
+test t15_3_iteration_cap_reached_parks_and_escalates_without_further_proposals ... ok
+test t17_1_caller_above_grant_effective_cap_is_the_grant ... ok
+test t17_3_authority_decision_hash_changes_with_requested_max_iterations ... ok
+test t17_2_config_default_above_grant_effective_cap_is_the_grant ... ok
+test t17_4_exact_exhaustion_at_grant_cap_settles_then_parks ... ok
+test t17_5_no_further_proposal_after_cap_park ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.18s
+
+     Running tests/conformance_m2.rs (target/debug/deps/conformance_m2-1f1524e56c911f0f)
+
+running 4 tests
+test conformance_m2_invalid_plan_has_no_case_side_effect ... ok
+test conformance_m2_plan_produces_committed_settlement_criteria_record ... ok
+test conformance_m2_human_task_parks_without_failure ... ok
+test conformance_m2_plan_runs_repeated_item_and_replays_activation_order ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.65s
+
+     Running tests/conformance_m3.rs (target/debug/deps/conformance_m3-efc433af4c413c91)
+
+running 8 tests
+test conformance_m3_runs_unsettled_lists_only_nonterminal_cases ... ok
+test conformance_m3_reject_terminates_case ... ok
+test conformance_m3_double_approve_is_refused ... ok
+test conformance_m3_security_officer_can_append_authorized_resolution ... ok
+test conformance_m3_approve_uses_ledger_truth_not_tampered_compatibility_view ... ok
+test conformance_m3_escalate_creates_approval_and_exits_5 ... ok
+test conformance_m3_approval_basis_is_authority_escalate_expired_on_ttl ... ok
+test conformance_m3_unauthorized_approver_cannot_append_resolution ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.77s
+
+     Running tests/conformance_m4b.rs (target/debug/deps/conformance_m4b-b455f61c20631e94)
+
+running 8 tests
+test f25g_legacy_silent_policy_refuses_cross_entity_recall ... ok
+test any_scope_recalls_across_entities ... ok
+test own_scope_cross_entity_target_is_denied_before_any_read ... ok
+test cli_recall_is_identical_with_and_without_the_sqlite_index ... ok
+test entity_scope_allows_named_entity_denies_others ... ok
+test recall_evidence_names_request_scope_and_returned_ids ... ok
+test limit_caps_returned_and_evidenced_items ... ok
+test own_scope_implicit_self_recall_returns_only_own_items ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.53s
+
+     Running tests/conformance_m5.rs (target/debug/deps/conformance_m5-505df30c814cfeea)
+
+running 2 tests
+test cli_project_quarantines_unsupported_projection_kind_without_accepting_or_dropping ... ok
+test cli_project_runs_full_m5_chain_and_settles_independent_projections ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+     Running tests/conformance_m8_artifact.rs (target/debug/deps/conformance_m8_artifact-40b1adb9d2351a1a)
+
+running 6 tests
+test conformance_m8_cli_rejects_caller_governance_refs_before_side_effects ... ok
+test conformance_m8_resume_expired_pending_approval_terminalizes_once ... ok
+test conformance_m8_cli_transition_uses_completed_case_and_rejects_teleport_without_case ... ok
+test conformance_m8_cli_profile_evaluator_controls_token_commit ... ok
+test conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records ... ok
+test conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.04s
+
+     Running tests/diagnostics.rs (target/debug/deps/diagnostics-c2fc5fca808f648d)
+
+running 6 tests
+test state_child_symlink_is_rejected_before_outside_write ... ok
+test config_failure_is_structured_and_correlated ... ok
+test inspect_rejects_noncanonical_run_ids ... ok
+test recall_missing_memory_is_an_io_error ... ok
+test invalid_intents_exit_two_without_creating_a_run_root ... ok
+test malformed_policy_classes_fail_before_run_creation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/lifecycle.rs (target/debug/deps/lifecycle-b62daaa2e358886e)
+
+running 12 tests
+test escalation_halts_and_requires_review ... ok
+test intent_to_settlement_produces_complete_accepted_run ... ok
+test compat_capability_recall_is_byte_for_structure_and_read_only ... ok
+test authority_denial_settles_rejected_without_command_start ... ok
+test pipeline_timeout_is_governed_and_rejected ... ok
+test kill_9_leaves_a_valid_jsonl_prefix_without_capability_corruption ... ok
+test validator_accepts_only_the_stub_contract ... ok
+test post_start_internal_error_is_run_correlated_and_traced ... ok
+test false_success_and_nonzero_execution_settle_rejected_with_evidence ... ok
+test run_ingress_composes_domainforge_candidate ... ok
+test repeated_runs_have_stable_artifact_identity_and_recall_is_read_only ... ok
+test required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.06s
+
+     Running tests/migrate_safety.rs (target/debug/deps/migrate_safety-cbb674161cc3d6e3)
+
+running 3 tests
+test migrate_rejects_symlinked_file_before_side_effects ... ok
+test migrate_rejects_nesting_deeper_than_the_depth_cap ... ok
+test migrate_rejects_symlink_directory_cycle_before_side_effects ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/resume_recovery.rs (target/debug/deps/resume_recovery-6013328275b6baa5)
+
+running 5 tests
+test f11_awaiting_approval_still_refuses_while_approvals_pending ... ok
+test f11_parked_human_task_is_not_disturbed_by_recovery ... ok
+test f11_terminal_states_are_still_refused ... ok
+test f11_crash_mid_episode_required_item_recovers_to_terminated_not_exit5_forever ... ok
+test f11_crash_mid_episode_optional_item_recovers_to_completed ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/self_model_cli.rs (target/debug/deps/self_model_cli-c574ff22c33b7ef0)
+
+running 3 tests
+test rebuild_commits_ledgered_governance_records ... ok
+test tampered_snapshot_is_self_model_error_exit1 ... ok
+test rebuild_validate_show_round_trip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.35s
+
+     Running tests/swe_seed_cli.rs (target/debug/deps/swe_seed_cli-6d5fee9197910d79)
+
+running 2 tests
+test swe_seed_accepts_small_valid_declaration_request ... ok
+test swe_seed_rejects_stdin_larger_than_one_mebibyte ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/task17_closeout.rs (target/debug/deps/task17_closeout-0254f5b20f10e93f)
+
+running 1 test
+test native_semantic_envelope_intentionally_diverges_from_cep0008_flat_profile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+

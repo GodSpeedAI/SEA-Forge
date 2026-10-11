@@ -1,0 +1,57 @@
+diff /home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go.orig /home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+--- /home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go.orig
++++ /home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go
+@@ -75,9 +75,9 @@
+ 		return prior
+ 	}
+ 	for _, tc := range []struct {
+-		name string
+-		execution string
+-		want retainedAvailability
++		name      string
++		execution string
++		want      retainedAvailability
+ 	}{
+ 		{name: "ordinal_nonterminal", execution: "active", want: retainedRetentionUnavailable},
+ 		{name: "ordinal_terminal", execution: "completed", want: retainedTerminalRetentionFailure},
+@@ -131,10 +131,10 @@
+ func TestRunObservationRetainedPolicyTerminalityUsesExecutionOnly(t *testing.T) {
+ 	key := retainedTestKey()
+ 	for _, tc := range []struct {
+-		name string
+-		execution string
++		name       string
++		execution  string
+ 		settlement string
+-		want retainedAvailability
++		want       retainedAvailability
+ 	}{
+ 		{name: "completed_unsettled", execution: "completed", settlement: "unsettled", want: retainedTerminalRetentionFailure},
+ 		{name: "failed_unsettled", execution: "failed", settlement: "unsettled", want: retainedTerminalRetentionFailure},
+@@ -208,9 +208,9 @@
+ 			t.Fatal(err)
+ 		}
+ 		var counts struct {
+-			Total int `json:"total_frame_count"`
+-			Retained int `json:"retained_frame_count"`
+-			Omitted int `json:"omitted_frame_count"`
++			Total     int  `json:"total_frame_count"`
++			Retained  int  `json:"retained_frame_count"`
++			Omitted   int  `json:"omitted_frame_count"`
+ 			Truncated bool `json:"truncated"`
+ 		}
+ 		if err := json.Unmarshal(image, &counts); err != nil {
+@@ -248,10 +248,10 @@
+ 	validSnapshot := retainedTestSnapshot(key)
+ 	priorMismatch := retainedTestState(otherKey, "prior-key")
+ 	for _, tc := range []struct {
+-		name string
+-		previous *runObservationRetainedState
++		name      string
++		previous  *runObservationRetainedState
+ 		requested runObservationPollerKey
+-		snapshot ports.RunTraceSnapshot
++		snapshot  ports.RunTraceSnapshot
+ 	}{
+ 		{name: "requested_snapshot_key_mismatch", requested: key, snapshot: retainedTestSnapshot(otherKey)},
+ 		{name: "prior_requested_key_mismatch", previous: priorMismatch, requested: key, snapshot: validSnapshot},

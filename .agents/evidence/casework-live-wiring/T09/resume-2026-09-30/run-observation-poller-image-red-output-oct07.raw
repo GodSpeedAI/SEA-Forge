@@ -1,0 +1,28 @@
+=== RUN   TestRunObservationPollerImageNilCurrentHasOnlyKeyAndControls
+    run_observation_manager_retained_image_test.go:17: marshal nil-current image: run observation poller image unavailable
+--- FAIL: TestRunObservationPollerImageNilCurrentHasOnlyKeyAndControls (0.00s)
+=== RUN   TestRunObservationPollerImageCurrentIsRawObjectAndKeyAppearsOnce
+    run_observation_manager_retained_image_test.go:40: marshal current image: run observation poller image unavailable
+--- FAIL: TestRunObservationPollerImageCurrentIsRawObjectAndKeyAppearsOnce (0.00s)
+=== RUN   TestRunObservationPollerImageCombinedExactLimitAndOneByteOver
+    run_observation_manager_retained_image_test.go:87: marshal base image: run observation poller image unavailable
+--- FAIL: TestRunObservationPollerImageCombinedExactLimitAndOneByteOver (0.00s)
+=== RUN   TestRunObservationPollerImageMarkerControlsKeepExactPriorWidth
+    run_observation_manager_retained_image_test.go:153: marshal base image: run observation poller image unavailable
+--- FAIL: TestRunObservationPollerImageMarkerControlsKeepExactPriorWidth (0.00s)
+=== RUN   TestRunObservationPollerImageOversizedNilCurrentReturnsGenericRefusal
+--- PASS: TestRunObservationPollerImageOversizedNilCurrentReturnsGenericRefusal (0.01s)
+=== RUN   TestRunObservationPollerImageDoesNotMutateStateOrAliasBytes
+    run_observation_manager_retained_image_test.go:221: marshal current image: run observation poller image unavailable
+--- FAIL: TestRunObservationPollerImageDoesNotMutateStateOrAliasBytes (0.00s)
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_phase
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_initializer_result
+=== RUN   TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/current_key_mismatch
+--- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_phase (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/invalid_initializer_result (0.00s)
+    --- PASS: TestRunObservationPollerImageRejectsInvalidCodesAndCurrentKeyMismatch/current_key_mismatch (0.00s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.125s
+FAIL

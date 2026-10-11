@@ -1,0 +1,91 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Finished `dev` profile [unoptimized] target(s) in 4.03s
+[understand-anything] commit 41735743c3c4571e44e31031e3b4cf08ca8f9358 changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring 4173574] feat(casework): bound run observation hydration payloads
+ 29 files changed, 1152 insertions(+), 2 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/hydration-cap-graft-and-capture-root-note-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-canonical-01-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-canonical-01-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-canonical-01-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-final-runtime-capture-erratum-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-final-runtime-capture-recovery-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-final-runtime-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-fixture-repair-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-green-01-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-green-01-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-green-01-run-recovery-initial-written-transcription.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-green-01-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-module-01-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-module-01-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-module-01-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-phase1-independent-rereview-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-phase1-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-phase2-independent-production-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-production-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-root-acceptance-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-server-01-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-server-01-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-server-01-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-hydration-cap-zero-frame-repair-original-assignment-oct06.md
+ create mode 100644 apps/godspeed-casework-go/internal/server/run_observation_hydration_cap.go
+ create mode 100644 apps/godspeed-casework-go/internal/server/run_observation_hydration_cap_test.go

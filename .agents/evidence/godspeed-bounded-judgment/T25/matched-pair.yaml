@@ -1,0 +1,75 @@
+schema: godspeed-bounded-judgment.t25-matched-pair
+task: T25
+mutation:
+  rule: 'single factor: payment capacity only (prereg matched_negative_mutation); no other field changes'
+  factor: bounded_input.max_rounds
+  positive: 4
+  negative: 3
+  r_star: 4
+  r_star_minus_one: 3
+  recorded_diff:
+    bounded_input:
+      positive:
+        scenario: e2e-happy
+        max_rounds: 4
+      negative:
+        scenario: e2e-happy
+        max_rounds: 3
+  diff_exactly_one_factor: true
+label_rule: the negative's label is READ from its own run_terminal consequence (state database, read-only, pinned);
+  it is never assigned
+positive:
+  source: T24 accepted generated case t24-case-001 (independent replay run, unchanged)
+  record_file: .agents/evidence/godspeed-bounded-judgment/T24/accepted-case.yaml
+  accepted: true
+  probe_id: probe-t24-case-001-replay-r1
+  bounded_input:
+    scenario: e2e-happy
+    max_rounds: 4
+  terminal_class: settled
+  settled: true
+  settlement_committed_count: 3
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db
+  state_db_sha256: 5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc
+  gauntlet_id_seed: t24-case-001-replay-r1-seed
+negative:
+  source: this task's single-factor mutated case run through the real mechanism
+  probe_id: probe-t25-negative-r1
+  bounded_input:
+    scenario: e2e-happy
+    max_rounds: 3
+  terminal_class: budget_exhausted
+  raw_terminal_state: budget_exhausted
+  settled: false
+  settlement_committed_count: 2
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/runs/negative-r1/state/gauntlet-state.db
+  state_db_sha256: 097e1af5bad144c661c6c11126a6077e0ccbddedde654ba9e0702f885bf19d88
+  gauntlet_id_seed: t25-negative-r1-seed
+  run:
+    run_command: timeout 240 /home/sprime01/projects/gauntlet/target/debug/gauntlet run Build and verify the calculator
+      page
+    cwd: /home/sprime01/.local/share/godspeed-route-discovery/T25/negative-001-r1/targets/negative-r1
+    started_at_utc: '2026-09-19T04:20:58.535321+00:00'
+    finished_at_utc: '2026-09-19T04:20:58.838828+00:00'
+    exit_code: 1
+    wall_seconds: 0.303
+    max_rounds_sed_applied: true
+    max_rounds_sed: 4 -> 3
+    gauntlet_stdout_tail: 'ested","basis":"wired per the caller''s manifest; the manifest binds no run unit as its
+      evidence"},{"key":"status","wired":true,"category":"configured-but-untested","basis":"wired per the caller''s
+      manifest; the manifest binds no run unit as its evidence"},{"key":"verify","wired":true,"category":"configured-but-untested","basis":"wired
+      per the caller''s manifest; the manifest binds no run unit as its evidence"}],"out_of_scope":[]}
+
+      delivery: gauntlet deliver --run 9TRR7D9C515BKD9TW0V5XNGC17 --apply
+
+      '
+    gauntlet_stderr_tail: ''
+matched_pair_expectation:
+  expected_negative_terminal: a typed non-settlement (budget_exhausted on this surface)
+  expected_holds: true
+  note: if the negative had settled, this pair would NOT be a matched negative and verify_payment.py must fail the
+    requirement
+seed_freshness:
+  seed: t25-negative-r1-seed
+  collisions: 0
+  prior_recorded_seeds_checked: 14

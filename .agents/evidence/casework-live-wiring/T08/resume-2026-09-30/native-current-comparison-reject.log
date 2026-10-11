@@ -1,0 +1,11 @@
+--- FAIL: TestNativeEventSourceResyncRetryAndRetentionReplay (15.05s)
+    native_events_live_test.go:248: run phase1 through the browser's native EventSource path: Error: the streamed K snapshot differs from the fresh authenticated current snapshot\nError: the streamed K snapshot differs from the fresh authenticated current snapshot
+            at assert (http://127.0.0.1:42981/e2e/native-events-live.ts:3:25)
+            at phaseOne (http://127.0.0.1:42981/e2e/native-events-live.ts:134:5) (diagnostics: /tmp/sea-t08-native-diagnostic-2887574431)
+    native_events_live_test.go:134: preserved native EventSource diagnostics at /tmp/sea-t08-native-diagnostic-2887574431
+    native_events_live_test.go:992: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-1652970453/cell
+    native_events_live_test.go:992: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-2178546819/cell
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	15.270s
+FAIL
+exit=1

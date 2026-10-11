@@ -1,0 +1,1705 @@
+schema: agent.spec
+schema_version: '1.0'
+metadata:
+  id: sea-forge.trusted-daemon-target
+  title: SEA-Forge Trusted Authority, Information-Flow, and Enforcement Daemon Target Specification
+  status: draft
+  version: 0.1.0
+  created: '2026-09-30'
+  scope: End-state normative contract for evolving SEA-Forge from its current full-spec authority/runtime/sandbox/server
+    substrate into a local-first trusted daemon that binds semantic authority to information-flow control, credential
+    mediation, egress control, containment, deterministic policy identity, evidence, and application/runtime integration
+    without transferring authority to agents or adapters.
+  purpose: 'Specify what SEA-Forge MUST ultimately guarantee at the consequential-action boundary: one semantic authority
+    model, exact decision/grant identity, bounded information flow, physically enforceable execution constraints, secret
+    non-disclosure, replayable evidence, safe remediation, projection-fidelity checks, and fail-closed behavior when
+    required guarantees cannot be represented or enforced.'
+  owner: GodSpeed AI / SEA-Forge
+  normative_language: RFC 2119
+  normative_keywords:
+  - MUST
+  - MUST_NOT
+  - REQUIRED
+  - SHOULD
+  - SHOULD_NOT
+  - RECOMMENDED
+  - MAY
+  - OPTIONAL
+  implementation_defined_meaning: Behavior is part of the implementation contract but this specification does not prescribe
+    one universal mechanism. The implementation MUST document the selected behavior and prove conformance to the surrounding
+    requirements.
+sources:
+  primary_brief:
+    role: Normative architectural synthesis of the SEA-Forge daemon direction agreed in GodSpeed/CognitiveOS design work
+      through 2026-09-30. Once approved, this concrete spec becomes the target authority for the daemon evolution.
+    expected_path: .agents/specs/sea-forge.trusted-daemon-target.spec.yml
+  existing_implementation:
+    role: Evidence of current state to evolve, not automatically the complete normative target. The full-spec branch
+      already contains move-only ActionGrant behavior, canonical hashing, authority policy bundles, server/runtime/sandbox
+      flow, integrity-ledger hooks, environment specification, safe path handling, and Linux Landlock jail enforcement.
+    location: 'GitHub: GodSpeedAI/SEA-Forge branch full-spec @ ca11dc2f86cf729affc03b91536e453f02031e5b'
+  main_branch_context:
+    role: Current narrower main branch; useful for migration context but not the end-state authority.
+    path: 'GitHub: GodSpeedAI/SEA-Forge main @ 530c235751c439418fcfb666b6643ca5efee8364'
+  architecture_reference_information_flow:
+    role: Non-normative design evidence for deterministic trajectory information-flow control, monotonic restriction,
+      scoped remediation, checked subagent return, canonical tool identity, and event-log-derived decisions. Stable semantics
+      are adopted here without vendor coupling.
+    path: 'Public reference architecture: OpenAPPA, inspected 2026-09-30'
+  architecture_reference_enforcement:
+    role: Non-normative design evidence for credential brokering, trusted supervisor separation, L7 egress mediation,
+      atomic authorization snapshots, deterministic policy identity, and OS-level hardening. Stable semantics are adopted
+      here without vendor coupling.
+    path: 'Public reference architecture: NVIDIA OpenShell, previously inspected in this design arc'
+  cognate_integration_context:
+    role: Application-substrate integration context. Cognate supplies SemanticRef, CapabilityContract, Policy/ActionPolicy
+      seams, durable events, DomainForge projection, and RealityTrace observation.
+    path: 'GitHub: GodSpeedAI/Cognate; current project architecture'
+spec_frame:
+  quality_gate_questions:
+  - What should be built?
+  - What result should it produce?
+  - How will we know the result is real?
+  - What capability should become reliably available after repeated successful use?
+  - What evidence proves the capability claim?
+  - What fails safely?
+  - What must repeat until reliable?
+  - What changes when evidence disagrees with the design?
+  proof_loop:
+    mermaid: "flowchart LR\n  Intent[\"Consequential intent\"] --> Normalize[\"Canonical semantic request\"]\n  Normalize\
+      \ --> Info[\"Trajectory / information-flow preflight\"]\n  Info --> Authority[\"Semantic authority decision\"]\n\
+      \  Authority -->|blocked but recoverable| Remedy[\"Bounded remedy plan\"]\n  Remedy --> Info\n  Authority -->|allowed|\
+      \ Grant[\"Exact EnforcementGrant\"]\n  Grant --> Project[\"Enforcement projection + capability proof\"]\n  Project\
+      \ -->|unsupported / widening| Block[\"Fail closed\"]\n  Project -->|sufficient| Execute[\"Mediated execution\"\
+      ]\n  Execute --> Observe[\"Durable event + RealityTrace observation\"]\n  Observe --> Settle[\"Evidence / settlement\"\
+      ]\n  Settle --> Replay[\"Replay + variation + adversarial proof\"]\n  Replay --> Capability[\"Capability claim\
+      \ decision\"]\n"
+problem_statement:
+  system_name: SEA-Forge Trusted Daemon
+  problem_summary: Agentic and application runtimes can produce consequential operations faster than conventional security
+    and governance layers can safely interpret them. Semantic authorization, information-flow restrictions, credentials,
+    network access, filesystem/process containment, and evidence are often decided by separate mechanisms with different
+    identities and stale state. This permits semantic drift, credential exposure, information laundering, policy races,
+    alias bypass, silent enforcement weakening, and false claims that an action was governed merely because a policy
+    check occurred.
+  job_to_be_done:
+    actor: A trusted calling runtime such as Cognate, Gauntlet, CLI, server workflow, or approved adapter
+    trigger: When an actor or agent proposes an operation that can change external state, disclose or consume restricted
+      information, use credentials, cross a network boundary, mutate governed resources, or otherwise produce material
+      consequence.
+    job: Determine whether the exact operation is semantically authorized in the exact current context; determine whether
+      information-flow, credential, network, process, filesystem, and evidence requirements can be enforced; issue a
+      narrowly bound grant only when they can; mediate or bind execution to that grant; and preserve enough evidence
+      to reconstruct why the action occurred.
+    outcome: Consequential actions occur only through authority- and evidence-bearing paths whose semantic meaning, policy
+      identity, information restrictions, enforcement guarantees, and observed result can be inspected and replayed.
+  current_failure_modes:
+  - Authority may be checked without binding the decision to the exact policy and state later used at execution.
+  - An agent can possess sensitive or untrusted information without the next tool boundary accounting for that trajectory
+    state.
+  - Raw credentials can leak into model, process, environment, logs, artifacts, or returned tool output.
+  - A nominal allow can be projected onto an enforcement backend that cannot express the required restriction, silently
+    widening authority.
+  - Tool aliases, adapters, providers, or runtime spellings can create multiple identities for one consequential operation.
+  - Subagents can become an information-laundering path if restrictions do not survive fork and checked return.
+  - Network controls may stop at host/port while application-level method/path/identity obligations remain unenforced.
+  - Execution success can be confused with governed success or settlement without correlated evidence.
+  why_existing_approaches_fail: A sandbox alone controls only part of physical execution; an information-flow engine
+    alone does not establish semantic authority; application policy alone can be bypassed by external execution paths;
+    and LLM judgment alone is not a trustworthy authorization boundary. The daemon must join semantic meaning, deterministic
+    authority, trajectory state, enforcement capability, and evidence without collapsing those distinct responsibilities.
+  important_boundary:
+    is: A trusted local authority and enforcement supervisor that converts semantic decisions into exact, narrow, auditable
+      execution rights and mediates the boundaries needed to make those rights physically meaningful.
+    is_not: An agent orchestrator, application framework, replacement for DomainForge, replacement for RealityTrace,
+      general-purpose container platform, credential store, or source of business/domain meaning.
+    successful_execution: An operation is successful for SEA-Forge only when the exact authorized operation executes
+      under sufficient enforcement, produces a correlated durable result, and satisfies its required evidence obligations.
+      Domain-level settlement may remain pending after execution.
+    false_success_boundary: A policy evaluation returning allow, a process exiting zero, a sandbox starting, an API call
+      returning 2xx, or an event being logged MUST NOT by itself be called governed success.
+requirements:
+  goals:
+  - id: REQ-GOAL-001
+    text: SEA-Forge MUST provide one trusted daemon boundary for consequential authorization and enforcement mediation.
+  - id: REQ-GOAL-002
+    text: SEA-Forge MUST preserve semantic authority as the governing source above runtime adapters, agents, policy projections,
+      and physical enforcement mechanisms.
+  - id: REQ-GOAL-003
+    text: SEA-Forge MUST bind each consequential authorization to exact actor, operation, resource, context, policy identity,
+      semantic source identity, and relevant trajectory state.
+  - id: REQ-GOAL-004
+    text: SEA-Forge MUST make unsupported or lossy enforcement visible and MUST fail closed when required guarantees
+      would widen.
+  - id: REQ-GOAL-005
+    text: SEA-Forge MUST support deterministic information-flow decisions over recorded trajectory state without transferring
+      authority to probabilistic classifiers.
+  - id: REQ-GOAL-006
+    text: SEA-Forge MUST prevent raw credentials from becoming ordinary agent/application data when a reference-mediated
+      path can perform the operation.
+  - id: REQ-GOAL-007
+    text: SEA-Forge MUST preserve replayable governance evidence and correlation into application events and RealityTrace.
+  - id: REQ-GOAL-008
+    text: SEA-Forge SHOULD remain local-first, lightweight, portable, and backend-pluggable rather than requiring Docker,
+      Kubernetes, or a standing VM for ordinary use.
+  non_goals:
+  - id: NONGOAL-001
+    text: SEA-Forge does not become Cognate; Cognate remains the application substrate.
+  - id: NONGOAL-002
+    text: SEA-Forge does not become Gauntlet; Gauntlet remains the execution/orchestration and navigation harness.
+  - id: NONGOAL-003
+    text: SEA-Forge does not replace DomainForge or own the .sea grammar.
+  - id: NONGOAL-004
+    text: SEA-Forge does not replace RealityTrace as the empirical/settlement evidence substrate.
+  - id: NONGOAL-005
+    text: SEA-Forge does not require a new .sea grammar construct for every backend, provider, policy language, credential
+      system, or sandbox mechanism.
+  - id: NONGOAL-006
+    text: SEA-Forge does not grant authority merely because an agent has a tool, a credential reference, contextual knowledge,
+      or a capability implementation.
+  - id: NONGOAL-007
+    text: SEA-Forge does not guarantee confidentiality against channels the selected enforcement backend explicitly cannot
+      observe; such gaps MUST be represented as unsupported requirements, not hidden.
+  - id: NONGOAL-008
+    text: SEA-Forge does not standardize donor-specific runtime APIs, TOML policy formats, marketplaces, batteries, plugins,
+      or host-specific naming as core domain concepts.
+outcome_contract:
+  output_produced:
+    primary_output: A trusted daemon capability that returns a deterministic AuthorityDecision and, only when all required
+      gates pass, an exact EnforcementGrant plus enforcement bindings sufficient for one consequential operation.
+    requirements:
+    - id: REQ-OUT-001
+      text: Every consequential request MUST resolve to allow, deny, escalate, or remediable-block with stable reason
+        codes and evidence references.
+    - id: REQ-OUT-002
+      text: An allowed request MUST produce a grant that cannot be widened by the child, caller, adapter, or execution
+        backend.
+    - id: REQ-OUT-003
+      text: The grant MUST be bound to exact policy identity and revision, semantic source digest/reference, operation
+        identity, actor, resource, expiry, and relevant trajectory revision/state hash.
+    - id: REQ-OUT-004
+      text: Execution MUST be mediated by or cryptographically/structurally bound to the issued grant; a detached advisory
+        allow is insufficient.
+    - id: REQ-OUT-005
+      text: The result MUST expose the enforcement backend and capability proof actually used, including any unsupported
+        requirements.
+    - id: REQ-OUT-006
+      text: The result MUST preserve correlation from semantic request through decision, grant, execution result, application
+        event, and RealityTrace observation when those surfaces are present.
+  outcome_verified:
+    condition: The daemon is verified only when adversarial tests demonstrate that stale, aliased, widened, untrusted,
+      credential-bearing, lossy-projection, and subagent-laundering paths are rejected while valid constrained operations
+      remain executable across supported target environments.
+    signals:
+    - id: REQ-VERIFY-001
+      text: Same normalized request + same recorded trajectory state + same policy identity MUST yield the same deterministic
+        authority/IFC decision.
+    - id: REQ-VERIFY-002
+      text: Changing policy, semantic source, operation identity, relevant trajectory revision, or enforcement capability
+        MUST invalidate or force reevaluation of affected grants.
+    - id: REQ-VERIFY-003
+      text: A denied or unsupported requirement MUST be observed to prevent the consequential side effect.
+    - id: REQ-VERIFY-004
+      text: Raw credential material MUST be absent from agent-visible state, application events, normal logs, evidence
+        artifacts, and returned tool output in reference-mediated flows.
+    - id: REQ-VERIFY-005
+      text: Exact and conservative projections MUST behave no wider than source authority; widening or unsupported projections
+        MUST fail closed for consequential operations.
+    - id: REQ-VERIFY-006
+      text: Subagent fork/return tests MUST prove that information restrictions cannot be laundered by delegation.
+    false_completion_conditions:
+    - The server starts but consequential execution can bypass it.
+    - Landlock or another sandbox works while semantic or information-flow binding remains advisory.
+    - Policies hash deterministically but grants are not rejected after relevant state changes.
+    - A credential broker exists but secrets still enter child environment, prompts, logs, or results unnecessarily.
+    - A projection produces syntactically valid target policy while semantically widening source authority.
+    - Happy-path tests pass but alias, stale-state, unavailable-backend, and subagent-return adversarial tests do not
+      exist.
+  consumer_and_handoff:
+    consumers:
+    - Cognate Policy and ActionPolicy adapters
+    - Gauntlet execution harness
+    - SEA-Forge server/case workflows
+    - CLI and approved external runtime adapters
+    - RealityTrace correlation/evidence integration
+    handoff_complete_when:
+    - A caller can submit one canonical consequential request without embedding daemon-specific enforcement mechanisms.
+    - The daemon can either produce an exact executable grant or a stable blocked/escalated/remediable result.
+    - The caller can correlate a completed operation back to SemanticRef/source digest, decision, grant, policy, enforcement,
+      and observation.
+    - Unsupported enforcement dimensions are explicit and cannot be silently ignored.
+    unverified_state: blocked
+    unverified_surface:
+    - typed decision/error result with reason code
+    - unsupported-requirements/capability report
+    - evidence record showing which gate prevented execution
+capability_claim:
+  applicability: applicable
+  owner: GodSpeed runtimes and operators that rely on SEA-Forge for consequential governance
+  delta: After repeated successful use, a caller can rely on SEA-Forge to transform semantic authorization requirements
+    into narrow, enforceable, replayable execution rights across supported backends without reconstructing security/governance
+    logic inside each application or agent.
+  why_in_scope: The daemon exists to reduce repeated orchestration and retrofit cost at the consequence boundary while
+    preserving authority, recovery, evidence, and portability.
+  proven_only_if:
+  - Required supported backends pass the same conformance suite under variation.
+  - Invalid/stale/widened grants are rejected consistently.
+  - Information-flow and credential non-disclosure properties survive multi-step and subagent workflows.
+  - Application integrations can use the daemon without duplicating authority logic.
+  - Recovery and remediable-block paths work without broadening authority.
+  not_proven_by:
+  - One successful sandboxed command.
+  - One policy-engine allow/deny demonstration.
+  - One successful Cognate integration.
+  - One benchmark or one platform.
+  - A generated policy artifact that has not been behaviorally checked.
+  learning_claim: This capability claim is operational reliability and transfer, not autonomous learning. SEA-Forge MAY
+    accumulate evidence and policy revisions, but it MUST NOT claim that repetition autonomously improves policy unless
+    a separately specified learning mechanism exists.
+claim_discipline:
+  levels:
+    evidence_backed: Supported by implementation, tests, logs, proof commands, reviewable artifacts, integration results,
+      benchmark evidence, or other inspectable evidence.
+    partially_proven: Implemented in meaningful pieces but not yet proven end-to-end, under required variation, or in
+      the target environment.
+    assumption: Required for the design to hold but not yet proven.
+    roadmap: Intended future behavior that is not required for current conformance until promoted.
+  claims:
+  - id: CLAIM-001
+    claim: The full-spec branch already provides move-only ActionGrant authorization bound to action/run/plan/workspace
+      plus execution context controls.
+    level: evidence_backed
+    required_evidence: Repository implementation and tests in sea-forge-authority.
+    current_evidence: crates/sea-forge-authority/src/lib.rs on full-spec.
+    gap: Grant does not yet express the full target identity/state/enforcement contract in this spec.
+  - id: CLAIM-002
+    claim: The full-spec branch already has a daemon-like server and authority -> runtime -> sandbox execution path.
+    level: evidence_backed
+    required_evidence: Server, runtime, and sandbox implementation plus tests.
+    current_evidence: sea-forge-server, sea-forge-runtime, sea-forge-sandbox on full-spec.
+    gap: Trusted-daemon scope, cross-platform transport, information-flow supervisor, broker/proxy services, and capability
+      proofs remain open.
+  - id: CLAIM-003
+    claim: Linux jail execution already provides fail-closed TCP Landlock restrictions derived from authority.
+    level: evidence_backed
+    required_evidence: jail implementation and negative tests.
+    current_evidence: crates/sea-forge-sandbox/src/jail.rs and NetworkPosture model.
+    gap: UDP/raw-socket coverage and portable equivalent backends are not yet proven.
+  - id: CLAIM-004
+    claim: Deterministic trajectory information-flow control can be integrated without making probabilistic classification
+      authoritative.
+    level: roadmap
+    required_evidence: Native SEA-Forge implementation and replay/adversarial conformance tests.
+    current_evidence: Architectural donor evidence only.
+    gap: No settled SEA-Forge IFC subsystem yet.
+  - id: CLAIM-005
+    claim: A daemon-owned credential broker can keep raw provider secrets out of agent/application context for mediated
+      operations.
+    level: roadmap
+    required_evidence: End-to-end provider integration proving reference-only handling and absence from logs/events/results.
+    current_evidence: Architectural donor evidence only.
+    gap: No settled SEA-Forge broker yet.
+  - id: CLAIM-006
+    claim: DomainForge can project semantic authority into multiple enforcement targets while detecting consequence-changing
+      degradation.
+    level: partially_proven
+    required_evidence: ProjectionBinding contract plus behavioral equivalence/conservative-subset tests across at least
+      two target backends.
+    current_evidence: DomainForge projection substrate exists; target enforcement projection contract is design-level.
+    gap: Projection fidelity taxonomy and cross-backend conformance remain to be implemented/proven.
+  - id: CLAIM-007
+    claim: Cognate applications can be governed through framework-owned capability/action boundaries without changing
+      Cognate kernel semantics.
+    level: partially_proven
+    required_evidence: A real Cognate vertical slice through SEA-Forge decision/grant/enforcement/event/RealityTrace.
+    current_evidence: Cognate already exposes SemanticRef, capability, policy/action-policy, event, and RealityTrace
+      seams.
+    gap: SEA-Forge adapter/profile vertical slice not yet settled.
+  - id: CLAIM-008
+    claim: The full-spec branch already separates environment content/provides from permission/isolation concerns and
+      supports pinned environment materialization.
+    level: evidence_backed
+    required_evidence: EnvironmentSpec implementation and tests.
+    current_evidence: crates/sea-forge-sandbox/src/environment.rs on full-spec.
+    gap: The target daemon must preserve this separation while moving backend selection to semantic capability requirements.
+system_overview:
+  architecture_pattern:
+    primary: Trusted semantic authority daemon with event-sourced decision state and pluggable enforcement projections/backends
+    rationale: The trusted boundary must remain outside untrusted agent reasoning while still accepting semantic requests
+      from multiple runtimes. A stable daemon lets authority, information-flow state, credential mediation, egress, and
+      physical enforcement share exact policy/state identity without coupling application code to mechanism-specific
+      implementations.
+    intentionally_not_used:
+    - pattern: Agent-internal self-policing
+      reason: Prompt/model state is not a trustworthy authority boundary.
+    - pattern: Sandbox-only security
+      reason: Physical containment alone cannot represent semantic authority, information provenance, or scoped remediation.
+    - pattern: Mandatory container/VM per operation
+      reason: Too heavy as the universal default; stronger tiers MAY exist when required.
+    - pattern: Independent policy engines making unrelated allow decisions
+      reason: Can create generation/state races and semantic divergence. SEA-Forge MUST resolve one authoritative decision/grant.
+    - pattern: Backend-specific policy as canonical truth
+      reason: Target policies are projections; semantic authority remains above them.
+  main_components:
+  - name: Semantic Authority Engine
+    responsibility: Evaluate actor + canonical operation + resource + context + semantic/policy evidence and resolve
+      one authoritative disposition.
+    inputs:
+    - CanonicalActionRequest
+    - PolicyRevision
+    - semantic model/source identity
+    - context/evidence refs
+    outputs:
+    - AuthorityDecision
+    - decision_ref
+    - governance boundaries
+    - remedy/escalation requirement
+  - name: Trajectory Information-Flow Supervisor
+    responsibility: Maintain deterministic, monotonic information restrictions and relevant effect history across root/child
+      trajectories and checked returns.
+    inputs:
+    - trajectory events
+    - operation contracts/annotations
+    - audience/trust/provenance facts
+    outputs:
+    - InformationState
+    - IFC decision
+    - bounded RemedyPlan
+  - name: Grant and Revision Authority
+    responsibility: Bind allowed consequence to exact policy, semantic source, trajectory revision, operation identity,
+      constraints, expiry, and evidence obligations.
+    inputs:
+    - resolved authority
+    - information-flow state
+    - enforcement requirements
+    outputs:
+    - move-only or unforgeable EnforcementGrant
+  - name: Enforcement Projection and Capability Resolver
+    responsibility: Translate semantic enforcement requirements into target-specific plans and prove the selected backend
+      can enforce them without widening.
+    inputs:
+    - EnforcementGrant
+    - backend capability reports
+    - projection definitions
+    outputs:
+    - ProjectionBinding
+    - EnforcementPlan
+    - ProjectionFidelity
+  - name: Trusted Execution Supervisor
+    responsibility: Coordinate containment, egress, credential references, timeouts, environment, and execution using
+      only grant-derived constraints.
+    inputs:
+    - EnforcementGrant
+    - EnforcementPlan
+    - ExecutionRequest
+    outputs:
+    - ExecutionResult
+    - backend identity
+    - enforcement evidence
+  - name: Credential and Egress Mediators
+    responsibility: Resolve credential references only in trusted paths and enforce destination/request restrictions
+      without exposing raw credentials to untrusted workloads.
+    inputs:
+    - CredentialRef
+    - EgressIntent
+    - grant constraints
+    outputs:
+    - injected upstream request or denied operation
+    - redacted receipt/evidence
+  - name: Evidence and Correlation Bridge
+    responsibility: Preserve governance and execution evidence and correlate it to application events and RealityTrace
+      observations without claiming settlement prematurely.
+    inputs:
+    - decision
+    - grant
+    - execution result
+    - application correlation IDs
+    outputs:
+    - durable governance records
+    - RealityTrace-compatible correlation/evidence refs
+  component_diagram:
+    mermaid: "flowchart TD\n  Caller[\"Cognate / Gauntlet / CLI / approved adapter\"] --> Normalize[\"Canonical semantic\
+      \ request\"]\n  Normalize --> IFC[\"Trajectory information-flow supervisor\"]\n  IFC --> Auth[\"Semantic Authority\
+      \ Engine\"]\n  Auth -->|deny/escalate/remediable| Block[\"Blocked / RemedyPlan\"]\n  Auth -->|allow| Grant[\"Grant\
+      \ & Revision Authority\"]\n  Grant --> Projection[\"Enforcement projection + capability resolver\"]\n  Projection\
+      \ -->|widening/unsupported| Block\n  Projection --> Exec[\"Trusted Execution Supervisor\"]\n  Exec --> Cred[\"\
+      Credential mediator\"]\n  Exec --> Egress[\"Egress supervisor\"]\n  Exec --> Contain[\"Containment backend\"]\n\
+      \  Cred --> World[\"External systems\"]\n  Egress --> World\n  Contain --> World\n  Exec --> Evidence[\"Evidence\
+      \ & correlation bridge\"]\n  Evidence --> RT[\"RealityTrace / durable application evidence\"]\n"
+  external_dependencies:
+  - name: DomainForge / semantic model
+    purpose: Provides semantic source identity and optional enforcement projections from .sea without making target policy
+      canonical.
+    failure_behavior: If required semantic source/projection cannot be resolved or validated, consequential execution
+      MUST remain blocked.
+  - name: OS enforcement primitives
+    purpose: Provide physical filesystem/process/network containment appropriate to the selected platform/backend.
+    failure_behavior: Required unavailable primitives MUST make the requested enforcement tier unsupported; no silent
+      downgrade.
+  - name: Credential providers
+    purpose: Resolve CredentialRef inside trusted mediator paths.
+    failure_behavior: Missing/unavailable credential resolution blocks only operations requiring that credential; raw
+      secret fallback is forbidden unless explicitly specified outside normal agent-visible state.
+  - name: RealityTrace
+    purpose: Receives or correlates observation/evidence after execution when configured.
+    failure_behavior: Evidence-required operations MUST follow their configured evidence mode; strict evidence obligations
+      may block final success, while non-strict observation delivery MAY be asynchronous and MUST be reported accurately.
+core_domain_model:
+  scope_rule: Stable entities represent authority, trajectory state, grants, enforcement obligations, and correlations
+    that must survive across adapters/backends. Mechanism nouns such as Landlock, bwrap, Seatbelt, AppContainer, Envoy,
+    Rego, or a specific credential provider remain adapter/backend details unless a requirement depends on them.
+  entities:
+  - name: CanonicalActionRequest
+    purpose: Stable representation of one proposed consequential operation before authority or execution.
+    used_by:
+    - Semantic Authority Engine
+    - Trajectory Information-Flow Supervisor
+    - Grant and Revision Authority
+    required_fields:
+    - name: request_id
+      type: string
+      meaning: Stable idempotency/correlation identity.
+    - name: actor
+      type: ActorRef
+      meaning: Authenticated or explicitly unresolved actor identity; unresolved actor cannot gain authority by default.
+    - name: operation
+      type: OperationIdentity
+      meaning: Canonical operation independent of host-native alias.
+    - name: resource
+      type: ResourceRef
+      meaning: Exact governed resource or scope.
+    - name: context
+      type: ContextRef
+      meaning: Bounded current context/evidence relevant to authority.
+    - name: semantic_ref
+      type: SemanticRef|null
+      meaning: Stable Cognate/DomainForge semantic identity when domain meaning exists.
+    - name: semantic_source_digest
+      type: digest|null
+      meaning: Exact semantic source revision/digest when applicable.
+    optional_fields:
+    - trajectory_id
+    - continuation_id
+    - correlation_id
+    - requested_credential_refs
+    - requested_enforcement
+    rules:
+    - Host-native tool names MUST be normalized before authoritative evaluation.
+    - Unknown/unclassifiable consequential operations MUST NOT default to allow.
+  - name: PolicyRevision
+    purpose: Exact identity of the policy state used to make a decision.
+    used_by:
+    - Semantic Authority Engine
+    - Trajectory Information-Flow Supervisor
+    - Grant and Revision Authority
+    required_fields:
+    - name: revision
+      type: string|integer
+      meaning: Monotonic or otherwise stable revision identity.
+    - name: policy_hash
+      type: digest
+      meaning: Deterministic canonical identity of behaviorally relevant policy.
+    optional_fields:
+    - source_refs
+    - loaded_at
+    - signature_ref
+    rules:
+    - Behaviorally relevant policy changes MUST change policy identity.
+    - Deployment-only hints that cannot affect decisions SHOULD NOT change semantic policy identity.
+  - name: InformationState
+    purpose: Deterministic security state carried by one trajectory/family across reads, calls, effects, and checked
+      returns.
+    used_by:
+    - Trajectory Information-Flow Supervisor
+    - Grant and Revision Authority
+    required_fields:
+    - name: trajectory_id
+      type: string
+      meaning: Stable root or child trajectory identity.
+    - name: revision
+      type: integer|string
+      meaning: Exact event-log position/state revision used by the decision.
+    - name: audience
+      type: AudienceConstraint
+      meaning: Who may receive accumulated information; must narrow monotonically absent explicit scoped transformation.
+    - name: trust
+      type: TrustRank
+      meaning: Integrity/provenance bound for accumulated information; must not silently improve.
+    - name: provenance_refs
+      type: list<string>
+      meaning: Evidence/source references sufficient for audit without duplicating secret content.
+    optional_fields:
+    - effects
+    - reservations
+    - parent_trajectory
+    - information_state_hash
+    rules:
+    - Ordinary reads/joins MUST only maintain or restrict state; they MUST NOT silently declassify or increase trust.
+    - Scoped authority or sanitization MAY permit one specific flow without globally making the trajectory less restricted.
+  - name: EnforcementGrant
+    purpose: Unforgeable or move-only proof that one exact consequential action may execute under exact constraints.
+    used_by:
+    - Trusted Execution Supervisor
+    - Credential and Egress Mediators
+    - containment backends
+    required_fields:
+    - name: grant_id
+      type: string
+      meaning: Unique grant identity.
+    - name: decision_ref
+      type: string
+      meaning: Exact authority decision that issued the grant.
+    - name: policy_revision
+      type: PolicyRevision
+      meaning: Exact governing policy.
+    - name: actor
+      type: ActorRef
+      meaning: Bound actor.
+    - name: operation
+      type: OperationIdentity
+      meaning: Bound canonical operation.
+    - name: resource
+      type: ResourceRef
+      meaning: Bound governed resource.
+    - name: expires_at
+      type: timestamp
+      meaning: Latest valid use time.
+    - name: enforcement_requirements
+      type: EnforcementRequirements
+      meaning: Filesystem/process/network/credential/evidence constraints required for safe execution.
+    optional_fields:
+    - semantic_ref
+    - semantic_source_digest
+    - trajectory_id
+    - trajectory_revision
+    - information_state_hash
+    - projection_id
+    - projection_hash
+    - credential_bindings
+    - evidence_obligations
+    - compensating_controls
+    rules:
+    - No child-controlled field may widen a grant.
+    - A stale or mismatched bound field MUST reject execution or force reevaluation.
+    - A grant MUST be single-use or explicitly idempotent/replay-safe according to the operation contract.
+  - name: ProjectionBinding
+    purpose: Evidence that semantic enforcement requirements were projected onto a particular target/backend with known
+      fidelity.
+    used_by:
+    - Enforcement Projection and Capability Resolver
+    - Trusted Execution Supervisor
+    required_fields:
+    - name: projection_id
+      type: string
+      meaning: Stable projection identity.
+    - name: source_model_hash
+      type: digest
+      meaning: Semantic source identity used for projection.
+    - name: target_kind
+      type: string
+      meaning: Target policy/config/runtime kind.
+    - name: artifact_hash
+      type: digest
+      meaning: Exact generated/selected target artifact identity.
+    - name: fidelity
+      type: ProjectionFidelity
+      meaning: exact | conservative_degradation | widening_degradation | unsupported.
+    - name: capabilities_proven
+      type: list<string>
+      meaning: Required enforcement dimensions actually supported.
+    - name: unsupported_requirements
+      type: list<string>
+      meaning: Required dimensions the target cannot enforce.
+    optional_fields:
+    - invocation_binding
+    - evidence_binding
+    - target_policy_revision
+    rules:
+    - Widening degradation MUST block consequential execution.
+    - Unsupported required guarantees MUST block consequential execution.
+    - Conservative degradation MAY proceed only when the narrower behavior remains usable and policy allows it.
+  - name: RemedyPlan
+    purpose: Bounded route that can transform a blocked proposal into a newly evaluable proposal without pretending the
+      original action was allowed.
+    used_by:
+    - Trajectory Information-Flow Supervisor
+    - Semantic Authority Engine
+    - caller
+    required_fields:
+    - name: remedy_id
+      type: string
+      meaning: Stable offer identity.
+    - name: blocked_reason
+      type: string
+      meaning: Reason the current request is not an affordance.
+    - name: steps
+      type: list<RemedyStep>
+      meaning: Allowed transformations such as scoped approval, sanitization, narrower destination, isolated child read,
+        or missing evidence acquisition.
+    - name: scope
+      type: string
+      meaning: Exact action/flow the remedy may make newly evaluable.
+    optional_fields:
+    - expires_at
+    - authority_ref
+    - sanitizer_ref
+    rules:
+    - A remedy does not mutate the original decision into allow; it produces a new evaluable state/request.
+    - Scoped approval MUST NOT globally widen trajectory information state or future authority.
+  - name: CapabilityReport
+    purpose: Machine-readable description of what one backend can actually enforce on one host.
+    used_by:
+    - Enforcement Projection and Capability Resolver
+    - startup/preflight
+    required_fields:
+    - name: backend_id
+      type: string
+      meaning: Stable backend implementation identity.
+    - name: platform
+      type: string
+      meaning: Host platform/OS context.
+    - name: dimensions
+      type: map<string, CapabilityLevel>
+      meaning: Supported enforcement dimensions and strength.
+    optional_fields:
+    - limitations
+    - version
+    - evidence_refs
+    rules:
+    - Backends MUST report limitations rather than claiming unsupported guarantees.
+    - Backend selection MUST be derived from grant requirements and capability report, not child preference.
+  orchestrator_daemon_add_on:
+    applicability: applicable
+    guidance: The daemon is stateful for policy revisions, trajectory/event state, active grants/dispatches, credential/egress
+      mediation, and evidence correlation. Runtime-specific scheduling/work-queue entities remain outside this core unless
+      repository inspection proves they are required.
+    entities:
+    - PolicyRevision
+    - InformationState
+    - EnforcementGrant
+    - ProjectionBinding
+    - CapabilityReport
+  identifiers_and_normalization:
+    primary_id_rule: Every request, decision, grant, trajectory, projection, and execution MUST have a stable opaque
+      identifier suitable for durable correlation.
+    human_readable_rule: Logs MAY include human-readable operation/resource labels but MUST also carry canonical identifiers.
+    normalized_identifier_rule: Operation identities MUST use a canonical namespace independent of host-native aliases.
+      Normalization MUST be deterministic, collision-resistant, and reject ambiguous/invalid spellings rather than guess.
+    path_or_resource_rule: Filesystem paths and resource locators crossing privileged boundaries MUST be normalized and
+      checked against authority-derived roots/scopes before mutation; symlink/parent escape protections remain REQUIRED.
+    unsafe_input_rule: Untrusted strings MUST be parsed into typed canonical forms before privileged use. Unknown fields,
+      duplicate/ambiguous encodings, traversal, alias collisions, and malformed target selectors MUST fail closed.
+configuration_and_input_contract:
+  configuration_sources_precedence:
+  - order: 1
+    source: Explicit invocation/session overrides that policy explicitly permits to narrow behavior only
+  - order: 2
+    source: Validated daemon configuration and policy bundle
+  - order: 3
+    source: Documented fail-closed defaults
+  - order: 4
+    source: Secret/provider references resolved only by trusted mediator components
+  resolution_rules:
+  - id: REQ-CONFIG-001
+    text: Configuration precedence MUST be deterministic and MUST NOT allow lower-precedence sources or child input to
+      widen authority.
+  - id: REQ-CONFIG-002
+    text: Secret configuration MUST use references/handles at untrusted boundaries; raw values are resolved only inside
+      trusted mediator components.
+  - id: REQ-CONFIG-003
+    text: Backend capability selection MUST be dynamic from host capability evidence and grant requirements; a configured
+      backend name alone is not proof of capability.
+  - id: REQ-CONFIG-004
+    text: Generated target policies/configuration MUST be content-addressed or otherwise bound to deterministic identity
+      used by the grant/projection evidence.
+  - id: REQ-CONFIG-005
+    text: Daemon transport configuration MUST support a local authenticated boundary; Unix domain sockets are acceptable
+      on Unix and a native Windows local IPC equivalent MUST be supported for Windows conformance.
+  required_config_fields:
+  - field: root
+    type: path
+    required: false
+    default: .sea-forge
+    validation: Must resolve to daemon-owned state root; unsafe paths rejected.
+  - field: policy_sources
+    type: list<PolicySource>
+    required: true
+    default: null
+    validation: Every active policy source must validate and contribute to deterministic PolicyRevision identity.
+  - field: transport
+    type: LocalTransportConfig
+    required: false
+    default: platform default
+    validation: Must not expose privileged control over unauthenticated public TCP by default.
+  - field: evidence_mode
+    type: enum
+    required: false
+    default: record
+    validation: Must declare strict vs asynchronous evidence obligations explicitly.
+  - field: credential_providers
+    type: map<string, CredentialProviderConfig>
+    required: false
+    default: {}
+    validation: Provider configuration cannot expose raw secret material through normal config inspection/logging.
+  error_classes:
+  - code: missing_config_error
+    blast_radius: Affected daemon subsystem or startup if normative policy is missing.
+  - code: parse_error
+    blast_radius: Affected configuration/policy revision cannot activate.
+  - code: schema_error
+    blast_radius: Affected request/config/policy rejected before privileged effect.
+  - code: unsupported_kind_error
+    blast_radius: Affected operation/projection/backend only; MUST NOT silently map to broader kind.
+  - code: missing_credential_error
+    blast_radius: Affected credential-requiring operation only.
+  - code: input_validation_error
+    blast_radius: Affected request only unless corruption indicates wider state invalidity.
+  - code: policy_revision_mismatch
+    blast_radius: Affected grant/execution; must reevaluate.
+  - code: trajectory_revision_mismatch
+    blast_radius: Affected grant/execution; must reevaluate.
+  - code: projection_widening_error
+    blast_radius: Affected operation/target backend; execution blocked.
+  - code: enforcement_capability_error
+    blast_radius: Affected operation on current backend/host; no silent downgrade.
+  - code: credential_exposure_error
+    blast_radius: Affected operation and possibly provider/session; execution blocked and evidence redacted.
+  - code: information_flow_error
+    blast_radius: Affected flow/call; may expose bounded remedy plan.
+  - code: grant_mismatch_error
+    blast_radius: Affected operation only; no side effect.
+  error_surface_requirements:
+  - Errors MUST include a stable code, concise message, and recoverability hint where possible.
+  - Errors MUST NOT include secrets or excessive raw configuration.
+  - Security-sensitive errors SHOULD disclose enough to permit safe remediation without revealing protected material.
+  - 'Blocked and unsupported are semantically distinct: blocked may become reachable after a valid remedy; unsupported
+    means the current substrate cannot enforce the requirement.'
+  dynamic_reload:
+    status: required
+    requirements:
+    - A candidate policy/config revision MUST validate completely before activation.
+    - Activation MUST produce a new deterministic PolicyRevision identity when behaviorally relevant semantics change.
+    - In-flight grants remain bound to their issuing revision and MUST NOT silently migrate to a new policy.
+    - A reload that invalidates a still-pending consequential operation MUST cause reevaluation before commitment.
+    - Invalid reload MUST leave the last valid revision active and MUST emit observable failure evidence.
+  startup_preflight:
+    requirements:
+    - id: REQ-CONFIG-010
+      text: Startup MUST validate policy identity, daemon state schema, local IPC permissions/authentication, required
+        credential provider metadata, and registered backend capability reports.
+    - id: REQ-CONFIG-011
+      text: Before consequential execution the daemon MUST revalidate all grant-bound context that can become stale,
+        including policy, trajectory revision/state, expiry, operation/resource identity, and selected enforcement capability.
+    - id: REQ-CONFIG-012
+      text: Preflight failure MUST block only the smallest affected scope unless the daemon cannot establish trustworthy
+        global state, in which case consequential execution MUST stop globally.
+  primary_input:
+    type: CanonicalActionRequest
+    source: Trusted caller adapter after canonicalization; untrusted child/model data may populate fields but cannot
+      assert authority
+    required_fields:
+    - name: request_id
+      type: string
+      validation: Non-empty stable id; duplicate behavior follows idempotency contract.
+    - name: actor
+      type: ActorRef
+      validation: Authenticated or explicitly unresolved; unresolved fails closed where authority is required.
+    - name: operation
+      type: OperationIdentity
+      validation: Canonical, registered/representable, no ambiguous alias.
+    - name: resource
+      type: ResourceRef
+      validation: Canonical scope with safe normalization.
+    - name: context
+      type: ContextRef
+      validation: References current evidence/context without embedding unbounded secret payloads.
+    optional_fields:
+    - semantic_ref
+    - semantic_source_digest
+    - trajectory_id
+    - correlation_id
+    - credential_refs
+    - requested_enforcement
+    invalid_input_behavior:
+      missing_required: Reject before policy evaluation or privileged side effect.
+      invalid_value: Reject with typed input/schema error.
+      duplicate_request: Return prior committed result only when operation contract declares idempotent equivalence;
+        otherwise reject or require a new request identity.
+      out_of_scope: Deny or mark unsupported; never coerce to a wider scope.
+      unsafe: Reject before privileged side effect and preserve redacted evidence.
+operational_flow_and_state_model:
+  flow_summary:
+    primary_flow:
+    - Receive and canonicalize proposed consequential action.
+    - Load exact semantic/policy revision and relevant trajectory/event state.
+    - Evaluate information-flow requirements and semantic authority; resolve deny/escalate/remediable/allow.
+    - If allowed, issue an exact EnforcementGrant bound to decision, revisions, identities, expiry, constraints, and
+      evidence obligations.
+    - Resolve enforcement projection and backend capability; reject widening or unsupported required guarantees.
+    - Resolve CredentialRef and egress bindings only inside trusted mediators; prepare containment from grant-derived
+      constraints.
+    - Execute once under the grant; prevent child/caller widening.
+    - Commit correlated execution/governance evidence and application/RealityTrace observation references.
+    - Report execution outcome separately from domain settlement.
+    remediation_flow:
+    - A blocked request MAY return one or more policy-permitted RemedyPlans.
+    - A remedy step MUST be executed/approved through its own bounded authority.
+    - The remedy produces a new state/request that is reevaluated; it does not mutate the previous denial into allow.
+  flow_diagram:
+    mermaid: "flowchart TD\n  A[\"Canonicalize request\"] --> B[\"Load exact policy + semantic + trajectory state\"]\n\
+      \  B --> C[\"IFC + semantic authority\"]\n  C -->|deny| X[\"Denied\"]\n  C -->|escalate| Y[\"Escalation required\"\
+      ]\n  C -->|remediable| R[\"Offer bounded RemedyPlan\"]\n  R --> B\n  C -->|allow| G[\"Issue exact EnforcementGrant\"\
+      ]\n  G --> P[\"Projection fidelity + backend capability\"]\n  P -->|widening/unsupported| U[\"Unsupported / blocked\"\
+      ]\n  P -->|sufficient| E[\"Trusted mediated execution\"]\n  E --> O[\"Commit correlated evidence\"]\n  O --> S[\"\
+      Execution outcome; settlement may remain pending\"]\n"
+  service_states:
+    stateful_object: EnforcementGrant
+    states:
+    - name: issued
+      meaning: Grant exists and is not yet consumed, expired, revoked, or invalidated.
+      entry_trigger: Resolved allow with sufficient prerequisites.
+      exit_trigger: Preflight/consume/revoke/expiry.
+    - name: validated
+      meaning: All bound revisions, identities, expiry, projection, and backend capabilities still satisfy the grant
+        immediately before commitment.
+      entry_trigger: Successful pre-execution preflight.
+      exit_trigger: Execution attempt or state change.
+    - name: consumed
+      meaning: Grant was used for its permitted consequential execution.
+      entry_trigger: Execution commitment begins according to operation contract.
+      exit_trigger: Terminal unless explicitly replay-safe/idempotent.
+    - name: invalidated
+      meaning: Grant no longer matches required policy/trajectory/semantic/enforcement state.
+      entry_trigger: Mismatch, widening, revocation, or relevant state change.
+      exit_trigger: New evaluation/grant.
+    - name: expired
+      meaning: Grant expiry passed before valid consumption.
+      entry_trigger: Clock exceeds expires_at.
+      exit_trigger: New evaluation/grant.
+  transition_rules:
+  - from: issued
+    to: validated
+    when: All bound identities/revisions/capabilities still match and no required guarantee is unsupported.
+  - from: issued
+    to: invalidated
+    when: Any bound policy, semantic, trajectory, operation, resource, or enforcement requirement mismatches.
+  - from: issued
+    to: expired
+    when: expires_at is exceeded.
+  - from: validated
+    to: consumed
+    when: Exact authorized consequence begins under the selected enforcement plan.
+  - from: validated
+    to: invalidated
+    when: A relevant state change occurs before commitment.
+  transition_triggers:
+  - name: policy_reload
+    behavior: Creates new PolicyRevision; affected unconsumed grants remain bound to old revision and must be reevaluated
+      if current-policy conformance is required.
+  - name: trajectory_append
+    behavior: Advances trajectory revision/state hash and invalidates grants bound to earlier relevant state unless contract
+      proves independence.
+  - name: backend_capability_change
+    behavior: Invalidates affected projection/enforcement plan before execution.
+  - name: grant_revoke
+    behavior: Prevents future consumption and records reason/evidence.
+  idempotency_rule: Authority evaluation MAY be replayed deterministically. Consequential execution MUST use request/grant
+    identities to prevent accidental duplicate side effects. An operation may reuse a previous result only when its contract
+    explicitly defines idempotent equivalence and the evidence proves the prior consequence corresponds to the same canonical
+    request.
+  important_nuances:
+  - Allow is not executable until enforcement fidelity and backend capability are proven.
+  - Scoped approval permits only the specific covered action/flow and MUST NOT globally raise trust, widen audience,
+    or confer future authority.
+  - A successful side effect whose result is intentionally confined may record the effect without returning sensitive
+    output to the agent.
+  - Execution success and domain settlement are separate states.
+  - A child/subagent starts no less restricted than the parent state it receives; delegation is not declassification.
+core_behavior_requirements:
+  authority_and_grants:
+  - id: REQ-AUTH-001
+    text: SEA-Forge MUST remain the final semantic authority for consequential actions; callers/adapters/backends MAY
+      narrow but MUST NOT widen its decision.
+  - id: REQ-AUTH-002
+    text: Every allow MUST be represented by an exact grant or equivalent unforgeable execution token; advisory allows
+      are insufficient for privileged execution.
+  - id: REQ-AUTH-003
+    text: The grant MUST bind actor, canonical operation, resource, context-relevant identity, policy revision/hash,
+      semantic source identity when present, expiry, and evidence obligations.
+  - id: REQ-AUTH-004
+    text: Relevant policy/semantic/trajectory/backend state changes before commitment MUST invalidate the grant or require
+      reevaluation.
+  - id: REQ-AUTH-005
+    text: Boundary constraints from multiple required governance sources MUST combine by intersection or another formally
+      no-wider rule; conflicting/empty boundaries MUST deny.
+  - id: REQ-AUTH-006
+    text: Unknown, unclassified, or ambiguous consequential operations MUST fail closed.
+  canonical_operation_identity:
+  - id: REQ-OPID-001
+    text: Every consequential operation MUST have one canonical identity independent of host-native spelling, provider
+      alias, MCP naming, CLI command alias, or framework adapter.
+  - id: REQ-OPID-002
+    text: Adapters MUST translate native calls to canonical identity bijectively over the supported native domain or
+      reject ambiguous aliases.
+  - id: REQ-OPID-003
+    text: The canonical identity and canonicalized arguments/resource scope used for policy evaluation MUST be the identity
+      executed.
+  policy_revision_and_snapshot:
+  - id: REQ-POL-001
+    text: Behaviorally relevant policy MUST have deterministic canonical identity.
+  - id: REQ-POL-002
+    text: One authorization MUST be derived from one coherent policy/semantic/trajectory snapshot; the daemon MUST NOT
+      combine independent decisions from different generations as though they were atomic.
+  - id: REQ-POL-003
+    text: Decision, grant, projection, and evidence records MUST carry the exact policy revision/hash used.
+  - id: REQ-POL-004
+    text: A policy reload MUST never retroactively rewrite evidence of the policy under which an earlier action was authorized.
+  information_flow:
+  - id: REQ-IFC-001
+    text: SEA-Forge MUST maintain deterministic trajectory information state sufficient to constrain future tool/capability
+      calls based on what the trajectory has read or received.
+  - id: REQ-IFC-002
+    text: 'Ordinary information joins MUST be monotonic: audience may only remain equal or narrow and trust may only
+      remain equal or degrade unless a separately authorized transformation produces a new derivative.'
+  - id: REQ-IFC-003
+    text: Tool/capability contracts MUST declare or resolve input requirements and output information deltas before the
+      call is released.
+  - id: REQ-IFC-004
+    text: Probabilistic or model-based annotators MAY propose bounded facts but MUST NOT directly grant authority; deterministic
+      policy evaluates recorded annotations.
+  - id: REQ-IFC-005
+    text: Changing a call after annotation MUST require a new annotation/evaluation; replay of the exact recorded call
+      MAY reuse the recorded annotation if identity is proven.
+  - id: REQ-IFC-006
+    text: Information-flow decisions MUST be replayable from durable facts/state without hidden dependence on unrecorded
+      model conversation.
+  - id: REQ-IFC-007
+    text: A data read that would make a required downstream action impossible MAY be isolated or sanitized only through
+      an explicitly permitted remedy; the system MUST NOT silently omit restrictions for convenience.
+  remediation_and_scoped_authority:
+  - id: REQ-REM-001
+    text: A blocked request MAY expose bounded RemedyPlans that describe what transformation could make a new request
+      reachable.
+  - id: REQ-REM-002
+    text: Supported remedy classes SHOULD include scoped approval, sanitization/redaction, narrowed audience/destination,
+      isolated child read, withheld result, and acquisition of missing evidence when semantically applicable.
+  - id: REQ-REM-003
+    text: A remedy MUST have explicit scope and MUST NOT grant unrelated future authority.
+  - id: REQ-REM-004
+    text: A failed/denied remedy leaves the original operation blocked.
+  subagents_and_delegation:
+  - id: REQ-DELEG-001
+    text: A child/subagent MUST inherit information restrictions no weaker than the parent state at the authorized fork
+      point.
+  - id: REQ-DELEG-002
+    text: Every child return carrying derived information MUST cross a checked return contract before entering the parent
+      trajectory.
+  - id: REQ-DELEG-003
+    text: Forking MUST NOT itself declassify information, raise trust, erase effects, or bypass authority.
+  - id: REQ-DELEG-004
+    text: Independent root forks from copied context MUST record their origin state and MUST NOT claim continuing synchronization
+      with the source trajectory.
+  projection_fidelity:
+  - id: REQ-PROJ-001
+    text: Semantic enforcement projection MUST classify fidelity as exact, conservative_degradation, widening_degradation,
+      or unsupported.
+  - id: REQ-PROJ-002
+    text: Widening degradation MUST fail closed for consequential execution.
+  - id: REQ-PROJ-003
+    text: Unsupported required semantics MUST fail closed and identify the missing enforcement dimensions.
+  - id: REQ-PROJ-004
+    text: Conservative degradation MAY execute only when the policy allows the narrower result and required functionality
+      remains available.
+  - id: REQ-PROJ-005
+    text: Generated target artifacts MUST be bound to source/target hashes and validated behaviorally where syntax alone
+      cannot prove consequence preservation.
+  - id: REQ-PROJ-006
+    text: Native projectors and modeled .sea projections MUST satisfy the same semantic conformance contract for claims
+      of equivalent fidelity.
+  - id: REQ-PROJ-007
+    text: SEA-Forge/DomainForge SHOULD permit a required port/capability model, a foreign target model, and their correspondence
+      to be represented independently so adapters/policies can be derived without making target structure canonical.
+  - id: REQ-PROJ-008
+    text: A new enforcement target, provider, protocol, runtime, or projection MUST NOT require a .sea grammar change
+      unless the language itself lacks a genuinely necessary semantic distinction.
+  - id: REQ-PROJ-009
+    text: Where an outward enforcement projection causes consequence, the system SHOULD preserve an inward evidence projection
+      that correlates target observations back to the semantic request and settlement/evidence surface.
+  enforcement_capabilities:
+  - id: REQ-ENF-001
+    text: SEA-Forge MUST model semantic enforcement requirements separately from concrete backend class names.
+  - id: REQ-ENF-002
+    text: Each backend MUST expose a CapabilityReport covering relevant filesystem, process, network, credential, protocol,
+      identity, proof, and evidence dimensions.
+  - id: REQ-ENF-003
+    text: Backend selection MUST satisfy all required grant dimensions; a backend name or availability alone is insufficient.
+  - id: REQ-ENF-004
+    text: Unavailable stronger enforcement MUST NOT silently downgrade to Local/unconfined execution.
+  - id: REQ-ENF-005
+    text: Current Linux Landlock jail behavior MAY remain an implementation backend but MUST no longer define the long-term
+      semantic contract.
+  containment:
+  - id: REQ-CONT-001
+    text: Filesystem roots, writable paths, denied paths, environment keys, process lifetime, timeouts, network posture,
+      and artifact roots MUST be derived from trusted grant constraints, never widened by child input.
+  - id: REQ-CONT-002
+    text: Path traversal, symlink escape, ambiguous path spellings, and writes outside authorized roots MUST be rejected
+      before mutation.
+  - id: REQ-CONT-003
+    text: The daemon SHOULD support native lightweight containment tiers on major platforms and MAY support stronger
+      isolation tiers such as microVMs when policy requires them.
+  - id: REQ-CONT-004
+    text: Process escape/hardening features such as no-new-privileges, syscall restrictions, process groups, and equivalent
+      native controls SHOULD be used where available and represented in CapabilityReport.
+  network_and_egress:
+  - id: REQ-NET-001
+    text: Default consequential network posture MUST be deny unless explicitly granted.
+  - id: REQ-NET-002
+    text: Network authorization MUST be representable as semantic EgressIntent including actor/process identity, destination,
+      protocol, operation/resource, credential reference, and context when those dimensions matter.
+  - id: REQ-NET-003
+    text: The egress decision MUST be derived from one atomic policy snapshot/generation and MUST NOT re-query independent
+      policy generations for action versus metadata.
+  - id: REQ-NET-004
+    text: When policy requires request-level restrictions such as HTTP method/path, host/port-only enforcement is unsupported
+      rather than exact.
+  - id: REQ-NET-005
+    text: Metadata resolution failure MUST NOT weaken a previously required destination/request restriction.
+  credentials:
+  - id: REQ-CRED-001
+    text: Untrusted callers/agents SHOULD receive CredentialRef handles rather than raw provider secrets.
+  - id: REQ-CRED-002
+    text: Raw credentials MUST be resolved only by trusted mediator components at the latest practical boundary.
+  - id: REQ-CRED-003
+    text: Credentials MUST NOT be logged, persisted in ordinary evidence, emitted in errors, included in model prompts/context,
+      or returned in normal tool results.
+  - id: REQ-CRED-004
+    text: Credential binding MUST be scoped to the exact allowed provider/operation/resource/destination when policy
+      provides those constraints.
+  - id: REQ-CRED-005
+    text: After credential injection or other trusted request mutation, any policy-relevant mutated request identity
+      MUST be revalidated before upstream dispatch.
+  confined_results:
+  - id: REQ-CONF-001
+    text: The daemon MUST support an execution mode where a successful side effect is recorded while sensitive tool output
+      is withheld from the untrusted caller/agent.
+  - id: REQ-CONF-002
+    text: Withholding a result MUST NOT erase the fact that the side effect occurred or its evidence obligations.
+  - id: REQ-CONF-003
+    text: A confined result MAY return a redacted receipt/status/reference that proves execution without disclosing protected
+      payload.
+  cognate_integration:
+  - id: REQ-COG-001
+    text: Cognate integration SHOULD be implemented as adapters/profile composition around Policy, ActionPolicy, capability
+      invocation, and irreversible-commit seams rather than by moving SEA-Forge authority into the Cognate kernel.
+  - id: REQ-COG-002
+    text: Where domain meaning exists, Cognate SemanticRef and DomainForge source digest SHOULD be carried into the SEA-Forge
+      request and correlated into the resulting event/evidence.
+  - id: REQ-COG-003
+    text: Cognate local eligibility checks MAY deny/narrow cheaply but MUST NOT widen or replace the authoritative SEA-Forge
+      decision for governed consequence.
+  - id: REQ-COG-004
+    text: A Cognate consequential event SHOULD carry governance correlation sufficient to recover decision_ref, grant_id,
+      policy_revision/hash, semantic_ref/source_digest, projection identity/hash, and enforcement backend without carrying
+      secrets.
+  gauntlet_integration:
+  - id: REQ-GAUNT-001
+    text: Gauntlet MAY orchestrate which work is attempted, but SEA-Forge MUST retain authority over whether governed
+      consequence is permitted.
+  - id: REQ-GAUNT-002
+    text: Gauntlet subagents/delegation MUST participate in the same trajectory/information-flow and grant rules when
+      they cross governed boundaries.
+  - id: REQ-GAUNT-003
+    text: Gauntlet MUST be able to distinguish denied, remediable, escalated, unsupported, and executed states so it
+      can navigate rather than treating every block as terminal failure.
+  evidence_and_realitytrace:
+  - id: REQ-EVID-001
+    text: Governance evidence MUST preserve enough information to reconstruct why a consequential action was allowed
+      or blocked without storing protected payload unnecessarily.
+  - id: REQ-EVID-002
+    text: Execution records MUST correlate request -> decision -> grant -> projection/backend -> result.
+  - id: REQ-EVID-003
+    text: When Cognate/RealityTrace integration is active, correlation MUST extend to application event -> RealityTrace
+      observation.
+  - id: REQ-EVID-004
+    text: A delivery receipt or recorded observation MUST NOT be mislabeled as domain evidence or settlement unless the
+      relevant settlement contract says so.
+  - id: REQ-EVID-005
+    text: Contradictory/failed evidence MUST be retained with provenance rather than overwritten by later success.
+  completion_rules:
+    may_claim_completion_only_when:
+    - All REQUIRED normative requirements promoted into the target release map to passing proof/evidence.
+    - At least one real Cognate or Gauntlet vertical slice proves semantic request through enforced consequence and correlated
+      evidence.
+    - Information-flow, credential, stale-state, alias, projection-fidelity, backend-unavailable, and subagent-return
+      adversarial suites pass.
+    - Supported target platforms report and satisfy their claimed capability profiles without hidden downgrade.
+    must_report_incomplete_blocked_or_failed_when:
+    - A required enforcement dimension is unsupported on the selected backend.
+    - A required target integration is skipped or mock-only.
+    - A policy/trajectory/semantic revision mismatch exists.
+    - Credential non-disclosure or information-flow confinement cannot be demonstrated.
+    - Projection fidelity is unknown for a consequential path.
+  environment_separation:
+  - id: REQ-ENV-001
+    text: Environment/content identity MUST remain distinct from permission and isolation authority. A package, toolchain,
+      image, environment specification, or declared capability MUST NOT grant execution authority merely by existing.
+  - id: REQ-ENV-002
+    text: Where reproducible environments are used, behaviorally relevant content and immutable versions SHOULD be content-addressed
+      or hash-pinned so the grant/evidence can identify what actually executed.
+  - id: REQ-ENV-003
+    text: Environment-provided capabilities MAY satisfy an enforcement or execution requirement only after the trusted
+      resolver verifies them; environment metadata supplied by the child is not proof.
+  adapter_boundaries:
+  - id: REQ-ADAPT-001
+    text: Runtime adapters MUST translate transport/provider/native representations into and out of the stable SEA-Forge
+      contract; they MUST NOT become independent sources of semantic authority.
+  - id: REQ-ADAPT-002
+    text: An adapter MAY reject or narrow behavior for local safety, but it MUST NOT widen a SEA-Forge grant or reinterpret
+      an unsupported requirement as satisfied.
+  - id: REQ-ADAPT-003
+    text: Adapter replacement MUST be testable through shared conformance contracts so backend/provider substitution
+      does not require rediscovering semantic meaning.
+execution_integration_contract:
+  invocation:
+    method: Local RPC/IPC or in-process trusted library boundary; exact transport implementation-defined per platform
+    required_parameters:
+    - CanonicalActionRequest
+    - caller/session identity or authenticated local transport context
+    runtime_context: Local daemon session/trajectory plus caller correlation context
+    authentication: Local authenticated principal/process boundary appropriate to platform; unauthenticated public control
+      surface forbidden by default
+    timeout_policy: Every external consult, execution, mediator, and backend operation MUST be bounded; timeout outcome
+      must be typed and must not imply success.
+  result:
+    type: GovernanceResult
+    success_fields:
+    - decision_ref
+    - disposition
+    - policy_revision
+    - grant_id when allowed
+    - projection/enforcement identity
+    - correlation/evidence refs
+    failure_fields:
+    - error.code
+    - error.message
+    - error.recoverable
+    - blocked_reason
+    - unsupported_requirements
+    - remedy_offers when applicable
+  external_side_effects:
+    may_change:
+    - Only resources/destinations explicitly covered by a valid grant and enforcement plan.
+    - Daemon-owned ledgers/event state needed to record decisions, grants, dispatches, outcomes, and evidence.
+    must_not_change:
+    - Resources outside grant scope.
+    - Policy/semantic source merely because an operation executes.
+    - Credential stores except through explicit credential-provider operations.
+    - Unrelated trajectory authority or information state.
+  sequence_diagram:
+    mermaid: "sequenceDiagram\n  participant Caller as Cognate/Gauntlet/Adapter\n  participant Daemon as SEA-Forge Daemon\n\
+      \  participant IFC as IFC Supervisor\n  participant Auth as Semantic Authority\n  participant Enf as Enforcement\
+      \ Resolver\n  participant Med as Credential/Egress/Containment\n  participant World as External System\n  participant\
+      \ Evidence as Event/RealityTrace Bridge\n\n  Caller->>Daemon: CanonicalActionRequest\n  Daemon->>IFC: evaluate\
+      \ trajectory state + call contract\n  IFC-->>Daemon: pass/block/remedy + state revision\n  Daemon->>Auth: evaluate\
+      \ exact semantic request + policy revision\n  Auth-->>Daemon: allow/deny/escalate/remediable\n  alt allowed\n \
+      \   Daemon->>Daemon: issue exact EnforcementGrant\n    Daemon->>Enf: prove projection fidelity + backend capability\n\
+      \    Enf-->>Daemon: EnforcementPlan or unsupported/widening\n    Daemon->>Med: execute under grant-derived constraints\n\
+      \    Med->>World: mediated consequential action\n    World-->>Med: result\n    Med-->>Daemon: redacted/confined\
+      \ ExecutionResult\n    Daemon->>Evidence: append governance + execution correlation\n    Daemon-->>Caller: governed\
+      \ result\n  else blocked\n    Daemon-->>Caller: typed block/escalation/remedy\n  end\n"
+  required_semantic_ports:
+    note: These are stable responsibilities, not mandated Rust trait or package names. Exact symbols are implementation-defined.
+    ports:
+    - name: AuthorityPort
+      responsibilities:
+      - evaluate canonical request against exact policy/semantic/trajectory snapshot
+      - return deterministic disposition, reasons, boundaries, remedies/escalation, and decision identity
+    - name: NetworkSupervisor
+      responsibilities:
+      - validate required network/egress plan against backend capability
+      - install/bind allowed network policy
+      - authorize individual egress intents when request-level mediation is required
+      - observe egress evidence
+      - revoke or stop use when grant becomes invalid
+    - name: CredentialBroker
+      responsibilities:
+      - accept CredentialRef rather than raw secret from untrusted callers
+      - resolve/inject credential only inside trusted mediation
+      - return secret-safe receipt/status
+    - name: ContainmentBackend
+      responsibilities:
+      - report capabilities
+      - prepare isolation from grant-derived requirements
+      - execute exact request
+      - collect permitted artifacts
+      - destroy/reconcile execution state
+    - name: EvidenceBridge
+      responsibilities:
+      - record decision/grant/projection/execution correlation
+      - bridge to application events and RealityTrace without claiming settlement prematurely
+proof_and_observability:
+  required_evidence_artifacts:
+  - Canonical request/decision/grant/projection/execution correlation record with secret-safe fields.
+  - Deterministic policy identity/revision record and semantic source digest/reference where applicable.
+  - Backend CapabilityReport and selected enforcement proof for every claimed target environment.
+  - Information-flow replay fixtures and trajectory event logs for required adversarial cases.
+  - Credential non-disclosure evidence for mediated provider flows.
+  - Projection-fidelity conformance artifacts comparing semantic source constraints with target behavior.
+  - Cognate/Gauntlet vertical-slice evidence including RealityTrace correlation when applicable.
+  evidence_policy:
+    storage: SEA-Forge evidence/ledger root or repository evidence root as selected by implementation plan; raw secrets
+      prohibited.
+    retention: Long enough to support conformance, audit, correction, and replay for the governing deployment; exact
+      retention implementation-defined.
+    access: Least privilege; governance metadata may itself be sensitive and MUST obey applicable audience/trust rules.
+    correction_history: Failed or contradictory evidence MUST NOT be overwritten merely because a later run passes. Preserve
+      provenance sufficient to reconstruct correction.
+  proof_interface:
+    preferred_commands:
+    - 'implementation-defined: one narrow daemon conformance command'
+    - 'implementation-defined: one adversarial IFC/credential/grant suite command'
+    - 'implementation-defined: one target-platform/backend capability suite command'
+    - 'implementation-defined: one Cognate/Gauntlet vertical integration proof command'
+    pass_condition: Exit zero means all selected REQUIRED checks executed, no required integration was skipped, all negative
+      tests observed absence of prohibited consequence, and evidence artifacts identify exact policy/semantic/backend
+      revisions.
+    fail_condition: Nonzero, skipped REQUIRED integration, missing evidence, unexplained platform downgrade, secret appearance,
+      widening projection, stale-grant acceptance, or contradiction between declared capability and observed behavior
+      is failure.
+  required_log_context:
+  - request_id/correlation_id
+  - trajectory_id + trajectory_revision where applicable
+  - canonical operation/resource
+  - decision_ref + grant_id
+  - policy_revision + policy_hash
+  - semantic_ref/source_digest where applicable
+  - projection_id/hash + enforcement backend
+  - state/disposition/reason code
+  required_metrics:
+  - name: decision_count_by_disposition
+    reason: Diagnose allow/deny/escalate/remediable/unsupported behavior without interpreting prose logs.
+  - name: grant_invalidations
+    reason: Reveal stale/mismatched policy/trajectory/backend conditions.
+  - name: projection_fidelity_outcomes
+    reason: Detect how often target backends are exact, conservative, widening, or unsupported.
+  - name: credential_mediation_failures
+    reason: Detect provider/broker problems without exposing secret values.
+  - name: remedy_success_rate_by_type
+    reason: Measure whether blocked paths can recover safely rather than forcing bypass.
+  required_events:
+  - policy_revision_activated
+  - trajectory_state_advanced
+  - authority_decision_recorded
+  - grant_issued
+  - grant_invalidated_or_expired
+  - projection_resolved
+  - execution_started
+  - execution_completed_or_failed
+  - credential_mediation_attempted
+  - egress_decision_recorded
+  - remedy_offered_or_resolved
+  - evidence_correlation_recorded
+repeatability_and_variation:
+  required_variations:
+  - id: VAR-001
+    case: Same request/event log/policy replayed multiple times
+    expected: Identical deterministic decision and normalized reason/evidence identity.
+  - id: VAR-002
+    case: Policy changes after grant issuance
+    expected: Affected unconsumed grant cannot silently execute under new semantics; reevaluation or explicit old-revision
+      rule required.
+  - id: VAR-003
+    case: Trajectory receives more restrictive information after grant issuance
+    expected: Affected grant rejected or reevaluated; no stale information-flow bypass.
+  - id: VAR-004
+    case: Same canonical operation arrives through two host/native aliases
+    expected: Same canonical identity and policy behavior; ambiguous alias rejected.
+  - id: VAR-005
+    case: Backend can enforce destination host/port but not required HTTP method/path
+    expected: Projection reported unsupported or widening; consequential execution blocked.
+  - id: VAR-006
+    case: Credential-backed operation through two providers
+    expected: Agent-visible state never contains raw secret; operation remains scoped to exact grant/provider binding.
+  - id: VAR-007
+    case: Parent trajectory spawns child after reading restricted data
+    expected: Child inherits no weaker restriction and cannot return an impermissible derivative.
+  - id: VAR-008
+    case: Valid call returns a sensitive credential-like payload after successful side effect
+    expected: Configured confined-result path records effect while withholding protected output.
+  - id: VAR-009
+    case: Linux and Windows/native portable backends claim equivalent semantic requirement
+    expected: Both pass the same semantic conformance tests or advertise different capability/fidelity.
+  - id: VAR-010
+    case: Cognate local eligibility denies a call SEA-Forge would allow
+    expected: Call remains denied locally; local layer may narrow.
+  - id: VAR-011
+    case: Cognate local eligibility attempts to allow a call SEA-Forge denies
+    expected: SEA-Forge denial wins; no execution.
+  required_recovery_cases:
+  - id: RECOV-001
+    case: Required human/scoped authority denies a remedy
+    expected: Original operation remains blocked; no global state widening.
+  - id: RECOV-002
+    case: Sanitizer/transformer fails or returns unverifiable output
+    expected: No declassification; flow remains blocked.
+  - id: RECOV-003
+    case: Selected backend disappears after decision but before execution
+    expected: Grant cannot execute until another backend proves equal-or-narrower conformance and binding is revalidated.
+  - id: RECOV-004
+    case: Credential provider unavailable
+    expected: Only dependent operation blocks/fails safely; no raw-secret fallback.
+  - id: RECOV-005
+    case: RealityTrace/evidence sink unavailable under asynchronous evidence mode
+    expected: Execution outcome is reported with pending evidence delivery, not falsely settled; strict mode remains
+      blocked/incomplete as configured.
+  - id: RECOV-006
+    case: Daemon restarts with pending/in-flight grant state
+    expected: Durable state permits safe reconciliation; uncertain external commitment is not replayed blindly.
+  capability_claim_rule: A capability claim remains unverified until every REQUIRED variation and recovery case applicable
+    to the target environment has passed.
+failure_model_and_recovery:
+  failure_classes:
+  - name: semantic_or_policy_mismatch
+    symptoms:
+    - source digest mismatch
+    - policy revision mismatch
+    - canonical operation/resource mismatch
+    required_behavior: Invalidate or refuse the grant and require reevaluation; no side effect.
+  - name: trajectory_state_race
+    symptoms:
+    - event-log position changed after decision
+    - information_state_hash mismatch
+    required_behavior: Reject stale commitment and re-evaluate against current state.
+  - name: projection_or_backend_gap
+    symptoms:
+    - widening_degradation
+    - unsupported required dimension
+    - backend capability disappeared
+    required_behavior: Fail closed for consequential action; expose missing dimension and alternative backend/remedy
+      if one is valid.
+  - name: credential_mediation_failure
+    symptoms:
+    - missing credential ref
+    - provider unavailable
+    - unexpected raw-secret surface
+    required_behavior: Block dependent operation; redact evidence; credential exposure indication is security-critical
+      and may require provider/session containment.
+  - name: information_flow_block
+    symptoms:
+    - destination outside audience
+    - trust below required threshold
+    - unapproved declassification
+    - child return too permissive
+    required_behavior: Block before tool release; MAY return bounded remedy offers.
+  - name: execution_indeterminate
+    symptoms:
+    - timeout after dispatch
+    - connection loss after possible external commit
+    - daemon restart mid-operation
+    required_behavior: Record indeterminate state, do not blindly retry non-idempotent consequence, and require reconciliation/evidence
+      before further action.
+  safe_failure_requirements:
+  - id: REQ-SAFE-001
+    text: Missing or ambiguous authority MUST resolve to deny/escalate, never implicit allow.
+  - id: REQ-SAFE-002
+    text: Missing enforcement capability MUST resolve to unsupported/blocked, never unconfined fallback.
+  - id: REQ-SAFE-003
+    text: Unknown external-commit status MUST resolve to indeterminate/reconcile, never automatic retry for non-idempotent
+      operations.
+  - id: REQ-SAFE-004
+    text: Policy reload or daemon restart MUST preserve exact evidence of prior decisions and MUST not reissue grants
+      by inference.
+  - id: REQ-SAFE-005
+    text: Sanitization, annotation, or authority service failure MUST not widen information flow or semantic authority.
+  unsafe_behaviors:
+  - Child process, agent, adapter, or provider broadens grant scope.
+  - Policy/evidence mismatch is ignored because the requested operation previously succeeded.
+  - Raw secret is copied into prompt/context/event/log/evidence/tool output unnecessarily.
+  - Subagent fork is treated as a clean context that erases prior restrictions.
+  - Host/port enforcement is labeled exact when source policy also requires request-level restrictions.
+  - Backend unavailable causes automatic local/unconfined execution.
+  - Observation receipt is labeled settlement without a settlement criterion.
+  recoverable_failures:
+  - failure: blocked_information_flow_with_permitted_remedy
+    recovery: Execute scoped approved remedy, produce new state/request, reevaluate.
+  - failure: stale_grant
+    recovery: Rebuild current snapshot and reevaluate; never patch grant fields in place.
+  - failure: backend_capability_gap_with_stronger_available_backend
+    recovery: Select alternate backend, produce new ProjectionBinding, revalidate grant before execution.
+  - failure: credential_provider_temporarily_unavailable
+    recovery: Retry provider under bounded policy if operation has not committed; otherwise reconcile.
+  nonrecoverable_or_operator_required:
+  - failure: semantic authority conflict with no permitted resolution
+    behavior: Stop/escalate to authorized operator or policy owner.
+  - failure: credential exposure suspected
+    behavior: Stop affected path, redact/quarantine evidence, and require security/operator handling.
+  - failure: required enforcement semantics cannot be represented on any available backend
+    behavior: Report unsupported; implementation/policy must change before execution.
+security_safety_trust_boundaries:
+  trusted_inputs:
+  - Validated active PolicyRevision and canonical semantic source identity
+  - Daemon-owned event/trajectory records
+  - Backend CapabilityReports produced by trusted backend probes/adapters
+  - CredentialRef metadata from configured trusted provider registry
+  untrusted_inputs:
+  - Agent/model-generated tool calls and arguments
+  - External web/tool/document content
+  - Child process environment/output
+  - Host-native operation aliases before canonicalization
+  - Dynamic annotator/classifier outputs beyond their declared mandate
+  trusted_actors:
+  - SEA-Forge daemon core and authenticated local caller identity boundary
+  - Explicit configured authority services only within their permit scope
+  - Credential mediator and enforcement backends only for the responsibilities they prove
+  privileged_operations:
+  - Issue/revoke/consume EnforcementGrant
+  - Resolve raw credential material
+  - Install/activate enforcement policy
+  - Release consequential egress/process/filesystem mutation
+  - Approve/declassify/sanitize across a restricted information boundary
+  - Activate a new PolicyRevision
+  mandatory_requirements:
+  - id: REQ-SEC-001
+    text: No untrusted actor MAY assert that it possesses authority; authority is established only by trusted policy/identity/evidence
+      evaluation.
+  - id: REQ-SEC-002
+    text: No untrusted actor MAY choose a weaker backend, wider network scope, broader filesystem root, extra environment
+      key, or raw credential value beyond the grant.
+  - id: REQ-SEC-003
+    text: Raw secrets MUST remain outside agent-visible and ordinary evidence surfaces; references/handles are the default
+      crossing representation.
+  - id: REQ-SEC-004
+    text: Information-flow transformation that makes data less restricted MUST require an explicitly permitted sanitizer/declassifier/authority
+      path and produce separate evidence.
+  - id: REQ-SEC-005
+    text: Security-critical policy/semantic/projection artifacts SHOULD support integrity verification; exact signing
+      mechanism is implementation-defined.
+  - id: REQ-SEC-006
+    text: Local daemon control transport MUST be access-controlled and MUST NOT be world-writable/world-callable by default.
+  secret_handling:
+    source: Configured credential providers resolved by trusted daemon mediator through CredentialRef
+    must_not:
+    - log secrets
+    - persist secrets in evidence artifacts
+    - emit secrets in error messages
+    - place raw secrets in model prompts or agent context
+    - place raw secrets in ordinary child environment when trusted request injection can avoid it
+    - return raw secrets in normal tool results when only success/evidence is required
+  authorization_requirements:
+  - Semantic authority and information-flow permission are both REQUIRED when the operation implicates both consequence
+    and restricted information.
+  - Physical enforcement capability is a gate after semantic allow, not a preference.
+  - Callers may add stricter local policy but may not use local policy to widen SEA-Forge authority.
+  trust_boundary_diagram:
+    mermaid: "flowchart LR\n  Agent[\"Agent / untrusted tool arguments\"] --> Adapter[\"Canonicalizing adapter\"]\n \
+      \ Adapter --> Daemon[\"SEA-Forge trusted daemon\"]\n  Policy[\"Policy + semantic source\"] --> Daemon\n  State[\"\
+      Daemon event / trajectory state\"] --> Daemon\n  Daemon --> Broker[\"Trusted credential mediator\"]\n  Daemon -->\
+      \ Egress[\"Trusted egress supervisor\"]\n  Daemon --> Sandbox[\"Containment backend\"]\n  Broker --> External[\"\
+      External systems\"]\n  Egress --> External\n  Sandbox --> External\n  External --> Result[\"Observed result\"]\n\
+      \  Result --> Daemon\n  Daemon --> Evidence[\"Redacted durable evidence / RealityTrace correlation\"]\n  Agent\
+      \ -. no direct raw secret access .-> Broker\n  Agent -. no direct backend widening .-> Sandbox\n"
+reference_algorithms:
+  authorize_and_bind:
+    pseudocode: "function authorize_and_bind(request):\n  canonical = canonicalize_and_validate(request)\n  snapshot\
+      \ = load_atomic_snapshot(\n      policy_revision,\n      semantic_source,\n      relevant_trajectory_state\n  )\n\
+      \n  ifc = evaluate_information_flow(canonical, snapshot)\n  if ifc.blocked:\n      return blocked(ifc.reason, permitted_remedies(ifc))\n\
+      \n  authority = evaluate_semantic_authority(canonical, snapshot, ifc)\n  if authority is deny or escalate:\n  \
+      \    return authority_result(authority)\n\n  requirements = derive_enforcement_requirements(authority, ifc)\n \
+      \ grant = issue_exact_grant(canonical, snapshot, requirements)\n\n  projection = resolve_projection_and_backend(grant)\n\
+      \  if projection.fidelity in [widening_degradation, unsupported]:\n      invalidate(grant)\n      return blocked(\"\
+      enforcement_not_sufficient\", projection.unsupported)\n\n  return allowed(grant, projection)\n"
+  commit_under_grant:
+    pseudocode: "function commit_under_grant(grant, execution_request):\n  current = reload_relevant_state()\n  require\
+      \ current.policy == grant.policy_revision\n  require current.semantic_source matches grant.semantic_source_digest\n\
+      \  require current.trajectory matches grant.trajectory_revision/state_hash\n  require execution_request canonical\
+      \ identity == grant operation/resource\n  require now <= grant.expires_at\n  require backend still proves all grant\
+      \ enforcement requirements\n  require projection fidelity is exact or policy-permitted conservative\n\n  resolve\
+      \ credential references only in trusted mediator\n  execute under grant-derived containment and egress controls\n\
+      \  confine/redact result as required\n  append governance/execution evidence atomically enough to detect races\n\
+      \  return execution outcome distinct from settlement\n"
+  trajectory_join:
+    pseudocode: "function join_information_state(current, incoming):\n  audience = intersect(current.audience, incoming.audience)\n\
+      \  trust = min_trust(current.trust, incoming.trust)\n  provenance = union_refs(current.provenance, incoming.provenance)\n\
+      \  return InformationState(audience, trust, provenance)\n"
+validation_matrix:
+  core_conformance:
+  - area: Outcome
+    test: Allowed canonical request executes only with exact grant and sufficient backend.
+    expected: Side effect occurs once; evidence links request/decision/grant/projection/backend/result.
+    evidence: End-to-end daemon integration record.
+  - area: Input validation
+    test: Ambiguous alias, traversal path, unknown operation, malformed resource.
+    expected: Typed rejection before privileged side effect.
+    evidence: Negative test logs + absence-of-effect proof.
+  - area: Config errors
+    test: Invalid policy reload or malformed credential/backend config.
+    expected: Last valid revision remains active; affected scope blocks safely.
+    evidence: Reload/preflight test.
+  - area: Startup/preflight
+    test: Required backend claims unsupported capability.
+    expected: Backend rejected for that operation; no silent downgrade.
+    evidence: CapabilityReport conformance.
+  - area: State transitions
+    test: Grant issued then relevant trajectory revision advances.
+    expected: Grant invalidated or reevaluated before commit.
+    evidence: Race/stale-state test.
+  - area: Failure handling
+    test: External commit becomes indeterminate after timeout.
+    expected: No blind retry; reconciliation required.
+    evidence: Fault-injection test.
+  - area: Observability
+    test: Trace an executed Cognate capability backward.
+    expected: Observation -> app event -> grant -> decision -> policy -> SemanticRef/source digest chain is recoverable.
+    evidence: Correlation query/report.
+  - area: Security/safety
+    test: Agent reads restricted data then attempts wider disclosure.
+    expected: Blocked before tool release or routed through explicit permitted remedy.
+    evidence: IFC replay/adversarial test.
+  - area: Security/safety
+    test: Credential-backed call attempts to expose secret in child/result.
+    expected: Secret absent; result confined/redacted as configured.
+    evidence: Secret-scanner + integration evidence.
+  - area: Projection fidelity
+    test: Source restricts method/path while target supports only host/port.
+    expected: Unsupported or widening; execution blocked.
+    evidence: Differential target-policy test.
+  - area: Delegation
+    test: Restricted parent spawns child which returns derivative to public-capable parent path.
+    expected: Return contract blocks laundering unless permitted sanitizer/declassifier succeeds.
+    evidence: Subagent conformance fixture.
+  variation_and_recovery:
+  - case: Scoped approval for one disclosure
+    why: Prove approval is local, not global declassification.
+    expected: One action may proceed; later similar action still requires its own authority.
+    evidence: Replay/state inspection.
+  - case: Sanitized derivative
+    why: Prove new derivative can be less restricted without mutating original.
+    expected: Derivative has separately justified label/evidence; original remains restricted.
+    evidence: Sanitizer/declassification fixture.
+  - case: Backend swap
+    why: Prove stable semantics survive implementation replacement.
+    expected: Equivalent backend passes same conformance; otherwise fidelity/capability differs explicitly.
+    evidence: Cross-backend test report.
+  - case: Daemon restart
+    why: Prove durable authority state and safe reconciliation.
+    expected: No duplicate non-idempotent consequence; pending state reconstructed or escalated.
+    evidence: Restart/fault-injection report.
+  real_integration_condition: Before final conformance, at least one real application/harness integration and each claimed
+    supported OS/backend tier MUST run without mocks for the authority/enforcement boundaries being claimed.
+  real_integration_tests:
+  - Cognate capability -> SEA-Forge decision -> grant -> enforced execution -> Cognate event -> RealityTrace correlation.
+  - Gauntlet/subagent governed tool flow including restricted information and one safe remedy path.
+  - Credential-mediated real provider or representative local fixture where the raw secret is available only to the mediator.
+  - Linux native containment/egress path and Windows native local-IPC/backend path for any release claiming both platforms.
+  skipped_test_rule: Skipped REQUIRED integration tests MUST be reported as skipped, not passed, and MUST prevent final
+    conformance when those tests are required.
+implementation_definition_of_done:
+- Trusted daemon boundary exists and consequential callers cannot bypass it on claimed governed paths.
+- Current full-spec ActionGrant/server/runtime/sandbox capabilities are preserved or superseded without loss of proven
+  guarantees.
+- PolicyRevision and exact grant binding include policy, semantic, trajectory, operation/resource, expiry, enforcement,
+  and evidence identity required by this spec.
+- Canonical operation identity prevents alias/provider naming bypass.
+- Information-flow supervisor passes deterministic replay, monotonic restriction, scoped remedy, and subagent return
+  tests.
+- CredentialRef mediation keeps raw secrets out of untrusted/ordinary evidence surfaces.
+- Projection fidelity and backend CapabilityReport prevent silent widening/downgrade.
+- Network/egress and containment backends enforce the dimensions they claim and surface unsupported dimensions.
+- Confined-result mode works for side-effecting operations that must not return protected payload.
+- Cognate integration proves SemanticRef -> decision/grant -> event -> RealityTrace correlation without kernel authority
+  duplication.
+- Gauntlet integration distinguishes denial, remediation, escalation, unsupported, execution, and settlement-pending
+  states.
+- Success, failure, stale-state, race, restart, recovery, and indeterminate-commit paths are proven.
+- Required evidence is stored, inspectable, replayable, and secret-safe.
+- Variation and recovery cases pass for claimed environments.
+- Security/trust-boundary tests pass.
+- Claim levels match actual evidence; roadmap items are not represented as implemented.
+- A cold developer or agent can answer every quality-gate question in spec_frame from this file alone.
+roadmap_boundaries:
+  portable_native_containment_backends:
+    level: roadmap
+    future_shape: Linux, macOS, and Windows native containment adapters selected by semantic capability requirements;
+      optional stronger microVM tier.
+    current_requirement: Stable EnforcementRequirements + CapabilityReport abstractions and no silent fallback from stronger
+      to weaker execution.
+  l7_egress_supervisor:
+    level: roadmap
+    future_shape: Protocol-aware egress mediation capable of destination plus HTTP/request constraints and credential
+      injection.
+    current_requirement: EgressIntent/EgressDecision semantics, atomic snapshot identity, and unsupported reporting when
+      available backend is too coarse.
+  native_information_flow_supervisor:
+    level: roadmap
+    future_shape: Durable trajectory IFC engine with audience, trust, provenance, effects, scoped authorities, sanitizers,
+      and checked child returns.
+    current_requirement: Stable InformationState/operation-contract/remedy semantics and deterministic decision/replay
+      contract.
+  policy_prover:
+    level: roadmap
+    future_shape: Optional formal reachability/exfiltration/capability-expansion proof engine after deterministic subset
+      checks justify it.
+    current_requirement: Deterministic conformance checks and explicit proof interfaces; no solver dependency required
+      initially.
+  cryptographically_signed_grants_and_policies:
+    level: roadmap
+    future_shape: Signed policy/grant artifacts for stronger cross-process/distributed verification.
+    current_requirement: Deterministic identity/hash and integrity-verifiable durable records; exact signing mechanism
+      remains implementation-defined.
+  modeled_enforcement_projection_kernel:
+    level: roadmap
+    future_shape: DomainForge can represent target enforcement vocabularies/mappings in .sea and produce target artifacts
+      plus ProjectionBinding with behavioral fidelity evidence.
+    current_requirement: Projection fidelity taxonomy, source/target/artifact identity, and no-widening conformance contract.
+  broader_realitytrace_settlement_integration:
+    level: roadmap
+    future_shape: Governance/execution evidence participates directly in richer settlement and developmental analysis.
+    current_requirement: Preserve correlation and never confuse delivery/recording with evidence or settlement.
+conformance_traceability:
+  high_risk_requirement_groups:
+  - group: Exact authority and stale-state safety
+    requirements:
+    - REQ-AUTH-002
+    - REQ-AUTH-003
+    - REQ-AUTH-004
+    - REQ-POL-002
+    - REQ-POL-003
+    confirmation: adversarial
+  - group: Information-flow and delegation confinement
+    requirements:
+    - REQ-IFC-001
+    - REQ-IFC-002
+    - REQ-IFC-004
+    - REQ-DELEG-001
+    - REQ-DELEG-002
+    - REQ-DELEG-003
+    confirmation: adversarial
+  - group: Projection and enforcement no-widening
+    requirements:
+    - REQ-PROJ-001
+    - REQ-PROJ-002
+    - REQ-PROJ-003
+    - REQ-ENF-002
+    - REQ-ENF-003
+    - REQ-ENF-004
+    confirmation: fresh_target_reproduction
+  - group: Credential non-disclosure
+    requirements:
+    - REQ-CRED-001
+    - REQ-CRED-002
+    - REQ-CRED-003
+    - REQ-CRED-004
+    - REQ-CONF-001
+    confirmation: adversarial
+  - group: Cognate governed vertical slice
+    requirements:
+    - REQ-COG-001
+    - REQ-COG-002
+    - REQ-COG-004
+    - REQ-EVID-002
+    - REQ-EVID-003
+    confirmation: independent
+  plan_projection_rule: Every REQUIRED normative requirement MUST map to at least one implementation plan task. Every
+    settlement-critical task MUST declare the requirement IDs it settles, its proof level, evidence location, and confirmation
+    mode. A requirement without a plan task or settled evidence remains open.

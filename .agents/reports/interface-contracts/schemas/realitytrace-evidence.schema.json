@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/realitytrace-evidence.schema.json",
+  "title": "RealityTraceEvidence",
+  "description": "Schemas for RealityTrace observations, expectations, discrepancies, and provenance artifacts.",
+  "type": "object",
+  "definitions": {
+    "RealityTraceQuestion": {
+      "type": "object",
+      "required": ["question_id", "predicate", "target_entity", "created_at"],
+      "properties": {
+        "question_id": { "type": "string", "pattern": "^q-[a-f0-9]{12}$" },
+        "predicate": { "type": "string" },
+        "target_entity": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "RealityTraceClaim": {
+      "type": "object",
+      "required": ["claim_id", "question_id", "proposition", "asserted_by"],
+      "properties": {
+        "claim_id": { "type": "string", "pattern": "^clm-[a-f0-9]{12}$" },
+        "question_id": { "type": "string" },
+        "proposition": { "type": "string" },
+        "asserted_by": { "type": "string" }
+      }
+    },
+    "SXRDiscrepancy": {
+      "type": "object",
+      "required": ["attribution_locus", "declared_state", "observed_state", "delta_summary"],
+      "properties": {
+        "attribution_locus": {
+          "type": "string",
+          "enum": [
+            "Locus0_TargetArtifact",
+            "Locus1_TestHarness",
+            "Locus2_RuntimeEnv",
+            "Locus3_ModelInference",
+            "Locus4_RoleProtocol",
+            "Locus5_SpecBoundary",
+            "Locus6_SentryCondition",
+            "Locus7_AuthorityPolicy",
+            "Locus8_ExternalWorld"
+          ]
+        },
+        "declared_state": { "type": "string" },
+        "observed_state": { "type": "string" },
+        "delta_summary": { "type": "string" },
+        "diff_snippet": { "type": "string" }
+      }
+    },
+    "ArtifactPayload": {
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "name",
+        "digest",
+        "content_type",
+        "content",
+        "provenance"
+      ],
+      "properties": {
+        "evidence_id": { "type": "string", "pattern": "^evi-[a-f0-9]{16}$" },
+        "name": { "type": "string" },
+        "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "content_type": {
+          "type": "string",
+          "enum": ["text/markdown", "application/json", "text/x-diff", "text/plain"]
+        },
+        "content": { "type": "string" },
+        "provenance": {
+          "type": "object",
+          "required": ["case_id", "plan_item_id", "invocation_id", "run_id"],
+          "properties": {
+            "case_id": { "type": "string" },
+            "plan_item_id": { "type": "string" },
+            "invocation_id": { "type": "string" },
+            "run_id": { "type": "string" },
+            "question_id": { "type": "string" },
+            "claim_id": { "type": "string" },
+            "commit_sha": { "type": "string" },
+            "pr_number": { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+n: 25
+providers:
+  deepseek-clinepass:
+    A:
+      accuracy: 0.5
+      n_answered: 24
+      abstention_rate: 0.12
+    B:
+      accuracy: 0.8
+      n_answered: 25
+      abstention_rate: 0.16
+    paired_deltas:
+      A_to_B_corrections: 8
+      A_to_B_regressions: 0
+      net: 8
+    improvement: 0.3
+  muse-spark-free:
+    A:
+      accuracy: 0.12
+      n_answered: 25
+      abstention_rate: 0.68
+    B:
+      accuracy: 0.25
+      n_answered: 24
+      abstention_rate: 0.68
+    paired_deltas:
+      A_to_B_corrections: 5
+      A_to_B_regressions: 2
+      net: 3
+    improvement: 0.13
+baseline:
+  accuracy: 0.48
+  note: constant settled predictor = class prior 12/25
+stage1_decision:
+  H_REPRESENTATION_supported: true
+  authorize_stage2: true

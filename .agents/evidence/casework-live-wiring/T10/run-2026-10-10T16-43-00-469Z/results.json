@@ -1,0 +1,17 @@
+[
+  {
+    "journey_id": "L8",
+    "title": "Thoth ask narration: interrupt and resume",
+    "status": "FAIL",
+    "depends_on": [
+      "L7"
+    ],
+    "settles": "a typed question is answered by the real kernel, narrated from the returned disclosure only, interruptible and resumable without a second ask",
+    "unlocks": [
+      "L9"
+    ],
+    "steps": [],
+    "total_ms": 37894,
+    "error": "Timed out waiting for signed-in app"
+  }
+]

@@ -1,0 +1,134 @@
+cargo test -p "sea-forge-authority" --locked ""
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-authority v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-authority)
+    Finished `test` profile [unoptimized] target(s) in 7.44s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_authority-34e7502d74e16823)
+
+running 43 tests
+test resolver_tests::escalation_blocks_while_retaining_boundaries ... ok
+test resolver_tests::degraded_requires_permission_and_accumulates_controls ... ok
+test resolver_tests::incompatible_boundaries_deny ... ok
+test resolver_tests::legacy_non_transition_sod_omits_transition_kind_in_serialization ... ok
+test resolver_tests::missing_required_evidence_denies ... ok
+test resolver_tests::deny_blocks_every_other_candidate ... ok
+test resolver_tests::allow_is_identity_and_candidate_order_is_irrelevant ... ok
+test tests::allowlisted_api_host_reaches_unsupported_surface_escalation ... ok
+test resolver_tests::capitalize_sod_escalates_only_capitalize_with_role_and_decision_markers ... ok
+test resolver_tests::sod_requester_role_must_match_actor ... ok
+test tests::approved_resolved_after_expiry_is_denied ... ok
+test tests::approval_required_rule_escalates_without_resolution ... ok
+test tests::automated_agent_requires_sponsor ... ok
+test resolver_tests::sod_transition_kind_validation_is_fail_closed ... ok
+test tests::approved_before_expiry_remains_valid_after_wall_clock_ttl ... ok
+test tests::boundary_and_degraded_requirements_survive_into_grants ... ok
+test tests::caller_supplied_approval_refs_do_not_change_escalation ... ok
+test resolver_tests::capitalize_sod_post_approval_grant_and_exact_action_binding ... ok
+test tests::configured_engine_must_fail_closed_and_unavailability_blocks ... ok
+test tests::engine_constructor_rejects_unvalidated_allow_any_command_bundle ... ok
+test tests::configured_service_identity_can_authorize ... ok
+test tests::configured_sod_approver_role_propagates_to_decision ... ok
+test tests::execution_grant_rejects_timeout_or_artifact_substitution ... ok
+test tests::f25h_grant_binds_the_decision_time_executable_identity ... ok
+test tests::domainforge_candidate_is_composed_with_local_authority ... ok
+test tests::exact_ledgered_approval_yields_one_exact_grant ... ok
+test tests::denied_or_substituted_action_cannot_receive_grant ... ok
+test tests::forged_identity_and_substitute_executable_cannot_use_allow_rules ... ok
+test tests::grant_is_bound_to_exact_action_and_context ... ok
+test tests::expired_decision_cannot_receive_grant ... ok
+test tests::malformed_executable_actions_are_unclassified ... ok
+test tests::generated_zone_boundary_precedes_allow_rule ... ok
+test tests::opaque_constraint_preempts_repeated_ambiguous_action ... ok
+test tests::m8_attestation_parameter_mismatches_deny_before_grant ... ok
+test tests::same_canonical_request_has_stable_decision_and_hashes ... ok
+test tests::non_canonical_spellings_cannot_bypass_hard_boundaries ... ok
+test tests::v02_identity_map_resolves_and_unknown_identity_escalates ... ok
+test tests::rule_disposition_cannot_override_rbac_or_sod ... ok
+test tests::policy_bundle_hash_is_independent_of_source_base_path ... ok
+test tests::reserved_transition_grant_rejects_a_substituted_action ... ok
+test tests::unclassified_and_reserved_surfaces_fail_closed ... ok
+test tests::m8_transition_parameter_mismatches_deny_before_grant ... ok
+test tests::wrong_self_expired_rejected_or_tampered_approval_is_denied ... ok
+
+test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/conformance_m0_authority.rs (target/debug/deps/conformance_m0_authority-a3e8c95d435ed23a)
+
+running 19 tests
+test complete_pairwise_matrix_is_commutative ... ok
+test m8_transition_rule_missing_required_contract_is_schema_error ... ok
+test m8_capitalization_schema_requires_approval_promote_and_value_evidence ... ok
+test m8_attestation_rule_missing_role_constraints_is_schema_error ... ok
+test memory_scope_any_allows_all ... ok
+test memory_scope_entity_allows_named_entity ... ok
+test m13_agent_task_requires_exact_endpoint_policy_and_grant_binding ... ok
+test memory_scope_hash_changes_with_target ... ok
+test memory_scope_missing_denies ... ok
+test memory_scope_own_denies_cross_entity ... ok
+test memory_scope_own_allows_same_entity ... ok
+test domainforge_authority_is_model_semantic ... ok
+test misspelled_top_level_bundle_key_is_rejected ... ok
+test memory_scope_grant_carries_boundary ... ok
+test m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding ... ok
+test memory_scope_entity_denies_other_entity ... ok
+test resolution_is_idempotent_and_group_order_independent ... ok
+test settlement_authority_descriptor_selects_one_strong_adapter_and_local_cannot_be_strong ... ok
+test reserved_mutator_into_generated_zone_denies_even_under_allow_all_policy ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+authority gate exit=0

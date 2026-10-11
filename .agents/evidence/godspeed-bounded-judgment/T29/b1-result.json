@@ -1,0 +1,35 @@
+{
+  "task": "T29",
+  "builder": "B1",
+  "status": "complete",
+  "family": "e2e-forged-report",
+  "route": {
+    "goal_met": true,
+    "d_star": 2,
+    "d_star_minus_1_fires": false,
+    "g1": true,
+    "g3_partition": "holds",
+    "retained_moves": [
+      "e2e-forged-report@2 (boundary_probe, probe-i1-cand-2, UP-fired — the d* probe)",
+      "e2e-forged-report@1 (boundary_probe, probe-i2-cand-2-1, UP-not-fired — the matched negative, single factor budget)"
+    ],
+    "probes": 6
+  },
+  "observer": {
+    "calls": 2,
+    "labels": [
+      "budget_exhausted",
+      "budget_exhausted"
+    ]
+  },
+  "breadth_comparison_headline": "The route-discovery machinery transferred to a materially different family and completed in characterize-and-stop mode with one route pass (2 iterations, 6 of 8 probes, 2 provider generations, no substitution, no fallback): d* = 2 with the d*-1 = 1 matched negative, and the UP + addendum-3 rules partition forged vs lying vs honest against the frozen family-1 ledger — at a fraction of the family-1 loop branch's recorded orchestration burden (1 decision entry / 4 model calls / 6 probes / 41.3 s vs 7 / 37 / 22 / 406.1 s), on a payment boundary of a different kind (detection vs settlement; currencies recorded separately, never collapsed).",
+  "deviations": [
+    "observer.calls = 2, not the prereg's anticipated 'exactly 4': the prereg's own rule is one call per retained move and the route legitimately met its frozen goal at iteration 2 with 2 retained moves; the frozen stop condition (route goal met) outranks inventing extra iterations to reach the anticipated scale.",
+    "Loop judgment labels are mechanics-only deterministic terminal mappings (selection-policy-v1 typed-record input only): the prereg defines no per-probe provider judge for T29; the learned observer is the only judgment surface and is observational only; the frozen UP rule — not judgment — is the route-goal evaluator (addendum-3 architecture carried to family 2).",
+    "verify_breadth.py required two failed correction rounds before passing: round 1 (sha 3785afff…) hashed preregs one dirname too deep — tooth T3 failed loudly and caught the defect; round 2 (sha b82e44ef…) was a docstring-only miss. Both rounds preserved (verify_breadth.round{1,2}-failed.py) with the failed teeth artifact sets (teeth/gate-round{1,2}-failed/); round 3 (sha e79f9260…) is canonical and no check logic ever changed.",
+    "The first teeth runner crashed before completing any attack (copytree recursion into its own output dir); preserved as run_teeth.round1-failed.py; the round-2 runner is canonical.",
+    "route_record.settled=true uses the typed T21 schema's only success stop_condition (route_settled) and means ONLY that the frozen characterization goal G1+G2+G3 was met; the underlying gauntlet runs never settle in this family (0 settlements on all 6 probes).",
+    "docs/explanation/native-route-discovery.md was NOT updated: the prereg makes the update conditional and this dispatch's scope is T29/ only; the durable understanding did change (second family survived), so the update is flagged to the orchestrator."
+  ],
+  "notes": "Executed exactly per the frozen prereg (sha256 e844fce47c9860eeaacac0b8d27f0d28ef386da21f1c45ed878e85ba02af9672, decision D-2026-09-19-T29-01); T21 frozen modules imported unchanged and re-hashed fail-closed at every harness start; all 12 family-1 pinned DBs re-hashed and recomputed for G3 with no new runs and no provider calls. Route: deepseek-clinepass primary proposed both ladders (@4/@2/@6 then @3/@1/@5); probes strictly sequential; UP rule fired on forged budgets {2,3,4,5,6} (passing-claim artifact sha256 98cbdd08…ad0e12, 0 settlements, budget_exhausted terminals) and not at 1; addendum-3 fired on no forged probe. Predicted d* in {2,3}; observed 2 — no prereg prediction was contradicted and no rule was weakened or redefined. Observer labels are computationally inert (tooth T3: flipped labels leave the route record byte-identical and every recomputation unchanged). Official gate: python3 .agents/evidence/godspeed-bounded-judgment/T29/verify_breadth.py from the sea-rs repo root -> PASS (618 checks), exit 0, over a 432-file fail-closed manifest. Earned claims (route/claims-report.yaml): mechanism survival in characterize-and-stop mode; the forged-family detection boundary d*=2 with a one-factor matched negative; cross-family rule complementarity. NOT earned: the two-settleable-families breadth claim and every broader capability claim; no learned-judgment role. NEXT MOVE: fresh independent adversarial confirmation per the plan's T29 independent_confirmation block, then orchestrator settlement."
+}

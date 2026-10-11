@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KDMVX1BF9GCK45ZZ1ZJ8GJ",
+  "source_entry_ulids": [
+    "01M4KDMVX1BF9GCK45ZZ1ZJ8GJ"
+  ],
+  "source_payload_hash": "sha256:5a303759aaf8e589291ac525b5937c90e62cb33bf68fbd65135c4bc8743bc379",
+  "view_path": "/tmp/t10-live-W2I3nx/cell/self-model/projections/self_model_snapshot/projection-record.json",
+  "view_sha256": "sha256:111221c57b063201e49a66f7df1c02e67f9a691de8c7355c8674cfb37fb17497",
+  "status": "current",
+  "failure_class": null
+}

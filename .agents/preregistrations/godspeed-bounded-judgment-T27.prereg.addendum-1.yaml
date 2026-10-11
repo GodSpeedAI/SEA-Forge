@@ -1,0 +1,52 @@
+schema: godspeed-bounded-judgment.t27-prereg.addendum-1
+created_utc: "2026-09-19"
+base_prereg: ".agents/preregistrations/godspeed-bounded-judgment-T27.prereg.yaml"
+base_prereg_sha256: 41af1921285bdbea33684d06b226fc8add83a59ed71378dbed464ab5b4b74343
+frozen_before: "any condition-A or condition-B provider call of T27 (no condition output had been observed when this addendum was frozen)"
+append_only: "The base prereg file is unchanged. This addendum supersedes the base ONLY in the terms below; all other base terms stand."
+
+superseded_terms:
+  paired_analysis.discordant_counts:
+    base: >-
+      b = A-wrong -> B-right (corrections); c = A-right -> B-wrong
+      (regressions), with corrections/regressions counted only between
+      DECIDED answers (abstention transitions excluded from b/c).
+    addendum: >-
+      DEFECT: on this frontier the dominant condition-A profile (from the
+      repeatability partition) has 4 of 10 frontier cases at a case-level
+      ABSTAIN readout (budget-C1/C2/C4/C5) and only ONE decided-wrong case
+      (budget-C3). Decided-only b/c would exclude the abstention->correct
+      channel, making the frozen C1 practical-effect criterion (net >= 3)
+      nearly unreachable BY CONSTRUCTION and biasing the experiment toward
+      C3/C5 before any call. CORRECTED primary pairing (standard paired
+      binary-correctness McNemar): b = cases whose condition-A case-level
+      readout is NOT correct (wrong OR abstain) and whose condition-B
+      readout IS correct; c = cases whose condition-A readout IS correct and
+      whose condition-B readout is NOT correct (wrong OR abstain). Abstention
+      is scored as not-correct for the primary test only.
+  interpretation_C1_C5.step_3_C2:
+    base: "target case budget-C3 corrects (A-wrong -> B-right) ..."
+    addendum: >-
+      T == 1 remains "budget-C3 corrects" (it is decided-wrong under A, so
+      the correction is decided-only by nature). b_f in steps 2-4 uses the
+      corrected binary-correctness b/c.
+
+preserved_and_retabulated:
+  transitions: >-
+    The report MUST still tabulate, separately from the primary b/c:
+    decided-only corrections (A-wrong->B-right, both decided), decided-only
+    regressions (A-right->B-wrong, both decided), unchanged-correct,
+    unchanged-wrong, and abstention transitions
+    (A-abstain->B-decided-right, A-abstain->B-decided-wrong,
+    A-decided->B-abstain, abstain->abstain). The McNemar primary uses the
+    corrected binary-correctness b/c; the decided-only counts are reported
+    beside it and are used by NO gate.
+  practical_effect_criterion: "UNCHANGED: net = b - c >= 3 of 14 AND frontier net (b_f - c_f) >= 2, now under the corrected b/c."
+  regression_guard: "UNCHANGED in form: c_ctrl under the corrected c (a control regressing right->abstain IS a regression). Hard line c_ctrl >= 2 -> C4; soft line c_ctrl == 1 blocks C1/C2."
+  interpretation_steps: "Steps 0-5 and their order are unchanged; only the b/c definitions feeding them are corrected by this addendum."
+
+no_other_changes: >-
+  Corpus, selection, conditions, renderers, provider, repetitions,
+  normalization, scoring readout, alpha, teeth, stop conditions, and
+  evidence locations are unchanged.
+addendum_sha256_recorded_in: ".agents/evidence/godspeed-bounded-judgment/decisions.yml (D-2026-09-19-T27-02)"

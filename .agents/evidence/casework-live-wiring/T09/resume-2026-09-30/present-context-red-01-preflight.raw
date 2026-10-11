@@ -1,0 +1,14 @@
+utc=2026-10-06T19:25:11Z
+cwd=/home/sprime01/projects/sea-rs/apps/godspeed-casework-go
+source_sha256=565ad7a604bf68ab7667c901eaa23928d28476150fdfa82da9e170ba9e61ee86  internal/server/run_observation_present_context.go
+fixture_sha256=fffa033505fa19b937da12963df91a0cdc2af30f39ecb50031fc2a17ec64a67b  internal/server/run_observation_present_context_test.go
+memory=               total        used        free      shared  buff/cache   available
+Mem:      8327897088  6125441024   120725504    10985472  2298548224  2202456064
+Swap:    12884901888 12142768128   742133760
+memavailable_bytes=2203516928
+swapfree_bytes=742133760
+tmpfs=Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2946088960 1217859584  71% /tmp
+gocache=Filesystem      1B-blocks       Used  Available Use% Mounted on
+tmpfs          4163948544 2946088960 1217859584  71% /tmp
+gate=GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 go test -race -count=1 -parallel=1 -run ^TestCheckRunObservationPresentContext -v ./internal/server

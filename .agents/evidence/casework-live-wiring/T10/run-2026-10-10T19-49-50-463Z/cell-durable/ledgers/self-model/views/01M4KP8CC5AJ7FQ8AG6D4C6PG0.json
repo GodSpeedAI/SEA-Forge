@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KP8CC5AJ7FQ8AG6D4C6PG0",
+  "source_entry_ulids": [
+    "01M4KP8CC5AJ7FQ8AG6D4C6PG0"
+  ],
+  "source_payload_hash": "sha256:4ac6e3ae39a6a3ae61a62a8f7863be3a8353450a749a0dd265dd944c7b704706",
+  "view_path": "/tmp/t10-live-XxasWD/cell/self-model/snapshots/smsnap_20261010T195719Z_55c57a.json",
+  "view_sha256": "sha256:4ac2b2c9fa570101e8f83e359b0e7fc062e6b7ae2bcc0e93ece48b2e9eb019ed",
+  "status": "current",
+  "failure_class": null
+}

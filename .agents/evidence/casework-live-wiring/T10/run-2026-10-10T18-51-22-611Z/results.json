@@ -1,0 +1,26 @@
+[
+  {
+    "journey_id": "L5",
+    "title": "Sign-off: operator denied, R-SO approves in a separate session",
+    "status": "FAIL",
+    "depends_on": [
+      "L4"
+    ],
+    "settles": "an approval opened by the operator's execution is resolved only by a distinct R-SO principal, with both principals visible in the durable record",
+    "unlocks": [
+      "L6",
+      "L7"
+    ],
+    "steps": [
+      {
+        "journey": "L5",
+        "name": "guard: the operator and the R-SO drive distinct agent-browser sessions",
+        "ok": false,
+        "ms": 0,
+        "error": "shared session identity: \"operator\" and \"rso\" drive the same agent-browser session \"gs-live-mv2r2zg9-shared\""
+      }
+    ],
+    "total_ms": 418,
+    "error": "shared session identity: \"operator\" and \"rso\" drive the same agent-browser session \"gs-live-mv2r2zg9-shared\""
+  }
+]

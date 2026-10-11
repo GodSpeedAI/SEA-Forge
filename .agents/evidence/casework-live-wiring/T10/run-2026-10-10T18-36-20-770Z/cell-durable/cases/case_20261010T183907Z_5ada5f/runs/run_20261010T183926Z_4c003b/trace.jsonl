@@ -1,0 +1,2 @@
+{"version":"0.1","event_id":"tev_0001","run_id":"run_20261010T183926Z_4c003b","plan_item_id":"task_draft","kind":"authority_evaluated","actor_id":"operator_local","timestamp":"2026-10-10T18:39:26.221292949+00:00","payload":{"decision_id":"auth_01","verdict":"escalate"}}
+{"version":"0.1","event_id":"tev_0002","run_id":"run_20261010T183926Z_4c003b","plan_item_id":"task_draft","kind":"run_halted","actor_id":"operator_local","timestamp":"2026-10-10T18:39:26.243493139+00:00","payload":{"verdict":"escalate"}}

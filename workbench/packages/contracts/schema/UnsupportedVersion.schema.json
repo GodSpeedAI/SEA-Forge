@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UnsupportedVersion",
+  "description": "`unsupported_version` structured error body.",
+  "type": "object",
+  "properties": {
+    "error": {
+      "type": "string"
+    },
+    "error_class": {
+      "description": "Always `\"unsupported_version\"`.",
+      "type": "string"
+    },
+    "requested": {
+      "type": "string"
+    },
+    "supported": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "error_class",
+    "requested",
+    "supported",
+    "error"
+  ]
+}

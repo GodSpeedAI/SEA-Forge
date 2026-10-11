@@ -1,0 +1,50 @@
+## 1. case.entry_options with the cyclic template installed
+{"templates": ["e2e-sentry-chain@0.1.0", "e2e-signoff-gate@0.1.0", "e2e-teeth-cyclic@0.1.0"]}
+cyclic listed: True
+
+## 2. case.preflight on the cyclic template
+{
+  "errors": [
+    "plan_cycle_error: sentry dependency cycle detected"
+  ],
+  "items": [
+    {
+      "item_kind": "SandboxedTask",
+      "name": "cyclic a",
+      "plan_item_id": "item_a"
+    },
+    {
+      "item_kind": "SandboxedTask",
+      "name": "cyclic b",
+      "plan_item_id": "item_b"
+    }
+  ],
+  "ok": false,
+  "precondition": {
+    "expected_digest": "sha256:3c5d00c9727c47d5cde4d759816eace4e712e9a1aa6d8c86fcf5310ec4bd6500",
+    "ref": "template:e2e-teeth-cyclic@0.1.0"
+  },
+  "template_ref": "e2e-teeth-cyclic@0.1.0"
+}
+
+## 3. case.commit on the cyclic template (must never create a case)
+{
+  "error": "plan_cycle_error: sentry dependency cycle detected"
+}
+
+## 4. correlated outcome recovery (request.get_status)
+{
+  "method": "case.commit",
+  "outcome": {
+    "error": "plan_cycle_error: sentry dependency cycle detected"
+  },
+  "request_id": "req-t03-teeth-cyclic-1",
+  "status": "failed"
+}
+## 5. proof no case was created by the refused commit
+no cases/ directory at all (nothing ever created)
+
+## 6. removing the cyclic template (teeth recorded, cell restored to the two E2E templates)
+removed '.sea-forge/casework-live/cell/templates/e2e-teeth-cyclic@0.1.0.yaml'
+e2e-sentry-chain@0.1.0.yaml
+e2e-signoff-gate@0.1.0.yaml

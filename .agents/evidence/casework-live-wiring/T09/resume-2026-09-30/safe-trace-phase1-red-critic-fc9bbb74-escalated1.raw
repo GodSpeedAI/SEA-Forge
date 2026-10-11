@@ -1,0 +1,317 @@
+--- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix (0.55s)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/exact_ownership_and_request_identity (0.01s)
+        run_trace_test.go:265: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/source_order_and_original_timestamp_text (0.01s)
+        run_trace_test.go:275: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"_\t" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/run_id/"foreign_identity" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_run_id (0.01s)
+        run_trace_test.go:291: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"_\t" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/case_id/"foreign_identity" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_case_id (0.02s)
+        run_trace_test.go:291: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"_\t" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/plan_item_id/"foreign_identity" (0.01s)
+        run_trace_test.go:286: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/missing_response_plan_item_id (0.01s)
+        run_trace_test.go:291: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_case_identity/"foreign_case" (0.01s)
+        run_trace_test.go:297: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_run_identity/"foreign_run" (0.01s)
+        run_trace_test.go:302: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/expected_item_identity/"foreign_item" (0.02s)
+        run_trace_test.go:307: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/accepted (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/pending/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/accepted (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/enabled/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/accepted (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/active/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/accepted (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/completed/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/accepted (0.06s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/failed/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/unsettled (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/accepted (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/rejected (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/terminated/escalated (0.01s)
+        run_trace_test.go:317: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/unknown_execution (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/null_execution (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/wrong_execution_shape (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/unknown_settlement (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/null_settlement (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/malformed_standing/wrong_settlement_shape (0.01s)
+        run_trace_test.go:333: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/absent_execution (0.01s)
+        run_trace_test.go:338: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3IdentityAndStandingMatrix/absent_settlement (0.01s)
+        run_trace_test.go:338: logical read produced 0 request lines, want exactly one run_get
+--- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention (0.36s)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_started (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_activated (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/command_started (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/command_finished (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_completed (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_failed (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/item_terminated (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/human_task_completed (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_halted (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/safe_kind/run_finished (0.01s)
+        run_trace_test.go:349: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_malformed_fields_and_selected_id_collision_are_omitted (0.01s)
+        run_trace_test.go:357: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_missing_event_id_is_ignored (0.01s)
+        run_trace_test.go:372: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_null_event_id_is_ignored (0.01s)
+        run_trace_test.go:372: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/unknown_kind_wrong-type_event_id_is_ignored (0.01s)
+        run_trace_test.go:372: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_event_kind (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_event_kind (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/numeric_selected_event_kind (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/boolean_selected_event_kind (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/blank_selected_event_id (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_event_id (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_event_id (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/wrong-type_selected_event_id (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/blank_selected_timestamp (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/missing_selected_timestamp (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_selected_timestamp (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/wrong-type_selected_timestamp (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/malformed_selected_timestamp (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/null_trace_row (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/scalar_trace_row (0.01s)
+        run_trace_test.go:394: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/duplicate_selected_id_invalidates_response (0.01s)
+        run_trace_test.go:401: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/selected_duplicate_beyond_retained_newest_1024_is_invalid (0.01s)
+        run_trace_test.go:413: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_0_and_newest_retention (0.01s)
+        run_trace_test.go:431: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_1024_and_newest_retention (0.02s)
+        run_trace_test.go:431: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3AllowlistIdentityAndRetention/returned_row_count_1027_and_newest_retention (0.01s)
+        run_trace_test.go:431: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+--- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary (0.33s)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/empty_returned_rows_zero_bytes (0.01s)
+        run_trace_test.go:479: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/empty_returned_rows_positive_bytes (0.01s)
+        run_trace_test.go:479: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/nonempty_returned_rows_zero_bytes (0.01s)
+        run_trace_test.go:479: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/nonempty_returned_prefix_positive_bytes (0.01s)
+        run_trace_test.go:479: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong_trace_shape (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_records (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_records (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong_records_shape (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_record_array_entry (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/scalar_trace_record_array_entry (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_record_name (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_record_name (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_record (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/duplicate_trace_records (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/absent_trace_record (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/false_trace_presence (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_trace_presence (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_trace_presence (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/wrong-type_trace_presence (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/missing_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/null_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/negative_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/fractional_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/boolean_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/string_bytes (0.02s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/malformed_record_entry (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/exact_u64_maximum_bytes (0.01s)
+        run_trace_test.go:479: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/u64_overflow_bytes (0.01s)
+        run_trace_test.go:479: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}
+    --- FAIL: TestReadRunTraceV3TracePresenceAndReturnedRowBoundary/returned_prefix_count_is_not_a_source_journal_total (0.01s)
+        run_trace_test.go:486: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+--- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON (0.06s)
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/invalid_JSON_text (0.01s)
+        run_trace_test.go:502: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/null_JSON_root (0.01s)
+        run_trace_test.go:502: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/array_JSON_root (0.01s)
+        run_trace_test.go:502: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/string_JSON_root (0.01s)
+        run_trace_test.go:502: logical read produced 0 request lines, want exactly one run_get
+    --- FAIL: TestReadRunTraceV3RejectsRawInvalidJSON/number_JSON_root (0.01s)
+        run_trace_test.go:502: logical read produced 0 request lines, want exactly one run_get
+--- FAIL: TestReadRunTraceV3CommandMetadataProjection (0.29s)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/missing_payload (0.03s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_payload (0.00s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/scalar_payload (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/array_payload (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/object_missing_execution (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_execution (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/execution_missing_optionals (0.00s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/null_status_and_exit (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_completed (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_spawn_failed (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_timed_out (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_sandbox_violation (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/status_suspected_sandbox_violation (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/exit_only (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/safe_lower_exit_boundary (0.01s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/safe_upper_exit_boundary (0.02s)
+        run_trace_test.go:551: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/execution_wrong_shape (0.00s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unknown_status (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/nonstring_status (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unsafe_adjacent_upper (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/unsafe_adjacent_lower (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/int64_positive_overflow (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/int64_negative_overflow (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/fraction_exit (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/string_exit (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/boolean_exit (0.01s)
+        run_trace_test.go:551: failed run trace snapshot = ports.RunTraceSnapshot{RunID:"", CaseID:"", PlanItemID:"", Execution:"", Settlement:"", Frames:[]ports.RunTraceFrame(nil), TotalFrameCount:0}, want empty snapshot ports.RunTraceSnapshot{RunID:"run_actual", CaseID:"case_actual", PlanItemID:"item_actual", Execution:"completed", Settlement:"accepted", Frames:[]ports.RunTraceFrame{ports.RunTraceFrame{EventID:"evt_command", Kind:"command_finished", Timestamp:"2026-10-05T12:13:14.123456789Z", ExecutionStatus:(*string)(nil), ExitCode:(*int64)(nil)}}, TotalFrameCount:1}
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/other_kinds_ignore_all_payload_metadata (0.01s)
+        run_trace_test.go:558: valid returned run trace was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+    --- FAIL: TestReadRunTraceV3CommandMetadataProjection/semantic_serialization_contains_only_safe_fields (0.01s)
+        run_trace_test.go:573: valid safe projection was unavailable: unavailable: the governed run trace projection is not implemented (run_trace)
+--- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial (0.06s)
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_case (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_case (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_run (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_run (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/empty_item (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+    --- FAIL: TestReadRunTraceV3RejectsBlankExpectedIdentityBeforeDial/blank_item (0.01s)
+        run_trace_test.go:610: blank expected identity error = unavailable: the governed run trace projection is not implemented (run_trace), want typed invalid
+--- FAIL: TestReadRunTraceV3PreservesAuthorityRefusalClass (0.01s)
+    run_trace_test.go:629: authority refusal error = unavailable: the governed run trace projection is not implemented (run_trace), want typed authority_denied
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.684s
+FAIL

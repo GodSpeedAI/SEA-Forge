@@ -1,0 +1,27 @@
+# Unit1 list-refusal fixture repair record
+
+Date: 2026-10-07. Bounded source-only test fixture repair. No compiler, test, scanner, formatter, typecheck, Git, or runtime command was run or authorized.
+
+## Original authority and governing distinction
+
+The full immutable Unit1 assignment is `run-observation-manager-unit1-original-assignment-oct06.md` (SHA-256 `de8c9019ebdf98a43525264a32897868f05ab3346cacf7c4f013ccdae23d9916`). The governing manager contract is revision 6 and its addenda/corrections, with root's private-design decision. Revision 6 expressly separates list refusal from failed Prepare (`run-observation-manager-concrete-proposal-revision6-oct06.md:90-98,451-459`): refused, over-cap, or undecodable `run.list` produces `run_list_state=unavailable`, `observation_state=unavailable`, nonnil empty `Runs`, absent optional counts, no candidate reads, and a completed empty lease whose later `Next` returns `ErrRunListUnavailable`. Auth/guard failure, context cancellation, manager stop, or irreducible initial assembly failure instead returns typed error, zero wrapper, nil lease, with rollback as applicable.
+
+Root's bounded assignment for this repair:
+
+> Fresh bounded SOURCEONLY Go fixture repair; no compile/test/scanner/Git. Root discovered `run_observation_manager_test.go` TestRunObservationManagerFailedPrepareReturnsNoLeaseAndReleasesOwnedReservation (~943) treats a RunsListForCase unavailable error as zero wrapper/nil lease, contradicting approved revision6 (~90–98): refused/overcap/undecodable list => exact unavailable initial DTO, nonnil empty Runs, absent all optional counts, no trace reads, completed empty lease whose Next returns list-unavailable. Only auth/guard/cancel/managerstop/irreducible assembly => failedPrepare rollback zero wrapper/nil lease. Read scoped instructions/skills and revision6 plus addenda/erratum/root-ratified decisions. Preserve immediate exact current source fa1601 and test b1b585 preimages using native patch and verify byte equality BEFORE editing. Source remains always-unavailable UNWIRED stub unchanged. Repair failedPrepare test to use genuine auth or guard refusal at appropriate ownership boundary, preserving bounded cleanup/retry checks; add distinct list-unavailable DTO/empty-lease test aligned with actual existing private declarations (do not add production implementation/Next merely for tests without reporting need). Inspect all fixture cases for same list-error misuse and explain exact deviations. Keep meaningful original instructions in NEW immutable assignment record; NEW result with exact hashes/diff, no overwrites. Root retains architecture/semantic decisions. Need independent guard critic afterwards. Do not claim tests RED/GREEN without run.
+
+## Pre-edit identities and exact preservation
+
+Immediate pre-edit source: `run_observation_manager.go`, SHA-256 `fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d` (5,488 bytes). Immediate pre-edit test: `run_observation_manager_test.go`, SHA-256 `b1b585320ef65ed1cb27a2b618bcca4a8b2e368c9646e96a6229e6855e91c72a` (51,535 bytes).
+
+Root preserved exact UTF-8 JSON-content preimages at `.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run_observation_manager.go.before-list-fixture-oct07.json` and `run_observation_manager_test.go.before-list-fixture-oct07.json`. Root reports decoded bytes match those sizes and hashes exactly. The package-local `.raw` attempts I made with `apply_patch` add-file are not byte-exact because each gained one extra terminal LF; hashes `57b22fae8fe8b1cdbb091a9f9126cd64e24fff41f4bafd5cc48d4b6ea4ae6f3c` and `f78c3d9eb55ab322a74be370e46086862424696281fa84b480f5e3775d1b1128`. They remain untouched and explicitly are not claimed as exact backups. No `cp` or shell file-copy operation was used.
+
+## Defect and planned bounded repair
+
+The existing `TestRunObservationManagerFailedPrepareReturnsNoLeaseAndReleasesOwnedReservation` makes the first `run.list` fake return an unavailable error, then expects zero DTO/nil lease. That contradicts revision 6. Replace this test's injected refusal with a genuine authorization refusal, which occurs before `run.list`/reservation, and preserve its bounded follow-up call and no-list check with an accurate test name/expectations. Add a distinct test that asks the existing private `prepare` seam for the refused-list DTO and completed empty lease, checks all optional count pointers are absent, `Runs` is a nonnil empty slice, and no trace read occurs.
+
+Current production source is an intentionally unwired stub and has no `Next` method or list-refusal error/lease state representation. This fixture repair must not invent production `Next` or implement list handling solely to satisfy the new test. Therefore the test can specify and assert the initial DTO/empty lease contract but cannot assert `Next() == ErrRunListUnavailable` against a current declaration; that boundary will be recorded as an explicit implementation obligation/limitation. The new source-level assertion is not a run result or a baseline RED claim.
+
+## Inspection scope and limitations
+
+The same test file was searched for every list fake that returns an error or uses an empty result with an error. The only misuse found is the named failed-Prepare test at its current lines around 943-968; other list fakes return valid lists or block for lifecycle/capacity fixtures. The production manager source remains byte-unchanged. This record is frozen before fixture edits; resulting exact hashes and diff scope will be recorded in a new result receipt.

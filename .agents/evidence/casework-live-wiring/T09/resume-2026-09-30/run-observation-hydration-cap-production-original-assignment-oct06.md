@@ -1,0 +1,13 @@
+# Hydration cap production Phase 2 — bounded original assignment
+
+This assignment is HELD until root explicitly releases it after independent source approval and an actual compiling semantic RED gate. Builder admission_retry_counter_fresh_builder; independent critic physical_admission_runtime_independent_critic. No compiler grant to builder.
+
+Implement ONLY `apps/godspeed-casework-go/internal/server/run_observation_hydration_cap.go`, preserving the exact private signature and 1MiB constant. Read the original Phase1 assignment, all fixture repairs/reviews, complete frozen test, Go DTO and nearby accepted private selector pattern. Frozen test must not change.
+
+Required semantics are the original assignment in full: validate <=8 runs, <=1024 frames per run, nonnegative consistent total/retained/omitted/truncated counts and parsed RFC3339Nano timestamps before accepting. Return typed unavailable and zero partial output on invalid bounds/counts/time or irreducible metadata overflow. Cap actual encoding/json payload bytes at1<<20, excluding event/SSE framing. Preserve all cohort/run metadata and ordering, retaining runs even when every frame is removed; no grammar, identity conversion, new policy or wire validation expansion.
+
+When over cap, remove a prefix of globally oldest frames ordered by parsed instant, complete RunID bytes, then EventID bytes. Preserve surviving per-run order. Update only retained count, omitted=total-retained, and truncated=(omitted>0), preserving prior ring omissions. Keep all count pointers and optional execution-status/exit-code pointers independent, fresh run/frame arrays, empty arrays preserved, caller input unchanged on success and failure.
+
+Bound algorithm work: <=8192 frame coordinates, a bounded ordering and binary search (or equivalent bounded exact-size strategy). Do not repeatedly marshal the entire payload once per omitted frame. Exact final serialization must prove cap; if no-frame metadata still exceeds cap, fail closed. Document why serialized size decreases under removal if using binary search. No goroutines/network/manager/SSE/HTTP/public interfaces/dependencies/source-schema/generated code changes.
+
+Native apply_patch, read before edit, file-only formatting. No source fixture edits or gates/Git/status/debt changes. Report final production hash, frozen fixture hash, algorithm reasoning and every material deviation, then freeze for independent source review. Root releases focused GREEN, full server race, module race and canonical Go gates only after source acceptance; each gate fresh resource preflight and joined capture, one compiler owner.

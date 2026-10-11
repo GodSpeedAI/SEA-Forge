@@ -1,0 +1,53 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-1",
+    "correlation_id": "t29-route-001-iter1",
+    "finished_at_utc": "2026-09-19T15:21:53.069455+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-1",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:21:52.648281+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i1-cand-1/state/gauntlet-state.db",
+    "state_db_sha256": "e61a96e41c0c10db2dac5e64ec4b4d977cb404660862dd661f3aa2403813f1d6",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 2,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2",
+    "correlation_id": "t29-route-001-iter1",
+    "finished_at_utc": "2026-09-19T15:21:53.277725+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-2",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:21:53.073574+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i1-cand-2/state/gauntlet-state.db",
+    "state_db_sha256": "59e23062c88bd3370b0c2f0f8e4e773246ea9a21fc5c74d01aedd99349a942f7",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 6,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-3",
+    "correlation_id": "t29-route-001-iter1",
+    "finished_at_utc": "2026-09-19T15:21:53.785805+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i1-cand-3",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:21:53.281254+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i1-cand-3/state/gauntlet-state.db",
+    "state_db_sha256": "f52ac5361038565fe35295c9fb51051489ba1349ac96eb3dc08ec2a683296fc9",
+    "terminal_class": "budget_exhausted"
+  }
+]

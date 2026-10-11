@@ -1,0 +1,214 @@
+{
+  "test_cases": [
+    {
+      "id": "TC_CJ01_HAPPY",
+      "journey_id": "CJ01",
+      "title": "Establish Trusted Cell Context - Happy Path",
+      "actor_identity": "cell-admin-alice",
+      "actor_role": "CellAdministrator",
+      "inputs": {
+        "cell_root_path": "/var/sea/cells/primary",
+        "actor_identity": "cell-admin-alice",
+        "configuration_inputs": { "profile": "production", "version": "0.2.0" },
+        "existing_ledger_history_when_present": true
+      },
+      "expected_settlement": "settlement_accepted",
+      "expected_state": "validated_current_context",
+      "expected_affordances": ["discover_lawful_affordances", "form_governed_case"],
+      "expected_blocked": ["execute_governed_work"]
+    },
+    {
+      "id": "TC_CJ01_PRECONDITION_BLOCK",
+      "journey_id": "CJ01",
+      "title": "Establish Trusted Cell Context - Missing Context Block",
+      "actor_identity": "cell-admin-alice",
+      "actor_role": "CellAdministrator",
+      "inputs": {
+        "actor_identity": "cell-admin-alice"
+      },
+      "expected_phase_blocked": "IS1",
+      "expected_blocked_reason": "Missing required context elements"
+    },
+    {
+      "id": "TC_CJ01_PREFLIGHT_FAIL",
+      "journey_id": "CJ01",
+      "title": "Establish Trusted Cell Context - Preflight Failure (Integrity Compromised)",
+      "actor_identity": "cell-admin-alice",
+      "actor_role": "CellAdministrator",
+      "inputs": {
+        "cell_root_path": "/var/sea/cells/corrupted",
+        "actor_identity": "cell-admin-alice",
+        "configuration_inputs": {},
+        "existing_ledger_history_when_present": true
+      },
+      "preflight_overrides": {
+        "identity_keys_present_and_uncompromised": false
+      },
+      "expected_phase_blocked": "IS2",
+      "expected_blocked_reason": "Preflight checks failed"
+    },
+    {
+      "id": "TC_CJ02_HAPPY",
+      "journey_id": "CJ02",
+      "title": "Discover Lawful Affordances - Happy Path",
+      "actor_identity": "operator-bob",
+      "actor_role": "Operator",
+      "inputs": {
+        "trusted_cell_and_actor_context": true,
+        "subject_of_inquiry": "capabilities_and_endpoints",
+        "disclosure_scope_declared": "standard_operational"
+      },
+      "expected_settlement": "settlement_accepted",
+      "expected_affordances": ["select_asset_or_provider", "form_or_revise_governed_case"]
+    },
+    {
+      "id": "TC_CJ03_HAPPY",
+      "journey_id": "CJ03",
+      "title": "Ground Work in Semantic Meaning - Semantic Validation and Pinning",
+      "actor_identity": "author-carol",
+      "actor_role": "DomainAuthor",
+      "inputs": {
+        "sea_source_files": [".sea/interaction/interaction-model.sea"],
+        "import_dependencies": [],
+        "projection_target_specification": "rust_core"
+      },
+      "expected_settlement": "settlement_accepted",
+      "expected_state": "semantically_pinned_domain_model",
+      "expected_affordances": ["pin_model_to_governed_case", "execute_deterministic_projection"]
+    },
+    {
+      "id": "TC_CJ04_HAPPY",
+      "journey_id": "CJ04",
+      "title": "Form and Commit a Governed Case - Immutable Case Plan",
+      "actor_identity": "owner-dave",
+      "actor_role": "CaseOwner",
+      "inputs": {
+        "actor_attribution": "owner-dave",
+        "cell_root": "/var/sea/cells/primary",
+        "work_source_descriptor": "intent_pipeline",
+        "semantic_references": ["sea_forge.interaction"],
+        "environment_and_evaluator_bindings": ["jail_evaluator"]
+      },
+      "expected_settlement": "settlement_accepted",
+      "expected_state": "immutable_committed_case",
+      "expected_affordances": ["start_lawful_work", "resolve_likely_approvals", "navigate_live_case"]
+    },
+    {
+      "id": "TC_CJ06_AUTHORITY_SELF_APPROVAL_BLOCK",
+      "journey_id": "CJ06",
+      "title": "Resolve Human Judgment - Anti-Self-Approval Block",
+      "actor_identity": "proposer-eve",
+      "actor_role": "Approver",
+      "inputs": {
+        "approval_request_id": "APPR-999",
+        "acting_human_identity": "proposer-eve",
+        "request_context_bundle": { "action": "deploy_jail" },
+        "downstream_effect_descriptor": "promote_container",
+        "item_proposer_or_creator": "proposer-eve"
+      },
+      "expected_phase_blocked": "IS3",
+      "expected_blocked_reason": "Separation of duty violation: Item creator cannot approve their own work"
+    },
+    {
+      "id": "TC_CJ06_ROLE_AUTHORITY_BLOCK",
+      "journey_id": "CJ06",
+      "title": "Resolve Human Judgment - Unauthorized Role Block",
+      "actor_identity": "unauthorized-frank",
+      "actor_role": "ExternalActor",
+      "inputs": {
+        "approval_request_id": "APPR-100",
+        "acting_human_identity": "unauthorized-frank",
+        "request_context_bundle": {},
+        "downstream_effect_descriptor": "none"
+      },
+      "expected_phase_blocked": "IS3",
+      "expected_blocked_reason": "Actor role 'ExternalActor' not authorized for journey"
+    },
+    {
+      "id": "TC_CJ07_EXECUTION_FAILURE_WITH_RECOVERY",
+      "journey_id": "CJ07",
+      "title": "Execute Governed Work - Execution Error within Sandbox",
+      "actor_identity": "operator-bob",
+      "actor_role": "Operator",
+      "inputs": {
+        "committed_case_id": "CASE-101",
+        "enabled_item_id": "ITEM-FAIL",
+        "authority_grant_token": "GRANT-TOKEN-OK",
+        "sandbox_and_environment_spec": { "type": "bwrap" },
+        "execution_limits": { "timeout_seconds": 60 }
+      },
+      "execution_success": false,
+      "expected_phase_blocked": "IS4",
+      "expected_blocked_reason": "Execution terminated with error within granted sandbox bounds"
+    },
+    {
+      "id": "TC_CJ07_SETTLEMENT_REJECTION_DESPITE_EXIT_ZERO",
+      "journey_id": "CJ07",
+      "title": "Execute Governed Work - Execution 0 but Settlement Criteria Rejected",
+      "actor_identity": "operator-bob",
+      "actor_role": "Operator",
+      "inputs": {
+        "committed_case_id": "CASE-101",
+        "enabled_item_id": "ITEM-EXIT0-FAIL-CRITERIA",
+        "authority_grant_token": "GRANT-TOKEN-OK",
+        "sandbox_and_environment_spec": { "type": "bwrap" },
+        "execution_limits": { "timeout_seconds": 60 }
+      },
+      "execution_success": true,
+      "criteria_met": false,
+      "expected_settlement": "settlement_rejected",
+      "expected_affordance_status": "blocked",
+      "expected_blocked_reason": "no_settlement_access"
+    },
+    {
+      "id": "TC_CJ09_ANTI_SELF_CERTIFICATION_BLOCK",
+      "journey_id": "CJ09",
+      "title": "Evaluate Outcomes - Anti-Self-Certification Block",
+      "actor_identity": "executor-grace",
+      "actor_role": "Auditor",
+      "inputs": {
+        "run_episode_id": "RUN-999",
+        "immutable_case_plan_criteria": ["crit_01"],
+        "authority_and_trace_records": ["trace_01"],
+        "disclosure_boundary": "local",
+        "executor_identity": "executor-grace"
+      },
+      "expected_phase_blocked": "IS3",
+      "expected_blocked_reason": "anti-self-certification"
+    },
+    {
+      "id": "TC_CJ09_HAPPY_SETTLEMENT",
+      "journey_id": "CJ09",
+      "title": "Evaluate Outcomes - Independent Reviewer Settlement",
+      "actor_identity": "auditor-heidi",
+      "actor_role": "Auditor",
+      "inputs": {
+        "run_episode_id": "RUN-999",
+        "immutable_case_plan_criteria": ["crit_01"],
+        "authority_and_trace_records": ["trace_01"],
+        "disclosure_boundary": "local",
+        "executor_identity": "executor-grace"
+      },
+      "expected_settlement": "settlement_accepted",
+      "expected_affordances": ["promote_settled_capability", "mature_governed_artifact"]
+    },
+    {
+      "id": "TC_CJ12_ATOMIC_REJECTION",
+      "journey_id": "CJ12",
+      "title": "Transfer and Adopt Assets - Tampered Archive Atomic Rejection",
+      "actor_identity": "cell-admin-alice",
+      "actor_role": "CellAdministrator",
+      "inputs": {
+        "source_cell_identity": "cell-remote",
+        "destination_cell_identity": "cell-local",
+        "transfer_boundary_specification": "bundle_manifest_v2",
+        "local_administrator_authority": true
+      },
+      "preflight_overrides": {
+        "no_tampering_or_path_traversal_in_archive": false
+      },
+      "expected_phase_blocked": "IS2",
+      "expected_blocked_reason": "Preflight checks failed"
+    }
+  ]
+}

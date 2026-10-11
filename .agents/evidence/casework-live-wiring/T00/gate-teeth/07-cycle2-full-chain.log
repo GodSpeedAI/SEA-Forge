@@ -1,0 +1,135 @@
+=== CYCLE 2 (idempotent re-run of the full chain; socket-cleanup guard now uses the server flock) ===
+$ just casework-cell-init
+casework-cell-init: cell already initialized at .sea-forge/casework-live/cell (server.yaml present; not modified)
+casework-cell-init: cell path: /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell
+exit=0
+
+$ just casework-server-up  (socket from cycle 1 lingers; expect guard b unless down cleaned it)
+casework-server-up: socket .sea-forge/casework-live/cell/server.sock already exists; if no server owns it, remove it manually
+error: recipe `casework-server-up` failed with exit code 1
+exit=1
+CYCLE 2 server-up blocked - investigate
+--- stale socket from the pre-fix teardown (cycle 1) is on disk; the fixed down cleans it ---
+$ just casework-server-down  # no pidfile, lingering socket, flock free
+casework-server-down: not running (no pidfile)
+casework-server-down: removed lingering socket .sea-forge/casework-live/cell/server.sock (socket lock free; no server owns it)
+exit=0
+
+$ ls .sea-forge/casework-live/cell/
+total 20
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:06 .
+drwxr-xr-x 3 sprime01 sprime01 4096 Sep 23 22:05 ..
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 .server.lock
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:05 ledgers
+drwxr-xr-x 2 sprime01 sprime01 4096 Sep 23 22:05 requests
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 server.sock.lock
+-rw-r--r-- 1 sprime01 sprime01  150 Sep 23 22:03 server.yaml
+
+$ just casework-server-up  # retry
+casework-server-up: building sea-forge-server (waits politely if another cargo holds the target lock)
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Finished `dev` profile [unoptimized] target(s) in 1.21s
+casework-server-up: starting server (cell .sea-forge/casework-live/cell, socket .sea-forge/casework-live/cell/server.sock, log: .sea-forge/casework-live/server.log)
+casework-server-up: listening (pid 827073, socket .sea-forge/casework-live/cell/server.sock, log: .sea-forge/casework-live/server.log)
+exit=0
+$ just casework-server-up  # teeth re-check (cycle 2)
+casework-server-up: server already running (pid 827073, socket .sea-forge/casework-live/cell/server.sock)
+error: recipe `casework-server-up` failed with exit code 1
+exit=1 (want 1)
+TEETH PASS on cycle 2
+
+$ just casework-live-go-up
+casework-live-go-up: building gateway binary
+casework-live-go-up: starting on 127.0.0.1:4179 against live cell .sea-forge/casework-live/cell (FIXTURE-LABELED providers until T05)
+casework-live-go-up: answering at http://127.0.0.1:4179/api/healthz (pid 827324, log: .sea-forge/casework-live/go.log)
+exit=0
+
+$ curl -sS http://127.0.0.1:4179/api/healthz
+{"status":"ok","provenance":"go:fixture:northstar","liveCursor":1150}
+ (curl exit=0)
+
+$ just casework-stack-down
+casework-live-go-down: stopped 827324
+casework-server-down: stopped (pid 827073)
+casework-server-down: removed lingering socket .sea-forge/casework-live/cell/server.sock (socket lock free; no server owns it)
+casework-stack-down: casework-live-go-down ok
+casework-stack-down: casework-server-down ok
+casework-stack-down: cell data preserved at .sea-forge/casework-live/cell (teardown is processes-only, never data)
+exit=0
+
+$ final state: live dir, cell dir, process scan
+.sea-forge/casework-live/:
+total 10344
+drwxr-xr-x 3 sprime01 sprime01     4096 Sep 23 22:07 .
+drwxr-xr-x 7 sprime01 sprime01     4096 Sep 23 22:03 ..
+drwxr-xr-x 4 sprime01 sprime01     4096 Sep 23 22:07 cell
+-rwxr-xr-x 1 sprime01 sprime01 10570340 Sep 23 22:07 go-bin
+-rw-r--r-- 1 sprime01 sprime01     1484 Sep 23 22:07 go.log
+-rw-r--r-- 1 sprime01 sprime01      868 Sep 23 22:06 server.log
+
+.sea-forge/casework-live/cell/:
+total 20
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:07 .
+drwxr-xr-x 3 sprime01 sprime01 4096 Sep 23 22:07 ..
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 .server.lock
+drwxr-xr-x 4 sprime01 sprime01 4096 Sep 23 22:05 ledgers
+drwxr-xr-x 2 sprime01 sprime01 4096 Sep 23 22:05 requests
+-rw-r--r-- 1 sprime01 sprime01    0 Sep 23 22:05 server.sock.lock
+-rw-r--r-- 1 sprime01 sprime01  150 Sep 23 22:03 server.yaml
+sea-forge-server processes: 0 (want 0); casework-live go-bin processes: 0 (want 0)
+CYCLE 2 PASS: idempotent full cycle; cell data preserved; no processes left

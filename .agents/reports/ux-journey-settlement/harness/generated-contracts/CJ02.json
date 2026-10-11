@@ -1,0 +1,166 @@
+{
+  "journey_id": "CJ02",
+  "canonical_journey_name": "Discover Lawful Affordances",
+  "canonical_source_references": [
+    {
+      "source_path": ".sea/interaction/canonicalization-matrix.csv",
+      "sha256": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4"
+    },
+    {
+      "source_path": ".sea/interaction/canonical-journey-catalog.md",
+      "sha256": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af"
+    },
+    {
+      "source_path": ".sea/interaction/journey-grammar.md",
+      "sha256": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb"
+    },
+    {
+      "source_path": ".sea/interaction/interaction-model.sea",
+      "sha256": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc"
+    },
+    {
+      "source_path": ".sea/interaction/journey-capability-map.md",
+      "sha256": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37"
+    },
+    {
+      "source_path": ".sea/interaction/coverage-report.md",
+      "sha256": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687"
+    },
+    {
+      "source_path": ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md",
+      "sha256": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9"
+    },
+    {
+      "source_path": ".agents/specs/spec-minimum.md",
+      "sha256": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3"
+    },
+    {
+      "source_path": ".agents/specs/spec-full.md",
+      "sha256": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+    }
+  ],
+  "source_story_ids": [
+    "2.5",
+    "2.6",
+    "3.1",
+    "3.2",
+    "3.3",
+    "3.4",
+    "3.5",
+    "3.6",
+    "3.9",
+    "4.1",
+    "4.2",
+    "4.3",
+    "4.4",
+    "4.5",
+    "4.6",
+    "4.8"
+  ],
+  "source_story_classifications": {
+    "canonical": 1,
+    "specialization": 10,
+    "variant": 3,
+    "composition": 2
+  },
+  "implementation_maturity": {
+    "specified": 4,
+    "implemented": 1,
+    "exercised": 9,
+    "evidenced": 2
+  },
+  "actor_and_role": {
+    "primary_actor": "operator",
+    "primary_role": "operator",
+    "allowed_roles": [
+      "operator",
+      "case author",
+      "external actor"
+    ]
+  },
+  "starting_state": "A user asks what SEA Forge can do, previews a proposal's authority burden, browses an operating asset, probes an endpoint, or encounters denial, escalation, or unusable state.",
+  "preconditions": [
+    "Trusted cell and actor context",
+    "disclosure scope resolved before retrieval",
+    "source records or validated catalogs for the subject being inspected."
+  ],
+  "intention": "Understand what exists, what is usable, what is allowed, and why a path is unavailable in the current actor and cell context.",
+  "job": "Choose a spendable path without confusing catalog presence, declared support, operational availability, authority, or settlement evidence.",
+  "authority_requirements": [
+    "Strict pre-effect authority evaluation",
+    "Attributable actor context and role resolution",
+    "Policy digest binding against active snapshot"
+  ],
+  "expected_capabilities": [
+    "`thoth.ask`",
+    "asset and endpoint inspection",
+    "endpoint probe",
+    "capability projection",
+    "environment and adapter inspection",
+    "authority preflight",
+    "and denial explanation."
+  ],
+  "declared_interface_bindings": {
+    "web_ui": [
+      "workbench_readiness_routes",
+      "workbench_thoth_route",
+      "workbench_assets_route",
+      "workbench_delegation_route",
+      "workbench_administration_route"
+    ],
+    "api": [
+      "sfwp_system_family",
+      "sfwp_context_family",
+      "sfwp_thoth_family",
+      "sfwp_asset_family",
+      "sfwp_delegation_family"
+    ],
+    "cli": [
+      "cli_semantic_and_environment_family",
+      "cli_thoth_family",
+      "cli_agent_family"
+    ],
+    "agent": [
+      "agent_thoth_epistemic_surface",
+      "agent_endpoint_surface",
+      "spec-minimum.md",
+      "spec-full.md"
+    ]
+  },
+  "expected_consequential_state_transitions": [
+    "Unknown or merely declared support becomes available, demonstrated, unavailable, denied, escalated, partial, or still unknown",
+    "an endpoint probe adds evidence but confers no general execution authority."
+  ],
+  "required_artifacts_and_evidence": [
+    "Bounded Thoth answers",
+    "disclosure plans",
+    "authority-burden previews",
+    "asset and endpoint rows",
+    "environment contracts",
+    "compatibility findings",
+    "capability records",
+    "probe evidence",
+    "denial reasons",
+    "and policy references."
+  ],
+  "settlement_condition": "The user receives a source-backed set of currently visible, reachable, permitted, and settleable actions, including explicit blockers, uncertainty, freshness, and limitations.",
+  "expected_next_decisions_and_affordances": [
+    "Select an asset or provider",
+    "form or revise a case",
+    "request approval or authority",
+    "repair a dependency",
+    "probe availability",
+    "choose another path",
+    "or stop."
+  ],
+  "applicable_failure_and_recovery_behavior": [
+    "Explain denial or escalation from committed records",
+    "repair dependency, policy, compatibility, or probe failures",
+    "re-query after context changes",
+    "preserve `unknown` when evidence is insufficient."
+  ],
+  "expected_unavailable_states": [
+    "authority.preflight method is preview-only",
+    "combined projection/environment single query unsurfaced"
+  ]
+}

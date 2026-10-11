@@ -1,0 +1,2 @@
+GodSpeed plan validation: FAIL
+- task settlement mismatch: unsettled=[] unknown=['REQ-FAKE-999']

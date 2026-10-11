@@ -1,0 +1,50 @@
+[
+  {
+    "journey_id": "J1",
+    "title": "Focus substrate",
+    "status": "FAIL",
+    "depends_on": [
+      "J0"
+    ],
+    "settles": "Focus is a reusable primitive that preserves CORE as orientation and object identity",
+    "unlocks": [
+      "J2",
+      "J3"
+    ],
+    "steps": [
+      {
+        "journey": "J1",
+        "name": "select a work object and fly into it",
+        "ok": true,
+        "ms": 37355
+      },
+      {
+        "journey": "J1",
+        "name": "CORE remains the home anchor and is not recreated",
+        "ok": true,
+        "ms": 4599
+      },
+      {
+        "journey": "J1",
+        "name": "local relationships and details are exposed",
+        "ok": true,
+        "ms": 11731
+      },
+      {
+        "journey": "J1",
+        "name": "unfocus returns through the hierarchy to Home",
+        "ok": true,
+        "ms": 5091
+      },
+      {
+        "journey": "J1",
+        "name": "focus again: identity and state survive",
+        "ok": false,
+        "ms": 33465,
+        "error": "same objects by identity after refocus"
+      }
+    ],
+    "total_ms": 122372,
+    "error": "same objects by identity after refocus"
+  }
+]

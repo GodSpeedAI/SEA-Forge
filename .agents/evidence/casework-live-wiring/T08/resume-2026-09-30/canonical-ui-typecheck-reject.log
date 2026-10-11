@@ -1,0 +1,13 @@
+bun install v1.4.0 (34cbb9a40)
+
+Checked 83 installs across 133 packages (no changes) [79.00ms]
+$ tsc --noEmit
+e2e/live-conformance.ts(104,5): error TS2741: Property 'unix' is missing in type 'TCPSocketListener<undefined>' but required in type 'UnixSocketListener<unknown>'.
+e2e/native-events-live.ts(84,26): error TS2339: Property 'settlement' does not exist on type 'XObject'.
+e2e/native-events-live.ts(195,11): error TS6133: 'disconnected' is declared but its value is never read.
+e2e/native-events-live.ts(261,12): error TS2367: This comparison appears to be unintentional because the types '2' and '4' have no overlap.
+e2e/native-events-live.ts(370,11): error TS6133: 'disconnected' is declared but its value is never read.
+src/adapters/local/localAdapter.test.ts(213,100): error TS2554: Expected 3 arguments, but got 4.
+src/adapters/local/localAdapter.test.ts(242,59): error TS2353: Object literal may only specify known properties, and 'display_name' does not exist in type '{ actor_id: string; role: ActorRole; }'.
+error: recipe `casework-ui-check` failed with exit code 2
+exit=2

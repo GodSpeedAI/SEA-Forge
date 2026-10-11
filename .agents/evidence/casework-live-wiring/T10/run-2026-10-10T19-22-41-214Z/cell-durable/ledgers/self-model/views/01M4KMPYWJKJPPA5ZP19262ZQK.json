@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KMPYWJKJPPA5ZP19262ZQK",
+  "source_entry_ulids": [
+    "01M4KMPYWJKJPPA5ZP19262ZQK"
+  ],
+  "source_payload_hash": "sha256:b15907058868aaf58b53b4487249a8c36b5ead4585add1dae3813b1cbd420f23",
+  "view_path": "/tmp/t10-live-m0NiAy/cell/self-model/projections/calm/projection-record.json",
+  "view_sha256": "sha256:ee92598466cf6dfc2c6292af29b74b41b2706a6e9bc71be79a2c92d2bf2d1122",
+  "status": "current",
+  "failure_class": null
+}

@@ -1,0 +1,100 @@
+schema: godspeed-bounded-judgment.t23-neighborhood
+route_id: t23-route-001
+iteration: 2
+correlation_id: t23-route-001-iter2
+rule: prereg operation_surface.neighborhood_rule (frozen)
+filters_applied:
+  probed_on_route:
+  - e2e-happy@4
+  - e2e-happy@3
+  - e2e-lying@4
+  denied_on_route: []
+  probes_remaining: 9
+  probe_cost_per_operation: 1
+  admission_compatible: mock replay runner only; disposable copy; no credentials; no network (frozen catalog)
+neighborhood_size: 21
+operations:
+- op_id: run_case:e2e-happy:1
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 1
+- op_id: run_case:e2e-happy:2
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 2
+- op_id: run_case:e2e-happy:5
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 5
+- op_id: run_case:e2e-happy:6
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 6
+- op_id: run_case:e2e-happy:7
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 7
+- op_id: run_case:e2e-happy:8
+  operation: run_case
+  scenario: e2e-happy
+  max_rounds: 8
+- op_id: run_case:e2e-lying:1
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 1
+- op_id: run_case:e2e-lying:2
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 2
+- op_id: run_case:e2e-lying:3
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 3
+- op_id: run_case:e2e-lying:5
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 5
+- op_id: run_case:e2e-lying:6
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 6
+- op_id: run_case:e2e-lying:7
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 7
+- op_id: run_case:e2e-lying:8
+  operation: run_case
+  scenario: e2e-lying
+  max_rounds: 8
+- op_id: run_case:e2e-forged-report:1
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 1
+- op_id: run_case:e2e-forged-report:2
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 2
+- op_id: run_case:e2e-forged-report:3
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 3
+- op_id: run_case:e2e-forged-report:4
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 4
+- op_id: run_case:e2e-forged-report:5
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 5
+- op_id: run_case:e2e-forged-report:6
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 6
+- op_id: run_case:e2e-forged-report:7
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 7
+- op_id: run_case:e2e-forged-report:8
+  operation: run_case
+  scenario: e2e-forged-report
+  max_rounds: 8

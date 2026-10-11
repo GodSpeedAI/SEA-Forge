@@ -1,0 +1,177 @@
+{
+  "captures": [
+    {
+      "original": "/tmp/renderer-chunks-oct07.focused.Jsjgt6/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-preflight.raw",
+      "sha256": "fb0687c167ca2643cb5f72771da20fe63da012fa59a271999e48e14bb9577670",
+      "bytes": 603,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.focused.Jsjgt6/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-run.raw",
+      "sha256": "1dd0dd8f2714314d061d6dc46d1d251e4e6e7da52f8f70e285a92cd535f7e5b1",
+      "bytes": 1588,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.focused.Jsjgt6/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-exit.raw",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "bytes": 1,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.typecheck.eWI8IK/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-preflight.raw",
+      "sha256": "2494b65d7991739e0e3b3763776a44e87561882aa755a6b09b75e6dc0ccbaa86",
+      "bytes": 603,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.typecheck.eWI8IK/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-run.raw",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.typecheck.eWI8IK/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-exit.raw",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "bytes": 1,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.build.5xwmOT/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-preflight.raw",
+      "sha256": "e832cd84640a624f53d7c7b13f70368a5f0106c7d72e4b8a1074051c2e2c3c38",
+      "bytes": 603,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.build.5xwmOT/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-run.raw",
+      "sha256": "3a40e48eaa60b12347e426ad6955a4d18546742efb92dfcb9a92a0bcde0635c6",
+      "bytes": 8275,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.build.5xwmOT/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-exit.raw",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "bytes": 1,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical.FG1GXc/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-preflight.raw",
+      "sha256": "f58c0b22085b8efd2e931e7fc1e44b2e4c0a7513dad460943095813ce924dc8b",
+      "bytes": 657,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical.FG1GXc/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-run.raw",
+      "sha256": "42904530902d3392609d81fa9a94d9051e287229dc82292a17483e174bb20558",
+      "bytes": 91,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical.FG1GXc/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-exit.raw",
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "bytes": 1,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-retry.2cJ0KE/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-preflight.raw",
+      "sha256": "8eb3cda389d2ff570b7e358bc62ef765c1393938ab712d3ea7462cbcd3732516",
+      "bytes": 675,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-retry.2cJ0KE/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-run.raw",
+      "sha256": "1b42e838c8545935597b50a21b85bf78d85db1c1410820339be58cb7f9262485",
+      "bytes": 39882,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-retry.2cJ0KE/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-exit.raw",
+      "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "bytes": 1,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-escalated.y8zWdK/preflight.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-preflight.raw",
+      "sha256": "fadcf08f07c8c362023c00210427797d390dc1f0d51da2fd97940e761b3d3269",
+      "bytes": 735,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-escalated.y8zWdK/stdout.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-run.raw",
+      "sha256": "247b1b0368fc1293f230692f7ede5976a87159ffc332287f47bfbaef43ca8567",
+      "bytes": 39944,
+      "cmp": 0
+    },
+    {
+      "original": "/tmp/renderer-chunks-oct07.canonical-escalated.y8zWdK/exit.raw",
+      "archive": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-exit.raw",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "bytes": 1,
+      "cmp": 0
+    }
+  ],
+  "rendererArtifacts": [
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/ChartRenderer-B_UWivW0.js",
+      "sha256": "e68ed628a315927d447c87628319690a27fe35086a9fcd49188d6cf537c7ec35",
+      "bytes": 3105
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/DiffRenderer-C7B9rAkF.js",
+      "sha256": "ce98065c44dfab1cdbb2b1f1ad9e4fa2e7d58f9affee3d7ac5492268c9b8445b",
+      "bytes": 2824
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/GraphRenderer-BEtn_yge.js",
+      "sha256": "f75009e8056bc7fb1f04020232a76efaeed308bc0da979c92c12e0c53f02a5a4",
+      "bytes": 5999
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/JsonRenderer-DL4mVUJ5.js",
+      "sha256": "0bbc0739642ceba258296195923eb81f0cb178784b2b423265cb26e65f99a76d",
+      "bytes": 3855
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/MarkdownRenderer-OzOvJShT.js",
+      "sha256": "5ef55f3f49cdcfe871d9f1111037d043ca8aeafee89d10e1e64101615261ea8f",
+      "bytes": 2096
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/TableRenderer-DOQo_-4h.js",
+      "sha256": "ff85b7f2cef0f1373f9232ccc008dbf83d4cb01d9a0c66713f880fecd91ee026",
+      "bytes": 2325
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/TextRenderer-Zvs8B1j7.js",
+      "sha256": "a697a5f37a8460b6fea3e2c9f69bb5116248ba8332612f9614018a7916b4eb6c",
+      "bytes": 1688
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/TimelineRenderer-C71VGLCP.js",
+      "sha256": "49df77263eb0f3e2efcf12820495c379c4b7d525f8c7e58eefec33597abc84af",
+      "bytes": 3295
+    },
+    {
+      "path": "apps/godspeed-cognitive-ui/dist/assets/TraceRenderer-IX8LTwXi.js",
+      "sha256": "622bdb32f09bfa16823f45c5de82cd14c899c4d16d44fadb91db0284fbd0f54c",
+      "bytes": 3431
+    }
+  ]
+}

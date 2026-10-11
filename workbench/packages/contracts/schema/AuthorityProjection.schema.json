@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuthorityProjection",
+  "description": "The authority decision that gated this run, projected from `authority.json`.\n\nReason codes, matched rule, and required next steps are carried through so a\ndenial renders as a governed outcome with a next lawful path (epic 2.6, 11.8)\nrather than as a generic error.",
+  "type": "object",
+  "properties": {
+    "decided_at": {
+      "type": "string"
+    },
+    "decision_id": {
+      "type": "string"
+    },
+    "matched_rule": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "normalized_disposition": {
+      "description": "`allow`, `deny`, `escalate`, `boundary`, `degraded`.",
+      "type": "string"
+    },
+    "policy_refs": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "reason": {
+      "type": "string"
+    },
+    "reason_codes": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_next_steps": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "verdict": {
+      "description": "`allow`, `deny`, `escalate`.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision_id",
+    "verdict",
+    "normalized_disposition",
+    "reason",
+    "decided_at"
+  ]
+}

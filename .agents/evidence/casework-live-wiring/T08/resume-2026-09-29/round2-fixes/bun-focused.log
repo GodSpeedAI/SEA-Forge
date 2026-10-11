@@ -1,0 +1,59 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/app/live.test.ts:
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:31:18)
+
+(pass) connectLive connection recovery > marks a prolonged outage interrupted and returns live only after a source snapshot [39.76ms]
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs/apps/godspeed-cognitive-ui/src/app/live.test.ts:65:18)
+
+(pass) connectLive connection recovery > clears the interruption timer when the subscription is disposed [31.35ms]
+(pass) connectLive connection recovery > keeps a stale-refusal refresh in history when a later live snapshot arrives [2.08ms]
+
+src/app/intents.test.ts:
+(pass) createIntentPath stale projection recovery > fetches one fresh snapshot, preserves the refusal, and keeps the current focus [2.17ms]
+(pass) createIntentPath stale projection recovery > keeps the stale refusal and reports a failed refresh without replaying the intent [1.27ms]
+(pass) createIntentPath stale projection recovery > does not merge a deferred old-case refresh after the user switches cases [1.20ms]
+(pass) createIntentPath stale projection recovery > rejects a refresh response that identifies a different case [1.34ms]
+
+src/adapters/local/localAdapter.test.ts:
+(pass) LocalContractAdapter > shared CaseworkPort behavioral conformance [545.87ms]
+(pass) LocalContractAdapter > duplicate intent_id returns DUPLICATE_IN_FLIGHT [363.85ms]
+(pass) LocalContractAdapter > unauthorized role agent_operator returns AUTHORITY_DENIED [184.32ms]
+(pass) LocalContractAdapter > unauthorized role developer returns UNAUTHORIZED_ROLE [182.55ms]
+(pass) LocalContractAdapter > ESCALATE_OR_OVERRIDE without justification returns JUSTIFICATION_REQUIRED [182.66ms]
+(pass) LocalContractAdapter > unknown target returns INVALID [182.63ms]
+(pass) LocalContractAdapter > unavailable action on target returns UNAVAILABLE [183.05ms]
+(pass) LocalContractAdapter > resolveArtifact returns independent clones [3.61ms]
+(pass) LocalContractAdapter > failArtifacts rejects with error [2.69ms]
+(pass) LocalContractAdapter > corruptArtifacts returns malformed content [2.64ms]
+(pass) LocalContractAdapter > getSnapshot with agent_operator role has no consequential actions [2.22ms]
+(pass) LocalContractAdapter > accepted intent completion precedes settlement [334.47ms]
+(pass) LocalContractAdapter > accepted intent emits snapshot, execution progress, and settlement events [283.98ms]
+
+src/adapters/http/httpTrajectory.test.ts:
+(pass) HttpCaseworkAdapter temporal trajectory > requests the authenticated case trajectory and returns the canonical response [0.64ms]
+(pass) HttpCaseworkAdapter temporal trajectory > surfaces typed unknown or unavailable retained history refusals [0.33ms]
+
+src/adapters/http/httpCaseworkAdapter.test.ts:
+(pass) HttpCaseworkAdapter > session() learns identity from /api/session and caches it [0.23ms]
+(pass) HttpCaseworkAdapter > getSnapshot ignores client-asserted actors and stamps the server perspective [0.20ms]
+(pass) HttpCaseworkAdapter > dispatchIntent sends the CSRF header and surfaces typed refusals verbatim [0.35ms]
+(pass) HttpCaseworkAdapter > pre-dispatch gateway refusals (rate limit) throw typed, never retry [0.19ms]
+(pass) HttpCaseworkAdapter > resolveArtifact returns the canonical authenticated payload with Unicode intact [0.30ms]
+(pass) HttpCaseworkAdapter > resolveArtifact preserves an empty artifact body [0.15ms]
+(pass) HttpCaseworkAdapter > resolveArtifact surfaces typed not-found errors from the gateway [0.92ms]
+(pass) HttpCaseworkAdapter > resolveArtifact rejects a response whose digest differs from the requested digest [1.28ms]
+(pass) HttpCaseworkAdapter > unauthenticated reads surface a sign-in refusal, not a leak [0.61ms]
+(pass) HttpCaseworkAdapter > subscribeEvents filters other cases and forwards same-case revisions [0.75ms]
+(pass) HttpCaseworkAdapter > queryTemporalTrajectory calls the authenticated endpoint and preserves a typed not-found refusal [0.30ms]
+
+src/adapters/http/httpCaseworkAdapter.nativeEvents.test.ts:
+(pass) HttpCaseworkAdapter native EventSource recovery > uses capped exponential retries, resumes from the last cursor, and ignores replayed frames [0.71ms]
+(pass) HttpCaseworkAdapter native EventSource recovery > disposal closes the source and cancels a pending retry [0.68ms]
+
+ 35 pass
+ 0 fail
+ 116 expect() calls
+Ran 35 tests across 6 files. [2.56s]

@@ -1,0 +1,50 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 4,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-1",
+    "correlation_id": "t29-route-001-iter1",
+    "expected_role": "establish_baseline",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Fixture default budget where G1 requires UP-detection of the forged probe to be established by this route's own probe."
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 2,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2",
+    "correlation_id": "t29-route-001-iter1",
+    "expected_role": "boundary_probe",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Lower end of the predicted d* in {2,3}; tests whether the detection floor is as early as 2."
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 6,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-3",
+    "correlation_id": "t29-route-001-iter1",
+    "expected_role": "boundary_probe",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Higher budget well above predicted d* to confirm sustained firing and separate G2 from G3 behavior."
+  }
+]

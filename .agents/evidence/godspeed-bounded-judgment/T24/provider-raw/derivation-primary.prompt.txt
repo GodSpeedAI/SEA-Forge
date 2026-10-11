@@ -1,0 +1,22 @@
+You are the inverse-case generator in a governed, settlement-first case-generation loop. A route of bounded gauntlet probes has GENUINELY SETTLED (verified from its own durable state databases, not asserted). Derive the ONE candidate case for which this settled route should be a legitimate solution.
+
+SETTLED ROUTE (frozen record):
+- route_id: t23-route-001
+- fingerprint (ordered retained moves with final terminals): e2e-happy@3:budget_exhausted; e2e-happy@6:settled; e2e-happy@2:budget_exhausted
+- goal ledger: baseline e2e-happy@4 settled_accepted; boundary r*=4 with r*-1=3 budget_exhausted; discriminator separated by the frozen addendum-3 mechanical rule
+- minimal settling budget on this route's own probes: r* = 4 (r*-1 = 3 exhausts payment)
+- settled baseline probe: e2e-happy@4 with 3 settlement_committed events
+
+THE CASE REPRESENTATION (typed, fixed by the harness; you supply the derivation): a case is (scenario in {e2e-happy, e2e-lying, e2e-forged-report}, max_rounds in 1..8) executed through the frozen fixture mechanism (fresh tests/fixtures/target copy, mock replay runner, deterministic clock, 240s timeout). The case is accepted later ONLY if an independent replay of it genuinely settles through gauntlet's own settlement path; your assertion is never acceptance evidence.
+
+TASK: state which single case the settled route legitimately solves and justify it from the route ledger above (which probe established the settlement, why the budget suffices, what the replay should observe).
+
+OUTPUT: STRICTLY one JSON object with EXACTLY these fields:
+{
+  "case_id": "t24-case-001",
+  "source_route_id": "t23-route-001",
+  "bounded_input": {"scenario": "<e2e-happy|e2e-lying|e2e-forged-report>", "max_rounds": <integer 1..8>},
+  "derivation": "<from which settled route probe this case is derived>",
+  "why_legitimate_for_route": "<one short paragraph, evidence only>"
+}
+No prose, no markdown fences, no commentary.

@@ -1,0 +1,40 @@
+{
+  "findings": [],
+  "harvests": [
+    {
+      "journey": "L5",
+      "session": "journey-L5",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L5",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L5",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "end-of-run",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "end-of-run",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    }
+  ]
+}

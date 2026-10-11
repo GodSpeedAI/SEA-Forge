@@ -1,0 +1,57 @@
+schema: casework-live-wiring.preregistration
+schema_version: '1.0'
+task: T10
+plan: casework-live-wiring-production
+written: '2026-09-26' # BEFORE any T10 implementation; by the orchestrator
+operator_decision_basis: plan T10 + report Section 0.3 (agent-browser runner; ladder L0-L9 + L-RECOV)
+
+claim: >-
+  Each ladder step's UI assertion and its durable-state assertion both pass, with no fixture
+  adapter loaded.
+
+falsifier: >-
+  Any step passes while the durable delta is missing, or the served bundle contains
+  LocalContractAdapter.
+
+known_confounds:
+  - stale cell from a prior run
+  - timing-dependent SSE assertions
+  - agent-browser session reuse leaking cookies between users
+  - (session-3 addition) live-suite load flakiness: mitigated by the -p 1 gate posture (decision
+    log D-3-followups-2) and fresh cells per run
+
+confirmation_condition: >-
+  Three consecutive green runs on fresh cells, confirmed by an independent agent.
+
+ladder_binding:
+  source: plan T10 steps, corrected per report errata Section 0.2 (real TraceKinds only)
+  tracekind_fixes: >-
+    ItemActivated (never ItemStarted); NO ApprovalDecided kind exists (approvals appear in
+    approvals.jsonl and the ledger, not as a trace kind); write-only episodes (the E2E templates'
+    write_file items) emit NO CommandStarted/CommandFinished — their run traces are
+    authority_evaluated, workspace_created, artifact_captured, settlement_recorded (decision log
+    D-3-followups); case.trace SSE event names are snake_case (item_activated).
+  durable_assertions: >-
+    Every step asserts against the cell's files (cases/case-*/case-events.jsonl,
+    approvals.jsonl, ledgers, run settlement.json) — never from process exit or UI state alone.
+  sessions: >-
+    L5 requires two DISTINCT agent-browser sessions (operator + R-SO via the T07 login surface);
+    the teeth prove the ladder fails if both users share one session identity.
+  fixture_exclusion: >-
+    The served bundle for the live ladder is the production build (no LocalContractAdapter — the
+    T08 bundle check is the standing proof) and the gateway runs the non-fixture build.
+
+teeth_from_plan:
+  - attack: "Stub the gateway to accept intents without calling the kernel."
+    expected: "The durable-state assertions fail at L1."
+  - attack: "Run L5 with both users in the same agent-browser session."
+    expected: "The ladder detects the shared session identity and fails. It never passes by accident."
+
+redesign_trigger_note: >-
+  agent-browser cannot observe a required signal (e.g. EventSource frames) — record in the
+  decision log and STOP for the operator before introducing any other browser driver.
+
+evidence_plan:
+  root: .agents/evidence/casework-live-wiring/T10/
+  per_run: screenshots + record/trace + HAR (agent-browser) + the durable-delta log per step
+  gate: just casework-e2e-live (added by T10; stack up -> bun e2e/run.ts --live -> stack down)

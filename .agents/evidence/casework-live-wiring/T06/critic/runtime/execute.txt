@@ -1,0 +1,4 @@
+# POST /api/intents EXECUTE_ITEM task_prepare (actor operator_local, client_cursor=01M3DCP9QBCVFCEGA7TV77FA6Y)
+{"intent_id":"critic-exec-1","success":true,"new_cursor":"01M3DCP9QBCVFCEGA7TV77FA6Y"}
+
+CURL_EXIT=0

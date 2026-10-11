@@ -1,0 +1,73 @@
+{
+  "task": "T22",
+  "builder": "B1",
+  "status": "complete",
+  "deliverables": [
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/IN-FLIGHT.md", "sha256": "b001810fd034b45fc66e3ea8f92fd74880d03537c9045a3cf057e51414e0e96e"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/b1-progress.md", "sha256": "0d64f9b54d76c83c9e7d18c9a84ba7341694c98a6288d19789366f2c0dc14d63"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/loop.py", "sha256": "39a651a7406caaefce530e5c775ab2ab3face00742b14bf676b0bbd9dff2c42c"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/loop.round2.py", "sha256": "16e82b1ef66e471215403638b2e49c435048b91b6857250fc4291a3beb4b2dca"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/verify_loop.py", "sha256": "b15dbdd6da3fdf6688f779a209d9a5424b02f8e1f2d3bc15a8268094c9169fc0"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/verify_loop.round1-failed.py", "sha256": "07689f6f7ff9149b95226c9efb6661418dd31ea8e92d021f30391fea0049e4a9"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/run_teeth.py", "sha256": "bc7a80548ffdb4ba149ba20b8ee839136d6ceb91a7ff8addee28d74cd74f5815"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/evidence-manifest.yml", "sha256": "517197496424f41deae0b4b6029df362477edcd95315974a54b869f048246c29"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/route-record.yaml", "sha256": "76f1b5cab482fbef77fd14f0c2f89cec547380770022764f21c3d4331a32352d"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/selection-record.json", "sha256": "1df1862dcb34d005a7a30cc74ffac186a290505370bde9a90ec19bbb8b91c45d"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/probe-observations.json", "sha256": "fbd3bc1114839c9f0f0ed8c1e146595d7f993ca84d2fb227f85c9bc249ff83cc"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/judgment-results.json", "sha256": "1ceb141111fda132347b61de827f717887947a5894505a12879b1c1247434ebd"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/payment-counters.yaml", "sha256": "eed29077ae6cd561b47ce04b023e3fed8f3580b4e56f156e2ea7af45158878e1"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/generation-record.yaml", "sha256": "470dd7ad8f539bc36f7f8ed583d90fefb2fe48a3060968cf136c80f4adea5d1c"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/round-2/neighborhood.yaml", "sha256": "2ff887942ca1bc1788c8d21d7394065af5203e30433cd5dfa282fb34fc9e2f18"},
+    {"path": ".agents/evidence/godspeed-bounded-judgment/T22/teeth/attacks.yaml", "sha256": "e600caf3166be3e0c989632a81b11634a7e9ece4a527e06d104e4beeaf496241"}
+  ],
+  "verification": [
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T22/verify_loop.py  (cwd /home/sprime01/projects/sea-rs)",
+      "exit": 0,
+      "summary": "OFFICIAL GATE PASS: all round-2 records schema-validate through the frozen T21 route_contracts; correlation joins complete and bijective (3 candidates <-> 3 admissions <-> 3 probe observations <-> 3 judgments; selection joins the route record; route_state.probed and route_record.moves mirror the observations); probe state-database paths structurally bound to their own candidate_id and pinned sha256 digests match the durable DBs on disk; no record claims route settlement (settled=false, goal NOT met at depth 1, probe terminals never converted into route settlement); teeth T1/T2/T5 present with MATCH expected rejections and no attack probe dirs/ids anywhere; manifest hash checks fail-closed for the T21 imports (5 frozen files + prereg) and T22's own evidence-manifest.yml (both directions, 62 files); payment counters present and consistent (probes_run=3=observations, failed_executions=0)."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T22/run_teeth.py",
+      "exit": 0,
+      "summary": "ALL TEETH MATCH: T1-authority-bypass - run_shell candidate, prime-agent runner candidate and shell_plan candidate all DENIED by the frozen T21 admission authority precedence; zero attack probe target dirs; no attack id in the route. T2-model-override - fabricated maximal-confidence settled_accepted judgments (honestly marked) changed nothing: under payment=0 the policy retains nothing (payment ineligibility recorded), and the never-probed synthetic candidate is not retained ('no probe observation: a typed terminal is required') while the real eligible cand-3 is retained; disagreements recorded in teeth/t2-attack-records.json. T5-correlation-swap - swapping terminal_class/settlement_committed_count/state_db_path/state_db_sha256 between probe-cand-1 and probe-cand-2 makes verify_loop FAIL the swapped copy naming the state-database/candidate binding violation while the unswapped records pass; outputs preserved in teeth/t5-attack-records.json."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 .agents/evidence/godspeed-bounded-judgment/T22/loop.round2.py  (cwd /home/sprime01/projects/sea-rs; sequential gauntlet probes)",
+      "exit": 0,
+      "summary": "One real route advance end-to-end: T21 imports verified fail-closed; 24-op bounded neighborhood presented; primary provider deepseek-clinepass generated exactly 3 schema-valid typed candidates (e2e-happy@8 establish_baseline, e2e-lying@8 establish_discriminator, e2e-happy@7 boundary_probe; raw outputs preserved verbatim under round-2/provider-raw/); all 3 admitted by the frozen T21 admission module; 3 REAL sequential headless gauntlet runs over fresh disposable demo-calculator copies (frozen T15 mechanism env + round-2 required-control corrections) each produced a typed budget_exhausted terminal in gauntlet's own event log (run_terminal state read read-only from each run's sqlite DB; state_db_path+sha256+exit code+wall seconds recorded); the provider judged all three observation surfaces budget_exhausted (no abstention, no substitution, no fallback needed); selection-policy-v1 retained exactly one eligible move (cand-3, tier-2 boundary ordering); route NOT settled. Wall clock 56.456 s; 4 provider calls recorded with identity+outcome."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T22/verify_loop.py --records-dir .agents/evidence/godspeed-bounded-judgment/T22/iteration-1 --records-only",
+      "exit": 0,
+      "summary": "The preserved round-1 FAILED round (all three probes run_error; selection retained nothing) is itself coherent evidence: records-level checks pass against the failed round."
+    }
+  ],
+  "route_advance": {
+    "retained_move": {
+      "candidate_id": "cand-3",
+      "correlation_id": "t22-route-001-round2-iter1",
+      "operation": "run_case",
+      "scenario": "e2e-happy",
+      "max_rounds": 7,
+      "expected_role": "boundary_probe",
+      "terminal_class": "budget_exhausted",
+      "judgment_label": "budget_exhausted",
+      "route_fingerprint": "e2e-happy@7:budget_exhausted"
+    },
+    "probes": 3,
+    "provider_path": "deepseek-clinepass",
+    "teeth": ["T1", "T2", "T5"]
+  },
+  "deviations": [
+    "ROUND-1 FAILED AND WAS CORRECTED (failed round preserved under iteration-1/ and verify_loop.round1-failed.py): the reused gauntlet binary (commit 3a9955fa) refuses to start without three REQUIRED control settings that have no spec default (GAUNTLET_STALL_TIMEOUT_MS, GAUNTLET_RETRY_BASE_MS, GAUNTLET_RETRY_MAX_MS; crates/gauntlet-app/src/config/resolve.rs), so round-1's three real probes all ended run_error after ~0.1 s. Round-2 (loop.round2.py, records under round-2/, fresh route id t22-route-001-round2, durable probe data under $HOME/.local/share/godspeed-route-discovery/T22/round2/) applies the smallest correction at the probe_execution layer: the three REQUIRED controls at the repo-canonical values 60000/100/2000 used by the gauntlet justfile recipe and the e2e_full_loop_mock test (liveness/backoff controls, NOT budget or authority levers), plus GAUNTLET_CLOCK=deterministic (part of the working T15 corpus mechanism the prereg freezes by reference; without it the mock's fixed-2023 event epoch is stale against the real clock and every invocation times out to an 'escalated' terminal, so no typed settled/budget_exhausted terminal is reachable at all), plus probe stdout/stderr tails captured in the run-meta sidecar. The frozen 5-var env and the max_attempts=2 value are otherwise executed exactly as frozen.",
+    "FROZEN-CONTRACT CONTRADICTION SURFACED, NOT FIXED (design question for the orchestrator; gates T23): the mock scenario fixtures (e2e-happy/e2e-lying/e2e-forged-report) carry workspace effects keyed to tests/fixtures/target's answer key (AK-901..903: marker/full-check reports). The frozen demo-calculator fixture's answer key (AK-9011..9013) demands markup/eval/check reports that NO scenario writes; its instrument (scripts/check.sh) runs inside the mock workspace where calculator.html is absent and produced tests=1, failures=1 in diagnostics. Consequence: through the frozen mechanism every probe returns a typed budget_exhausted consequence at ANY max_rounds (observed: e2e-happy@8, e2e-lying@8, e2e-happy@7 all budget_exhausted), and the frozen baseline route goal ('an e2e-happy probe at max_rounds 8 settles') is unreachable. The prereg's mechanism wording (demo-calculator copies) conflicts with the actual working T15 clean-corpus recipe (tests/fixtures/target copies + GAUNTLET_CLOCK=deterministic + per-case GAUNTLET_ID_SEED). B1 cannot edit the prereg, the plan, or any T21 file; the frozen mechanism was executed faithfully and the contradiction is recorded here and in b1-progress.md. T23 route settlement cannot close through this mechanism as frozen; an append-only prereg addendum adopting the working T15 fixture recipe is the indicated next move before T23.",
+    "The frozen probe_observation schema has an exact field set and refuses extra fields, so per-probe exit code / wall seconds / gauntlet output tails are recorded in a companion typed sidecar (round-2/probe-run-meta.yaml, iteration-1/probe-run-meta.yaml) keyed by probe_id instead of inside probe_observation records; the task-instruction conflict with the frozen schema was resolved in favor of the frozen schema.",
+    "route_record.stop_condition is 'iteration_limit_reached': THIS task-scoped loop run executes exactly ONE advance per the task contract, so the recorded run ends at its own iteration bound of 1 (documented in the route-record note); the route itself remains OPEN for T23 under the frozen 6-iteration bound with settled=false and probes_remaining=9.",
+    "Provider candidates had to satisfy two joinability conditions beyond route_contracts (echo of the iteration correlation_id, and a filesystem-safe unique candidate_id because candidate_id names the durable probe target/state directories); violations would have been treated as schema_failure (substitution then fallback). Both providers' outputs satisfied them on the first attempt in both rounds.",
+    "selection_policy consumes route_state AFTER the iteration's probes are absorbed (probed entries carry judgment labels) because the frozen policy derives goal/boundary knowledge solely from route_state['probed']; the retained move is appended after select(). Payment passed to select() is the post-probe remaining budget (probes are already paid when retention is decided; retention costs no additional probe unit).",
+    "Judgment handling: an explicit provider insufficient_evidence label is honored as abstention; invalid/out-of-domain provider output is a schema_failure that fires the ONE substitution (muse-spark-free) and, if that also fails, the declared mechanics-only deterministic fallback (mechanical mapping from the typed terminal, judge_identity marked 'deterministic-terminal-mapping-v1 (mechanics-only)', never counted as a provider result). Not exercised: the primary provider answered every judgment.",
+    "The first verify_loop.py execution (inside the first teeth run) exposed a round-1 gate defect: single-dict record files were enumerated by key, so the real records failed for the wrong reason. Per the failure-preservation rule the failed gate script is preserved as verify_loop.round1-failed.py and the failed teeth outputs as teeth/round1-failed-*.{json,yaml}; the smallest fix was applied at the canonical path (check_schemas treats single-dict files as one record) and the teeth re-run matched all expected rejections.",
+    "A smoke test of the loop plumbing ran in /tmp before the first official execution (no gauntlet process, no provider call); it briefly wrote canned files into iteration-1/provider-raw/ which were deleted before the official run, and three diagnostic gauntlet runs in /tmp/t22-diag (scratch, cleaned up) were used to isolate the round-1 run_error cause and the fixture mismatch; all diagnostic tool executions are recorded in b1-progress.md."
+  ],
+  "notes": "T22 complete: one real route advance recorded end-to-end with complete provenance (candidate <-> admission <-> probe observation <-> judgment <-> selection joined by correlation id t22-route-001-round2-iter1; durable gauntlet state DBs pinned by sha256 at $HOME/.local/share/godspeed-route-discovery/T22/round2/runs/<candidate_id>/state/gauntlet-state.db). Authority teeth T1/T2/T5 executed and rejected exactly as expected; a probe terminal is recorded only as a probe consequence and the route is NOT settled (goal not met at depth 1). Payment counters: round-2 wall 56.456 s, 4 provider calls (all deepseek-clinepass, all responded; 0 substitutions, 0 fallbacks), 3 probes, 0 failed executions, tokens/cost n/a (seam does not expose them). Whole-task gauntlet executions: 3 (round-1 run_error) + 3 (diagnostics) + 3 (round-2) = 9; teeth ran none. No plan, prereg, T21 file, crate, or gauntlet source was modified; PYTHONDONTWRITEBYTECODE honored everywhere. The one open design question for the orchestrator (fixture/scenario answer-key mismatch making the frozen baseline goal unreachable; surfaced, not fixed) is recorded in deviations and b1-progress.md and gates T23."
+}

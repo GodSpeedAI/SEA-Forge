@@ -1,0 +1,58 @@
+# =============================================================================
+# T16 PROVIDER-SUBSTITUTION ADDENDUM (append-only; operator-directed)
+# =============================================================================
+schema: godspeed-bounded-judgment.t16-provider-substitution
+created_utc: "2026-09-18"
+parent_prereg:
+  path: ".agents/preregistrations/godspeed-bounded-judgment-T16.prereg.yaml"
+  sha256: "d89bea890d8d55ee1f9dc6c44e2bc193e54ac06e993b3465427d556ffc4555f0"
+  unchanged: true
+original_provider_A:
+  identity: "codex exec --skip-git-repo-check (OpenAI-backed codex CLI)"
+  original_round_result: "provider_error 9/9 rows — usage_limit_reached (plan quota)"
+  reason_unavailable: "transient provider-plan quota exhaustion (429 usage_limit_reached; codex indicated ~11:38 AM reset)"
+  evidence_preserved: "T16/round-1/provider-raw-results.json + remeasure-report.yml (mechanical B superseded by D-2026-09-18-T16-02)"
+replacement_provider_A:
+  identity: "opencode run -m cline-pass/cline-pass/deepseek-v4.1-flash (ClinePass API, discovered from 'opencode models'; auth present in ~/.local/share/opencode/auth.json)"
+  model_identifier: "cline-pass/cline-pass/deepseek-v4.1-flash (DeepSeek 4.1 Flash)"
+  identity_confidence: >-
+    The provider banner reports 'cline-pass/deepseek-v4.1-flash' — the resolved
+    alias. ClinePass does not expose an independently verifiable backend model
+    identity beyond that alias; recorded honestly, no stronger provenance
+    claimed.
+  smoke_test: "structured bounded-contract JSON returned (answer/confidence/distribution/reason), 2026-09-18"
+replacement_provider_B: "prime-agent -p --offline (UNCHANGED; smoke test 2026-09-18: quota no longer blocking, structured JSON returned)"
+material_independence_check:
+  finding: >-
+    DeepSeek 4.1 Flash (ClinePass) and Prime-Agent differ in harness and, as
+    far as observable, in model family (deepseek-v4.1 vs prime-agent's own
+    configured backend). Prime-Agent's backend model identity is not fully
+    observable from this seam. No evidence shows a shared backend; no evidence
+    proves one either beyond the observable identities. Two-provider
+    comparison preserved WITH this caveat.
+unchanged:
+  corpus: ".agents/preregistrations/godspeed-bounded-judgment-T15.corpus-manifest.yml (b8550ad5...)"
+  DecisionSurface: "settlement-outcome prediction, t16-settlement-outcome/v1"
+  answer_domain: [settled, not_settled, insufficient_evidence]
+  semantic_basis: "record-contract terms; DomainForge authority untouched"
+  evaluation_basis: "this measurement's evaluation layer"
+  deterministic_baseline: "face-value rule, byte-identical"
+  metrics: "byte-identical"
+  decision_rule: "A-E frozen rule, byte-identical"
+  teeth: "unchanged incl. leakage/shuffle/degenerate/invalid/baseline-triviality/attribution"
+  evaluation_procedure: "unchanged"
+substitution_effect: >-
+  provider identity changes; the governing question and evaluation procedure
+  do not. The T16 result will apply to DeepSeek-4.1-Flash-via-ClinePass +
+  Prime-Agent + this frozen corpus + this DecisionSurface + this bounded
+  contract — NOT to Codex judgment quality, and providers are never merged
+  into an anonymous 'LLM' category.
+harness_delta:
+  round1_preserved: ".agents/evidence/godspeed-bounded-judgment/T16/run_remeasure.round1-codex-quota.py"
+  change: "provider A invocation becomes the ClinePass/DeepSeek opencode call; parsing, scoring, baseline, leakage assertions, decision rule untouched"
+  round2_sha256: "b8bcf348a2aefc15ccdeaf52cdcc4936ad5dab73d8499bb968383b890cbbb9fd"
+cost_record:
+  access_mode: "clinepass_free (current operating condition, not an architectural property)"
+  observed_cost: "free tier at time of run"
+  quota_behavior: "not yet observed under load; will be recorded if it surfaces"
+  latency: "recorded per call in raw results"

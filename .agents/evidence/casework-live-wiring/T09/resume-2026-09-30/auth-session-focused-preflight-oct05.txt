@@ -1,0 +1,9 @@
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.3Gi       183Mi       156Mi       2.7Gi       2.5Gi
+Swap:           12Gi       7.3Gi       4.7Gi
+Filename				Type		Size		Used		Priority
+/dev/sdc                                partition	12582912	7619548		-2
+    PID    PPID STAT   RSS COMMAND
+      1       0 Ss   19128 codex
+      2       1 S     3476 bash
+      5       2 R     3988 ps

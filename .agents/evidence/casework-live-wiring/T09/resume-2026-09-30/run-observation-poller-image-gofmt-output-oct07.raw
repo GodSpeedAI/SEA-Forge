@@ -1,0 +1,20 @@
+diff internal/server/run_observation_manager_retained_image_test.go.orig internal/server/run_observation_manager_retained_image_test.go
+--- internal/server/run_observation_manager_retained_image_test.go.orig
++++ internal/server/run_observation_manager_retained_image_test.go
+@@ -258,11 +258,11 @@
+ 	key := retainedTestKey()
+ 	state := retainedTestState(key, "opaque-A")
+ 	cases := []struct {
+-		name      string
+-		phase     runObservationPollerPhase
+-		init      runObservationInitializerResult
+-		imageKey  runObservationPollerKey
+-		current   *runObservationRetainedState
++		name     string
++		phase    runObservationPollerPhase
++		init     runObservationInitializerResult
++		imageKey runObservationPollerKey
++		current  *runObservationRetainedState
+ 	}{
+ 		{
+ 			name: "invalid_phase", phase: runObservationPollerPhase(4),

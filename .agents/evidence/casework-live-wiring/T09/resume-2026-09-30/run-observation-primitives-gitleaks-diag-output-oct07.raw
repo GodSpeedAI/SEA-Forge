@@ -1,0 +1,7 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "gitleaks" on /home/sprime01/projects/sea-rs
+6:35PM INF 516 commits scanned.
+6:35PM INF scanned ~84293173 bytes (84.29 MB) in 43.3s
+6:35PM WRN leaks found: 1
+Error: error running script "gitleaks" in Devbox: exit status 1
+

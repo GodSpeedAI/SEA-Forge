@@ -1,0 +1,57 @@
+bun install v1.4.0 (34cbb9a40)
+
++ @types/react@19.3.0
++ @types/react-dom@19.3.0
++ @types/three@0.186.0
++ @vitejs/plugin-react@5.2.0
++ bun-types@1.4.2
++ typescript@5.9.3
++ vite@7.3.6
++ @fontsource/ibm-plex-mono@5.3.0
++ @fontsource/inter@5.3.0
++ react@19.3.0
++ react-dom@19.3.0
++ three@0.186.0
+
+83 packages installed [12.78s]
+$ tsc --noEmit
+bun test v1.4.0 (34cbb9a40)
+
+src/app/live.test.ts:
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:38:18)
+
+[event stream] warn: stream disconnected
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:70:18)
+
+[event stream] warn: stream disconnected
+      at error (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:185:64)
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:190:7)
+
+[event stream] warn: stream disconnected
+      at error (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:185:64)
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/app/live.test.ts:204:7)
+
+
+src/ui/journeys.test.tsx:
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:407:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:407:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:407:23)
+
+[event stream] warn: event stream status 503: gateway broken
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/adapters/http/httpCaseworkAdapter.ts:407:23)
+
+[event stream] warn: connection interrupted
+      at <anonymous> (/home/sprime01/projects/sea-rs-t12-fresh/apps/godspeed-cognitive-ui/src/ui/journeys.test.tsx:383:18)
+
+
+ 373 pass
+ 0 fail
+ 1831 expect() calls
+Ran 373 tests across 35 files. [10.98s]
+EXIT 0 dur=38s

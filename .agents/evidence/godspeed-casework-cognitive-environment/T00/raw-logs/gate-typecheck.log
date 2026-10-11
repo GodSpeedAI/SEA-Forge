@@ -1,0 +1,103 @@
+cargo check --workspace --all-targets --locked
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Checking sea-forge-core v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-core)
+    Checking sea-forge-ledger v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-ledger)
+    Checking sea-forge-domainforge v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-domainforge)
+    Checking sea-forge-authority v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-authority)
+    Checking sea-forge-sandbox v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-sandbox)
+    Checking sea-forge-settlement v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-settlement)
+    Checking sea-forge-domain v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-domain)
+    Checking sea-forge-planner v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-planner)
+    Checking sea-forge-capability v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-capability)
+    Checking sea-forge-evidence v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-evidence)
+    Checking sea-forge-self-model v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-self-model)
+    Checking sea-forge-spec-pipeline v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-spec-pipeline)
+    Checking sea-forge-runtime v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-runtime)
+    Checking sea-forge-case-runner v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-case-runner)
+    Checking sea-forge-thoth v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-thoth)
+    Checking sea-forge-extension v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-extension)
+    Checking sea-forge-trace v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-trace)
+    Checking sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-agent)
+    Checking sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-server)
+    Checking sea-forge-cell v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-cell)
+    Checking sea-forge-artifact-ip v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-artifact-ip)
+    Checking sea-forge-cli v0.1.0 (/home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/crates/sea-forge-cli)
+    Finished `dev` profile [unoptimized] target(s) in 36.56s
+	Command being timed: "just typecheck"
+	User time (seconds): 29.49
+	System time (seconds): 6.72
+	Percent of CPU this job got: 98%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:36.64
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 500240
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 10
+	Minor (reclaiming a frame) page faults: 1802652
+	Voluntary context switches: 2555
+	Involuntary context switches: 604
+	Swaps: 0
+	File system inputs: 45576
+	File system outputs: 23744
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

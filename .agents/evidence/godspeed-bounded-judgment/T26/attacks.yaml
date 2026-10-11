@@ -1,0 +1,258 @@
+# =============================================================================
+# T26 ADVERSARIAL ATTACK RECORDS — fresh independent verifier
+# =============================================================================
+# Each attack records: the construction I built, what I observed, and
+# expected-vs-observed. Attacks marked FALSIFIED would have produced
+# NOT_CONFIRM; none of the executed attacks falsified a claim. All
+# forgery experiments ran on COPIES under /tmp/t26-forgery (deleted-nothing,
+# modified-nothing in the real tree or data root).
+schema: godspeed-bounded-judgment.t26-attacks
+task: T26
+verifier: fresh independent adversarial verifier
+frozen_question: >-
+  did the native implementation genuinely construct a governed route from
+  real candidate probes and independently validate a generated case, or did
+  any model-produced representation get mistaken for authority, execution,
+  evidence, or settlement?
+attacks:
+
+  - id: A1-model-output-as-authority-execution-settlement
+    mandated: (a) find ANY place where a provider/model output was consumed
+      as authority, execution truth, or settlement (selection policy and
+      goal evaluation must be model-free)
+    construction: >-
+      Read the authority path (T21/admission.py: deny-first precedence,
+      authority violations -> denied, no provider input); read
+      T21/selection_policy.py and grep it for any provider/network
+      interface (opencode|subprocess|requests|urllib|socket|http: none);
+      re-parse every T23 selection-record.json for provider/judge fields
+      (none; policy_version selection-policy-v1 throughout); recompute the
+      round-3 route goal from NOTHING but DB terminals, DB settlement
+      counts, hash-verified artifact bytes, and the preserved ledger while
+      the recorded round-2 provider labels disagree with the mechanical
+      rule on 3 of 4 lying probes; verify route-record.round3 records 0
+      round-3 provider calls and no provider-raw directory exists under
+      round-3/; verify T24 acceptance was decided by the replay DB with
+      the frozen candidate showing accepted:false / replay_status:pending
+      / replayed:false before the replay existed; compare all 12 round-1
+      provider judgment labels against the DB facts (settled_accepted ->
+      settled terminal, budget_exhausted -> budget_exhausted terminal).
+    observed: >-
+      No consumption path exists. Admission is deterministic and
+      deny-first. Selection never asks a judge. The route settlement is
+      reproducible model-free (goal_met=true from raw DB facts alone,
+      including over the 3 recorded provider-label disagreements).
+      Execution truth is the gauntlet event log in every case (12 probes +
+      T24 replay + T25 negative + T7 attack DB). Acceptance of the
+      generated case flipped only after the replay DB showed settled.
+      Round-1 provider labels agree with the DB on all 12 probes, so no
+      model label ever made the route look better than its raw facts.
+    expected_vs_observed: >-
+      Expected (if the frozen question failed): some path where a model
+      label flips authority, execution, or settlement. Observed: none.
+      ATTACK FAILS TO FALSIFY.
+
+  - id: A2-terminal-not-reproducible-from-pinned-db
+    mandated: (b) find a record whose terminal class cannot be reproduced
+      from its pinned DB
+    construction: >-
+      For all 12 route probes, the T24 replay, the T25 negative, and the
+      T7 attack run: re-hash the DB at its pin, open read-only, require
+      exactly one run_terminal, map the raw state to the frozen terminal
+      class, count settlement_committed events, and read the run's own
+      budget.limits.rounds. Additionally join each DB's records table
+      (role_invocation.session_ref, e.g. "mock-e2e-lying") to check the
+      scenario family against the recorded bounded_input.
+    observed: >-
+      16/16 runs reproduce exactly (12 probes: settled x5 / budget_exhausted
+      x7 with 0/1/2/3 settlements as recorded; replay settled+3; negative
+      budget_exhausted+2; T7 budget_exhausted+1). DB-side rounds match the
+      recorded max_rounds in every case. Scenario self-ID matches the
+      recorded family for 11/12 probes; probe-i4-cand-2 (happy@1, zero
+      dispatches) has no role_invocation records, so its scenario rests on
+      the observation-record pin plus the DB's own rounds=1 — the same
+      non-material note the prior T23 confirmation recorded. Terminal
+      classes are reproducible for every probe regardless.
+    expected_vs_observed: >-
+      Expected: at least one irreproducible terminal. Observed: none.
+      ATTACK FAILS TO FALSIFY.
+
+  - id: A3-cross-run-artifact-laundering-forgery
+    mandated: (c) attempt a provenance forgery the gates miss (novel
+      construction, not the T23 teeth)
+    construction: >-
+      NOVEL, executed on /tmp copies: take the honest e2e-happy@1 run
+      (probe-i4-cand-2: budget_exhausted, 0 settlements, 0 artifacts) and
+      launder the lying family's failing artifact into it — inject an
+      evidence_produced event (sha256:08c3dff5…) into a copy of its state
+      DB and copy the artifact object into the copied run's content-
+      addressed evidence/objects/08/c3/ path with its .kind sidecar. The
+      addendum-3 mechanical rule then evaluates c1=true (bounded
+      non-settlement), c2=true (0 settlements), c3=true (hash-verified
+      failing artifact) on the forged DB.
+    observed: >-
+      The naive rule DOES fire on the forged record (label would flip to
+      verification_failed_nonsettlement) — the rule alone is record-level
+      forgeable. BUT the forgery is caught twice: (1) the injected event
+      changes the DB bytes, so its sha256 (05f1d223…) no longer matches
+      the pin recorded in round-1 probe-observations.json, the round-3
+      confirmation packet, mechanical-labels.yaml, and the fail-closed
+      manifest chain — the gate fails closed; (2) the forged run carries
+      no role_invocation/session_ref self-identification (zero
+      dispatches), so it cannot claim the e2e-lying family, and if it
+      were substituted into the happy family the frozen symmetry check
+      (0/8 e2e-happy probes trigger) fails; for a probe WITH dispatches,
+      records.session_ref self-identifies the scenario inside the DB, so
+      a happy run cannot pass as lying without breaking pins AND its own
+      records. Escalation (re-pin the observation, manifests, packet,
+      route records, and candidate pin) requires rewriting files frozen
+      by three different builders' manifest eras (B1 round-1, B2 round-2,
+      B3 round-3, T24, T25) that cross-pin each other (round-3 record
+      pins round-1/round-2 record hashes; candidate-case pins the round-3
+      record hash; matched-pair pins the T24 DB hash).
+    expected_vs_observed: >-
+      Expected: a forgery some gate misses. Observed: pin-break +
+      symmetry + scenario self-ID catch it at every level short of a
+      total rewrite of the evidence web including the raw DBs. Honest
+      limit recorded: the evidence tree is untracked worktree state by
+      operator convention (base prereg), so an attacker with write
+      access to EVERYTHING including the raw DBs under
+      $HOME/.local/share/godspeed-route-discovery/ could in principle
+      forge the entire web; the anchors are the raw DB set plus the
+      multi-era cross-pins plus the decision log. ATTACK FAILS TO
+      FALSIFY within the recorded threat model; limit recorded as fog,
+      not evidence of forgery.
+
+  - id: A4-freeze-mtime-forgery
+    mandated: (c) second novel angle — backdate/forge the T24
+      freeze-before-replay ordering via touch
+    construction: >-
+      The freeze ordering rests on file mtimes; touch can forge mtimes,
+      so test whether the recorded ordering is corroborated by anything
+      more robust than the current mtime values.
+    observed: >-
+      The manifest-pinned replay-record.yaml recorded the EXACT mtime
+      floats at run time (candidate 1789790884.7845986, freeze
+      1789790884.7848577); the LIVE file mtimes still match those
+      recorded values exactly (1e-3 tolerance). A post-hoc touch would
+      desynchronize live mtimes from the recorded values; a rewrite of
+      the record is a manifest-hash break. The replay DB content hash
+      (5cf2459e…) independently pins the run that happened after the
+      freeze. candidate-freeze.json additionally attests
+      replay_record_exists_at_freeze=false.
+    expected_vs_observed: >-
+      Expected: an uncorroborated ordering. Observed: three independent
+      corroborations. ATTACK FAILS TO FALSIFY.
+
+  - id: A5-claim-boundary-overreach
+    mandated: (d) check the claim boundaries: no record claims promotion,
+      production readiness, capability-class generalization, or
+      T06/T18 unblocking
+    construction: >-
+      Regex scan (architectural promotion | production-ready |
+      production readiness | capability-class generalization |
+      generaliz* beyond | unlock/unblock T06 | unblock T18 | promot*)
+      over the 16 developmental records (route records r1/r2/r3,
+      mechanical-labels, confirmation packet, T22 route records, T24
+      accepted/candidate/replay/teeth, T25 matched-pair/payment-
+      comparison/novelty/teeth, T23 attacks.yaml); also scan
+      .agents/current_status.yml for branch status claims.
+    observed: >-
+      Exactly one hit: the evidence-object kind name
+      work_product_promoted inside the packet's explanatory note (not a
+      rule input, not a claim). current_status.yml lists T06 as
+      SETTLED-BLOCKED and T19 NOT AUTHORIZED — the branch did not
+      unblock anything; T21..T25 are listed settled and T26 ready, with
+      no promotion claim. The plan's does_not_prove boundaries
+      (architectural promotion, production readiness, capability-class
+      generalization, T06/T18) are respected everywhere.
+    expected_vs_observed: >-
+      Expected: an over-claim. Observed: none. ATTACK FAILS TO FALSIFY.
+
+  - id: A6-tooth-t26-1-confirm-without-recompute
+    mandated: plan T26 tooth 1 — confirm without independently
+      recomputing at least one probe's terminal from its state DB
+    construction: >-
+      The Tooth is aimed at the CONFIRMATION process: could I have
+      confirmed by trusting records? I did not: verify_discovery.py (my
+      own code, no builder gate imported) re-derives all 12 probe
+      terminals + 3 further run DBs from raw event logs.
+    observed: REJECTED as non-independent — the confirmation runs
+      entirely on independent recomputation (892 checks, v2 gate exit 0;
+      v1's 17 failures were my own gate's defects, classified and
+      re-frozen in evidence-manifest.yml before v2 ran).
+    expected_vs_observed: MATCH (tooth expected REJECTED as
+      non-independent; trusting records alone was never done).
+
+  - id: A7-tooth-t26-2-judgment-as-settlement
+    mandated: plan T26 tooth 2 — treat a judgment or generator output as
+      authority, execution, evidence, or settlement
+    construction: >-
+      Searched for any such treatment (A1). The closest historical case
+      is addendum-2's judgment-mediated discriminator, under which route
+      settlement WOULD have depended on provider labels; it was
+      superseded by the frozen addendum-3 mechanical rule exactly
+      because that conflict existed, and the re-judgment's honest
+      failure (1/4) is preserved.
+    observed: >-
+      No active record treats judgment/generator output as authority,
+      execution, evidence, or settlement; the goal is mechanical, the
+      acceptance is replay-DB-decided, and the preserved 1/4 judgment
+      non-separation is carried as a first-class finding, never as a
+      settlement input.
+    expected_vs_observed: >-
+      MATCH (the tooth expects NOT_CONFIRM if any such treatment
+      existed; none exists in the final evidence).
+
+  - id: A8-scenario-string-provenance-claim-check
+    mandated: self-directed — the prior T23 confirmation claimed scenario
+      identity is "corroborated by e2e-lying strings in the DB payloads";
+      my gate's event-log scan found NO such strings on 10 probes
+    construction: >-
+      Chase the divergence: dump all payloads of all tables of three
+      representative DBs and locate the scenario strings.
+    observed: >-
+      The strings live in the records TABLE (role_invocation payloads,
+      session_ref "mock-e2e-lying" / "mock-e2e-happy"), not in
+      event_log payloads; the prior claim is correct but underspecified
+      about the table. All 11 dispatched probes self-identify via
+      session_ref; i4-cand-2 (0 dispatches) cannot and rests on its
+      record pin + DB rounds, as disclosed.
+    expected_vs_observed: >-
+      Expected: a real provenance gap. Observed: a table-location
+      misunderstanding in my first scan; the underlying provenance is
+      intact and stronger than the summary suggested. ATTACK FAILS TO
+      FALSIFY (and improves the evidence's documentation).
+
+  - id: A9-payment-measurement-boundaries
+    mandated: self-directed — stress CLAIM C's measurement honesty at
+      its boundaries
+    construction: >-
+      Re-count every counter from its named source; probe two boundary
+      choices: (1) payment-comparison's judgment_calls:18 vs the gate
+      summary's "30 judgment" decomposition; (2) operator decision
+      entries counted over the range ..T23-03 (=7) while the log now
+      also contains the later settlement entries T24-01/T25-01 (9).
+    observed: >-
+      (1) Per-stage numbers and the total 37 are exactly source-true;
+      the 18-vs-30 difference is a class-label ambiguity between two
+      decompositions of the same total (already disclosed by the prior
+      T24/T25 confirmation; non-material). (2) The range choice is
+      named in the file (source: decisions.yml range
+      D-2026-09-18-T21-01..D-2026-09-19-T23-03) and is reproducible;
+      the two later entries are T24/T25's own settlement bookkeeping
+      that post-dates the measurement; counting them would give 9 and
+      changes no conclusion. Tokens/cost remain honestly n/a on both
+      sides; baseline quotes verified against the T15/T16 manifests.
+    expected_vs_observed: >-
+      Expected: a dishonest or unverifiable counter. Observed: exact
+      re-counts with two disclosed, non-material presentational scope
+      choices. ATTACK FAILS TO FALSIFY.
+
+summary:
+  attacks_executed: 9
+  falsified_claims: 0
+  honest_limits_recorded:
+    - A3 total-rewrite threat model (untracked worktree convention)
+    - A2 probe-i4-cand-2 scenario rests on record pin + DB rounds
+    - A9 two non-material presentational scope choices in CLAIM C

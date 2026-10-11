@@ -1,0 +1,172 @@
+# Behavioral IR: CJ09 Evaluate, Settle, and Audit Outcomes
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ09"
+  slug: "evaluate_settle_and_audit_outcomes"
+  title: "Evaluate, Settle, and Audit Outcomes"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "epistemic"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - execution_terminated
+    - claim_or_failure_needs_explanation
+    - criteria_settlement_required
+    - assurance_label_proof_requested
+    - audit_inspection_initiated
+  actor_roles:
+    - Operator
+    - CaseOwner
+    - Auditor
+    - Approver
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - run_episode_id
+      - immutable_case_plan_criteria
+      - authority_and_trace_records
+      - disclosure_boundary
+    context_scope: "Criteria origins, trace records, output artifacts, witness receipts, audit logs"
+
+  IS2_preflight:
+    checks:
+      - run_record_and_artifacts_untainted_and_hash_verified
+      - plan_criteria_origins_resolvable
+      - actor_holds_audit_or_settlement_authority
+      - actor_independent_of_executor_if_settling_criteria
+    readiness_classification:
+      expected: "ready | evidence_missing | self_certification_detected"
+      failure_action: "reject_self_certification_and_require_independent_evaluator"
+
+  IS3_authority_resolution:
+    required_role: "Auditor"
+    alternate_role: "CaseOwner"
+    grant_scope: "evidence_evaluation_and_settlement"
+    separation_of_duty: "CRITICAL: Executor cannot settle its own work (anti-self-certification). Settlement requires independent reviewer or deterministic rule evaluator."
+    approval:
+      status: "implemented"
+      note: "Explicit role separation checks enforced in settlement evaluation"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "settlement.evaluate"
+      invoked_capabilities:
+        - "run.get"
+        - "evidence_and_claim_explanation"
+        - "artifact_and_transcript_verification"
+        - "settlement_evaluation"
+        - "declaration_weighting"
+        - "provenance_checks"
+        - "ledger_inclusion_and_consistency_proof"
+        - "deterministic_replay"
+        - "audit_search"
+        - "disclosure_history"
+        - "source_record_access"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / settlement engine"
+    bounds:
+      evaluation_scope: "criteria_vs_evidence"
+      mutation_style: "append_settlement_record"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "execution_evidence_collected"
+      to: "outcome_settled"
+      alternative_states:
+        - "settlement_accepted"
+        - "settlement_rejected"
+        - "settlement_escalated"
+        - "evidence_insufficient_unsettled"
+        - "assurance_degraded"
+    artifacts:
+      - "immutable_settlement_record"
+      - "criteria_to_evidence_matrix"
+      - "declaration_standing_record"
+      - "witness_receipt"
+      - "replay_consistency_proof"
+      - "audit_finding_packet"
+    mutation_rule: "Settlement appended to ledger; historical execution record remains immutable regardless of pass/fail"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "criterion_evaluations_with_pass_fail_evidence"
+        evidence_class: "observed"
+      - item: "artifact_and_transcript_hashes"
+        evidence_class: "observed"
+      - item: "witness_receipt_or_merkle_path"
+        evidence_class: "observed"
+      - item: "actor_independence_proof"
+        evidence_class: "observed"
+    integrity_verification:
+      execution_vs_settlement_separated: true
+      unbroken_provenance_chain_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "Every outcome or assurance claim resolves to attributable, integrity-checked evidence and an independent settlement or explicit unavailability; execution termination remains separately visible."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "settlement_accepted"
+        - "settlement_rejected"
+        - "settlement_escalated"
+        - "settlement_unavailable"
+    settlement_vs_termination: "Execution exit code 0 paired with failed criteria results in SETTLEMENT REJECTED. Settlement is sovereign over termination."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "promote_settled_capability"
+        target_journey: "CJ10"
+        condition: "outcome == settlement_accepted"
+      - id: "mature_governed_artifact"
+        target_journey: "CJ11"
+        condition: "outcome == settlement_accepted"
+      - id: "retry_or_replan_case"
+        target_journey: "CJ05"
+        condition: "outcome == settlement_rejected"
+      - id: "obtain_fresh_evidence"
+        target_journey: "CJ07"
+        condition: "outcome == settlement_unavailable"
+    blocked_affordances:
+      - id: "promote_rejected_work_to_capability"
+        target_journey: "CJ10"
+        reason: "no_settlement_access"
+        explanation: "Rejected or unsettled work cannot be promoted to reusable capability"
+
+recovery_paths:
+  - condition: "self_certification_attempt"
+    remedy: "Exclude executor declarations; require independent reviewer settlement"
+  - condition: "mismatched_criteria_or_broken_origins"
+    remedy: "Refuse settlement; mark criteria unverified; require plan revision"
+  - condition: "ledger_inconsistency"
+    remedy: "Replay ledger events deterministically to verify inclusion and ordering"
+
+unresolved_bindings:
+  - component: "cross_family_audit_search_ui"
+    status: "unresolved_in_source"
+    impact: "Cross-family audit search specified in epic; CLI provides log search while UI has item-level drilldown"

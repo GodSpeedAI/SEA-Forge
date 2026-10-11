@@ -1,0 +1,36 @@
+schema: godspeed-bounded-judgment.t24-evidence-manifest
+task: T24
+builder: B1
+frozen_utc: '2026-09-19T04:14:36.909186+00:00'
+note: frozen BEFORE the FINAL gate run; every .py/.yaml/.json/.txt artifact of T24 is pinned; no pinned file is
+  ever modified afterwards (corrections use round-2 names); b1-result.json and the .md notes are authored after
+  the gate and are deliberately not pinned
+files:
+- path: accepted-case.yaml
+  sha256: 02927ee42a4bf1858083a9179b4d812c2313657fac6a503cae8578643010ed58
+- path: candidate-case.yaml
+  sha256: 6bf2610c12a609cee98d48ad571baf2fc58d383232eb72bdb9275b245ea25977
+- path: candidate-freeze.json
+  sha256: fc4b9839b30e754e4c4b70fb18723d0d1ad7658fd2b54ac71799ca910c8a0ebc
+- path: generate_case.py
+  sha256: 5539538721f9fae64ea5a2576889d9d597327a615815998eb221f82ebd0cdb80
+- path: payment-counters.yaml
+  sha256: eb5867e0931935b82190bc03a759f0da6744da23c23e6d8cb783081cb53535c9
+- path: replay-record.yaml
+  sha256: 4717856e1c6c3afe57cb681c50636cf7d777ce92659490f08b11ad1eadc83430
+- path: replay_case.py
+  sha256: 9249900cb315195c860896e6ec4c2b7935ca1fe316f54774990c09ada5678abc
+- path: run_tooth.py
+  sha256: 7787e5afb11c66dfa6ae44db7629dc24abfb4588731caf5992c3f371a2f17b55
+- path: teeth.yaml
+  sha256: 1a34c5dcdd35e21e51b37e147f55c2250f643fcdddf401574afa895c7d0e1ef7
+- path: verify_case.py
+  sha256: 3c30ba028d00e722497a955d2c023b33c449b679447afa224658a041551ca35e
+- path: teeth/t7-attack-record.json
+  sha256: 599e5f8d7da801adb0ee70e1366e2f3e72797a02917818d808f74ed77faf9e68
+- path: teeth/t7-attack-rejected-case.yaml
+  sha256: a031f57d2718c9b8c78ba0d7072ca4d3fe2e90758609dbc96ff71880c3893cf4
+- path: provider-raw/derivation-primary.prompt.txt
+  sha256: 925e374f06b67f4ec2b6529597cb280d906e8adc0cf9ad86db72bce834c46421
+- path: provider-raw/derivation-primary.raw.txt
+  sha256: d772d138f4bfd9306ca0a0527570374eee69d1bdafbee65e2f09a26d0fc14871

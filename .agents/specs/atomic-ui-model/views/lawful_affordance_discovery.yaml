@@ -1,0 +1,121 @@
+# Atomic UI View: lawful_affordance_discovery
+# Upstream Behavioral Source: CJ02 Discover Lawful Affordances
+
+view:
+  id: lawful_affordance_discovery
+  purpose: Enable epistemic discovery, Thoth inquiry, and authority-burden preview across capabilities, assets, and providers.
+
+sources:
+  journey: CJ02
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    cell_context: persistent
+    actor_identity: persistent
+    active_inquiry: persistent_during_session
+
+regions:
+  - id: inquiry_bar
+    responsibility: capture_epistemic_questions_and_search_terms
+  - id: catalog_browser
+    responsibility: project_and_filter_available_assets_and_capabilities
+  - id: asset_inspector
+    responsibility: inspect_asset_details_dependencies_and_freshness
+  - id: authority_preview_panel
+    responsibility: preview_authority_burden_and_explain_denials
+  - id: discovery_actions
+    responsibility: present_derived_next_affordances
+
+elements:
+  # Inquiry Region
+  - id: thoth_query_input
+    primitive: input
+    region: inquiry_bar
+    binds: { field: query_text }
+
+  - id: disclosure_scope_choice
+    primitive: choice
+    region: inquiry_bar
+    binds: { field: disclosure_scope }
+
+  - id: submit_inquiry_action
+    primitive: action
+    region: inquiry_bar
+    semantic_action: thoth.ask
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  # Catalog Browser Region
+  - id: asset_collection
+    primitive: collection
+    region: catalog_browser
+    binds: { entity: operating_assets }
+
+  - id: asset_category_tree
+    primitive: tree
+    region: catalog_browser
+    binds: { entity: asset_categories }
+
+  # Asset Inspector Region
+  - id: selected_asset_identity
+    primitive: identity
+    region: asset_inspector
+    binds: { entity: selected_asset }
+
+  - id: asset_availability_status
+    primitive: status
+    region: asset_inspector
+    binds: { field: operational_availability }
+
+  - id: asset_evidence_receipt
+    primitive: evidence_item
+    region: asset_inspector
+    binds: { field: probe_evidence }
+
+  - id: probe_endpoint_action
+    primitive: action
+    region: asset_inspector
+    semantic_action: probe_availability
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  # Authority Preview Region
+  - id: authority_burden_preview
+    primitive: comparison
+    region: authority_preview_panel
+    binds: { field: requested_vs_permitted_scope }
+
+  - id: denial_explanation_message
+    primitive: message
+    region: authority_preview_panel
+    binds: { field: policy_denial_reason }
+
+  # Discovery Actions Region
+  - id: select_asset_action
+    primitive: action
+    region: discovery_actions
+    semantic_action: select_asset_or_provider
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  - id: form_case_from_asset_action
+    primitive: action
+    region: discovery_actions
+    semantic_action: form_or_revise_governed_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: request_authority_escalation_action
+    primitive: action
+    region: discovery_actions
+    semantic_action: request_approval_or_authority
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: inquiry_or_catalog_probe_in_progress }
+  ready: { when: affordances_and_assets_projected }
+  empty: { when: zero_matching_assets_found }
+  blocked: { when: disclosure_scope_restricted }
+  error: { when: probe_connection_failed }

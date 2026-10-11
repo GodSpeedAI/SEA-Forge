@@ -25,7 +25,7 @@ Add the `!` either after the type or after the scope.
 
 - [ ] `just check-fast` passed locally
 - [ ] `just ci` passed locally (or CI is green on this PR)
-- [ ] `just context-check` passed (CURRENT_STATUS.md updated if project files changed)
+- [ ] `just status-check` passed (CURRENT_STATUS.yaml and CURRENT_STATUS.md updated if project files changed)
 - [ ] Tests cover the new behavior, or N/A explained
 
 ## Risk and rollback

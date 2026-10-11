@@ -1,0 +1,7 @@
+Command: GOMAXPROCS=2 GOFLAGS=-p=1 go test -race -count=1 ./internal/config ./internal/server/... ./internal/auth/...
+Working directory: apps/godspeed-casework-go
+Exit: 0
+
+ok  github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config  1.029s
+ok  github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server  2.505s
+ok  github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth   33.796s

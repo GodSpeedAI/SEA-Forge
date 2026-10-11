@@ -1,0 +1,661 @@
+{
+ "providers": {
+  "codex": "codex CLI (OpenAI-backed); exact model as configured for the CLI, not overridden",
+  "prime-agent": "prime-agent -p --offline (local harness CLI); CONFOUND: same harness lineage that produced the corpus",
+  "scripted": "scripted-marker-heuristic-v1 (mechanics only; never counted as real substitution)"
+ },
+ "results": {
+  "codex": [
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.97,
+    "distribution": {
+     "satisfied": 0.02,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.97
+    },
+    "reason": "The report shows 15 passing tests but does not identify what was tested or confirm that calculator.html and the required digit and operator buttons exist.",
+    "raw_tail": "nswer\":\"insufficient_evidence\",\"confidence\":0.97,\"distribution\":{\"satisfied\":0.02,\"not_satisfied\":0.01,\"insufficient_evidence\":0.97},\"reason\":\"The report shows 15 passing tests but does not identify what was tested or confirm that calculator.html and the required digit and operator buttons exist.\"}\n",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence content only identifies a test report and provides no result showing that the calculator check ran or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence content only identifies a test report and provides no result showing that the calculator check ran or exited zero.\"}\n",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.015,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.98
+    },
+    "reason": "The report shows 15 passing tests but does not identify what was tested or directly establish the file location and required button declarations.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.015,\"not_satisfied\":0.005,\"insufficient_evidence\":0.98},\"reason\":\"The report shows 15 passing tests but does not identify what was tested or directly establish the file location and required button declarations.\"}\n",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and does not show the check command, calculator check execution, or exit status.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and does not show the check command, calculator check execution, or exit status.\"}\n",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only identifies a test report and provides no test cases or outcomes showing correct evaluation of at least two expressions with different operators.",
+    "raw_tail": "sufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only identifies a test report and provides no test cases or outcomes showing correct evaluation of at least two expressions with different operators.\"}\n",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.01,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.98
+    },
+    "reason": "The report shows 15 passing tests but does not identify what they tested or demonstrate that calculator.html and the required digit and operator buttons exist.",
+    "raw_tail": "\":\"insufficient_evidence\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.01,\"not_satisfied\":0.01,\"insufficient_evidence\":0.98},\"reason\":\"The report shows 15 passing tests but does not identify what they tested or demonstrate that calculator.html and the required digit and operator buttons exist.\"}\n",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and does not show the check command, calculator check execution, or exit status.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and does not show the check command, calculator check execution, or exit status.\"}\n",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and no test outcomes demonstrating correct evaluation of at least two arithmetic expressions with different operators.",
+    "raw_tail": "e\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and no test outcomes demonstrating correct evaluation of at least two arithmetic expressions with different operators.\"}\n",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.015,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.98
+    },
+    "reason": "The report shows 15 passing tests but does not identify their assertions or demonstrate that calculator.html exists at the workspace root with the required digit and operator buttons.",
+    "raw_tail": "\"confidence\":0.98,\"distribution\":{\"satisfied\":0.015,\"not_satisfied\":0.005,\"insufficient_evidence\":0.98},\"reason\":\"The report shows 15 passing tests but does not identify their assertions or demonstrate that calculator.html exists at the workspace root with the required digit and operator buttons.\"}\n",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only contains the label \"test_report\" and provides no check command, calculator-check result, or exit status.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only contains the label \\\"test_report\\\" and provides no check command, calculator-check result, or exit status.\"}\n",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and no test cases, expressions, operators, or results needed to verify the requirement.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and no test cases, expressions, operators, or results needed to verify the requirement.\"}\n",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.98,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.015
+    },
+    "reason": "The declared test report records 15 tests, zero failures, and the calculator markup check command, providing deterministic evidence that the stated markup requirement passed.",
+    "raw_tail": "tisfied\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.98,\"not_satisfied\":0.005,\"insufficient_evidence\":0.015},\"reason\":\"The declared test report records 15 tests, zero failures, and the calculator markup check command, providing deterministic evidence that the stated markup requirement passed.\"}\n",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and does not show that the real check command ran the calculator check or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and does not show that the real check command ran the calculator check or exited zero.\"}\n",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and no test outcomes demonstrating correct evaluation of at least two expressions with different operators.",
+    "raw_tail": "ent_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and no test outcomes demonstrating correct evaluation of at least two expressions with different operators.\"}\n",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The report shows 15 passing tests but does not identify the tested assertions or demonstrate that calculator.html and the required digit and operator buttons exist.",
+    "raw_tail": "fficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The report shows 15 passing tests but does not identify the tested assertions or demonstrate that calculator.html and the required digit and operator buttons exist.\"}\n",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence only states \"test_report\" and does not show that the project's real check command ran the calculator check or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence only states \\\"test_report\\\" and does not show that the project's real check command ran the calculator check or exited zero.\"}\n",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence contains only the label \"test_report\" and no test outcomes demonstrating correct evaluation of at least two expressions with different operators.",
+    "raw_tail": "ent_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence contains only the label \\\"test_report\\\" and no test outcomes demonstrating correct evaluation of at least two expressions with different operators.\"}\n",
+    "row_index": 16
+   }
+  ],
+  "prime-agent": [
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.98,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.01
+    },
+    "reason": "The deterministic test report shows 15 checks completed with zero failures for the calculator verification script.",
+    "raw_tail": "{\"answer\":\"satisfied\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.98,\"not_satisfied\":0.01,\"insufficient_evidence\":0.01},\"reason\":\"The deterministic test report shows 15 checks completed with zero failures for the calculator verification script.\"}\n",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only identifies a test report and does not show that the calculator check ran or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only identifies a test report and does not show that the calculator check ran or exited zero.\"}\n",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.93,
+    "distribution": {
+     "satisfied": 0.05,
+     "not_satisfied": 0.02,
+     "insufficient_evidence": 0.93
+    },
+    "reason": "The passing test summary does not show which checks ran or whether they verify the required file and button declarations.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.93,\"distribution\":{\"satisfied\":0.05,\"not_satisfied\":0.02,\"insufficient_evidence\":0.93},\"reason\":\"The passing test summary does not show which checks ran or whether they verify the required file and button declarations.\"}\n",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided content contains no check command result or exit status.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided content contains no check command result or exit status.\"}\n",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided content contains no test outcomes or expression results to verify the claim.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided content contains no test outcomes or expression results to verify the claim.\"}\n",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.98,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.01
+    },
+    "reason": "The deterministic check report shows 15 tests with zero failures for the calculator target.",
+    "raw_tail": "{\"answer\":\"satisfied\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.98,\"not_satisfied\":0.01,\"insufficient_evidence\":0.01},\"reason\":\"The deterministic check report shows 15 tests with zero failures for the calculator target.\"}\n",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only identifies a test report and does not show that the calculator check ran or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only identifies a test report and does not show that the calculator check ran or exited zero.\"}\n",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided content names a test report but gives no test cases or results to verify the claim.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided content names a test report but gives no test cases or results to verify the claim.\"}\n",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.98,
+    "distribution": {
+     "satisfied": 0.98,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.01
+    },
+    "reason": "The deterministic markup check report shows 15 tests completed with zero failures.",
+    "raw_tail": "{\"answer\":\"satisfied\",\"confidence\":0.98,\"distribution\":{\"satisfied\":0.98,\"not_satisfied\":0.01,\"insufficient_evidence\":0.01},\"reason\":\"The deterministic markup check report shows 15 tests completed with zero failures.\"}\n",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only identifies a test report and does not show that the calculator check ran or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only identifies a test report and does not show that the calculator check ran or exited zero.\"}\n",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The locator content provides no test cases, outputs, or pass/fail results to verify the claim.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The locator content provides no test cases, outputs, or pass/fail results to verify the claim.\"}\n",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.9,
+    "distribution": {
+     "satisfied": 0.9,
+     "not_satisfied": 0.02,
+     "insufficient_evidence": 0.08
+    },
+    "reason": "The deterministic check script completed 15 tests with zero failures.",
+    "raw_tail": "{\"answer\":\"satisfied\",\"confidence\":0.9,\"distribution\":{\"satisfied\":0.9,\"not_satisfied\":0.02,\"insufficient_evidence\":0.08},\"reason\":\"The deterministic check script completed 15 tests with zero failures.\"}\n",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The evidence only identifies a test report and does not show that the calculator check ran or exited zero.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The evidence only identifies a test report and does not show that the calculator check ran or exited zero.\"}\n",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The provided evidence only identifies a test report and shows no test results for any arithmetic expressions.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The provided evidence only identifies a test report and shows no test results for any arithmetic expressions.\"}\n",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "satisfied",
+    "confidence": 0.97,
+    "distribution": {
+     "satisfied": 0.97,
+     "not_satisfied": 0.01,
+     "insufficient_evidence": 0.02
+    },
+    "reason": "The deterministic test report shows all 15 markup-check tests passed with zero failures.",
+    "raw_tail": "{\"answer\":\"satisfied\",\"confidence\":0.97,\"distribution\":{\"satisfied\":0.97,\"not_satisfied\":0.01,\"insufficient_evidence\":0.02},\"reason\":\"The deterministic test report shows all 15 markup-check tests passed with zero failures.\"}\n",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The locator content only identifies a test report and provides no command result, calculator-check status, or exit code.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The locator content only identifies a test report and provides no command result, calculator-check status, or exit code.\"}\n",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.99,
+    "distribution": {
+     "satisfied": 0.005,
+     "not_satisfied": 0.005,
+     "insufficient_evidence": 0.99
+    },
+    "reason": "The locator content only identifies a test report and provides no test cases, results, or evidence of correct evaluation.",
+    "raw_tail": "{\"answer\":\"insufficient_evidence\",\"confidence\":0.99,\"distribution\":{\"satisfied\":0.005,\"not_satisfied\":0.005,\"insufficient_evidence\":0.99},\"reason\":\"The locator content only identifies a test report and provides no test cases, results, or evidence of correct evaluation.\"}\n",
+    "row_index": 16
+   }
+  ],
+  "scripted": [
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "not_satisfied",
+    "confidence": 0.6,
+    "distribution": {
+     "satisfied": 0.125,
+     "not_satisfied": 0.7499999999999999,
+     "insufficient_evidence": 0.125
+    },
+    "reason": "scripted marker-count rule (mechanics only)",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.5,
+    "distribution": {
+     "satisfied": 0.1,
+     "not_satisfied": 0.1,
+     "insufficient_evidence": 0.8
+    },
+    "reason": "scripted rule: no resolvable evidence content",
+    "row_index": 16
+   }
+  ]
+ }
+}

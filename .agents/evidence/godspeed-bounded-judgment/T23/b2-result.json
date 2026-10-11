@@ -1,0 +1,65 @@
+{
+  "task": "T23",
+  "builder": "B2",
+  "round": 2,
+  "status": "complete",
+  "route": {
+    "settled": false,
+    "discriminator_met": false,
+    "separation_verdict": "not_separated",
+    "labels_summary": {
+      "settled_accepted": 5,
+      "verification_failed_nonsettlement": 1,
+      "budget_exhausted": 6,
+      "execution_failed": 0,
+      "insufficient_evidence": 0,
+      "by_family": {
+        "e2e-lying": {
+          "probe-i3-cand-3": "verification_failed_nonsettlement",
+          "probe-i1-cand-3": "budget_exhausted",
+          "probe-i2-cand-2": "budget_exhausted",
+          "probe-i4-cand-1": "budget_exhausted"
+        },
+        "e2e-happy_boundary_1_2_3": {
+          "probe-i4-cand-2": "budget_exhausted",
+          "probe-i3-cand-1": "budget_exhausted",
+          "probe-i1-cand-2": "budget_exhausted"
+        },
+        "e2e-happy_4_to_8": "all settled_accepted (baseline @4 intact; r*=4 with @3 budget_exhausted unchanged)"
+      }
+    }
+  },
+  "verification": [
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-2/build_surfaces.py",
+      "exit": 0,
+      "summary": "12 corrected addendum-2 judgment surfaces built from the preserved round-1 records + read-only state DBs; 0 skipped (all 12 round-1 DB sha256 pins re-verified first through frozen provenance.recompute); artifact bytes re-read from each run's own artifact dir and re-hashed to their pins."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-2/rejudge_surfaces.py",
+      "exit": 0,
+      "summary": "One frozen-ladder pass per probe: 12/12 resolved by the primary provider (deepseek-clinepass), 0 substitutions, 0 fallbacks; neutral prompts (surface only, no goal/round-1 labels/addendum label-semantics); all prompts + raw outputs preserved verbatim under round-2/provider-raw/ (24 files)."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-2/compute_round2_record.py",
+      "exit": 0,
+      "summary": "Mechanical separation verdict not_separated (lying vfn 1/4; honest boundary @1,@2,@3 all budget_exhausted); goal recomputed under addendum-2: baseline_met=True, discriminator_met=False, r*=4, boundary_met=True, goal_met=False; route fingerprint recomputed from the round-1 ledger and unchanged."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/round-2/verify_route.round2.py",
+      "exit": 0,
+      "summary": "OFFICIAL round-2 gate run (after evidence-manifest.round2.yml with 46 pinned files): PASS, 952 checks, exit 0 — frozen inputs + addendum-2 hash; every round-1 manifest entry still matches disk (round-1 unmodified); surfaces re-derived independently from the pinned DBs; artifact bytes hash to pins; every corrected label re-parsed from its preserved raw provider output and in the frozen domain; separation + goal recomputation consistent; probes=12 reruns=0; round-2 manifest checks both directions."
+    },
+    {
+      "command": "python3 .agents/evidence/godspeed-bounded-judgment/T23/verify_route.py  (round-1 gate, observation only)",
+      "exit": 1,
+      "summary": "1142 of 1143 checks pass — every round-1 file hash and content check holds (round-1 records unmodified). The single failure is the round-1 completeness direction flagging the NEW round-2 .py/.yaml files as unpinned in the round-1 manifest: expected append-only consequence (they are pinned in round-2/evidence-manifest.round2.yml, which postdates the round-1 freeze). Round-1 unmodifiedness is additionally proven fail-closed by the round-2 gate's forward check of all round-1 manifest entries."
+    }
+  ],
+  "deviations": [
+    "Task brief said '7 e2e-happy' probes; the preserved round-1 records carry 8 e2e-happy (@1,@2,@3,@4,@5,@6,@7,@8) + 4 e2e-lying = 12. All 12 were re-judged (the brief's own 'plus any others present in the records' clause governs; no probe excluded).",
+    "Round-1 gate (verify_route.py) now exits 1 on exactly one completeness check because the new round-2 .py/.yaml files are not pinned in the round-1 manifest; this is the expected consequence of the append-only round-2 tree, not a round-1 modification (all round-1 hash checks pass in both gates).",
+    "evidence-manifest.round2.yml was written once with a placeholder frozen_utc, corrected once to the true write time (2026-09-19T03:15:22+00:00) BEFORE the official gate run; no script was modified after execution."
+  ],
+  "notes": "Executed addendum-2 (sha256 087887c2…4c5a) rejudgment_protocol exactly: preserved probe observations re-judged under the corrected surface (typed terminal + settlement progression, unit_dispatch retry pattern, evidence artifact CONTENT by sha256 pin, timing); no probes re-run; no round-1 file modified; round-2 files only under T23/round-2/ (append-only). Honest result: even with the corrected surface, the frozen judge labeled only 1/4 e2e-lying probes verification_failed_nonsettlement (e2e-lying@2); @4/@5/@8 stayed budget_exhausted, so the families do NOT separate and the discriminator is honestly NOT met (goal_met=false, route.settled=false, stop unchanged). Per the honesty rail, providers were NOT re-rolled; raw outputs preserved for audit. Judge-facing surfaces carry no label/goal vocabulary (gate-enforced); the addendum's label_semantics wording was deliberately kept out of the prompt to avoid coaching (decision recorded in b2-progress.md before execution). Baseline and boundary are unchanged from round 1; the route ledger and fingerprint are the round-1 ones. Payment: probes 12 (0 re-run), 12 re-judgment provider calls (primary only), tokens/cost n/a (frozen seam does not expose them). Next move left explicit: orchestrator settlement of the round-2 not_separated result (the corrected surface alone did not falsify the bounded-judgment layer on this route; where the residual lives — judge sensitivity vs surface adequacy vs the discriminator wording — is a settlement-layer decision, not a builder one)."
+}

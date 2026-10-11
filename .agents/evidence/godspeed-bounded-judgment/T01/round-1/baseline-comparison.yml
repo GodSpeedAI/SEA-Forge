@@ -1,0 +1,28 @@
+disclosure:
+  n: 17
+  independent_run_count: 6
+  class_counts:
+    PASS: 17
+  concentration_by_run:
+    rows_by_run:
+      demo-calculator.proof-2of3-2216: 2
+      demo-calculator.settled-0904: 3
+      demo-calculator.settled-3of3-clean-seed-0730: 3
+      demo-calculator.settled-3of3-contaminated-seed-2234: 3
+      demo-calculator.settled-3of3-sharpened-role-1044: 3
+      demo-calculator.settled-rpc-1652: 3
+    effective_diversity_runs: 5.897959183673469
+    note: one run may dominate; effective diversity is disclosed with every N
+  missing_attribution: 17/17
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: pilot corpus of order 10^1 settled judgments; every metric below is unstable and descriptive only'
+  note: ''
+deterministic_baseline: the recorded verification_record outcome (existing deterministic instrument); shown to no provider
+providers_vs_baseline_accuracy:
+  codex: null
+  prime-agent: null
+  scripted: null
+incremental_information_statement: 'DESCRIPTIVE ONLY, on this surface: the judgment adds information in FORM (a distribution,
+  a confidence, and an explicit insufficiency label) that the deterministic point outcome does not carry. Whether that form
+  carries USEFUL incremental information is exactly what the A-E classification below the reports must decide from agreement,
+  disagreement, abstention-gap co-occurrence, and contract reliability.'

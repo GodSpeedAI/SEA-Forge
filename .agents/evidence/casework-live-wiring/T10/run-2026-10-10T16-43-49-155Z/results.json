@@ -1,0 +1,59 @@
+[
+  {
+    "journey_id": "L8",
+    "title": "Thoth ask narration: interrupt and resume",
+    "status": "PASS",
+    "depends_on": [
+      "L7"
+    ],
+    "settles": "a typed question is answered by the real kernel, narrated from the returned disclosure only, interruptible and resumable without a second ask",
+    "unlocks": [
+      "L9"
+    ],
+    "steps": [
+      {
+        "journey": "L8",
+        "name": "the live app offers narration (agent available) and is not the scripted local agent",
+        "ok": true,
+        "ms": 762
+      },
+      {
+        "journey": "L8",
+        "name": "ask a typed question; the real kernel answers and the disclosure card shows the returned fields",
+        "ok": true,
+        "ms": 6421
+      },
+      {
+        "journey": "L8",
+        "name": "durable: the kernel committed the question and disclosure to the thoth-asks ledger as operator_local, via a delegated ask",
+        "ok": true,
+        "ms": 5
+      },
+      {
+        "journey": "L8",
+        "name": "interrupt: Space pauses at a checkpoint and the narration does not advance",
+        "ok": true,
+        "ms": 7187
+      },
+      {
+        "journey": "L8",
+        "name": "resume: continue picks up from the checkpoint and finishes without asking again",
+        "ok": true,
+        "ms": 40455
+      },
+      {
+        "journey": "L8",
+        "name": "a free-text question is answered honestly as unsupported and asks nothing",
+        "ok": true,
+        "ms": 6028
+      },
+      {
+        "journey": "L8",
+        "name": "a different principal (R-SO, separate session) gets the kernel's governed denial, recorded under rso_local",
+        "ok": true,
+        "ms": 23117
+      }
+    ],
+    "total_ms": 99280
+  }
+]

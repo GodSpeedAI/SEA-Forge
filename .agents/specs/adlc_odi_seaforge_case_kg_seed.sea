@@ -1,0 +1,561 @@
+@namespace "godspeed.adlc_odi_case"
+@version "1.0.0"
+@owner "godspeed-ai"
+@profile "default"
+
+// Purpose:
+// Seed the DomainForge knowledge graph with the isomorphic relationship among:
+// - Outcome-Driven Innovation (ODI),
+// - the Agentic Development Lifecycle (ADLC), and
+// - the governed case substrate retained in the new SEA-Forge rebuild.
+//
+// This is a semantic model. ODI concepts are not new SEA-Forge kernel record types.
+// SEA-Forge execution remains grounded in Case, CasePlanModel, Stage, PlanItem,
+// Sentry, Milestone, DiscretionaryItem, authority, ledger, runtime, trace,
+// evidence, settlement, capability, and rebuildable projections.
+
+// -----------------------------------------------------------------------------
+// Framework and case concepts
+// -----------------------------------------------------------------------------
+
+Entity "Agentic Development Lifecycle"
+Entity "Outcome-Driven Innovation"
+Entity "SEA-Forge Case Management"
+Entity "Agentic Development Case"
+
+// -----------------------------------------------------------------------------
+// SEA-Forge rebuild substrate
+// -----------------------------------------------------------------------------
+
+Entity "Case"
+Entity "CasePlanModel"
+Entity "Stage"
+Entity "PlanItem"
+Entity "Sentry"
+Entity "Milestone"
+Entity "DiscretionaryItem"
+Entity "CaseFile"
+Entity "Ledger"
+Entity "DomainModelRef"
+Entity "AuthorityDecision"
+Entity "AuthorizedAction"
+Entity "SandboxRuntime"
+Entity "TraceEvent"
+Entity "EvidenceRecord"
+Entity "SettlementDeclaration"
+Entity "CapabilityRecord"
+Entity "RebuildableProjection"
+
+// -----------------------------------------------------------------------------
+// ADLC phase concepts
+// -----------------------------------------------------------------------------
+
+Entity "ADLC Phase"
+Entity "Preparation and Hypothesis"
+Entity "Scope and Problem Identification"
+Entity "Design and Architecture"
+Entity "Simulation and Proof of Value"
+Entity "Implementation"
+Entity "Testing"
+Entity "Deployment"
+
+// -----------------------------------------------------------------------------
+// ODI and product-outcome concepts
+// -----------------------------------------------------------------------------
+
+Entity "Job Executor"
+Entity "Job To Be Done"
+Entity "Job Context"
+Entity "Desired Outcome Criterion"
+Entity "Outcome Importance Evidence"
+Entity "Outcome Satisfaction Evidence"
+Entity "Outcome-Based Segment"
+Entity "Outcome Opportunity"
+Entity "Underserved Outcome"
+Entity "Product Hypothesis"
+Entity "Product Artifact"
+Entity "Producer Outcome"
+Entity "Customer Affordance"
+Entity "Observed Outcome"
+
+// -----------------------------------------------------------------------------
+// Integrated case stages
+// These are containment stages, not a fixed waterfall.
+// -----------------------------------------------------------------------------
+
+Entity "Frame the Job"
+Entity "Discover Outcomes"
+Entity "Select Opportunity"
+Entity "Design and Simulate"
+Entity "Implement Product"
+Entity "Evaluate Product"
+Entity "Activate and Observe"
+
+// -----------------------------------------------------------------------------
+// PlanItems
+// -----------------------------------------------------------------------------
+
+Entity "Identify Job Executor"
+Entity "Define Core Job"
+Entity "Define Job Context"
+Entity "Capture Outcome Hypotheses"
+
+Entity "Generate Complete Outcome Set"
+Entity "Validate Outcome Wording"
+Entity "Gather Importance Evidence"
+Entity "Gather Satisfaction Evidence"
+Entity "Identify Outcome-Based Segments"
+
+Entity "Evaluate Underserved Outcomes"
+Entity "Select Target Outcome Cluster"
+Entity "Define Product Hypothesis"
+Entity "Establish Outcome Baseline"
+
+Entity "Design Agent Architecture"
+Entity "Map Mechanisms to Target Outcomes"
+Entity "Prototype in Sandbox"
+Entity "Simulate Outcome Improvement"
+Entity "Evaluate Safety Cost Latency and Reliability"
+
+Entity "Build Protected Operations"
+Entity "Integrate Models APIs MCPs and Tools"
+Entity "Implement Context and Authority Boundaries"
+Entity "Produce Product Artifact"
+
+Entity "Evaluate Target Outcome Performance"
+Entity "Evaluate Reasoning and Safety"
+Entity "Test Under Variation"
+Entity "Compare Against Baseline Satisfaction"
+
+Entity "Controlled Deployment"
+Entity "Observe Real Job Execution"
+Entity "Collect Outcome Evidence"
+Entity "Declare Settlement"
+Entity "Detect Drift and New Unmet Outcomes"
+
+// -----------------------------------------------------------------------------
+// Milestones
+// -----------------------------------------------------------------------------
+
+Entity "Job Framed"
+Entity "Outcome Field Evidenced"
+Entity "Product Direction Authorized"
+Entity "Proof of Value Accepted"
+Entity "Release Candidate Produced"
+Entity "Product Hypothesis Accepted"
+Entity "Product Settled"
+
+// -----------------------------------------------------------------------------
+// Sentries
+// -----------------------------------------------------------------------------
+
+Entity "Job Framing Complete Sentry"
+Entity "Outcome Evidence Sufficient Sentry"
+Entity "Opportunity Targeted Sentry"
+Entity "Proof of Value Sentry"
+Entity "Release Candidate Sentry"
+Entity "Evaluation Accepted Sentry"
+Entity "Activation Settlement Sentry"
+
+// -----------------------------------------------------------------------------
+// Semantic relationship resources
+// -----------------------------------------------------------------------------
+
+Resource "Specializes" units
+Resource "Composes" units
+Resource "Contains" units
+Resource "References" units
+Resource "Grounds" units
+Resource "Defines" units
+Resource "Performs" units
+Resource "Contextualizes" units
+Resource "Measures" units
+Resource "Segments" units
+Resource "Supports" units
+Resource "Identifies" units
+Resource "Targets" units
+Resource "Guides" units
+Resource "Enables" units
+Resource "Produces" units
+Resource "Settles As" units
+Resource "Becomes" units
+Resource "Observed As" units
+Resource "Evaluates" units
+Resource "Distinct From" units
+Resource "Activates" units
+Resource "Requests Authority" units
+Resource "Authorizes" units
+Resource "Executes In" units
+Resource "Emits" units
+Resource "Settles" units
+Resource "Achieves" units
+Resource "Records" units
+Resource "Projects" units
+Resource "Adds" units
+Resource "Reactivates" units
+Resource "Promotes" units
+Resource "Governs" units
+Resource "Constrains" units
+
+// -----------------------------------------------------------------------------
+// Framework composition
+// -----------------------------------------------------------------------------
+
+Flow "Governs" from "SEA-Forge Case Management" to "Agentic Development Case"
+Flow "Specializes" from "Agentic Development Case" to "Case"
+Flow "Composes" from "Agentic Development Lifecycle" to "Agentic Development Case"
+Flow "Grounds" from "Outcome-Driven Innovation" to "Agentic Development Case"
+
+// -----------------------------------------------------------------------------
+// SEA-Forge governed case loop
+// -----------------------------------------------------------------------------
+
+Flow "Contains" from "Case" to "CasePlanModel"
+Flow "Contains" from "Case" to "CaseFile"
+Flow "Contains" from "Case" to "Ledger"
+Flow "References" from "Case" to "DomainModelRef"
+
+Flow "Contains" from "CasePlanModel" to "Stage"
+Flow "Contains" from "Stage" to "PlanItem"
+Flow "Contains" from "CasePlanModel" to "Milestone"
+Flow "Contains" from "CasePlanModel" to "Sentry"
+Flow "Contains" from "CasePlanModel" to "DiscretionaryItem"
+
+Flow "Supports" from "CaseFile" to "Sentry"
+Flow "Supports" from "TraceEvent" to "Sentry"
+Flow "Supports" from "Milestone" to "Sentry"
+Flow "Activates" from "Sentry" to "PlanItem"
+Flow "Adds" from "DiscretionaryItem" to "PlanItem"
+
+Flow "Requests Authority" from "PlanItem" to "AuthorityDecision"
+Flow "Authorizes" from "AuthorityDecision" to "AuthorizedAction"
+Flow "Executes In" from "AuthorizedAction" to "SandboxRuntime"
+Flow "Emits" from "SandboxRuntime" to "TraceEvent"
+Flow "Supports" from "TraceEvent" to "EvidenceRecord"
+Flow "Supports" from "EvidenceRecord" to "SettlementDeclaration"
+Flow "Achieves" from "SettlementDeclaration" to "Milestone"
+Flow "Promotes" from "SettlementDeclaration" to "CapabilityRecord"
+
+Flow "Records" from "Ledger" to "AuthorityDecision"
+Flow "Records" from "Ledger" to "TraceEvent"
+Flow "Records" from "Ledger" to "EvidenceRecord"
+Flow "Records" from "Ledger" to "SettlementDeclaration"
+Flow "Records" from "Ledger" to "Milestone"
+Flow "Projects" from "Ledger" to "RebuildableProjection"
+
+// -----------------------------------------------------------------------------
+// ADLC phase ontology
+// -----------------------------------------------------------------------------
+
+Flow "Specializes" from "Preparation and Hypothesis" to "ADLC Phase"
+Flow "Specializes" from "Scope and Problem Identification" to "ADLC Phase"
+Flow "Specializes" from "Design and Architecture" to "ADLC Phase"
+Flow "Specializes" from "Simulation and Proof of Value" to "ADLC Phase"
+Flow "Specializes" from "Implementation" to "ADLC Phase"
+Flow "Specializes" from "Testing" to "ADLC Phase"
+Flow "Specializes" from "Deployment" to "ADLC Phase"
+
+Flow "Contains" from "Agentic Development Lifecycle" to "Preparation and Hypothesis"
+Flow "Contains" from "Agentic Development Lifecycle" to "Scope and Problem Identification"
+Flow "Contains" from "Agentic Development Lifecycle" to "Design and Architecture"
+Flow "Contains" from "Agentic Development Lifecycle" to "Simulation and Proof of Value"
+Flow "Contains" from "Agentic Development Lifecycle" to "Implementation"
+Flow "Contains" from "Agentic Development Lifecycle" to "Testing"
+Flow "Contains" from "Agentic Development Lifecycle" to "Deployment"
+
+// ADLC phases are placed inside adaptive case stages.
+Flow "Contains" from "Frame the Job" to "Preparation and Hypothesis"
+Flow "Contains" from "Frame the Job" to "Scope and Problem Identification"
+Flow "Contains" from "Design and Simulate" to "Design and Architecture"
+Flow "Contains" from "Design and Simulate" to "Simulation and Proof of Value"
+Flow "Contains" from "Implement Product" to "Implementation"
+Flow "Contains" from "Evaluate Product" to "Testing"
+Flow "Contains" from "Activate and Observe" to "Deployment"
+
+// ADLC remains non-linear when evidence invalidates an earlier representation.
+Flow "Reactivates" from "Simulation and Proof of Value" to "Design and Architecture"
+Flow "Reactivates" from "Testing" to "Scope and Problem Identification"
+Flow "Reactivates" from "Deployment" to "Testing"
+Flow "Adds" from "Deployment" to "DiscretionaryItem"
+
+// -----------------------------------------------------------------------------
+// ODI ontology and product-outcome boundary
+// -----------------------------------------------------------------------------
+
+Flow "Defines" from "Outcome-Driven Innovation" to "Job To Be Done"
+Flow "Defines" from "Outcome-Driven Innovation" to "Desired Outcome Criterion"
+Flow "Performs" from "Job Executor" to "Job To Be Done"
+Flow "Contextualizes" from "Job Context" to "Job To Be Done"
+Flow "Defines" from "Job To Be Done" to "Desired Outcome Criterion"
+
+Flow "Measures" from "Outcome Importance Evidence" to "Desired Outcome Criterion"
+Flow "Measures" from "Outcome Satisfaction Evidence" to "Desired Outcome Criterion"
+Flow "Segments" from "Outcome-Based Segment" to "Job Executor"
+Flow "Supports" from "Outcome Importance Evidence" to "Outcome Opportunity"
+Flow "Supports" from "Outcome Satisfaction Evidence" to "Outcome Opportunity"
+Flow "Identifies" from "Outcome Opportunity" to "Underserved Outcome"
+Flow "Targets" from "Product Hypothesis" to "Underserved Outcome"
+Flow "Guides" from "Product Hypothesis" to "Product Artifact"
+
+// Boundary-relative product/outcome identity:
+// the product is a settled producer-case outcome and a customer-case affordance.
+Flow "Produces" from "Agentic Development Case" to "Product Artifact"
+Flow "Settles As" from "Product Artifact" to "Producer Outcome"
+Flow "Becomes" from "Product Artifact" to "Customer Affordance"
+Flow "Enables" from "Product Artifact" to "Desired Outcome Criterion"
+Flow "Enables" from "Customer Affordance" to "Desired Outcome Criterion"
+Flow "Observed As" from "Customer Affordance" to "Observed Outcome"
+Flow "Evaluates" from "Observed Outcome" to "Desired Outcome Criterion"
+Flow "Settles" from "Observed Outcome" to "SettlementDeclaration"
+Flow "Distinct From" from "Product Artifact" to "Observed Outcome"
+Flow "Promotes" from "Product Settled" to "CapabilityRecord"
+
+// -----------------------------------------------------------------------------
+// Integrated CasePlanModel
+// -----------------------------------------------------------------------------
+
+Flow "Contains" from "CasePlanModel" to "Frame the Job"
+Flow "Contains" from "CasePlanModel" to "Discover Outcomes"
+Flow "Contains" from "CasePlanModel" to "Select Opportunity"
+Flow "Contains" from "CasePlanModel" to "Design and Simulate"
+Flow "Contains" from "CasePlanModel" to "Implement Product"
+Flow "Contains" from "CasePlanModel" to "Evaluate Product"
+Flow "Contains" from "CasePlanModel" to "Activate and Observe"
+
+// Frame the Job
+Flow "Contains" from "Frame the Job" to "Identify Job Executor"
+Flow "Contains" from "Frame the Job" to "Define Core Job"
+Flow "Contains" from "Frame the Job" to "Define Job Context"
+Flow "Contains" from "Frame the Job" to "Capture Outcome Hypotheses"
+Flow "Contains" from "Frame the Job" to "Job Framed"
+
+Flow "Defines" from "Identify Job Executor" to "Job Executor"
+Flow "Defines" from "Define Core Job" to "Job To Be Done"
+Flow "Defines" from "Define Job Context" to "Job Context"
+Flow "Defines" from "Capture Outcome Hypotheses" to "Desired Outcome Criterion"
+
+// Discover Outcomes
+Flow "Contains" from "Discover Outcomes" to "Generate Complete Outcome Set"
+Flow "Contains" from "Discover Outcomes" to "Validate Outcome Wording"
+Flow "Contains" from "Discover Outcomes" to "Gather Importance Evidence"
+Flow "Contains" from "Discover Outcomes" to "Gather Satisfaction Evidence"
+Flow "Contains" from "Discover Outcomes" to "Identify Outcome-Based Segments"
+Flow "Contains" from "Discover Outcomes" to "Outcome Field Evidenced"
+
+Flow "Produces" from "Generate Complete Outcome Set" to "Desired Outcome Criterion"
+Flow "Evaluates" from "Validate Outcome Wording" to "Desired Outcome Criterion"
+Flow "Produces" from "Gather Importance Evidence" to "Outcome Importance Evidence"
+Flow "Produces" from "Gather Satisfaction Evidence" to "Outcome Satisfaction Evidence"
+Flow "Produces" from "Identify Outcome-Based Segments" to "Outcome-Based Segment"
+
+// Select Opportunity
+Flow "Contains" from "Select Opportunity" to "Evaluate Underserved Outcomes"
+Flow "Contains" from "Select Opportunity" to "Select Target Outcome Cluster"
+Flow "Contains" from "Select Opportunity" to "Define Product Hypothesis"
+Flow "Contains" from "Select Opportunity" to "Establish Outcome Baseline"
+Flow "Contains" from "Select Opportunity" to "Product Direction Authorized"
+
+Flow "Produces" from "Evaluate Underserved Outcomes" to "Outcome Opportunity"
+Flow "Targets" from "Select Target Outcome Cluster" to "Underserved Outcome"
+Flow "Produces" from "Define Product Hypothesis" to "Product Hypothesis"
+Flow "Defines" from "Establish Outcome Baseline" to "Outcome Satisfaction Evidence"
+
+// Design and Simulate
+Flow "Contains" from "Design and Simulate" to "Design Agent Architecture"
+Flow "Contains" from "Design and Simulate" to "Map Mechanisms to Target Outcomes"
+Flow "Contains" from "Design and Simulate" to "Prototype in Sandbox"
+Flow "Contains" from "Design and Simulate" to "Simulate Outcome Improvement"
+Flow "Contains" from "Design and Simulate" to "Evaluate Safety Cost Latency and Reliability"
+Flow "Contains" from "Design and Simulate" to "Proof of Value Accepted"
+
+Flow "Guides" from "Product Hypothesis" to "Design Agent Architecture"
+Flow "Targets" from "Map Mechanisms to Target Outcomes" to "Desired Outcome Criterion"
+Flow "Executes In" from "Prototype in Sandbox" to "SandboxRuntime"
+Flow "Produces" from "Prototype in Sandbox" to "Product Artifact"
+Flow "Evaluates" from "Simulate Outcome Improvement" to "Desired Outcome Criterion"
+Flow "Constrains" from "Evaluate Safety Cost Latency and Reliability" to "Product Hypothesis"
+
+// Implement Product
+Flow "Contains" from "Implement Product" to "Build Protected Operations"
+Flow "Contains" from "Implement Product" to "Integrate Models APIs MCPs and Tools"
+Flow "Contains" from "Implement Product" to "Implement Context and Authority Boundaries"
+Flow "Contains" from "Implement Product" to "Produce Product Artifact"
+Flow "Contains" from "Implement Product" to "Release Candidate Produced"
+
+Flow "Produces" from "Build Protected Operations" to "AuthorizedAction"
+Flow "Guides" from "Integrate Models APIs MCPs and Tools" to "SandboxRuntime"
+Flow "Constrains" from "Implement Context and Authority Boundaries" to "AuthorityDecision"
+Flow "Produces" from "Produce Product Artifact" to "Product Artifact"
+
+// Evaluate Product
+Flow "Contains" from "Evaluate Product" to "Evaluate Target Outcome Performance"
+Flow "Contains" from "Evaluate Product" to "Evaluate Reasoning and Safety"
+Flow "Contains" from "Evaluate Product" to "Test Under Variation"
+Flow "Contains" from "Evaluate Product" to "Compare Against Baseline Satisfaction"
+Flow "Contains" from "Evaluate Product" to "Product Hypothesis Accepted"
+
+Flow "Evaluates" from "Evaluate Target Outcome Performance" to "Desired Outcome Criterion"
+Flow "Evaluates" from "Evaluate Reasoning and Safety" to "Product Artifact"
+Flow "Evaluates" from "Test Under Variation" to "Product Artifact"
+Flow "Evaluates" from "Compare Against Baseline Satisfaction" to "Outcome Satisfaction Evidence"
+
+// Activate and Observe
+Flow "Contains" from "Activate and Observe" to "Controlled Deployment"
+Flow "Contains" from "Activate and Observe" to "Observe Real Job Execution"
+Flow "Contains" from "Activate and Observe" to "Collect Outcome Evidence"
+Flow "Contains" from "Activate and Observe" to "Declare Settlement"
+Flow "Contains" from "Activate and Observe" to "Detect Drift and New Unmet Outcomes"
+Flow "Contains" from "Activate and Observe" to "Product Settled"
+
+Flow "Requests Authority" from "Controlled Deployment" to "AuthorityDecision"
+Flow "Produces" from "Observe Real Job Execution" to "Observed Outcome"
+Flow "Produces" from "Collect Outcome Evidence" to "EvidenceRecord"
+Flow "Produces" from "Declare Settlement" to "SettlementDeclaration"
+Flow "Reactivates" from "Detect Drift and New Unmet Outcomes" to "Discover Outcomes"
+Flow "Adds" from "Detect Drift and New Unmet Outcomes" to "DiscretionaryItem"
+
+// -----------------------------------------------------------------------------
+// Sentry activation and milestone settlement
+// -----------------------------------------------------------------------------
+
+Flow "Evaluates" from "Job Framing Complete Sentry" to "Job Framed"
+Flow "Activates" from "Job Framing Complete Sentry" to "Generate Complete Outcome Set"
+
+Flow "Evaluates" from "Outcome Evidence Sufficient Sentry" to "Outcome Field Evidenced"
+Flow "Activates" from "Outcome Evidence Sufficient Sentry" to "Evaluate Underserved Outcomes"
+
+Flow "Evaluates" from "Opportunity Targeted Sentry" to "Product Direction Authorized"
+Flow "Activates" from "Opportunity Targeted Sentry" to "Design Agent Architecture"
+
+Flow "Evaluates" from "Proof of Value Sentry" to "Proof of Value Accepted"
+Flow "Activates" from "Proof of Value Sentry" to "Build Protected Operations"
+
+Flow "Evaluates" from "Release Candidate Sentry" to "Release Candidate Produced"
+Flow "Activates" from "Release Candidate Sentry" to "Evaluate Target Outcome Performance"
+
+Flow "Evaluates" from "Evaluation Accepted Sentry" to "Product Hypothesis Accepted"
+Flow "Activates" from "Evaluation Accepted Sentry" to "Controlled Deployment"
+
+Flow "Evaluates" from "Activation Settlement Sentry" to "Product Settled"
+Flow "Activates" from "Activation Settlement Sentry" to "Detect Drift and New Unmet Outcomes"
+
+// -----------------------------------------------------------------------------
+// Ontology completeness and separation policies
+// -----------------------------------------------------------------------------
+
+Policy required_case_substrate_declared
+    per Constraint Obligation priority 10
+    @rationale "Keep the ODI and ADLC knowledge seed grounded in the retained SEA-Forge rebuild substrate"
+    @tags ["sea-forge", "case-management", "knowledge-graph"]
+    as:
+        exists e in entities: (e.name = "Case")
+        and exists e in entities: (e.name = "CasePlanModel")
+        and exists e in entities: (e.name = "Stage")
+        and exists e in entities: (e.name = "PlanItem")
+        and exists e in entities: (e.name = "Sentry")
+        and exists e in entities: (e.name = "Milestone")
+        and exists e in entities: (e.name = "DiscretionaryItem")
+        and exists e in entities: (e.name = "AuthorityDecision")
+        and exists e in entities: (e.name = "AuthorizedAction")
+        and exists e in entities: (e.name = "Ledger")
+        and exists e in entities: (e.name = "TraceEvent")
+        and exists e in entities: (e.name = "EvidenceRecord")
+        and exists e in entities: (e.name = "SettlementDeclaration")
+
+Policy product_outcome_boundary_declared
+    per Constraint Obligation priority 10
+    @rationale "A product is a producer-case outcome and a customer-case affordance, while remaining distinct from the observed customer outcome"
+    @tags ["odi", "product", "outcome", "boundary"]
+    as:
+        exists e in entities: (e.name = "Product Artifact")
+        and exists e in entities: (e.name = "Producer Outcome")
+        and exists e in entities: (e.name = "Customer Affordance")
+        and exists e in entities: (e.name = "Observed Outcome")
+        and exists r in resources: (r.name = "Settles As")
+        and exists r in resources: (r.name = "Becomes")
+        and exists r in resources: (r.name = "Distinct From")
+
+Policy trace_evidence_settlement_are_distinct
+    per Constraint Obligation priority 10
+    @rationale "Execution trace, inspectable evidence, and accepted settlement must remain separate semantic objects"
+    @tags ["trace", "evidence", "settlement"]
+    as:
+        exists e in entities: (e.name = "TraceEvent")
+        and exists e in entities: (e.name = "EvidenceRecord")
+        and exists e in entities: (e.name = "SettlementDeclaration")
+        and exists r in resources: (r.name = "Supports")
+        and exists r in resources: (r.name = "Settles")
+
+Policy adaptive_case_reactivation_declared
+    per Constraint Obligation priority 8
+    @rationale "ADLC and ODI case work must be able to reactivate earlier work or add discretionary work when evidence changes"
+    @tags ["adlc", "odi", "adaptive-case"]
+    as:
+        exists e in entities: (e.name = "DiscretionaryItem")
+        and exists r in resources: (r.name = "Reactivates")
+        and exists r in resources: (r.name = "Adds")
+
+// -----------------------------------------------------------------------------
+// Knowledge graph projection contract
+// -----------------------------------------------------------------------------
+
+Mapping "adlc_odi_case_kg" for kg {
+    Entity "Agentic Development Lifecycle" -> Node { id: "agentic_development_lifecycle", kind: "framework" }
+    Entity "Outcome-Driven Innovation" -> Node { id: "outcome_driven_innovation", kind: "framework" }
+    Entity "Agentic Development Case" -> Node { id: "agentic_development_case", kind: "case" }
+    Entity "CasePlanModel" -> Node { id: "case_plan_model", kind: "case_model" }
+    Entity "Stage" -> Node { id: "stage", kind: "case_element" }
+    Entity "PlanItem" -> Node { id: "plan_item", kind: "case_element" }
+    Entity "Sentry" -> Node { id: "sentry", kind: "case_element" }
+    Entity "Milestone" -> Node { id: "milestone", kind: "case_element" }
+    Entity "DiscretionaryItem" -> Node { id: "discretionary_item", kind: "case_element" }
+    Entity "AuthorityDecision" -> Node { id: "authority_decision", kind: "governance_record" }
+    Entity "AuthorizedAction" -> Node { id: "authorized_action", kind: "governed_action" }
+    Entity "TraceEvent" -> Node { id: "trace_event", kind: "execution_record" }
+    Entity "EvidenceRecord" -> Node { id: "evidence_record", kind: "evidence_record" }
+    Entity "SettlementDeclaration" -> Node { id: "settlement_declaration", kind: "settlement_record" }
+    Entity "CapabilityRecord" -> Node { id: "capability_record", kind: "capability_record" }
+    Entity "Job To Be Done" -> Node { id: "job_to_be_done", kind: "odi_concept" }
+    Entity "Desired Outcome Criterion" -> Node { id: "desired_outcome_criterion", kind: "odi_concept" }
+    Entity "Underserved Outcome" -> Node { id: "underserved_outcome", kind: "odi_concept" }
+    Entity "Product Hypothesis" -> Node { id: "product_hypothesis", kind: "product_concept" }
+    Entity "Product Artifact" -> Node { id: "product_artifact", kind: "product_concept" }
+    Entity "Observed Outcome" -> Node { id: "observed_outcome", kind: "outcome_concept" }
+    Entity "Customer Affordance" -> Node { id: "customer_affordance", kind: "affordance_concept" }
+
+    Flow "Specializes" -> Edge { kind: "specializes" }
+    Flow "Composes" -> Edge { kind: "composes" }
+    Flow "Contains" -> Edge { kind: "contains" }
+    Flow "References" -> Edge { kind: "references" }
+    Flow "Grounds" -> Edge { kind: "grounds" }
+    Flow "Defines" -> Edge { kind: "defines" }
+    Flow "Performs" -> Edge { kind: "performs" }
+    Flow "Contextualizes" -> Edge { kind: "contextualizes" }
+    Flow "Measures" -> Edge { kind: "measures" }
+    Flow "Segments" -> Edge { kind: "segments" }
+    Flow "Supports" -> Edge { kind: "supports" }
+    Flow "Identifies" -> Edge { kind: "identifies" }
+    Flow "Targets" -> Edge { kind: "targets" }
+    Flow "Guides" -> Edge { kind: "guides" }
+    Flow "Enables" -> Edge { kind: "enables" }
+    Flow "Produces" -> Edge { kind: "produces" }
+    Flow "Settles As" -> Edge { kind: "settles_as" }
+    Flow "Becomes" -> Edge { kind: "becomes" }
+    Flow "Observed As" -> Edge { kind: "observed_as" }
+    Flow "Evaluates" -> Edge { kind: "evaluates" }
+    Flow "Distinct From" -> Edge { kind: "distinct_from" }
+    Flow "Activates" -> Edge { kind: "activates" }
+    Flow "Requests Authority" -> Edge { kind: "requests_authority" }
+    Flow "Authorizes" -> Edge { kind: "authorizes" }
+    Flow "Executes In" -> Edge { kind: "executes_in" }
+    Flow "Emits" -> Edge { kind: "emits" }
+    Flow "Settles" -> Edge { kind: "settles" }
+    Flow "Achieves" -> Edge { kind: "achieves" }
+    Flow "Records" -> Edge { kind: "records" }
+    Flow "Projects" -> Edge { kind: "projects" }
+    Flow "Adds" -> Edge { kind: "adds" }
+    Flow "Reactivates" -> Edge { kind: "reactivates" }
+    Flow "Promotes" -> Edge { kind: "promotes" }
+    Flow "Governs" -> Edge { kind: "governs" }
+    Flow "Constrains" -> Edge { kind: "constrains" }
+}

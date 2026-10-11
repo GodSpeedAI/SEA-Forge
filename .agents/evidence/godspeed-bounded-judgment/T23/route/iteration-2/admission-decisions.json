@@ -1,0 +1,26 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "classification": "admitted",
+    "correlation_id": "t23-route-001-iter2",
+    "decided_at_utc": "2026-09-19T02:25:43.912559+00:00",
+    "policy_version": "t21-neighborhood-admission-v1",
+    "reason": "e2e-happy@5 is cataloged, unprobed, un-denied, reachable, and affordable"
+  },
+  {
+    "candidate_id": "cand-2",
+    "classification": "admitted",
+    "correlation_id": "t23-route-001-iter2",
+    "decided_at_utc": "2026-09-19T02:25:43.912738+00:00",
+    "policy_version": "t21-neighborhood-admission-v1",
+    "reason": "e2e-lying@5 is cataloged, unprobed, un-denied, reachable, and affordable"
+  },
+  {
+    "candidate_id": "cand-3",
+    "classification": "admitted",
+    "correlation_id": "t23-route-001-iter2",
+    "decided_at_utc": "2026-09-19T02:25:43.912761+00:00",
+    "policy_version": "t21-neighborhood-admission-v1",
+    "reason": "e2e-happy@6 is cataloged, unprobed, un-denied, reachable, and affordable"
+  }
+]

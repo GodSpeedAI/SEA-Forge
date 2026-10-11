@@ -1,0 +1,16 @@
+Mon Oct  5 16:41:38 UTC 2026
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       4.9Gi       251Mi       107Mi       2.9Gi       2.8Gi
+Swap:           12Gi       9.0Gi       3.0Gi
+    PID COMMAND           RSS %MEM
+ 393814 .cline          1405008 17.2
+ 383827 node            394536  4.8
+   1709 node            392296  4.8
+  38102 codex           367192  4.5
+   4442 claude          285556  3.5
+   1613 node            279764  3.4
+   1528 node            249100  3.0
+   2559 language_server 161524  1.9
+1490946 node-MainThread 134968  1.6
+ 384376 language_server 114420  1.4
+1490841 npm exec playwr 92428  1.1

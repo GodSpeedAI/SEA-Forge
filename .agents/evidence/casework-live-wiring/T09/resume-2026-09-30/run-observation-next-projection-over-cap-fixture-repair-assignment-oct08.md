@@ -1,0 +1,7 @@
+# Full original assignment — Next over-cap fixture repair
+
+Fresh bounded Next over-cap repair SOURCE TEST ONLY first; originalrenderer algorithm rejected by independentNextcritic: len(state.Frames)>runObservationRetainedFrameLimit1024 not checked; total>=len coherent ledger105?1025accepts malformed capture. Fulloriginalnext-projection-assignment+rootclarification/governingretainedversionconstructor rejects cap lines79-81. Allowed edit ONLY delta_test.go add deterministic 1025-frame currentstate coherentunique exactledger/ordinalsH1025 TotalFrameCount1025 fixture; assert typedunavailable +allZEROoutputs. Preserve existingtests bytecontent except additive onecase/test, no weakening. Buildcounterexampleactualvalidframeenums/key/generation/time so failure isolatescap. Do NOT addalgorithmcapguard yet; delta.go frozen3c81aa06b4f2062e0d3af314635c4c141c9b407d6cee32afe579a03a391cbbb4. Nativeapply_patch only. No compiler/Git/gates, root serializeddiagnosticsoleheavy. Write NEW originalgrant/result exactpreposthashes and coverage oracle; independent critic firstsourcechecks then rootactualRED, thenexplicitguardrelease. Escalate narrow issue. No Next/T09completion.
+
+## Archive note
+
+This archive was written after the source patch. The test preimage itself was not copied to a separate file. Its exact bytes were reconstructed by removing only the additive test and `strconv` import from the postimage; the reconstructed length and SHA-256 match the pre-edit identity measured before editing. No earlier-than-edit archive is claimed.

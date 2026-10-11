@@ -1,0 +1,93 @@
+=== RUN   TestUnknownVerbIsTypedUnavailableWithoutRetryStorm
+--- PASS: TestUnknownVerbIsTypedUnavailableWithoutRetryStorm (0.01s)
+=== RUN   TestIdentityRefusalKeepsClass
+--- PASS: TestIdentityRefusalKeepsClass (0.01s)
+=== RUN   TestSeveredMutationIsRecoveredNotResent
+--- PASS: TestSeveredMutationIsRecoveredNotResent (0.06s)
+=== RUN   TestSeveredMutationReturnsRecordedOutcome
+--- PASS: TestSeveredMutationReturnsRecordedOutcome (0.01s)
+=== RUN   TestInspectRetriesOnceOnTransportFailure
+--- PASS: TestInspectRetriesOnceOnTransportFailure (0.01s)
+=== RUN   TestMutationRequiresRequestID
+=== RUN   TestMutationRequiresRequestID/case_advance
+=== RUN   TestMutationRequiresRequestID/item_execute
+=== RUN   TestMutationRequiresRequestID/human_task_complete
+=== RUN   TestMutationRequiresRequestID/case_commit
+=== RUN   TestMutationRequiresRequestID/approval_decide
+=== RUN   TestMutationRequiresRequestID/case_add_item
+=== RUN   TestMutationRequiresRequestID/case_reopen
+=== RUN   TestMutationRequiresRequestID/case_terminate
+--- PASS: TestMutationRequiresRequestID (0.01s)
+    --- PASS: TestMutationRequiresRequestID/case_advance (0.00s)
+    --- PASS: TestMutationRequiresRequestID/item_execute (0.00s)
+    --- PASS: TestMutationRequiresRequestID/human_task_complete (0.00s)
+    --- PASS: TestMutationRequiresRequestID/case_commit (0.00s)
+    --- PASS: TestMutationRequiresRequestID/approval_decide (0.00s)
+    --- PASS: TestMutationRequiresRequestID/case_add_item (0.00s)
+    --- PASS: TestMutationRequiresRequestID/case_reopen (0.00s)
+    --- PASS: TestMutationRequiresRequestID/case_terminate (0.00s)
+=== RUN   TestSubscriptionResumesFromLastCursor
+--- PASS: TestSubscriptionResumesFromLastCursor (0.17s)
+=== RUN   TestGoldenCapture
+    golden_capture_test.go:22: GOLDEN_CAPTURE not set; run with GOLDEN_CAPTURE=testdata to (re)record golden frames
+--- SKIP: TestGoldenCapture (0.00s)
+=== RUN   TestGoldenRequestEncoding
+=== RUN   TestGoldenRequestEncoding/system.hello
+=== RUN   TestGoldenRequestEncoding/readiness.get
+=== RUN   TestGoldenRequestEncoding/identity.get
+=== RUN   TestGoldenRequestEncoding/request.get_status.unknown
+=== RUN   TestGoldenRequestEncoding/case.entry_options
+=== RUN   TestGoldenRequestEncoding/case.preflight
+=== RUN   TestGoldenRequestEncoding/case.list
+=== RUN   TestGoldenRequestEncoding/approval.list
+=== RUN   TestGoldenRequestEncoding/events.get_range
+=== RUN   TestGoldenRequestEncoding/events.subscribe.ack
+=== RUN   TestGoldenRequestEncoding/case.commit
+=== RUN   TestGoldenRequestEncoding/case.commit.signoff
+=== RUN   TestGoldenRequestEncoding/case.commit.third
+=== RUN   TestGoldenRequestEncoding/case.commit.identity_not_bound
+=== RUN   TestGoldenRequestEncoding/case.commit.identity_delegation_refused
+--- PASS: TestGoldenRequestEncoding (0.01s)
+    --- PASS: TestGoldenRequestEncoding/system.hello (0.00s)
+    --- PASS: TestGoldenRequestEncoding/readiness.get (0.00s)
+    --- PASS: TestGoldenRequestEncoding/identity.get (0.00s)
+    --- PASS: TestGoldenRequestEncoding/request.get_status.unknown (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.entry_options (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.preflight (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.list (0.00s)
+    --- PASS: TestGoldenRequestEncoding/approval.list (0.00s)
+    --- PASS: TestGoldenRequestEncoding/events.get_range (0.00s)
+    --- PASS: TestGoldenRequestEncoding/events.subscribe.ack (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.signoff (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.third (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.identity_not_bound (0.00s)
+    --- PASS: TestGoldenRequestEncoding/case.commit.identity_delegation_refused (0.00s)
+=== RUN   TestGoldenResponseDecoding
+--- PASS: TestGoldenResponseDecoding (0.01s)
+=== RUN   TestLiveExecutionProducesAcceptedArtifacts
+--- PASS: TestLiveExecutionProducesAcceptedArtifacts (0.08s)
+=== RUN   TestLiveDelegationRefusedWithoutGatewayBinding
+--- PASS: TestLiveDelegationRefusedWithoutGatewayBinding (0.02s)
+=== RUN   TestLiveKillMidCommitRecovery
+    live_recovery_test.go:25: warm-up case case_20260925T203827Z_e71bd7 committed
+    live_recovery_test.go:59: server killed mid-commit; restarting
+    live_recovery_test.go:81: commit completed before the kill; outcome recovered for case case_20260925T203827Z_7ffc47
+    live_recovery_test.go:126: durable truth: 2 CaseCreated in the cell, record status=completed - no double commit
+    live_recovery_test.go:135: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-3785052-3-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_recovery_test.go:139: post-recovery case case_20260925T203827Z_ffcae7 committed
+--- PASS: TestLiveKillMidCommitRecovery (0.40s)
+=== RUN   TestLiveSubscriptionResumeAcrossRestart
+    live_subscribe_test.go:115: case A (case_20260925T203827Z_701d6f) frames streaming; last cursor 01M3D4MWWSY6YJ29BMWYR9XDNA
+    live_subscribe_test.go:119: server killed under an active subscription; restarting
+    live_subscribe_test.go:131: commit outcome unresolved across the restart (unavailable: the authority has no record of request gw-3785052-2-case_commit (it never crossed admission); it is safe to retry only with a NEW request id (recover)); retrying with a new request id
+    live_subscribe_test.go:138: case B (case_20260925T203827Z_cfb0d0) frames delivered across the restart boundary; last cursor 01M3D4MX7C5Z06JQBXT9ZTMJD6
+    live_subscribe_test.go:180: no frames after the last delivered cursor (expected: none were committed)
+--- PASS: TestLiveSubscriptionResumeAcrossRestart (0.44s)
+=== RUN   TestLiveVerbRoundTrip
+    live_verbs_test.go:52: readiness overall: unknown
+    live_verbs_test.go:91: committed case case_20260925T203828Z_83e463 (state active)
+    live_verbs_test.go:155: cycle refusal class: plan_cycle_error (plan_cycle_error: sentry dependency cycle detected)
+--- PASS: TestLiveVerbRoundTrip (1.13s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	3.483s

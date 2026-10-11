@@ -1,0 +1,6 @@
+{
+  "kind": "ask_evidence_for_claim",
+  "subject": "domain-rust",
+  "purpose": "planning",
+  "case": "case-t09-contract"
+}

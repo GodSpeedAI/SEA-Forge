@@ -1,0 +1,5 @@
+
+# POST /api/templates/preflight (sentry chain)
+{"template_ref":"e2e-sentry-chain@0.1.0","params":{"dataset_label":"t06critic","dataset_name":"critic-ds","max_rows":"25","out_dir":"work"},"passed":true,"reasons":[],"digest":"sha256:385efd013fb7ef9007a6995aebc1cbce869ac79b3cc1c00c0432371dfdfaf2cd"}
+
+CURL_EXIT=0

@@ -1,0 +1,9 @@
+# resource preflight before/after T03 gates (build-resource policy)
+$ date -u: Sun Sep 20 00:36:40 UTC 2026
+MemAvailable kB: 2141308
+SwapFree kB: 1626988
+memory PSI:
+some avg10=0.00 avg60=0.01 avg300=0.01 total=294618078
+full avg10=0.00 avg60=0.01 avg300=0.01 total=277046866
+other active cargo/bun/go builds:
+(none)

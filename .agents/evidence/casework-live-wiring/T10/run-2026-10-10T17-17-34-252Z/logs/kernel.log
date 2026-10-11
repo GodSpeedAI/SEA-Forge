@@ -1,0 +1,2 @@
+{"timestamp":"2026-10-10T17:17:35.171078Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t10-live-I8Q7IX/cell","socket":"/tmp/t10-live-I8Q7IX/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T17:17:35.182778Z","level":"INFO","message":"server listening on /tmp/t10-live-I8Q7IX/cell/server.sock"}

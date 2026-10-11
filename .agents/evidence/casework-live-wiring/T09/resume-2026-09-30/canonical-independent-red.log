@@ -1,0 +1,67 @@
+bun test v1.4.0 (34cbb9a40)
+
+.agents/reports/interface-contracts/tests/contract-conformance.test.ts:
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 1 & 6: Client initializes and returns valid world snapshot with monotonic cursor [0.82ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Wire shape rejects the stale numeric/object and underspecified intent forms [0.15ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 2: Role boundaries survive projection (Developer vs Security Officer vs Auditor) [0.25ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 3 & 5: Governed Work to Gauntlet execution loop is deterministic [0.35ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 9: Consequential intents enforce role governance and reject unauthorized actors [0.10ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 1: Discretionary work addition extends plan at runtime [0.07ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 10: Temporal navigation returns checkpoints and truthful historical snapshot [0.23ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 11: Artifact provenance survives and resolves to authoritative sources [0.11ms]
+532 |     }
+533 | 
+534 |     const schemasDir = path.resolve(import.meta.dir, '../schemas');
+535 |     for (const file of CONTRACT_SCHEMA_FILES) {
+536 |       const filePath = path.join(schemasDir, file);
+537 |       expect(fs.existsSync(filePath)).toBe(true);
+                                            ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/tests/contract-conformance.test.ts:537:39)
+(fail) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 12: Example JSON payloads parse cleanly and adhere to contract definitions [2.11ms]
+548 |   });
+549 | 
+550 |   it('pins the Ask schema inventory, exact literals, request shape, and full answer disclosure envelope', () => {
+551 |     const askSchemaPath = join(SCHEMA_DIR, 'thoth-ask.schema.json');
+552 |     expect(CONTRACT_SCHEMA_FILES).toContain('thoth-ask.schema.json');
+553 |     expect(readFileSync(askSchemaPath, 'utf-8')).toBeTruthy();
+                 ^
+error: ENOENT: no such file or directory, open '/home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/schemas/thoth-ask.schema.json'
+      at <anonymous> (/home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/tests/contract-conformance.test.ts:553:12)
+(fail) GodSpeed Casework Application Boundary & Contract Conformance > pins the Ask schema inventory, exact literals, request shape, and full answer disclosure envelope [0.30ms]
+631 |           items?: { type?: string; properties?: Record<string, { type?: string; enum?: string[] }> };
+632 |           properties?: Record<string, { type?: string; enum?: string[]; maxItems?: number }>;
+633 |         }>;
+634 |       }>;
+635 |     };
+636 |     expect(streamSchema.properties.event_type.enum).toEqual([...STREAM_EVENT_KINDS]);
+                                                          ^
+error: expect(received).toEqual(expected)
+
+  [
+    "snapshot",
+    "patch",
+    "execution_progress",
+    "settlement_recorded",
+    "lease_expired",
+    "resync_required",
+-   "interrupted",
+-   "error",
+    "heartbeat",
+-   "execution_observation",
+  ]
+
+- Expected  - 3
++ Received  + 0
+
+      at <anonymous> (/home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/tests/contract-conformance.test.ts:636:53)
+(fail) GodSpeed Casework Application Boundary & Contract Conformance > pins execution observation as a safe, bounded cohort side channel and preserves all stream arms [0.71ms]
+
+ 8 pass
+ 3 fail
+ 134 expect() calls
+Ran 11 tests across 1 file. [18.00ms]

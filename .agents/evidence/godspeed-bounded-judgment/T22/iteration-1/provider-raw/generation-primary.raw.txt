@@ -1,0 +1,32 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t22-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 8},
+    "expected_role": "establish_baseline",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Default budget e2e-happy is the frozen baseline surface expected to settle accept."
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t22-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-lying", "max_rounds": 8},
+    "expected_role": "establish_discriminator",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "E2e-lying at default budget tests honest verification failure on this route."
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t22-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 7},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Max_rounds=7 is the immediate below-default probe needed to bracket r* against 8."
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "request_id": "592f2e83-2436-48a4-b4ee-3ef279374fb6",
+  "method": "case.add_item",
+  "status": "completed",
+  "submitted_at": "2026-10-10T17:36:54.499071161+00:00",
+  "completed_at": "2026-10-10T17:36:54.535036280+00:00",
+  "outcome": {
+    "case_id": "case_20261010T173551Z_3dc916",
+    "ok": true,
+    "plan_item_id": "item-disc-acceaaca",
+    "proposed_by": "operator_local"
+  },
+  "payload_hash": "41e971827654b9e915947662a22831c0c868b3153a5fd976bb0d7c1d3b3fdc7d"
+}

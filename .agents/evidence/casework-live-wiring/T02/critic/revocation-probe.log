@@ -1,0 +1,4 @@
+[revoke] before revoke: effective_actor=operator_b
+[revoke] identity_get after edit, NO commit since: effective_actor=operator_b refusal=None
+[revoke] delegated commit as operator_a (forces reload): ok
+[revoke] identity_get after a commit-triggered reload: effective_actor=None refusal=identity_delegation_refused

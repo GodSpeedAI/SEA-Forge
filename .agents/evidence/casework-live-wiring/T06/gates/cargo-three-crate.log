@@ -1,0 +1,32 @@
+=== cargo test -p sea-forge-cli -p sea-forge-case-runner -p sea-forge-server ===
+test a_non_gateway_uid_cannot_send_on_behalf_of ... ok
+test the_gateway_cannot_speak_for_a_non_allowlisted_actor ... ok
+test separation_of_duty_holds_between_end_users_behind_one_gateway ... ok
+test two_end_users_behind_one_gateway_are_attributed_distinctly ... ok
+test user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledgered ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/sfwp_supervisor.rs (target/debug/deps/sfwp_supervisor-d0cf8a522c5e4b6c)
+
+running 4 tests
+test supervisor_and_client_advance_serialize_on_the_same_case ... ok
+test supervisor_enabled_auto_advances_ready_sandboxed_task_without_a_client ... ok
+test supervisor_never_completes_human_tasks_or_creates_approvals ... ok
+test default_config_never_auto_advances_a_ready_sandboxed_task ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.59s
+
+   Doc-tests sea_forge_case_runner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sea_forge_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+EXIT=0

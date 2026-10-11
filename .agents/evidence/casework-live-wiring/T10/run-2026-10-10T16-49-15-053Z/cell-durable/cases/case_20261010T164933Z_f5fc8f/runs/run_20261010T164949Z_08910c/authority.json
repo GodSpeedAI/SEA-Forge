@@ -1,0 +1,126 @@
+[
+  {
+    "version": "0.2",
+    "decision_id": "auth_01",
+    "run_id": "run_20261010T164949Z_08910c",
+    "plan_item_id": "task_prepare",
+    "action_id": "act_8f3442",
+    "correlation_id": "run_20261010T164949Z_08910c",
+    "operation": {
+      "kind": "write_file",
+      "path": "work/dataset.md",
+      "content_hint": "sha256:90999fcee4382f5d72e4ba9034d9427ad861c3202e483516003afa20aa7faa56"
+    },
+    "outcome": "allow",
+    "verdict": "allow",
+    "normalized_disposition": "allow",
+    "matched_rule": "allow-e2e-write-file",
+    "reason_codes": [
+      "policy_allow"
+    ],
+    "reason": "policy_allow",
+    "policy_refs": [
+      "local-policy:allow-e2e-write-file"
+    ],
+    "required_next_steps": [],
+    "identity_binding": {
+      "identity_id": "identity:operator_local",
+      "principal": "operator_local",
+      "roles": [
+        "operator"
+      ],
+      "actor_type": "human",
+      "binding_resolution": "exact",
+      "identity_binding_source": "local-slice-default",
+      "source": "local-slice-default",
+      "sponsor": null,
+      "issued_at": null,
+      "expires_at": null,
+      "identity_binding_hash": "0822d401e4a47a80924adefe50bbc9917347369c06f7f373b6c693cc46c4685e"
+    },
+    "determinism": {
+      "policy_bundle_hash": "sha256:5d8227e7f23149f69a87c5e6ee6204832da7a5e464cc3d40e1b77b8913204157",
+      "action_request_hash": "sha256:580b5014cacf836bec98f512e13e9c0e93b2b19744e14ac016fca2c3e0c4ea1f",
+      "identity_binding_hash": "sha256:9b2fc935b6bde3e26402a18670d8e9736ea1c0c6b748a8ed26538e6314c16775"
+    },
+    "action_request": {
+      "schema_version": "cam.v1",
+      "action_id": "act_8f3442",
+      "correlation_id": "run_20261010T164949Z_08910c",
+      "timestamp_utc": "2026-10-10T16:49:49.145107667+00:00",
+      "actor": {
+        "actor_id": "operator_local",
+        "actor_type": "human",
+        "principal": "operator_local"
+      },
+      "action": {
+        "operation": "write_file",
+        "parameters": {
+          "content_sha256": "90999fcee4382f5d72e4ba9034d9427ad861c3202e483516003afa20aa7faa56",
+          "path": "work/dataset.md"
+        },
+        "resource_id": "work/dataset.md",
+        "resource_type": "file",
+        "tool_name": "sea-forge-cli"
+      },
+      "context": {
+        "artifacts_root": "/tmp/t10-live-bu7HCd/cell/cases/case_20261010T164933Z_f5fc8f/runs/run_20261010T164949Z_08910c/artifacts",
+        "branch": null,
+        "channel": "cli",
+        "domain_model_ref": null,
+        "env_keys": [
+          "HOME",
+          "PATH"
+        ],
+        "environment": "local-slice",
+        "plan_item_id": "task_prepare",
+        "repo": null,
+        "run_id": "run_20261010T164949Z_08910c",
+        "source_platform": "cli",
+        "timeout_secs": 900,
+        "workspace_root": "/tmp/t10-live-bu7HCd/cell/cases/case_20261010T164933Z_f5fc8f/runs/run_20261010T164949Z_08910c/workspace"
+      },
+      "evidence": {
+        "identity_binding_source": "local-slice-default",
+        "payload_hash": "sha256:c6384136b057b19e0a294379a8d87bae7a5fb83caff2e7939c25f8a581b100fb",
+        "tool_trace_ref": null
+      }
+    },
+    "audit_record": {
+      "engine": "sea-forge-authority",
+      "disposition": "allow",
+      "subject": "file:work/dataset.md",
+      "reason": "policy_allow",
+      "evidence_refs": [],
+      "recorded_at": "2026-10-10T16:49:49.145107667+00:00",
+      "decision_id": "auth_01",
+      "case_id": "case_20261010T164933Z_f5fc8f",
+      "run_id": "run_20261010T164949Z_08910c",
+      "policy_bundle_hash": "sha256:5d8227e7f23149f69a87c5e6ee6204832da7a5e464cc3d40e1b77b8913204157",
+      "action_request_hash": "sha256:580b5014cacf836bec98f512e13e9c0e93b2b19744e14ac016fca2c3e0c4ea1f",
+      "identity_binding_hash": "sha256:9b2fc935b6bde3e26402a18670d8e9736ea1c0c6b748a8ed26538e6314c16775"
+    },
+    "decided_at": "2026-10-10T16:49:49.145107667+00:00",
+    "candidate_verdicts": [
+      {
+        "engine": "local",
+        "disposition": "allow",
+        "subject": "work/dataset.md",
+        "reason": "policy_allow",
+        "evidence_refs": [
+          "local-policy:allow-e2e-write-file"
+        ],
+        "recorded_at": "2026-10-10T16:49:49.145107667+00:00",
+        "boundary_constraints": {},
+        "compensating_controls": []
+      }
+    ],
+    "winning_source": "local",
+    "precedence_reason": "typed deterministic candidate resolution",
+    "sandbox_class_granted": "local",
+    "approval_request_id": null,
+    "opaque_constraint_id": null,
+    "boundary_constraints": {},
+    "compensating_controls": []
+  }
+]

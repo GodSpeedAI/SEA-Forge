@@ -1,0 +1,11 @@
+server binary: /home/sprime01/projects/sea-rs/target/debug/sea-forge-server
+cell: /tmp/sf-t04critic-H8bj
+socket up: /tmp/sf-t04critic-H8bj/server.sock
+submit -> {"case_id": "case_20260925T014041Z_f77286", "exit_code": 5, "state": "active"}
+cycle add -> {"error": "plan_cycle_error: sentry dependency cycle detected", "error_class": "plan_cycle_error"}
+plan.json sha before=7f6f4495786764b60cd748889a37d3b91a80c7bcb6612186fa674fadf9ede7a8 after=7f6f4495786764b60cd748889a37d3b91a80c7bcb6612186fa674fadf9ede7a8
+case-events lines before=2 after=2
+empty-reason terminate -> {"error": "case.terminate requires a non-empty reason", "error_class": "input_error"}
+legal add -> {"case_id": "case_20260925T014041Z_f77286", "ok": true, "plan_item_id": "legit", "proposed_by": "operator_local"}
+ATTACK RESULT: PASS
+ATTACK_EXIT=0

@@ -1,0 +1,79 @@
+# T03 — sea-forge-server full-suite gate repair record
+schema: godspeed-bounded-judgment.t03-gate-repair
+schema_version: "1.0"
+executed: "2026-09-17"
+sea_rs_revision: "72348237412dc000533c05b6a36e01066ca3baed (production code untouched by T03)"
+
+round_1_reproduction:
+  command: "just crate-test sea-forge-server both_layouts_still_resolve_after_a_restart"
+  exit_code: 101
+  evidence: "round-1-reproduction.log"
+  failure: "panicked at conformance_run_locator.rs:59:56 — UnixStream::connect unwrap, Os NotFound; the second server never published a socket because the first server still held the cell lock"
+
+diagnosis:
+  decided: "DECIDED: the production lock scope is correct; the test's assumption was wrong"
+  mechanism: >-
+    lock_cell_root (crates/sea-forge-server/src/lib.rs:966) takes an exclusive
+    flock on <root>/.server.lock, held for the server's lifetime, documented:
+    "A socket override must not let two servers mutate the same ledgers through
+    different socket paths" (single-mutator-per-cell invariant; runtime depends
+    on it). The restart test kept the first server ALIVE (only the client was
+    dropped) and booted a second server against the same root — an operation the
+    product deliberately refuses. The redesign_trigger condition (lock
+    fundamentally process-scoped in a way the runtime depends on) was examined
+    and does NOT fire: the lock is cell-scoped, documented, and load-bearing.
+  test_fix_rationale: >-
+    The test's essential property is unchanged: both run layouts must resolve
+    through a SECOND server (fresh socket, fresh server state) after the
+    process that first served them is gone. The correction makes the test
+    model a real restart: the first server task is aborted (dropping the
+    future releases the flock exactly as a real process exit would) before
+    the second server boots. No assertion was weakened, deleted, filtered, or
+    made single-threaded; no production code changed.
+
+correction:
+  files_changed: ["crates/sea-forge-server/tests/conformance_run_locator.rs"]
+  change: >-
+    serve() now returns (socket, JoinHandle); single-server call sites
+    destructure with _server; the restart test aborts and awaits the first
+    server task before booting the second, with a comment stating the
+    invariant. Assertions byte-identical to round-1.
+
+verification:
+  narrow_test:
+    command: "just crate-test sea-forge-server both_layouts_still_resolve_after_a_restart"
+    exit_code: 0
+    result: "conformance_run_locator: 1 passed (the previously failing test, original assertions)"
+    evidence: "round-2-narrow.log"
+  crate_suite:
+    command: "just crate-test sea-forge-server"
+    exit_code: 101
+    run_locator_suite: "ok. 6 passed; 0 failed (round-2-crate-suite.log)"
+    newly_observed_preexisting_failures:
+      - "sea-forge-server::conformance_sfwp::oversized_precondition_records_fail_with_typed_error_before_any_side_effect"
+      - "sea-forge-server::conformance_sfwp::precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint"
+      - "sea-forge-server::conformance_sfwp::stale_precondition_on_approve_is_rejected_with_no_side_effect"
+    classification: "PREEXISTING_BASELINE_FAILURE (masked, not caused by T03)"
+    masking_note: >-
+      The T00 baseline crate-suite run aborted at conformance_run_locator
+      (alphabetically before conformance_sfwp), so conformance_sfwp has NO T00
+      verdict. The failures reproduce in isolation (sfwp-preexisting-failures.log,
+      deterministic 16 passed / 3 failed both runs). sea-forge-server src and
+      the sfwp test file are byte-identical to the T00 revision (neither is in
+      the T00 dirty inventory; T03 touched only conformance_run_locator.rs),
+      so the failures reproduce at the T00 revision: pre-existing, newly
+      OBSERVED because the suite now progresses further. Example failure:
+      stale_precondition_on_approve expects approval.decide envelope field
+      'rejected_as_stale', receives Null (conformance_sfwp.rs:354).
+    disposition: "recorded per T03 contract ('do not silently fix or hide'); fixing them is outside T03's declared scope"
+  workspace_suite:
+    command: "just test"
+    exit_code: 101
+    result: "fails at sea-forge-cli::conformance_m13::t13_1_agent_task_routed_through_server_and_settles (PREEXISTING_BASELINE_FAILURE, T00-confirmed; the workspace order reaches cli before the server suites, so server suites are again unreached in this invocation)"
+    evidence: "round-3-workspace.log"
+
+done_when_audit:
+  - "previously-failing test passes with original assertions intact: YES"
+  - "just crate-test sea-forge-server exits 0: NO — red solely on the three masked pre-existing sfwp failures recorded above; T03's own defect is repaired and proven"
+  - "original failure output preserved as round-1 evidence: YES"
+  - "remaining failures classified with exact ids: YES (3 sfwp + cli t13_1)"

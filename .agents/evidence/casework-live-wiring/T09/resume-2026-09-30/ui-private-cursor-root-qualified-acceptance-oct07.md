@@ -1,0 +1,9 @@
+# Root acceptance of the private local cursor checkpoint
+
+Root accepts independent review c1a0e509 with its immutable citation correction 111abd25. The six current source hashes match the frozen candidate. All seventeen distinct raw manifest hashes resolve to the durable archives; actual E2E preflight/output/exit compare byte for byte with current originals. Both result wrappers decode exactly to the originals and contain eleven passing journey records. Older temporary originals were lost after reset; their comparisons remain historical, and focused preflight provenance is tool-only as disclosed.
+
+Root inspected the actual HEAD diff for shared conformance: it adds only the future-only choice of captured pre-resume head instead of snapshot cursor; replay-retained remains unchanged. The original Phase1 assignment authorizes that choice. Independent review verifies scenario declarations, branch assertions, and listener floor semantics. This conformance hunk is included in the accepted six-file checkpoint, distinct from the later three-hunk test repair.
+
+Approved source paths: localAdapter.ts; localAdapter.cursorOrder.test.ts; localAdapter.cursorBounds.test.ts; localAdapter.settlementAtomicity.test.ts; localAdapter.hostileThrownValues.test.ts; conformance/caseworkPortConformance.ts. Renderer chunk and Vite changes, Go stubs, operator changes, and unrelated staged entries are outside this acceptance.
+
+The private UI focused/typecheck/full suite/build/canonical gates and local contract-adapter ladder passed. The first sandbox loopback failure and interrupted run remain recorded failures/partial observations. No live-server, public cursor, all-T09, or T10 claim follows. Shared mutable event argument risk remains CW-25. Normal hooks and publication gates are still required for the pending checkpoint.

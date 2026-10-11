@@ -1,0 +1,65 @@
+
+[attack c] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack c] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "operator_c", "process": "t02_critic", "request_id": "critic-commit-1", "actor": {"actor_id": "gateway", "role": "service"}, "on_behalf_of": {"actor_id": "operator_c", "role": "operator"}}
+[attack c] RESPONSE (verbatim): {"error": "delegated identity refused: actor `operator_c` is not in this cell's gateway-delegable allowlist", "error_class": "identity_delegation_refused", "next_lawful_action": "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role", "no_side_effect": true}
+[attack c] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack c] verdict: PASS
+
+[attack d] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack d] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "security_officer", "process": "t02_critic", "request_id": "critic-commit-2", "actor": {"actor_id": "gateway", "role": "service"}, "on_behalf_of": {"actor_id": "security_officer", "role": "operator"}}
+[attack d] RESPONSE (verbatim): {"error": "delegated identity refused: role Operator exceeds the roles bound to `security_officer`", "error_class": "identity_delegation_refused", "next_lawful_action": "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role", "no_side_effect": true}
+[attack d] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack d] verdict: PASS
+
+[attack x1] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack x1] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "ghost", "process": "t02_critic", "request_id": "critic-commit-3", "actor": {"actor_id": "gateway", "role": "service"}, "on_behalf_of": {"actor_id": "ghost", "role": "operator"}}
+[attack x1] RESPONSE (verbatim): {"error": "delegated identity refused: actor `ghost` is not in this cell's gateway-delegable allowlist", "error_class": "identity_delegation_refused", "next_lawful_action": "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role", "no_side_effect": true}
+[attack x1] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack x1] verdict: PASS
+
+[attack x2] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack x2] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "operator_a", "process": "t02_critic", "request_id": "critic-commit-4", "actor": {"actor_id": "gateway", "role": "service"}, "on_behalf_of": "operator_a"}
+[attack x2] RESPONSE (verbatim): {"error": "this request verified actor `gateway` but attributes its work to `operator_a`; the two must name the same actor", "error_class": "identity_entity_mismatch", "next_lawful_action": "Attribute the operation to the verified actor", "no_side_effect": true}
+[attack x2] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack x2] verdict: PASS
+
+[positive] A submits via gateway: {"case_id": "case_20260925T014255Z_00df95", "exit_code": 5, "state": "active"}
+[positive] A adds discretionary item via gateway: {"case_id": "case_20260925T014255Z_00df95", "ok": true, "plan_item_id": "disc", "proposed_by": "operator_a"}
+[positive] A executes item (escalates): {"case_id": "case_20260925T014255Z_00df95", "episodes": [{"item_id": "disc", "run_id": "run_20260925T014255Z_febcac", "settlement_status": "escalated"}], "ok": true, "state": "idle"}
+[positive] pending approval: apr_0001
+[positive] B resolves A's approval via gateway: {"ok": true, "output": "approval_id=apr_0001\nstatus=Approved\nresolved_by=operator_b\n"}
+[positive] delegation-audit records (4):
+           {"effective_actor_id": "operator_a", "effective_role": "operator", "gateway_actor_id": "gateway", "gateway_uid": 1000, "request_id": "critic-pos-submit", "verb": "submit"}
+           {"effective_actor_id": "operator_a", "effective_role": "operator", "gateway_actor_id": "gateway", "gateway_uid": 1000, "request_id": "critic-pos-add", "verb": "case_add_item"}
+           {"effective_actor_id": "operator_a", "effective_role": "operator", "gateway_actor_id": "gateway", "gateway_uid": 1000, "request_id": "critic-pos-exec", "verb": "item_execute"}
+           {"effective_actor_id": "operator_b", "effective_role": "operator", "gateway_actor_id": "gateway", "gateway_uid": 1000, "request_id": "critic-pos-decide", "verb": "approval_decide"}
+[positive] approval_resolution payload: {"approval_id": "apr_0001", "case_id": "case_20260925T014255Z_00df95", "criteria_record_hash": "sha256:e81af2dc0c2882706c37630abe25a17e6dd777da7a716d4f7cbdd3d5b14b7b3c", "criteria_ref": "crit_204c58", "criteria_sha256": "sha256:0d56755da21c267e9fe697b276f4da45e6c57a5e18b99d112b46cab39e1da279", "decision_id": "auth_01", "expires_at": "2026-09-25T01:43:55.882411262+00:00", "note": "distinct end user, same gateway (critic)", "plan_item_id": "disc", "requested_at": "2026-09-25T01:42:55.882411262+00:00", "resolved_at": "2026-09-25T01:42:55.905525892+00:00", "resolved_by": "operator_b", "run_id": "run_20260925T014255Z_febcac", "status": "approved", "version": "0.1"}
+[positive] escalation requester (SoD field): operator_a
+[positive] identity.get (delegated inspect): {"available": [{"actor_id": "gateway", "roles": ["service"]}], "configured": true, "effective_actor": {"actor_id": "operator_a", "delegated_by": {"actor_id": "gateway", "uid": 1000}, "role": "operator"}, "uid": 1000}
+[positive] verdict: PASS
+
+[attack a] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack a] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "operator_b", "process": "t02_critic", "request_id": "critic-commit-5", "actor": {"actor_id": "operator_local", "role": "operator"}, "on_behalf_of": {"actor_id": "operator_b", "role": "operator"}}
+[attack a] RESPONSE (verbatim): {"error": "delegated identity refused: uid 1000 is not the configured gateway uid 4242, so it may not send `on_behalf_of`", "error_class": "identity_delegation_refused", "next_lawful_action": "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role", "no_side_effect": true}
+[attack a] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack a] verdict: PASS
+
+[attack b] before: digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack b] request: {"verb": "case_commit", "template_ref": "e2e-sentry-chain@0.1.0", "params": {"dataset_name": "orders-q3", "dataset_label": "t02critic", "max_rows": "25", "out_dir": "work"}, "policy": "authority/active-policy.json", "entity": "operator_local", "process": "t02_critic", "request_id": "critic-commit-6", "actor": {"actor_id": "gateway", "role": "service"}, "on_behalf_of": {"actor_id": "operator_local", "role": "operator"}}
+[attack b] RESPONSE (verbatim): {"error": "delegated identity refused: this cell configures no `gateway` principal, so no connection may send `on_behalf_of` (uid 1000 did)", "error_class": "identity_delegation_refused", "next_lawful_action": "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role", "no_side_effect": true}
+[attack b] after:  digest=e3b0c44298fc1c14… cases=0 delegation_audit_exists=False
+[attack b] verdict: PASS
+
+[attack b] direct claim on same connection after refusal: ok
+
+================ CRITIC RUN SUMMARY ================
+  c-bound-not-allowlisted: PASS
+  d-role-exceeds-binding: PASS
+  x-unknown-actor: PASS
+  x-garbled-on-behalf-of-entity-mismatch: PASS
+  e-positive-sod: PASS
+  a-operator-bound-uid: PASS
+  b-gateway-section-omitted: PASS
+  b-direct-still-works: PASS
+OVERALL: PASS
+cells kept for inspection: /tmp/t02-critic-gateway-6evqj_59 /tmp/t02-critic-operator-imzv8qef /tmp/t02-critic-ungoverned-obm9wfqo

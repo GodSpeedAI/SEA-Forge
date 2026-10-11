@@ -1,0 +1,71 @@
+# =============================================================================
+# T21 PREREG ADDENDUM 1 — fixture-mechanism correction (append-only, FROZEN)
+# =============================================================================
+# Frozen BEFORE the first T23 probe and BEFORE any further route execution.
+# The base prereg (sha256 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5)
+# is preserved unchanged; this addendum supersedes ONLY its
+# fixture_and_case_family section and the route_goal baseline wording.
+schema: godspeed-bounded-judgment.t21-prereg.addendum-1
+created_utc: "2026-09-18"
+frozen_before: "first T23 probe"
+contradiction_record:
+  what_the_base_prereg_froze: >-
+    fixture_and_case_family named examples/demo-calculator copies plus a 5-var
+    env, citing .agents/evidence/godspeed-bounded-judgment/T15/batch-round1-failed.sh.
+  what_the_T15_clean_corpus_actually_ran: >-
+    The T15 corpus manifest (godspeed-bounded-judgment-T15.corpus-manifest.yml)
+    records the clean round-3 batch as "headless gauntlet run (deterministic
+    mock replay, GAUNTLET_CLOCK=deterministic, GAUNTLET_ID_SEED per case) over
+    tests/fixtures/target copies; the repo's own e2e_full_loop_mock recipe",
+    and its excluded_rounds note preserves rounds 1-2 as FAILED rounds whose
+    failures included generator targeting - i.e. demo-calculator was the
+    failed round's targeting error, not the corpus recipe. The cited script's
+    own name (batch-round1-failed) records exactly this.
+  how_the_defect_surfaced: >-
+    T22 round-1 (preserved, untouched): all 3 probes died as run_error because
+    the frozen 5-var env omitted required control settings. T22 round-2
+    (preserved): with the required controls the loop executed a genuine
+    advance, but every probe on demo-calculator copies returned typed
+    budget_exhausted with the instrument recording failures=1 - the mock
+    scenarios' workspace effects are keyed to the fixture target's answer key,
+    so on demo-calculator copies nothing can settle at any max_rounds and the
+    frozen baseline goal (e2e-happy@8 settles) is unreachable by construction.
+  classification: >-
+    Per the base prereg failure_interpretation: smallest falsified layer =
+    probe_execution (fixture mechanism specification); the loop, admission,
+    judgment, and selection layers performed correctly and are NOT implicated.
+corrected_fixture_mechanism:
+  target: >-
+    Each probe copies /home/sprime01/projects/gauntlet/tests/fixtures/target
+    to a fresh disposable target (the T15 clean recipe; runners.default is
+    already mock-agent; NO runner sed).
+  budget_lever: >-
+    For boundary probes, sed the copied GAUNTLET.md budget.max_rounds (fixture
+    default 4) to the probe's max_rounds value; the operation catalog domain
+    stays max_rounds in 1..8 (values >4 raise the lever and remain valid
+    probes; the baseline is the fixture default 4).
+  env: >-
+    GAUNTLET_STATE_DIR, GAUNTLET_ARTIFACT_DIR (durable per-probe dirs under
+    $HOME/.local/share/godspeed-route-discovery/), GAUNTLET_MOCK_SCENARIO,
+    GAUNTLET_ID_SEED (unique per probe, recorded in the probe record),
+    GAUNTLET_CLOCK=deterministic, GAUNTLET_STALL_TIMEOUT_MS=60000,
+    GAUNTLET_RETRY_BASE_MS=100, GAUNTLET_RETRY_MAX_MS=2000,
+    GAUNTLET_MAX_ATTEMPTS_PER_UNIT=2, GAUNTLET_TOOL_TEST=<target>/scripts/check.sh;
+    timeout 240 s per probe; ground truth remains the run's own event log
+    (run_terminal state + settlement_committed count).
+corrected_route_goal:
+  baseline: "an e2e-happy probe at the fixture default max_rounds=4 settles (settled_accepted); the repo's own e2e proof is prior evidence, the route establishes its own"
+  discriminator: "unchanged from the base prereg: an e2e-lying probe on this route honestly fails verification (verification_failed_nonsettlement)"
+  boundary: "unchanged in kind: minimal settling budget r* in {1..8} discovered by this route's own probes with r*-1 exhausting; prior knowledge from the T15 manifest (r1/r2 exhausted, r4 settles) may order the neighborhood but never substitutes for this route's own r* and r*-1 probes"
+unchanged: >-
+  Everything else in the base prereg stands exactly as frozen: operation
+  catalog and neighborhood rule, K=3, retained-depth 5, probe budget 12,
+  iterations 6, candidate representation, answer domain, selection-policy-v1,
+  provider admission policy, stop conditions, inverse-generation acceptance,
+  matched-negative single factor (r* -> r*-1), novelty metric, teeth, claims
+  A/B/C with D out of scope, failure interpretation, payment counters.
+evidence:
+  - ".agents/preregistrations/godspeed-bounded-judgment-T15.corpus-manifest.yml"
+  - ".agents/evidence/godspeed-bounded-judgment/T22/iteration-1/ (preserved failed round-1)"
+  - ".agents/evidence/godspeed-bounded-judgment/T22/round-2/ (preserved round-2 records incl. the diagnostic)"
+  - "/home/sprime01/projects/gauntlet/crates/gauntlet-cli/tests/e2e_full_loop_mock.rs (the canonical env recipe)"

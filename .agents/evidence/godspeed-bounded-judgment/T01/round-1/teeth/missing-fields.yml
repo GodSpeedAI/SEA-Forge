@@ -1,0 +1,8 @@
+tooth: missing_fields
+rows_mutated: 5
+missing_claim_detected: 5
+missing_settlement_detected: 5
+expected: the missing-field report names removed fields and reconstructibility drops; no silent default substitution
+behaved_as_specified: true
+mode: missing-fields
+executed_at: '2026-09-18T00:09:41.281986+00:00'

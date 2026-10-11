@@ -1,0 +1,98 @@
+# Atomic UI View: semantic_model_workspace
+# Upstream Behavioral Source: CJ03 Ground Work in Semantic Meaning
+
+view:
+  id: semantic_model_workspace
+  purpose: Supply, validate, inspect, and pin DomainForge .sea domain models and deterministic projections before execution.
+
+sources:
+  journey: CJ03
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    cell_context: persistent
+    active_source_set: persistent_during_editing
+    model_closure_hash: persistent_across_views
+
+regions:
+  - id: source_explorer
+    responsibility: manage_sea_source_files_and_imports
+  - id: model_diagnostics
+    responsibility: expose_syntax_import_and_dangling_reference_diagnostics
+  - id: concept_graph
+    responsibility: visualize_concepts_entities_and_relation_topology
+  - id: pin_and_project_panel
+    responsibility: pin_semantic_closure_hash_and_trigger_projections
+
+elements:
+  # Source Explorer Region
+  - id: source_file_tree
+    primitive: tree
+    region: source_explorer
+    binds: { entity: sea_sources }
+
+  - id: add_source_input
+    primitive: input
+    region: source_explorer
+    binds: { field: file_path_or_buffer }
+
+  # Model Diagnostics Region
+  - id: validation_status_badge
+    primitive: status
+    region: model_diagnostics
+    binds: { field: domainforge_validation_status }
+
+  - id: diagnostic_messages_list
+    primitive: collection
+    region: model_diagnostics
+    binds: { entity: parser_diagnostics }
+
+  # Concept Graph Region
+  - id: namespace_topology_graph
+    primitive: graph
+    region: concept_graph
+    binds: { entity: validated_domain_model }
+
+  - id: concept_inspector
+    primitive: inspector
+    region: concept_graph
+    binds: { entity: selected_concept }
+
+  # Pin and Project Region
+  - id: closure_hash_value
+    primitive: value
+    region: pin_and_project_panel
+    binds: { field: semantic_closure_hash }
+
+  - id: domain_model_ref_receipt
+    primitive: evidence_item
+    region: pin_and_project_panel
+    binds: { field: domain_model_ref }
+
+  - id: pin_model_to_case_action
+    primitive: action
+    region: pin_and_project_panel
+    semantic_action: pin_model_to_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: run_projection_action
+    primitive: action
+    region: pin_and_project_panel
+    semantic_action: execute_deterministic_projection
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: quarantine_drift_action
+    primitive: action
+    region: pin_and_project_panel
+    semantic_action: quarantine_and_rework_drift
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: domainforge_validation_in_progress }
+  ready: { when: model_parsed_and_references_pinned }
+  blocked: { when: syntax_error_or_dangling_reference_present }
+  error: { when: drift_detected_against_committed_hash }

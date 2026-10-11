@@ -1,0 +1,14 @@
+{
+  "session": "gs-live-mv2z0ily-operator",
+  "entries": [
+    {
+      "level": "warning",
+      "text": "[event stream] {stack: \"Error: event stream interrupted (reconnecting; bac…81/assets/httpCaseworkAdapter-CvluCuo-.js:1:6303)\", message: \"event stream interrupted (reconnecting; backoff cap 10000ms)\"}"
+    },
+    {
+      "level": "warning",
+      "text": "[event stream] {stack: \"Error: event stream interrupted (reconnecting; bac…81/assets/httpCaseworkAdapter-CvluCuo-.js:1:6303)\", message: \"event stream interrupted (reconnecting; backoff cap 10000ms)\"}"
+    }
+  ],
+  "page_errors": []
+}

@@ -1,0 +1,47 @@
+n: 9
+class_counts:
+  settled: 3
+  budget_exhausted: 6
+disclosure:
+  n: 9
+  independent_run_count: 3
+  class_counts:
+    settled: 3
+    budget_exhausted: 6
+  concentration_by_run: 3 case families x 3
+  missing_attribution: providers are live and attributed per answer; historical attribution n/a
+  reconstructibility_rate: 1.0
+  stability: 'UNSTABLE: pilot corpus of 9 runs; descriptive only'
+baseline:
+  rule: 'face-value: all documents claim completed -> settled'
+  accuracy: 0.6666666666666666
+  triviality_note: baseline never reads artifact contents; reported beside providers
+deepseek-clinepass:
+  contract_failures: 0
+  n_answered: 9
+  accuracy_vs_consequence: 0.6666666666666666
+  confusion:
+    insufficient_evidence:
+      not_settled: 2
+    settled:
+      settled: 3
+      not_settled: 1
+    not_settled:
+      not_settled: 3
+  abstention_rate: 0.2222222222222222
+  mean_entropy_nats: 0.7709798012755577
+prime-agent:
+  contract_failures: 9
+  n_answered: 0
+  accuracy_vs_consequence: null
+  confusion: {}
+  abstention_rate: 0.0
+  mean_entropy_nats: null
+capable_vs_capable_disagreement: 0
+decision:
+  letter: B
+  legs:
+    contract: false
+    accuracy>=0.8: false
+    abstention<=0.5: true
+    entropy>0: false

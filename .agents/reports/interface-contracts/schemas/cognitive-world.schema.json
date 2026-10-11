@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/cognitive-world.schema.json",
+  "title": "CognitiveWorldSnapshot",
+  "description": "Authoritative spatial and temporal projection of a purposeful case world for the Cognitive Environment.",
+  "type": "object",
+  "required": [
+    "world_id",
+    "case_id",
+    "cursor",
+    "timestamp",
+    "perspective",
+    "summary",
+    "visible_objects",
+    "available_actions",
+    "attention_focus"
+  ],
+  "properties": {
+    "world_id": {
+      "type": "string",
+      "pattern": "^ws-[a-z0-9_.-]+-[0-9]+\\.[0-9]{10}$",
+      "description": "Unique deterministic snapshot identifier."
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^case-[a-z0-9_.-]+$",
+      "description": "Identifier of the underlying SEA-Forge case."
+    },
+    "cursor": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]{10}$",
+      "description": "Monotonic logical sequence cursor (<epoch>.<seq>)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wall-clock time when snapshot was synthesized."
+    },
+    "perspective": {
+      "type": "object",
+      "required": ["actor_id", "role"],
+      "properties": {
+        "actor_id": { "type": "string" },
+        "role": { "type": "string" },
+        "display_name": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["headline", "phase", "status_phrase"],
+      "properties": {
+        "headline": { "type": "string" },
+        "phase": { "type": "string" },
+        "status_phrase": { "type": "string" },
+        "progress_percent": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    "visible_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CognitiveObject"
+      }
+    },
+    "available_actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ActionDescriptor"
+      }
+    },
+    "attention_focus": {
+      "type": "object",
+      "required": ["primary_object_id"],
+      "properties": {
+        "primary_object_id": { "type": "string" },
+        "salience_rank": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "narration": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "CognitiveObject": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "status",
+        "badge",
+        "salience",
+        "actions"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "work_item",
+            "stage",
+            "milestone",
+            "decision_gate",
+            "discretionary_opportunity",
+            "execution_trace",
+            "evidence_record"
+          ]
+        },
+        "name": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "WAITING",
+            "READY_TO_BEGIN",
+            "IN_PROGRESS",
+            "ACTION_REQUIRED",
+            "WAITING_ON_OTHERS",
+            "COMPLETED",
+            "REJECTED",
+            "FAILED",
+            "AVAILABLE_TO_ADD",
+            "ACTIVE"
+          ]
+        },
+        "badge": { "type": "string" },
+        "explanation": { "type": "string" },
+        "salience": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "parent_id": { "type": "string" },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "spatial_layout": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" },
+            "radius": { "type": "number" }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ActionDescriptor"
+          }
+        }
+      }
+    },
+    "ActionDescriptor": {
+      "type": "object",
+      "required": ["id", "label", "intent", "consequential"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "intent": {
+          "type": "string",
+          "enum": [
+            "BEGIN_WORK",
+            "APPROVE_HUMAN_TASK",
+            "REJECT_HUMAN_TASK",
+            "ADD_DISCRETIONARY_WORK",
+            "REOPEN_WORK",
+            "ESCALATE_OR_OVERRIDE",
+            "OPEN_ARTIFACT",
+            "RESOLVE_SOURCE",
+            "EXPORT_AUDIT_BUNDLE",
+            "RESUME_LIVE_STREAM"
+          ]
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["PRIMARY", "SECONDARY", "DANGER", "WARNING", "GHOST"]
+        },
+        "consequential": { "type": "boolean" },
+        "requires_justification": { "type": "boolean" }
+      }
+    }
+  }
+}

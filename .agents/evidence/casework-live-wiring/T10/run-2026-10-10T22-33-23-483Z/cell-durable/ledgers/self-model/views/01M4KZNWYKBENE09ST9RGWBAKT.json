@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KZNWYKBENE09ST9RGWBAKT",
+  "source_entry_ulids": [
+    "01M4KZNWYKBENE09ST9RGWBAKT"
+  ],
+  "source_payload_hash": "sha256:e20710c06ccbaba71ca732133e341f071c8c0272852ef90446d771a78a0a802c",
+  "view_path": "/tmp/t10-live-7U58R8/cell/self-model/snapshots/smsnap_20261010T224200Z_c074d9.json",
+  "view_sha256": "sha256:032be1505b70f6fa54c1de6a91295d4dd09ee89d531f1e9a0ad13c82a5cbb780",
+  "status": "current",
+  "failure_class": null
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SettlementDetail",
+  "description": "The settlement record, projected. Separate from [`RunRecord::termination`]\nby construction (epic 12.4).",
+  "type": "object",
+  "properties": {
+    "basis": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "criteria_ref": {
+      "description": "The immutable criteria record this settlement judged against. Absent on\nlegacy runs, which the kernel marks with a `legacy_unattributed_criteria`\nbasis token.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "review_required": {
+      "type": "boolean"
+    },
+    "settled_at": {
+      "type": "string"
+    },
+    "settlement_id": {
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/SettlementStanding"
+    }
+  },
+  "required": [
+    "settlement_id",
+    "status",
+    "review_required",
+    "settled_at"
+  ],
+  "$defs": {
+    "SettlementStanding": {
+      "description": "Whether a *governed settlement* has been recorded for the item. Distinct\nfrom execution: work can execute perfectly and settle as rejected.",
+      "oneOf": [
+        {
+          "description": "No settlement record exists for this item yet.",
+          "type": "string",
+          "const": "unsettled"
+        },
+        {
+          "description": "A settlement record accepted the work.",
+          "type": "string",
+          "const": "accepted"
+        },
+        {
+          "description": "A settlement record rejected the work.",
+          "type": "string",
+          "const": "rejected"
+        },
+        {
+          "description": "A settlement record escalated the decision to a human.",
+          "type": "string",
+          "const": "escalated"
+        }
+      ]
+    }
+  }
+}

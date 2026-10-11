@@ -1,0 +1,544 @@
+{
+ "domain": [
+  "no_chain_deficiency",
+  "missing_evidence_object",
+  "unresolvable_reference",
+  "instrument_mismatch",
+  "insufficient_provenance"
+ ],
+ "mechanical_baseline": [
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency",
+  "no_chain_deficiency"
+ ],
+ "results": {
+  "codex": [
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.004,
+     "insufficient_provenance": 0.002
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.004,\"insufficient_provenance\":0.002},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object resolves, and the test-report verification instrument matches the test_report requirement.",
+    "raw_tail": "nce_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object resolves, and the test-report verification instrument matches the test_report requirement.\"}\n",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object resolves, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "issing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object resolves, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, temporal integrity is intact, the evidence object is resolvable, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.",
+    "raw_tail": "g_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the verification instrument matches the test-report requirement.\"}\n",
+    "row_index": 16
+   }
+  ],
+  "prime-agent": [
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.003,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.002
+    },
+    "reason": "All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "iency\":0.99,\"missing_evidence_object\":0.003,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.002},\"reason\":\"All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "iency\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.003,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.003,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the test-report instrument matches the requirement.",
+    "raw_tail": ":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.003,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required hops are present, the evidence object is resolvable, and the test-report instrument matches the stated requirement.",
+    "raw_tail": "ution\":{\"no_chain_deficiency\":0.99,\"missing_evidence_object\":0.003,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.003},\"reason\":\"All required hops are present, the evidence object is resolvable, and the test-report instrument matches the stated requirement.\"}\n",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "iency\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "iency\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, the evidence object resolves, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is okay, and the test-report instrument matches the requirement.",
+    "raw_tail": "y\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is okay, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, temporal integrity is valid, the evidence object resolves, and the test-report instrument matches the requirement.",
+    "raw_tail": "iency\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, temporal integrity is valid, the evidence object resolves, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.003,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.003,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.003,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.003
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the test-report instrument matches the requirement.",
+    "raw_tail": ":0.99,\"missing_evidence_object\":0.003,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.003},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is intact, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, temporal integrity is valid, the evidence object is resolvable, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, temporal integrity is valid, the evidence object is resolvable, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "no_chain_deficiency",
+    "confidence": 0.99,
+    "distribution": {
+     "no_chain_deficiency": 0.99,
+     "missing_evidence_object": 0.002,
+     "unresolvable_reference": 0.002,
+     "instrument_mismatch": 0.002,
+     "insufficient_provenance": 0.004
+    },
+    "reason": "All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.",
+    "raw_tail": "\":0.99,\"missing_evidence_object\":0.002,\"unresolvable_reference\":0.002,\"instrument_mismatch\":0.002,\"insufficient_provenance\":0.004},\"reason\":\"All required chain hops are present, the evidence object is resolvable, temporal integrity is valid, and the test-report instrument matches the requirement.\"}\n",
+    "row_index": 16
+   }
+  ]
+ }
+}

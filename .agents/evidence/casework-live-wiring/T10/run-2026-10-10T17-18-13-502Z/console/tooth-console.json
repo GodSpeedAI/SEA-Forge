@@ -1,0 +1,11 @@
+{
+  "session": "gs-live-mv2nr7f2-tooth",
+  "entries": [],
+  "page_errors": [
+    {
+      "session": "tooth",
+      "where": "pageerror",
+      "text": "Error: tooth-injected-page-error\n    at file:///tmp/l9-tooth-DpeRRd/noisy.html:1:140"
+    }
+  ]
+}

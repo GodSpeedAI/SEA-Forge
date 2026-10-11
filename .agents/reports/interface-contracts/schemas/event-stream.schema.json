@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/schemas/event-stream.schema.json",
+  "title": "EventStreamEnvelope",
+  "description": "SSE envelope schemas. execution_observation is informational, uses the latest real case cursor, has no SSE id, and does not advance logical history.",
+  "type": "object",
+  "required": ["event_type", "cursor", "timestamp", "payload"],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "snapshot",
+        "patch",
+        "execution_progress",
+        "settlement_recorded",
+        "lease_expired",
+        "resync_required",
+        "interrupted",
+        "error",
+        "heartbeat",
+        "execution_observation"
+      ]
+    },
+    "cursor": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]{10}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific typed data payload."
+    }
+  },
+  "allOf": [{
+    "if": { "properties": { "event_type": { "const": "execution_observation" } }, "required": ["event_type"] },
+    "then": { "$ref": "#/definitions/ExecutionObservationEvent" }
+  }],
+  "definitions": {
+    "RunTraceFrame": {
+      "type": "object",
+      "description": "Allowlisted metadata from a real trace row; raw payload and actor are never forwarded.",
+      "required": ["event_id", "kind", "timestamp"],
+      "properties": {
+        "event_id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["run_started", "item_activated", "command_started", "command_finished", "item_completed", "item_failed", "item_terminated", "human_task_completed", "run_halted", "run_finished"]
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "execution_status": {
+          "type": "string",
+          "enum": ["completed", "spawn_failed", "timed_out", "sandbox_violation", "suspected_sandbox_violation"],
+          "description": "Present only when recorded on the actual command_finished row."
+        },
+        "exit_code": {
+          "type": "integer",
+          "description": "Actual optional kernel i64 exit code; JavaScript consumers must check safe-integer exactness."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [{
+        "if": { "properties": { "kind": { "const": "command_finished" } }, "required": ["kind"] },
+        "then": {},
+        "else": { "not": { "anyOf": [{ "required": ["execution_status"] }, { "required": ["exit_code"] }] } }
+      }]
+    },
+    "RunTraceRunObservation": {
+      "type": "object",
+      "description": "One exact-owner-validated run. Frame identity is (run_id,event_id). Counts satisfy total = retained + omitted and truncated iff omitted is positive.",
+      "required": ["run_id", "observed_at", "plan_item_id", "execution", "settlement", "observation_state", "frames", "total_frame_count", "retained_frame_count", "omitted_frame_count", "truncated"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "plan_item_id": { "type": "string" },
+        "execution": { "type": "string", "enum": ["pending", "enabled", "active", "completed", "failed", "terminated"] },
+        "settlement": { "type": "string", "enum": ["unsettled", "accepted", "rejected", "escalated"] },
+        "observation_state": { "type": "string", "enum": ["validated", "unavailable"] },
+        "frames": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/definitions/RunTraceFrame" } },
+        "total_frame_count": { "type": "integer", "minimum": 0 },
+        "retained_frame_count": { "type": "integer", "minimum": 0, "maximum": 1024 },
+        "omitted_frame_count": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" }
+      },
+      "additionalProperties": false,
+      "allOf": [{
+        "if": { "properties": { "omitted_frame_count": { "minimum": 1 } }, "required": ["omitted_frame_count"] },
+        "then": { "properties": { "truncated": { "const": true } } },
+        "else": { "properties": { "truncated": { "const": false } } }
+      }]
+    },
+    "RunTraceObservation": {
+      "type": "object",
+      "description": "One connection hydration cohort. Counts exist only after complete run.list; unavailable list is never represented as an empty successful list.",
+      "required": ["case_id", "observed_at", "run_list_state", "observation_state", "hydration_read_budget", "runs"],
+      "properties": {
+        "case_id": { "type": "string" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "run_list_state": { "type": "string", "enum": ["complete", "unavailable"] },
+        "observation_state": { "type": "string", "enum": ["complete", "no_runs", "capacity_limited", "unavailable"] },
+        "listed_run_count": { "type": "integer", "minimum": 0 },
+        "selected_run_count": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "validated_run_count": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "unreadable_run_count": { "type": "integer", "minimum": 0 },
+        "unavailable_run_count": { "type": "integer", "minimum": 0 },
+        "omitted_run_count": { "type": "integer", "minimum": 0 },
+        "hydration_read_budget": {
+          "type": "object",
+          "required": ["limit", "reads_attempted", "exhausted"],
+          "properties": {
+            "limit": { "type": "integer", "const": 8 },
+            "reads_attempted": { "type": "integer", "minimum": 0, "maximum": 8 },
+            "exhausted": { "type": "boolean", "description": "True only when the eight-read limit prevented a known candidate from validation." }
+          },
+          "additionalProperties": false
+        },
+        "runs": { "type": "array", "maxItems": 8, "items": { "$ref": "#/definitions/RunTraceRunObservation" } }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "run_list_state": { "const": "unavailable" } }, "required": ["run_list_state"] },
+          "then": {
+            "allOf": [
+              { "not": { "anyOf": [
+                { "required": ["listed_run_count"] }, { "required": ["selected_run_count"] },
+                { "required": ["validated_run_count"] }, { "required": ["unreadable_run_count"] },
+                { "required": ["unavailable_run_count"] }, { "required": ["omitted_run_count"] }
+              ] } },
+              { "properties": { "runs": { "maxItems": 0 } } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "run_list_state": { "const": "complete" } }, "required": ["run_list_state"] },
+          "then": { "required": ["listed_run_count", "selected_run_count", "validated_run_count", "unreadable_run_count", "unavailable_run_count", "omitted_run_count"] }
+        },
+        {
+          "if": { "properties": { "observation_state": { "const": "no_runs" } }, "required": ["observation_state"] },
+          "then": {
+            "properties": {
+              "run_list_state": { "const": "complete" },
+              "listed_run_count": { "const": 0 },
+              "unreadable_run_count": { "const": 0 },
+              "selected_run_count": { "const": 0 },
+              "validated_run_count": { "const": 0 },
+              "unavailable_run_count": { "const": 0 },
+              "omitted_run_count": { "const": 0 },
+              "hydration_read_budget": { "properties": { "reads_attempted": { "const": 0 } } },
+              "runs": { "maxItems": 0 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "observation_state": { "const": "capacity_limited" } }, "required": ["observation_state"] },
+          "then": { "properties": { "run_list_state": { "const": "complete" }, "omitted_run_count": { "minimum": 1 } } }
+        },
+        {
+          "if": { "properties": { "observation_state": { "const": "complete" } }, "required": ["observation_state"] },
+          "then": { "properties": { "run_list_state": { "const": "complete" }, "listed_run_count": { "minimum": 1 }, "unreadable_run_count": { "const": 0 }, "unavailable_run_count": { "const": 0 }, "omitted_run_count": { "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "observation_state": { "const": "unavailable" } }, "required": ["observation_state"] },
+          "then": { "anyOf": [
+            { "properties": { "run_list_state": { "const": "unavailable" } } },
+            { "properties": { "unreadable_run_count": { "minimum": 1 } }, "required": ["unreadable_run_count"] },
+            { "properties": { "unavailable_run_count": { "minimum": 1 } }, "required": ["unavailable_run_count"] }
+          ] }
+        }
+      ]
+    },
+    "ExecutionObservationEvent": {
+      "type": "object",
+      "required": ["event_type", "cursor", "timestamp", "payload"],
+      "properties": {
+        "event_type": { "const": "execution_observation" },
+        "cursor": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{10}$", "description": "Informational latest real case cursor; this event does not advance it." },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "payload": { "$ref": "#/definitions/RunTraceObservation" }
+      },
+      "additionalProperties": false
+    },
+    "ExecutionProgressPayload": {
+      "type": "object",
+      "required": ["run_id", "phase", "progress_percent", "log_line"],
+      "properties": {
+        "run_id": { "type": "string" },
+        "phase": {
+          "type": "string",
+          "enum": ["orchestrator", "builder", "critic", "verifier", "settling"]
+        },
+        "progress_percent": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "log_line": { "type": "string" }
+      }
+    },
+    "ResyncRequiredPayload": {
+      "type": "object",
+      "required": ["requested_cursor", "oldest_available_cursor", "reason"],
+      "properties": {
+        "requested_cursor": { "type": "string" },
+        "oldest_available_cursor": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    },
+    "ErrorPayload": {
+      "type": "object",
+      "required": ["error_code", "message"],
+      "properties": { "error_code": { "type": "string" }, "message": { "type": "string" } }
+    },
+    "InterruptedPayload": {
+      "type": "object",
+      "required": ["reason"],
+      "properties": { "reason": { "type": "string" }, "last_cursor": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{10}$" } }
+    }
+  }
+}

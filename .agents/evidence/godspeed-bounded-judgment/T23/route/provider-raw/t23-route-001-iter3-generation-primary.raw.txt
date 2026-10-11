@@ -1,0 +1,32 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter3",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 2},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Prior ordering places e2e-happy:2 at payment exhaustion, so it probes the lower edge of the settling bracket."
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter3",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 8},
+    "expected_role": "establish_baseline",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "High-budget e2e-happy mirrors the default settled case and can confirm settled_accepted on this route."
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter3",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-lying", "max_rounds": 2},
+    "expected_role": "establish_discriminator",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Prior ordering shows e2e-lying has not settled, so a low-budget e2e-lying probe tests verification_failed_nonsettlement."
+  }
+]

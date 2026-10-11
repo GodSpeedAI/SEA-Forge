@@ -1,0 +1,22 @@
+=== RUN   TestSelectObservationRunsRanksGroupsAndKeepsTheFirstEight
+    run_observation_selection_test.go:55: selectObservationRuns() error = unavailable: run observation selection is not implemented (run_observation_selection), want successful selection
+--- FAIL: TestSelectObservationRunsRanksGroupsAndKeepsTheFirstEight (0.00s)
+=== RUN   TestSelectObservationRunsRanksAllTerminalStatesTogether
+    run_observation_selection_test.go:86: selectObservationRuns() error = unavailable: run observation selection is not implemented (run_observation_selection), want successful terminal selection
+--- FAIL: TestSelectObservationRunsRanksAllTerminalStatesTogether (0.00s)
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/empty
+    run_observation_selection_test.go:101: selectObservationRuns(0 runs) error = unavailable: run observation selection is not implemented (run_observation_selection), want success
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/empty_nonnil
+    run_observation_selection_test.go:112: selectObservationRuns(0 runs) error = unavailable: run observation selection is not implemented (run_observation_selection), want success
+=== RUN   TestSelectObservationRunsHandlesEmptyAndShortInput/short
+    run_observation_selection_test.go:126: selectObservationRuns(1 runs) error = unavailable: run observation selection is not implemented (run_observation_selection), want success
+--- FAIL: TestSelectObservationRunsHandlesEmptyAndShortInput (0.00s)
+    --- FAIL: TestSelectObservationRunsHandlesEmptyAndShortInput/empty (0.00s)
+    --- FAIL: TestSelectObservationRunsHandlesEmptyAndShortInput/empty_nonnil (0.00s)
+    --- FAIL: TestSelectObservationRunsHandlesEmptyAndShortInput/short (0.00s)
+=== RUN   TestSelectObservationRunsRejectsUnknownExecutionWithoutPartialSelection
+--- PASS: TestSelectObservationRunsRejectsUnknownExecutionWithoutPartialSelection (0.00s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	1.151s
+FAIL

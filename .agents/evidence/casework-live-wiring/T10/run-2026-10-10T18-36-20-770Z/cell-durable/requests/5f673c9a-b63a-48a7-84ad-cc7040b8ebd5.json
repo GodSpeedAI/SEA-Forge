@@ -1,0 +1,13 @@
+{
+  "request_id": "5f673c9a-b63a-48a7-84ad-cc7040b8ebd5",
+  "method": "case.reopen",
+  "status": "completed",
+  "submitted_at": "2026-10-10T18:42:06.068418668+00:00",
+  "completed_at": "2026-10-10T18:42:06.273492836+00:00",
+  "outcome": {
+    "case_id": "case_20261010T183703Z_cc70a7",
+    "case_state": "active",
+    "ok": true
+  },
+  "payload_hash": "bbff651b83cc675913c961e98fcb844167b5fda3557b92d2429977ff07519f25"
+}

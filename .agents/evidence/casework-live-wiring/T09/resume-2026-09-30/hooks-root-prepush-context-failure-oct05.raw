@@ -1,0 +1,11 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+scripts/check-agent-context.sh
+context_error: project files changed without a corresponding CURRENT_STATUS.md update
+next move: update .agents/CURRENT_STATUS.md, then rerun scripts/check-agent-context.sh
+error: recipe `context-check` failed on line 118 with exit code 1
+error: recipe `ci` failed with exit code 1
+error: recipe `pre-push` failed with exit code 1
+Error: error running script "just" in Devbox: exit status 1
+
+error: failed to push some refs to 'https://github.com/GodSpeedAI/SEA-Forge.git'

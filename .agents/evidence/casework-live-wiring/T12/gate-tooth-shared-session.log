@@ -1,0 +1,7 @@
+live ladder [tooth: shared-session]; evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T10/run-2026-10-11T00-21-03-393Z
+stack up: base=http://127.0.0.1:4179 cell=/tmp/t10-live-VwMDQa/cell
+bundle: 13 JS assets scanned (disk + HTTP), no fixture adapter
+[FAIL] L5: Sign-off: operator denied, R-SO approves in a separate session (0/1 steps, 2186ms)
+  Error: shared session identity: "operator" and "rso" drive the same agent-browser session "gs-live-mv32uyja-shared"
+TOOTH shared-session: PASS - L5 failed at "guard: the operator and the R-SO drive distinct agent-browser sessions": shared session identity: "operator" and "rso" drive the same agent-browser session "gs-live-mv32uyja-shared"
+EXIT 0 dur=4s

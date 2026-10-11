@@ -1,0 +1,142 @@
+T27-1_content_equivalence:
+  pass: true
+  real:
+    accepted-A1:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    accepted-A10:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    accepted-A11:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    accepted-A12:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    accepted-A2:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    accepted-A4:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 25
+      n_b_atoms: 25
+    budget-C1:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 1
+      n_b_atoms: 1
+    budget-C2:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 1
+      n_b_atoms: 1
+    budget-C3:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 13
+      n_b_atoms: 13
+    budget-C4:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 1
+      n_b_atoms: 1
+    budget-C5:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 1
+      n_b_atoms: 1
+    forge-D1:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 23
+      n_b_atoms: 23
+    forge-D2:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 23
+      n_b_atoms: 23
+    lying-B1:
+      pass: true
+      missing_from_B: []
+      added_in_B: []
+      n_a_atoms: 23
+      n_b_atoms: 23
+  attack_rejected: true
+  attack_detail:
+    missing_from_B: []
+    added_in_B:
+    - sha256:deadbeef0000000000000000000000000000000000000000000000000000000
+    n_a_atoms: 13
+    n_b_atoms: 14
+T27-2_role_vocabulary:
+  pass: true
+  real:
+    accepted-A1: pass
+    accepted-A10: pass
+    accepted-A11: pass
+    accepted-A12: pass
+    accepted-A2: pass
+    accepted-A4: pass
+    budget-C1: pass
+    budget-C2: pass
+    budget-C3: pass
+    budget-C4: pass
+    budget-C5: pass
+    forge-D1: pass
+    forge-D2: pass
+    lying-B1: pass
+  attack_rejected: true
+  attack_detail:
+  - 'role label not in frozen vocabulary: CONTRADICTED_CLAIM'
+  - 'relation value not in frozen vocabulary: claim_is_false'
+  - banned token 'false' in relation value claim_is_false
+T27-3_temporal_horizon:
+  pass: true
+  real:
+    accepted-A1: pass
+    accepted-A10: pass
+    accepted-A11: pass
+    accepted-A12: pass
+    accepted-A2: pass
+    accepted-A4: pass
+    budget-C1: pass
+    budget-C2: pass
+    budget-C3: pass
+    budget-C4: pass
+    budget-C5: pass
+    forge-D1: pass
+    forge-D2: pass
+    lying-B1: pass
+  attack_rejected: true
+  attack_detail:
+  - 'truth/post-judgment token in body: budget_exhausted'
+  - 'truth/post-judgment token in body: run_terminal'
+T27-4_case_identity:
+  key_binding: sha256(prereg_sha|case_id|condition|rep|prompt_hash)[:16]
+  store_consistent: null
+  attack_rejected: true
+  pass: true

@@ -1,0 +1,21 @@
+schema: godspeed-bounded-judgment.t25-t8-duplicate-route-record
+marked: ATTACK - synthetic regenerated route record, never part of any route ledger or developmental set
+route_id: t25-t8-duplicate-route
+correlation_id: t25-t8-attack
+construction: 'regenerated retained-move sequence copied from the settled route t23-route-001: structurally equivalent
+  by construction (same moves in the same order with the same terminals)'
+settled: true
+stop_condition: route_settled
+moves:
+- scenario: e2e-happy
+  max_rounds: 3
+  terminal_class: budget_exhausted
+- scenario: e2e-happy
+  max_rounds: 6
+  terminal_class: settled
+- scenario: e2e-happy
+  max_rounds: 2
+  terminal_class: budget_exhausted
+fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+policy_version: selection-policy-v1
+note: a fabricated 'fresh' route with no own probes; used ONLY to show the frozen novelty metric detects it

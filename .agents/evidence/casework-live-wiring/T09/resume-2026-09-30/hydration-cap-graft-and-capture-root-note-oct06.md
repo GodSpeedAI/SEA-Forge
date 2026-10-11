@@ -1,0 +1,7 @@
+# Hydration cap indexing and capture root note
+
+Root Graft refresh session86179 joined exit0:691cards,7601nodes,14667edges. Fresh preflight2628MiB available RAM/3109MiB free swap; root exclusive heavy ownership. Actual captures remain at `/tmp/cap-graft-oct06-{preflight,run,exit}.raw`. This note reports derived results and does not claim a native raw archive/byte comparison for those three files. Graft indexes source, including pending UI files; indexing is not implementation approval.
+
+Root read both independent capture clarification/recovery records and verified that replacing exactly the reported 1024-frame duration0.00s with0.01s in the labeled recovery reproduces the entire final byte-exact focused transcript. Recovery SHA dd2331bf0649dbba42e248fb1601c82402fef922a8b7722995120ec30b88204a. It is reconstructed from a successful patch request, not a contemporaneously preserved old disk capture. The first rejected patch created no file; the second successful write was edited without preserving its old bytes. CW18 records this process/evidence debt. Current twelve final runtime captures remain byte-exact against actual originals; this limitation does not change observed passing tests.
+
+The earlier erratum's “No incorrect archive copy exists” describes only the rejected first attempt. The recovery record and this note establish the distinct later written-duration error. Preserve all records and the recovery label; do not substitute the reconstruction for the actual CLI transcript.

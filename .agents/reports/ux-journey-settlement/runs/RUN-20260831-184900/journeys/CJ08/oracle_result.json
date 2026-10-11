@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ08",
+  "oracle_name": "CJ08_OperationalMonitoringAndRecoveryOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Authoritative operational standing observed; scoped intervention or explicit recovery reached.",
+  "authoritative_record_inspected": "events.subscribe / request.get_status",
+  "rationale": "Observed 12 ordered events via cursor; recovery mechanism verified (recovery_executed=True).",
+  "evidence_refs": [
+    "case-events.jsonl",
+    "events.get_range"
+  ],
+  "carried_state": {}
+}

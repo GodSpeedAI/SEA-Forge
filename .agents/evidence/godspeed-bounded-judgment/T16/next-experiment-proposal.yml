@@ -1,0 +1,160 @@
+# =============================================================================
+# PROPOSED NEXT EXPERIMENT — Epistemic-Role Representation (NOT EXECUTED)
+# =============================================================================
+schema: godspeed-bounded-judgment.t16-next-experiment-proposal
+status: PROPOSED_ONLY (not authorized, not executed)
+date: "2026-09-18"
+
+governing_question: >-
+  Does explicitly typing the epistemic role of each piece of information in
+  the judgment input (builder_claim vs observed_artifact vs verifier_output
+  vs execution_evidence) materially improve bounded-judgment discrimination
+  on this surface, or is the limitation elsewhere?
+
+why_this_experiment:
+  primary_signal: >-
+    DeepSeek's single non-abstaining error on the expanded corpus was
+    believing a lying builder's claim (a result document that said
+    "completed" while the planted workspace evidence recorded failure).
+    The provider saw the claim and the artifact but the prompt did not
+    distinguish "this is what the builder SAYS" from "this is what the
+    instrument OBSERVED". Both were presented as undifferentiated text.
+  secondary_signal: >-
+    Muse's 0.68 abstention rate may reflect the same confusion: unable to
+    distinguish claims from observations, the provider defaulted to
+    "insufficient_evidence" on most rows.
+  hypothesis_origin: >-
+    The T15/T16 measurement found that both providers pass the accuracy
+    D-bar when they answer, but differ dramatically in abstention rate.
+    The representation (undifferentiated record text) may be the cause.
+
+competing_hypotheses:
+  H_representation: >-
+    Judgment improves materially when existing evidence is explicitly typed
+    by epistemic role, because the current representation conflates claims
+    with observations.
+  H_provider: >-
+    Errors persist despite improved representation: model/provider capability
+    is the limiting factor.
+  H_surface: >-
+    Neither representation improves judgment because the DecisionSurface
+    itself is poorly aligned with the consequential distinction (e.g. the
+    fixture's verify ladder doesn't produce the signal the model needs).
+  H_prior: >-
+    A cheap deterministic mechanism (e.g. check.sh exit code + artifact
+    presence) already captures all economically useful information; learned
+    judgment remains unjustified.
+
+current_representational_state:
+  what_providers_saw: >-
+    role_invocation payload JSON (the builder's result document: claims,
+    self-reported checks, changed paths) + a correction_selection count.
+    The result document's text was shown as an undifferentiated JSON blob —
+    claims, self_checks, and artifact references all at the same level.
+  what_was_MISSING: >-
+    The planted workspace effects (src/gadget.rs with or without the marker)
+    and the evidence/*.json test reports (which record actual test outcomes)
+    were RESOLVED by the harness but their CONTENT was not distinguished
+    from the builder's CLAIMS in the prompt. The provider could see that a
+    file existed but not that its content was a test REPORT (observation)
+    rather than a builder ASSERTION (claim).
+
+proposed_representation_B:
+  epistemic_roles:
+    builder_claim: "text from the result document's claims/self_checks fields"
+    observed_artifact: "content of files the workspace observer actually saw"
+    verifier_output: "the verification record's outcome, instrument, and evidence_ref (the deterministic instrument's verdict)"
+    execution_evidence: "commands_run, exit codes, digests from the evidence chain"
+    consequence_record: "the run's terminal state (EXCLUDED from judgment input per the frozen leakage rule)"
+  construction_rule: >-
+    Each JSON field in the prompt is prefixed with its epistemic role tag.
+    The underlying DATA is unchanged from condition A; only the labeling
+    differs. No new information is added; existing information is organized.
+  example: >-
+    Instead of: {"claim": "...", "self_checks": [...]}
+    Condition B: [builder_claim] "... says the slice is implemented"
+                 [observed_artifact] "src/gadget.rs contains marker XYZ"
+                 [verifier_output] "scripts/check.sh exit_code=0, tests ran, 0 failures"
+
+independent_variable: >-
+  Presence/absence of epistemic-role tags on the SAME underlying data.
+  This is the ONLY change. Model, corpus, truth labels, answer domain,
+  baseline, D-bar, scoring, and decision rule are all held constant.
+
+controlled_variables:
+  - "same 25-run expanded corpus (frozen manifest, same hashes)"
+  - "same frozen answer domain (t16-settlement-outcome/v1)"
+  - "same providers (whatever is available; results per-provider)"
+  - "same deterministic baseline"
+  - "same scoring (accuracy vs truth, confusion, entropy, abstention)"
+  - "same exact permutation tooth"
+  - "same D-bar (0.8 non-abstaining, 0 contract failures, abstention <= 0.5, entropy > 0)"
+  - "same A-E decision rule"
+
+observer_horizon_constraints:
+  rule: >-
+    The typed representation may only contain distinctions available at the
+    moment judgment is supposed to occur (pre-consequence).
+  allowed: ["builder_claim (what the builder asserts)", "observed_artifact (what the workspace observer saw)", "verifier_output (what the instrument produced)", "execution_evidence (command digests and exit codes)"]
+  forbidden_as_leakage: ["false_builder_claim (falsity is known only post-verification)", "evidence_that_later_proved_wrong (hindsight)", "settlement_record (post-consequence)", "run_terminal (post-consequence)", "any reference to the outcome letter or D-bar"]
+
+leakage_rules:
+  - "the truth label (settled/not_settled) must never appear in the prompt"
+  - "the run_terminal event and settlement_committed event must be excluded"
+  - "the verification record's outcome field is excluded (that IS the deterministic baseline)"
+  - "structural assertion before each call (same as T16 round-4)"
+
+provider_admission_policy:
+  stable_contract: >-
+    Any provider must: accept the frozen prompt format; return strict JSON
+    with answer/confidence/distribution/reason; operate within the frozen
+    answer domain; be capable of answering all 25 rows (timeout on <= 1 row
+    is tolerated if disclosed).
+  execution_policy: >-
+    Select from available free providers at run time. Each provider's results
+    are separate. Provider switches are append-only. Model identities are
+    recorded. Results are never merged anonymously.
+
+required_evidence:
+  - "condition A (current representation): already measured (round-4/5 persisted)"
+  - "condition B (epistemically typed): fresh 25-row measurement with tagged prompts"
+  - "both conditions scored by the same frozen scoring code"
+  - "exact permutation tooth for both conditions"
+  - "disclosure gate for both conditions"
+  - "independent adversarial confirmation of the comparison"
+
+teeth_falsifiers:
+  - "condition B must not reveal the truth label via its tags (leakage check)"
+  - "condition B must not add information that did not exist in condition A"
+  - "if condition B improves accuracy but the improvement is concentrated on
+     the trivially-classifiable rows (not the lying-builder rows), the
+     representation hypothesis is NOT confirmed — the improvement was
+     class-imbalance exploitation, not epistemic-role clarity"
+  - "if neither condition improves over the baseline, H_prior is supported"
+
+settlement_criterion: >-
+  H_representation is CONFIRMED if condition B materially outperforms
+  condition A on the same corpus, same providers, same scoring —
+  specifically: non-abstaining accuracy improves by >= 0.1 for at least one
+  capable provider, AND the improvement concentrates on the
+  discrimination-critical rows (lying-builder and budget-exhaustion cases,
+  not the trivially-settled cases). Otherwise the hypothesis is not
+  confirmed and the next-ranked experiment is chosen.
+
+estimated_payment:
+  corpus_reuse: "free (existing 25 runs, frozen manifest)"
+  representation_work: "~1 hour (tag existing JSON fields)"
+  harness_changes: "~30 minutes (condition B prompt constructor)"
+  provider_calls: "50 (25 rows x 2 providers, condition B only; condition A reuses persisted results)"
+  expected_availability: "ClinePass DeepSeek + opencode Muse contributor-free (both currently available)"
+  independent_confirmation: "1 fresh verifier (same discipline as T16 round-5)"
+  statistical_requirement: >-
+    exact permutation tooth at N=25 (already shown to have absolute
+    discriminating power); paired comparison between conditions A and B on
+    the same rows (McNemar-style or permutation difference test)
+
+possible_outcomes_and_affordances:
+  B_beats_A: "H_representation confirmed -> the representation was the blocker -> re-run with the improved representation as the new baseline; T06's authorization question is re-evaluated with the improved measurement"
+  B_equals_A: "H_provider or H_surface supported -> representation was not the blocker -> try a stronger provider (when quota allows) or investigate the DecisionSurface alignment"
+  B_worse_than_A: "the epistemic tags confused the provider -> H_representation falsified for this provider; try without tags but with artifact contents separated into a different prompt section"
+  both_at_chance: "H_surface supported -> the DecisionSurface itself needs redesign before any provider can discriminate"

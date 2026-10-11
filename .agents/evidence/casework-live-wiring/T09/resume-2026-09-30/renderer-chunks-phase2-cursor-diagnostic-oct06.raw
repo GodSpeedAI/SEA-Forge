@@ -1,0 +1,9 @@
+bun test v1.4.0 (34cbb9a40)
+
+src/adapters/local/localAdapter.test.ts:
+(pass) LocalContractAdapter > shared CaseworkPort behavioral conformance [644.18ms]
+
+ 1 pass
+ 15 filtered out
+ 0 fail
+Ran 1 test across 1 file. [730.00ms]

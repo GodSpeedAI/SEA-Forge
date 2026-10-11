@@ -1,0 +1,62 @@
+{
+  "note": "both variants are honestly marked synthetic attacks; no fabricated judgment enters the iteration records",
+  "variants": [
+    {
+      "fabricated_judgment": {
+        "candidate_id": "cand-3",
+        "correlation_id": "t22-route-001-round2-iter1",
+        "judge_identity": "attack-t2-fabricated-judge (synthetic, honestly marked attack; confidence 1.0; never evidence)",
+        "judged_at_utc": "2026-09-19T01:49:24.085987+00:00",
+        "judgment_id": "attack-t2-fabricated-unaffordable",
+        "label": "settled_accepted",
+        "observation_refs": [
+          "probe-cand-3"
+        ]
+      },
+      "ineligibility_reason_for_attacked_candidate": "probe cost 1 unit does not fit the remaining payment 0",
+      "payment_passed": 0,
+      "policy_retained": "",
+      "variant": "A-unaffordable"
+    },
+    {
+      "admission": {
+        "candidate_id": "attack-t2-synthetic",
+        "classification": "admitted",
+        "correlation_id": "t22-route-001-round2-iter1",
+        "decided_at_utc": "2026-09-19T01:49:24.086181+00:00",
+        "policy_version": "t21-neighborhood-admission-v1",
+        "reason": "e2e-happy@1 is cataloged, unprobed, un-denied, reachable, and affordable"
+      },
+      "fabricated_judgment": {
+        "candidate_id": "attack-t2-synthetic",
+        "correlation_id": "t22-route-001-round2-iter1",
+        "judge_identity": "attack-t2-fabricated-judge (synthetic, honestly marked attack; confidence 1.0; never evidence)",
+        "judged_at_utc": "2026-09-19T01:49:24.086189+00:00",
+        "judgment_id": "attack-t2-fabricated-synthetic",
+        "label": "settled_accepted",
+        "observation_refs": [
+          "attack-no-probe"
+        ]
+      },
+      "ineligibility_reason_for_attacked_candidate": "no probe observation: a typed terminal is required",
+      "policy_retained": "cand-3",
+      "synthetic_candidate": {
+        "bounded_input": {
+          "max_rounds": 1,
+          "scenario": "e2e-happy"
+        },
+        "candidate_id": "attack-t2-synthetic",
+        "correlation_id": "t22-route-001-round2-iter1",
+        "expected_role": "boundary_probe",
+        "generator": {
+          "identity": "attack-t2",
+          "version": "1"
+        },
+        "operation": "run_case",
+        "prerequisite_refs": [],
+        "rationale": "ATTACK T2-model-override: synthetic candidate with no typed terminal; must never be retained however strongly a judge prefers it"
+      },
+      "variant": "B-unprobed-but-praised"
+    }
+  ]
+}

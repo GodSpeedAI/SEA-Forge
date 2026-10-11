@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KZCWJGEM5JR249891R7TZ4",
+  "source_entry_ulids": [
+    "01M4KZCWJGEM5JR249891R7TZ4"
+  ],
+  "source_payload_hash": "sha256:0a15618dc7157c26578aa75f09cfb7b98bdad6762ec6a330e5c219008c130774",
+  "view_path": "/tmp/t10-live-7U58R8/cell/authority/active-policy.json",
+  "view_sha256": "sha256:093cb08bf0869527dd1cee006d97d963bd38d6365ecc9794f568fb11d54fb0e9",
+  "status": "current",
+  "failure_class": null
+}

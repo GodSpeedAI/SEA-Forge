@@ -1,0 +1,968 @@
+{
+  "counts": {
+    "new_private_lifecycle_sources": 5,
+    "staged_foreign_index_entries_preserved": 11,
+    "status_handoff": 2,
+    "tracked_references_not_added": 7,
+    "untracked_lifecycle_evidence": 118,
+    "untracked_total_observed": 625
+  },
+  "date": "2026-10-08",
+  "families": {
+    "excluded": [
+      "C2 and live-cursor drafts",
+      "observation-safe-trace-port proposal/review artifacts",
+      "old PhaseA/scaffold and primitive/pure-image source histories",
+      "DEBT, AGENTS, Jolli, trusted-daemon artifacts and unrelated workspace changes"
+    ],
+    "included": [
+      "watcher-terminal algorithm assignment, source preimages, result, independent review, identity erratum, formatter chronology and root format captures",
+      "existing manager fixture correction assignment, exact preimage, result, independent review and review erratum",
+      "failure-fixture format assignment/result/review, exact preimage and actual formatter captures",
+      "focused-green retry02 and watcher-terminal focused RED/GREEN original assignments, actual captures, results, and capture-layout errata",
+      "canonical Go current-source and listener retry02/retry03 assignments, results and captures",
+      "full-module race assignment/result/captures",
+      "private-lifecycle final review and additive scope/identity errata",
+      "Graft build complete captures, including preserved invalid captures and correction records"
+    ]
+  },
+  "foreign_staged_index_blobs_preserved": [
+    {
+      "blob_oid": "d2247e5d25ac015d0d7f7cf9373d717e47d8b797",
+      "mode": "100644",
+      "path": ".agents/AGENTS.md",
+      "stage": 0
+    },
+    {
+      "blob_oid": "8eda0d33b0855b8ac33d517155bbac3c39af3229",
+      "mode": "100644",
+      "path": ".agents/DEBT.md",
+      "stage": 0
+    },
+    {
+      "blob_oid": "834b649d5dd580852a6f10a9baa0df104212e05c",
+      "mode": "100644",
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-safe-trace-port-proposal-independent-review-anchor-clarification.md",
+      "stage": 0
+    },
+    {
+      "blob_oid": "d940a5a8579e5344957ac7e635ebbf30e77cf8e8",
+      "mode": "100644",
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-safe-trace-port-proposal-independent-review.md",
+      "stage": 0
+    },
+    {
+      "blob_oid": "8fb9ab9b4939653d092418c37bdafb4b46a2f2dc",
+      "mode": "100644",
+      "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/observation-safe-trace-port-root-proposal.md",
+      "stage": 0
+    },
+    {
+      "blob_oid": "b7df8fa5ecf5fa623252abe834580c0ef6238f7b",
+      "mode": "100644",
+      "path": ".agents/plans/sea-forge-trusted-daemon-target-plan_v0.1.0.yml",
+      "stage": 0
+    },
+    {
+      "blob_oid": "d5ce878158327c5d196c68bc77ee16f648bf4420",
+      "mode": "100644",
+      "path": ".agents/specs/sea-forge-trusted-daemon-target-spec_v0.1.0.yml",
+      "stage": 0
+    },
+    {
+      "blob_oid": "0dea83374fbf20bd95a7f2ee8509220c8acfd9b0",
+      "mode": "100644",
+      "path": ".jolli/jollimemory/debug.log",
+      "stage": 0
+    },
+    {
+      "blob_oid": "7aaa73e646ca479785f2b9ace6549053f33391cd",
+      "mode": "100644",
+      "path": ".jolli/jollimemory/discovery-cursors.json",
+      "stage": 0
+    },
+    {
+      "blob_oid": "ee0e814f19de82c4c382edb0c7b37021437a627b",
+      "mode": "100644",
+      "path": ".jolli/jollimemory/plans.json",
+      "stage": 0
+    },
+    {
+      "blob_oid": "0a7f448c17be8994365d5dc2413410ef21c34c2f",
+      "mode": "100644",
+      "path": ".jolli/jollimemory/sessions.json",
+      "stage": 0
+    }
+  ],
+  "head": "7c65be70ecf14c77df1a7749e9fa5526e28eabc1",
+  "notes": [
+    "Evidence is direct lineage for the bounded five-source lifecycle checkpoint, not a recursive archive of all T09 history.",
+    "Eleven foreign staged blob identities are captured for later comparison; no index/worktree mutation command was run.",
+    "Revision 1 is preserved at its named path; this revision includes the three omitted review artifacts.",
+    "Tracked dependencies are references only and are not part of the checkpoint path set."
+  ],
+  "other_unstaged_tracked_workspace_changes_excluded": [
+    {
+      "path": ".agents/CURRENT_STATUS.md",
+      "xy": " M"
+    },
+    {
+      "path": ".agents/DEBT.md",
+      "xy": "AM"
+    },
+    {
+      "path": ".agents/current_status.yml",
+      "xy": " M"
+    },
+    {
+      "path": ".agents/reports/2026-09-23-case-engine-frontend-e2e-journey-mapping.md",
+      "xy": " M"
+    },
+    {
+      "path": ".agents/reports/casework-live-wiring/decision-log.yaml",
+      "xy": " M"
+    },
+    {
+      "path": ".githooks/commit-msg",
+      "xy": " D"
+    },
+    {
+      "path": ".githooks/post-commit",
+      "xy": " M"
+    },
+    {
+      "path": ".githooks/post-commit.pre-entire",
+      "xy": " D"
+    },
+    {
+      "path": ".githooks/post-rewrite",
+      "xy": " D"
+    },
+    {
+      "path": ".githooks/pre-push",
+      "xy": " M"
+    },
+    {
+      "path": ".githooks/pre-push.pre-entire",
+      "xy": " D"
+    },
+    {
+      "path": ".githooks/prepare-commit-msg",
+      "xy": " D"
+    },
+    {
+      "path": ".jolli/jollimemory/debug.log",
+      "xy": "MM"
+    }
+  ],
+  "purpose": "Corrected candidate exact path scope for the bounded private lifecycle checkpoint. Read-only inventory; no index or Git state changed.",
+  "revision": 2,
+  "schema": "sea-rs-readonly-checkpoint-scope-manifest/v1",
+  "scope": {
+    "new_private_lifecycle_sources": [
+      {
+        "bytes": 29377,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_manager.go",
+        "sha256": "22005e5c15d60c4e99768ac6c69da2d211b816ef16c20663231e8a9fc164dc57",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 13217,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_poller_worker.go",
+        "sha256": "b0fde3fed983099ec78754a71578357f82b79988a6a15e1c54962e1e1390d403",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 56118,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_manager_test.go",
+        "sha256": "cf7188c23e5bad5f7b0f093561bf85e1e273b48c721a677084429e8038f0ba86",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 47658,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_manager_failure_test.go",
+        "sha256": "8c71197adc61bf0f0a3fb0a0fdf413ff41f1fdfa54e8a4af0c4a3abf63cb8df8",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 41286,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_manager_authority_terminal_test.go",
+        "sha256": "889f9648ead4399ef2d89732422ffed9a3d1ff786e4938b2aafaa45862b2752b",
+        "worktree_state": "untracked"
+      }
+    ],
+    "status_handoff": [
+      {
+        "bytes": 38905,
+        "path": ".agents/CURRENT_STATUS.md",
+        "sha256": "45a0b24b9c6eb1b04d10a8e12cc866b96545cf45c2a60db46bfd4f37df769f9c",
+        "worktree_state": "modified tracked worktree file"
+      },
+      {
+        "bytes": 51879,
+        "path": ".agents/current_status.yml",
+        "sha256": "ec4f2945359bba159d5d0e5436d7861d515497df9301029832f57620917c872d",
+        "worktree_state": "modified tracked worktree file"
+      }
+    ],
+    "tracked_dependencies_referenced_not_added": [
+      {
+        "bytes": 2996,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-primitives-canonical-fullrace-final-acceptance-oct07.md",
+        "sha256": "56d4039c8f69023d247a29db95028423ebfba77634214eed4b75e2cdcf0d5b80",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 193,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_key.go",
+        "sha256": "a6f0114d73aefdf816d35df7fd0b18d708924c3d673f78472e79c283bef3557b",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 11463,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_manager_retained_image_test.go",
+        "sha256": "cf501bf7d65a413a2c575b951980be3d0e301f3515a991682680b2d3baa4f256",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 3208,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_poller_image.go",
+        "sha256": "3dba418f6f4920f89bb10ec59e9b77076e3005d3a03d7504212887369b5ed3f9",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 13240,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_retained_policy_test.go",
+        "sha256": "e156c9cf0281baa4e532131be2606a280c846de2f2e3ce9b4fa3dc03509d3f28",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 10456,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_retained_version.go",
+        "sha256": "2157583fbb74f519c2e4254bf1fd26fce330ed567ac7ddaf006b510c87fd50bd",
+        "worktree_state": "tracked, unchanged reference only"
+      },
+      {
+        "bytes": 26425,
+        "path": "apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go",
+        "sha256": "34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7",
+        "worktree_state": "tracked, unchanged reference only"
+      }
+    ],
+    "untracked_lifecycle_evidence": [
+      {
+        "bytes": 344,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-command-oct08.raw.json",
+        "sha256": "5aed3a7bfc37fa65f30df8f994be3ba6784ce43306a624f6ea342391d7079160",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2215,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-current-source-assignment-oct08.md",
+        "sha256": "8ec3e01783dca962b1ba0ff22b11b07a80b4752dcafebf87c8f911661df50172",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2215,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-current-source-execution-assignment-oct08.md",
+        "sha256": "8ec3e01783dca962b1ba0ff22b11b07a80b4752dcafebf87c8f911661df50172",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5625,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-current-source-result-oct08.md",
+        "sha256": "f8af234ce7d5eee36e2b3cfbcfbc02f5338eea3b17a3f60139e865b3684ab1f4",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 115,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-exit-oct08.raw.json",
+        "sha256": "3506d948b06668ed8c1e0f7db1293ce24afede66c61aead612f3f54e2c5879c1",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1858,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-listener-retry03-assignment-oct08.md",
+        "sha256": "df8328bdf03f34ee5f3051970c21278ea2707d0d33f9ae83aead574598ae6daf",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2570,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-listener-retry03-execution-assignment-oct08.md",
+        "sha256": "ab7de14960d340e52d846d871f02b402853d589a30c0768478cbdad12239bad0",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5422,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-listener-retry03-result-oct08.md",
+        "sha256": "01e47029d1098c774ffc15e90803aa0f5e20d3ee7253806322f2dd7fdcf8c0d9",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 135,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-preflight-exit-oct08.raw.json",
+        "sha256": "cb220f3513f15d0371441ca2ed4d1b4a75fc27c8e45f1a1c2fb83b69fb964806",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3646,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-preflight-oct08.raw.json",
+        "sha256": "92065dfc539e27b5ba8f9ca0e67a2022dca27967631327b66df1dea0b5df4fe6",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1671,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-assignment-oct08.md",
+        "sha256": "2d921f8e18f5cb7056623bd981088b234cda592efc6075bb6d67a49294f24e16",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 418,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-command-oct08.raw.json",
+        "sha256": "f92938beee202346deda7eff8a19697d75f69bca2c527af86d54eba55bb16fea",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2508,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-execution-assignment-oct08.md",
+        "sha256": "43f79416fd7d6443c1bf2ec9667f7b7fae50dddb8703aafb55109a714b190b95",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 116,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-exit-oct08.raw.json",
+        "sha256": "b613fc0507038db3afe7988735314ea05d349b571af332acda6befb135e67133",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 156,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-preflight-exit-oct08.raw.json",
+        "sha256": "2c41657b6194bf910fc441e0ab83984c412e135ed4f247d09d48830d16075ff6",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3730,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-preflight-oct08.raw.json",
+        "sha256": "d07fbb10b542478873c0743c1eddb2c9f837a995129b24065c5ebf1cf900c57a",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5600,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-result-oct08.md",
+        "sha256": "c263dbcdd7b1fe6830613af5dedc54f45c7c03a2989916e5961d09d1b5b62e76",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 196,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-stderr-oct08.raw.json",
+        "sha256": "279db7a0ec702cedeacd03bac5eb3fc60a6d724b2544d99cc43b46e9b78d7464",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 72180,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry02-stdout-oct08.raw.json",
+        "sha256": "221a80c49965d9fb400620d5baded0b45dc84753a740fc5014902258cb886b66",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 418,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-command-oct08.raw.json",
+        "sha256": "cc6a58a31d1eb64e453f1788742812ed7b44b6521bf2e73eb8bd2a534f56c190",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 116,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-exit-oct08.raw.json",
+        "sha256": "1dd810cd636a08549aa84e427416c21ab6d0d76407d58ed4e22f7bd4d3b658f2",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 156,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-preflight-exit-oct08.raw.json",
+        "sha256": "dad7987c765d959cc2fd4d98900d969c7012d2031921b05bb935a189cbf2c61a",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3730,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-preflight-oct08.raw.json",
+        "sha256": "6051810d16967bbe017329df81f540a258811f63c604c2db2853b390cb89bbc2",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 116,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-stderr-oct08.raw.json",
+        "sha256": "c83817e01e1b25fba578fbab0009ac7f7cc7edbccb44f12e33b2f9886689f91c",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2020,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-retry03-stdout-oct08.raw.json",
+        "sha256": "976c21e932464980cf19167cb927bb7e20fe365af4dc45a38985b11537abccfd",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 275,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-stderr-oct08.raw.json",
+        "sha256": "ae9e507e0deb3cf80077593917110488c0c49fed594af61c67e66129b1512db1",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 118,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-canonical-go-stdout-oct08.raw.json",
+        "sha256": "a5499e843c9749b7b60451f098b8c47dbaa119ba399bbe12280c33b9458b44bc",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 4069,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-existing-fixture-correction-assignment-oct08.md",
+        "sha256": "75cd9bfd5f49ab11dce02f759543ea1e2c20d6f490ee3b10e983463ccbacd982",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 6242,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-existing-fixture-correction-independent-review-oct08.md",
+        "sha256": "d703ba5a980fb90242cc49c9f89a7b65e02224833c24bd964eff479e4344b06b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 59919,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-existing-fixture-correction-preimage-oct08.json",
+        "sha256": "6ade27afc2b7719955d72b9c6909d6b46f14369bb337e6079be17060e3eb7153",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 4256,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-existing-fixture-correction-result-oct08.md",
+        "sha256": "588375ea008f61ed1380513838c4004f880e13f8dfd177aebe029e5ff48d4f86",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 488,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-existing-fixture-correction-review-erratum-oct08.md",
+        "sha256": "5964b9d512780087584ee7a7aa36f533648b08fdcf5e5d3402da76d2f5442c15",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1695,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-fixture-format-assignment-oct08.md",
+        "sha256": "a95792d543b17e0bf842cebdb49cfbe9bf494cf905a56a595013cd01f4e6fc87",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5680,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-fixture-format-independent-review-oct08.md",
+        "sha256": "740ff1e8420a5c16a40ad28db51d67beece52d00cc1b60a1fb2b7202e5323b39",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3771,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-fixture-format-result-oct08.md",
+        "sha256": "38d60c7e8503186cf040e3935260ce78013870438c674d93bc7d3c3c7d9071a9",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 270,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-format-command-oct08.raw.json",
+        "sha256": "a67ccba28a75be6cd27205b93bbbf102a22495b1e8b202f0bfdaece9a561f9a9",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 180,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-format-exit-oct08.raw.json",
+        "sha256": "8b4d9fb71de9a5a511ea103ebf283b64f43d24dcca15046b5ad6138d0cf14c49",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 386,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-format-preflight-oct08.raw.json",
+        "sha256": "1ff92a65f783131d0a96c67310fa6a22f689141f4dc7f2fc13e1073f068bec87",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 179,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-format-stderr-oct08.raw.json",
+        "sha256": "b5be92b8231734054eecb883bae9455f7b893dd2b19e333c2dc87e612b3705cd",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 50889,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-failure-format-stdout-oct08.raw.json",
+        "sha256": "bf1482548aecdc9bee0a93c25a4c32613ac3c28fc87c6e19e8e2d163d0e26e3a",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1698,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-assignment-oct08.md",
+        "sha256": "1ef5657bf949f8d555ba31ffe6d58f3a6c30ffe02b140660f966b1f7769cfa90",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 427,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-command-oct08.raw.json",
+        "sha256": "adfc9113b5849ec660e902c9a34a8efad0be70061dc544207302bd6e9f8b5eb5",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1698,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-execution-assignment-oct08.md",
+        "sha256": "1ef5657bf949f8d555ba31ffe6d58f3a6c30ffe02b140660f966b1f7769cfa90",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 124,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-exit-oct08.raw.json",
+        "sha256": "93097ed8f2b4b87ace9abe6dc140e3d0ef302b11c3bd2f503210405f0f4b332e",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 144,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-preflight-exit-oct08.raw.json",
+        "sha256": "6ecb0f3139b1567eed5f118ae98fa10ee53f37bcae0e98e7becabf9b8a9e7745",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3448,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-preflight-oct08.raw.json",
+        "sha256": "812c2e6892a63f9750556d87bcd74de5a768c8f969fbc49357c62f0ca756852c",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5966,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-result-oct08.md",
+        "sha256": "7d321d1104a6e25649180be97f5ffe9040fc750a0123b24418c128fef1368b2b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 127,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-stderr-oct08.raw.json",
+        "sha256": "e7311e3ab126d3f073ddd6ab7e46c6f840f8a13c5cdc049c37c1eafef8329598",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 13654,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-focused-green-retry02-stdout-oct08.raw.json",
+        "sha256": "f06cab527a445817c3aa79c056e30920805f4eff4ccb4c502916c032a3ac2538",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1955,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-assignment-oct08.md",
+        "sha256": "05f0b481a55ecacf8d541b009954e97235d0861368fe8800dec9112954492ae4",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 453,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-command-oct08.raw.json",
+        "sha256": "ea20401b30323addb13b21ab234fd6297a6fb6dcb9fd5cd29b92110489762724",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2208,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-execution-assignment-oct08.md",
+        "sha256": "b8c81aa3fc04a58d3ddf087717ef324cbf990c660b4fed817a975986c37f6e7f",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 111,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-exit-oct08.raw.json",
+        "sha256": "395ec329956bcfea8873ec811734c845b54d9d081f02a62e82328c89a7a52063",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 151,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-preflight-exit-oct08.raw.json",
+        "sha256": "84bec7c3584a20a96961e95747118e9f1bda73da98548dc8d31af437febf1493",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3725,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-preflight-oct08.raw.json",
+        "sha256": "bee099303aba33cb375bdf4ffbf71ffeb1e7864e3ac84b07ef4b59bbf6759625",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5171,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-result-oct08.md",
+        "sha256": "2a4cd19d296407a75383d7f4b562b0751a15469c4acf07e7ea0c1ce63f0cd901",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 111,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-stderr-oct08.raw.json",
+        "sha256": "75e4d22c2cadd1818a603fb284630e4815fbfee42dac32771e1e6d84dcead402",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1955,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-fullmodule-race-stdout-oct08.raw.json",
+        "sha256": "4781749848c77b4ba2867a1d1a910884f6415ec4ce52117d7bda8ee6bd015562",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 769,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-capture-correction-oct08.md",
+        "sha256": "b72156cd8ce8e4992a16e41474c0ea10f568a586d27940472d0af004381850be",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 17,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-command-oct08.raw.b64",
+        "sha256": "cb15be9eb048ea3eadd54f38d6a9f4f0b151ed0e1f3203ba9bcfcf14a12038bc",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-exit-oct08.raw.b64",
+        "sha256": "9e48b9419ef4c3e43d961a8b045cf28bd29243cd19b98887fafc2eee700ee4bc",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1526,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-oct08-assignment.md",
+        "sha256": "4208e7a4e6b588418d6abd64057680d9ce579deeffccc55367827cf5db3839b7",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2326,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-correction-oct08.raw.b64",
+        "sha256": "dbf2fe40daecc9166a47c41f7cc8d7de8c6f9578e6b1c8aa5978aebb5274432b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-exit-oct08.raw.b64",
+        "sha256": "9e48b9419ef4c3e43d961a8b045cf28bd29243cd19b98887fafc2eee700ee4bc",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 756,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-final-correction-oct08.md",
+        "sha256": "729940dfa7a9a337be547e0f68f7eb8901e2df262f133476bc7f1de80ba0778b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2325,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-final-oct08.raw.b64",
+        "sha256": "51e5fb1a1f32c6c99276f80e8fc1fe009c0ce8abd4a8f212fa883e8a059acd8c",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2326,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-oct08.raw.b64",
+        "sha256": "dbf2fe40daecc9166a47c41f7cc8d7de8c6f9578e6b1c8aa5978aebb5274432b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2351,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-preflight-verified-oct08.raw.b64",
+        "sha256": "b89bd8de02edcca13fcd42de6d0327c03a0d5aa5f675675457678584c06e3a54",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2611,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-result-oct08.md",
+        "sha256": "ab2606b439d9d8b0aa15721c37121c08de511d4cde0ebb9484e5a1aee8f263a8",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 5981,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-stderr-oct08.raw.xz.b64",
+        "sha256": "6b1316528078e869c6d25ae05c60be30faa88b1d865f305779719792a506bd3c",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 565,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-graft-build-stdout-oct08.raw.b64",
+        "sha256": "0830d9af3c1ec4a2a8c48f388d8d1b59c9fc8906902681811c52296d65fe7c92",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 50903,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-manager-failure-fixture-format-preimage-oct08.json",
+        "sha256": "3e68ccee15e867db6c110e5227e1f13da1a65e5235ba40fbbf8f9ca58853d454",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 757,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-lifecycle-independent-final-review-fixture-scope-erratum-identity-correction-oct08.md",
+        "sha256": "7a8f682e2ed935b8be272041cc2c3b02c2cd45829d4ba05fe8495ad1ea314aae",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3521,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-lifecycle-independent-final-review-fixture-scope-erratum-oct08.md",
+        "sha256": "113985583eca0fca423f35cebde8afdf4ea97b7b5d8d95ba3fd49b00cccffb47",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 10823,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-lifecycle-independent-final-review-oct08.md",
+        "sha256": "03be81b6a55f7179e49bdb484dfdf790d00e5379d57809418bc8e6ccf0392200",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 9311,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-assignment-oct08.md",
+        "sha256": "a886842c0d7d7ba4673916862a6bd56d1b2d2b336fd6342a983cda697e714ab2",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 43907,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-fixture-preimage-oct08.json",
+        "sha256": "1434b3861ba185d7de107484eca8c745f2953fecc852941e18aa91f9d216970b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1395,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-format-preflight-oct08.json",
+        "sha256": "e1c164862db2f1e041aaf89601ca6b0bb83d5ea9f8b53ed4af51cb37b9a56833",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3671,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-identity-erratum-oct08.md",
+        "sha256": "843dc54f5f2ff55171071cf1cb40649cdcd112ee6ab03eeae62c25098613153f",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 11843,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-independent-review-oct08.md",
+        "sha256": "425909d9ca4e1ebe734d1df1f0f7a11d7492f14c01a9917b7f3c987ff8c33570",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 28923,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-manager-preimage-oct08.json",
+        "sha256": "3c9d90a148f3f2e45d4dd15a04ecf12d7197fc454b138496b4a1fa90f75a6b99",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 31887,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-manager.go-preformat-source-oct08.json",
+        "sha256": "2432a57c347e568a8d3e4f1c162caaa6a5e8fefdc7c8511b5f671e35b6e5033e",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 43907,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-manager_authority_terminal_test.go-preformat-source-oct08.json",
+        "sha256": "1434b3861ba185d7de107484eca8c745f2953fecc852941e18aa91f9d216970b",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 14763,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-poller_worker.go-preformat-source-oct08.json",
+        "sha256": "6321df81903b4b206d6b31b6d732f93eb2f3bd57d4ef883fdb6a692eb2837775",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 7098,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-result-oct08.md",
+        "sha256": "b1c7e71370b1b523950be8fd9e2750d445d10eaf0e35030dcc521d539b5ba1da",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 9856,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-algorithm-worker-preimage-oct08.json",
+        "sha256": "a7b43df2334c3968333f0d8353a246330f552dec0e1b9e51cfb6ec45e67b4cb0",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 534,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-fixture-gofmt-preflight-oct08.json",
+        "sha256": "6524b1d6f73b2acaa946a7a5f8a176e2d48e31b1e385d2482dfe3be824e9bfb5",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 44165,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-fixture-gofmt-witness-oct08.json",
+        "sha256": "4def65131a8c11312295923fb396cd4ab4fa71b3d66067f0a4a045b49450a29e",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 44918,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-fixture-root-format-verification-oct08.raw.json",
+        "sha256": "ad7487c6ff44a45d147052b7e3599fb76e2a0f3e3238459c64fc53369ce51063",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2802,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-assignment-oct08.md",
+        "sha256": "5cc99e87cdeefd13846af5afe9c5a4281ff4d9258bd71dd874cf0539ff8e5eda",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1462,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-capture-layout-erratum-oct08.md",
+        "sha256": "0d2cebfde1d3a9e79d4dae96161af00f2a9d4729f2f77296b5a5c6503934262d",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 436,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-command-oct08.raw.json",
+        "sha256": "6a1797043d39e360a48a779c810e8a126257bd98d55bfb164d51f3a0b7224db1",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 133,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-exit-oct08.raw.json",
+        "sha256": "f01a91debd1d66e8344139c0dc4ccba34c87cba9c55bde6761bfb2f2307f0849",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 153,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-preflight-exit-oct08.raw.json",
+        "sha256": "45113a68935a57ca5a90122b8f3e5087a00236bfa3424d6876ce85116cadb94f",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3471,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-preflight-oct08.raw.json",
+        "sha256": "7ae4991a032a88f58cb45751dd5fcdeca21e2825e9cb13ffc8517f3e355be075",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 136,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-stderr-oct08.raw.json",
+        "sha256": "1a0757a4ef31e9b6c48467d75f62ce6ea2dcf8c7ba77474d0d73a465be9068d8",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 14864,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-etaBTw-stdout-oct08.raw.json",
+        "sha256": "2f582ce919490da0c684f9b336a8ca3917bccb7a847bc2f355a25a8dd70a2b5f",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2802,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-execution-assignment-oct08.md",
+        "sha256": "5cc99e87cdeefd13846af5afe9c5a4281ff4d9258bd71dd874cf0539ff8e5eda",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 6790,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-green-result-oct08.md",
+        "sha256": "dab62acbba5d783b4051dd45dd691c8e5a2fdff95f7bb32f7b320bbbb3e24404",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3830,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-assignment-oct08.md",
+        "sha256": "74e82cb6a6b7bb0c141459ea7127c486856cb994a523ea394ec9a9d78a031aa0",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 424,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-command-oct08.raw.json",
+        "sha256": "2d7170815c59768d6a0e9056498703eab8fc02a76629b915e34caebd663a0942",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 3830,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-execution-assignment-oct08.md",
+        "sha256": "74e82cb6a6b7bb0c141459ea7127c486856cb994a523ea394ec9a9d78a031aa0",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 100,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-exit-oct08.raw.json",
+        "sha256": "03b595eb487f39927c0f4a26c10e364060a36491bc58f904300a828c6d573807",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 10932,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-output-oct08.raw.json",
+        "sha256": "402ce44df91e07dd04cf33e1b59c68ab6c8a13821433c6b37e5380a301f39e12",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 120,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-preflight-exit-oct08.raw.json",
+        "sha256": "9ef6364bb520533b99eda9ec32dec745f4906c18bf03061ed2e449630bd8e4a6",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 95884,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-preflight-oct08.raw.json",
+        "sha256": "88c0bc397d235508ba05d8dd1bbb32f2d1831274aaa3521247e2892476537a62",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1412,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-result-citation-erratum-oct08.md",
+        "sha256": "3b157724133d8e993ec5f2006289468fcc0b02db542e066853e2b581b37816a5",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 9391,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-result-oct08.md",
+        "sha256": "c13fa2c54c5b44965a55110b408eb0b2f128ec4cfe7efbb5cefe0f1e5ed2b3b9",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 2444,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-focused-red-root-acceptance-oct08.md",
+        "sha256": "9dbef78de688711c6408bc9e2d1da62c0699d872cf4940a66e8d5c966b1ebc0d",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 989,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-formatter-provenance-clarification-oct08.md",
+        "sha256": "bdaff2a65aad102b382bafce1804b0851e0f92be67958bcdd5b740803ce47530",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 510,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-manager-gofmt-preflight-oct08.json",
+        "sha256": "6bb5d5d495c8e315c7e1ff920a1a113c1046ce36639e49b9dcda9e225d382d4d",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 32057,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-manager-gofmt-witness-oct08.json",
+        "sha256": "e27a3d2b22efc2332bd474a0925e72a93b114a6efd563f7b0b22317145448d72",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 32845,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-manager-root-format-verification-oct08.raw.json",
+        "sha256": "44d37f7359d975c81df43511d513f0b822208eeae701c3ab2eb40c5dfee79389",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 1803,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-root-format-verification-oct08.md",
+        "sha256": "3956cf1936dcdfb4a08f43b2416b25e066835fb9677a8b5c86af3a00101a2916",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 974,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-worker-formatter-chronology-oct08.md",
+        "sha256": "caeb5d72bff6d0b8caead75b586c7d55a4121535ab3f9561d3f38838d94589fd",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 516,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-worker-gofmt-preflight-oct08.json",
+        "sha256": "e87c5b4054fc355ead4db57944459dc60cdf6dd540550f79b0342634f315bddb",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 14870,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-worker-gofmt-witness-oct08.json",
+        "sha256": "7dca802f0eb617252958d71b2b9ebde6e7a5f464ec1ddb1abca80c008a1eb4e0",
+        "worktree_state": "untracked"
+      },
+      {
+        "bytes": 15563,
+        "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-watcher-terminal-worker-root-format-verification-oct08.raw.json",
+        "sha256": "e9a074d8c59999807f63674891a8e5d2841c10c5689416a8aa6982266b190d08",
+        "worktree_state": "untracked"
+      }
+    ]
+  },
+  "supersedes": {
+    "path": ".agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-private-lifecycle-checkpoint-scope-manifest-oct08.json",
+    "reason": "Revision 1 omitted the three newly written private lifecycle independent-review/errata files because of a basename filter.",
+    "sha256": "38b0d306a76876b76adf77cadd18ac3902766918205b3f90a63158062c3f107f"
+  }
+}

@@ -1,0 +1,169 @@
+# Behavioral IR: CJ02 Discover Lawful Affordances
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ02"
+  slug: "discover_lawful_affordances"
+  title: "Discover Lawful Affordances"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "epistemic"
+
+interaction_kinds:
+  - open_input
+  - entity_resolution
+  - validation
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - trusted_context_established
+    - inquiry_initiated
+    - denial_encountered
+    - escalation_pending
+  actor_roles:
+    - Operator
+    - CaseOwner
+    - DomainAuthor
+    - Auditor
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - trusted_cell_and_actor_context
+      - subject_of_inquiry
+      - disclosure_scope_declared
+    context_scope: "Subject entity, provider scope, catalog root, actor authorization context"
+
+  IS2_preflight:
+    checks:
+      - actor_disclosure_scope_resolved
+      - subject_record_or_catalog_exists
+      - boundary_limits_defined
+    readiness_classification:
+      expected: "ready | partial_disclosure | denied"
+      failure_action: "block_unauthorized_disclosure_before_retrieval"
+
+  IS3_authority_resolution:
+    required_role: "Operator"
+    alternate_role: "Auditor"
+    grant_scope: "epistemic_inquiry_and_affordance_preview"
+    separation_of_duty: "Authority preview confers no execution authority"
+    approval:
+      status: "unresolved_in_source"
+      note: "Complete authority preview contract partially implemented across surfaces"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "affordance.discover"
+      invoked_capabilities:
+        - "thoth.ask"
+        - "asset_and_endpoint_inspection"
+        - "endpoint_probe"
+        - "capability_projection"
+        - "environment_and_adapter_inspection"
+        - "authority_preflight"
+        - "denial_explanation"
+      binding:
+        status: "exercised"
+        source_ref: "sea-forge-server / thoth"
+    bounds:
+      network_access: "bounded_probe_only"
+      side_effects: "strictly_read_only"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "unknown_or_declared_support"
+      to: "available_or_demonstrated_affordances"
+      alternative_states:
+        - "unavailable"
+        - "denied"
+        - "escalated"
+        - "partial"
+        - "still_unknown"
+    artifacts:
+      - "bounded_thoth_answers"
+      - "disclosure_plans"
+      - "authority_burden_previews"
+      - "asset_and_endpoint_descriptors"
+      - "compatibility_findings"
+      - "denial_reasons_and_policy_references"
+    mutation_rule: "Read-only; produces source-linked projections, never new authoritative case state"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "catalog_source_references"
+        evidence_class: "observed"
+      - item: "endpoint_probe_receipt"
+        evidence_class: "observed"
+      - item: "freshness_and_limitation_annotations"
+        evidence_class: "observed"
+      - item: "denial_policy_clause_hash"
+        evidence_class: "observed"
+    integrity_verification:
+      source_traceability_verified: true
+      distinguish_existence_from_usability: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The user receives a source-backed set of currently visible, reachable, permitted, and settleable actions, including explicit blockers, uncertainty, freshness, and limitations."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "affordances_proven"
+        - "path_denied_with_explanation"
+        - "path_escalated"
+        - "evidence_insufficient_unknown_preserved"
+    settlement_vs_termination: "Delivering text or list output is not settlement; proof requires citation of governing policy and source bounds."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "select_asset_or_provider"
+        action: "choose_inspected_asset"
+        condition: "outcome == affordances_proven"
+      - id: "form_or_revise_governed_case"
+        target_journey: "CJ04"
+        condition: "outcome == affordances_proven"
+      - id: "request_approval_or_authority"
+        target_journey: "CJ06"
+        condition: "outcome == path_escalated"
+      - id: "repair_dependency"
+        action: "invoke_repair_procedure"
+        condition: "outcome == path_denied_with_explanation"
+    blocked_affordances:
+      - id: "invoke_denied_capability"
+        target_journey: "CJ07"
+        reason: "policy_prohibited"
+        explanation: "Policy prohibits execution of requested capability under current actor role"
+
+recovery_paths:
+  - condition: "denial_or_escalation"
+    remedy: "Explain denial or escalation from committed policy records; show required escalation path"
+  - condition: "probe_failure"
+    remedy: "Repair dependency, network, or compatibility failure before re-probing"
+  - condition: "insufficient_evidence"
+    remedy: "Preserve unknown status rather than assuming availability or inventing support"
+
+unresolved_bindings:
+  - component: "complete_authority_burden_preview"
+    status: "unresolved_in_source"
+    impact: "Pre-execution authority burden preview is partial in current Workbench projections"
+  - component: "combined_projection_environment_browser"
+    status: "unresolved"
+    impact: "Environment browsing exists in CLI but is preview-only in graphical shell"

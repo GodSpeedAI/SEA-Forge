@@ -1,0 +1,6 @@
+2026-10-01T05:28:24Z
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       5.5Gi       238Mi       532Mi       2.7Gi       2.2Gi
+Swap:           12Gi       6.0Gi       6.0Gi
+1318737 bash            /bin/bash -c mkdir -p /tmp/sea-rs-ask-runtime-gates/phase-a && { date -u '+%Y-%m-%dT%H:%M:%SZ'; free -h; ps -eo pid,comm,args | awk 'tolower($0) ~ /(go test|go build|cargo|rustc|bun test|bun run|tsc|vite|esbuild)/ {print}'; } > /tmp/sea-rs-ask-runtime-gates/phase-a/preflight.txt 2>&1; rc=$?; cat /tmp/sea-rs-ask-runtime-gates/phase-a/preflight.txt; exit $rc
+1318742 awk             awk tolower($0) ~ /(go test|go build|cargo|rustc|bun test|bun run|tsc|vite|esbuild)/ {print}

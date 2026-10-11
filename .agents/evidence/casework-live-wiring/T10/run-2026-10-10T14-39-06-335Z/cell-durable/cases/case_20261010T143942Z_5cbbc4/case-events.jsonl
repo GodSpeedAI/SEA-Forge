@@ -1,0 +1,2 @@
+{"version":"0.1","event_id":"cev_000001","run_id":"case","plan_item_id":null,"kind":"case_created","actor_id":"case_engine","timestamp":"2026-10-10T14:39:42.328225602+00:00","payload":{"case_id":"case_20261010T143942Z_5cbbc4"}}
+{"version":"0.1","event_id":"cev_000002","run_id":"case","plan_item_id":"task_prepare","kind":"item_enabled","actor_id":"case_engine","timestamp":"2026-10-10T14:39:42.338340793+00:00","payload":{}}

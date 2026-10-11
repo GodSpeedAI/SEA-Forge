@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ01",
+  "oracle_name": "CJ01_TrustedCellContextOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Actor is attributable, snapshots explicit, readiness classified with evidence.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs",
+  "rationale": "Cell root exists, identity and foundation checks evaluate fail-closed, readiness classification correctly reports foundation state.",
+  "evidence_refs": [
+    "crates/sea-forge-server/src/sfwp/readiness.rs",
+    "crates/sea-forge-self-model"
+  ],
+  "carried_state": {}
+}

@@ -25,7 +25,7 @@ smaller layer of controls is GitHub-only because they depend on GitHub itself.
 | Tests | `cargo test --workspace --all-features --locked` |
 | Build | `cargo build --workspace --all-targets --locked` |
 | Supply chain + secrets | `cargo deny check` + `gitleaks detect` |
-| Agent handoff | `scripts/check-agent-context.sh` (run via `just context-check`) |
+| Agent handoff | `scripts/check-agent-context.sh` (run via `just status-check`, alias `context-check`) |
 | Canonical command surface | every check above is a `just` recipe in `justfile` |
 
 The two execution paths converge on the same commands: hooks call `just`
@@ -59,7 +59,7 @@ remember is small.
 | `just sync` | after `git pull` that touched dependency files | re-pin toolchain + refetch deps |
 | `just doctor` | when something feels off; emits JSONL evidence to `target/bootstrap-evidence/` | `scripts/doctor.sh` |
 | `just hooks-install` | first checkout, or after a hook file changes | sets `core.hooksPath=.githooks` |
-| `just check-fast` | before each commit (also run by `pre-commit` hook) | context-check + fmt-check + typecheck |
+| `just check-fast` | before each commit (also run by `pre-commit` hook) | status-check + fmt-check + typecheck |
 | `just fmt` / `just fmt-check` | apply / verify rustfmt | `cargo fmt --all` |
 | `just fix` | apply only safe automatic fixes | `cargo fmt --all` (clippy fixes are reviewed manually) |
 | `just lint` | clippy | `cargo clippy ... -D warnings` |
@@ -67,7 +67,7 @@ remember is small.
 | `just security` | supply-chain + secret scan | `cargo deny check` + `gitleaks detect` |
 | `just test` | unit + integration tests | `cargo test --workspace --all-features --locked` |
 | `just build` | full build | `cargo build --workspace --all-targets --locked` |
-| `just check` | developer quality sweep | context-check + fmt-check + lint + typecheck + security |
+| `just check` | developer quality sweep | status-check + fmt-check + lint + typecheck + security |
 | `just ci` | canonical CI verification (union of required CI job *commands* on this platform) | check + test + build |
 | `just pre-commit` | invoked by `.githooks/pre-commit` | `just check-fast` |
 | `just pre-push` | invoked by `.githooks/pre-push` | `just ci` |
@@ -75,7 +75,7 @@ remember is small.
 | `just pr` | verify + push + open a PR via gh | see recipe body; refuses from `main`, never auto-merges |
 | `just release-check [tag]` | verify version synchronization across manifests | reads `workspace.package.version`, `sea-forge-core`, `sea-forge-cli`, optional tag; fails on any mismatch |
 | `just publish-bootstrap <crate>` | one-time manual crates.io publish (F-010) | uses `$CARGO_REGISTRY_TOKEN`; refuses without it |
-| `just context-check` | agent-handoff validation; runs inside `check-fast` and `ci` | `scripts/check-agent-context.sh` |
+| `just status` / `just status-check` | show latest snapshot (`status`) / validate handoff structure & coupling (`status-check`) | `tail -n 1 .agents/CURRENT_STATUS.yaml` / `scripts/check-agent-context.sh` |
 | `just proof` | minimum-spec P1–P4b conformance | `spec-minimum.md` §12.2 |
 | `just clean` | remove `target/` and bootstrap evidence | `cargo clean` + `rm -rf target/bootstrap-evidence` |
 

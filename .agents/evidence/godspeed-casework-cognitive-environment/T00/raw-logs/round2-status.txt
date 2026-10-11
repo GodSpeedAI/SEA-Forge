@@ -1,0 +1,8 @@
+started_at=2026-09-19T18:55:57Z
+MemAvailable:    3550176 kB SwapFree:        7405760 kB preflight[proof]
+proof exit=0 wall_s=3
+MemAvailable:    3564688 kB SwapFree:        7405760 kB preflight[check]
+check exit=1 wall_s=101
+MemAvailable:    3458276 kB SwapFree:        7255312 kB preflight[ci]
+ci exit=1 wall_s=41
+finished_at=2026-09-19T18:58:22Z

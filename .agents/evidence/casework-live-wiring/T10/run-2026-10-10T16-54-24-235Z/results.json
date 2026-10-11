@@ -1,0 +1,45 @@
+[
+  {
+    "journey_id": "L-RECOV",
+    "title": "Recovery: corrupt artifact, SSE drop, kernel and gateway kill -9",
+    "status": "PASS",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI is honest and consistent with the durable files across a corrupt artifact, an SSE drop and kernel/gateway crashes",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "L-RECOV",
+        "name": "setup: design case R1 through the UI and execute its first item; the artifact is captured",
+        "ok": true,
+        "ms": 32009
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(a) corrupt artifact: bytes edited inside the cell -> typed digest-mismatch card, nothing rendered from the bad bytes; restored afterwards",
+        "ok": true,
+        "ms": 31603
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(d) SSE drop: while the stream is down another session executes; the pill says Reconnecting (no progress), then resumes from the cursor with no duplicate revision",
+        "ok": true,
+        "ms": 47494
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(c) kernel kill -9 and restart: cases recover from disk, the gateway re-subscribes, the next execution reaches the UI over SSE",
+        "ok": true,
+        "ms": 67979
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(b) gateway kill -9 and restart: the UI shows Reconnecting, sessions are gone by design, a fresh sign-in shows exactly the durable state with no duplicate revision",
+        "ok": true,
+        "ms": 42113
+      }
+    ],
+    "total_ms": 231193
+  }
+]

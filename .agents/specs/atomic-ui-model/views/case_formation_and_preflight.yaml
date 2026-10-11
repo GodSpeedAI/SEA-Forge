@@ -1,0 +1,111 @@
+# Atomic UI View: case_formation_and_preflight
+# Upstream Behavioral Source: CJ04 Form and Commit a Governed Case
+
+view:
+  id: case_formation_and_preflight
+  purpose: Normalize intent or external proposals, validate semantic references, inspect preflight criteria, and immutably commit a governed case.
+
+sources:
+  journey: CJ04
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    cell_context: persistent
+    actor_identity: persistent
+    draft_plan_digest: persistent_during_formation
+
+regions:
+  - id: proposal_input_panel
+    responsibility: capture_intent_template_selection_or_external_proposal
+  - id: plan_structure_preview
+    responsibility: preview_stages_items_sentries_and_milestones_dag
+  - id: preflight_summary_panel
+    responsibility: show_provenance_evaluators_limits_and_readiness_checks
+  - id: commit_action_bar
+    responsibility: confirm_commitment_and_expose_next_affordances
+
+elements:
+  # Proposal Input Region
+  - id: work_source_choice
+    primitive: choice
+    region: proposal_input_panel
+    binds: { field: work_source_type }
+
+  - id: intent_specification_input
+    primitive: input
+    region: proposal_input_panel
+    binds: { field: intent_payload }
+
+  - id: semantic_reference_choice
+    primitive: choice
+    region: proposal_input_panel
+    binds: { field: domain_model_ref }
+
+  # Plan Structure Preview Region
+  - id: stages_dag_graph
+    primitive: graph
+    region: plan_structure_preview
+    binds: { entity: case_plan_stages }
+
+  - id: plan_items_table
+    primitive: table
+    region: plan_structure_preview
+    binds: { entity: plan_items }
+
+  - id: criteria_origins_list
+    primitive: collection
+    region: plan_structure_preview
+    binds: { entity: plan_criteria }
+
+  # Preflight Summary Region
+  - id: preflight_status_badge
+    primitive: status
+    region: preflight_summary_panel
+    binds: { field: preflight_classification }
+
+  - id: execution_limits_inspector
+    primitive: inspector
+    region: preflight_summary_panel
+    binds: { field: sandbox_and_execution_limits }
+
+  - id: preflight_diagnostic_message
+    primitive: message
+    region: preflight_summary_panel
+    binds: { field: preflight_failure_reasons }
+
+  # Commit Action Bar Region
+  - id: run_preflight_action
+    primitive: action
+    region: commit_action_bar
+    semantic_action: case.preflight
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+  - id: commit_case_action
+    primitive: action
+    region: commit_action_bar
+    semantic_action: case.commit
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: start_work_action
+    primitive: action
+    region: commit_action_bar
+    semantic_action: start_lawful_work
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: navigate_case_action
+    primitive: action
+    region: commit_action_bar
+    semantic_action: navigate_live_case
+    consequence: epistemic
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: plan_derivation_or_preflight_in_progress }
+  ready: { when: preflight_passed_and_commit_available }
+  blocked: { when: preflight_failed_or_stale_source }
+  settled: { when: case_committed_to_ledger }
+  error: { when: proposal_validation_failed }

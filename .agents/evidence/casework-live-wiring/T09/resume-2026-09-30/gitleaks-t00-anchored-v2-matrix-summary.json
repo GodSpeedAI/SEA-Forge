@@ -1,0 +1,37 @@
+{
+  "checks": {
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl": true,
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl": true,
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl": true,
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt": true,
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log": true,
+    "suppressed commit1 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log": true,
+    "suppressed commit2 .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log": true,
+    "reported prefix_path commit1": true,
+    "reported prefix_path commit2": true,
+    "reported suffix_path commit1": true,
+    "reported suffix_path commit2": true,
+    "reported unlisted_path commit1": true,
+    "reported unlisted_path commit2": true,
+    "reported unlisted commit exact path": true,
+    "reported other rule in allowed pair commit1": true,
+    "reported other rule in allowed pair commit2": true,
+    "no unexpected findings": true
+  },
+  "baseline_findings": 21,
+  "production_findings": 9,
+  "baseline_rules": {
+    "generic-api-key": 19,
+    "github-pat": 2
+  },
+  "production_rules": {
+    "github-pat": 2,
+    "generic-api-key": 7
+  },
+  "marker_line_sha256": "c2d7793179976fec96329a56d807aa169aa1a1e77ef3a39cd1502b4759bba821"
+}

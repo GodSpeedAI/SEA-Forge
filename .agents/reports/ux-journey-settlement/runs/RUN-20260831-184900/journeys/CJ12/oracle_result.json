@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ12",
+  "oracle_name": "CJ12_AssetTransferAndAdoptionOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Transfer rejected atomically or admitted with assets inert; authorized adoption required before usability.",
+  "authoritative_record_inspected": "sea-forge federation / /federation route",
+  "rationale": "Cell bundle export/import enforces atomic verification and asset inertness; federation UI route correctly renders specification preview.",
+  "evidence_refs": [
+    "crates/sea-forge-cell/src/bundle.rs",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx"
+  ],
+  "carried_state": {}
+}

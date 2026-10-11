@@ -1,0 +1,128 @@
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/sea-rs
+context check passed
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Checking ring v0.17.14
+    Checking rustls-webpki v0.103.15
+    Checking rustls v0.23.45
+    Checking tokio-rustls v0.26.4
+    Checking hyper-rustls v0.27.9
+    Checking reqwest v0.12.28
+    Checking sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+    Checking sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `dev` profile [unoptimized] target(s) in 20.02s
+[understand-anything] commit 74f86f0964f92c5b1715eb0703a9b880d28cccae changed source files; the .ua knowledge graph is now stale.
+[understand-anything] Re-run the understand skill (incremental mode) to refresh /home/sprime01/projects/sea-rs/.ua.
+[casework/live-wiring 74f86f0] build(casework): verify emitted renderer chunks
+ 59 files changed, 3680 insertions(+), 106 deletions(-)
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-checkpoint-graft-exit-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-checkpoint-graft-output-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-checkpoint-graft-preflight-oct07.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-checkpoint-scope-reconciliation-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-fixture-repair-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-independent-source-review-oct07.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-build-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-escalated-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-initial-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-canonical-retry-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-focused-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-serialized-verification-assignment.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-serialized-verification.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-oct07-typecheck-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-independent-rereview-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-red-oct06-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-red-oct06-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-red-oct06-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase1-red-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-oct06-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-oct06-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-oct06-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-retry-oct06-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-retry-oct06-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-canonical-retry-oct06-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-cursor-diagnostic-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-diagnostic-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-focused-oct06-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-focused-oct06-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-focused-oct06-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-gates-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-independent-source-review-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-listener-default-diagnostic-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-listener-escalated-diagnostic-oct06.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-typecheck-oct06-exit.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-typecheck-oct06-preflight.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-phase2-typecheck-oct06-run.raw
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-production-original-assignment-oct06.md
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-root-actual-capture-manifest-oct07.json
+ create mode 100644 .agents/evidence/casework-live-wiring/T09/resume-2026-09-30/renderer-chunks-root-qualified-acceptance-oct07.md
+ create mode 100644 apps/godspeed-cognitive-ui/src/build/rendererChunkContract.test.ts
+ create mode 100644 apps/godspeed-cognitive-ui/src/build/rendererChunkContract.ts

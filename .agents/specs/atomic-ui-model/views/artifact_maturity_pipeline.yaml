@@ -1,0 +1,99 @@
+# Atomic UI View: artifact_maturity_pipeline
+# Upstream Behavioral Source: CJ11 Transform and Mature Governed Artifacts
+
+view:
+  id: artifact_maturity_pipeline
+  purpose: Derive, project, promote, and quarantine artifacts through explicit sequential maturity gates (cognitive -> intellectual -> product -> capital).
+
+sources:
+  journey: CJ11
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    case_identity: persistent
+    source_artifact_id: persistent_during_transition
+    transition_token_chain: persistent_across_views
+
+regions:
+  - id: stage_progression_rail
+    responsibility: visualize_sequential_maturity_pipeline_stages
+  - id: transformation_comparison_view
+    responsibility: compare_source_model_with_projected_artifacts_and_lineage
+  - id: transition_tokens_panel
+    responsibility: inspect_predecessor_transition_tokens_and_licenses
+  - id: maturity_actions_bar
+    responsibility: authorize_promotion_quarantine_or_runtime_binding
+
+elements:
+  # Stage Progression Rail Region
+  - id: pipeline_stages_progress
+    primitive: progress
+    region: stage_progression_rail
+    binds: { entity: maturity_stages }
+
+  - id: active_stage_status
+    primitive: status
+    region: stage_progression_rail
+    binds: { field: current_maturity_tier }
+
+  # Transformation Comparison Region
+  - id: source_vs_projected_comparison
+    primitive: comparison
+    region: transformation_comparison_view
+    binds: { field: source_vs_projected_artifacts }
+
+  - id: adapter_version_value
+    primitive: value
+    region: transformation_comparison_view
+    binds: { field: pinned_adapter_version }
+
+  - id: output_artifact_ref
+    primitive: artifact_reference
+    region: transformation_comparison_view
+    binds: { field: projected_artifact_descriptor }
+
+  # Transition Tokens Region
+  - id: transition_token_chain_view
+    primitive: timeline
+    region: transition_tokens_panel
+    binds: { entity: transition_tokens }
+
+  - id: license_attestation_receipt
+    primitive: evidence_item
+    region: transition_tokens_panel
+    binds: { field: ownership_and_license_token }
+
+  - id: quarantine_diagnostic_message
+    primitive: message
+    region: transition_tokens_panel
+    binds: { field: quarantine_reason }
+
+  # Maturity Actions Bar Region
+  - id: advance_stage_action
+    primitive: action
+    region: maturity_actions_bar
+    semantic_action: advance_to_next_legal_stage
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: implement_binding_action
+    primitive: action
+    region: maturity_actions_bar
+    semantic_action: implement_and_settle_runtime_binding
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: rework_quarantined_action
+    primitive: action
+    region: maturity_actions_bar
+    semantic_action: rework_quarantined_artifact
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: projection_or_gate_evaluation_in_progress }
+  ready: { when: stage_transition_preconditions_verified }
+  blocked: { when: missing_predecessor_transition_token }
+  settled: { when: transition_token_admitted_and_artifact_promoted }
+  error: { when: projection_validation_or_gate_failed_quarantined }

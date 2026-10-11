@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KACH57B7QXRRDJS14RRGT5",
+  "source_entry_ulids": [
+    "01M4KACH57B7QXRRDJS14RRGT5"
+  ],
+  "source_payload_hash": "sha256:78ccf3c627080aee26d27372a83cc972a1ca8eef981a93ec41bd23cc6a91f54a",
+  "view_path": "/tmp/t10-live-jkFPx0/cell/authority/active-policy.json",
+  "view_sha256": "sha256:e0516096baa0d94ecb5181cb0e8b8adffb5ed9d341e7208db4faf0eb3625a214",
+  "status": "current",
+  "failure_class": null
+}

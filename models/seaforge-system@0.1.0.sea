@@ -1,0 +1,285 @@
+@namespace "godspeed.seaforge.system"
+@version "0.1.0"
+@owner "godspeed-ai"
+@profile "default"
+
+// Purpose:
+// The canonical Genesis Self-Model of SEA Forge (spec-adlc-thoth §7.1, G1).
+// This is a semantic model of SEA Forge itself: its identity, architecture,
+// crate/component responsibilities, extension ABI, protected operations and
+// authority surfaces, case-management semantics, trace/evidence/settlement
+// distinctions, sandbox and environment semantics, projection capabilities,
+// artifact/capability lifecycle, failure and escalation modes, and assurance
+// levels. It is shipped content; installations reference, never edit, it.
+//
+// This is a semantic model. It mints no kernel record types. SEA Forge
+// execution remains grounded in the existing kernel: Case, PlanItem, Sentry,
+// Milestone, DiscretionaryItem, authority decisions, the ledger, trace,
+// evidence, settlement, capability records, and rebuildable projections.
+
+// -----------------------------------------------------------------------------
+// Identity and architecture
+// -----------------------------------------------------------------------------
+
+Entity "SEA Forge"
+Entity "Governed Capability Execution Kernel"
+Entity "Synchronous Kernel"
+Entity "Server and Runtime Adapter Layer"
+
+Entity "sea-forge-core"
+Entity "sea-forge-cli"
+Entity "sea-forge-authority"
+Entity "sea-forge-planner"
+Entity "sea-forge-sandbox"
+Entity "sea-forge-runtime"
+Entity "sea-forge-trace"
+Entity "sea-forge-evidence"
+Entity "sea-forge-settlement"
+Entity "sea-forge-capability"
+Entity "sea-forge-extension"
+Entity "sea-forge-ledger"
+Entity "sea-forge-domainforge"
+Entity "sea-forge-spec-pipeline"
+Entity "sea-forge-cell"
+Entity "sea-forge-artifact-ip"
+Entity "sea-forge-self-model"
+Entity "sea-forge-server"
+
+// -----------------------------------------------------------------------------
+// Case management semantics
+// -----------------------------------------------------------------------------
+
+Entity "Case"
+Entity "CasePlanModel"
+Entity "Stage"
+Entity "PlanItem"
+Entity "Sentry"
+Entity "Milestone"
+Entity "DiscretionaryItem"
+Entity "CaseFile"
+
+// -----------------------------------------------------------------------------
+// Authority fabric
+// -----------------------------------------------------------------------------
+
+Entity "AuthorityDecision"
+Entity "AuthorizedAction"
+Entity "CanonicalActionRequest"
+Entity "PolicyBundle"
+Entity "IdentityBinding"
+Entity "SeparationOfDutiesRule"
+Entity "AuthoritySurface"
+
+// -----------------------------------------------------------------------------
+// Sandbox and environment
+// -----------------------------------------------------------------------------
+
+Entity "SandboxRuntime"
+Entity "SandboxClass"
+Entity "EnvironmentContract"
+Entity "ProbeEvidence"
+
+// -----------------------------------------------------------------------------
+// Trace, evidence, settlement
+// -----------------------------------------------------------------------------
+
+Entity "TraceEvent"
+Entity "EvidenceRecord"
+Entity "SettlementDeclaration"
+Entity "SettlementCriteriaRecord"
+Entity "SemanticEnvelope"
+
+// -----------------------------------------------------------------------------
+// Capability, ledger, projections
+// -----------------------------------------------------------------------------
+
+Entity "CapabilityRecord"
+Entity "RebuildableProjection"
+Entity "ProjectionRecord"
+Entity "Ledger"
+Entity "DomainModelRef"
+
+// -----------------------------------------------------------------------------
+// Extension ABI and lifecycle
+// -----------------------------------------------------------------------------
+
+Entity "ExtensionDescriptor"
+Entity "ExtensionRegistry"
+Entity "RuntimeAdapterExtension"
+
+// -----------------------------------------------------------------------------
+// Self-model (E11)
+// -----------------------------------------------------------------------------
+
+Entity "Genesis Self-Model"
+Entity "SelfModelSnapshot"
+Entity "ReleaseRealization"
+Entity "CellRealization"
+Entity "DeclaredLayer"
+Entity "ObservedLayer"
+Entity "DemonstratedLayer"
+
+// -----------------------------------------------------------------------------
+// Failure, escalation, assurance
+// -----------------------------------------------------------------------------
+
+Entity "ApprovalRequest"
+Entity "EscalationPath"
+Entity "QuarantineRecord"
+Entity "AssuranceLevel"
+Entity "SelfModelError"
+Entity "FailClosedBehavior"
+
+// -----------------------------------------------------------------------------
+// Relationship vocabulary
+// -----------------------------------------------------------------------------
+
+Resource "Contains" units
+Resource "Composes" units
+Resource "Specializes" units
+Resource "Implements" units
+Resource "Exposes" units
+Resource "Governs" units
+Resource "Constrains" units
+Resource "Records" units
+Resource "Requests" units
+Resource "Authorizes" units
+Resource "Executes" units
+Resource "Emits" units
+Resource "Supports" units
+Resource "Settles" units
+Resource "Promotes" units
+Resource "Projects" units
+Resource "Describes" units
+Resource "Realizes" units
+Resource "Observes" units
+Resource "Demonstrates" units
+Resource "Protects" units
+Resource "Escalates" units
+Resource "Boundarizes" units
+
+// -----------------------------------------------------------------------------
+// Architecture composition
+// -----------------------------------------------------------------------------
+
+Flow "Specializes" from "SEA Forge" to "Governed Capability Execution Kernel"
+Flow "Contains" from "SEA Forge" to "Synchronous Kernel"
+Flow "Contains" from "SEA Forge" to "Server and Runtime Adapter Layer"
+
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-core"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-authority"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-planner"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-sandbox"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-runtime"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-trace"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-evidence"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-settlement"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-capability"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-extension"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-ledger"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-domainforge"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-spec-pipeline"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-cell"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-artifact-ip"
+Flow "Composes" from "Synchronous Kernel" to "sea-forge-self-model"
+
+Flow "Composes" from "Server and Runtime Adapter Layer" to "sea-forge-server"
+Flow "Composes" from "Server and Runtime Adapter Layer" to "sea-forge-cli"
+
+Flow "Implements" from "sea-forge-core" to "Governed Capability Execution Kernel"
+Flow "Implements" from "sea-forge-self-model" to "Genesis Self-Model"
+
+// -----------------------------------------------------------------------------
+// Case loop semantics
+// -----------------------------------------------------------------------------
+
+Flow "Contains" from "Case" to "CasePlanModel"
+Flow "Contains" from "Case" to "CaseFile"
+Flow "Contains" from "CasePlanModel" to "Stage"
+Flow "Contains" from "Stage" to "PlanItem"
+Flow "Contains" from "CasePlanModel" to "Milestone"
+Flow "Contains" from "CasePlanModel" to "Sentry"
+Flow "Contains" from "CasePlanModel" to "DiscretionaryItem"
+
+Flow "Supports" from "TraceEvent" to "Sentry"
+Flow "Supports" from "Milestone" to "Sentry"
+Flow "Requests" from "PlanItem" to "AuthorityDecision"
+Flow "Authorizes" from "AuthorityDecision" to "AuthorizedAction"
+Flow "Executes" from "AuthorizedAction" to "SandboxRuntime"
+
+// -----------------------------------------------------------------------------
+// Authority fabric
+// -----------------------------------------------------------------------------
+
+Flow "Requests" from "CanonicalActionRequest" to "AuthorityDecision"
+Flow "Constrains" from "PolicyBundle" to "AuthorityDecision"
+Flow "Supports" from "IdentityBinding" to "AuthorityDecision"
+Flow "Constrains" from "SeparationOfDutiesRule" to "AuthorityDecision"
+Flow "Exposes" from "AuthoritySurface" to "CanonicalActionRequest"
+Flow "Protects" from "AuthoritySurface" to "SEA Forge"
+
+// -----------------------------------------------------------------------------
+// Sandbox and environment
+// -----------------------------------------------------------------------------
+
+Flow "Constrains" from "SandboxClass" to "SandboxRuntime"
+Flow "Constrains" from "EnvironmentContract" to "SandboxRuntime"
+Flow "Supports" from "ProbeEvidence" to "EnvironmentContract"
+
+// -----------------------------------------------------------------------------
+// Trace, evidence, settlement
+// -----------------------------------------------------------------------------
+
+Flow "Emits" from "SandboxRuntime" to "TraceEvent"
+Flow "Supports" from "TraceEvent" to "EvidenceRecord"
+Flow "Supports" from "EvidenceRecord" to "SettlementDeclaration"
+Flow "Constrains" from "SettlementCriteriaRecord" to "SettlementDeclaration"
+Flow "Contains" from "SemanticEnvelope" to "EvidenceRecord"
+
+// -----------------------------------------------------------------------------
+// Capability, ledger, projections
+// -----------------------------------------------------------------------------
+
+Flow "Promotes" from "SettlementDeclaration" to "CapabilityRecord"
+Flow "Records" from "Ledger" to "AuthorityDecision"
+Flow "Records" from "Ledger" to "TraceEvent"
+Flow "Records" from "Ledger" to "SettlementDeclaration"
+Flow "Projects" from "DomainModelRef" to "RebuildableProjection"
+Flow "Specializes" from "ProjectionRecord" to "RebuildableProjection"
+Flow "Supports" from "CapabilityRecord" to "DemonstratedLayer"
+
+// -----------------------------------------------------------------------------
+// Extension ABI
+// -----------------------------------------------------------------------------
+
+Flow "Records" from "ExtensionRegistry" to "ExtensionDescriptor"
+Flow "Specializes" from "RuntimeAdapterExtension" to "ExtensionDescriptor"
+
+// -----------------------------------------------------------------------------
+// Self-model (E11): declared / observed / demonstrated separation
+// -----------------------------------------------------------------------------
+
+Flow "Contains" from "Genesis Self-Model" to "DeclaredLayer"
+Flow "Contains" from "Genesis Self-Model" to "ObservedLayer"
+Flow "Contains" from "Genesis Self-Model" to "DemonstratedLayer"
+
+Flow "Describes" from "DeclaredLayer" to "SEA Forge"
+Flow "Realizes" from "ReleaseRealization" to "DeclaredLayer"
+Flow "Observes" from "CellRealization" to "ObservedLayer"
+Flow "Demonstrates" from "CapabilityRecord" to "DemonstratedLayer"
+
+Flow "Contains" from "SelfModelSnapshot" to "DomainModelRef"
+Flow "Contains" from "SelfModelSnapshot" to "ReleaseRealization"
+Flow "Contains" from "SelfModelSnapshot" to "CellRealization"
+Flow "Projects" from "SelfModelSnapshot" to "ProjectionRecord"
+
+// -----------------------------------------------------------------------------
+// Failure, escalation, assurance
+// -----------------------------------------------------------------------------
+
+Flow "Escalates" from "PlanItem" to "ApprovalRequest"
+Flow "Supports" from "ApprovalRequest" to "EscalationPath"
+Flow "Records" from "QuarantineRecord" to "RebuildableProjection"
+Flow "Constrains" from "AssuranceLevel" to "SettlementDeclaration"
+Flow "Boundarizes" from "FailClosedBehavior" to "SEA Forge"
+Flow "Specializes" from "SelfModelError" to "FailClosedBehavior"

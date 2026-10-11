@@ -1,0 +1,46 @@
+[
+  {
+    "template_ref": "tpl-service-migration-v2",
+    "title": "Service migration with security gate",
+    "description": "Two-item chain: a sandboxed patch item followed by a load verification that unlocks after the security review.",
+    "parameters": [
+      {
+        "name": "target_service",
+        "title": "Target service",
+        "description": "The service being migrated.",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "environment",
+        "title": "Environment",
+        "type": "enum",
+        "required": true,
+        "default_value": "staging",
+        "options": [
+          "staging",
+          "production"
+        ]
+      },
+      {
+        "name": "max_duration_minutes",
+        "title": "Maximum duration",
+        "type": "number",
+        "default_value": 30
+      }
+    ]
+  },
+  {
+    "template_ref": "tpl-security-audit-lite",
+    "title": "Lightweight security audit",
+    "description": "A single human sign-off gate over an attached evidence bundle.",
+    "parameters": [
+      {
+        "name": "scope",
+        "title": "Audit scope",
+        "type": "string",
+        "required": true
+      }
+    ]
+  }
+]

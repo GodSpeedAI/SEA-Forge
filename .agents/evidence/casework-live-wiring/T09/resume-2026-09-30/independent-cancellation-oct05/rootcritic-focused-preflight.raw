@@ -1,0 +1,138 @@
+2026-10-05T17:13:43Z
+MemTotal:        8132712 kB
+MemAvailable:    2695396 kB
+SwapTotal:      12582912 kB
+SwapFree:        2342168 kB
+      1 systemd
+      2 init-systemd(Ub
+      3 init-watcher
+      7 init
+     48 systemd-journal
+     80 systemd-resolve
+     83 systemd-udevd
+    151 snapfuse
+    152 snapfuse
+    162 snapfuse
+    165 snapfuse
+    194 chronyd-starter
+    195 cron
+    196 dbus-daemon
+    200 networkd-dispat
+    203 snapd
+    204 systemd-logind
+    215 rsyslogd
+    239 agetty
+    261 chronyd
+    275 chronyd
+    282 unattended-upgr
+    294 systemd
+    305 (sd-pam)
+    337 MainThread
+    338 MainThread
+    456 login
+    534 bash
+    703 MainThread
+   1485 SessionLeader
+   1487 Relay(1489)
+   1489 bash
+   1518 sh
+   1528 node
+   1562 node
+   1613 node
+   1709 node
+   1825 bash
+   1831 bash
+   1833 bash
+   2504 bash
+   2559 language_server
+   2726 node
+   3252 node
+   3441 node
+   3529 node
+   3558 chrome-devtools
+   3624 node-MainThread
+   4442 claude
+   4647 serena
+   4679 bun
+   4757 node
+   4766 node-MainThread
+   4822 node
+   4851 node-MainThread
+   5509 SessionLeader
+   5510 Relay(5511)
+   5511 node
+   5695 zcode-cli
+   5751 zcode-node-repl
+  38017 dbus-daemon
+  38019 xdg-desktop-por
+  38024 xdg-permission-
+  38029 xdg-document-po
+  38035 fusermount3
+  38041 xdg-desktop-por
+  38074 at-spi-bus-laun
+  38083 dbus-daemon
+  38088 at-spi2-registr
+  38102 codex
+  38204 codex
+  38680 codex
+  38868 node
+  38869 node
+  38872 node
+  38873 serena
+  38877 node
+  38911 node-MainThread
+  38915 node-MainThread
+  38928 node-MainThread
+  38929 node-MainThread
+  39079 node
+  39104 node-MainThread
+  39308 serena
+  39315 node
+  39316 node
+  39327 node
+  39330 node
+  39360 node-MainThread
+  39363 node-MainThread
+  39364 node-MainThread
+  39399 node-MainThread
+  39537 node
+  39543 node-MainThread
+ 280671 node
+ 383827 node
+ 383828 node
+ 384078 node
+ 384251 bash
+ 384376 language_server
+ 384651 node
+ 384834 node
+ 384922 node-MainThread
+ 385514 node
+ 385612 chrome-devtools
+ 392648 bash
+ 393656 node
+ 393694 node-MainThread
+ 393814 .cline
+ 404946 .cline
+ 470172 node
+ 471026 node
+ 471033 node
+ 471128 node
+1433926 nix-daemon
+1463466 bash
+1472686 codex-code-mode
+1541296 node
+1541297 node
+1541299 MainThread
+1541302 node
+1541304 node
+1541311 serena
+1541347 node-MainThread
+1541349 node-MainThread
+1541351 node-MainThread
+1541372 node-MainThread
+1541804 node
+1541828 node-MainThread
+1545040 wsl-pro-service
+1547969 sleep
+1551498 bash
+1551501 ps

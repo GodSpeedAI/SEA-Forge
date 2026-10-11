@@ -1,0 +1,115 @@
+{
+  "description": "Comparison of three role projections for the exact same underlying case state at cursor 1.0000000042",
+  "case_id": "case-auth-v2-001",
+  "cursor": "1.0000000042",
+  "developer_projection": {
+    "perspective": { "actor_id": "usr-dev-alice", "role": "developer" },
+    "summary": {
+      "headline": "Authentication Gateway Refactor",
+      "phase": "Review & Hardening",
+      "status_phrase": "Waiting on security officer review"
+    },
+    "visible_objects": [
+      {
+        "id": "obj-task-ed25519-impl",
+        "kind": "work_item",
+        "name": "Verify Ed25519 Bridge Implementation",
+        "status": "COMPLETED",
+        "badge": "Done & Proven",
+        "actions": [
+          { "id": "view_evidence", "label": "Inspect Provenance Evidence", "intent": "OPEN_ARTIFACT", "consequential": false }
+        ]
+      },
+      {
+        "id": "obj-gate-security",
+        "kind": "decision_gate",
+        "name": "Security Officer Architecture Signoff",
+        "status": "WAITING_ON_OTHERS",
+        "badge": "Needs Security Review",
+        "explanation": "Bob (Security Officer) must approve this gate before next phase unlocks.",
+        "actions": []
+      },
+      {
+        "id": "obj-disc-pen-test",
+        "kind": "discretionary_opportunity",
+        "name": "Run Boundary Fuzzing Test Suite",
+        "status": "AVAILABLE_TO_ADD",
+        "badge": "Optional Work",
+        "actions": [
+          { "id": "act_add_work", "label": "Add this work", "intent": "ADD_DISCRETIONARY_WORK", "consequential": true }
+        ]
+      }
+    ],
+    "available_actions": [
+      { "id": "act_add_work", "label": "Add this work", "intent": "ADD_DISCRETIONARY_WORK", "consequential": true }
+    ]
+  },
+  "security_officer_projection": {
+    "perspective": { "actor_id": "usr-sec-bob", "role": "security_officer" },
+    "summary": {
+      "headline": "Authentication Gateway Refactor",
+      "phase": "Review & Hardening",
+      "status_phrase": "Action Required: Your security signoff is pending"
+    },
+    "visible_objects": [
+      {
+        "id": "obj-task-ed25519-impl",
+        "kind": "work_item",
+        "name": "Verify Ed25519 Bridge Implementation",
+        "status": "COMPLETED",
+        "badge": "Ready for Audit",
+        "actions": [
+          { "id": "view_evidence", "label": "Inspect Cryptographic Diffs", "intent": "OPEN_ARTIFACT", "consequential": false }
+        ]
+      },
+      {
+        "id": "obj-gate-security",
+        "kind": "decision_gate",
+        "name": "Security Officer Architecture Signoff",
+        "status": "ACTION_REQUIRED",
+        "badge": "Needs Decision",
+        "explanation": "Review SXR evidence bundle and approve or reject milestone advancement.",
+        "actions": [
+          { "id": "act_sec_approve", "label": "Approve Architecture", "intent": "APPROVE_HUMAN_TASK", "consequential": true, "variant": "PRIMARY" },
+          { "id": "act_sec_reject", "label": "Reject & Request Remediation", "intent": "REJECT_HUMAN_TASK", "consequential": true, "variant": "DANGER" }
+        ]
+      }
+    ],
+    "available_actions": [
+      { "id": "act_sec_approve", "label": "Approve Architecture", "intent": "APPROVE_HUMAN_TASK", "consequential": true },
+      { "id": "act_sec_reject", "label": "Reject & Request Remediation", "intent": "REJECT_HUMAN_TASK", "consequential": true },
+      { "id": "act_sec_override", "label": "Emergency Sentry Override", "intent": "ESCALATE_OR_OVERRIDE", "consequential": true, "requires_justification": true }
+    ]
+  },
+  "auditor_projection": {
+    "perspective": { "actor_id": "usr-aud-charlie", "role": "auditor" },
+    "summary": {
+      "headline": "Authentication Gateway Refactor",
+      "phase": "Review & Hardening",
+      "status_phrase": "Read-only audit stream"
+    },
+    "visible_objects": [
+      {
+        "id": "obj-task-ed25519-impl",
+        "kind": "work_item",
+        "name": "Verify Ed25519 Bridge Implementation",
+        "status": "COMPLETED",
+        "badge": "SHA-256 Verified",
+        "actions": [
+          { "id": "view_provenance", "label": "Inspect Provenance Chain", "intent": "RESOLVE_SOURCE", "consequential": false }
+        ]
+      },
+      {
+        "id": "obj-gate-security",
+        "kind": "decision_gate",
+        "name": "Security Officer Architecture Signoff",
+        "status": "WAITING_ON_OTHERS",
+        "badge": "Awaiting Signoff",
+        "actions": []
+      }
+    ],
+    "available_actions": [
+      { "id": "export_bundle", "label": "Export Signed Audit Bundle", "intent": "EXPORT_AUDIT_BUNDLE", "consequential": false }
+    ]
+  }
+}

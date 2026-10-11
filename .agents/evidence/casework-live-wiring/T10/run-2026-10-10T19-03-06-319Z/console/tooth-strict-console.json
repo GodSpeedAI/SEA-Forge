@@ -1,0 +1,20 @@
+{
+  "session": "gs-live-mv2ri2f7-tooth",
+  "entries": [
+    {
+      "level": "log",
+      "text": "fine"
+    },
+    {
+      "level": "error",
+      "text": "tooth-injected-console-error"
+    }
+  ],
+  "page_errors": [
+    {
+      "session": "tooth",
+      "where": "pageerror",
+      "text": "Error: tooth-injected-page-error\n    at file:///tmp/l9-tooth-OvERXH/noisy.html:1:140"
+    }
+  ]
+}

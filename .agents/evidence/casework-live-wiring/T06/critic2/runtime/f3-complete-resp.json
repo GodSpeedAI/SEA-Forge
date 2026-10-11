@@ -1,0 +1,1 @@
+{"intent_id":"critic2-signoff-complete-1","success":false,"refusal":{"refusal_kind":"JUSTIFICATION_REQUIRED","message":"A human-task completion is a governed judgment: a recorded justification is mandatory."},"error_code":"JUSTIFICATION_REQUIRED","error_message":"A human-task completion is a governed judgment: a recorded justification is mandatory."}

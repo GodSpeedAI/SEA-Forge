@@ -1,0 +1,20 @@
+case_id: t24-case-001
+correlation_id: t24-case-001
+generator:
+  identity: deepseek-clinepass
+  version: cline-pass/cline-pass/deepseek-v4.1-flash
+source_route_id: t23-route-001
+source_route_fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+bounded_input:
+  scenario: e2e-happy
+  max_rounds: 4
+replay:
+  probe_id: probe-t24-case-001-replay-r1
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/replay-001-r1/runs/replay-r1/state/gauntlet-state.db
+  state_db_sha256: 5cf2459efbdc8159d81d78ccbbaf865c2790df05f77fb58dba11fdeb89f45fbc
+  terminal_class: settled
+  settled: true
+  mechanism: t15-frozen-case-execution
+accepted: true
+invalid_reason: ''
+created_at_utc: '2026-09-19T04:09:31.341786+00:00'

@@ -1,0 +1,9 @@
+tooth: out_of_domain
+parsed:
+  status: out_of_domain
+  reason: answer 'YES_SURE' not in declared domain
+  raw_answer: YES_SURE
+expected: the value is rejected as a typed schema failure and counted; never coerced into a legal label
+behaved_as_specified: true
+mode: out-of-domain
+executed_at: '2026-09-18T00:01:51.648456+00:00'

@@ -1,0 +1,20 @@
+=== RUN   TestLiveAcceptedExecuteAndIdempotentReplay
+--- PASS: TestLiveAcceptedExecuteAndIdempotentReplay (0.52s)
+=== RUN   TestLiveToothOperatorApproveRefusedWithNoKernelCall
+livetest-relay: relay: rebuild of case_20260925T223933Z_1ec95a at 01M3DBJMEQ229ZP3SQ0MVHYWTR failed: unavailable: the connection to the governed authority failed (read): EOF
+livetest-relay: relay: rebuild of case_20260925T223933Z_ea570a at 01M3DBJMFSXX7XWYW0EQPNZ0ZP failed: unavailable: the live authority client is closed (client)
+--- PASS: TestLiveToothOperatorApproveRefusedWithNoKernelCall (0.03s)
+=== RUN   TestLiveToothStaleCursorRefusedWithNoKernelWrite
+--- PASS: TestLiveToothStaleCursorRefusedWithNoKernelWrite (0.11s)
+=== RUN   TestLiveToothPreflightDigestVerifiedByTheKernel
+livetest-relay: relay: rebuild of case_20260925T223933Z_a152dc at 01M3DBJMMJT4ATEP05QKC5A2PS failed: unavailable: the connection to the governed authority failed (read): read unix @->/tmp/TestLiveToothPreflightDigestVerifiedByTheKernel2077478487/001/server.sock.binding: read: connection reset by peer
+--- PASS: TestLiveToothPreflightDigestVerifiedByTheKernel (0.04s)
+=== RUN   TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart
+    intents_live_test.go:222: restarted-gateway replay outcome: success=true refusal=<nil>
+livetest-relay: relay: rebuild of case_20260925T223933Z_96ee46 at 01M3DBJMQE0KNAQA7EMGXEK8QX failed: unavailable: the connection to the governed authority failed (read): read unix @->/tmp/TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart354317036/001/server.sock.binding: read: connection reset by peer
+livetest-relay: relay: rebuild of case_20260925T223933Z_96ee46 at 01M3DBJMQH5082K9XJ4RKN2PSK failed: unavailable: the connection to the governed authority failed (read): read unix @->/tmp/TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart354317036/001/server.sock.binding: read: connection reset by peer
+livetest-relay: relay: rebuild of case_20260925T223933Z_96ee46 at 01M3DBJMQKAT48GTN0Z84NHYVJ failed: unavailable: the live authority client is closed (client)
+--- PASS: TestLiveKernelDedupsSameRequestIDAcrossGatewayRestart (0.11s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	0.820s
+EXIT=0

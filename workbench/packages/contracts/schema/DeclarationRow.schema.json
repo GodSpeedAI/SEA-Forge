@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeclarationRow",
+  "description": "One settlement declaration, projected for standing/reliability inspection\n(epic 12.5). Weak and strong settlement must not look alike, so\n`qualifies_for_capability` and the reliability weight travel with the row.",
+  "type": "object",
+  "properties": {
+    "declaration_id": {
+      "type": "string"
+    },
+    "declarer_actor_id": {
+      "type": "string"
+    },
+    "declarer_role": {
+      "type": "string"
+    },
+    "independent": {
+      "description": "Whether the declarer is independent of the acting entity. Self-\ncertification is visible here rather than silently weighted (epic 12.6).",
+      "type": "boolean"
+    },
+    "issued_at": {
+      "type": "string"
+    },
+    "qualifies_for_capability": {
+      "type": "boolean"
+    },
+    "reliability_weight": {
+      "type": "string"
+    },
+    "status": {
+      "description": "`accepted`, `rejected`, … as recorded.",
+      "type": "string"
+    },
+    "strength": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "declaration_id",
+    "status",
+    "strength",
+    "qualifies_for_capability",
+    "declarer_actor_id",
+    "declarer_role",
+    "independent",
+    "reliability_weight",
+    "issued_at"
+  ]
+}

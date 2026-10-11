@@ -1,0 +1,515 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunRecord",
+  "description": "`run.get` result body — the single linked view of one run episode\n(epic 12.1).",
+  "type": "object",
+  "properties": {
+    "authority": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuthorityProjection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "case_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "criteria": {
+      "description": "Declared criteria paired with the settlement's own basis (epic 12.3).",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CriterionCheck"
+      }
+    },
+    "criteria_ref": {
+      "description": "The immutable criteria record id this run was committed against.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "declarations": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DeclarationRow"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/EvidenceRow"
+      }
+    },
+    "execution": {
+      "$ref": "#/$defs/ExecutionStanding"
+    },
+    "finished_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "item_kind": {
+      "description": "`sandboxed_task`, `human_task`, `agent_task`, …",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan_item_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plan_item_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "records": {
+      "description": "Which canonical records exist for this run (epic 12.10). Absence is\nreported here rather than inferred from an empty panel.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RecordPresence"
+      }
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "settlement": {
+      "$ref": "#/$defs/SettlementStanding"
+    },
+    "settlement_record": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SettlementDetail"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "started_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "termination": {
+      "description": "How execution ended. Never conflated with `settlement` (epic 12.4).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunTermination"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trace": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/TraceRow"
+      }
+    }
+  },
+  "required": [
+    "run_id",
+    "execution",
+    "settlement"
+  ],
+  "$defs": {
+    "AuthorityProjection": {
+      "description": "The authority decision that gated this run, projected from `authority.json`.\n\nReason codes, matched rule, and required next steps are carried through so a\ndenial renders as a governed outcome with a next lawful path (epic 2.6, 11.8)\nrather than as a generic error.",
+      "type": "object",
+      "properties": {
+        "decided_at": {
+          "type": "string"
+        },
+        "decision_id": {
+          "type": "string"
+        },
+        "matched_rule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "normalized_disposition": {
+          "description": "`allow`, `deny`, `escalate`, `boundary`, `degraded`.",
+          "type": "string"
+        },
+        "policy_refs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "reason_codes": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_next_steps": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "verdict": {
+          "description": "`allow`, `deny`, `escalate`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "decision_id",
+        "verdict",
+        "normalized_disposition",
+        "reason",
+        "decided_at"
+      ]
+    },
+    "CriterionCheck": {
+      "description": "One declared criterion paired with what the settlement record said about it.",
+      "type": "object",
+      "properties": {
+        "basis": {
+          "description": "The exact basis token(s) from `settlement.json` that decided this row.\nEmpty when `standing` is `unavailable` — the operator can then see the\nsettlement said nothing about it, rather than inferring a verdict.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "criterion": {
+          "description": "Stable machine key: `require_exit_zero`, `required_artifact`,\n`stdout_must_contain`, `agent_output_must_contain`, `require_approval`,\n`evaluator`, `batch`.",
+          "type": "string"
+        },
+        "expected": {
+          "description": "The criterion's declared value, as committed in the plan.",
+          "type": "string"
+        },
+        "standing": {
+          "$ref": "#/$defs/CriterionStanding"
+        }
+      },
+      "required": [
+        "criterion",
+        "expected",
+        "standing"
+      ]
+    },
+    "CriterionStanding": {
+      "description": "Whether the settlement record judged a declared criterion satisfied.",
+      "oneOf": [
+        {
+          "description": "The settlement record's basis contains this criterion's passing token.",
+          "type": "string",
+          "const": "satisfied"
+        },
+        {
+          "description": "The settlement record's basis contains this criterion's failing token.",
+          "type": "string",
+          "const": "unsatisfied"
+        },
+        {
+          "description": "Observed and recorded, but not a pass/fail input to acceptance —\nevaluator scores (§10.6). Kept out of the pass/fail vocabulary on\npurpose: an evaluator score is evidence, never standing.",
+          "type": "string",
+          "const": "recorded"
+        },
+        {
+          "description": "No settlement record yet, or it recorded no token deciding this\ncriterion. Never assumed satisfied.",
+          "type": "string",
+          "const": "unavailable"
+        }
+      ]
+    },
+    "DeclarationRow": {
+      "description": "One settlement declaration, projected for standing/reliability inspection\n(epic 12.5). Weak and strong settlement must not look alike, so\n`qualifies_for_capability` and the reliability weight travel with the row.",
+      "type": "object",
+      "properties": {
+        "declaration_id": {
+          "type": "string"
+        },
+        "declarer_actor_id": {
+          "type": "string"
+        },
+        "declarer_role": {
+          "type": "string"
+        },
+        "independent": {
+          "description": "Whether the declarer is independent of the acting entity. Self-\ncertification is visible here rather than silently weighted (epic 12.6).",
+          "type": "boolean"
+        },
+        "issued_at": {
+          "type": "string"
+        },
+        "qualifies_for_capability": {
+          "type": "boolean"
+        },
+        "reliability_weight": {
+          "type": "string"
+        },
+        "status": {
+          "description": "`accepted`, `rejected`, … as recorded.",
+          "type": "string"
+        },
+        "strength": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "declaration_id",
+        "status",
+        "strength",
+        "qualifies_for_capability",
+        "declarer_actor_id",
+        "declarer_role",
+        "independent",
+        "reliability_weight",
+        "issued_at"
+      ]
+    },
+    "EvidenceRow": {
+      "description": "One row of the run's evidence journal.",
+      "type": "object",
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "`artifact`, `authority_decision`, `execution_result`, `recall`.",
+          "type": "string"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_event_id": {
+          "description": "The trace event this evidence was captured from — the link back that\nmakes evidence attributable rather than free-floating.",
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "kind",
+        "uri",
+        "source_event_id"
+      ]
+    },
+    "ExecutionStanding": {
+      "description": "How far an item has progressed *as execution* — derived only from the trace\nevents the case runner appended. Deliberately disjoint from\n[`SettlementStanding`] so no consumer can conflate the two.",
+      "oneOf": [
+        {
+          "description": "In the plan, but no event has been observed for it yet.",
+          "type": "string",
+          "const": "pending"
+        },
+        {
+          "description": "Entry criteria met; eligible to be dispatched.",
+          "type": "string",
+          "const": "enabled"
+        },
+        {
+          "description": "Dispatched and running.",
+          "type": "string",
+          "const": "active"
+        },
+        {
+          "description": "Execution finished without error. Says nothing about settlement.",
+          "type": "string",
+          "const": "completed"
+        },
+        {
+          "description": "Execution ended in error.",
+          "type": "string",
+          "const": "failed"
+        },
+        {
+          "description": "Deliberately stopped before completing.",
+          "type": "string",
+          "const": "terminated"
+        }
+      ]
+    },
+    "RecordPresence": {
+      "description": "Whether a canonical run-record file was present on disk.",
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "description": "Size in bytes when present — enough for an operator to tell an empty\njournal from a populated one without opening it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "present": {
+          "type": "boolean"
+        },
+        "record": {
+          "description": "Filename relative to `<root>/runs/<run_id>/`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record",
+        "present"
+      ]
+    },
+    "RunTermination": {
+      "description": "How the *execution* episode ended. Deliberately disjoint from\n[`SettlementStanding`]: this is the terminal fact about the process, not a\ngoverned outcome (epic 12.4).",
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string"
+        },
+        "execution_status": {
+          "description": "The kernel's `ExecutionStatus` for the episode (`completed`,\n`timed_out`, `spawn_failed`, `sandbox_violation`), when recorded.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exit_code": {
+          "description": "Process exit code, when the terminating event carried an execution\nresult. Absent for episodes that never spawned a process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int64"
+        },
+        "trace_kind": {
+          "description": "The trace event kind that ended the episode — `command_finished`,\n`run_halted`, `item_failed`, `run_finished`, …",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trace_kind",
+        "at"
+      ]
+    },
+    "SettlementDetail": {
+      "description": "The settlement record, projected. Separate from [`RunRecord::termination`]\nby construction (epic 12.4).",
+      "type": "object",
+      "properties": {
+        "basis": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "criteria_ref": {
+          "description": "The immutable criteria record this settlement judged against. Absent on\nlegacy runs, which the kernel marks with a `legacy_unattributed_criteria`\nbasis token.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "review_required": {
+          "type": "boolean"
+        },
+        "settled_at": {
+          "type": "string"
+        },
+        "settlement_id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/SettlementStanding"
+        }
+      },
+      "required": [
+        "settlement_id",
+        "status",
+        "review_required",
+        "settled_at"
+      ]
+    },
+    "SettlementStanding": {
+      "description": "Whether a *governed settlement* has been recorded for the item. Distinct\nfrom execution: work can execute perfectly and settle as rejected.",
+      "oneOf": [
+        {
+          "description": "No settlement record exists for this item yet.",
+          "type": "string",
+          "const": "unsettled"
+        },
+        {
+          "description": "A settlement record accepted the work.",
+          "type": "string",
+          "const": "accepted"
+        },
+        {
+          "description": "A settlement record rejected the work.",
+          "type": "string",
+          "const": "rejected"
+        },
+        {
+          "description": "A settlement record escalated the decision to a human.",
+          "type": "string",
+          "const": "escalated"
+        }
+      ]
+    },
+    "TraceRow": {
+      "description": "One row of the run's trace, projected for display. The payload is carried\nthrough verbatim rather than summarized: the trace *is* the explanation of\nevery state transition (epic 7.4), and a lossy summary would be a second\naccount of it.",
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "type": "string"
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "Snake-case `TraceKind`.",
+          "type": "string"
+        },
+        "payload": true,
+        "plan_item_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "kind",
+        "actor_id",
+        "timestamp",
+        "payload"
+      ]
+    }
+  }
+}

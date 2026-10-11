@@ -1,0 +1,702 @@
+{
+ "rows": [
+  {
+   "case_id": "accepted-A1",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A2",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A3",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "lying-B1",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "lying-B2",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "lying-B3",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "budget-C1",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "budget-C2",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "budget-C3",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "accepted-A4",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A5",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A6",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A7",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A8",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A9",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A10",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A11",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "accepted-A12",
+   "consequence": "settled"
+  },
+  {
+   "case_id": "lying-B4",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "lying-B5",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "lying-B6",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "budget-C4",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "budget-C5",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "forge-D1",
+   "consequence": "budget_exhausted"
+  },
+  {
+   "case_id": "forge-D2",
+   "consequence": "budget_exhausted"
+  }
+ ],
+ "results": {
+  "deepseek-clinepass": [
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.6,
+     "not_settled": 0.25,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "All three builder attempts were admitted and the session_ref 'mock-e2e-happy' indicates a designed happy-path close, though the explicit terminal settlement event is absent.",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.72,
+    "distribution": {
+     "settled": 0.72,
+     "not_settled": 0.18,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder iterations are admitted with no rejection or authority failure, corrections are being selected, and the mock-e2e-happy session indicates a clean converging path toward settlement.",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.62,
+    "distribution": {
+     "settled": 0.7,
+     "not_settled": 0.2,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder iterations were admitted under a mock happy-path session with only 3 corrections, suggesting the loop is converging toward acceptance rather than consuming budget.",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.72,
+    "distribution": {
+     "settled": 0.15,
+     "not_settled": 0.72,
+     "insufficient_evidence": 0.13
+    },
+    "reason": "Three builder iterations under a 'mock-e2e-lying' session with 3 corrections and only admitted claims, no independent verification or accepted settlement evidence, so the run most likely exhausts its budget without acceptance.",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.04,
+     "not_settled": 0.91,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "The run is the 'mock-e2e-lying' builder family with three non-convergent iterations and three correction selections, matching the corpus class whose terminal consequence is budget exhaustion (non-settlement) rather than acceptance.",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.72,
+    "distribution": {
+     "settled": 0.15,
+     "not_settled": 0.72,
+     "insufficient_evidence": 0.13
+    },
+    "reason": "Three builder iterations under a session labeled 'mock-e2e-lying' with 3 corrections and no evidence of accepted settlement suggests repeated unverified claims trending toward budget exhaustion rather than a close.",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.2,
+     "not_settled": 0.2,
+     "insufficient_evidence": 0.6
+    },
+    "reason": "The run records contain no invocations, corrections, or evidence, so there is no basis to judge whether work will close under the run's constraints.",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.1,
+     "not_settled": 0.6,
+     "insufficient_evidence": 0.3
+    },
+    "reason": "No invocations and no corrections indicate no builder work or evidence was produced, so the run lacks grounds to reach an accepted settlement.",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.6,
+     "not_settled": 0.15,
+     "insufficient_evidence": 0.25
+    },
+    "reason": "The single builder result is admitted in a session explicitly named 'mock-e2e-happy' with no failed corrections or budget exhaustion indicators, suggesting the represented work will close.",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.6,
+     "not_settled": 0.25,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "All three builder invocations were admitted under the happy-path session with contiguous workspace refs and no failed/blocked state, suggesting convergence, though the three corrections and absent budget/terminal records leave some doubt.",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.72,
+    "distribution": {
+     "settled": 0.72,
+     "not_settled": 0.18,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder result documents were admitted and the session_ref 'mock-e2e-happy' plus correction count suggest a straightforward converging run with no failures or budget signals recorded.",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.7,
+    "distribution": {
+     "settled": 0.7,
+     "not_settled": 0.2,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder result documents are admitted, corrections are enabled, and the session_ref 'mock-e2e-happy' indicates a designed happy-path run that closes under its constraints.",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.82,
+    "distribution": {
+     "settled": 0.82,
+     "not_settled": 0.13,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "Three admitted builder iterations under a 'mock-e2e-happy' session with all results admitted at increasing timestamps indicate the correction loop is converging toward acceptance.",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.72,
+    "distribution": {
+     "settled": 0.72,
+     "not_settled": 0.13,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "All three builder result documents were admitted and the session is an explicit happy-path mock E2E, so the run's represented work is on track to close settled.",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.97,
+    "distribution": {
+     "settled": 0.96,
+     "not_settled": 0.03,
+     "insufficient_evidence": 0.01
+    },
+    "reason": "All three builder invocations for this run are admitted, all three units (AK-901/902/903) have committed settlements with produced evidence, and the session is the class-correlated 'mock-e2e-happy' happy-path terminal that closes settled.",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.62,
+    "distribution": {
+     "settled": 0.62,
+     "not_settled": 0.23,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "All three builder iterations were admitted under a 'mock-e2e-happy' session with no rejection or escalation signal, suggesting the run converges to acceptance, though the absence of claim/evidence content and a terminal event leaves real uncertainty.",
+    "row_index": 15
+   },
+   {
+    "status": "provider_timeout",
+    "row_index": 16
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.7,
+    "distribution": {
+     "settled": 0.7,
+     "not_settled": 0.2,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder invocations are admitted under a mock happy-path e2e session with a contained tier and no failed/blocked state, indicating the represented work is on track to close.",
+    "row_index": 17
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.1,
+     "not_settled": 0.6,
+     "insufficient_evidence": 0.3
+    },
+    "reason": "Every builder iteration (3 of 3, session 'mock-e2e-lying') drew a correction and no evidence documents were produced, so the work shows no converging acceptance path and will exhaust budget non-settled.",
+    "row_index": 18
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.7,
+    "distribution": {
+     "settled": 0.08,
+     "not_settled": 0.72,
+     "insufficient_evidence": 0.2
+    },
+    "reason": "Three builder iterations under the 'mock-e2e-lying' session each required a correction (3 corrections) with no accepted/settled result, indicating the lying builder will exhaust the run budget before settling.",
+    "row_index": 19
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.62,
+    "distribution": {
+     "settled": 0.2,
+     "not_settled": 0.65,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "Three builder iterations each accrued corrections with a 'mock-e2e-lying' session and no acceptance evidence, indicating non-convergence likely to exhaust budget without settlement.",
+    "row_index": 20
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.6,
+    "distribution": {
+     "settled": 0.15,
+     "not_settled": 0.25,
+     "insufficient_evidence": 0.6
+    },
+    "reason": "The run records contain no invocations, claims, evidence, or corrections, so there is nothing to judge work closure against.",
+    "row_index": 21
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "No invocations, claims, evidence, or corrections are present, so the records cannot indicate whether the work will settle.",
+    "row_index": 22
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.62,
+    "distribution": {
+     "settled": 0.18,
+     "not_settled": 0.67,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "Three builder iterations on an identical context digest under a 'mock-e2e-forged-report' session, each drawing a correction (corrections=3), show no convergence or accepted evidence, so the run is unlikely to close under budget.",
+    "row_index": 23
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.55,
+    "distribution": {
+     "settled": 0.25,
+     "not_settled": 0.6,
+     "insufficient_evidence": 0.15
+    },
+    "reason": "Three builder iterations produced only admitted claims with no produced evidence and a forged-report session, so the represented work likely cannot close under the run's constraints.",
+    "row_index": 24
+   }
+  ],
+  "muse-spark-free": [
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records contain only admission envelopes with no claim contents, evidence, or budget/acceptance criteria to decide settlement.",
+    "row_index": 0
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "Records show only admission metadata and a correction count without claim contents, correction selections, or produced evidence needed to judge settlement.",
+    "row_index": 1
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.85,
+    "distribution": {
+     "settled": 0.1,
+     "not_settled": 0.85,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "All three result documents claim admitted not completed with three corrections across three iterations, matching the face-value not-settled rule and budget-exhausted correction pattern.",
+    "row_index": 2
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "Records show only admission metadata without claim content, evidence, or budget/acceptance criteria needed to judge settlement.",
+    "row_index": 3
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.9,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "Three admitted builder iterations from mock-e2e-lying required three corrections with no accepted evidence shown, indicating exhaustion rather than settlement.",
+    "row_index": 4
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "Records provide only admission metadata with no claim contents, correction details, or evidence to judge settlement.",
+    "row_index": 5
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.9,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "No invocations or evidence were produced so there is nothing to settle as accepted.",
+    "row_index": 6
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Empty invocations and zero corrections provide no claims or evidence to judge settlement.",
+    "row_index": 7
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.78,
+    "distribution": {
+     "settled": 0.12,
+     "not_settled": 0.78,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "Single admitted iteration-1 builder claim with one correction and no completed or accepted evidence matches the budget-exhausted pattern that fails to close.",
+    "row_index": 8
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.9,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "Three sequentially admitted contained builder results under mock-e2e-happy show steady happy-path progress toward settlement.",
+    "row_index": 9
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.85,
+    "distribution": {
+     "settled": 0.85,
+     "not_settled": 0.1,
+     "insufficient_evidence": 0.05
+    },
+    "reason": "Three admitted builder invocations under mock-e2e-happy match the accepted family that closes as settled.",
+    "row_index": 10
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.92,
+    "distribution": {
+     "settled": 0.04,
+     "not_settled": 0.04,
+     "insufficient_evidence": 0.92
+    },
+    "reason": "Records show only admission metadata without claim contents, evidence, or budget limits needed to decide settlement.",
+    "row_index": 11
+   },
+   {
+    "status": "ok",
+    "answer": "settled",
+    "confidence": 0.78,
+    "distribution": {
+     "settled": 0.78,
+     "not_settled": 0.12,
+     "insufficient_evidence": 0.1
+    },
+    "reason": "All three builder results are admitted under mock-e2e-happy with no rejection, indicating happy-path convergence to accepted settlement.",
+    "row_index": 12
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "Records show only admitted invocation metadata without claims content, evidence quality, or budget constraints needed to decide settlement.",
+    "row_index": 13
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records show only admission metadata without claim contents or evidence to judge settlement.",
+    "row_index": 14
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records contain only admission metadata for three iterations with no claim contents, correction details, or evidence to judge settlement.",
+    "row_index": 15
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records provide only admission metadata with no claim contents, correction details, or evidence to judge settlement.",
+    "row_index": 16
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Only admission metadata and a correction count are shown with no claim contents, selections, or evidence to evaluate closure.",
+    "row_index": 17
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.92,
+    "distribution": {
+     "settled": 0.04,
+     "not_settled": 0.04,
+     "insufficient_evidence": 0.92
+    },
+    "reason": "Records show only admission metadata and a correction count with no claim contents, evidence, budget limit, or acceptance criteria to decide settlement.",
+    "row_index": 18
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records contain only admission envelopes with no claim content, correction detail, or verification evidence to judge settlement.",
+    "row_index": 19
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.9,
+    "distribution": {
+     "settled": 0.05,
+     "not_settled": 0.05,
+     "insufficient_evidence": 0.9
+    },
+    "reason": "Records provide only admission metadata for three iterations with no claim contents, correction details, or evidence verification to decide settlement.",
+    "row_index": 20
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Empty records provide no claims or evidence to judge settlement.",
+    "row_index": 21
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Empty invocations and zero corrections provide no claims or evidence to predict settlement.",
+    "row_index": 22
+   },
+   {
+    "status": "ok",
+    "answer": "not_settled",
+    "confidence": 0.85,
+    "distribution": {
+     "settled": 0.08,
+     "not_settled": 0.85,
+     "insufficient_evidence": 0.07
+    },
+    "reason": "Three retries of the same AK-901 unit with three corrections and a forged-report session matches the budget-exhausted lying pattern, not progressive settlement.",
+    "row_index": 23
+   },
+   {
+    "status": "ok",
+    "answer": "insufficient_evidence",
+    "confidence": 0.95,
+    "distribution": {
+     "settled": 0.025,
+     "not_settled": 0.025,
+     "insufficient_evidence": 0.95
+    },
+    "reason": "Records list only admitted metadata without claim contents, acceptance criteria, or evidence needed to judge settlement.",
+    "row_index": 24
+   }
+  ]
+ }
+}

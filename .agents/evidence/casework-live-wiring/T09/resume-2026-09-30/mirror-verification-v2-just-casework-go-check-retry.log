@@ -1,0 +1,96 @@
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	0.004s
+--- FAIL: TestUnknownVerbIsTypedUnavailableWithoutRetryStorm (0.00s)
+    client_test.go:129: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-3762829007/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestIdentityRefusalKeepsClass (0.00s)
+    client_test.go:167: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-888540924/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestSeveredMutationIsRecoveredNotResent (0.00s)
+    client_test.go:198: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-677744080/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestSeveredMutationReturnsRecordedOutcome (0.00s)
+    client_test.go:244: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-240616038/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestInspectRetriesOnceOnTransportFailure (0.00s)
+    client_test.go:287: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-4228317892/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestMutationRequiresRequestID (0.00s)
+    client_test.go:335: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-228267871/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestRequestAfterIdleGapUsesAFreshConnection (0.00s)
+    client_test.go:387: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-idle-1668212995/idle.sock: setsockopt: operation not permitted
+--- FAIL: TestSubscriptionResumesFromLastCursor (0.00s)
+    client_test.go:489: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-sub-1775524817/sub.sock: setsockopt: operation not permitted
+--- FAIL: TestLowerResponseLineLimitAppliesToRPC (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/exact_configured_boundary (0.00s)
+        response_limit_test.go:98: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-1008404320/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToRPC/one_byte_over_is_unavailable_after_the_safe_inspect_retry (0.00s)
+        response_limit_test.go:116: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-563579285/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestLowerResponseLineLimitAppliesToSubscription (0.00s)
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/exact_configured_boundary (0.00s)
+        response_limit_test.go:145: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-712783943/fake.sock: setsockopt: operation not permitted
+    --- FAIL: TestLowerResponseLineLimitAppliesToSubscription/one_byte_over_is_rejected_before_delivery (0.00s)
+        response_limit_test.go:145: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-1997716497/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestInspectOverLimitResponseRetriesOnceOnFreshConnection (0.04s)
+    response_limit_test.go:252: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-1810973752/fake.sock: setsockopt: operation not permitted
+--- FAIL: TestOverLimitMutationAndRecoveryResponsesNeverResendMutation (0.10s)
+    response_limit_test.go:287: listen unix /tmp/t09-mirror-repair-v2/tmp/sfwp-fake-2039166180/fake.sock: setsockopt: operation not permitted
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	3.351s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+--- FAIL: TestOIDCDiscoveryAndFlowConstruction (0.06s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 239 [running]:
+testing.tRunner.func1.2({0xc06118, 0x318d3c8e4d0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0xc06118?, 0x318d3c8e4d0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0xd9
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xc5f928, 0x318d3e34000})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x25
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.newTestOIDCProvider(0x318d3d60d88)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/auth/oidc_test.go:89 +0x256
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth.TestOIDCDiscoveryAndFlowConstruction(0x318d3d60d88)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/auth/oidc_test.go:152 +0x27
+testing.tRunner(0x318d3d60d88, 0xc642f8)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	0.977s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	0.006s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	0.005s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.004s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	0.035s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	0.003s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.017s
+--- FAIL: TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective (0.00s)
+panic: httptest: failed to listen on a port: listen tcp6 [::1]:0: socket: operation not permitted [recovered, repanicked]
+
+goroutine 11 [running]:
+testing.tRunner.func1.2({0xbbf4f0, 0x28b0d6e89ec0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2123 +0x232
+testing.tRunner.func1()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2126 +0x329
+panic({0xbbf4f0?, 0x28b0d6e89ec0?})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/runtime/panic.go:859 +0x125
+net/http/httptest.newLocalListener()
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:226 +0xd9
+net/http/httptest.NewUnstartedServer(...)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:284
+net/http/httptest.NewServer({0xc193f8, 0x28b0d6e865c0})
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/net/http/httptest/server.go:267 +0x25
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.newLiveHarness(0x28b0d5ae0488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/server_test.go:165 +0x557
+github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.TestArtifactGetReturnsVerifiedCanonicalPayloadAndSessionPerspective(0x28b0d5ae0488)
+	/home/sprime01/projects/sea-rs/apps/godspeed-casework-go/internal/server/artifact_test.go:40 +0x175
+testing.tRunner(0x28b0d5ae0488, 0xc1db70)
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2193 +0xea
+created by testing.(*T).Run in goroutine 1
+	/home/sprime01/.local/share/mise/installs/go/1.27.1/src/testing/testing.go:2258 +0x4d4
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	0.627s
+FAIL
+error: recipe `casework-go-check` failed with exit code 1

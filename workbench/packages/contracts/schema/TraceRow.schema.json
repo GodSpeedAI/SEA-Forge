@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TraceRow",
+  "description": "One row of the run's trace, projected for display. The payload is carried\nthrough verbatim rather than summarized: the trace *is* the explanation of\nevery state transition (epic 7.4), and a lossy summary would be a second\naccount of it.",
+  "type": "object",
+  "properties": {
+    "actor_id": {
+      "type": "string"
+    },
+    "event_id": {
+      "type": "string"
+    },
+    "kind": {
+      "description": "Snake-case `TraceKind`.",
+      "type": "string"
+    },
+    "payload": true,
+    "plan_item_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "kind",
+    "actor_id",
+    "timestamp",
+    "payload"
+  ]
+}

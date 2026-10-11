@@ -1,0 +1,12 @@
+# Fresh exact survivor registry assertion repair
+Date: 2026-10-08
+Builder: Luna manager_lifecycle_scope_recon, different from FORMAT author of rejected fixture51f73f94.
+Independent critic: renderer_resume_critic. Root sole heavy token idle.
+
+Read FULL original TDD grantbfcfa5cd and fresh fixture repairgrant61d5bf6d, all original governing docs/clarifications, actual receipt12fe9a50, actual source51f73f94, primary independent REJECTa830e313 and additive errata3b0aabe8/46359773 at run-observation-watcher-terminal-fixture-repair-independent-review{,-erratum,-erratum2}-oct08.md. All evidence under BASE=.agents/evidence/casework-live-wiring/T09/resume-2026-09-30. Root read all three actual review records. The THREE previous findings are resolved by static review; remaining exact registry/key proof is not.
+
+FIRST read the file and archive exact UTF-8 current new fixture preimage natively as BASE/run-observation-watcher-terminal-exact-registry-preimage-oct08.json (path/source/sha256/bytes). Required51f73f94fed07eb97fd7b9b59d76cbf1ce65278d3acaca5b778c3a91782ad5c8/41008B. Derive and verify metadata.
+
+Edit ONLY apps/godspeed-casework-go/internal/server/run_observation_manager_authority_terminal_test.go, ONLY pre-port group6 post-failed-owner/read-only cleanup observation/assertion. Add exact manager.pollers[key]==entry and current.Key==key to the existing valid-survivor registry/state proof, with bounded matching diagnostics. Preserve ALL existing assertions/helper/actual gates and the held-read sibling unchanged. No optional mode/hook/private state mutation. No wholesale formatting or unrelated edit. Ten other source files unchanged (manager47c95f3b/failureccbbe234/worker843/originalaf/sixprimitives, complete hashes in12fe). Do not change production code or policy.
+
+No compiler/tests/formatter/scanner/Graft build/Git/status/debt edits. Native apply_patch only persistent writer, exact preimage then narrow assertion patch then NEW BASE/run-observation-watcher-terminal-exact-registry-result-oct08.md. Include actual derived full hashes/all ten unchanged files, exact small diff, every material deviation, and source-only claim; no RED/approval/runtime claim. Original artifacts immutable. Root verifies preimage/hunk; independent critic gets FULL original and thisFULLgrant plus actual frozen implementation/reviews, evidence-based source readiness required before sole-owner RAM-preflight actualfocusedraceRED.

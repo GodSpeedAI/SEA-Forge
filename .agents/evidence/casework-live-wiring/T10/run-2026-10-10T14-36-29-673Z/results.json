@@ -1,0 +1,17 @@
+[
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "FAIL",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "steps": [],
+    "total_ms": 33449,
+    "error": "Failed to open http://127.0.0.1:4179/: ✗ CDP command timed out: Page.navigate\n"
+  }
+]

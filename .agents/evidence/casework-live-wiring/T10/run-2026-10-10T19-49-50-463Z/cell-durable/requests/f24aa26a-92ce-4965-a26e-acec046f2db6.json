@@ -1,0 +1,14 @@
+{
+  "request_id": "f24aa26a-92ce-4965-a26e-acec046f2db6",
+  "method": "case.terminate",
+  "status": "completed",
+  "submitted_at": "2026-10-10T19:57:01.621578338+00:00",
+  "completed_at": "2026-10-10T19:57:01.852925384+00:00",
+  "outcome": {
+    "case_id": "case_20261010T195252Z_6f08a4",
+    "case_state": "terminated",
+    "close_reason": "operator_terminated:L7: the release was withdrawn",
+    "ok": true
+  },
+  "payload_hash": "b83a543963ae57ce6d08bc89c4c454f990663b31bf47a54d4b228cbf251e6bc1"
+}

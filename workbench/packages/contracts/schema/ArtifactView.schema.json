@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArtifactView",
+  "description": "`artifact.get` result body: the content-addressed artifact bytes plus the\nevidence-record refs the kernel's own artifact store shapes.",
+  "type": "object",
+  "properties": {
+    "content": {
+      "description": "The artifact content when it is valid UTF-8.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "content_base64": {
+      "description": "Standard base64 (with padding) of the content when it is not UTF-8.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "digest": {
+      "type": "string"
+    },
+    "evidence_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0
+    },
+    "uri": {
+      "description": "Run-relative evidence URI (e.g. `artifacts/stdout.txt`).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "digest",
+    "run_id",
+    "evidence_id",
+    "uri",
+    "size_bytes"
+  ]
+}

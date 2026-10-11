@@ -37,8 +37,8 @@ git switch main
 git pull --ff-only
 git switch -c feat/short-description
 
-# make changes; update .agents/CURRENT_STATUS.md if you changed tracked
-# project files (scripts/check-agent-context.sh enforces this)
+# make changes; update .agents/CURRENT_STATUS.yaml and .agents/CURRENT_STATUS.md if you changed
+# tracked project files (scripts/check-agent-context.sh enforces this)
 
 just check-fast        # context + fmt + typecheck — what pre-commit runs
 git add ...
@@ -101,7 +101,7 @@ updates) so they pass the title check.
 
 | Failure | Cause | Fix |
 | --- | --- | --- |
-| `context_error: project files changed without a corresponding CURRENT_STATUS.md update` | a tracked project file changed but `.agents/CURRENT_STATUS.md` was not touched | edit `.agents/CURRENT_STATUS.md` (bump `Updated:` and add a line under the relevant section), then rerun |
+| `context_error: project files changed without corresponding CURRENT_STATUS.yaml and CURRENT_STATUS.md updates` | a tracked project file changed but status was not updated | append snapshot to `.agents/CURRENT_STATUS.yaml` and mirror in `.agents/CURRENT_STATUS.md`, then rerun |
 | pre-commit fails on `cargo fmt --check` | rustfmt would modify a file | `just fmt`, re-stage, retry |
 | pre-commit fails with a Rust syntax error | an unclosed delimiter or similar | fix the syntax; the error names the file and line |
 | pre-push fails on clippy with `-D warnings` | a clippy lint fired | read the lint; `cargo clippy --workspace --all-targets --all-features --fix` for safe auto-fixes, then re-run; do not weaken the lint |

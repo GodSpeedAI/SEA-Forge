@@ -1,0 +1,47 @@
+# T02 — Gauntlet CI record
+schema: godspeed-bounded-judgment.t02-record
+executed: "2026-09-17"
+gauntlet_revision: "3a9955fa331de8b88db6d4025b91096b313f0d5e"
+
+pre_existing_ci_check:
+  finding: "no .github directory existed before this task (confirmed by ls before authoring)"
+
+per_recipe_baselines_individual:
+  check: "PASS (T00 GAUNTLET_CHECK exit 0)"
+  test: "PASS (T00 GAUNTLET_TEST exit 0; 1787/1787)"
+  lint: "PASS exit 0 (gauntlet-recipe-lint.log, fresh this task)"
+  deny: "PASS exit 0 (gauntlet-recipe-deny.log, fresh this task)"
+  boundaries: "PASS exit 0 (gauntlet-recipe-boundaries.log, fresh this task)"
+  ruler: "PASS exit 0 (gauntlet-recipe-ruler.log, fresh this task)"
+
+change:
+  file: "../gauntlet/.github/workflows/ci.yml (authored, UNCOMMITTED — commit/push requires operator authorization)"
+  invokes: "just ci (check test lint deny boundaries ruler) — no new test logic, no parallel command surface"
+  conventions: "mirrors sea-rs .github/workflows/ci.yml shape (pinned checkout SHA, contents: read, concurrency group); toolchain via dtolnay/rust-toolchain@stable + taiki-e/install-action (nextest, cargo-deny) + setup-just; tag pins carry a resolve-to-SHA hardening note because no verified commit SHAs were available offline"
+
+teeth:
+  attack: "deliberate violation in a scratch branch (git worktree at HEAD, dead fn added to a tracked module file)"
+  observed:
+    - "lint baseline (unmodified): exit 0"
+    - "lint with violation: exit 101 — clippy -D warnings 'function teeth_violation is never used' (tooth-lint-violation.log)"
+    - "lint restored: exit 0 (tooth-lint-restored.log)"
+  full_ci_in_scratch_worktree: >-
+    `just ci` in the scratch worktree additionally failed in the test recipe on
+    gauntlet-cli::conformance_cli::a_clean_fixture_sweep_exits_zero_and_writes_report_and_evidence_only
+    — a fixture-sweep test whose environment assumptions do not hold in a
+    secondary worktree; the same suite passes 1787/1787 in the real checkout
+    (T00 GAUNTLET_TEST). Recorded as a worktree-environment observation, not a
+    gate defect.
+
+limitation:
+  statement: >-
+    Hosted enforcement activates when the workflow file is committed and pushed
+    to origin (github.com/GodSpeedAI/Gauntlet). Until then, gate evidence
+    relies on manual runs (T00 baselines + fresh per-recipe records above),
+    per the plan's redesign_trigger disposition.
+
+done_when_audit:
+  - "CI configuration exists and invokes only existing Gauntlet recipes: YES (uncommitted)"
+  - "gate observed to fail on a deliberate violation and pass on the unmodified revision: YES (lint component; full ci composition = same recipes)"
+  - "baseline-red recipes recorded: NONE red (all six recipes green individually)"
+  - "no new test logic or command surface: YES"

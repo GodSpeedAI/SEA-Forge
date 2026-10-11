@@ -1,0 +1,50 @@
+=== RUN   TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts
+--- PASS: TestClientUsesAdmissionOnlyForPhysicalRunGetAttempts (0.00s)
+=== RUN   TestClientAdmissionCountsAllFourRunGetRetryAttempts
+--- PASS: TestClientAdmissionCountsAllFourRunGetRetryAttempts (0.03s)
+=== RUN   TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission
+--- PASS: TestClientDoesNotRouteAskOrMutationThroughRunGetAdmission (0.02s)
+=== RUN   TestMutationTransportFailureIsNotResentThroughAdmission
+--- PASS: TestMutationTransportFailureIsNotResentThroughAdmission (0.10s)
+=== RUN   TestClientAdmissionMarksPayloadAndLFWriteBoundary
+--- PASS: TestClientAdmissionMarksPayloadAndLFWriteBoundary (0.00s)
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/partial_payload
+=== RUN   TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/LF_write_error
+--- PASS: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure (0.00s)
+    --- PASS: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/partial_payload (0.00s)
+    --- PASS: TestClientAdmissionFinishesAtFinalAttemptedWriteOnPayloadAndLFFailure/LF_write_error (0.00s)
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_payload
+=== RUN   TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_LF
+--- PASS: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish (0.00s)
+    --- PASS: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_payload (0.00s)
+    --- PASS: TestClientWaitsForBlockedPayloadAndLFAttemptBeforeFinish/blocked_LF (0.00s)
+=== RUN   TestClientAdmissionReleaseFollowsCancellationAndConnectionRetirement
+--- PASS: TestClientAdmissionReleaseFollowsCancellationAndConnectionRetirement (0.00s)
+=== RUN   TestRunGetLimiterContract
+=== RUN   TestRunGetLimiterContract/production_constructor_fixes_storage_and_cooldown
+=== RUN   TestRunGetLimiterContract/same_run_remains_excluded_while_a_permit_is_owned
+=== RUN   TestRunGetLimiterContract/matching_run_reuses_its_eligible_slot_without_falling_through
+=== RUN   TestRunGetLimiterContract/matching_cooling_slot_does_not_fall_through_to_another_eligible_slot
+=== RUN   TestRunGetLimiterContract/unexpired_idle_and_busy_slots_are_not_evicted
+=== RUN   TestRunGetLimiterContract/different_runs_have_at_most_two_simultaneous_owners
+=== RUN   TestRunGetLimiterContract/queued_cancellation_returns_typed_unavailable
+=== RUN   TestRunGetLimiterContract/queued_deadline_returns_typed_unavailable
+=== RUN   TestRunGetLimiterContract/release_before_any_write_leaves_cooldown_clear
+=== RUN   TestRunGetLimiterContract/cooldown_begins_at_final_attempted_write_completion
+=== RUN   TestRunGetLimiterContract/busy_same-run_wait_ignores_expired_unrelated_deadlines_and_wakes_on_permit_release
+--- PASS: TestRunGetLimiterContract (0.04s)
+    --- PASS: TestRunGetLimiterContract/production_constructor_fixes_storage_and_cooldown (0.00s)
+    --- PASS: TestRunGetLimiterContract/same_run_remains_excluded_while_a_permit_is_owned (0.00s)
+    --- PASS: TestRunGetLimiterContract/matching_run_reuses_its_eligible_slot_without_falling_through (0.00s)
+    --- PASS: TestRunGetLimiterContract/matching_cooling_slot_does_not_fall_through_to_another_eligible_slot (0.00s)
+    --- PASS: TestRunGetLimiterContract/unexpired_idle_and_busy_slots_are_not_evicted (0.00s)
+    --- PASS: TestRunGetLimiterContract/different_runs_have_at_most_two_simultaneous_owners (0.00s)
+    --- PASS: TestRunGetLimiterContract/queued_cancellation_returns_typed_unavailable (0.00s)
+    --- PASS: TestRunGetLimiterContract/queued_deadline_returns_typed_unavailable (0.00s)
+    --- PASS: TestRunGetLimiterContract/release_before_any_write_leaves_cooldown_clear (0.00s)
+    --- PASS: TestRunGetLimiterContract/cooldown_begins_at_final_attempted_write_completion (0.00s)
+    --- PASS: TestRunGetLimiterContract/busy_same-run_wait_ignores_expired_unrelated_deadlines_and_wakes_on_permit_release (0.04s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.230s

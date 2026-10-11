@@ -1,0 +1,5 @@
+# T07 independent critic scope
+
+I am the independent T07 critic, not the implementation builder. I received the builder's original bounded session-read specification at `../session-read-builder-spec.md`, the original repair result and test coverage record under `../session-read-fix/`, the round-two rejection at `../recovery-round2/confirmation.md`, and round-three static review/probe plan under `../recovery-round3/`. I reviewed the committed tree at `8741ff4` against the T07 plan and normative spec/ADR.
+
+Required claim scope: browser authentication and session mapping; CSRF and no-write refusal; actor overwrite; current/history/SSE session perspective; immutable captured facts and genuine historical state; cursor query override and cross-case rejection; invalid/revoked delegation; origins, log escaping/correlation, production refusal of dev auth, cookies/static serving/readiness/rate limiting. Evidence is limited to commands and inspections actually completed. Runtime gateway probes remain pending because auto-review rejected the loopback gateway launch; no approval is issued.

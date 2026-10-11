@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DelegationStanding",
+  "description": "Where a delegation sits in its lifecycle.\n\nClosed on purpose, and *not* an execution or settlement vocabulary — those\nalready exist in `run_views` and mean different things. A fifth variant here\nwould mean the kernel grew a fifth genuinely distinguishable state, not that\nthe UI wanted a new label.",
+  "oneOf": [
+    {
+      "description": "The server holds a live handle and no cancellation has been requested.",
+      "type": "string",
+      "const": "active"
+    },
+    {
+      "description": "A cancellation has been recorded; the episode has not yet settled. This\nis a *request*, not an outcome — the episode terminates on its own terms\nand its settlement records what actually happened.",
+      "type": "string",
+      "const": "cancellation_requested"
+    },
+    {
+      "description": "A settlement record exists on disk. Whether it was accepted is a\nseparate question, answered by `settlement`.",
+      "type": "string",
+      "const": "settled"
+    },
+    {
+      "description": "A delegation run exists with no settlement and no live handle. The\nserver cannot say what happened to it — typically it was in flight when\nthe server stopped. Never to be rendered as cancelled or failed.",
+      "type": "string",
+      "const": "unresolved"
+    }
+  ]
+}

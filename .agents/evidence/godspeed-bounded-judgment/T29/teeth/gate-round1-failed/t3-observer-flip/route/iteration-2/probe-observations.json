@@ -1,0 +1,53 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 3,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-3",
+    "correlation_id": "t29-route-001-iter2",
+    "finished_at_utc": "2026-09-19T15:22:10.498008+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-2-3",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:22:09.492386+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-3/state/gauntlet-state.db",
+    "state_db_sha256": "d9cad952d9956ffd552ba448d58231d27f55f2b5e339309ec12ed04a7bb8bed5",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 1,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-1",
+    "correlation_id": "t29-route-001-iter2",
+    "finished_at_utc": "2026-09-19T15:22:10.705739+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-2-1",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:22:10.502446+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-1/state/gauntlet-state.db",
+    "state_db_sha256": "db62e5fba76c1abd55f1f7c3bc27bd4cb9274d6cb417a7751e38de46c8cc748a",
+    "terminal_class": "budget_exhausted"
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 5,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-5",
+    "correlation_id": "t29-route-001-iter2",
+    "finished_at_utc": "2026-09-19T15:22:11.313174+00:00",
+    "mechanism": "t15-frozen-case-execution",
+    "operation": "run_case",
+    "probe_id": "probe-i2-cand-2-5",
+    "settlement_committed_count": 0,
+    "started_at_utc": "2026-09-19T15:22:10.709335+00:00",
+    "state_db_path": "/home/sprime01/.local/share/godspeed-route-discovery/T29/route-001-r1/runs/i2-cand-2-5/state/gauntlet-state.db",
+    "state_db_sha256": "6b23d20672ecc35b20252fe581a72b706fb74e0692f962b407513004b1682c43",
+    "terminal_class": "budget_exhausted"
+  }
+]

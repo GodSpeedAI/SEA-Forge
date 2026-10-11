@@ -1,0 +1,32 @@
+[
+  {
+    "candidate_id": "cand-1",
+    "correlation_id": "t23-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 4},
+    "expected_role": "establish_baseline",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Fixture default budget 4 is the only probe that can directly establish this route's settled_accepted baseline."
+  },
+  {
+    "candidate_id": "cand-2",
+    "correlation_id": "t23-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-happy", "max_rounds": 3},
+    "expected_role": "boundary_probe",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Since 4 settled and 1,2 were ordered as exhausting, probing 3 is the tightest test of whether r* is 3."
+  },
+  {
+    "candidate_id": "cand-3",
+    "correlation_id": "t23-route-001-iter1",
+    "operation": "run_case",
+    "bounded_input": {"scenario": "e2e-lying", "max_rounds": 4},
+    "expected_role": "establish_discriminator",
+    "prerequisite_refs": [],
+    "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+    "rationale": "Probing e2e-lying at the same default budget used for the baseline is the cleanest comparison for honest verification_failed_nonsettlement."
+  }
+]

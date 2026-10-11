@@ -1,0 +1,23 @@
+schema: godspeed-bounded-judgment.t22-import-verification
+verified_at_utc: '2026-09-19T01:35:55.335848+00:00'
+manifest: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T21/evidence-manifest.yml
+files:
+- path: route_contracts.py
+  sha256: 0d8023877846c606bb1359d1c4ae8a683706caf7f4e0d7318165c124dac7fe8c
+  match: true
+- path: admission.py
+  sha256: 8608b495eebb6e281f50e41ee7c22317260b4219263247161789870d792bf49b
+  match: true
+- path: selection_policy.py
+  sha256: 9b25b0c8c9a65ce0771f1821b4f34b4161adfdb11dd5c5aa1da620c7b19ff5ef
+  match: true
+- path: verify_contract.py
+  sha256: 92b16ac59573148484ef9e645574fa98ab2b4f644fe7b933b39ec14d6178a657
+  match: true
+- path: operations_catalog.yaml
+  sha256: 85327cb23ac35df21e767c4cfe603cd287a7724906e453f4ab1d589731fec7dd
+  match: true
+prereg:
+  path: /home/sprime01/projects/sea-rs/.agents/preregistrations/godspeed-bounded-judgment-T21.prereg.yaml
+  sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  match: true

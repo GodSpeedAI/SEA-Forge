@@ -1,0 +1,29 @@
+.container {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  background-color: var(--surface-panel, rgba(22, 27, 34, 0.8));
+  border: 1px solid var(--border-standard, rgba(48, 54, 61, 0.8));
+  border-radius: var(--radius-control, 6px);
+  font: var(--text-body-sm, 13px / 1.4 system-ui, sans-serif);
+}
+
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stateLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted, #8b949e);
+  font-weight: 600;
+}
+
+.separator {
+  color: var(--border-subtle, #30363d);
+  font-size: 14px;
+}

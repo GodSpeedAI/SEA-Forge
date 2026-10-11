@@ -1,0 +1,13 @@
+# Isolated primitives canonical retry and full race assignment
+
+Date: 2026-10-07. Entire original execution instruction archived before gates.
+
+> ROOT EXPLICIT SOLE HEAVY GRANT canonicalRETRY/fullrace AFTER independentpolicyformatREADY8fcd. Archive ENTIREoriginalinstructions NEWimmutableexecutionassignment beforecommands. Isolatedroot /tmp/sea-casework-primitives-74f86f0-oct07 HEAD74 exactsixfiles; policyNOW e156c9cf0281baa4e532131be2606a280c846de2f2e3ce9b4fa3dc03509d3f28, otherfivekeya6f/helper215/base34/encoder3dba/fixturecf501 unchanged. Gate1 isolatedROOT env JUST_TEMPDIR=/tmp GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS='-p=1 -count=1' GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 RUST_TEST_THREADS=1 just casework-go-check. Freshactualpreflight UTC/freeMem>=1200MiB/freeSwap>=512MiB competingGo/RustcompilerZERO, exactGitHEAD/statussixpaths/full6hashes+cmpprimarybefore EACHgate. Uniqueactual/tmp redirectsallpreflight/output/exit(andpreflight.exit ifcaptured); JOIN immediatelyNATIVEimmutableALLcapturearchives+actualcmp beforeANYnextgate/end, directoriginalstringsTABbytes notmanualtranscription. DestinationsABSENTbeforeAdd, ifalreadycorrectCOPYexistsCMPdon'twrite. Ifcanonfailstop/recordactualfailure no fullrace (knowncoordinatorflakeonlyreportrootbeforeextra). Gate2 ONLYaftercanonPASS+archivesallcmp0 from isolatedGoAPP sameenv `go test -race -count=1 -parallel=1 -timeout=60s ./...`; freshpreflight/uniqueactualredirects and immediatearchiveallcaptures/cmpafterJOIN. No hidden skipped/removedtrackedtests; scopeONLY exactproposedprimitivecommit, mainunpublishedmanagerintentionallynotincluded. Nonfatalmise trackingwarn acknowledgedCW29, preserveconfig/pinnedtools no no-config/quiet workaround. Allsource frozen nocompileotheragent/root. Independentboundedapproval requirescanonicalformat/vet/freshtests+fullmodule-race pass allidentities/captureprovenance. Actualoutput/packagecounts/cache/skips reportonlyobserved no inventedtestcasecounts. Newimmutable result exactcommands/paths/fullhash/bytes/cmp/limits; returnheavyafterarchives+receipt. No source/generator/dependency/hook/Git changes/scanner/graftbuild/extra gates. Lifecycle3findingdocsupplement4752source review AFTERheavygates complete, neverparallelcompile.
+
+## Archive scope
+
+This immutable assignment records the full received execution instruction. It
+authorizes only two verification gates in the isolated six-file primitive
+snapshot, with fresh resource and source-identity preflights and immediate
+capture archiving after each process joins. No test or source edits are part
+of this assignment.

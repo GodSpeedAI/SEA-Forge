@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JourneyTrace",
+  "description": "Schema for machine-readable traces of executed journey tests in the SEA-Forge Journey Settlement Gauntlet.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "timestamp",
+    "journey_id",
+    "journey_name",
+    "canonical_source_hashes",
+    "agent_browser_version",
+    "actor_and_role",
+    "starting_state",
+    "actor_visible_observations",
+    "browser_actions",
+    "screenshot_references",
+    "snapshot_references",
+    "interface_projections_encountered",
+    "capability_bindings_invoked",
+    "authority_decisions",
+    "consequential_state_transitions",
+    "execution_identifiers",
+    "evidence_references",
+    "settlement_oracle_result",
+    "resulting_next_affordances",
+    "gate_results",
+    "final_status",
+    "failure_diagnosis"
+  ],
+  "properties": {
+    "run_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "journey_id": { "type": "string", "pattern": "^CJ(0[1-9]|1[0-2])$" },
+    "journey_name": { "type": "string" },
+    "source_story_ids": { "type": "array", "items": { "type": "string" } },
+    "canonical_source_hashes": { "type": "object" },
+    "implementation_revision": { "type": "string" },
+    "harness_revision": { "type": "string" },
+    "agent_browser_version": { "type": "string" },
+    "actor_and_role": {
+      "type": "object",
+      "required": ["actor", "role"],
+      "properties": {
+        "actor": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "starting_state": { "type": "string" },
+    "actor_visible_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "observation", "source_element"],
+        "properties": {
+          "step": { "type": "integer" },
+          "observation": { "type": "string" },
+          "source_element": { "type": "string" }
+        }
+      }
+    },
+    "browser_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "command", "target", "result"],
+        "properties": {
+          "step": { "type": "integer" },
+          "command": { "type": "string" },
+          "target": { "type": "string" },
+          "value": { "type": "string" },
+          "result": { "type": "string" }
+        }
+      }
+    },
+    "screenshot_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sequence", "name", "relative_path", "moment_kind", "description"],
+        "properties": {
+          "sequence": { "type": "integer" },
+          "name": { "type": "string" },
+          "relative_path": { "type": "string" },
+          "moment_kind": {
+            "type": "string",
+            "enum": [
+              "entry",
+              "affordance_discovery",
+              "state_transition",
+              "authority_boundary",
+              "unexpected_blocker",
+              "execution_completion",
+              "settlement_state",
+              "resulting_next_affordance",
+              "failure",
+              "recovery"
+            ]
+          },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "snapshot_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["relative_path", "snapshot_type"],
+        "properties": {
+          "relative_path": { "type": "string" },
+          "snapshot_type": { "type": "string", "enum": ["accessibility", "dom", "a11y_tree"] }
+        }
+      }
+    },
+    "interface_projections_encountered": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "capability_bindings_invoked": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "authority_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["decision_type", "resource", "verdict", "policy_ref"],
+        "properties": {
+          "decision_type": { "type": "string" },
+          "resource": { "type": "string" },
+          "verdict": { "type": "string" },
+          "policy_ref": { "type": "string" }
+        }
+      }
+    },
+    "consequential_state_transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from_state", "to_state", "trigger", "evidence_ref"],
+        "properties": {
+          "from_state": { "type": "string" },
+          "to_state": { "type": "string" },
+          "trigger": { "type": "string" },
+          "evidence_ref": { "type": "string" }
+        }
+      }
+    },
+    "execution_identifiers": {
+      "type": "object",
+      "properties": {
+        "case_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "settlement_id": { "type": "string" },
+        "request_id": { "type": "string" }
+      }
+    },
+    "evidence_references": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "settlement_oracle_result": {
+      "type": "object",
+      "required": ["oracle_name", "status", "completion_condition_evaluated", "rationale"],
+      "properties": {
+        "oracle_name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACCEPTED", "REJECTED", "UNAVAILABLE", "ERROR"] },
+        "completion_condition_evaluated": { "type": "string" },
+        "authoritative_record_inspected": { "type": "string" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "resulting_next_affordances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["affordance_name", "target_journey", "visible", "reachable"],
+        "properties": {
+          "affordance_name": { "type": "string" },
+          "target_journey": { "type": "string" },
+          "visible": { "type": "boolean" },
+          "reachable": { "type": "boolean" },
+          "carried_state": { "type": "object" }
+        }
+      }
+    },
+    "gate_results": {
+      "type": "object",
+      "required": [
+        "ENTRY",
+        "VISIBILITY",
+        "REACHABILITY",
+        "BINDING",
+        "AUTHORITY",
+        "EXECUTION",
+        "EVIDENCE",
+        "SETTLEMENT",
+        "CONTINUITY",
+        "RECOVERY"
+      ],
+      "properties": {
+        "ENTRY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "VISIBILITY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "REACHABILITY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "BINDING": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "AUTHORITY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "EXECUTION": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "EVIDENCE": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "SETTLEMENT": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "CONTINUITY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] },
+        "RECOVERY": { "type": "string", "enum": ["PASS", "FAIL", "BLOCKED", "NA"] }
+      }
+    },
+    "final_status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "BLOCKED", "CANONICALLY_UNAVAILABLE", "HARNESS_ERROR"]
+    },
+    "failure_diagnosis": {
+      "type": "object",
+      "properties": {
+        "failure_code": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "ENTRY_GAP",
+            "AFFORDANCE_VISIBILITY_GAP",
+            "PROJECTION_GAP",
+            "INTERFACE_BINDING_GAP",
+            "CAPABILITY_GAP",
+            "AUTHORITY_GAP",
+            "STATE_TRANSITION_GAP",
+            "EVIDENCE_GAP",
+            "SETTLEMENT_GAP",
+            "NEXT_AFFORDANCE_GAP",
+            "RECOVERY_GAP",
+            "CANONICAL_DRIFT",
+            "UNAVAILABLE_AFFORDANCE_LEAK"
+          ]
+        },
+        "failure_locus": { "type": "string" },
+        "expected": { "type": "string" },
+        "observed": { "type": "string" },
+        "reproducible_path": { "type": "string" }
+      }
+    }
+  }
+}

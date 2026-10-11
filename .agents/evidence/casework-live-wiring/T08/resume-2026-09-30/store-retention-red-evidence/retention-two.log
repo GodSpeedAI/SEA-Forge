@@ -1,0 +1,7 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -run ^TestStoreRetentionTwoKeepsEveryRetainedIndexAndReplaysInOrder$ -count=1 ./internal/projection
+--- FAIL: TestStoreRetentionTwoKeepsEveryRetainedIndexAndReplaysInOrder (0.00s)
+    store_retention_test.go:45: At(01BBB) returned a different retained revision: {Cursor:01CCC At:2026-09-25 12:00:00 +0000 UTC CaseID:case_1 Summary:case.trace.item_activated Snapshot:{WorldID: CaseID:case_1 Cursor:01CCC Timestamp: Perspective:{ActorID: Role: DisplayName:<nil>} Summary:{Headline: Phase: StatusPhrase: ProgressPercent:<nil>} VisibleObjects:[] AvailableActions:[] AttentionFocus:{PrimaryObjectID: SalienceRank:[] Narration:<nil>}} Facts:<nil>}
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.059s
+FAIL
+EXIT_CODE=1

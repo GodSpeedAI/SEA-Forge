@@ -1,0 +1,117 @@
+%% GodSpeed stack — CURRENT architecture as established by code inspection (2026-09-16)
+%% Evidence: see 2026-09-16-godspeed-judgment-plane-adversarial-review.md
+%% Edge labels are evidence classes, not aspirations:
+%%   [code] compile-time dependency   [proc] process/CLI/subprocess call site
+%%   [mcp]  MCP stdio/SSE call site   [wire] wire contract only, NO live call site
+%%   [none] no integration found in code
+
+flowchart TB
+
+  subgraph MEANING["MEANING — canonical semantics"]
+    DF["DomainForge: .sea DSL, semantic_pack,<br/>projection/, ApplicationContract<br/>Rust + TS + Python + WASM"]
+  end
+
+  subgraph REPRESENTATION["REPRESENTATION — bounded situational material"]
+    CK["Context Kernel (ck-*): 20 crates, SQLite+FTS5,<br/>embeddings DISABLED by default, MCP stdio/SSE, 8 tools"]
+    SWECON["SWE_SEED context/pack.rs: ContextPack + ContextBudget"]
+    NCCTX["NeatCode lib/context.mjs: bounded context rings, 0 deps"]
+  end
+
+  subgraph JUDGE["JUDGMENT — present only as DETERMINISTIC classification"]
+    GLADDER["gauntlet-app/src/verify/ladder.rs<br/>RungKind 1-4 deterministic; position 10 = ModelJudgment<br/>VerificationRecord.outcome = PASS/FAIL/INCONCLUSIVE"]
+    THOTHJ["sea-forge-thoth/src/manager.rs<br/>judge(ManagerView) -> ManagerJudgment (4-way, DETERMINISTIC)<br/>NO probability anywhere in sea-rs"]
+    PROBE["sea-forge-server/src/agent_probe.rs<br/>Verdict::Allow checked BEFORE dispatch"]
+  end
+
+  subgraph PROVIDER["PROVIDER PORTS — two, disjoint, non-overlapping"]
+    APORT["gauntlet_ports::AgentRunner<br/>invoke/poll/collect/cancel/capabilities<br/>RoleInvocationSpec.context_envelope.digest bound per invocation"]
+    AADAPT["CliAgentRunner REAL (command template, no default)<br/>PrimeAgentRunner REAL (harness kernel)<br/>MockAgentRunner scripted"]
+    SPORT["sea_forge_agent::AgentProvider complete/stream<br/>typed AgentError x10"]
+    SADAPT["OpenAiCompatibleProvider (HTTP /v1/chat/completions)<br/>AnthropicProvider<br/>NetworkPolicy: production requires HTTPS"]
+  end
+
+  subgraph COMPOSE["DETERMINISTIC COMPOSITION — exists twice"]
+    GAGG["gauntlet-app aggregate/residual<br/>ComparisonRecord, Residual, CorrectionSelection"]
+    SFSET["sea-forge-settlement<br/>SettlementClaim.evaluator_scores: BTreeMap&lt;String,f64&gt;<br/>BatchEvaluationResult.pass_ratio<br/>SettlementEvent Accepted/Rejected/Escalated"]
+  end
+
+  SFAB["sea-forge-authority (AUTHORITY)<br/>PolicyAuthorityEngine, PolicyAuthorityBundle<br/>Verdict{Allow,Deny,Escalate}, NormalizedDisposition{+Boundary,Degraded}<br/>Determinism{policy_bundle_hash, action_request_hash, identity_binding_hash}"]
+
+  subgraph EXEC["EXECUTION"]
+    SFEX["sea-forge-runtime / sea-forge-sandbox: landlock jail"]
+    GEX["Gauntlet: RoleId{orchestrator,builder,critic,verifier,observer,optimizer,custom}<br/>RoleInvocation state machine, Budget/MicroUsd,<br/>BlastRadius tier -> sandbox_policy required"]
+  end
+
+  subgraph OBS["OBSERVATION / EVIDENCE"]
+    GEVID["Gauntlet evidence_fs CAS evidence/{objects,pins}/&lt;sha256&gt;<br/>observation_bindings(run_id,iteration_no)"]
+    SFEVID["sea-forge-evidence JsonlEvidenceWriter<br/>EvidenceRecord{kind,uri,sha256,source_event_id}"]
+    SXREV["sxr evidence.created / observation.recorded"]
+  end
+
+  subgraph SETTLE["SETTLEMENT"]
+    SFS["sea-forge-settlement + SettlementDeclaration<br/>DeclarationStatus{Accepted,Rejected,Escalated}<br/>DeclarationIndependence, DeclarationReliability"]
+    GS["Gauntlet settlements(run_id,unit_id,verification_ref,<br/>evidence_ref,reference_digest,event_log_offset)"]
+    SXS["sxr settlement.registered (13-value CEP vocabulary)"]
+  end
+subgraph MEM["DEVELOPMENTAL MEMORY — five independent stores"]
+    SFL["sea-forge-ledger: MMR + global checkpoint + ed25519 witness"]
+    GM["Gauntlet SQLite: event_log + records + capability_observations/transitions"]
+    SXL["sxr-ledger: hash chains, outbox, writer lock, CAS/ARS; MMR deliberately omitted"]
+    GAL["godspeed_agent LedgerStore: newline-JSON + fsync + flock + checksum"]
+    SWEL["SWE_SEED trace_ledger.sqlite3 + learning/{records,proposals,regressions}"]
+  end
+
+  subgraph ADAPT["TRAINING / ADAPTATION"]
+    GPR["Gauntlet promote/: PromotionGate, held_out_control/treatment,<br/>regression_control/treatment, revision_{proposals,evaluations,decisions,restores}"]
+    SFC["sea-forge-capability: CapabilityPromotionPolicy + confidence formula<br/>(reliability x coverage x recovery x burden)"]
+    GSA["godspeed_agent developmental_memory.py + request_capability_promotion()"]
+    SWEL2["SWE_SEED learning/proposals — WRITTEN, NEVER READ by route/context/hooks/skill"]
+    NOWEIGHTS["MISSING: nothing anywhere changes weights or model behaviour"]
+  end
+
+  CEPP["CEP normative: spec CEP-0000..0010<br/>Question, Representation, Evidence, Settlement, Semantic Envelope"]
+  CEPV["cep/src Python: validator + scorer + conformance<br/>NO runtime, NO model call"]
+
+  subgraph TARGET["TARGET MACHINE — NVIDIA Jetson AGX Orin 64 GB (SM87), unified memory"]
+    LAU["edgeai launcher 127.0.0.1:18001 OpenAI-compatible<br/>memory-aware model admission (llama-swap)"]
+    LLAM["llama.cpp GGUF SM87"]
+    VLLM["vLLM AWQ: Qwen3.6-35B-A3B-AWQ-4bit"]
+    NATSE["edgeai compose: nats:2.10-alpine + sea-bridge service"]
+    RUV["edgeai compose: ruvector-postgres:arm64-local"]
+  end
+
+  %% ---------- code dependencies ----------
+  SFEX --> SFAB
+  SFAB --> EXEC
+  PROBE --> SPORT
+  SFS --> SFL
+  GEVID --> GS
+  GS --> GM
+
+  %% ---------- process / MCP dependencies ----------
+  SWECON -.->|"[mcp] tools/call context_required"| CK
+  LAU -.->|"[proc] controls host llama-server processes"| LLAM
+  LAU -.-> VLLM
+
+  %% ---------- wire-only contracts ----------
+  CEPP -.->|"[wire] schema pinned sha256 4b42bfdd..."| SXL
+  CEPV -.->|"[wire] schema + validation"| SXL
+
+  %% ---------- semantic dependencies ----------
+  DF -.->|"[proc] sxr-df CliDomainForgeAdapter envelope CLI"| SXL
+  DF -.->|"[code] sea-forge-domainforge DomainModelRef v2-full-preimage"| SFEX
+
+  %% ---------- declared-but-absent links ----------
+  AADAPT x-.-x|"[none] no HTTP AgentRunner exists in Gauntlet"| LAU
+  SPORT x-.-x|"[none] no judgment contract; used only by delegation + agent_probe"| GLADDER
+  GSA -.->|"[wire] one-way NATS publish sea.agent.event.godspeed-agent"| NATSE
+  GM -.->|"[wire] no live correlation contract"| SFL
+  SXL -.->|"[wire] no live correlation contract"| GM
+  GAL -.->|"[none] no consumer found in any other repo"| MEM
+
+  %% ---------- duplication markers ----------
+  MEM -.- DUP1(("5x append-only<br/>ledger"))
+  OBS -.- DUP2(("3x evidence<br/>schema"))
+  ADAPT -.- DUP3(("4x capability<br/>promotion"))
+  REPRESENTATION -.- DUP4(("4x context<br/>assembly"))
+  JUDGE -.- DUP5(("1 noun, 3 meanings:<br/>ManagerJudgment det.,<br/>judge_snapshots det.,<br/>VERIFIER_PROMPT model"))

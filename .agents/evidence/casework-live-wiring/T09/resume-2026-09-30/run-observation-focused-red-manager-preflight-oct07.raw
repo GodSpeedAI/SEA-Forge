@@ -1,0 +1,9 @@
+UTC 2026-10-07T12:44:06.891550+00:00
+Repository /home/sprime01/projects/sea-rs
+MemAvailableMiB 4396
+SwapFreeMiB 12080
+fa1601f3746bca6c6697e5e6c6861bb9442bac6aafc2aa762a4f32580f8a905d apps/godspeed-casework-go/internal/server/run_observation_manager.go
+af2dfcb8c83d8a53186d8e446a11de35ce51d45cac74461ea3c3f971d0da30c4 apps/godspeed-casework-go/internal/server/run_observation_manager_test.go
+d8df5498cc395e8ce45f52ea324ae1e31262ded874f44ca3dd5f9a56cfc1d331 apps/godspeed-casework-go/internal/server/run_observation_retained_version.go
+34df05f171f2fbb513caf86d096a87b9c3a4f353b2a5bef236d08132b040bfd7 apps/godspeed-casework-go/internal/server/run_observation_retained_version_test.go
+Command: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOLDEN_UPDATE=0 GOCACHE=/tmp/sea-casework-go-build-cache-e8859aa2-setupfix1 CARGO_BUILD_JOBS=1 go test -race -count=1 -parallel=1 -timeout=60s ./internal/server -run '^(TestRunObservationManagerAuthorizationRefusalReturnsNoLeaseBeforeList|TestRunObservationManagerRefusedListReturnsUnavailableDTOAndEmptyLease|TestRunObservationManagerCanceledPartialPrepareJoinsOwnedReadBeforeRetry)$'

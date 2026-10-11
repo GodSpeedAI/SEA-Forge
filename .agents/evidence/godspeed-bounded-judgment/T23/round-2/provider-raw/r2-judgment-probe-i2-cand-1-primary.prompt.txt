@@ -1,0 +1,103 @@
+You are doing a bounded judgment task. Answer STRICTLY with one JSON object.
+Question: classify the recorded consequence of one bounded Gauntlet probe.
+Answer domain for "label" (choose exactly one): settled_accepted | verification_failed_nonsettlement | budget_exhausted | execution_failed | insufficient_evidence
+Judge ONLY from the corrected observation record below (typed terminal; settlement_committed count and unit-level progression; unit_dispatch retry pattern; the content of produced evidence artifacts fetched by their sha256 pins; timing). Use insufficient_evidence if the record genuinely cannot decide.
+JSON shape: {"label": "<one label from the answer domain>"}
+
+Corrected observation record:
+{
+ "bounded_input": {
+  "max_rounds": 5,
+  "scenario": "e2e-happy"
+ },
+ "candidate_id": "cand-1",
+ "correlation_id": "t23-route-001-iter2",
+ "evidence_artifacts": [
+  {
+   "content": "{\"tests\": 1, \"failures\": 0, \"command\": \"scripts/check.sh --marker\"}",
+   "kind": "test_report",
+   "locator": "evidence/marker-check-report.json",
+   "sha256": "98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12"
+  },
+  {
+   "content": "{\"tests\": 2, \"failures\": 0, \"command\": \"scripts/check.sh\"}",
+   "kind": "test_report",
+   "locator": "evidence/check-report.json",
+   "sha256": "873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41"
+  },
+  {
+   "content": "{\"tests\": 3, \"failures\": 0, \"command\": \"scripts/check.sh --all\"}",
+   "kind": "test_report",
+   "locator": "evidence/full-check-report.json",
+   "sha256": "2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e"
+  }
+ ],
+ "mechanism": "t15-frozen-case-execution",
+ "operation": "run_case",
+ "probe_id": "probe-i2-cand-1",
+ "settlement_committed_count": 3,
+ "settlement_progression": [
+  {
+   "evidence_ref": "sha256:98cbdd080be79908b5ec5a87daef45325ce89ea793fb501b91990b99f2ad0e12",
+   "order": 1,
+   "unit_id": "AK-901",
+   "verification_ref": "vrf-AXM4Z58NX3F50JB64X2CY21KQ6"
+  },
+  {
+   "evidence_ref": "sha256:873c013c6638f80c2123a28da222f29044c1a3d437c00a214b176b493a65ca41",
+   "order": 2,
+   "unit_id": "AK-902",
+   "verification_ref": "vrf-0R6THNSB4W2W0ECN07SF3K7PJ3"
+  },
+  {
+   "evidence_ref": "sha256:2614558d4e3b921fc32f5c040f61a126cad884debe9eff738b25e92a956a950e",
+   "order": 3,
+   "unit_id": "AK-903",
+   "verification_ref": "vrf-CGFWR53A744PATAKDVG5WHXBX5"
+  }
+ ],
+ "state_db_sha256": "913d5fc12a5aa3435f2db2afbd83f26cfac3f7847306af7be16ee35c62ffffba",
+ "timing": {
+  "checkpoint_iterations": [
+   1,
+   2,
+   3,
+   3
+  ],
+  "event_clock_first": 0,
+  "event_clock_last": 30,
+  "finished_at_utc": "2026-09-19T02:25:44.526523+00:00",
+  "started_at_utc": "2026-09-19T02:25:43.919501+00:00",
+  "wall_seconds": 0.607
+ },
+ "typed_terminal": {
+  "run_terminal_states": [
+   "settled"
+  ],
+  "terminal_class": "settled"
+ },
+ "unit_dispatch_pattern": {
+  "dispatch_sequence": [
+   "AK-901",
+   "AK-902",
+   "AK-903"
+  ],
+  "per_unit": [
+   {
+    "dispatches": 1,
+    "settlements": 1,
+    "unit_id": "AK-901"
+   },
+   {
+    "dispatches": 1,
+    "settlements": 1,
+    "unit_id": "AK-902"
+   },
+   {
+    "dispatches": 1,
+    "settlements": 1,
+    "unit_id": "AK-903"
+   }
+  ]
+ }
+}

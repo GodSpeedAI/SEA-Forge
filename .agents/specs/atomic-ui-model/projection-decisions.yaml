@@ -1,0 +1,117 @@
+# Projection Decisions
+# Evaluates each projection pressure observation from upstream Behavioral IR
+# Schema: id, kind, journey, phases, observation, decision, rationale, representation_test, target_views, target_regions
+
+- id: "PP01"
+  kind: "persistent_context"
+  journey: "CJ01"
+  phases: ["IS1", "IS7", "IS8"]
+  observation: "Operator and auditor repeatedly require cell identity, active snapshot hash, and readiness standing across transitions; lost context forces redundant re-queries."
+  decision: "adopted"
+  rationale: "Persistent header region pins cell_root, self_model_snapshot_sha256, and overall_readiness. Eliminates recurring context reload burden."
+  representation_test: "Persistent header avoids having operators navigate back to CJ01 or issue Thoth queries mid-decision to verify cell root authenticity."
+  target_views:
+    - "cell_readiness_and_context"
+    - "case_horizon_and_adaptation"
+    - "asset_transfer_and_federation"
+  target_regions:
+    - "cell_header"
+    - "case_header"
+    - "federation_boundary_header"
+
+- id: "PP02"
+  kind: "simultaneous_comparison"
+  journey: "CJ09"
+  phases: ["IS6", "IS7"]
+  observation: "Auditor must simultaneously view immutable case criteria alongside observed run traces, output hashes, and declaration standings; sequential paging obscures criteria fulfillment gaps."
+  decision: "adopted"
+  rationale: "Dual-operand comparison primitive placed in criteria_comparison_view. Juxtaposes plan criteria origins against observed execution evidence."
+  representation_test: "Sequential paging between criteria and trace logs led to human settlement errors in test fixtures; side-by-side comparison makes criteria gaps immediately visible before settlement."
+  target_views:
+    - "settlement_and_audit_workbench"
+  target_regions:
+    - "criteria_comparison_view"
+
+- id: "PP03"
+  kind: "collection"
+  journey: "CJ06"
+  phases: ["IS1", "IS2", "IS8"]
+  observation: "Approver needs to scan, filter, and prioritize multiple pending approval requests, each showing requesting actor, target resource, expiry countdown, and risk rating."
+  decision: "adopted"
+  rationale: "Comparative table with sorting and filtering by expiry time and risk rating in inbox_table_panel."
+  representation_test: "Scanning single approval prompts sequentially causes urgent expiring requests to be overlooked; tabular collection enables deadline-aware triage."
+  target_views:
+    - "human_approval_inbox"
+  target_regions:
+    - "inbox_table_panel"
+
+- id: "PP04"
+  kind: "relationship_view"
+  journey: "CJ05"
+  phases: ["IS1", "IS2", "IS8"]
+  observation: "Committed case stages, items, milestones, and sentries form an interdependent dependency DAG; linear representation fails to show why a downstream item is blocked by an unmet upstream sentry."
+  decision: "adopted"
+  rationale: "Topological graph primitive in plan_structure_preview (CJ04) and plan_horizon_graph (CJ05). Supported by text-alternative table for accessibility."
+  representation_test: "A flat item list conceals why stage 3 is blocked; graph topology directly traces the blocking upstream sentry condition to its required milestone."
+  target_views:
+    - "case_formation_and_preflight"
+    - "case_horizon_and_adaptation"
+  target_regions:
+    - "plan_structure_preview"
+    - "plan_horizon_graph"
+
+- id: "PP05"
+  kind: "temporal_view"
+  journey: "CJ08"
+  phases: ["IS1", "IS5", "IS6"]
+  observation: "Monitoring concurrent runs and restart recovery requires a monotonic timeline linking ordered event cursors, sibling runs, and successor retry episodes to diagnose causal failure."
+  decision: "adopted"
+  rationale: "Monotonic timeline primitive in event_stream_timeline (CJ08) and run_episodes_timeline (CJ05)."
+  representation_test: "Unordered log dumps make concurrent race conditions impossible to diagnose; ordered event cursors preserve causality across restart boundaries."
+  target_views:
+    - "operational_monitor_and_recovery"
+    - "case_horizon_and_adaptation"
+  target_regions:
+    - "event_stream_timeline"
+    - "run_episodes_timeline"
+
+- id: "PP06"
+  kind: "artifact_context"
+  journey: "CJ07"
+  phases: ["IS1", "IS3", "IS4"]
+  observation: "Executor and operator must keep sandbox boundary constraints (timeout, network deny, filesystem chroot) and job contract parameters visible while monitoring execution."
+  decision: "adopted"
+  rationale: "Dedicated sandbox_boundary_panel in governed_execution_console and request_context_inspector in human_approval_inbox."
+  representation_test: "Operators approving execution cannot safely confirm consequential grants without simultaneous visibility into the exact sandbox isolation limits being enforced."
+  target_views:
+    - "governed_execution_console"
+    - "human_approval_inbox"
+  target_regions:
+    - "sandbox_boundary_panel"
+    - "request_context_inspector"
+
+- id: "PP07"
+  kind: "simultaneous_comparison"
+  journey: "CJ11"
+  phases: ["IS2", "IS6", "IS7"]
+  observation: "Maturity gate evaluation requires side-by-side inspection of source .sea model digests against projected code artifacts and predecessor TransitionTokens to prevent skipping legal stages."
+  decision: "adopted"
+  rationale: "Comparison primitive in transformation_comparison_view linking source model descriptors with derived code outputs."
+  representation_test: "Validating that generated code does not silently diverge from .sea source truth requires side-by-side inspection of adapter versions and hashes before promotion."
+  target_views:
+    - "artifact_maturity_pipeline"
+  target_regions:
+    - "transformation_comparison_view"
+
+- id: "PP08"
+  kind: "artifact_context"
+  journey: "CJ12"
+  phases: ["IS2", "IS5", "IS7"]
+  observation: "Cell administrator must inspect external bundle manifest entries, size bounds, and provenance signatures while executing atomic admission or deciding inert asset adoption."
+  decision: "adopted"
+  rationale: "Dedicated bundle_manifest_inspector region retaining manifest table and cryptographic signature evidence simultaneously with admission actions."
+  representation_test: "Admitting external content without viewing manifest hashes and size limits risks importing unisolated code or tampered assets."
+  target_views:
+    - "asset_transfer_and_federation"
+  target_regions:
+    - "bundle_manifest_inspector"

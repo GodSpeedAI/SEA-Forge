@@ -1,0 +1,3 @@
+COMMAND: GOMEMLIMIT=256MiB GOGC=50 GOMAXPROCS=2 GOFLAGS=-p=1 GOCACHE=/home/sprime01/.cache/go-build go test -p=1 -parallel=1 -race -tags=live -run ^TestNativeEventSourceResyncRetryAndRetentionReplay$ -count=1 ./internal/server
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	35.546s
+EXIT_CODE=0

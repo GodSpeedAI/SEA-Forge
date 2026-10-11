@@ -1,0 +1,29 @@
+[
+  {
+    "journey_id": "L-RECOV",
+    "title": "Recovery: corrupt artifact, SSE drop, kernel and gateway kill -9",
+    "status": "FAIL",
+    "depends_on": [
+      "L1"
+    ],
+    "settles": "the UI is honest and consistent with the durable files across a corrupt artifact, an SSE drop and kernel/gateway crashes",
+    "unlocks": [],
+    "steps": [
+      {
+        "journey": "L-RECOV",
+        "name": "setup: design case R1 through the UI and execute its first item; the artifact is captured",
+        "ok": true,
+        "ms": 28753
+      },
+      {
+        "journey": "L-RECOV",
+        "name": "(a) corrupt artifact: bytes edited inside the cell -> typed digest-mismatch card, nothing rendered from the bad bytes; restored afterwards",
+        "ok": false,
+        "ms": 14797,
+        "error": "the card names a digest mismatch (Could not load this artifact the governed artifact authority could not serve this artifact sha256:90999fcee4382f5d72e4ba9034d9427ad861c3202e483516003afa20aa7faa56)"
+      }
+    ],
+    "total_ms": 50077,
+    "error": "the card names a digest mismatch (Could not load this artifact the governed artifact authority could not serve this artifact sha256:90999fcee4382f5d72e4ba9034d9427ad861c3202e483516003afa20aa7faa56)"
+  }
+]

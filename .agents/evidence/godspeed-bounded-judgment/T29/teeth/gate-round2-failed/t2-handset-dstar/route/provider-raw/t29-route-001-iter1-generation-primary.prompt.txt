@@ -1,0 +1,38 @@
+You are the candidate generator in a governed route-discovery loop. Propose exactly 3 candidate moves.
+
+ROUTE GOAL (frozen):
+- G1 baseline detection: an e2e-forged-report probe at the fixture default budget (max_rounds 4) is UP-detected by the frozen unsubstantiated-pass rule; established by THIS route's own probes
+- G2 boundary: d* = minimal max_rounds in {1..8} at which a real forged probe is UP-detected; established by THIS route's own probes such that d* fires and d*-1 does not fire (d* = 1 is the structural domain floor)
+- G3 cross-family separation: the UP rule fires on every forged probe at budgets >= d* on this route, and never on the frozen family-1 honest ledger nor on the lying family rows; the addendum-3 rule fires on no forged probe
+
+Prior evidence (ORDERING ONLY — never a substitute for this route's own probes): recorded T16 corpus forge probes at the fixture default budget 4 showed same-unit repeat dispatch, passing-claim artifacts, 0 settlements, terminal budget_exhausted; the detection boundary d* is genuinely uncertain, predicted in {2,3}. This route must still establish its own consequences.
+
+ROUTE KNOWLEDGE SO FAR (ordering only, from this route's own probes): budgets where the detection rule FIRED: [none yet]; budgets where it did NOT fire: [none yet].
+
+BOUNDED NEIGHBORHOOD (the ONLY operations you may propose; each costs 1 probe unit; 8 probe units remain; operations already probed or denied on this route are excluded):
+  - {op_id: run_case:e2e-forged-report:1, scenario: e2e-forged-report, max_rounds: 1}
+  - {op_id: run_case:e2e-forged-report:2, scenario: e2e-forged-report, max_rounds: 2}
+  - {op_id: run_case:e2e-forged-report:3, scenario: e2e-forged-report, max_rounds: 3}
+  - {op_id: run_case:e2e-forged-report:4, scenario: e2e-forged-report, max_rounds: 4}
+  - {op_id: run_case:e2e-forged-report:5, scenario: e2e-forged-report, max_rounds: 5}
+  - {op_id: run_case:e2e-forged-report:6, scenario: e2e-forged-report, max_rounds: 6}
+  - {op_id: run_case:e2e-forged-report:7, scenario: e2e-forged-report, max_rounds: 7}
+  - {op_id: run_case:e2e-forged-report:8, scenario: e2e-forged-report, max_rounds: 8}
+
+For the FIRST iteration, a recommended ladder spread (ordering only, you decide): max_rounds 4 (the G1 baseline at the fixture default), 2, and 6. In later iterations, prioritize the smallest unprobed budget adjacent to the known fire/no-fire boundary.
+
+TYPED CANDIDATE SCHEMA - each candidate is EXACTLY one JSON object with EXACTLY these fields (no extra fields, no shell plans, no commands):
+{
+  "candidate_id": "<unique id, lowercase letters/digits/hyphens, e.g. cand-1>",
+  "correlation_id": "t29-route-001-iter1",
+  "operation": "run_case",
+  "bounded_input": {"scenario": "e2e-forged-report", "max_rounds": <integer 1..8>},
+  "expected_role": "<establish_baseline|establish_discriminator|boundary_probe>",
+  "prerequisite_refs": [],
+  "generator": {"identity": "deepseek-clinepass", "version": "cline-pass/cline-pass/deepseek-v4.1-flash"},
+  "rationale": "<one short sentence, evidence only>"
+}
+Role reading (frozen): establish_baseline serves G1; boundary_probe serves the G2 ladder; establish_discriminator serves the G3 verification steps. All scenarios MUST be e2e-forged-report.
+Constraint: all three candidates must propose DISTINCT max_rounds values from the bounded neighborhood.
+
+OUTPUT: STRICTLY a JSON array of exactly 3 candidate objects. No prose, no markdown fences, no commentary.

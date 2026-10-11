@@ -1,0 +1,204 @@
+schema: godspeed-bounded-judgment.t23-route-record
+correction_round: 1
+fixture_mechanism: 'addendum-1 corrected mechanism: fresh tests/fixtures/target copy per probe; runners.default
+  already mock-agent (NO runner sed); GAUNTLET.md budget.max_rounds (fixture default 4) sed''d only for probe values
+  != 4; addendum env incl. per-probe GAUNTLET_ID_SEED; GAUNTLET_CLOCK=deterministic + required controls; timeout
+  240'
+probe_data_root: /home/sprime01/.local/share/godspeed-route-discovery/T23/route-001-r1
+goal_definition:
+  goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+    r*/r*-1 on THIS route's ledger (addendum-1)
+  prior_knowledge_note: "Prior evidence (ORDERING ONLY \u2014 never a substitute for this route's own probes): on\
+    \ this fixture family, e2e-happy at max_rounds 1 and 2 exhausted payment and the fixture default 4 settled;\
+    \ e2e-lying runs have not settled. This route must still establish its own consequences."
+stop_note: the frozen 12-probe budget is spent
+goal_evaluation:
+  goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+    r*/r*-1 on THIS route's ledger (addendum-1)
+  baseline_met: true
+  discriminator_met: false
+  r_star: 4
+  boundary_met: true
+  goal_met: false
+  evaluated_at_utc: '2026-09-19T02:28:47.202204+00:00'
+route_state:
+  route_id: t23-route-001
+  created_at_utc: '2026-09-19T02:24:11.221077+00:00'
+  probes_remaining: 0
+  retained_moves:
+  - candidate_id: cand-2
+    correlation_id: t23-route-001-iter1
+    scenario: e2e-happy
+    max_rounds: 3
+    expected_role: boundary_probe
+    judgment_label: budget_exhausted
+  - candidate_id: cand-3
+    correlation_id: t23-route-001-iter2
+    scenario: e2e-happy
+    max_rounds: 6
+    expected_role: boundary_probe
+    judgment_label: settled_accepted
+  - candidate_id: cand-1
+    correlation_id: t23-route-001-iter3
+    scenario: e2e-happy
+    max_rounds: 2
+    expected_role: boundary_probe
+    judgment_label: budget_exhausted
+  probed:
+  - candidate_id: cand-1
+    correlation_id: t23-route-001-iter1
+    scenario: e2e-happy
+    max_rounds: 4
+    terminal_class: settled
+    judgment_label: settled_accepted
+  - candidate_id: cand-2
+    correlation_id: t23-route-001-iter1
+    scenario: e2e-happy
+    max_rounds: 3
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-3
+    correlation_id: t23-route-001-iter1
+    scenario: e2e-lying
+    max_rounds: 4
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-1
+    correlation_id: t23-route-001-iter2
+    scenario: e2e-happy
+    max_rounds: 5
+    terminal_class: settled
+    judgment_label: settled_accepted
+  - candidate_id: cand-2
+    correlation_id: t23-route-001-iter2
+    scenario: e2e-lying
+    max_rounds: 5
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-3
+    correlation_id: t23-route-001-iter2
+    scenario: e2e-happy
+    max_rounds: 6
+    terminal_class: settled
+    judgment_label: settled_accepted
+  - candidate_id: cand-1
+    correlation_id: t23-route-001-iter3
+    scenario: e2e-happy
+    max_rounds: 2
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-2
+    correlation_id: t23-route-001-iter3
+    scenario: e2e-happy
+    max_rounds: 8
+    terminal_class: settled
+    judgment_label: settled_accepted
+  - candidate_id: cand-3
+    correlation_id: t23-route-001-iter3
+    scenario: e2e-lying
+    max_rounds: 2
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-1
+    correlation_id: t23-route-001-iter4
+    scenario: e2e-lying
+    max_rounds: 8
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-2
+    correlation_id: t23-route-001-iter4
+    scenario: e2e-happy
+    max_rounds: 1
+    terminal_class: budget_exhausted
+    judgment_label: budget_exhausted
+  - candidate_id: cand-3
+    correlation_id: t23-route-001-iter4
+    scenario: e2e-happy
+    max_rounds: 7
+    terminal_class: settled
+    judgment_label: settled_accepted
+  denied_keys: []
+route_record:
+  route_id: t23-route-001
+  correlation_id: t23-route-001-iter4
+  settled: false
+  stop_condition: probe_budget_exhausted
+  moves:
+  - scenario: e2e-happy
+    max_rounds: 3
+    terminal_class: budget_exhausted
+  - scenario: e2e-happy
+    max_rounds: 6
+    terminal_class: settled
+  - scenario: e2e-happy
+    max_rounds: 2
+    terminal_class: budget_exhausted
+  fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+  correlation_ids:
+  - t23-route-001-iter1
+  - t23-route-001-iter2
+  - t23-route-001-iter3
+  - t23-route-001-iter4
+  policy_version: selection-policy-v1
+  prereg_sha256: 1fb55d9c56d87d94adc4850bc5ca713db3e600297fbdc997accfab54c98ea8b5
+  opened_at_utc: '2026-09-19T02:24:11.221077+00:00'
+  closed_at_utc: '2026-09-19T02:28:47.202155+00:00'
+iterations:
+- iteration: 1
+  correlation_id: t23-route-001-iter1
+  provider_path: deepseek-clinepass
+  probes_run: 3
+  retained_candidate_id: cand-2
+  goal_evaluation:
+    goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+      r*/r*-1 on THIS route's ledger (addendum-1)
+    baseline_met: true
+    discriminator_met: false
+    r_star: 4
+    boundary_met: true
+    goal_met: false
+    evaluated_at_utc: '2026-09-19T02:25:10.900199+00:00'
+- iteration: 2
+  correlation_id: t23-route-001-iter2
+  provider_path: deepseek-clinepass
+  probes_run: 3
+  retained_candidate_id: cand-3
+  goal_evaluation:
+    goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+      r*/r*-1 on THIS route's ledger (addendum-1)
+    baseline_met: true
+    discriminator_met: false
+    r_star: 4
+    boundary_met: true
+    goal_met: false
+    evaluated_at_utc: '2026-09-19T02:26:20.183140+00:00'
+- iteration: 3
+  correlation_id: t23-route-001-iter3
+  provider_path: deepseek-clinepass
+  probes_run: 3
+  retained_candidate_id: cand-1
+  goal_evaluation:
+    goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+      r*/r*-1 on THIS route's ledger (addendum-1)
+    baseline_met: true
+    discriminator_met: false
+    r_star: 4
+    boundary_met: true
+    goal_met: false
+    evaluated_at_utc: '2026-09-19T02:27:42.301986+00:00'
+- iteration: 4
+  correlation_id: t23-route-001-iter4
+  provider_path: deepseek-clinepass
+  probes_run: 3
+  retained_candidate_id: ''
+  goal_evaluation:
+    goal: baseline e2e-happy@4 settled_accepted + discriminator e2e-lying verification_failed_nonsettlement + boundary
+      r*/r*-1 on THIS route's ledger (addendum-1)
+    baseline_met: true
+    discriminator_met: false
+    r_star: 4
+    boundary_met: true
+    goal_met: false
+    evaluated_at_utc: '2026-09-19T02:28:47.199880+00:00'
+note: a probe terminal is a probe consequence, never route settlement; settled is decided ONLY by the corrected
+  goal evaluation over this route's own ledger and is recomputed independently by verify_route.py

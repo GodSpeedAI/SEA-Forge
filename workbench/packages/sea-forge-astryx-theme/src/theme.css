@@ -1,0 +1,30 @@
+/*
+ * Static SEA Forge token projection for the prebuilt Astryx neutral theme.
+ *
+ * This must remain a stylesheet rather than a `defineTheme` extension: Astryx
+ * generates extension styles at runtime, while the packaged Tauri application
+ * deliberately disallows runtime evaluation under its CSP.
+ */
+@layer astryx-theme {
+  @scope ([data-astryx-theme="neutral"]) to ([data-astryx-theme]) {
+    :scope {
+      --color-background-body: var(--surface-workspace);
+      --color-background-surface: var(--surface-panel);
+      --color-background-card: var(--surface-panel-elevated);
+      --color-background-popover: var(--surface-overlay);
+      --color-background-muted: var(--surface-muted);
+      --color-text-primary: var(--fg-primary);
+      --color-text-secondary: var(--fg-secondary);
+      --color-text-disabled: var(--fg-tertiary);
+      --color-border: var(--surface-muted);
+      --color-accent: var(--color-focus-primary);
+      --color-on-accent: var(--fg-inverse);
+      --color-success: var(--color-authority-allowed);
+      --color-error: var(--color-danger);
+      --color-warning: var(--color-attention);
+      --font-family-body: var(--font-sans);
+      --font-family-heading: var(--font-sans);
+      --font-family-code: var(--font-mono);
+    }
+  }
+}

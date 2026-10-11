@@ -1,0 +1,49 @@
+schema: godspeed-bounded-judgment.t29-teeth-attacks
+task: T29
+route_id: t29-route-001
+gate_identity:
+  script: verify_breadth.py
+  sha256: e79f9260d823276f4a1604fc488c696999f09f2e98ce6356322aeca632b70d94
+  harness_sha256: fd555c9eb8536039fd0ee20d3e83abee8af66748f091b9de00c5ebda714b0f9c
+attacks:
+- attack: T1 fabricated detection record without a pinned real probe DB
+  expected: mechanism-provenance validation refuses; no route credit
+  observed:
+    t1a_absorb_time_gate:
+      tool: harness.validate_observation (the loop's own absorb-time gate, imported unmodified)
+      refused: true
+      reason: 'no state database at the pinned path: /home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T29/teeth/t1-fabricated/no-such/gauntlet-state.db'
+    t1b_gate_recomputation:
+      tool: verify_breadth.py against teeth/t1-fabricated/
+      exit_code: 1
+      provenance_finding_present: true
+      route_credit: 'none: the fabricated row cannot pass the re-hash, so it never enters the recomputed route state;
+        the gate exits nonzero'
+  verdict: REFUSED
+- attack: T2 hand-assign the d* boundary / the negative label
+  expected: gate recomputation from pinned DBs refuses; labels are read, never assigned
+  observed:
+    hand_set_d_star: 3
+    recomputed_d_star: 2
+    tool: verify_breadth.py against teeth/t2-handset-dstar/
+    exit_code: 1
+    findings:
+      d_star_mismatch_refusal: true
+      matched_negative_label_refusal: true
+      g3_record_refusal: true
+  verdict: REFUSED
+- attack: T3 let the optional learned observer label alter retention or settlement
+  expected: REJECTED; the observer is recorded as observational evidence only
+  observed:
+    flipped_labels:
+    - settled_accepted
+    - settled_accepted
+    tool: verify_breadth.py against teeth/t3-observer-flip/
+    gate_exit_code: 1
+    substantive_findings: []
+    note: the only finding is the (expected, not-yet-written) evidence manifest; the route-goal, d*, G1/G2/G3, matched-negative
+      and payment recomputations are all UNCHANGED by the flipped labels
+    route_record_sha256_real: 27dd9d8964a1ef41d1554bc77de64c719adc0434e7271cf9e888d88c2c220cf6
+    route_record_sha256_flipped_copy: 27dd9d8964a1ef41d1554bc77de64c719adc0434e7271cf9e888d88c2c220cf6
+    route_record_byte_identical: true
+  verdict: REJECTED (observer label is computationally inert)

@@ -1,0 +1,1 @@
+{"answer": "settled", "confidence": 0.62, "distribution": {"settled": 0.65, "not_settled": 0.22, "insufficient_evidence": 0.13}, "reason": "Both builder iterations were admitted with no recorded rejection and the session ref is 'mock-e2e-happy', consistent with a designed happy path that closes accepted."}

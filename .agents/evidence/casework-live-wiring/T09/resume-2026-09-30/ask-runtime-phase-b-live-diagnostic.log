@@ -1,0 +1,5 @@
+--- FAIL: TestLiveProtectedAskUsesSessionAndMatchesCommittedDisclosure (20.01s)
+    ask_live_test.go:84: server socket never appeared; log at /tmp/asktmp/TestLiveProtectedAskUsesSessionAndMatchesCommittedDisclosure1503300191/001/server.log
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	20.189s
+FAIL

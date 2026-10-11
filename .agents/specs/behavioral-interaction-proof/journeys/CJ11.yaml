@@ -1,0 +1,161 @@
+# Behavioral IR: CJ11 Transform and Mature Governed Artifacts
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ11"
+  slug: "transform_and_mature_governed_artifacts"
+  title: "Transform and Mature Governed Artifacts"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - execution
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - validated_source_needs_projection
+    - pipeline_stage_eligible
+    - generated_output_failed_validation
+    - maturity_gate_review_requested
+  actor_roles:
+    - DomainAuthor
+    - CaseOwner
+    - CellAdministrator
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - source_artifact_id_and_hash
+      - target_maturity_stage
+      - transformation_adapter_or_pipeline_rule
+      - declared_parameters
+    context_scope: "Source artifact, target stage (cognitive -> intellectual -> product -> capital), transition token"
+
+  IS2_preflight:
+    checks:
+      - source_artifact_hash_verified
+      - legal_predecessor_transition_tokens_valid
+      - required_ownership_license_and_attestation_present
+      - transformation_adapter_version_pinned
+    readiness_classification:
+      expected: "ready | missing_predecessor_token | unverified_hash | license_incomplete"
+      failure_action: "block_stage_transition_until_preconditions_satisfied"
+
+  IS3_authority_resolution:
+    required_role: "CaseOwner"
+    alternate_role: "DomainAuthor"
+    grant_scope: "artifact_maturity_transition_and_promotion"
+    separation_of_duty: "Artifact creator cannot self-attest legal maturity transition without independent review"
+    approval:
+      status: "implemented"
+      note: "TransitionToken requires independent attestation signature"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "artifact.mature_and_project"
+      invoked_capabilities:
+        - "deterministic_domainforge_projection"
+        - "spec_pipeline_transformation"
+        - "artifact_registration_and_lineage_inspection"
+        - "gate_evaluation"
+        - "derive_or_promote_transition"
+        - "artifact.quarantine"
+        - "separation_of_duty_check"
+        - "transition_token_validation"
+      binding:
+        status: "implemented"
+        source_ref: "sea-forge-server / artifact pipeline"
+    bounds:
+      runtime_readiness: "prohibited_from_claiming_runtime_readiness_on_file_creation_alone"
+      determinism: "strictly_reproducible"
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "source_artifact"
+      to: "matured_or_projected_artifact"
+      alternative_states:
+        - "cognitive_to_intellectual_settled"
+        - "intellectual_to_product_settled"
+        - "product_to_capital_settled"
+        - "artifact_quarantined"
+    artifacts:
+      - "matured_artifact_descriptor"
+      - "transition_token"
+      - "derived_code_or_documentation_projection"
+      - "license_and_ownership_attestation"
+      - "quarantine_record_when_invalid"
+    mutation_rule: "Append-only; lineage links immutable; prior stages remain accessible"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "source_and_output_sha256_digests"
+        evidence_class: "observed"
+      - item: "transition_token_chain"
+        evidence_class: "observed"
+      - item: "gate_settlement_evidence"
+        evidence_class: "observed"
+    integrity_verification:
+      runtime_readiness_distinct_from_file_creation: true
+      unbroken_lineage_chain_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "The output is either validated, hash-linked, and settled at its actual maturity or quarantined with typed reasons; every transition preserves provenance and no file creation alone claims runtime readiness."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "stage_transition_settled"
+        - "artifact_quarantined"
+        - "runtime_binding_settled_separately"
+    settlement_vs_termination: "Code generation or file writing is not maturity; settlement requires validated TransitionToken."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "advance_to_next_legal_stage"
+        action: "initiate_next_stage_transition"
+        condition: "outcome == stage_transition_settled && target_stage != capital"
+      - id: "implement_and_settle_runtime_binding"
+        target_journey: "CJ07"
+        condition: "outcome == stage_transition_settled && has_runtime_contract"
+      - id: "rework_quarantined_artifact"
+        action: "re-run_transformation_with_fixes"
+        condition: "outcome == artifact_quarantined"
+    blocked_affordances:
+      - id: "skip_maturity_stage"
+        action: "promote_cognitive_directly_to_product"
+        reason: "policy_prohibited"
+        explanation: "Maturity transitions must be sequential: cognitive -> intellectual -> product -> capital"
+
+recovery_paths:
+  - condition: "validation_or_gate_failure"
+    remedy: "Quarantine invalid output; record reason; re-run from last valid predecessor"
+  - condition: "missing_legal_predecessor_token"
+    remedy: "Block transition; surface missing token; require earlier stage settlement"
+  - condition: "adapter_drift"
+    remedy: "Pin adapter version; recompute hash; quarantine output if nondeterministic"
+
+unresolved_bindings:
+  - component: "workbench_artifact_browser"
+    status: "unresolved_in_source"
+    impact: "Artifact browser in Workbench is preview-only; pipeline transformations fully exercised in kernel/CLI"

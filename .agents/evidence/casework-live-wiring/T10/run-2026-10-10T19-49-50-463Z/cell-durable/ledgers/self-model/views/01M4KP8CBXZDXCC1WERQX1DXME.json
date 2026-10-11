@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KP8CBXZDXCC1WERQX1DXME",
+  "source_entry_ulids": [
+    "01M4KP8CBXZDXCC1WERQX1DXME"
+  ],
+  "source_payload_hash": "sha256:c2adf2cb47657223c5701002b73c2174202d8731b1a28446fbed6992aab4bba9",
+  "view_path": "/tmp/t10-live-XxasWD/cell/self-model/realization/cell.json",
+  "view_sha256": "sha256:8d2b631a792f0bbd5ce20aa5bfcbcb80f42cd1734d3fcc21755181afdb94e86b",
+  "status": "current",
+  "failure_class": null
+}

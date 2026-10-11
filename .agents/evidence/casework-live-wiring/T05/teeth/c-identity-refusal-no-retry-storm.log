@@ -1,0 +1,6 @@
+# TOOTH (c): on_behalf_of from a cell with NO gateway section -> typed identity_delegation_refused, no retry storm, nothing durable (permanent: live_identity_test.go)
+=== RUN   TestLiveDelegationRefusedWithoutGatewayBinding
+--- PASS: TestLiveDelegationRefusedWithoutGatewayBinding (0.01s)
+PASS
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	1.026s
+EXIT=0

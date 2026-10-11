@@ -1,0 +1,4 @@
+GodSpeed plan validation: FAIL
+- dependency graph contains a cycle involving ['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14']
+- initial ready set is wrong: ['T00'] expected []
+- initial blocked map does not exactly match task dependencies

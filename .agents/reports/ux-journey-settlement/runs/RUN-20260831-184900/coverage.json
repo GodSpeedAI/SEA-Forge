@@ -1,0 +1,101 @@
+{
+  "run_id": "RUN-20260831-184900",
+  "dimensions": {
+    "canonical_journey_coverage": {
+      "total_canonical_journeys": 12,
+      "tested_canonical_journeys": 12,
+      "passed_canonical_journeys": 12,
+      "percentage": "100.0%"
+    },
+    "story_coverage": {
+      "total_reconciled_stories": 128,
+      "covered_stories": 128,
+      "classifications": {
+        "canonical": 12,
+        "specialization": 69,
+        "variant": 26,
+        "composition": 21
+      },
+      "percentage": "100.0%"
+    },
+    "interface_projection_coverage": {
+      "total_declared_projections": 38,
+      "total_journey_bindings_evaluated": 96,
+      "surfaces": [
+        "Web UI",
+        "API",
+        "CLI",
+        "Agent"
+      ],
+      "percentage": "100.0%"
+    },
+    "journey_transition_coverage": {
+      "total_declared_transitions": 10,
+      "verified_transitions": 10,
+      "transitions": [
+        {
+          "from": "CJ01",
+          "to": "CJ02",
+          "description": "Trusted Cell Context -> Discover Lawful Affordances",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ02",
+          "to": "CJ04",
+          "description": "Discovered Affordance -> Form & Commit Governed Case",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ04",
+          "to": "CJ05",
+          "description": "Case Committed -> Navigate Live Case Horizon",
+          "status": "VERIFIED",
+          "carried_state": "case_id"
+        },
+        {
+          "from": "CJ05",
+          "to": "CJ06",
+          "description": "Live Case -> Resolve Human Approval",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ06",
+          "to": "CJ07",
+          "description": "Approved Case -> Governed Sandboxed Execution",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ07",
+          "to": "CJ08",
+          "description": "Execution -> Operational Monitor & Recovery",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ08",
+          "to": "CJ09",
+          "description": "Monitoring -> Outcome Settlement & Audit",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ09",
+          "to": "CJ10",
+          "description": "Settled Evidence -> Demonstrated Knowledge Reuse",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ11",
+          "to": "CJ04",
+          "description": "Matured Artifact -> Plan Binding",
+          "status": "VERIFIED"
+        },
+        {
+          "from": "CJ12",
+          "to": "CJ01",
+          "description": "Adopted Asset -> Cell Context Integration",
+          "status": "VERIFIED"
+        }
+      ],
+      "percentage": "100.0%"
+    }
+  }
+}

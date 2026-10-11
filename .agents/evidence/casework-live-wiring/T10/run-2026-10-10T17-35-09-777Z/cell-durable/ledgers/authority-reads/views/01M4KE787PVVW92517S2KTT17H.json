@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KE787PVVW92517S2KTT17H",
+  "source_entry_ulids": [
+    "01M4KE787PVVW92517S2KTT17H"
+  ],
+  "source_payload_hash": "sha256:04cea438c10c4ccbdf2b3f7409ca22a6eeb46d1ea0f0935e0ce89d3fbb586f18",
+  "view_path": "/tmp/t10-live-0smEny/cell/authority/audit.jsonl",
+  "view_sha256": "sha256:6cfbc1d0c39b7acb26b59757064053ba069e209b8a1718e5a67055676d6bc0b2",
+  "status": "current",
+  "failure_class": null
+}

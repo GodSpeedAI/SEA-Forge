@@ -1,0 +1,50 @@
+[
+  {
+    "bounded_input": {
+      "max_rounds": 3,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-3",
+    "correlation_id": "t29-route-001-iter2",
+    "expected_role": "boundary_probe",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Budget 3 is the smallest unprobed value adjacent to the known fire boundary (2 fires, so test 3 to confirm the boundary or reveal a gap)."
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 1,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-1",
+    "correlation_id": "t29-route-001-iter2",
+    "expected_role": "boundary_probe",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Budget 1 is the structural domain floor and remains unprobed, needed to pin the lower edge of d*."
+  },
+  {
+    "bounded_input": {
+      "max_rounds": 5,
+      "scenario": "e2e-forged-report"
+    },
+    "candidate_id": "cand-2-5",
+    "correlation_id": "t29-route-001-iter2",
+    "expected_role": "boundary_probe",
+    "generator": {
+      "identity": "deepseek-clinepass",
+      "version": "cline-pass/cline-pass/deepseek-v4.1-flash"
+    },
+    "operation": "run_case",
+    "prerequisite_refs": [],
+    "rationale": "Budget 5 is unprobed and between known fires 4 and 6, checking monotonic separation across the ladder."
+  }
+]

@@ -1,0 +1,7 @@
+               total        used        free      shared  buff/cache   available
+Mem:            7942        5644          89         252        2653        2297
+Swap:          12288       10402        1885
+    PID COMMAND           RSS
+      1 codex           19044
+      2 bash             3548
+      4 ps               3996

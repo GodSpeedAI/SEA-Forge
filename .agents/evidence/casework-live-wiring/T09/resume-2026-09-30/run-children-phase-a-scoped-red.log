@@ -1,0 +1,76 @@
+--- FAIL: TestScopedRunsListUsesCaseRequestAndMapsEveryField (0.00s)
+    scoped_runs_test.go:51: Authority does not implement scoped RunsListForCase
+--- FAIL: TestScopedRunsListRejectsBlankCaseBeforeWireContact (0.00s)
+    scoped_runs_test.go:92: Authority does not implement scoped RunsListForCase
+--- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows (0.17s)
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-runs (0.02s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-runs (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-unreadable (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/null-unreadable (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-run-id (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-case (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/foreign-case (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/missing-item (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-execution (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/unknown-settlement (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/bad-timestamp (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/negative-evidence (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-run-id (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/duplicate-unreadable (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/overlap (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+    --- FAIL: TestScopedRunsListRejectsMalformedAuthorityRows/blank-unreadable (0.01s)
+        scoped_runs_test.go:148: Authority does not implement scoped RunsListForCase
+--- FAIL: TestScopedRunsListRefusalRemainsTyped (0.01s)
+    scoped_runs_test.go:171: Authority does not implement scoped RunsListForCase
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	0.214s
+--- FAIL: TestLiveSourceUsesOnlyScopedRunListAndRetainsUnreadableIDs (0.00s)
+    scoped_live_test.go:67: internal: legacy unscoped runs list must not be called (test)
+--- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls (0.00s)
+    --- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls/#00 (0.00s)
+        scoped_live_test.go:92: invalid case contacted authority: case-list=1 scoped=0 legacy=0
+    --- FAIL: TestLiveSourceRejectsInvalidRequestedCaseBeforeAuthorityCalls/___ (0.00s)
+        scoped_live_test.go:92: invalid case contacted authority: case-list=1 scoped=0 legacy=0
+--- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts (0.01s)
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/record-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = invalid: no case case_1 exists on the authority (world), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/overview-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/horizon-ref (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/foreign-readable-case (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-run-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-item-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/missing-actual-parent (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/duplicate-readable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/duplicate-unreadable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/blank-unreadable-id (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+    --- FAIL: TestLiveSourceRejectsMismatchedAndUnownedScopedRunFacts/readable-unreadable-overlap (0.00s)
+        scoped_live_test.go:123: invalid scoped facts error = internal: legacy unscoped runs list must not be called (test), want typed unavailable
+--- FAIL: TestStoreDeepCopiesUnreadableRunIDs (0.00s)
+    unreadable_runs_test.go:25: append retained mutable unreadable IDs: [mutated source]
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.036s
+FAIL

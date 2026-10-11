@@ -1,0 +1,54 @@
+# T04 — authority non-bypass adversarial proof record
+schema: godspeed-bounded-judgment.t04-record
+executed: "2026-09-17"
+preregistration: ".agents/preregistrations/godspeed-bounded-judgment-T04.prereg.yaml"
+prereg_sha256_frozen_before_first_execution: "see decision log D-2026-09-17-T04-01"
+test_artifact: "crates/sea-forge-server/tests/conformance_authority_nonbypass.rs (8 tests, 8 passed)"
+
+case_results:
+  t04_1_allow_shaped_provider_output_cannot_produce_allow_under_deny_policy:
+    result: PASS
+    strongest_allow_shaped_answer_used: true
+    provider_connections: 0
+    outcome: "Rejected, error_class=authority_denied; allow-shaped text in no committed record"
+  t04_2_provider_timeout:
+    result: PASS
+    outcome: "Rejected, error_class=agent_endpoint_timeout; no response hash; authority.json exists (attempt referenceable)"
+  t04_3_provider_unreachable:
+    result: PASS
+    outcome: "Rejected, error_class=agent_endpoint_unreachable"
+  t04_4_out_of_domain_body:
+    result: PASS
+    outcome: "Rejected, error_class=agent_endpoint_schema_invalid; body counted, never coerced"
+  t04_5_contradictory_answers:
+    result: PASS
+    outcome: "both runs preserved with distinct content hashes; each settlement cites authority_allow as basis; healthy control Accepted"
+  t04_6_override_directive_inert:
+    result: PASS
+    outcome: "directive recorded only as sha256 content hash; never appears in authority.json or evidence.json text"
+  t04_7_vacuity_guard:
+    result: PASS
+    outcome: "deny policy genuinely denies an unattacked control (0 provider connections)"
+  t04_8_canonical_vocabulary_closed:
+    result: PASS
+    outcome: "unknown operation kind refused by the typed enum (serde)"
+
+gates:
+  - command: "just crate-test sea-forge-authority"
+    exit_code: 0
+    log: "gate-authority.log"
+  - command: "just crate-test sea-forge-server"
+    exit_code: 101
+    log: "gate-server.log"
+    attribution: >-
+      Red ONLY on the three conformance_sfwp failures recorded as
+      PREEXISTING_BASELINE_FAILURE at D-2026-09-17-T03-01 (masked at T00;
+      not touched by T04). 22 suites green including the new T04 battery
+      (8/8) and the repaired conformance_run_locator (6/6). No new failures.
+
+ordering_property_proven:
+  statement: >-
+    authority.json is committed BEFORE any provider contact in every case;
+    provider content only ever enters records as a sha256 hash plus
+    endpoint/status metadata; every non-allowed outcome settles Rejected with
+    a named typed class. Provider output = evidence; provider output != permission.

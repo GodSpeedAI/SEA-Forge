@@ -1,0 +1,41 @@
+report: /home/sprime01/projects/sea-rs/.worktrees/godspeed-casework-cognitive-environment/.agents/evidence/godspeed-casework-cognitive-environment/T00/raw-logs/gitleaks.json
+findings: 14
+span lengths: {'span=23': 11, 'span=32': 3}
+value classes: {'lower-alnum-hyphen': 14}
+fields: {'idempotency_key': 3, 'key': 11}
+value lengths: {13: 3, 16: 11}
+values containing a digit: {'True': 14}
+values containing a hyphen: {'True': 3, 'False': 11}
+entropy range: (3.5465937, 3.75) | commits: {'6ce518fcd9': 14}
+
+  .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt:587  span=32  field='idempotency_key'  value_len=13  class=lower-alnum-hyphen  digit=True  hyphen=True  entropy=3.5465937
+  .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log:590  span=32  field='idempotency_key'  value_len=13  class=lower-alnum-hyphen  digit=True  hyphen=True  entropy=3.5465937
+  .agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log:590  span=32  field='idempotency_key'  value_len=13  class=lower-alnum-hyphen  digit=True  hyphen=True  entropy=3.5465937
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:23  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.75
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:26  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.625
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:49  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.625
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:81  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.5778196
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:99  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.625
+  .agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:150  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.75
+  .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:39  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.5778196
+  .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:96  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.5778196
+  .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:125  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.625
+  .agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:129  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.5778196
+  .agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl:116  span=23  field='key'  value_len=16  class=lower-alnum-hyphen  digit=True  hyphen=False  entropy=3.625
+
+=== non-vacuity / refusal guard tests (round 4) ===
+-- empty report --
+report: /tmp/gdsp/g-empty.json
+findings: 0
+exit=2
+-- missing report --
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/gdsp/g-missing.json'
+exit=1
+-- whitespace-only span --
+
+
+exit=2
+-- unreadable file --
+
+
+exit=2

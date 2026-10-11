@@ -1,0 +1,4 @@
+# github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server.test]
+internal/server/run_observation_manager_failure_test.go:323:11: declared and not used: caller
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server [build failed]
+FAIL

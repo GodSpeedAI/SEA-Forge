@@ -1,0 +1,27 @@
+=== just casework-server-down (teardown; must leave no process) ===
+casework-server-down: stopped (pid 966368)
+casework-server-down: removed lingering socket .sea-forge/casework-live/cell/server.sock (socket lock free; no server owns it)
+exit=0
+
+=== teardown proof: no sea-forge-server process, no socket, no pidfile ===
+967612 /bin/bash -c . '/home/sprime01/.zcode/cli/exec/shell-snapshots/snapshot-bash-1790214043093-ndyqet.sh' 2>/dev/null || true . '/home/sprime01/.zcode/cli/exec/bash-startup/sess_subagent_agent_b5b01247-3654-482d-90d2-e87a615dc326/embedded-search-startup-fcef745e7773ec1a.sh' { echo "=== just casework-server-down (teardown; must leave no process) ===" just casework-server-down echo "exit=$?" echo echo "=== teardown proof: no sea-forge-server process, no socket, no pidfile ===" pgrep -af sea-forge-server || echo "no sea-forge-server process remains" ls .sea-forge/casework-live/cell/server.sock 2>/dev/null || echo "socket removed" ls .sea-forge/casework-live/server.pid 2>/dev/null || echo "pidfile removed" echo echo "=== server.log tail (boot proof of the seeded cell) ===" tail -5 .sea-forge/casework-live/server.log } 2>&1 | tee /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T03/gate-casework-server-down.log __zcode_status=$? if [ "$__zcode_status" -eq 0 ]; then pwd -P > '/tmp/zcode-b97aabc5-d2de-4039-af7c-ca30a9571cbc-cwd'; fi exit "$__zcode_status"
+967638 /bin/bash -c . '/home/sprime01/.zcode/cli/exec/shell-snapshots/snapshot-bash-1790214043093-ndyqet.sh' 2>/dev/null || true . '/home/sprime01/.zcode/cli/exec/bash-startup/sess_subagent_agent_b5b01247-3654-482d-90d2-e87a615dc326/embedded-search-startup-fcef745e7773ec1a.sh' { echo "=== just casework-server-down (teardown; must leave no process) ===" just casework-server-down echo "exit=$?" echo echo "=== teardown proof: no sea-forge-server process, no socket, no pidfile ===" pgrep -af sea-forge-server || echo "no sea-forge-server process remains" ls .sea-forge/casework-live/cell/server.sock 2>/dev/null || echo "socket removed" ls .sea-forge/casework-live/server.pid 2>/dev/null || echo "pidfile removed" echo echo "=== server.log tail (boot proof of the seeded cell) ===" tail -5 .sea-forge/casework-live/server.log } 2>&1 | tee /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T03/gate-casework-server-down.log __zcode_status=$? if [ "$__zcode_status" -eq 0 ]; then pwd -P > '/tmp/zcode-b97aabc5-d2de-4039-af7c-ca30a9571cbc-cwd'; fi exit "$__zcode_status"
+socket removed
+pidfile removed
+
+=== server.log tail (boot proof of the seeded cell) ===
+{"timestamp":"2026-09-24T02:17:34.085701Z","level":"INFO","message":"server listening on /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell/server.sock"}
+{"timestamp":"2026-09-24T02:17:44.742178Z","level":"INFO","message":"starting sea-forge-server","root":"/home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell","socket":"/home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-24T02:17:44.743947Z","level":"INFO","message":"server listening on /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell/server.sock"}
+{"timestamp":"2026-09-24T03:57:03.591723Z","level":"INFO","message":"starting sea-forge-server","root":"/home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell","socket":"/home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-09-24T03:57:03.599547Z","level":"INFO","message":"server listening on /home/sprime01/projects/sea-rs/.sea-forge/casework-live/cell/server.sock"}
+
+=== teardown proof (clean check, pattern not carried by this shell) ===
+pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
+Try `pgrep -f' option to match against the complete command line.
+PASS: no sea-forge-server process remains
+PASS: socket gone
+PASS: pidfile gone
+
+=== teardown proof (pgrep -f, excluding this shell's own cmdline) ===
+PASS: no sea-forge-server binary process remains

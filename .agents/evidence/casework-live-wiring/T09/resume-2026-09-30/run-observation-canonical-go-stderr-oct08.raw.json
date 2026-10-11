@@ -1,0 +1,5 @@
+{
+  "kind": "stderr.raw",
+  "original_tmp_path": "/tmp/sea-observation-canonical-go-E3JO4A/stderr.raw",
+  "raw": "casework-go-check: gofmt would rewrite:\ninternal/server/run_observation_manager_failure_test.go\nerror: recipe `casework-go-check` failed with exit code 1\n"
+}

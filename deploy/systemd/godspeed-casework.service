@@ -1,0 +1,65 @@
+# Casework gateway (godspeed-casework -serve). Plan casework-live-wiring T11.
+#
+# Ordering: the gateway Requires= and starts After= the kernel unit, and ExecStartPre waits until
+# the kernel socket accepts connections (a started unit is not yet a listening socket). Stopping
+# or restarting the kernel unit stops/restarts this unit with it; a kernel CRASH (Restart=) does
+# not, and the gateway's SFWP client reconnects on its own (proven by ladder step L-RECOV).
+#
+# Identity: the kernel authenticates the gateway by SO_PEERCRED uid against server.yaml
+# (gateway.uid / identity.bindings), and the socket is 0600, so both units run as the same
+# service user. server.yaml's gateway.uid MUST be that user's uid.
+[Unit]
+Description=Casework gateway (godspeed-casework)
+Documentation=file:///usr/share/doc/sea-forge/config-reference.md
+Requires=sea-forge-server.service
+After=sea-forge-server.service network.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sea-forge
+Group=sea-forge
+# GODSPEED_CONFIG, GODSPEED_CELL_ROOT, GODSPEED_METRICS_ADDR and the secrets the config references
+# with env:NAME indirections. Keep this file 0640 root:sea-forge: it holds secrets.
+EnvironmentFile=/etc/sea-forge/gateway.env
+ExecStartPre=/usr/bin/timeout 60 /bin/sh -c 'until [ -S /run/sea-forge/server.sock ]; do sleep 0.5; done'
+ExecStart=/usr/local/bin/godspeed-casework -serve -addr 127.0.0.1:4179
+UMask=0077
+
+# The gateway has its own 5s graceful HTTP shutdown. Sessions are in memory: every restart signs
+# all browser users out by design (they sign in again; the kernel holds all durable state).
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=on-failure
+RestartSec=2
+
+# Hardening. The gateway holds no durable state: read-only filesystem, no home, no temp sharing.
+# It needs the kernel socket (read/write on /run/sea-forge) and the TCP listener.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadOnlyPaths=/etc/sea-forge
+ReadWritePaths=/run/sea-forge
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target

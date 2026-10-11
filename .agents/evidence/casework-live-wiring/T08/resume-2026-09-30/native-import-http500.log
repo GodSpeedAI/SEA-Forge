@@ -1,0 +1,8 @@
+--- FAIL: TestNativeEventSourceResyncRetryAndRetentionReplay (18.54s)
+    native_events_live_test.go:205: run phase1 through the browser's native EventSource path: agent-browser eval --stdin: exit status 1 (✗ Evaluation error: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:42367/e2e/native-events-live.ts) (diagnostics: /tmp/sea-t08-native-diagnostic-1048786612)
+    native_events_live_test.go:132: preserved native EventSource diagnostics at /tmp/sea-t08-native-diagnostic-1048786612
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-804548001/cell
+    native_events_live_test.go:824: preserved failed native EventSource proof cell at /tmp/sea-t08-f14-failed-cell-58151498/cell
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	18.681s
+FAIL

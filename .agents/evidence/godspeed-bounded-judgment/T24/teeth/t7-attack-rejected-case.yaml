@@ -1,0 +1,22 @@
+case_id: t24-case-t7-attack
+correlation_id: t24-t7-attack
+generator:
+  identity: t7-attack-synthetic
+  version: '1'
+source_route_id: t23-route-001
+source_route_fingerprint: e2e-happy@3:budget_exhausted;e2e-happy@6:settled;e2e-happy@2:budget_exhausted
+bounded_input:
+  scenario: e2e-happy
+  max_rounds: 2
+replay:
+  probe_id: probe-t24-t7-attack
+  state_db_path: /home/sprime01/.local/share/godspeed-route-discovery/T24/teeth-r1/runs/t7-attack/state/gauntlet-state.db
+  state_db_sha256: 7136ad9c9333586ceb2f0e8671ca77066f9fa9d6e0d9f59ca11ced1f8a99841d
+  terminal_class: budget_exhausted
+  settled: false
+  mechanism: t15-frozen-case-execution
+accepted: false
+invalid_reason: 'T7 ATTACK case REJECTED by the acceptance path: the independent replay ended budget_exhausted with
+  1 settlement_committed events - NOT a settlement; the case is recorded invalid and is NOT added as valid developmental
+  data (preserved here as an attack artifact only)'
+created_at_utc: '2026-09-19T04:10:59.851728+00:00'

@@ -1,0 +1,176 @@
+# Canonical Journey Catalog
+# Source Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+# Reconciled Story Count: 128 observed stories mapped to CJ01–CJ12
+
+semantic_source: ".sea/interaction/interaction-model.sea"
+semantic_authority: "canonical"
+proof_mode: "PROTOTYPE"
+
+journeys:
+  - id: "CJ01"
+    slug: "establish_trusted_cell_context"
+    title: "Establish Trusted Cell Context"
+    operation_class: "epistemic"
+    intention: "Enter a cell whose identity, configuration, integrity, semantic self-model, and operation-specific readiness are explicit."
+    user_job: "Establish a trustworthy starting context for a human or automated actor without overwriting history or treating stale state as current."
+    mapped_stories: 15
+    maturity:
+      specified: 1
+      implemented: 2
+      exercised: 5
+      evidenced: 7
+    path: "journeys/CJ01.yaml"
+
+  - id: "CJ02"
+    slug: "discover_lawful_affordances"
+    title: "Discover Lawful Affordances"
+    operation_class: "epistemic"
+    intention: "Understand what exists, what is usable, what is allowed, and why a path is unavailable in the current actor and cell context."
+    user_job: "Choose a spendable path without confusing catalog presence, declared support, operational availability, authority, or settlement evidence."
+    mapped_stories: 16
+    maturity:
+      specified: 4
+      implemented: 1
+      exercised: 9
+      evidenced: 2
+    path: "journeys/CJ02.yaml"
+
+  - id: "CJ03"
+    slug: "ground_work_in_semantic_meaning"
+    title: "Ground Work in Semantic Meaning"
+    operation_class: "consequential"
+    intention: "Bind work to validated, reproducible domain meaning before authority or execution can spend it."
+    user_job: "Supply, validate, inspect, pin, and project a .sea model while keeping derived output subordinate to source."
+    mapped_stories: 7
+    maturity:
+      specified: 1
+      implemented: 0
+      exercised: 6
+      evidenced: 0
+    path: "journeys/CJ03.yaml"
+
+  - id: "CJ04"
+    slug: "form_and_commit_governed_case"
+    title: "Form and Commit a Governed Case"
+    operation_class: "consequential"
+    intention: "Turn intent, a template, or an untrusted proposal into a validated, previewed, immutable case plan."
+    user_job: "Choose the appropriate work source, declare dependencies and criteria, inspect the complete proposal, and commit it before execution side effects."
+    mapped_stories: 10
+    maturity:
+      specified: 1
+      implemented: 0
+      exercised: 6
+      evidenced: 3
+    path: "journeys/CJ04.yaml"
+
+  - id: "CJ05"
+    slug: "navigate_and_adapt_live_case"
+    title: "Navigate and Adapt a Live Case"
+    operation_class: "consequential"
+    intention: "Understand a committed case's purpose, current horizon, history, and lawful adaptation paths without rewriting prior truth."
+    user_job: "Orient to live work, explain its state, follow attempts, and append authorized changes when new work or lifecycle decisions arise."
+    mapped_stories: 11
+    maturity:
+      specified: 0
+      implemented: 0
+      exercised: 10
+      evidenced: 1
+    path: "journeys/CJ05.yaml"
+
+  - id: "CJ06"
+    slug: "resolve_human_judgment_and_approval"
+    title: "Resolve Human Judgment and Approval"
+    operation_class: "consequential"
+    intention: "Admit accountable human decisions and work into the governed record through the same authority and evidence fabric as other work."
+    user_job: "Find pending action, inspect its full context, act only when eligible, and record the decision or human-task evidence durably."
+    mapped_stories: 7
+    maturity:
+      specified: 2
+      implemented: 0
+      exercised: 3
+      evidenced: 2
+    path: "journeys/CJ06.yaml"
+
+  - id: "CJ07"
+    slug: "execute_governed_work"
+    title: "Execute Governed Work"
+    operation_class: "consequential"
+    intention: "Perform human, command, projection, transition, or agent work only within the exact granted boundary and retain evidence for later settlement."
+    user_job: "Authorize first, execute under declared isolation and environment constraints, observe bounded progress, and hand outcomes to evaluation without equating termination with success."
+    mapped_stories: 6
+    maturity:
+      specified: 0
+      implemented: 0
+      exercised: 3
+      evidenced: 3
+    path: "journeys/CJ07.yaml"
+
+  - id: "CJ08"
+    slug: "monitor_intervene_and_recover"
+    title: "Monitor, Intervene, and Recover"
+    operation_class: "consequential"
+    intention: "Keep concurrent and interrupted work visible, controllable, and recoverable without changing committed meaning or affecting unrelated work."
+    user_job: "Observe source-backed operational state, intervene at the right scope, resume committed work, and construct a lawful path after failure or change."
+    mapped_stories: 12
+    maturity:
+      specified: 1
+      implemented: 1
+      exercised: 9
+      evidenced: 1
+    path: "journeys/CJ08.yaml"
+
+  - id: "CJ09"
+    slug: "evaluate_settle_and_audit_outcomes"
+    title: "Evaluate, Settle, and Audit Outcomes"
+    operation_class: "epistemic"
+    intention: "Prove what was intended, authorized, attempted, observed, accepted, and promoted from immutable evidence."
+    user_job: "Inspect a linked episode, compare criteria with evidence, keep execution and settlement distinct, validate provenance and integrity, and reproduce governance history."
+    mapped_stories: 17
+    maturity:
+      specified: 1
+      implemented: 0
+      exercised: 11
+      evidenced: 5
+    path: "journeys/CJ09.yaml"
+
+  - id: "CJ10"
+    slug: "reuse_demonstrated_knowledge_and_capability"
+    title: "Reuse Demonstrated Knowledge and Capability"
+    operation_class: "epistemic"
+    intention: "Reuse settled history and evidence-backed capability without allowing indexes, summaries, or stale projections to become authoritative."
+    user_job: "Recall relevant memory under disclosure authority, inspect what influenced work, assess capability quality, and route future work from the same qualifying evidence."
+    mapped_stories: 10
+    maturity:
+      specified: 2
+      implemented: 0
+      exercised: 8
+      evidenced: 0
+    path: "journeys/CJ10.yaml"
+
+  - id: "CJ11"
+    slug: "transform_and_mature_governed_artifacts"
+    title: "Transform and Mature Governed Artifacts"
+    operation_class: "consequential"
+    intention: "Derive, project, promote, or quarantine artifacts through explicit, evidence-backed maturity gates without skipping stages."
+    user_job: "Select an exact source and transformation, validate the result, keep generated output distinct from runtime readiness, and prove each maturity transition and lineage link."
+    mapped_stories: 10
+    maturity:
+      specified: 0
+      implemented: 1
+      exercised: 9
+      evidenced: 0
+    path: "journeys/CJ11.yaml"
+
+  - id: "CJ12"
+    slug: "transfer_and_adopt_governed_assets"
+    title: "Transfer and Adopt Governed Assets"
+    operation_class: "consequential"
+    intention: "Move verifiable records and assets across cell boundaries while preserving provenance and withholding local usability until governed adoption."
+    user_job: "Preview and export a bounded bundle, verify and import it atomically, keep imported content isolated and inert, and deliberately adopt or reject each asset."
+    mapped_stories: 7
+    maturity:
+      specified: 0
+      implemented: 1
+      exercised: 6
+      evidenced: 0
+    path: "journeys/CJ12.yaml"

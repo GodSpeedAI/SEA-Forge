@@ -1,0 +1,4 @@
+# GET /api/templates
+{"templates":[{"template_ref":"e2e-sentry-chain@0.1.0","title":"e2e-sentry-chain","description":"Two sandboxed tasks chained by a settlement_status sentry, closed by a required all-of rollup milestone. Parameters are substituted into the governed write's path, content, and required artifacts.","parameters":[{"name":"dataset_label","type":"string","required":false,"default_value":"e2e"},{"name":"dataset_name","type":"string","required":true},{"name":"max_rows","type":"number","required":false,"default_value":"10"},{"name":"out_dir","type":"string","required":false,"default_value":"work"}]},{"template_ref":"e2e-signoff-gate@0.1.0","title":"e2e-signoff-gate","description":"A governed draft write followed by a human sign-off gate (ItemKind HumanTask with require_approval) that parks the case for an operator decision.","parameters":[{"name":"change_summary","type":"string","required":true}]}]}
+
+CURL_EXIT=0

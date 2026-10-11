@@ -1,0 +1,20 @@
+{
+ "tooth": "exact class-preserving permutation, corrected oracle (round-6)",
+ "prediction_counts": {"settled": 13, "not_settled": 8, "abstain": 4, "invalid": 0},
+ "truth_counts": {"settled": 12, "not_settled": 13},
+ "observed_accuracy": "20/25 = 0.800",
+ "confusion_observed_labeling": {"settled_preds_correct": "12/13", "not_settled_preds_correct": "8/8", "abstentions_scored_incorrect": 4},
+ "total_unique_permutations": 5200300,
+ "original_labeling_in_space": true,
+ "original_labeling_perm_score": 20,
+ "invariant_max_ge_observed": true,
+ "invariant_count_ge_observed_at_least_1": true,
+ "exact_permutation_min": "computed over full enumeration (low tail)",
+ "exact_permutation_max": "20/25 = 0.800",
+ "count_ge_observed": 13,
+ "exact_p_value": "13/5200300 = 2.5e-6",
+ "analytical_crosscheck": "max = min(12,13) + min(13,8) = 12+8 = 20; max-scoring assignments = C(13,12) x 1 = 13; matches exhaustive enumeration",
+ "deepseek_d_bar": "PASS (0.800 >= 0.8)",
+ "discrimination_tooth": "PASS (2.5e-6 << 0.05)",
+ "faulty_prior_result": "p = 0/5200300 with null max 0.48 — superseded; cause: matches counted as k_s + k_n (settled-truths on not_settled-answers, i.e. misses) instead of k_s + (a_n - k_n)"
+}

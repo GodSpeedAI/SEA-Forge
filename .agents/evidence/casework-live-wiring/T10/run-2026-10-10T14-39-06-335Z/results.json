@@ -1,0 +1,96 @@
+[
+  {
+    "journey_id": "L0",
+    "title": "Readiness and identity",
+    "status": "PASS",
+    "depends_on": [],
+    "settles": "the stack is the real, non-fixture, authenticated one",
+    "unlocks": [
+      "L1"
+    ],
+    "steps": [
+      {
+        "journey": "L0",
+        "name": "served bundle has no fixture adapter (disk scan + HTTP scan)",
+        "ok": true,
+        "ms": 1
+      },
+      {
+        "journey": "L0",
+        "name": "gateway is the live non-fixture build and the kernel is ready",
+        "ok": true,
+        "ms": 286
+      },
+      {
+        "journey": "L0",
+        "name": "unauthenticated browser sees the LoginScreen (live source label)",
+        "ok": true,
+        "ms": 2966
+      },
+      {
+        "journey": "L0",
+        "name": "operator signs in through the LoginScreen; identity is the gateway-verified one",
+        "ok": true,
+        "ms": 6878
+      },
+      {
+        "journey": "L0",
+        "name": "the browser loaded only live-adapter scripts (no fixture adapter at runtime)",
+        "ok": true,
+        "ms": 2427
+      }
+    ],
+    "total_ms": 14322
+  },
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "PASS",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "steps": [
+      {
+        "journey": "L1",
+        "name": "home offers Design case; the picker lists the published templates",
+        "ok": true,
+        "ms": 3401
+      },
+      {
+        "journey": "L1",
+        "name": "select template, fill parameters; submit stays disabled before preflight",
+        "ok": true,
+        "ms": 5725
+      },
+      {
+        "journey": "L1",
+        "name": "preflight passes with a digest; only then is submit enabled",
+        "ok": true,
+        "ms": 2423
+      },
+      {
+        "journey": "L1",
+        "name": "editing a parameter invalidates the preflight and disables submit again",
+        "ok": true,
+        "ms": 6002
+      },
+      {
+        "journey": "L1",
+        "name": "durable: commit writes case_created + item_enabled to the new case's case-events.jsonl and its plan.json",
+        "ok": true,
+        "ms": 813
+      },
+      {
+        "journey": "L1",
+        "name": "UI: the panel closes and the new case's world is the one shown",
+        "ok": true,
+        "ms": 2895
+      }
+    ],
+    "total_ms": 24170
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "journey_id": "CJ09",
+  "oracle_name": "CJ09_OutcomeSettlementAndAuditOracle",
+  "status": "ACCEPTED",
+  "completion_condition_evaluated": "Outcome resolves to attributable, integrity-checked evidence and independent settlement.",
+  "authoritative_record_inspected": "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj09/settlement.json",
+  "rationale": "Settlement independently verified: status='accepted' with 1 criteria evaluation entries.",
+  "evidence_refs": [
+    "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj09/settlement.json",
+    "/home/sprime01/projects/sea-rs/.agents/reports/ux-journey-settlement/runs/RUN-20260831-184900/evidence/sample_run_cj09/semantic-envelope.json"
+  ],
+  "carried_state": {}
+}

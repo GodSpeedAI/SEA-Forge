@@ -1,0 +1,19 @@
+bun test v1.4.0 (34cbb9a40)
+
+.agents/reports/interface-contracts/tests/contract-conformance.test.ts:
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 1 & 6: Client initializes and returns valid world snapshot with monotonic cursor [3.87ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Wire shape rejects the stale numeric/object and underspecified intent forms [1.65ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 2: Role boundaries survive projection (Developer vs Security Officer vs Auditor) [0.32ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 3 & 5: Governed Work to Gauntlet execution loop is deterministic [0.98ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 9: Consequential intents enforce role governance and reject unauthorized actors [0.20ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 1: Discretionary work addition extends plan at runtime [0.09ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 10: Temporal navigation returns checkpoints and truthful historical snapshot [0.77ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 11: Artifact provenance survives and resolves to authoritative sources [0.21ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > Criterion 12: Example JSON payloads parse cleanly and adhere to contract definitions [6.90ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > pins the Ask schema inventory, exact literals, request shape, and full answer disclosure envelope [7.67ms]
+(pass) GodSpeed Casework Application Boundary & Contract Conformance > pins execution observation as a safe, bounded cohort side channel and preserves all stream arms [5.77ms]
+
+ 11 pass
+ 0 fail
+ 963 expect() calls
+Ran 11 tests across 1 file. [51.00ms]

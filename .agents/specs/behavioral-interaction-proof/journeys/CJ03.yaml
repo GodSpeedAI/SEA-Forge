@@ -1,0 +1,164 @@
+# Behavioral IR: CJ03 Ground Work in Semantic Meaning
+# Semantic Authority: /home/sprime01/projects/sea-rs/.sea/interaction/interaction-model.sea
+
+journey:
+  id: "CJ03"
+  slug: "ground_work_in_semantic_meaning"
+  title: "Ground Work in Semantic Meaning"
+  semantic_source: ".sea/interaction/interaction-model.sea"
+  semantic_authority: "canonical"
+
+proof_mode: "PROTOTYPE"
+
+operation_class: "consequential"
+
+interaction_kinds:
+  - entity_resolution
+  - validation
+  - commitment
+  - observation
+  - evidence_review
+  - settlement
+  - navigation
+
+entry:
+  states:
+    - sources_supplied
+    - plan_needs_semantic_references
+    - drift_detected
+    - projection_requested
+  actor_roles:
+    - DomainAuthor
+    - CaseOwner
+    - Operator
+
+affordance_gates:
+  visible: true
+  reachable: true
+  authorized: true
+  payable: true
+  executable: true
+  recoverable: true
+  settleable: true
+
+phases:
+  IS1_context_selection:
+    requires:
+      - sea_source_files
+      - import_dependencies
+      - projection_target_specification
+    context_scope: "Namespace declaration, DomainForge version 0.16.0+, concept and entity instances"
+
+  IS2_preflight:
+    checks:
+      - syntax_valid_against_domainforge_grammar
+      - import_closure_resolvable_without_cycles
+      - referenced_units_policies_and_relations_present
+      - no_dangling_entity_references
+    readiness_classification:
+      expected: "ready | parse_error | unresolvable_import | dangling_reference"
+      failure_action: "block_activation_with_diagnostics"
+
+  IS3_authority_resolution:
+    required_role: "DomainAuthor"
+    alternate_role: "CaseOwner"
+    grant_scope: "semantic_model_validation_and_hash_pinning"
+    separation_of_duty: "Domain author cannot self-approve plan binding without independent case owner role"
+    approval:
+      status: "unresolved_in_source"
+      note: "Formal model approval pipeline handled via standard case governance"
+
+  IS4_capability_invocation:
+    capability:
+      semantic_id: "domainforge.validate_and_pin"
+      invoked_capabilities:
+        - "domainforge_parsing"
+        - "semantic_validation"
+        - "model_inspection"
+        - "plan_reference_resolution"
+        - "hash_pinning"
+        - "version_skew_checks"
+        - "deterministic_projection"
+        - "output_validation"
+      binding:
+        status: "implemented"
+        source_ref: "domainforge-core CLI / lib"
+    bounds:
+      cpu_timeout_ms: 10000
+      memory_ceiling_mb: 512
+
+  IS5_state_and_artifact_effect:
+    expected_state:
+      from: "supplied_source_or_unpinned_plan"
+      to: "semantically_pinned_domain_model"
+      alternative_states:
+        - "source_rejected"
+        - "drift_detected_blocked"
+        - "projection_quarantined"
+    artifacts:
+      - "validated_domain_model_ast"
+      - "domain_model_ref"
+      - "semantic_closure_hash"
+      - "source_and_adapter_digests"
+      - "deterministic_projection_output"
+      - "quarantine_record_when_invalid"
+    mutation_rule: "Hash-pinned immutable ref; derived artifacts never supersede source .sea files"
+
+  IS6_evidence_inspection:
+    required_evidence:
+      - item: "domainforge_validation_diagnostic_log"
+        evidence_class: "observed"
+      - item: "domain_model_ref_digest"
+        evidence_class: "observed"
+      - item: "semantic_closure_hash"
+        evidence_class: "observed"
+      - item: "plan_reference_resolution_receipt"
+        evidence_class: "observed"
+    integrity_verification:
+      dangling_reference_rejection_verified: true
+      invariant_policy_evaluation_verified: true
+
+  IS7_settlement_or_decision:
+    criterion:
+      statement: "All semantic references resolve against an exact validated model and adapter snapshot, or activation remains blocked with layer-specific diagnostics and a lawful repair path."
+      source: "canonical_completion_condition"
+      machine_evaluable: true
+    settlement_decision:
+      outcomes:
+        - "model_pinned_and_active"
+        - "model_validation_failed"
+        - "model_drift_quarantined"
+    settlement_vs_termination: "Clean exit of parser does not settle model; full resolution of all downstream plan references required."
+
+  IS8_next_affordance_selection:
+    current_affordances:
+      - id: "pin_model_to_governed_case"
+        target_journey: "CJ04"
+        condition: "outcome == model_pinned_and_active"
+      - id: "execute_deterministic_projection"
+        target_journey: "CJ11"
+        condition: "outcome == model_pinned_and_active"
+      - id: "revise_domain_source"
+        action: "edit_and_revalidate_sea_source"
+        condition: "outcome == model_validation_failed"
+      - id: "quarantine_and_rework_drift"
+        action: "replan_against_new_closure_hash"
+        condition: "outcome == model_drift_quarantined"
+    blocked_affordances:
+      - id: "commit_case_with_unresolved_semantics"
+        target_journey: "CJ04"
+        reason: "missing_precondition"
+        explanation: "Cannot commit case plan when semantic references fail resolution"
+
+recovery_paths:
+  - condition: "syntax_or_import_error"
+    remedy: "Correct syntax, import, or pattern failures at grammar layer; revalidate"
+  - condition: "semantic_drift_detected"
+    remedy: "Re-run validation to compute new semantic_closure_hash; update DomainModelRef"
+  - condition: "invalid_projection_output"
+    remedy: "Quarantine invalid projections without changing source truth"
+
+unresolved_bindings:
+  - component: "workbench_domain_model_browser"
+    status: "unresolved_in_source"
+    impact: "Model browsing surface in Workbench is preview-only; full tree inspection uses CLI"

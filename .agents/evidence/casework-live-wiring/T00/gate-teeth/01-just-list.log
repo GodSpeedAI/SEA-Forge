@@ -1,0 +1,103 @@
+Available recipes:
+    [casework]
+    casework-cell-init                          # fail closed until T02/T03 — and an existing server.yaml is never modified.
+    casework-demo-up                            # Start both Go casework boundary and cognitive UI dev servers for the full demo experience.
+    casework-go-check                           # the plan names `just casework-go-check`; it must observe the real implementation, never a stub.
+    casework-go-down addr=casework_go_addr      # Stop the Go casework boundary server.
+    casework-go-status addr=casework_go_addr    # Report up/down status, health endpoint, pid, and logs for the Go casework boundary server.
+    casework-go-up addr=casework_go_addr        # Build and start the Go casework boundary server in the background (default 127.0.0.1:4179).
+    casework-live-go-down addr="127.0.0.1:4179" # that recognizes only the casework-live go-bin (never the fixture gateway's binary).
+    casework-live-go-up addr="127.0.0.1:4179"   # process that already answers /api/healthz (e.g. the fixture casework-go-up).
+    casework-server-down                        # Cell data under the live dir is never touched.
+    casework-server-up                          # Teeth: refuses to start when our pidfile is live, or when the cell socket already exists.
+    casework-stack-down                         # data at .sea-forge/casework-live/cell (ledgers, requests, server.yaml) is always preserved.
+    casework-ui-check                           # UI app. The plan names `just casework-ui-check`; it must observe the real app, never a stub.
+    casework-ui-down                            # UI (guards against pid reuse after a reboot).
+    casework-ui-status port=casework_ui_port    # looks wrong.
+    casework-ui-up port=casework_ui_port
+
+    [hooks]
+    hooks-install                               # Idempotent: safe to rerun after pulling hook changes.
+    pr                                          # from main, requires a clean tree, and never merges automatically.
+    pr-check                                    # maintainer can ask "what does CI see?" with one command.
+    pre-commit                                  # reliably under ~10s and require no network: context, fmt, typecheck.
+    pre-push                                    # supply-chain, secret scan, tests, and a debug build on top of pre-commit.
+
+    [integration]
+    integration name                            # Validate and run a declared API/MCP integration by name.
+
+    [meta]
+    default                                     # Default: print grouped recipes.
+
+    [quality]
+    build                                       # Build all crates.
+    cache-stats                                 # Bound the client call so an unreachable cache daemon cannot hang a developer shell.
+    check                                       # implementation per category.
+    check-fast                                  # Target runtime well under 10s — this is what pre-commit runs.
+    check-package package                       # Standard package-scoped type-check interface; retains the established crate gate.
+    ci                                          # parallelized). Local `just ci` is equivalent to the union of required jobs.
+    clean                                       # Remove build output and bootstrap evidence. Does not touch tracked files.
+    context-check                               # Validate agent handoff structure and freshness without vendor-specific tooling.
+    coverage
+    crate-check crate                           # Type-check one workspace crate. Example: `just crate-check sea-forge-core`.
+    crate-test crate test_filter=''             # Example: `just crate-test sea-forge-core authority`.
+    deny                                        # categories are offline. gitleaks scans staged + committed history.
+    doctor                                      # Machine-readable environment check (Shell-SPEC §7.1). Writes doctor.jsonl.
+    e2e-check                                   # Plan global gate CHECK -> repository composite quality gate.
+    e2e-delta-check                             # Plan global gate DELTA -> mechanical requirement/evidence matrix check.
+    e2e-delta-report                            # Regenerate .agents/evidence/e2e/T00/delta0.md from the status file.
+    e2e-gate TASK_ID                            # closed instead of passing vacuously.
+    e2e-lint                                    # Plan global gate LINT -> formatting + lint gates.
+    e2e-prereg-check                            # convergence/Gauntlet run until the change is reviewed and re-frozen.
+    e2e-test                                    # Plan global gate TEST -> repository test suite.
+    fix                                         # excluded: `-A clippy::all --fix` mutates behavior and should be reviewed.
+    fmt                                         # Apply rustfmt to every crate.
+    fmt-check                                   # Verify rustfmt without modifying files.
+    lint                                        # Run clippy with `-D warnings` across all targets and features.
+    mutation
+    no-async-kernel                             # HTTP clients: reqwest, hyper, ureq, isahc, surf, attohttpc, minreq.
+    proof                                       # Minimum-spec proof commands (spec-minimum §12.2). Requires the slice.
+    release-check tag=''                        # Fails loudly with all values printed on any mismatch.
+    security
+    test                                        # Run the test suite (Shell-SPEC §10.3).
+    test-doc                                    # Run doctests separately; the canonical test gate uses the full feature set.
+    test-package package                        # Standard package-scoped test interface; retains the established crate gate.
+    timings                                     # and verify: each is substantially more expensive than the normal gate.
+    typecheck                                   # Type-check every crate (`cargo check --locked`).
+    verify                                      # Standard normal-verification interface; ci remains the authoritative recipe.
+    workbench-check                             # per docs/decisions/ADR-004-workbench-stack.md.
+    workbench-contracts-gate                    # Bun dependency (K-06).
+    workbench-contracts-generate                # Regenerate Rust schemas and their TypeScript/AJV projections.
+    workbench-skill-check                       # Validate the repository-local Workbench skill after editing it.
+    workbench-tauri-test                        # reach.
+
+    [release]
+    publish-bootstrap crate                     # token. After this, release-please.yml handles subsequent publishes via OIDC.
+
+    [secrets]
+    secrets-check profile='dev'                 # Decrypt to a pipe, validate names, redact values, report missing requirements.
+    secrets-edit profile='dev'                  # Edit an encrypted profile via SOPS without leaving plaintext behind.
+    secrets-init                                # Create a local age key if absent and print its public key.
+    secrets-rekey                               # Update encrypted files after recipient changes.
+
+    [setup]
+    setup                                       # Converge on the pinned toolchain: Devbox packages + Rust components + deps.
+    sync                                        # Re-converge after a pull that touched Cargo.toml/Cargo.lock/rust-toolchain.
+
+    [workbench]
+    cell-reset root=''                          # Remove the demonstration cell. Refuses anything without the seed marker.
+    cell-seed root=''                           # one thing this system must never contain.
+    workbench-completion-eval-inputs-check      # placeholders. This stays outside CI until Task 12 owns release aggregation.
+    workbench-demo root=''                      # (U-06), so this is also the demonstration that it does.
+    workbench-dev-down                          # damage (F-25.d). [alias: dev-down]
+    workbench-dev-up                            # Start the Workbench Vite dev server in the background (http://localhost:1420). [alias: dev-up]
+    workbench-e2e-agent-browser                 # evidence for that condition.
+    workbench-e2e-case-authoring                # ephemeral Vite server; requires `just workbench-check`-installed deps.
+    workbench-e2e-real filter=''                # substitutes the mocked Playwright harness.
+    workbench-host-build                        # Build the standalone Tauri host crate without packaging the Workbench.
+    workbench-package                           # `"appimage"` back to `bundle.targets`; nothing else has to change.
+    workbench-package-inventory                 # generated source"), and a negative claim nobody checks is just a hope.
+    workbench-sidecar profile='debug'           # workbench test loop fast; packaging uses `release`.
+    workbench-storybook-down                    # is never used to identify a victim. [alias: storybook-down]
+    workbench-storybook-up                      # Start Storybook component explorer in the background (http://localhost:6006). [alias: storybook-up]
+    workbench-tauri-dev                         # Launch the Tauri desktop application with a debug sidecar.

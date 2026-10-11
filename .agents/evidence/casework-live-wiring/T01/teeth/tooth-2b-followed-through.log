@@ -1,0 +1,20 @@
+=== TOOTH 2 (stage B): bogus intent kind 'BOGUS_KIND' fully followed through on the TS side ===
+TS changes: ActionIntentKind + InteractionActionName + ConsequentialIntentName unions; the
+hardcoded ACTION_INTENT_KINDS and CONSEQUENTIAL_INTENT_KINDS lists in wireContract.test.ts;
+golden/intent-bogus-kind.json and its import/record entry. Go side untouched.
+
+$ cd apps/godspeed-cognitive-ui && bun run typecheck && bun test src/ports
+typecheck-exit=0
+bun-test-exit=0
+(both 0: the TS side is internally consistent with its fixture)
+
+$ cd apps/godspeed-casework-go && go test -count=1 ./internal/contract/
+--- FAIL: TestGoldenCoversEveryIntentKind (0.00s)
+    golden_test.go:383: intent-bogus-kind.json: action_name "BOGUS_KIND" is not in the Go AllIntentKinds list; a kind exists in the fixtures (and likely in the TS union) that the Go side does not know
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.030s
+FAIL
+go-test-exit=1
+
+NOTE: -count=1 is required: Go's test cache keys on package sources, not on files read
+at runtime, so a fixture-only change can otherwise be masked by a cached green result.

@@ -1,0 +1,30 @@
+{
+  "request": {
+    "intent_id": "intent-3f9c2a81-0005",
+    "kind": "CONSEQUENTIAL_CASE",
+    "action_name": "APPROVE_HUMAN_TASK",
+    "target_object_id": "item-patch-14",
+    "case_id": "case-31ab",
+    "client_cursor": "1.0000000410",
+    "actor": {
+      "actor_id": "actor-rso-2",
+      "role": "security_officer"
+    },
+    "justification": "Signed off after reviewing evidence-88; the sandboxed checks cover the flagged paths."
+  },
+  "responses": [
+    {
+      "intent_id": "intent-3f9c2a81-0005",
+      "success": true,
+      "new_cursor": "1.0000000411"
+    },
+    {
+      "intent_id": "intent-3f9c2a81-0005",
+      "success": false,
+      "refusal": {
+        "refusal_kind": "UNAUTHORIZED_ROLE",
+        "message": "Approving a security sign-off requires the security_officer role; the acting role cannot decide it."
+      }
+    }
+  ]
+}

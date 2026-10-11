@@ -1,0 +1,278 @@
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: /home/sprime01/projects/sea-rs/crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+error: expected expression, found keyword `fn`
+   --> crates/sea-forge-server/src/identity.rs:980:5
+    |
+980 |     fn gateway_cell() -> (IdentityBindings, GatewayConfig) {
+    |     ^^ expected expression
+    |
+   ::: /home/sprime01/.rustup/toolchains/1.92.0-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/macros/mod.rs:43:18
+    |
+ 43 |     ($left:expr, $right:expr $(,)?) => {
+    |                  ----------- while parsing argument for this `expr` macro fragment
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1079:5
+     |
+1079 |     #[test]
+     |     ^^^^^^^
+     |
+     = note: `#[warn(unnameable_test_items)]` on by default
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1098:5
+     |
+1098 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1120:5
+     |
+1120 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1139:5
+     |
+1139 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1161:5
+     |
+1161 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1176:5
+     |
+1176 |     #[test]
+     |     ^^^^^^^
+
+warning: cannot test inner items
+    --> crates/sea-forge-server/src/identity.rs:1190:5
+     |
+1190 |     #[test]
+     |     ^^^^^^^
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1081:36
+     |
+1081 |         let (bindings, _gateway) = gateway_cell();
+     |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1082:23
+     |
+1082 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1084:23
+     |
+1084 |                 Some(&gateway_claim()),
+     |                       ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1100:35
+     |
+1100 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1101:23
+     |
+1101 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1103:23
+     |
+1103 |                 Some(&gateway_claim()),
+     |                       ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1122:35
+     |
+1122 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1123:23
+     |
+1123 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1125:23
+     |
+1125 |                 Some(&gateway_claim()),
+     |                       ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1141:39
+     |
+1141 |         let (bindings, mut gateway) = gateway_cell();
+     |                                       ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1143:23
+     |
+1143 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1145:23
+     |
+1145 |                 Some(&gateway_claim()),
+     |                       ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1163:35
+     |
+1163 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1164:23
+     |
+1164 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1178:35
+     |
+1178 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1179:23
+     |
+1179 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1192:35
+     |
+1192 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1193:23
+     |
+1193 |         let refusal = bindings
+     |                       ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1195:23
+     |
+1195 |                 Some(&gateway_claim()),
+     |                       ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1246:36
+     |
+1246 |         let (bindings, _gateway) = gateway_cell();
+     |                                    ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1247:24
+     |
+1247 |         let resolved = bindings
+     |                        ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1248:28
+     |
+1248 |             .resolve(Some(&gateway_claim()), Some(PeerIdentity { uid: 2000 }))
+     |                            ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_cell` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1259:35
+     |
+1259 |         let (bindings, gateway) = gateway_cell();
+     |                                   ^^^^^^^^^^^^ not found in this scope
+
+error[E0282]: type annotations needed
+    --> crates/sea-forge-server/src/identity.rs:1261:20
+     |
+1261 |         let view = bindings.describe_delegated(
+     |                    ^^^^^^^^ cannot infer type
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1262:19
+     |
+1262 |             Some(&gateway_claim()),
+     |                   ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1274:19
+     |
+1274 |             Some(&gateway_claim()),
+     |                   ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `gateway_claim` in this scope
+    --> crates/sea-forge-server/src/identity.rs:1287:19
+     |
+1287 |             Some(&gateway_claim()),
+     |                   ^^^^^^^^^^^^^ not found in this scope
+
+Some errors have detailed explanations: E0282, E0425.
+For more information about an error, try `rustc --explain E0282`.
+warning: `sea-forge-server` (lib test) generated 7 warnings
+error: could not compile `sea-forge-server` (lib test) due to 28 previous errors; 7 warnings emitted

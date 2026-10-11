@@ -1,0 +1,30 @@
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/cmd/godspeed-casework	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/fakeauthority	1.011s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/adapters/sfwp	17.691s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/apperr	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/auth	33.273s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/boundary	1.029s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/config	1.015s
+--- FAIL: TestGoldenRoundTrip (0.01s)
+    golden_test.go:120: unrecognized golden fixture "ask-answer-answered.json": every file under golden/ must map to a contract struct
+    golden_test.go:120: unrecognized golden fixture "ask-answer-denied.json": every file under golden/ must map to a contract struct
+    golden_test.go:120: unrecognized golden fixture "ask-answer-partial.json": every file under golden/ must map to a contract struct
+    golden_test.go:120: unrecognized golden fixture "ask-request.json": every file under golden/ must map to a contract struct
+    golden_test.go:118: /home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/golden/sse-events.jsonl line 10: round-trip is not byte-stable.
+        --- fixture ---
+        {"event_type":"execution_observation","cursor":"1.0000000416","timestamp":"2026-09-23T10:17:00Z","payload":{"case_id":"case-t09-observation","observed_at":"2026-09-23T10:17:00Z","run_list_state":"complete","observation_state":"complete","listed_run_count":1,"selected_run_count":1,"validated_run_count":1,"unreadable_run_count":0,"unavailable_run_count":0,"omitted_run_count":0,"hydration_read_budget":{"limit":8,"reads_attempted":1,"exhausted":false},"runs":[{"run_id":"run-t09-command-20260923101600","observed_at":"2026-09-23T10:17:00Z","plan_item_id":"task_prepare","execution":"completed","settlement":"rejected","observation_state":"validated","total_frame_count":5,"retained_frame_count":5,"omitted_frame_count":0,"truncated":false,"frames":[{"event_id":"evt-t09-run-started-0001","kind":"run_started","timestamp":"2026-09-23T10:16:00Z"},{"event_id":"evt-t09-command-started-0002","kind":"command_started","timestamp":"2026-09-23T10:16:01Z"},{"event_id":"evt-t09-command-finished-0003","kind":"command_finished","timestamp":"2026-09-23T10:16:05Z","execution_status":"completed","exit_code":0},{"event_id":"evt-t09-item-completed-0004","kind":"item_completed","timestamp":"2026-09-23T10:16:06Z"},{"event_id":"evt-t09-run-finished-0005","kind":"run_finished","timestamp":"2026-09-23T10:16:07Z"}]}]}}
+        --- re-marshaled ---
+        {"event_type":"execution_observation","cursor":"1.0000000416","timestamp":"2026-09-23T10:17:00Z","payload":{"case_id":"case-t09-observation","hydration_read_budget":{"exhausted":false,"limit":8,"reads_attempted":1},"listed_run_count":1,"observation_state":"complete","observed_at":"2026-09-23T10:17:00Z","omitted_run_count":0,"run_list_state":"complete","runs":[{"execution":"completed","frames":[{"event_id":"evt-t09-run-started-0001","kind":"run_started","timestamp":"2026-09-23T10:16:00Z"},{"event_id":"evt-t09-command-started-0002","kind":"command_started","timestamp":"2026-09-23T10:16:01Z"},{"event_id":"evt-t09-command-finished-0003","execution_status":"completed","exit_code":0,"kind":"command_finished","timestamp":"2026-09-23T10:16:05Z"},{"event_id":"evt-t09-item-completed-0004","kind":"item_completed","timestamp":"2026-09-23T10:16:06Z"},{"event_id":"evt-t09-run-finished-0005","kind":"run_finished","timestamp":"2026-09-23T10:16:07Z"}],"observation_state":"validated","observed_at":"2026-09-23T10:17:00Z","omitted_frame_count":0,"plan_item_id":"task_prepare","retained_frame_count":5,"run_id":"run-t09-command-20260923101600","settlement":"rejected","total_frame_count":5,"truncated":false}],"selected_run_count":1,"unavailable_run_count":0,"unreadable_run_count":0,"validated_run_count":1}}
+    golden_test.go:118: /home/sprime01/projects/sea-rs/.agents/reports/interface-contracts/golden/sse-events.jsonl line 10: event_type "execution_observation" is not in AllStreamEventKinds
+--- FAIL: TestStreamEventKindsExhaustive (0.00s)
+    golden_test.go:449: sse-events.jsonl line 10: event_type "execution_observation" is not in the Go AllStreamEventKinds list
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/contract	0.029s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/intents	1.019s
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livestack	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/livetest	[no test files]
+?   	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/ports	[no test files]
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/preflight	1.011s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	1.013s
+ok  	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/server	2.415s
+FAIL

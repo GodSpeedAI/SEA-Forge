@@ -1,0 +1,111 @@
+{
+  "run_id": "RUN-20260831-194009",
+  "timestamp": "2026-08-31T19:41:22.469343+00:00",
+  "journey_id": "CJ10",
+  "journey_name": "Reuse Demonstrated Knowledge and Capability",
+  "source_story_ids": [
+    "4.7",
+    "13.1",
+    "13.2",
+    "13.3",
+    "13.4",
+    "13.5",
+    "13.6",
+    "13.7",
+    "13.8",
+    "16.4"
+  ],
+  "canonical_source_hashes": {
+    ".sea/interaction/canonicalization-matrix.csv": "9d05e7d377cf0ccfeaea52b686273ee5c3b70a9415bc16d26319b9bee93966f4",
+    ".sea/interaction/canonical-journey-catalog.md": "2f651ccdf8d6f77bf6493c201021f1387ef6db27fa76a65411a257be326554af",
+    ".sea/interaction/journey-grammar.md": "9020b772210ebe9fc0e0ea6bd18eb98509787c90a1e53d222500ee03db41d8eb",
+    ".sea/interaction/interaction-model.sea": "282cb157b0f39f8409980705b81fde17be9af5bc846cbb9508a7109ff03ea2fc",
+    ".sea/interaction/journey-capability-map.md": "ca5abea8666232cecea4d3630fb352dfd3ac8d97a2204926eebc7bb486cd4c37",
+    ".sea/interaction/coverage-report.md": "b7e467e19151d1b6f2828f561501225950f2313217128e58ae70918eca087687",
+    ".agents/specs/frontend/sea-forge-governed-workbench-ux-epic-v0.1.md": "afdc7677bb73f39d4cd494b38ed60ae6099e564833e7c9bf7c9642048a49b8e9",
+    ".agents/specs/spec-minimum.md": "08e572814efc56c869cee75d378b6acfa2f7f085db4907760ed40124aaa370a3",
+    ".agents/specs/spec-full.md": "b1834e6cafedd2ef3406f473c6a2b1645ccbf718ecbdbb02eb3a114192e60697"
+  },
+  "implementation_revision": "16c414c8ef85373d64a03d5c38ed6af9615ff587",
+  "harness_revision": "v2.0.0",
+  "agent_browser_version": "agent-browser 0.34.0",
+  "actor_and_role": {
+    "actor": "operator",
+    "role": "operator"
+  },
+  "starting_state": "Planning or execution needs prior settled context, an operator inspects capability standing, a capability changes tier, or a derived memory or capability view is missing, stale, or suspect.",
+  "actor_visible_observations": [],
+  "browser_actions": [],
+  "screenshot_references": [
+    {
+      "sequence": 1,
+      "name": "CJ10-001-entry-capabilities-preview.png",
+      "relative_path": "screenshots/CJ10/CJ10-001-entry-capabilities-preview.png",
+      "moment_kind": "entry",
+      "description": "Capabilities route rendering fail-closed standing"
+    },
+    {
+      "sequence": 2,
+      "name": "CJ10-002-memory-preview-failclosed.png",
+      "relative_path": "screenshots/CJ10/CJ10-002-memory-preview-failclosed.png",
+      "moment_kind": "settlement_state",
+      "description": "Memory route correctly fails closed without false capability claims"
+    }
+  ],
+  "snapshot_references": [],
+  "interface_projections_encountered": [
+    "workbench_thoth_route",
+    "workbench_unavailable_record_routes"
+  ],
+  "capability_bindings_invoked": [
+    "Governed memory recall",
+    "source-record fallback",
+    "influence tracking",
+    "capability derivation",
+    "promotion and contraction",
+    "capability browse and detail",
+    "deterministic rebuild",
+    "routing gates",
+    "and Thoth claim derivation."
+  ],
+  "execution_identifiers": {},
+  "evidence_references": [
+    "crates/sea-forge-cli/src/commands/recall.rs",
+    "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+    "workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+  ],
+  "settlement_oracle_result": {
+    "journey_id": "CJ10",
+    "oracle_name": "CJ10_DemonstratedKnowledgeReuseOracle",
+    "status": "ACCEPTED",
+    "completion_condition_evaluated": "Reused knowledge/capability is disclosure-safe, traceable to source settlements, and unauthoritative projections fail closed.",
+    "authoritative_record_inspected": "sea-forge memory CLI / /capabilities, /memory routes",
+    "rationale": "Recall CLI source exists and is source-attributable; Workbench capability.list preview correctly fails closed (system.hello did not list it implemented).",
+    "evidence_refs": [
+      "crates/sea-forge-cli/src/commands/recall.rs",
+      "workbench/apps/desktop/src/pages/SurfacesPages.tsx",
+      "workbench/apps/desktop/src/pages/UnbackedSurface.tsx"
+    ],
+    "carried_state": {}
+  },
+  "gate_results": {
+    "ENTRY": "PASS",
+    "VISIBILITY": "PASS",
+    "REACHABILITY": "PASS",
+    "BINDING": "PASS",
+    "AUTHORITY": "PASS",
+    "EXECUTION": "PASS",
+    "EVIDENCE": "PASS",
+    "SETTLEMENT": "PASS",
+    "CONTINUITY": "PASS",
+    "RECOVERY": "PASS"
+  },
+  "final_status": "PASS",
+  "failure_diagnosis": {
+    "failure_code": "NONE",
+    "failure_locus": "none",
+    "expected": "",
+    "observed": "",
+    "reproducible_path": ""
+  }
+}

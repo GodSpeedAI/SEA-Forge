@@ -1,0 +1,33 @@
+--- FAIL: TestBuildAddsCaseOwnedRunChildrenForEveryStandingPair (0.00s)
+    run_children_test.go:89: execution_trace children = 0, want all 24 valid runs (hydration limit must not truncate captured facts)
+    run_children_test.go:95: run "run_pending_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_pending_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_pending_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_pending_escalated" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_enabled_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_enabled_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_enabled_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_enabled_escalated" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_active_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_active_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_active_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_active_escalated" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_completed_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_completed_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_completed_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_completed_escalated" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_failed_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_failed_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_failed_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_failed_escalated" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_terminated_unsettled" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_terminated_accepted" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_terminated_rejected" emitted 0 execution_trace children, want exactly one
+    run_children_test.go:95: run "run_terminated_escalated" emitted 0 execution_trace children, want exactly one
+--- FAIL: TestBuildOmitsInvalidRunChildrenWithoutDroppingValidSiblings (0.00s)
+    run_children_test.go:138: object "run_valid" missing from the snapshot
+--- FAIL: TestStoreKeepsRunChildStandingAtCapturedCursor (0.00s)
+    run_children_test.go:221: object "run_history" missing from the snapshot
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/projection	0.021s
+FAIL

@@ -1,0 +1,24 @@
+{
+  "swapped_candidate_ids": [
+    "cand-1",
+    "cand-2"
+  ],
+  "swapped_fields": [
+    "terminal_class",
+    "settlement_committed_count",
+    "state_db_path",
+    "state_db_sha256"
+  ],
+  "swapped_probe_ids": [
+    "probe-cand-1",
+    "probe-cand-2"
+  ],
+  "verification_on_real_records": {
+    "exit": 1,
+    "output": "verify_loop: FAIL (records[/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T22/round-2])\n  - schema selection-record.json[0]: record must be a mapping\n  - schema selection-record.json[1]: record must be a mapping\n  - schema selection-record.json[2]: record must be a mapping\n  - schema selection-record.json[3]: record must be a mapping\n  - schema selection-record.json[4]: record must be a mapping\n  - schema selection-record.json[5]: record must be a mapping\n  - schema selection-record.json[6]: record must be a mapping"
+  },
+  "verification_on_swapped_copy": {
+    "exit": 1,
+    "output": "verify_loop: FAIL (records[/home/sprime01/projects/sea-rs/.agents/evidence/godspeed-bounded-judgment/T22/teeth/t5-swapped])\n  - schema selection-record.json[0]: record must be a mapping\n  - schema selection-record.json[1]: record must be a mapping\n  - schema selection-record.json[2]: record must be a mapping\n  - schema selection-record.json[3]: record must be a mapping\n  - schema selection-record.json[4]: record must be a mapping\n  - schema selection-record.json[5]: record must be a mapping\n  - schema selection-record.json[6]: record must be a mapping\n  - probe probe-cand-1 (candidate cand-1): state_db_path '/home/sprime01/.local/share/godspeed-route-discovery/T22/round2/runs/cand-2/state/gauntlet-state.db' is not the frozen-mechanism state database of its own candidate ('/home/sprime01/.local/share/godspeed-route-discovery/T22/round2/runs/cand-1/state/gauntlet-state.db')\n  - probe probe-cand-2 (candidate cand-2): state_db_path '/home/sprime01/.local/share/godspeed-route-discovery/T22/round2/runs/cand-1/state/gauntlet-state.db' is not the frozen-mechanism state database of its own candidate ('/home/sprime01/.local/share/godspeed-route-discovery/T22/round2/runs/cand-2/state/gauntlet-state.db')"
+  }
+}

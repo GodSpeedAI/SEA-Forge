@@ -1,0 +1,119 @@
+# Atomic UI View: settlement_and_audit_workbench
+# Upstream Behavioral Source: CJ09 Evaluate, Settle, and Audit Outcomes
+
+view:
+  id: settlement_and_audit_workbench
+  purpose: Evaluate immutable plan criteria against observed run evidence, enforce anti-self-certification, and render sovereign settlement decisions.
+
+sources:
+  journey: CJ09
+  behavioral_phases: [IS1, IS2, IS3, IS4, IS5, IS6, IS7, IS8]
+
+context:
+  persistence:
+    case_identity: persistent
+    run_identity: persistent
+    criteria_matrix: persistent_during_audit
+
+regions:
+  - id: episode_header
+    responsibility: anchor_run_episode_identity_and_criteria_origins
+  - id: criteria_comparison_view
+    responsibility: simultaneously_compare_criteria_with_observed_evidence
+  - id: declarations_and_standing_panel
+    responsibility: weight_declarations_and_enforce_anti_self_certification
+  - id: ledger_proof_inspector
+    responsibility: verify_witness_receipts_merkle_paths_and_replay_order
+  - id: settlement_decision_bar
+    responsibility: commit_independent_settlement_decision_and_expose_affordances
+
+elements:
+  # Episode Header Region
+  - id: episode_id_display
+    primitive: identity
+    region: episode_header
+    binds: { entity: run_episode, field: episode_id }
+
+  - id: executor_attribution_display
+    primitive: identity
+    region: episode_header
+    binds: { entity: run_episode, field: executor_identity }
+
+  - id: auditor_independence_status
+    primitive: status
+    region: episode_header
+    binds: { field: anti_self_certification_standing }
+
+  # Criteria Comparison Region
+  - id: criteria_evidence_comparison
+    primitive: comparison
+    region: criteria_comparison_view
+    binds: { field: criteria_vs_observed_evidence }
+
+  - id: criteria_fulfillment_table
+    primitive: table
+    region: criteria_comparison_view
+    binds: { entity: criteria_evaluations }
+
+  # Declarations and Standing Region
+  - id: declarations_collection
+    primitive: collection
+    region: declarations_and_standing_panel
+    binds: { entity: actor_declarations }
+
+  - id: assurance_label_status
+    primitive: status
+    region: declarations_and_standing_panel
+    binds: { field: assurance_standing }
+
+  # Ledger Proof Inspector Region
+  - id: witness_receipt_item
+    primitive: evidence_item
+    region: ledger_proof_inspector
+    binds: { field: witness_receipt }
+
+  - id: replay_consistency_proof
+    primitive: artifact_reference
+    region: ledger_proof_inspector
+    binds: { field: replay_proof_token }
+
+  # Settlement Decision Bar Region
+  - id: settlement_rationale_input
+    primitive: input
+    region: settlement_decision_bar
+    binds: { field: settlement_explanation }
+
+  - id: accept_settlement_action
+    primitive: action
+    region: settlement_decision_bar
+    semantic_action: settlement.evaluate
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: reject_settlement_action
+    primitive: action
+    region: settlement_decision_bar
+    semantic_action: retry_or_replan_case
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: promote_capability_action
+    primitive: action
+    region: settlement_decision_bar
+    semantic_action: promote_settled_capability
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+  - id: mature_artifact_action
+    primitive: action
+    region: settlement_decision_bar
+    semantic_action: mature_governed_artifact
+    consequence: consequential
+    availability: { source: behavioral_ir }
+
+states:
+  loading: { when: run_evidence_and_criteria_loading }
+  ready: { when: evidence_complete_and_auditor_independent }
+  blocked: { when: anti_self_certification_violation_or_missing_evidence }
+  settled: { when: settlement_decision_admitted_to_ledger }
+  error: { when: ledger_replay_inconsistency_detected }

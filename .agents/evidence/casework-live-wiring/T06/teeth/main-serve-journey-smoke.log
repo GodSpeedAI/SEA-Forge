@@ -1,0 +1,9 @@
+1 preflight passed: True digest: sha256:385efd013fb7e...
+2 world cursor: ... case: 
+3 PROPOSE_CASE success: True refusal: None new_cursor: 01M3DBQKPF9VA7C9...
+4 world case_id: case_20260925T224216Z_a50a5c cursor: 01M3DBQKPF9VA7C9...
+5 available_actions: ['EXECUTE_ITEM', 'TERMINATE_CASE']
+6 items: {'task_prepare': 'READY_TO_BEGIN', 'task_publish': 'WAITING', 'ms_chain_accepted': 'WAITING'}
+7 SSE frames (first 4): ['01M3DBQKPF9VA7C96MEXM9HDXE', 'snapshot-open']
+SMOKE2_OK
+EXIT=0

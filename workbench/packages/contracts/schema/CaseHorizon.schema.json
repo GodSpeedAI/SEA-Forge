@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CaseHorizon",
+  "description": "`case.get_horizon` result body.",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "case_state": {
+      "description": "`active`, `awaiting_approval`, `completed`, `terminated`.",
+      "type": "string"
+    },
+    "events_folded": {
+      "description": "Number of trace events folded, so a client can tell \"no events yet\" from\n\"events exist but none matched an item\".",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/HorizonItem"
+      }
+    },
+    "last_event_id": {
+      "description": "`event_id` of the last trace event folded into this view. A client that\nhas seen a later event than this knows its view is behind and must\nrefetch rather than patch — the projection is rebuildable, never a\nsecond source of truth.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "case_id",
+    "case_state",
+    "items",
+    "events_folded"
+  ],
+  "$defs": {
+    "ExecutionStanding": {
+      "description": "How far an item has progressed *as execution* — derived only from the trace\nevents the case runner appended. Deliberately disjoint from\n[`SettlementStanding`] so no consumer can conflate the two.",
+      "oneOf": [
+        {
+          "description": "In the plan, but no event has been observed for it yet.",
+          "type": "string",
+          "const": "pending"
+        },
+        {
+          "description": "Entry criteria met; eligible to be dispatched.",
+          "type": "string",
+          "const": "enabled"
+        },
+        {
+          "description": "Dispatched and running.",
+          "type": "string",
+          "const": "active"
+        },
+        {
+          "description": "Execution finished without error. Says nothing about settlement.",
+          "type": "string",
+          "const": "completed"
+        },
+        {
+          "description": "Execution ended in error.",
+          "type": "string",
+          "const": "failed"
+        },
+        {
+          "description": "Deliberately stopped before completing.",
+          "type": "string",
+          "const": "terminated"
+        }
+      ]
+    },
+    "HorizonItem": {
+      "description": "One row of the case horizon: a plan item with its separately-derived\nexecution and settlement standing.",
+      "type": "object",
+      "properties": {
+        "depends_on": {
+          "description": "Plan items that must settle before this one is eligible.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution": {
+          "$ref": "#/$defs/ExecutionStanding"
+        },
+        "item_kind": {
+          "description": "`sandboxed_task`, `human_task`, `agent_task`, `stage`, `milestone`, …",
+          "type": "string"
+        },
+        "last_event_at": {
+          "description": "Timestamp of the most recent trace event observed for this item.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent_stage": {
+          "description": "Stage this item belongs to, when the plan nests it under one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "plan_item_id": {
+          "type": "string"
+        },
+        "run_ids": {
+          "description": "Run ids that carried episodes of this item, in first-seen order. An item\nretried as a new episode has more than one.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "settlement": {
+          "$ref": "#/$defs/SettlementStanding"
+        }
+      },
+      "required": [
+        "plan_item_id",
+        "name",
+        "item_kind",
+        "execution",
+        "settlement"
+      ]
+    },
+    "SettlementStanding": {
+      "description": "Whether a *governed settlement* has been recorded for the item. Distinct\nfrom execution: work can execute perfectly and settle as rejected.",
+      "oneOf": [
+        {
+          "description": "No settlement record exists for this item yet.",
+          "type": "string",
+          "const": "unsettled"
+        },
+        {
+          "description": "A settlement record accepted the work.",
+          "type": "string",
+          "const": "accepted"
+        },
+        {
+          "description": "A settlement record rejected the work.",
+          "type": "string",
+          "const": "rejected"
+        },
+        {
+          "description": "A settlement record escalated the decision to a human.",
+          "type": "string",
+          "const": "escalated"
+        }
+      ]
+    }
+  }
+}
