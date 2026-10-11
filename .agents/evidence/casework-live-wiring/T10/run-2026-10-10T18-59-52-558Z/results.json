@@ -1,0 +1,49 @@
+[
+  {
+    "journey_id": "L1",
+    "title": "Template to preflight to commit",
+    "status": "FAIL",
+    "depends_on": [
+      "L0"
+    ],
+    "settles": "a case exists in the kernel because the UI committed it",
+    "unlocks": [
+      "L2"
+    ],
+    "steps": [
+      {
+        "journey": "L1",
+        "name": "home offers Design case; the picker lists the published templates",
+        "ok": true,
+        "ms": 4495
+      },
+      {
+        "journey": "L1",
+        "name": "select template, fill parameters; submit stays disabled before preflight",
+        "ok": true,
+        "ms": 6527
+      },
+      {
+        "journey": "L1",
+        "name": "preflight passes with a digest; only then is submit enabled",
+        "ok": true,
+        "ms": 2386
+      },
+      {
+        "journey": "L1",
+        "name": "editing a parameter invalidates the preflight and disables submit again",
+        "ok": true,
+        "ms": 5325
+      },
+      {
+        "journey": "L1",
+        "name": "durable: commit writes case_created + item_enabled to the new case's case-events.jsonl and its plan.json",
+        "ok": false,
+        "ms": 30827,
+        "error": "timed out after 30000ms waiting for a new case with kinds [case_created, item_enabled] under /tmp/t10-live-D1Je38/cell/cases"
+      }
+    ],
+    "total_ms": 60197,
+    "error": "timed out after 30000ms waiting for a new case with kinds [case_created, item_enabled] under /tmp/t10-live-D1Je38/cell/cases"
+  }
+]

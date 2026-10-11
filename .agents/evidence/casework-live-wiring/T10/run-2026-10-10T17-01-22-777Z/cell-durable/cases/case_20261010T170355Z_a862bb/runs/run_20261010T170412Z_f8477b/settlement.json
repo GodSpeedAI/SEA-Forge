@@ -1,0 +1,12 @@
+{
+  "version": "0.1",
+  "settlement_id": "set_b6d1c7",
+  "run_id": "run_20261010T170412Z_f8477b",
+  "status": "escalated",
+  "basis": [
+    "authority_escalate",
+    "legacy_unattributed_criteria"
+  ],
+  "review_required": true,
+  "settled_at": "2026-10-10T17:04:12.890215561+00:00"
+}

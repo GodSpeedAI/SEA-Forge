@@ -1,0 +1,18 @@
+{
+  "source_entry_ulid": "01M4KCJRC2TPD44GHXWKR46TBR",
+  "source_entry_ulids": [
+    "01M4KC8Z9Y25PG1XD19DM1AM2S",
+    "01M4KC9XR4VPDN4C4DZRA2HWR6",
+    "01M4KCBCJJPZPYCE0TKGXMK40C",
+    "01M4KCD2N1RTY9G6862GRFNBED",
+    "01M4KCFB028MNH8RZH6XKK2F5P",
+    "01M4KCGSKVQNWCRQR4DC9XCWH4",
+    "01M4KCHKB9TV06K9PHZV9AVVSC",
+    "01M4KCJRC2TPD44GHXWKR46TBR"
+  ],
+  "source_payload_hash": "sha256:3471c4919dcade13d53d4a1ef5faec7e265adcdf5e96409392fc78d85bfc2eae",
+  "view_path": "/tmp/t10-live-SSjEPu/cell/authority/audit.jsonl",
+  "view_sha256": "sha256:6a0b621b00d05b08d16a7000de15b813677437ae54c3cb023748005cbc86c266",
+  "status": "current",
+  "failure_class": null
+}

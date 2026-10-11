@@ -1,0 +1,35 @@
+{
+  "projection_id": "proj_self_model_snapshot_d2a320dc50d9f1cd",
+  "projection_kind": "self_model_snapshot",
+  "adapter_ref": "sea-forge-self-model",
+  "case_id": "self-model",
+  "run_id": "smsnap_20261010T193020Z_75c05e",
+  "source_refs": [
+    "models/seaforge-system@0.1.0.sea"
+  ],
+  "input_hash": "sha256:d2a320dc50d9f1cd56a7dd70689e4188d29e69dfd0fef37138b06a7d0b576f40",
+  "output_refs": [
+    {
+      "path": "self-model/self_model_snapshot/snapshot.json",
+      "sha256": "sha256:5de28acf53f0a9e078a9e66124e4ee2aaee1f10469a4b72a822a82de31d6f265",
+      "generated": true
+    }
+  ],
+  "quarantine_refs": [],
+  "validation": {
+    "status": "accepted",
+    "validator_ref": "sea-forge-self-model",
+    "basis": [
+      "deterministic_rebuild"
+    ]
+  },
+  "authority_refs": [
+    "01M4KMPYRQRPPVNVEDQ82X034V"
+  ],
+  "evidence_refs": [
+    "01M4KMPYRNW7DTSMQ5V1QADZ5X"
+  ],
+  "settlement_ref": "01M4KMPYRSC4DGSXPSQR35G7D4",
+  "created_at": "2026-10-10T19:30:19.837059674+00:00",
+  "rebuild_hash": "sha256:55b9c860c1acf5bbf943701919200a25f87d641278dde010ce36d64096811b76"
+}

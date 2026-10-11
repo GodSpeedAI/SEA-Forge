@@ -1,0 +1,11 @@
+{
+  "session": "gs-live-mv2npj0w-operator",
+  "entries": [],
+  "page_errors": [
+    {
+      "session": "operator",
+      "where": "pageerror",
+      "text": "Error: tooth-injected-page-error\n    at <anonymous>:1:74"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KP8C8DNG1KCW0CAFFJ3RWW",
+  "source_entry_ulids": [
+    "01M4KP8C8DNG1KCW0CAFFJ3RWW"
+  ],
+  "source_payload_hash": "sha256:5547e22ccb5d12c93860855d3dee1c7fe534e448461fea3653b48da771e430f0",
+  "view_path": "/tmp/t10-live-XxasWD/cell/self-model/projections/kg/projection-record.json",
+  "view_sha256": "sha256:ba1f44121e19b2a3168ccf695b3381ee6b4cf8ff38f14ea9ff23cb9d6abfbaae",
+  "status": "current",
+  "failure_class": null
+}

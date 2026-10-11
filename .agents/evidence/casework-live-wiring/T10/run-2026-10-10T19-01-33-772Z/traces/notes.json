@@ -1,0 +1,9 @@
+{
+  "sessions": [
+    "operator",
+    "rso"
+  ],
+  "notes": [
+    "operator: trace stop failed: trace stop failed: ✗ CDP error (IO.read): Read failed\n"
+  ]
+}

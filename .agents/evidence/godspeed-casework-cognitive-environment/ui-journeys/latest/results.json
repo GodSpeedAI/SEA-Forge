@@ -13,40 +13,40 @@
         "journey": "J0",
         "name": "app opens through the contract port",
         "ok": true,
-        "ms": 18827
+        "ms": 8141
       },
       {
         "journey": "J0",
         "name": "CORE persists as a single rendered anchor",
         "ok": true,
-        "ms": 7103
+        "ms": 4129
       },
       {
         "journey": "J0",
         "name": "VAR-001 quiet world stays sparse while data is hidden",
         "ok": true,
-        "ms": 6188
+        "ms": 7505
       },
       {
         "journey": "J0",
         "name": "no heavy artifact renderer is loaded",
         "ok": true,
-        "ms": 4166
+        "ms": 2465
       },
       {
         "journey": "J0",
         "name": "VAR-002 waking surfaces the consequential object among routine ones",
         "ok": true,
-        "ms": 16261
+        "ms": 8108
       },
       {
         "journey": "J0",
         "name": "composer and chrome are available; work objects are selectable",
         "ok": true,
-        "ms": 15586
+        "ms": 4918
       }
     ],
-    "total_ms": 71800
+    "total_ms": 36474
   },
   {
     "journey_id": "J1",
@@ -65,40 +65,40 @@
         "journey": "J1",
         "name": "select a work object and fly into it",
         "ok": true,
-        "ms": 35986
+        "ms": 29797
       },
       {
         "journey": "J1",
         "name": "CORE remains the home anchor and is not recreated",
         "ok": true,
-        "ms": 2669
+        "ms": 1381
       },
       {
         "journey": "J1",
         "name": "local relationships and details are exposed",
         "ok": true,
-        "ms": 10847
+        "ms": 7942
       },
       {
         "journey": "J1",
         "name": "unfocus returns through the hierarchy to Home",
         "ok": true,
-        "ms": 4561
+        "ms": 3790
       },
       {
         "journey": "J1",
         "name": "focus again: identity and state survive",
         "ok": true,
-        "ms": 32751
+        "ms": 27632
       },
       {
         "journey": "J1",
         "name": "the Core anchor returns Home",
         "ok": true,
-        "ms": 9561
+        "ms": 7236
       }
     ],
-    "total_ms": 110359
+    "total_ms": 86224
   },
   {
     "journey_id": "J2",
@@ -120,46 +120,46 @@
         "journey": "J2",
         "name": "a source-backed preview is disclosed from its object",
         "ok": true,
-        "ms": 21373
+        "ms": 21333
       },
       {
         "journey": "J2",
         "name": "selecting it opens the right-side viewer with the diff renderer",
         "ok": true,
-        "ms": 23148
+        "ms": 33310
       },
       {
         "journey": "J2",
         "name": "interact: search highlights, a line can be selected",
         "ok": true,
-        "ms": 15143
+        "ms": 25273
       },
       {
         "journey": "J2",
         "name": "source and provenance are preserved",
         "ok": true,
-        "ms": 1576
+        "ms": 2187
       },
       {
         "journey": "J2",
         "name": "a second artifact kind on the same object (tab)",
         "ok": true,
-        "ms": 13870
+        "ms": 24945
       },
       {
         "journey": "J2",
         "name": "close returns to the exact prior context",
         "ok": true,
-        "ms": 19387
+        "ms": 21680
       },
       {
         "journey": "J2",
         "name": "reopen, pin (local), close: the pinned artifact stays available",
         "ok": true,
-        "ms": 32138
+        "ms": 29454
       }
     ],
-    "total_ms": 174435
+    "total_ms": 195230
   },
   {
     "journey_id": "J3",
@@ -178,40 +178,40 @@
         "journey": "J3",
         "name": "mark the source objects' rendered identity",
         "ok": true,
-        "ms": 3807
+        "ms": 2051
       },
       {
         "journey": "J3",
         "name": "orbital → causal: the same objects re-arrange",
         "ok": true,
-        "ms": 20149
+        "ms": 15899
       },
       {
         "journey": "J3",
         "name": "select in the causal representation",
         "ok": true,
-        "ms": 13295
+        "ms": 9218
       },
       {
         "journey": "J3",
         "name": "causal → orbital: the selection is the same object",
         "ok": true,
-        "ms": 16270
+        "ms": 13090
       },
       {
         "journey": "J3",
         "name": "orbital → comparison of the same objects",
         "ok": true,
-        "ms": 23160
+        "ms": 19066
       },
       {
         "journey": "J3",
         "name": "return without duplicate state",
         "ok": true,
-        "ms": 13738
+        "ms": 10091
       }
     ],
-    "total_ms": 135697
+    "total_ms": 107592
   },
   {
     "journey_id": "J4",
@@ -231,52 +231,52 @@
         "journey": "J4",
         "name": "enter historical inspection",
         "ok": true,
-        "ms": 17533
+        "ms": 21038
       },
       {
         "journey": "J4",
         "name": "VAR-004 traverse three historical positions",
         "ok": true,
-        "ms": 39630
+        "ms": 36240
       },
       {
         "journey": "J4",
         "name": "the past is the same objects at an earlier state (read-only)",
         "ok": true,
-        "ms": 13189
+        "ms": 13552
       },
       {
         "journey": "J4",
         "name": "mark two positions and compare them",
         "ok": true,
-        "ms": 50926
+        "ms": 55153
       },
       {
         "journey": "J4",
         "name": "inspect a source artifact during comparison",
         "ok": true,
-        "ms": 42779
+        "ms": 42226
       },
       {
         "journey": "J4",
         "name": "exit comparison back to the single historical position",
         "ok": true,
-        "ms": 11352
+        "ms": 7724
       },
       {
         "journey": "J4",
         "name": "return to live",
         "ok": true,
-        "ms": 9912
+        "ms": 10048
       },
       {
         "journey": "J4",
         "name": "no source-history mutation",
         "ok": true,
-        "ms": 1250
+        "ms": 1232
       }
     ],
-    "total_ms": 235230
+    "total_ms": 244592
   },
   {
     "journey_id": "J5",
@@ -295,40 +295,40 @@
         "journey": "J5",
         "name": "ask a contextual question; a multi-beat explanation starts",
         "ok": true,
-        "ms": 20256
+        "ms": 15945
       },
       {
         "journey": "J5",
         "name": "a beat reveals source evidence; the user interrupts by inspecting it",
         "ok": true,
-        "ms": 30619
+        "ms": 30262
       },
       {
         "journey": "J5",
         "name": "dismiss and return to the explanation's world",
         "ok": true,
-        "ms": 3065
+        "ms": 3754
       },
       {
         "journey": "J5",
         "name": "resume continues from the checkpoint and finishes",
         "ok": true,
-        "ms": 57858
+        "ms": 54329
       },
       {
         "journey": "J5",
         "name": "VAR-005 two artifact kinds, source evidence preserved",
         "ok": true,
-        "ms": 2744
+        "ms": 2479
       },
       {
         "journey": "J5",
         "name": "RECOV-003 lose the agent adapter mid-explanation; direct UI stays usable",
         "ok": true,
-        "ms": 127399
+        "ms": 120852
       }
     ],
-    "total_ms": 284958
+    "total_ms": 264348
   },
   {
     "journey_id": "J6",
@@ -348,40 +348,40 @@
         "journey": "J6",
         "name": "enter the causal representation",
         "ok": true,
-        "ms": 14466
+        "ms": 10652
       },
       {
         "journey": "J6",
         "name": "expected, missing condition and observed are distinct, with causal links",
         "ok": true,
-        "ms": 2716
+        "ms": 1579
       },
       {
         "journey": "J6",
         "name": "select a causal node",
         "ok": true,
-        "ms": 10423
+        "ms": 10977
       },
       {
         "journey": "J6",
         "name": "inspect the supporting source (expected vs observed)",
         "ok": true,
-        "ms": 55527
+        "ms": 40265
       },
       {
         "journey": "J6",
         "name": "move between causal and orbital without identity loss",
         "ok": true,
-        "ms": 34180
+        "ms": 21150
       },
       {
         "journey": "J6",
         "name": "return to the prior focus",
         "ok": true,
-        "ms": 3552
+        "ms": 2288
       }
     ],
-    "total_ms": 165256
+    "total_ms": 127752
   },
   {
     "journey_id": "J7",
@@ -400,52 +400,52 @@
         "journey": "J7",
         "name": "enter Case Design from the focused case",
         "ok": true,
-        "ms": 24062
+        "ms": 18290
       },
       {
         "journey": "J7",
         "name": "inspect structure: select a design node",
         "ok": true,
-        "ms": 10587
+        "ms": 9254
       },
       {
         "journey": "J7",
         "name": "inspect an earlier published version",
         "ok": true,
-        "ms": 22375
+        "ms": 15879
       },
       {
         "journey": "J7",
         "name": "propose: reorder a stage and change required evidence (local draft)",
         "ok": true,
-        "ms": 23487
+        "ms": 13648
       },
       {
         "journey": "J7",
         "name": "save the draft locally; submission is honestly unavailable",
         "ok": true,
-        "ms": 11997
+        "ms": 7271
       },
       {
         "journey": "J7",
         "name": "compare the proposal with the published structure",
         "ok": true,
-        "ms": 30039
+        "ms": 19109
       },
       {
         "journey": "J7",
         "name": "authoritative template unchanged by the proposal",
         "ok": true,
-        "ms": 1216
+        "ms": 698
       },
       {
         "journey": "J7",
         "name": "leave Case Design back to the case, without mutation",
         "ok": true,
-        "ms": 15457
+        "ms": 10210
       }
     ],
-    "total_ms": 183962
+    "total_ms": 122727
   },
   {
     "journey_id": "J8",
@@ -464,52 +464,52 @@
         "journey": "J8",
         "name": "a consequential action opens judgment (backend-offered choices)",
         "ok": true,
-        "ms": 26434
+        "ms": 17644
       },
       {
         "journey": "J8",
         "name": "VAR-007 agent attempts the same consequence through the same path → denied",
         "ok": true,
-        "ms": 25542
+        "ms": 19016
       },
       {
         "journey": "J8",
         "name": "a justification-required choice is validated before sending",
         "ok": true,
-        "ms": 14460
+        "ms": 9861
       },
       {
         "journey": "J8",
         "name": "the human approves on a fresh attempt → accepted",
         "ok": true,
-        "ms": 10805
+        "ms": 8891
       },
       {
         "journey": "J8",
         "name": "execution is visible and completion does not read as settlement",
         "ok": true,
-        "ms": 12815
+        "ms": 10562
       },
       {
         "journey": "J8",
         "name": "evidence appears and settlement is authoritative",
         "ok": true,
-        "ms": 3833
+        "ms": 2424
       },
       {
         "journey": "J8",
         "name": "inspect execution, evidence and settlement",
         "ok": true,
-        "ms": 35940
+        "ms": 28501
       },
       {
         "journey": "J8",
         "name": "the world reorganises from the settled projection",
         "ok": true,
-        "ms": 7436
+        "ms": 5092
       }
     ],
-    "total_ms": 182314
+    "total_ms": 134678
   },
   {
     "journey_id": "J9",
@@ -531,58 +531,58 @@
         "journey": "J9",
         "name": "orientation → focus",
         "ok": true,
-        "ms": 31321
+        "ms": 22699
       },
       {
         "journey": "J9",
         "name": "progressively resolve representation (semantic zoom)",
         "ok": true,
-        "ms": 44476
+        "ms": 34926
       },
       {
         "journey": "J9",
         "name": "inspect and dismiss a source artifact",
         "ok": true,
-        "ms": 46919
+        "ms": 44614
       },
       {
         "journey": "J9",
         "name": "contextual question → interruptible narrated answer",
         "ok": true,
-        "ms": 105779
+        "ms": 88475
       },
       {
         "journey": "J9",
         "name": "temporal rewind, compare two positions, return to live",
         "ok": true,
-        "ms": 117660
+        "ms": 87276
       },
       {
         "journey": "J9",
         "name": "causal representation and case design",
         "ok": true,
-        "ms": 65865
+        "ms": 54375
       },
       {
         "journey": "J9",
         "name": "consequential action: agent denied, human accepted (fresh attempts)",
         "ok": true,
-        "ms": 41265
+        "ms": 38210
       },
       {
         "journey": "J9",
         "name": "execution → evidence → authoritative settlement",
         "ok": true,
-        "ms": 27590
+        "ms": 36888
       },
       {
         "journey": "J9",
         "name": "world reorganised by the settled projection; return and orient at CORE",
         "ok": true,
-        "ms": 14093
+        "ms": 17816
       }
     ],
-    "total_ms": 509138
+    "total_ms": 438612
   },
   {
     "journey_id": "RECOVERY",
@@ -600,51 +600,51 @@
         "journey": "RECOVERY",
         "name": "RECOV-004 optional renderer fails: isolated, source reference kept",
         "ok": true,
-        "ms": 94726
+        "ms": 80687
       },
       {
         "journey": "RECOVERY",
         "name": "invalid payload: bounded error, no collapse",
         "ok": true,
-        "ms": 82526
+        "ms": 66432
       },
       {
         "journey": "RECOVERY",
         "name": "unavailable source: bounded error",
         "ok": true,
-        "ms": 57120
+        "ms": 60656
       },
       {
         "journey": "RECOVERY",
         "name": "leave temporal/comparison mid-state and return",
         "ok": true,
-        "ms": 97623
+        "ms": 80106
       },
       {
         "journey": "RECOVERY",
         "name": "interrupt a transition mid-flight",
         "ok": true,
-        "ms": 52536
+        "ms": 40629
       },
       {
         "journey": "RECOVERY",
         "name": "resize during focused, artifact and temporal states",
         "ok": true,
-        "ms": 37911
+        "ms": 24371
       },
       {
         "journey": "RECOVERY",
         "name": "repeated open/close of the viewer leaks no state",
         "ok": true,
-        "ms": 89456
+        "ms": 67124
       },
       {
         "journey": "RECOVERY",
         "name": "navigation never recreated the persistent Core",
         "ok": true,
-        "ms": 1326
+        "ms": 1064
       }
     ],
-    "total_ms": 514583
+    "total_ms": 423623
   }
 ]

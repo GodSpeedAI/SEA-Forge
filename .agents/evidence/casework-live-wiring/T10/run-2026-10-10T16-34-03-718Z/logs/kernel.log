@@ -1,0 +1,8 @@
+{"timestamp":"2026-10-10T16:34:04.967254Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t10-live-HmGCag/cell","socket":"/tmp/t10-live-HmGCag/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T16:34:04.979231Z","level":"INFO","message":"server listening on /tmp/t10-live-HmGCag/cell/server.sock"}
+{"timestamp":"2026-10-10T16:34:15.476260Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T16:34:25.681160Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T16:34:29.713939Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T16:34:31.016547Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T16:34:36.090346Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}
+{"timestamp":"2026-10-10T16:34:46.896650Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

@@ -1,0 +1,12 @@
+{
+  "cell_id": "cell_local",
+  "active_extensions": [],
+  "environments_present": [],
+  "toolchain_probes": [],
+  "sandbox_classes_available": [
+    "jail",
+    "local"
+  ],
+  "degraded_components": [],
+  "probed_at": "2026-10-10T21:18:06.296486626+00:00"
+}

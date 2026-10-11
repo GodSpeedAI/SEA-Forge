@@ -1,0 +1,3 @@
+{"timestamp":"2026-10-10T17:17:12.740984Z","level":"INFO","message":"starting sea-forge-server","root":"/tmp/t10-live-nvT0vQ/cell","socket":"/tmp/t10-live-nvT0vQ/cell/server.sock","max_concurrent":4}
+{"timestamp":"2026-10-10T17:17:12.752161Z","level":"INFO","message":"server listening on /tmp/t10-live-nvT0vQ/cell/server.sock"}
+{"timestamp":"2026-10-10T17:17:23.211037Z","level":"WARN","message":"connection error: request line exceeded the 10s server timeout"}

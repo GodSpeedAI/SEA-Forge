@@ -1,0 +1,229 @@
+{
+  "findings": [],
+  "harvests": [
+    {
+      "journey": "L0",
+      "session": "journey-L0",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L0",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L1",
+      "session": "journey-L1",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L1",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L2",
+      "session": "journey-L2",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L2",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L3",
+      "session": "journey-L3",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L3",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L4",
+      "session": "journey-L4",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L4",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L5",
+      "session": "journey-L5",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L5",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L5",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L6",
+      "session": "journey-L6",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L6",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L6",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L7",
+      "session": "journey-L7",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L7",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L7",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L8",
+      "session": "journey-L8",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L8",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L8",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L9",
+      "session": "journey-L9",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L9",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 4
+    },
+    {
+      "journey": "L9",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L-RECOV",
+      "session": "journey-L-RECOV",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 0
+    },
+    {
+      "journey": "L-RECOV",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 18
+    },
+    {
+      "journey": "L-RECOV",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 10
+    },
+    {
+      "journey": "L-RECOV",
+      "session": "operator-b",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 10
+    },
+    {
+      "journey": "end-of-run",
+      "session": "operator",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 18
+    },
+    {
+      "journey": "end-of-run",
+      "session": "rso",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 11
+    },
+    {
+      "journey": "end-of-run",
+      "session": "operator-b",
+      "page_errors": 0,
+      "console_errors": 0,
+      "console_total": 11
+    }
+  ]
+}

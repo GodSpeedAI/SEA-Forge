@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KH6SRKCY27KAN03BREP8SE",
+  "source_entry_ulids": [
+    "01M4KH6SRKCY27KAN03BREP8SE"
+  ],
+  "source_payload_hash": "sha256:b20d6e0deef8c45b1b818516face6e4e1a35ab2e7f130bf812e918724f946eab",
+  "view_path": "/tmp/t10-live-ibSH8R/cell/self-model/realization/cell.json",
+  "view_sha256": "sha256:4ef758123cc9a3a7b2cafc288137f559ec215094ae6c9f067a305f42f6a2cd77",
+  "status": "current",
+  "failure_class": null
+}

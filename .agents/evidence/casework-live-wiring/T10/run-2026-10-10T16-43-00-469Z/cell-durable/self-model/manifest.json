@@ -1,0 +1,9 @@
+{
+  "schema_version": "self_model.v1",
+  "release_id": "sea-forge@0.1.0",
+  "kernel_version": "0.1",
+  "current_snapshot_id": "smsnap_20261010T164303Z_eed64e",
+  "stale": true,
+  "stale_reason": "extension_registry_absent",
+  "initialized_at": "2026-10-10T16:43:02.962146621+00:00"
+}

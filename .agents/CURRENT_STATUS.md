@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 70
+**Status revision:** 71
 
-**Stage:** Casework live wiring: T09-T12 complete; T12 independent fresh-clone acceptance CONFIRM WITH CONDITIONS; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete and merged to local main; T13 not started
 
-**Summary:** T12 independent agent cloned e284e26 fresh and ran every gate: UI 373 pass; fixture ladder 11/11; Go (plain and -tags live) 12 packages ok; Rust workspace 1158 pass/0 fail/4 ignored; just casework-e2e-live 3x on fresh cells 11/11 PASS (70 steps each); four teeth caught their injected faults; just casework-load within budgets with 0 errors. Final-acceptance criteria 1-4 pass with accepted limits: dev auth in the live ladder, hand-built harness cell, no video/trace (CW-44), kernel does not resume an escalated item after approval (CW-45), no execution_progress or typed settlement in the live gateway. T11 decision-log entries added. Earlier status text saying T10-T12 unstarted or T11 not complete is superseded by this revision.
+**Summary:** Committed the retained T10 live-ladder run evidence (runs, HARs, trace zips, cell snapshots), the T09 raw command captures, and the regenerated fixture-ladder evidence from the T12 fixture run. gitleaks flagged only idempotency keys in throwaway harness cells (no credentials); HARs carry no cookie or authorization headers. Branch fast-forwarded into main.
 
 **Verified:**
 
@@ -31,6 +31,7 @@
 - READMEs were checked against code, configs and reports by the editing agent; no recipe was run for the docs change.
 - T12 independent confirmation (CONFIRM WITH CONDITIONS): .agents/evidence/casework-live-wiring/T12/independent-confirmation.md; UI tests now 373 (earlier 347 figure superseded).
 - T12 did not run just check, just proof or just status-check, and did not reproduce systemd-analyze, the CI workflow, codec captures or the Rust SoD mutation check.
+- gitleaks over T10 evidence: 19 generic-api-key hits, all idempotency_key values in harness cell ledgers.
 
 **Limits:**
 
@@ -58,7 +59,7 @@
 - just check must be run before any merge or publication; casework-live GitHub workflow has not been dispatched (CW-53).
 - T13 not started; nothing published or merged.
 
-**Next:** Operator: decide CW-47/49/51, dispatch the casework-live workflow once, run just check, then authorize T13/publication. No further implementation is pending.
+**Next:** Operator: decide CW-47/49/51, dispatch casework-live workflow once (CW-53), authorize T13.
 
 **Evidence:**
 
@@ -89,6 +90,7 @@
 - apps/godspeed-casework-go/README.md
 - apps/godspeed-cognitive-ui/README.md
 - .agents/evidence/casework-live-wiring/T12/independent-confirmation.md
+- .agents/evidence/casework-live-wiring/T10
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

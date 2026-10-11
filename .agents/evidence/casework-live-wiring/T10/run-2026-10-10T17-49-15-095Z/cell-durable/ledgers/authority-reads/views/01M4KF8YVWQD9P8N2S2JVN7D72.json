@@ -1,0 +1,16 @@
+{
+  "source_entry_ulid": "01M4KF8YVWQD9P8N2S2JVN7D72",
+  "source_entry_ulids": [
+    "01M4KF0ZSNX7NY1TEGPX0AX4FH",
+    "01M4KF23CHKXCEVJJNCA1V2QEF",
+    "01M4KF3KWYYQERJE1F0V4Z38CA",
+    "01M4KF5AEDGR5FC7WST16GTGFR",
+    "01M4KF7NXJ685EN69NVCXE488Q",
+    "01M4KF8YVWQD9P8N2S2JVN7D72"
+  ],
+  "source_payload_hash": "sha256:ae63b2030eb0975f8801661957559b310ab039a69592d75b57906cb8107ff34e",
+  "view_path": "/tmp/t10-live-9pXYCN/cell/authority/audit.jsonl",
+  "view_sha256": "sha256:0eafaa290becb84a617240cdd71caa5b9f9171c1460fdf241beda873bedb2848",
+  "status": "current",
+  "failure_class": null
+}

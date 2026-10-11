@@ -1,0 +1,35 @@
+{
+  "projection_id": "proj_calm_0818fe88e0231516",
+  "projection_kind": "calm",
+  "adapter_ref": "sea-forge-self-model",
+  "case_id": "self-model",
+  "run_id": "smsnap_20261010T195719Z_55c57a",
+  "source_refs": [
+    "models/seaforge-system@0.1.0.sea"
+  ],
+  "input_hash": "bbb503c36eb0424b60760997676d0547954596a63ea5a5a765134ad81a5fe291",
+  "output_refs": [
+    {
+      "path": "self-model/calm/calm.json",
+      "sha256": "sha256:175509e9794313f73c984456ab16e7e7fc85ca7d35d9f493bf562778335bed87",
+      "generated": true
+    }
+  ],
+  "quarantine_refs": [],
+  "validation": {
+    "status": "accepted",
+    "validator_ref": "sea-forge-self-model",
+    "basis": [
+      "deterministic_rebuild"
+    ]
+  },
+  "authority_refs": [
+    "01M4KP8C7BJE7VDD58Q196MZAB"
+  ],
+  "evidence_refs": [
+    "01M4KP8C79HQ26HC0TZT0JJA8H"
+  ],
+  "settlement_ref": "01M4KP8C7DGH4MWD1P8ZE754ET",
+  "created_at": "2026-10-10T19:57:19.286842409+00:00",
+  "rebuild_hash": "sha256:c04009200e5c1b6550631a3048e27baa6396634878893ad87d121c3b38d32b2f"
+}

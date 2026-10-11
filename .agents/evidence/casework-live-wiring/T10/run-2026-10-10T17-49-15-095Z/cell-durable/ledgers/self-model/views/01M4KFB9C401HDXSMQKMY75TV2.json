@@ -1,0 +1,11 @@
+{
+  "source_entry_ulid": "01M4KFB9C401HDXSMQKMY75TV2",
+  "source_entry_ulids": [
+    "01M4KFB9C401HDXSMQKMY75TV2"
+  ],
+  "source_payload_hash": "sha256:34ac4d5d7fdbd86a978633994217be9ba5f15c6bbda8fc284048c04ecedb4f83",
+  "view_path": "/tmp/t10-live-9pXYCN/cell/self-model/projections/kg/projection-record.json",
+  "view_sha256": "sha256:4295dcffced04f4e3484613f09663dacd58a65bc2c081ad4ae4acfac66852f18",
+  "status": "current",
+  "failure_class": null
+}

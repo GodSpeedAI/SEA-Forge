@@ -1,0 +1,12 @@
+{
+  "sessions": [
+    "operator",
+    "rso",
+    "operator-b"
+  ],
+  "notes": [
+    "operator: trace stop failed: trace stop failed: ✗ Tracing stop timed out after 30s\n",
+    "rso: trace stop failed: trace stop failed: ✗ Tracing stop timed out after 30s\n",
+    "operator-b: trace stop failed: trace stop failed: ✗ Tracing stop timed out after 30s\n"
+  ]
+}
