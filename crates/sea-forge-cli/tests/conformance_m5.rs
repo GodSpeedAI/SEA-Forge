@@ -65,6 +65,10 @@ fn stdout_field<'a>(stdout: &'a str, key: &str) -> &'a str {
 // ── 1. End-to-end: ADR→PRD→SDS→SEA→AST/IR→manifest→generated-contract ──
 
 #[test]
+#[cfg_attr(
+    not(target_os = "linux"),
+    ignore = "runs sandboxed projection commands, which need the Linux Landlock jail backend"
+)]
 fn cli_project_runs_full_m5_chain_and_settles_independent_projections() {
     let root = temp_root("chain");
     let policy = write_policy(&root);
@@ -145,6 +149,10 @@ fn cli_project_runs_full_m5_chain_and_settles_independent_projections() {
 // ── 2. Negative proof: an unsupported projection kind quarantines, never silently drops ──
 
 #[test]
+#[cfg_attr(
+    not(target_os = "linux"),
+    ignore = "runs sandboxed projection commands, which need the Linux Landlock jail backend"
+)]
 fn cli_project_quarantines_unsupported_projection_kind_without_accepting_or_dropping() {
     let root = temp_root("bad-projection");
     let policy = write_policy(&root);

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 76
+**Status revision:** 77
 
-**Stage:** Casework live wiring: T09-T12 complete; PR #11 CI repairs (gitleaks shallow scan, packaged_stack, macOS jail tests); T13 not started
+**Stage:** Casework live wiring: T09-T12 complete; PR #11 macOS CI follow-up; T13 not started
 
-**Summary:** PR #11 CI follow-ups: scoped gitleaks path allowlist for T09 resume records (shallow-checkout fingerprints cannot match); workbench packaged_stack test updated for F-16 cell-relative plan/policy references and to fail on either error key; conformance_m5 jail tests ignored off Linux with a stated reason; DEBT M-53 marked resolved.
+**Summary:** macOS CI: sea-forge-cli conformance_m5 projection tests ignored off Linux (they run sandboxed commands needing the Landlock jail); just test now uses --no-fail-fast so one CI run reports every failing test binary.
 
 **Verified:**
 
@@ -64,7 +64,7 @@
 - T13 not started; nothing published or merged.
 - DEBT M-53 still lists two failures on the old base: macOS conformance_m5 tests assume the Landlock jail, and workbench packaged_stack records_survive_the_kernel_being_stopped_and_started_again; PR #11 CI will show whether they persist.
 
-**Next:** Read PR #11 CI after the push; when required checks are green, squash-merge with the conventional title.
+**Next:** Read PR #11 macOS result; gate any further Linux-jail-only tests the same way; squash-merge when required checks are green.
 
 **Evidence:**
 
