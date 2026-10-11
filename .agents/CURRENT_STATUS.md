@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 73
+**Status revision:** 74
 
-**Stage:** Casework live wiring: T09-T12 complete and merged to local main; just check run on a clean checkout; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete and merged to local main; just check green on a clean checkout; T13 not started
 
-**Summary:** Fixed a clippy manual_is_multiple_of lint in a sea-forge-ledger test (from T11 load commit) found by running just check on a clean checkout of main.
+**Summary:** Scoped gitleaks allowlist for the retained T10 live-ladder evidence (idempotency keys and UI snapshot field names, inspected; no credentials).
 
 **Verified:**
 
@@ -33,6 +33,7 @@
 - T12 did not run just check, just proof or just status-check, and did not reproduce systemd-analyze, the CI workflow, codec captures or the Rust SoD mutation check.
 - gitleaks over T10 evidence: 19 generic-api-key hits, all idempotency_key values in harness cell ledgers.
 - just status-check passes on a clean checkout of main.
+- just check (status, fmt, clippy, typecheck, cargo-deny, gitleaks) run on a clean checkout of main.
 
 **Limits:**
 
@@ -94,6 +95,7 @@
 - .agents/evidence/casework-live-wiring/T10
 - .agents/reports/casework-live-wiring/delivery-summary.md
 - crates/sea-forge-ledger/src/types.rs
+- .gitleaks.toml
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

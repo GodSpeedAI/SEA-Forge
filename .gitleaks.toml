@@ -77,3 +77,13 @@ paths = [
   '''^\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK\.log$''',
   '''^\.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI\.log$''',
 ]
+
+# T10/T12 live-ladder evidence (2026-10-11): retained browser traces and harness-cell snapshots.
+# Verified by inspection: matches are `idempotency_key` values in throwaway harness-cell ledgers and
+# UI snapshot field names (frame_token, embedding_token, navigation_token, navigation_api_key)
+# captured in trace zips. HARs carry no cookie or authorization headers. No real credentials.
+[[allowlists]]
+description = "casework live-ladder run evidence (harness cells, trace zips)"
+paths = [
+  '''^\.agents/evidence/casework-live-wiring/T10/.*''',
+]
