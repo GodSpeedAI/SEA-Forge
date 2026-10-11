@@ -3373,7 +3373,7 @@ mod tests {
             reader.read_entries().unwrap_or_else(|e| {
                 panic!("read_entries raced an append after {verifications} passes: {e}")
             });
-            if verifications % 16 == 0 {
+            if verifications.is_multiple_of(16) {
                 reader.verify().unwrap_or_else(|e| {
                     panic!("verify raced an append after {verifications} passes: {e}")
                 });

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 72
+**Status revision:** 73
 
-**Stage:** Casework live wiring: T09-T12 complete and merged to local main; delivery summary for docs/GTM added; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete and merged to local main; just check run on a clean checkout; T13 not started
 
-**Summary:** Added .agents/reports/casework-live-wiring/delivery-summary.md: what shipped, evidence-backed claims, claims not to make, demo commands, documentation index.
+**Summary:** Fixed a clippy manual_is_multiple_of lint in a sea-forge-ledger test (from T11 load commit) found by running just check on a clean checkout of main.
 
 **Verified:**
 
@@ -32,6 +32,7 @@
 - T12 independent confirmation (CONFIRM WITH CONDITIONS): .agents/evidence/casework-live-wiring/T12/independent-confirmation.md; UI tests now 373 (earlier 347 figure superseded).
 - T12 did not run just check, just proof or just status-check, and did not reproduce systemd-analyze, the CI workflow, codec captures or the Rust SoD mutation check.
 - gitleaks over T10 evidence: 19 generic-api-key hits, all idempotency_key values in harness cell ledgers.
+- just status-check passes on a clean checkout of main.
 
 **Limits:**
 
@@ -92,6 +93,7 @@
 - .agents/evidence/casework-live-wiring/T12/independent-confirmation.md
 - .agents/evidence/casework-live-wiring/T10
 - .agents/reports/casework-live-wiring/delivery-summary.md
+- crates/sea-forge-ledger/src/types.rs
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 
