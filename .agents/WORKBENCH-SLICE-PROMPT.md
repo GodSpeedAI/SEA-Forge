@@ -54,7 +54,7 @@ the slice to `.agents/CURRENT_STATUS.md` and log out-of-scope findings in
 
 - **Use the neatcode skill**: append `Use the neatcode skill to refactor and restructure where it is load-bearing, but not for speculative abstractions.`
 
-Do not commit unless I ask.
+Commit often at meaningful milestones.
 ```
 
 ---
