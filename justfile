@@ -321,7 +321,7 @@ workbench-completion-eval-inputs-check:
 # Run the test suite (Shell-SPEC §10.3).
 [group('quality')]
 test:
-    cargo test --workspace --all-features --locked
+    cargo test --workspace --all-features --locked --no-fail-fast
 
 # Test one workspace crate, optionally filtering by test name.
 # Example: `just crate-test sea-forge-core authority`.
