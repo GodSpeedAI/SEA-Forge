@@ -16,6 +16,10 @@
 //!   AFFORDANCE = aff-t11-canonical-001
 //!   Fixed UUIDv5 event ids for E4/E5A/E5B/E6 etc.
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use std::path::PathBuf;
 
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
@@ -29,6 +33,9 @@ use sea_forge_server::governed_settlement_return::{
 use sea_forge_server::governed_work_ingress::accept_governed_work_request;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+
+const WORLD: &str =
+    "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn sha256_hex(b: &[u8]) -> String {
     format!("{:x}", Sha256::digest(b))
@@ -132,6 +139,7 @@ fn e4_governed_request() -> Value {
     let payload = json!({
         "namespace": "agentic_capability_loop",
         "domain_model_hash": DOMAIN_HASH,
+        "world_ref": WORLD,
         "work_request_id": WR_ID,
         "affordance_id": AFFORDANCE,
         "actor": {"actor_id": "agent-operator", "role": "R-AA"},
@@ -171,6 +179,7 @@ fn e3_context_packet() -> Value {
     let payload = json!({
         "namespace": "agentic_capability_loop",
         "domain_model_hash": DOMAIN_HASH,
+        "world_ref": WORLD,
         "work_request_id": WR_ID,
         "context_requirement_id": "cr-t11",
         "context_packet_id": "ctx_t11_001",
@@ -212,6 +221,7 @@ fn t11_whole_loop_traceability_via_real_gates() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .expect("Allow must emit AuthorizedInvocation");
     assert_eq!(inv.work_request_id, WR_ID);
@@ -262,6 +272,10 @@ fn t11_whole_loop_traceability_via_real_gates() {
     .expect("settlement must emit");
     assert_eq!(settlement.work_request_id, WR_ID);
     assert_eq!(settlement.envelope["payload"]["work_request_id"], WR_ID);
+    // CEP-0008: one world from E4 ingress to the E6 settlement.
+    assert_eq!(ctx.world_ref, WORLD);
+    assert_eq!(inv.world_ref, WORLD);
+    assert_eq!(settlement.envelope["payload"]["world_ref"], WORLD);
     assert_eq!(
         settlement.envelope["payload"]["domain_model_hash"],
         DOMAIN_HASH
@@ -293,6 +307,7 @@ fn t11_duplicate_observation_is_idempotent() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -345,6 +360,7 @@ fn t11_duplicate_settlement_via_replay_is_idempotent() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -420,6 +436,7 @@ fn t11_late_observation_cannot_settle_against_wrong_invocation() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -454,6 +471,7 @@ fn t11_late_observation_cannot_settle_against_wrong_invocation() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -548,6 +566,7 @@ fn t11_failed_settlement_remains_observable() {
         DOMAIN_HASH,
         e4["event_id"].as_str().unwrap(),
         None,
+        WORLD,
     )
     .unwrap();
     ledger
@@ -596,4 +615,326 @@ fn t11_failed_settlement_remains_observable() {
     );
     // But it is still a valid, observable settlement — not disappeared
     assert_eq!(settlement.envelope["payload"]["work_request_id"], WR_ID);
+}
+
+// --- CEP-0008 world_ref across the E4 -> E5A -> E5B -> E6 chain (Stage 9) ----------
+
+const OTHER_WORLD: &str =
+    "world:sf@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+
+use sea_forge_server::governed_execution_boundary::BoundaryError;
+use sea_forge_server::governed_settlement_return::{
+    validate_operational_settlement_wire, SettlementReturnError,
+};
+use sea_forge_server::governed_work_ingress::GovernedIngressError;
+
+fn observation_for(invocation_id: &str, e5a_event_id: &str, extra: Value) -> Value {
+    let mut payload = json!({
+        "namespace": "agentic_capability_loop",
+        "domain_model_hash": DOMAIN_HASH,
+        "work_request_id": WR_ID,
+        "invocation_id": invocation_id,
+        "execution_status": "completed",
+        "observed_effects": [{"effect": "health check green"}, {"effect": "zero-downtime observed"}],
+    });
+    for (k, v) in extra.as_object().cloned().unwrap_or_default() {
+        payload[k] = v;
+    }
+    json!({
+        "schema_version": "v1",
+        "event_id": "55555555-0000-4000-8000-0000000000aa",
+        "source_agent": "execution-environment",
+        "event_type": "ExecutionObservation",
+        "occurred_at": "2026-08-26T12:00:00+00:00",
+        "idempotency_key": sha256_hex(format!("obs-{invocation_id}-{payload}").as_bytes()),
+        "payload": payload,
+        "provenance": {"origin": "execution-environment", "chain": [format!("caused_by:{e5a_event_id}")]}
+    })
+}
+
+#[test]
+fn stage9_e4_request_without_a_world_is_refused() {
+    let mut e4 = e4_governed_request();
+    e4["payload"].as_object_mut().unwrap().remove("world_ref");
+    let err = accept_governed_work_request(&e4, &e3_context_packet(), DOMAIN_HASH).unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
+}
+
+#[test]
+fn stage9_e4_alias_world_is_refused() {
+    let mut e4 = e4_governed_request();
+    e4["payload"]["world_ref"] = json!("world:sf");
+    let err = accept_governed_work_request(&e4, &e3_context_packet(), DOMAIN_HASH).unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
+}
+
+#[test]
+fn stage9_context_packet_from_another_world_is_refused_at_e4() {
+    let mut e3 = e3_context_packet();
+    e3["payload"]["world_ref"] = json!(OTHER_WORLD);
+    let err = accept_governed_work_request(&e4_governed_request(), &e3, DOMAIN_HASH).unwrap_err();
+    assert!(
+        matches!(&err, GovernedIngressError::World { reason } if reason.contains("context packet")),
+        "{err}"
+    );
+}
+
+#[test]
+fn stage9_context_completeness_is_surfaced_not_coerced() {
+    let mut e3 = e3_context_packet();
+    e3["payload"]["retrieval_completeness"] = json!("partial");
+    let intent = accept_governed_work_request(&e4_governed_request(), &e3, DOMAIN_HASH).unwrap();
+    assert_eq!(intent.context_completeness.as_deref(), Some("partial"));
+    let intent =
+        accept_governed_work_request(&e4_governed_request(), &e3_context_packet(), DOMAIN_HASH)
+            .unwrap();
+    assert_eq!(intent.context_completeness, None);
+}
+
+#[test]
+fn stage9_invocation_cannot_be_authorized_in_an_alias_world() {
+    let h = harness("stage9_alias");
+    let decision = allow_decision(&h, 1);
+    let err = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
+        &decision,
+        WR_ID,
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        "44444444-1111-4000-8000-000000000001",
+        None,
+        "world:sf",
+    )
+    .unwrap_err();
+    assert!(matches!(err, BoundaryError::World { .. }), "{err}");
+}
+
+#[test]
+fn stage9_ledger_refuses_an_invocation_with_no_world() {
+    let h = harness("stage9_admit");
+    let decision = allow_decision(&h, 1);
+    let inv = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
+        &decision,
+        WR_ID,
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        "44444444-1111-4000-8000-000000000001",
+        None,
+        WORLD,
+    )
+    .unwrap();
+    let mut stripped = inv.envelope.clone();
+    stripped["payload"]
+        .as_object_mut()
+        .unwrap()
+        .remove("world_ref");
+    let err = InvocationLedger::default()
+        .admit_authorized_invocation(&stripped, DOMAIN_HASH)
+        .unwrap_err();
+    assert!(matches!(err, BoundaryError::World { .. }), "{err}");
+}
+
+#[test]
+fn stage9_observation_cannot_move_the_cycle_into_another_world() {
+    let h = harness("stage9_obs_world");
+    let decision = allow_decision(&h, 1);
+    let mut ledger = InvocationLedger::default();
+    let inv = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
+        &decision,
+        WR_ID,
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        "44444444-1111-4000-8000-000000000001",
+        None,
+        WORLD,
+    )
+    .unwrap();
+    ledger
+        .admit_authorized_invocation(&inv.envelope, DOMAIN_HASH)
+        .unwrap();
+    let moved = observation_for(
+        &inv.invocation_id,
+        &inv.event_id,
+        json!({"world_ref": OTHER_WORLD}),
+    );
+    let err = ledger
+        .settle_execution_observation(&moved, DOMAIN_HASH)
+        .unwrap_err();
+    assert!(matches!(err, BoundaryError::World { .. }), "{err}");
+}
+
+#[test]
+fn stage9_settlement_world_comes_from_the_ledger_not_the_observation() {
+    let h = harness("stage9_ledger_world");
+    let decision = allow_decision(&h, 1);
+    let mut ledger = InvocationLedger::default();
+    let inv = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
+        &decision,
+        WR_ID,
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        "44444444-1111-4000-8000-000000000001",
+        None,
+        WORLD,
+    )
+    .unwrap();
+    ledger
+        .admit_authorized_invocation(&inv.envelope, DOMAIN_HASH)
+        .unwrap();
+    // The execution environment says nothing about worlds.
+    let obs = observation_for(&inv.invocation_id, &inv.event_id, json!({}));
+    let outcome = ledger
+        .settle_execution_observation(&obs, DOMAIN_HASH)
+        .unwrap();
+    let sea_forge_server::governed_execution_boundary::ObservationOutcome::Settled {
+        world_ref,
+        ..
+    } = &outcome
+    else {
+        panic!("expected Settled")
+    };
+    assert_eq!(world_ref, WORLD);
+    let settlement = emit_operational_settlement(
+        &outcome,
+        &[
+            "health check green".to_string(),
+            "zero-downtime observed".to_string(),
+        ],
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        &inv.event_id,
+        obs["event_id"].as_str().unwrap(),
+        SettlementOptionalFields::default(),
+    )
+    .unwrap();
+    assert_eq!(settlement.envelope["payload"]["world_ref"], WORLD);
+}
+
+#[test]
+fn stage9_e6_wire_validation_refuses_a_settlement_with_no_or_alias_world() {
+    let h = harness("stage9_e6_wire");
+    let decision = allow_decision(&h, 1);
+    let mut ledger = InvocationLedger::default();
+    let inv = sea_forge_server::governed_execution_boundary::emit_authorized_invocation(
+        &decision,
+        WR_ID,
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        "44444444-1111-4000-8000-000000000001",
+        None,
+        WORLD,
+    )
+    .unwrap();
+    ledger
+        .admit_authorized_invocation(&inv.envelope, DOMAIN_HASH)
+        .unwrap();
+    let obs = observation_for(&inv.invocation_id, &inv.event_id, json!({}));
+    let outcome = ledger
+        .settle_execution_observation(&obs, DOMAIN_HASH)
+        .unwrap();
+    let settlement = emit_operational_settlement(
+        &outcome,
+        &[
+            "health check green".to_string(),
+            "zero-downtime observed".to_string(),
+        ],
+        DOMAIN_HASH,
+        DOMAIN_HASH,
+        &inv.event_id,
+        obs["event_id"].as_str().unwrap(),
+        SettlementOptionalFields::default(),
+    )
+    .unwrap();
+    assert!(validate_operational_settlement_wire(&settlement.envelope, DOMAIN_HASH).is_ok());
+
+    let mut none = settlement.envelope.clone();
+    none["payload"].as_object_mut().unwrap().remove("world_ref");
+    assert!(matches!(
+        validate_operational_settlement_wire(&none, DOMAIN_HASH),
+        Err(SettlementReturnError::World { .. })
+    ));
+    let mut alias = settlement.envelope.clone();
+    alias["payload"]["world_ref"] = json!("world:sf");
+    assert!(matches!(
+        validate_operational_settlement_wire(&alias, DOMAIN_HASH),
+        Err(SettlementReturnError::World { .. })
+    ));
+}
+
+#[test]
+fn stage9_intent_world_is_verified_against_the_registry_not_trusted() {
+    use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
+    let src = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
+    let set = SeaSourceSet {
+        entry_uri: "demo.sea".into(),
+        files: vec![SourceFile {
+            uri: "demo.sea".into(),
+            sha256: sha256_hex(src.as_bytes()),
+            content: src.into(),
+        }],
+    };
+    let mut worlds = WorldRegistry::new();
+    let registered = worlds
+        .register_source_set("demo", &set)
+        .unwrap()
+        .to_string();
+
+    // A request pinned to the registered world verifies.
+    let mut e4 = e4_governed_request();
+    let mut e3 = e3_context_packet();
+    e4["payload"]["world_ref"] = json!(registered);
+    e3["payload"]["world_ref"] = json!(registered);
+    let intent = accept_governed_work_request(&e4, &e3, DOMAIN_HASH).unwrap();
+    assert!(intent.verify_world(&worlds).is_ok());
+
+    // A well-formed world SEA-Forge never registered passes ingress (syntax and
+    // equality) but fails closed here: the sender's assertion is not trusted.
+    let intent =
+        accept_governed_work_request(&e4_governed_request(), &e3_context_packet(), DOMAIN_HASH)
+            .unwrap();
+    assert!(intent.verify_world(&worlds).is_err());
+}
+
+#[test]
+fn stage11_verified_intake_recomputes_the_world_and_fails_closed_on_an_unknown_one() {
+    use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
+    use sea_forge_server::governed_work_ingress::{
+        accept_verified_governed_work_request, GovernedIngressError,
+    };
+    let src = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
+    let set = SeaSourceSet {
+        entry_uri: "demo.sea".into(),
+        files: vec![SourceFile {
+            uri: "demo.sea".into(),
+            sha256: sha256_hex(src.as_bytes()),
+            content: src.into(),
+        }],
+    };
+    let mut worlds = WorldRegistry::new();
+    let registered = worlds
+        .register_source_set("demo", &set)
+        .unwrap()
+        .to_string();
+
+    let mut e4 = e4_governed_request();
+    let mut e3 = e3_context_packet();
+    e4["payload"]["world_ref"] = json!(registered);
+    e3["payload"]["world_ref"] = json!(registered);
+    let intent = accept_verified_governed_work_request(&e4, &e3, DOMAIN_HASH, &worlds)
+        .expect("a registered world is accepted");
+    assert_eq!(intent.world_ref, registered);
+
+    // Well-formed and self-consistent, but never registered: refused.
+    let err = accept_verified_governed_work_request(
+        &e4_governed_request(),
+        &e3_context_packet(),
+        DOMAIN_HASH,
+        &worlds,
+    )
+    .unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
+
+    // An empty registry knows no world at all.
+    let err = accept_verified_governed_work_request(&e4, &e3, DOMAIN_HASH, &WorldRegistry::new())
+        .unwrap_err();
+    assert!(matches!(err, GovernedIngressError::World { .. }), "{err}");
 }

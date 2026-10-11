@@ -87,3 +87,15 @@ description = "casework live-ladder run evidence (harness cells, trace zips)"
 paths = [
   '''^\.agents/evidence/casework-live-wiring/T10/.*''',
 ]
+
+# Historical evidence from the godspeed-bounded-judgment gauntlet (immutable by repository rule, so the
+# files cannot be edited). Inspected 2026-10-04 and again 2026-10-05: the generic-api-key hits are test-fixture
+# event-type strings and benchmark observation rows where "key" is a 16-hex row id and long tokens are answer
+# labels; none is a credential. Commit-fingerprint entries in .gitleaksignore cannot cover these in CI, because a
+# shallow pull-request checkout scans them under a new commit hash. Scoped to this one rule and directory.
+[[allowlists]]
+description = "benchmark and gate evidence under godspeed-bounded-judgment (verified false positives)"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^\.agents/evidence/godspeed-bounded-judgment/''',
+]

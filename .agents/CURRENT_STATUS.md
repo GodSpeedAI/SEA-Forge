@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 74
+**Status revision:** 75
 
-**Stage:** Casework live wiring: T09-T12 complete and merged to local main; just check green on a clean checkout; T13 not started
+**Stage:** Casework live wiring: T09-T12 complete; remote casework/live-wiring (CEP migration #7-#9, a88eb3e) merged into the clean branch; PR #11 open; T13 not started
 
-**Summary:** Scoped gitleaks allowlist for the retained T10 live-ladder evidence (idempotency keys and UI snapshot field names, inspected; no credentials).
+**Summary:** Merged origin/casework/live-wiring into casework/live-wiring-clean-2026-10-09. 14 conflicts resolved keeping the later and more complete side (this branch's observed-stack helpers, evidence children, login throttle, physicalAttempt run_get admission, append-only YAML+MD status contract and context-check alias; spec 0.2.6); gitleaksignore entries unioned; the case-colliding T09 raw capture renamed with an upper- prefix so macOS checkouts work. Remote-only changes (CEP world_ref migration, CI bun/Tauri/gitleaks/case fixes) came in unchanged.
 
 **Verified:**
 
@@ -34,6 +34,7 @@
 - gitleaks over T10 evidence: 19 generic-api-key hits, all idempotency_key values in harness cell ledgers.
 - just status-check passes on a clean checkout of main.
 - just check (status, fmt, clippy, typecheck, cargo-deny, gitleaks) run on a clean checkout of main.
+- After the merge: Rust workspace 1246 pass / 0 fail; clippy -D warnings clean; Go vet and go test -p 1 ./... ok; UI typecheck clean, 373 tests pass.
 
 **Limits:**
 
@@ -60,8 +61,9 @@
 - Open operator decisions: CW-47, CW-49, CW-51; DEBT CW-43..CW-54 remain open.
 - just check must be run before any merge or publication; casework-live GitHub workflow has not been dispatched (CW-53).
 - T13 not started; nothing published or merged.
+- DEBT M-53 still lists two failures on the old base: macOS conformance_m5 tests assume the Landlock jail, and workbench packaged_stack records_survive_the_kernel_being_stopped_and_started_again; PR #11 CI will show whether they persist.
 
-**Next:** Operator: push authorization, CW-47/49/51, dispatch casework-live workflow once (CW-53), authorize T13.
+**Next:** Push the merge, read PR #11 CI, fix remaining failures (M-53), then merge the PR by squash with the conventional title once required checks pass.
 
 **Evidence:**
 
@@ -96,6 +98,7 @@
 - .agents/reports/casework-live-wiring/delivery-summary.md
 - crates/sea-forge-ledger/src/types.rs
 - .gitleaks.toml
+- https://github.com/GodSpeedAI/SEA-Forge/pull/11
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

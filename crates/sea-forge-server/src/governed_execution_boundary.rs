@@ -288,6 +288,10 @@ pub enum BoundaryError {
         expected_parent: String,
         recorded: Vec<String>,
     },
+    /// The invocation or observation names no world, a malformed one, or a
+    /// world different from the one the invocation was authorized in
+    /// (CEP-0008 `world_ref`).
+    World { reason: String },
     /// No authorized invocation exists under the cited identity.
     UnknownInvocation { invocation_id: String },
     /// The observation belongs to a superseded generation of its slot.
@@ -355,6 +359,7 @@ impl std::fmt::Display for BoundaryError {
                 f,
                 "observation does not cite its authorized invocation as causal parent: expected {expected_parent}, recorded {recorded:?}"
             ),
+            Self::World { reason } => write!(f, "semantic world rejected: {reason}"),
             Self::UnknownInvocation { invocation_id } => write!(
                 f,
                 "no authorized invocation exists under invocation_id {invocation_id:?}"
@@ -397,6 +402,8 @@ pub struct AuthorizedInvocation {
     pub authority_decision_id: String,
     pub operation: String,
     pub resource: String,
+    /// The world this invocation was authorized in.
+    pub world_ref: String,
 }
 
 /// Total projection of an [`AuthorityAction`] into the frozen
@@ -460,6 +467,7 @@ pub fn emit_authorized_invocation(
     local_model_sha256: &str,
     governed_work_request_event_id: &str,
     grant_id: Option<&str>,
+    world_ref: &str,
 ) -> Result<AuthorizedInvocation, BoundaryError> {
     // 1. Authority gate — deny/escalate/boundary/degraded produce NOTHING.
     if decision.verdict != Verdict::Allow
@@ -489,6 +497,10 @@ pub fn emit_authorized_invocation(
             local: local_model_sha256.trim().to_string(),
         });
     }
+
+    // 3b. The world the work request was pinned to (syntax only here; the
+    //     digest is verified on the CEP authority path).
+    crate::world_pin::verify(world_ref).map_err(|reason| BoundaryError::World { reason })?;
 
     // 4. Mandatory causal lineage to the governing work request.
     let causal_parent = check_identity_string(
@@ -534,6 +546,7 @@ pub fn emit_authorized_invocation(
         Value::String(declared_model_sha256.to_string()),
     );
     payload.insert("namespace".into(), Value::String(NAMESPACE.into()));
+    payload.insert("world_ref".into(), Value::String(world_ref.to_string()));
     payload.insert(
         "work_request_id".into(),
         Value::String(work_request_id.clone()),
@@ -576,6 +589,7 @@ pub fn emit_authorized_invocation(
         authority_decision_id: decision.decision_id.clone(),
         operation,
         resource,
+        world_ref: world_ref.to_string(),
     })
 }
 
@@ -593,6 +607,7 @@ struct IssuedInvocation {
     authority_decision_id: String,
     operation: String,
     resource: String,
+    world_ref: String,
 }
 
 #[derive(Debug, Default)]
@@ -614,6 +629,9 @@ pub enum ObservationOutcome {
         authority_decision_id: String,
         execution_status: String,
         observed_effects: Value,
+        /// The world the invocation was authorized in — taken from the
+        /// LEDGER record, never from the observation.
+        world_ref: String,
     },
     /// A redelivery of an already-settled observation (same event id or
     /// idempotency key). Explicitly consequence-free: the first settlement
@@ -715,6 +733,10 @@ impl InvocationLedger {
         }
         let invocation_id = invocation_id.unwrap_or_default();
 
+        // CEP-0008: an invocation is authorized in exactly one world.
+        let world_ref = crate::world_pin::from_payload(payload)
+            .map_err(|reason| BoundaryError::World { reason })?;
+
         // ENV-I4: derived envelopes identify their causal parents.
         let parents = causal_parents(envelope);
         if parents.is_empty() {
@@ -763,6 +785,7 @@ impl InvocationLedger {
                 authority_decision_id: authority_decision_id.unwrap_or_default(),
                 operation: operation.unwrap_or_default(),
                 resource: resource.unwrap_or_default(),
+                world_ref,
             });
         }
         self.by_invocation_id.insert(invocation_id, key);
@@ -947,6 +970,14 @@ impl InvocationLedger {
             });
         }
 
+        // World: an observation may not move the cycle into another world. It
+        // need not carry one (the world comes from the ledger record), but a
+        // world it does claim must be exactly the authorized one.
+        if let Some(claimed) = payload.get("world_ref") {
+            crate::world_pin::require_same(&issued.world_ref, claimed.as_str())
+                .map_err(|reason| BoundaryError::World { reason })?;
+        }
+
         // Fabricated/self-asserted authority inside the response has NO
         // authority effect: it either matches the recorded decision exactly
         // (and is redundant) or the observation is refused. The outcome below
@@ -987,6 +1018,7 @@ impl InvocationLedger {
             authority_decision_id: issued.authority_decision_id.clone(),
             execution_status,
             observed_effects,
+            world_ref: issued.world_ref.clone(),
         })
     }
 

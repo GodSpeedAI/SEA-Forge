@@ -17,3 +17,23 @@ fd0475721fea79d899dcf0535b31f5250652ce4c:4/full.jsonl:private-key:310
 f56fc1756a68a4ca5a42f6e98b9ec690821f5088:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/task-artifact-checkpoint-inventory-oct08.json:generic-api-key:1
 d100b9b80986cef4b7c38022b3299b198ee68a03:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/run-observation-checkpoint-gitleaks-exception-independent-review-oct08.md:generic-api-key:15
 d100b9b80986cef4b7c38022b3299b198ee68a03:.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/checkpoint-two-false-positive-fingerprints-builder-oct08.md:generic-api-key:7
+# Verified false positives (2026-10-04). Every entry is one fingerprint of the generic-api-key rule
+# in a historical evidence file under .agents/ (immutable by repository rule), all from commit 44b5a0b3:
+#   - test-fixture JSON containing event-type strings, and
+#   - benchmark observation rows where "key" is a 16-hex row id and long tokens are answer labels.
+# They were inspected by character class and structure; none is a credential. Do not add entries
+# without the same inspection. Format: <commit>:<file>:<rule>:<line>
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK-fmt-drift.txt:generic-api-key:587
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CHECK.log:generic-api-key:590
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T00/gate-SEA_CI.log:generic-api-key:590
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:150
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:23
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:26
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:49
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:81
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T18/observations.jsonl:generic-api-key:99
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:generic-api-key:125
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:generic-api-key:129
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:generic-api-key:39
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/T27/observations.jsonl:generic-api-key:96
+44b5a0b36399fffbd685de7d93bda1933ed75c96:.agents/evidence/godspeed-bounded-judgment/repeatability/observations.jsonl:generic-api-key:116

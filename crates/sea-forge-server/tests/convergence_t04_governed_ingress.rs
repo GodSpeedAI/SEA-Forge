@@ -13,6 +13,10 @@
 //!   TEETH-2 context packet cross-wire    -> rejected
 //!   TEETH-3 different DomainForge model  -> rejected before governed execution
 
+// These suites exercise the wire contract with synthetic worlds; the verified
+// entry point is covered by `stage11_*` in convergence_t11_whole_loop.rs.
+#![allow(deprecated)]
+
 use serde_json::{json, Value};
 
 use sea_forge_server::governed_work_ingress::{accept_governed_work_request, GovernedIngressError};
@@ -56,6 +60,13 @@ fn e4_golden_fixture_from_swe_seed_producer_is_accepted() {
     assert!(!intent.intent.is_empty());
     assert!(intent.proof_contract.get("criterion").is_some());
     assert!(!intent.settlement_criteria.is_empty());
+    // CEP-0008: SWE_SEED's real producer pins a well-formed world, and the
+    // CK packet in the fixture names the same one.
+    assert!(intent.world_ref.starts_with("world:"));
+    assert_eq!(
+        body["context_packet"]["payload"]["world_ref"].as_str(),
+        Some(intent.world_ref.as_str())
+    );
 }
 
 // --- frozen falsifier: opaque command-only requests ------------------------------
