@@ -16,7 +16,12 @@ fn run(root: &std::path::Path, action: &str, extra: &[&str]) -> (u8, String) {
     args.extend_from_slice(extra);
     let output = Command::new(sea_forge_bin()).args(&args).output().unwrap();
     let code = output.status.code().unwrap_or(1) as u8;
-    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let mut stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    if code != 0 {
+        // A failing command reports its reason on stderr; keep it in the assertion message.
+        stdout.push_str("\n[stderr] ");
+        stdout.push_str(&String::from_utf8_lossy(&output.stderr));
+    }
     (code, stdout)
 }
 
