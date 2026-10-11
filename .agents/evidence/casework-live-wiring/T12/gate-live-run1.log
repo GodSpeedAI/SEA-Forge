@@ -1,0 +1,15 @@
+live ladder; evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T10/run-2026-10-10T23-34-05-442Z
+stack up: base=http://127.0.0.1:4179 cell=/tmp/t10-live-eukSX5/cell
+bundle: 13 JS assets scanned (disk + HTTP), no fixture adapter
+[PASS] L0: Readiness and identity (5/5 steps, 16194ms)
+[PASS] L1: Template to preflight to commit (6/6 steps, 25451ms)
+[PASS] L2: Horizon standing (5/5 steps, 20920ms)
+[PASS] L3: Discretionary add (5/5 steps, 45304ms)
+[PASS] L4: Execute through the UI (5/5 steps, 30142ms)
+[PASS] L5: Sign-off: operator denied, R-SO approves in a separate session (9/9 steps, 102874ms)
+[PASS] L6: Settlement and the evidence dock (5/5 steps, 40289ms)
+[PASS] L7: Lifecycle: close, reopen, terminate (8/8 steps, 132400ms)
+[PASS] L8: Thoth ask narration: interrupt and resume (7/7 steps, 97371ms)
+[PASS] L9: L0-L8 in one session: console and errors stay empty (6/6 steps, 18056ms)
+[PASS] L-RECOV: Recovery: corrupt artifact, SSE drop, kernel and gateway kill -9 (9/9 steps, 349939ms)
+EXIT 0 dur=892s

@@ -1,0 +1,18 @@
+casework-ui-up: serving http://127.0.0.1:4178 (pid 1171771)
+casework-ui-up: log: .sea-forge/casework-ui/ui.log
+Checking if dev server is running at http://127.0.0.1:4178
+Dev server is ready. Running tests with base=http://127.0.0.1:4178
+Output directory: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/godspeed-casework-cognitive-environment/ui-journeys/latest
+[PASS] J0: Boot / orientation substrate (6/6 steps, 24375ms)
+[PASS] J1: Focus substrate (6/6 steps, 59841ms)
+[PASS] J2: Artifact inspection substrate (7/7 steps, 88648ms)
+[PASS] J3: Representation-switching substrate (6/6 steps, 73073ms)
+[PASS] J4: Temporal + comparison substrate (8/8 steps, 127468ms)
+[PASS] J5: Narrated semantic-beat journey (6/6 steps, 182191ms)
+[PASS] J6: Causal reasoning journey (6/6 steps, 89937ms)
+[PASS] J7: Case Design journey (8/8 steps, 97576ms)
+[PASS] J8: Consequential-action UI journey (contract adapter) (8/8 steps, 98483ms)
+[PASS] J9: Integrated cognitive-environment journey (contract adapter) (9/9 steps, 295643ms)
+[PASS] RECOVERY: UI-level recovery (bounded failures) (8/8 steps, 268640ms)
+EXIT run 0 dur=1410s
+casework-ui-down: stopped (pid 1171771)

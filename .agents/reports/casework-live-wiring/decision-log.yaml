@@ -329,3 +329,27 @@ t10_accepted_deviations:
         design: sessions are in-memory), and ArtifactService caches an error per artifact ref until the
         page is reloaded (L-RECOV restores the bytes, then reloads to prove the digest verifies again).
         L-RECOV asserts the behavior as it is. Tracked as DEBT CW-46.
+    - id: T11-DEV-1
+      title: Load budgets are calibrated on one shared development host
+      deviation: >-
+        The load harness budgets (intent p95 20s, event lag p95 40s, bounded gateway memory) were set from
+        runs on a single shared WSL2 host, not a dedicated production-like machine. The T12 independent run
+        measured intent p95 8.0s, event lag p95 7.75s, 0 errors, memory 30-47 MB across kernel and gateway
+        kill teeth. The budgets are regression guards, not capacity claims. Tracked in load-budgets.md.
+    - id: T11-DEV-2
+      title: CI workflow written but not yet dispatched on GitHub
+      deviation: >-
+        .github/workflows/casework-live.yml has not been run on GitHub (DEBT CW-53). It is unverified
+        until a manual workflow_dispatch is done; that is an outward-facing action left to the operator.
+    - id: T11-DEV-3
+      title: Backup is offline-only; metrics are loopback-only
+      deviation: >-
+        casework-cell-backup/restore require the stack stopped (no online snapshot). Prometheus-text
+        metrics are served on a loopback-only listener by design. Packaging (systemd units, config
+        reference, runbook) was checked by static review and systemd-analyze in the authoring session;
+        T12 did not independently reproduce systemd-analyze.
+    - id: T11-DEV-4
+      title: T11 security review was self-run by a delegated agent, not an external review
+      deviation: >-
+        .agents/reports/casework-live-wiring/security-review.md was produced by a delegated agent with
+        fixes committed in e8d66ad. T12 did not independently re-audit it.

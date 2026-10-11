@@ -1,0 +1,9 @@
+live ladder [tooth: console-error]; evidence: /home/sprime01/projects/sea-rs-t12-fresh/.agents/evidence/casework-live-wiring/T10/run-2026-10-11T00-22-05-682Z
+stack up: base=http://127.0.0.1:4179 cell=/tmp/t10-live-3YaRWO/cell
+bundle: 13 JS assets scanned (disk + HTTP), no fixture adapter
+[FAIL] L9: Tooth: the strict console check fails on an injected console error (1/2 steps, 3970ms)
+  Error: 2 error(s) in the tooth session: [console] tooth-injected-console-error | [pageerror] Error: tooth-injected-page-error
+    at file:///tmp/l9-tooth-Ev0nin/noisy.html:1:140
+TOOTH console-error: PASS - the strict check failed at "strict: tooth session, agent-browser console and errors are empty of errors for the whole run": 2 error(s) in the tooth session: [console] tooth-injected-console-error | [pageerror] Error: tooth-injected-page-error
+    at file:///tmp/l9-tooth-Ev0nin/noisy.html:1:140
+EXIT 0 dur=6s

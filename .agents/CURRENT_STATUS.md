@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 69
+**Status revision:** 70
 
-**Stage:** Casework live wiring: T11 complete in code; READMEs describe the live stack; T12 independent fresh-clone acceptance pending
+**Stage:** Casework live wiring: T09-T12 complete; T12 independent fresh-clone acceptance CONFIRM WITH CONDITIONS; T13 not started
 
-**Summary:** Go and UI READMEs and the e2e README now present the live stack as the production path (real kernel over SFWP, delegated identity, production UI build served by the gateway, ladders, load test, metrics, known limitations) and keep fixture mode documented as dev/test only; stale fixture-labeled text in the justfile was removed; the cell restore script archive validation was hardened.
+**Summary:** T12 independent agent cloned e284e26 fresh and ran every gate: UI 373 pass; fixture ladder 11/11; Go (plain and -tags live) 12 packages ok; Rust workspace 1158 pass/0 fail/4 ignored; just casework-e2e-live 3x on fresh cells 11/11 PASS (70 steps each); four teeth caught their injected faults; just casework-load within budgets with 0 errors. Final-acceptance criteria 1-4 pass with accepted limits: dev auth in the live ladder, hand-built harness cell, no video/trace (CW-44), kernel does not resume an escalated item after approval (CW-45), no execution_progress or typed settlement in the live gateway. T11 decision-log entries added. Earlier status text saying T10-T12 unstarted or T11 not complete is superseded by this revision.
 
 **Verified:**
 
@@ -29,6 +29,8 @@
 - T11C: go vet and go test -p 1 ./... green; cargo test -p sea-forge-ledger green; regression tests fail when fixes are reverted (OIDC nonce, OIDC state cap, readyz leak, symlink-safe view temp); just casework-e2e-live --skip-build and just casework-load both pass after the fixes (reported by the implementing agent). TestLiveSubscriptionResumeAcrossRestart: failed ~80% under saturated CPUs before the test fix, 15/15 with -race after.
 - T11D: workflow YAML parses and defines three jobs; referenced commands exist locally (just --dry-run casework-load renders, go vet and gofmt clean, agent-browser install --with-deps exists); not run on GitHub and actionlint is unavailable.
 - READMEs were checked against code, configs and reports by the editing agent; no recipe was run for the docs change.
+- T12 independent confirmation (CONFIRM WITH CONDITIONS): .agents/evidence/casework-live-wiring/T12/independent-confirmation.md; UI tests now 373 (earlier 347 figure superseded).
+- T12 did not run just check, just proof or just status-check, and did not reproduce systemd-analyze, the CI workflow, codec captures or the Rust SoD mutation check.
 
 **Limits:**
 
@@ -52,8 +54,11 @@
 - TestT11IntentInputBounds is a weak regression proof (fails only by not compiling without the fix); restore script hardening F9 has no automated test.
 - casework-live.yml is unverified on GitHub (CW-53 asks for one manual workflow_dispatch before relying on it; CW-54 nightly load job may be flaky on shared runners).
 - UI dev recipe casework-ui-up shows the local adapter unless VITE_CASEWORK_SOURCE=live; configs/live-serve.json has no static_root, so the gateway serves the UI only with a config that sets it (documented, not changed).
+- Open operator decisions: CW-47, CW-49, CW-51; DEBT CW-43..CW-54 remain open.
+- just check must be run before any merge or publication; casework-live GitHub workflow has not been dispatched (CW-53).
+- T13 not started; nothing published or merged.
 
-**Next:** T12: independent agent clones the repo fresh and runs just casework-e2e-live x3 on fresh cells plus the other gates, audits evidence against final_acceptance and target_settlement; then resolve operator decisions CW-47/49/51.
+**Next:** Operator: decide CW-47/49/51, dispatch the casework-live workflow once, run just check, then authorize T13/publication. No further implementation is pending.
 
 **Evidence:**
 
@@ -83,6 +88,7 @@
 - .github/workflows/casework-live.yml
 - apps/godspeed-casework-go/README.md
 - apps/godspeed-cognitive-ui/README.md
+- .agents/evidence/casework-live-wiring/T12/independent-confirmation.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

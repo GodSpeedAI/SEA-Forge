@@ -1,0 +1,623 @@
+=== RUN   TestToothGatewayRestartUnder50SSEClients
+    load_test.go:501: evidence: /home/sprime01/projects/sea-rs/.agents/evidence/casework-live-wiring/T11/negative-control-no-resume-watermark/tooth-gateway-neg.json
+    load_test.go:502: gateway restart: resynced 50/50 clients (reconnected 50, re-logged-in 50, resync_required frames 0); first accepted intent 1230 ms after the restart began; post burst 40 intents, 0 errors
+    load_test.go:504: in flight at the crash: 80 intents, 70 failed; acknowledged 74, durable plan_mutated events 82
+    load_test.go:506: gateway RSS MB before/peak/after = 26.7/44.5/26.1; goroutines 124 -> 119; fds 78 -> 73; revisions per client 32 -> 101; outage probe (0 ms): 
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 0: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 0: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 1: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 1: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 2: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 2: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 3: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 3: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 4: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 4: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 5: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 5: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 6: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 6: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 7: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 7: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 8: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 8: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 9: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 9: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 10: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 10: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 11: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YE6GJ5BGZXG6E0DT5ZG (not monotonic)
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 11: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 11: saw 100 revisions, client 0 saw 101 (sequences differ: first difference at 41: 01M4KS3V9XE6NPST8N1Z3JQKNY vs 01M4KS3YKMTHN7GX0ANRFY9YWD)
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 12: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 12: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 12: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 13: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 13: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 14: id 01M4KS3XDTD8T70FYY5XJ4P564 not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 14: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 14: saw 100 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3XDTD8T70FYY5XJ4P564 vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 15: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 15: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 16: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 16: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 17: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 17: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 18: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 18: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 19: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 19: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 19: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 20: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 20: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 21: id 01M4KS3XDTD8T70FYY5XJ4P564 not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 21: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 21: saw 100 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3XDTD8T70FYY5XJ4P564 vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 22: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 22: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 23: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 23: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 23: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 24: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 24: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 25: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 25: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 26: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 26: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 27: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 27: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 28: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 28: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 29: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 29: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 30: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 30: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 31: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 31: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 31: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 32: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 32: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 33: id 01M4KS3XDTD8T70FYY5XJ4P564 not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 33: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 33: saw 100 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3XDTD8T70FYY5XJ4P564 vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 34: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 34: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 35: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 35: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 35: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 36: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 36: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 37: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 37: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 37: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 38: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 38: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 39: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 39: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3V7J8Z0QTXKBCRS3KMCB
+    load_test.go:510: restart tooth violation: client 40: id 01M4KS3V7J8Z0QTXKBCRS3KMCB not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 40: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 40: saw 102 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3V7J8Z0QTXKBCRS3KMCB vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 41: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 41: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 42: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 42: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 43: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 43: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 44: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 44: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 45: id 01M4KS3XDTD8T70FYY5XJ4P564 not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 45: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 45: saw 100 revisions, client 0 saw 101 (sequences differ: first difference at 42: 01M4KS3XDTD8T70FYY5XJ4P564 vs 01M4KS3V9XE6NPST8N1Z3JQKNY)
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 46: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 46: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 47: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 47: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 48: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 48: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3V9XE6NPST8N1Z3JQKNY
+    load_test.go:510: restart tooth violation: client 49: id 01M4KS3V9XE6NPST8N1Z3JQKNY not after 01M4KS3YKMTHN7GX0ANRFY9YWD (not monotonic)
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3XDTD8T70FYY5XJ4P564
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3XHF3GJJPWH8DES1A1KG
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3XHJA6H9C4BZFT509ANN
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3XHQ7ZFPYGYCX0GZZ4MM
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3XWNNV6R9JRJEVH44VXP
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3Y2JTF1CXJRQ4X35YG38
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3Y2KX6GVHN0HZW9KHDB6
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3Y2S97X236CMNJTPCZ9X
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3YE6GJ5BGZXG6E0DT5ZG
+    load_test.go:510: restart tooth violation: client 49: duplicate revision 01M4KS3YKMTHN7GX0ANRFY9YWD
+--- FAIL: TestToothGatewayRestartUnder50SSEClients (24.31s)
+FAIL
+FAIL	github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go/internal/loadtest	24.312s
+FAIL
