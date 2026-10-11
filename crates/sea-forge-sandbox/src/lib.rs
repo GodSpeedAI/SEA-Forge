@@ -320,23 +320,24 @@ fn checked_parent(
 /// F-25.i: write-through after `safe_join` without reopening the
 /// check-then-use window. The destination is opened with `O_NOFOLLOW`, so a
 /// symlink swapped in between validation and open fails with `ELOOP` (mapped
-/// to a typed unsafe-path error) instead of writing through the link.
+/// to a typed unsafe-path error) instead of writing through the link. The
+/// flag and errno come from `libc`: their values differ per OS and
+/// architecture (macOS, aarch64 Linux), so a hardcoded literal silently
+/// disables the guard off x86 Linux.
 /// Residual parent-component races remain until `openat2(RESOLVE_BENEATH)`
 /// stabilizes; per-component re-validation in `safe_join` keeps them narrow.
 #[cfg(unix)]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
-    // 0o400000 is the Linux `O_NOFOLLOW` (glibc) / `O_NOFOLLOW` (FreeBSD) value.
-    const O_NOFOLLOW: i32 = 0o400000;
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .custom_flags(O_NOFOLLOW)
+        .custom_flags(libc::O_NOFOLLOW)
         .open(destination)
         .map_err(|e| {
-            if e.kind() == std::io::ErrorKind::Other && e.raw_os_error() == Some(40) {
+            if e.raw_os_error() == Some(libc::ELOOP) {
                 ForgeError::UnsafePath(format!(
                     "destination {} was swapped to a symlink during materialization",
                     destination.display()

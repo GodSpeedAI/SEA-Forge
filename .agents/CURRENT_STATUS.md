@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 78
+**Status revision:** 79
 
 **Stage:** Casework live wiring: T09-T12 complete; PR #11 macOS CI follow-up; T13 not started
 
-**Summary:** just test now uses --no-fail-fast so one CI run reports every failing test binary (previous commit's message said so but the justfile edit had not applied).
+**Summary:** Found by the first complete macOS CI report: safe_write hardcoded the Linux x86 O_NOFOLLOW value (0o400000) and Linux ELOOP (40), so on macOS (and aarch64 Linux) a symlink swapped in between validation and open was written through. It now uses libc::O_NOFOLLOW and libc::ELOOP (libc added as a unix dependency of sea-forge-sandbox, workbench lockfile updated). conformance_m16 t16_4 needs the Linux interactive jail and is ignored off Linux with a stated reason.
 
 **Verified:**
 
@@ -36,6 +36,7 @@
 - just check (status, fmt, clippy, typecheck, cargo-deny, gitleaks) run on a clean checkout of main.
 - After the merge: Rust workspace 1246 pass / 0 fail; clippy -D warnings clean; Go vet and go test -p 1 ./... ok; UI typecheck clean, 373 tests pass.
 - just workbench-tauri-test passes locally; conformance_m5 passes on Linux (4 pass, 2 helper ignores); clippy clean for sea-forge-case-runner.
+- sea-forge-sandbox tests pass on Linux including destination_swapped_to_symlink_between_check_and_write_is_refused; conformance_m16 16 pass; just workbench-tauri-test passes with the updated lockfile. macOS result pending CI.
 
 **Limits:**
 
@@ -63,8 +64,9 @@
 - just check must be run before any merge or publication; casework-live GitHub workflow has not been dispatched (CW-53).
 - T13 not started; nothing published or merged.
 - DEBT M-53 still lists two failures on the old base: macOS conformance_m5 tests assume the Landlock jail, and workbench packaged_stack records_survive_the_kernel_being_stopped_and_started_again; PR #11 CI will show whether they persist.
+- The symlink guard fix is verified on Linux only; macOS is verified by CI.
 
-**Next:** Read PR #11 macOS result; gate any further Linux-jail-only tests; squash-merge when required checks are green.
+**Next:** Read PR #11 macOS result; squash-merge when required checks are green.
 
 **Evidence:**
 
@@ -100,6 +102,7 @@
 - crates/sea-forge-ledger/src/types.rs
 - .gitleaks.toml
 - https://github.com/GodSpeedAI/SEA-Forge/pull/11
+- crates/sea-forge-sandbox/src/lib.rs
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

@@ -595,6 +595,10 @@ async fn t16_3_every_v1_tool_kind_maps_and_unknown_kind_denies() {
 }
 
 #[tokio::test]
+#[cfg_attr(
+    not(target_os = "linux"),
+    ignore = "needs the Linux interactive jail backend"
+)]
 async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
     let root = tempfile::tempdir().unwrap();
     std::fs::write(
