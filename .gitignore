@@ -58,3 +58,6 @@ workbench/.tools/
 
 # Standalone database binaries (local downloads)
 /clickhouse
+
+# Jolli memory tool runtime state (churns on every session)
+.jolli/

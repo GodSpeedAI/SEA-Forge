@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 81
+**Status revision:** 82
 
-**Stage:** Casework live wiring: T09-T12 complete; PR #11 macOS CI follow-up; T13 not started
+**Stage:** repo-hygiene
 
-**Summary:** macOS CI flakes traced to test temp directories keyed only on a nanosecond clock reading: macOS clocks tick in microseconds, so parallel tests in one binary could share a directory and one test's remove_dir_all deleted another's files (self_model_cli, then conformance_m2 'read plan proposal: No such file'). All 17 test files using that pattern now add the process id and a process-wide counter to the directory name.
+**Summary:** Agent instructions now say to commit often at meaningful milestones, and Jolli runtime state is untracked and gitignored so it stops dirtying the tree.
 
 **Verified:**
 
@@ -39,6 +39,7 @@
 - sea-forge-sandbox tests pass on Linux including destination_swapped_to_symlink_between_check_and_write_is_refused; conformance_m16 16 pass; just workbench-tauri-test passes with the updated lockfile. macOS result pending CI.
 - self_model_cli passes on Linux; 40 repeat runs without failure.
 - Rust workspace 1246 pass / 0 fail; clippy -D warnings clean.
+- just check run on this branch before push
 
 **Limits:**
 
@@ -70,7 +71,7 @@
 - The macOS self_model_cli failure is not yet explained.
 - The macOS fix is verified by CI only.
 
-**Next:** Read PR #11 macOS result; squash-merge when required checks are green.
+**Next:** Merge via auto-merge once CI is green; T13 not started.
 
 **Evidence:**
 
@@ -108,6 +109,9 @@
 - https://github.com/GodSpeedAI/SEA-Forge/pull/11
 - crates/sea-forge-sandbox/src/lib.rs
 - crates/sea-forge-cli/tests/self_model_cli.rs
+- .gitignore
+- .agents/WORKBENCH-SLICE-PROMPT.md
+- .agents/specs/cognitive-environment/RUN_PLAN.md
 
 **Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
 

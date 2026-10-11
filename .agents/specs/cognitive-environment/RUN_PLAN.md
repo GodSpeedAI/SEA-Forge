@@ -10,7 +10,7 @@ App: `apps/godspeed-cognitive-ui` (placeholder `src/main.tsx`; React 19 + Vite +
 - **Haiku**: recon, focused module builds from precise specs (one module or component per agent, with exact file paths, the interface, and acceptance tests), screenshot capture, and first-pass visual diff notes.
 - **Main agent**: architecture, the shared types and interfaces (write these *first*, yourself, so Haiku agents build against fixed contracts), integration and wiring, visual judgment against the mocks, and final verification. Spot-check every Haiku report by reading the code or screenshot that matters.
 - Run independent Haiku builds in parallel (≤4 at a time). Keep prompts self-contained and point them to §0.1 of the spec.
-- **Do not commit, push, stash, reset or clean.** Leave all changes in the working tree for the operator. Never touch files outside `apps/godspeed-cognitive-ui` and `.agents/specs/cognitive-environment` unless strictly required.
+- **Commit often at meaningful milestones. Do not push, stash, reset or clean.** Never touch files outside `apps/godspeed-cognitive-ui` and `.agents/specs/cognitive-environment` unless strictly required.
 - Never restore or read the old host backup tarball. Do not port `gargantua.html`.
 - Add npm dependencies only when a milestone requires them, and record why in the Progress Log.
 - Keep `bun run typecheck`, `bun run build` and `bun test` green at the end of every milestone. Tests belong next to modules (`*.test.ts`) for pure logic: camera math, layout, LOD thresholds, beat player, artifact snapshot/restore, and time-slice derivation.
