@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 94
+**Status revision:** 95
 
-**Stage:** semantic-cell-execution: governed cell episode
+**Stage:** ci: required authority-opa job
 
-**Summary:** Governed Semantic Cell episode: ExecuteSandboxCommand guest-command action (host ExecuteCommand gate unchanged); PromoteChangeset is approval-only; a real OPA 1.21.1 subprocess candidate replaces the placeholder engine and is accepted only when evaluated over the engine's own Rego bundle; OpenShell backend and Git-backed changesets added. Live MicroVM proof remains BLOCKED / UNPROVEN.
+**Summary:** A required authority-opa CI job runs the real-OPA authority and cell-episode tests against opa 1.21.1 verified by a pinned SHA-256 digest.
 
 **Verified:**
 
@@ -59,6 +59,7 @@
 - Semantic-cell integration on Rust 1.99.0 and the strict YAML boundary: clippy --workspace --all-targets -D warnings and fmt clean; authority, changeset, sandbox, runtime and case-runner tests pass (297 passed, 0 failed); cell_episode 24 pass by default.
 - Test isolation: with GIT_DIR, GIT_INDEX_FILE and GIT_WORK_TREE pointing at a decoy repository, the changeset and case-runner tests pass (50 passed, 0 failed) and leave the decoy's HEAD, refs, config, index and object count unchanged.
 - OPA candidate binding: a candidate evaluated over another policy's Rego bundle is denied whether or not opa is required (opa_candidate::candidate_from_another_bundle_is_denied); opa_candidate passes 29 of 29 and cell_episode 30 of 30 with --include-ignored against opa 1.21.1.
+- authority-opa CI job added and required by gate; the pinned digest 668506eb...5031 equals the GitHub asset digest and the release's .sha256 for opa v1.21.1 linux amd64 static.
 
 **Limits:**
 
@@ -101,10 +102,10 @@
 - Changeset promotion requires the target ref not to be checked out in a working tree; a promotion that loses a race after its pre-check can leave unreferenced objects in the authoritative repository (refs unchanged).
 - The OpenShell 0.1.3 MicroVM driver has no per-sandbox CPU or memory limits (gateway-level vcpus and mem_mib only).
 - The RepairAgent model's single projected policy is constant true; real-OPA deny and escalate outcomes are exercised with the separate fixture fixtures/policies/gate.
-- The real-OPA tests are ignored by default and are not yet in CI: the authority-opa job that runs them is proposed separately on branch ci/authority-opa and has never run on GitHub.
+- The real-OPA tests are ignored by default locally; the authority-opa CI job runs them. Its opa digest pin shows the binary is the published release asset, not that it matches a source build. The job has not run on main before this change.
 - An OPA candidate is bound to its Rego bundle but not to the action under evaluation; one candidate can be passed to several evaluate calls.
 
-**Next:** Run the live MicroVM proof on a KVM host (BLOCKED on this WSL2 host); review the separate authority-opa CI job (branch ci/authority-opa); keep the approval-only promotion path unchanged.
+**Next:** Run the live MicroVM proof on a KVM host (BLOCKED on this WSL2 host); keep the approval-only promotion path unchanged; diagnose the intermittent TestLiveKillMidCommitRecovery restart failure.
 
 **Evidence:**
 
