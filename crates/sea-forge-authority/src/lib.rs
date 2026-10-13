@@ -66,6 +66,16 @@ pub struct ResolvedGovernance {
     pub compensating_controls: BTreeSet<String>,
 }
 
+/// The grant parts that `validate_grant` has checked; `mint_grant` only assembles them.
+struct ValidatedGrant {
+    workspace_root: PathBuf,
+    artifacts_root: Option<PathBuf>,
+    timeout_secs: Option<u64>,
+    env_keys: BTreeSet<String>,
+    sandbox_class: String,
+    expires_at: chrono::DateTime<Utc>,
+}
+
 /// Move-only proof that one exact action may execute in one exact context.
 /// It is intentionally not serializable or cloneable.
 pub struct ActionGrant {
@@ -1682,8 +1692,29 @@ impl PolicyAuthorityEngine {
                 ));
             }
         }
+        // The grant window is a fresh five minutes; the approval's expiry only
+        // shortens it when it still lies in the future.
+        let grant_window = Utc::now() + chrono::Duration::minutes(5);
+        let grant_expiry = if expires_at > Utc::now() {
+            std::cmp::min(grant_window, expires_at)
+        } else {
+            grant_window
+        };
+        // Every deterministic check that can refuse the grant runs before the
+        // append, so a refused request never spends the approval. Validation
+        // is a pure function of the inputs; the append is the atomic decision
+        // point (the idempotency key admits one caller), and minting after a
+        // successful append cannot fail for a reason validation did not check.
+        let validated = self.validate_grant(
+            decision,
+            committed_decision,
+            action,
+            assurance,
+            Verdict::Escalate,
+            Some(rule.sandbox_class.clone().unwrap_or_else(|| "local".into())),
+            Some(grant_expiry),
+        )?;
         // Ledger-backed consumption keyed by semantic decision+approval identity.
-        // Fail-closed if grant minting fails after the consumption append.
         let consumption_key = format!("{}:{}", decision.decision_id, approval.approval_id);
         let consumption = json!({
             "decision_id": decision.decision_id,
@@ -1716,23 +1747,13 @@ impl PolicyAuthorityEngine {
             }
             Err(other) => return Err(other),
         }
-        // The grant window is a fresh five minutes; the approval's expiry only
-        // shortens it when it still lies in the future.
-        let grant_window = Utc::now() + chrono::Duration::minutes(5);
-        let grant_expiry = if expires_at > Utc::now() {
-            std::cmp::min(grant_window, expires_at)
-        } else {
-            grant_window
-        };
-        self.grant_exact(
-            decision,
-            committed_decision,
-            action,
-            assurance,
-            Verdict::Escalate,
-            Some(rule.sandbox_class.clone().unwrap_or_else(|| "local".into())),
-            Some(grant_expiry),
-        )
+        // Wall-clock expiry is the one check that can still fail after the
+        // append (residual: only if the window closes between validation and
+        // this line). It is re-checked here so no expired grant is returned.
+        if Utc::now() > validated.expires_at {
+            return Err(ForgeError::Input("authority decision expired".into()));
+        }
+        Ok(self.mint_grant(decision, action, assurance, validated))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1746,6 +1767,31 @@ impl PolicyAuthorityEngine {
         sandbox_class: Option<String>,
         approval_expiry: Option<chrono::DateTime<Utc>>,
     ) -> Result<ActionGrant, ForgeError> {
+        let validated = self.validate_grant(
+            decision,
+            committed,
+            action,
+            assurance,
+            expected_verdict,
+            sandbox_class,
+            approval_expiry,
+        )?;
+        Ok(self.mint_grant(decision, action, assurance, validated))
+    }
+
+    /// Every check that can make `grant_exact` fail. Apart from the one-time
+    /// removal from `issued_decisions` on the non-approval path, it has no side effects.
+    #[allow(clippy::too_many_arguments)]
+    fn validate_grant(
+        &self,
+        decision: &AuthorityDecision,
+        committed: &CommittedRecordRef,
+        action: &AuthorityAction,
+        assurance: Option<&PreActionAssurance>,
+        expected_verdict: Verdict,
+        sandbox_class: Option<String>,
+        approval_expiry: Option<chrono::DateTime<Utc>>,
+    ) -> Result<ValidatedGrant, ForgeError> {
         if committed.record_kind() != "authority_decision" {
             return Err(ForgeError::Input(
                 "authority decision has the wrong committed record kind".into(),
@@ -1846,26 +1892,45 @@ impl PolicyAuthorityEngine {
         if Utc::now() > expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
-        Ok(ActionGrant {
-            action: action.clone(),
-            run_id: decision.run_id.clone(),
-            plan_item_id: decision.plan_item_id.clone(),
+        let sandbox_class = sandbox_class
+            .ok_or_else(|| ForgeError::Input("authority decision grants no sandbox".into()))?;
+        Ok(ValidatedGrant {
             workspace_root,
             artifacts_root,
             timeout_secs,
             env_keys,
+            sandbox_class,
+            expires_at,
+        })
+    }
+
+    /// Infallible: assembles a grant from parts that `validate_grant` has checked.
+    fn mint_grant(
+        &self,
+        decision: &AuthorityDecision,
+        action: &AuthorityAction,
+        assurance: Option<&PreActionAssurance>,
+        validated: ValidatedGrant,
+    ) -> ActionGrant {
+        ActionGrant {
+            action: action.clone(),
+            run_id: decision.run_id.clone(),
+            plan_item_id: decision.plan_item_id.clone(),
+            workspace_root: validated.workspace_root,
+            artifacts_root: validated.artifacts_root,
+            timeout_secs: validated.timeout_secs,
+            env_keys: validated.env_keys,
             _assurance_ref: assurance.map(|value| value.global_checkpoint_hash().into()),
-            sandbox_class: sandbox_class
-                .ok_or_else(|| ForgeError::Input("authority decision grants no sandbox".into()))?,
+            sandbox_class: validated.sandbox_class,
             boundaries: decision.boundary_constraints.clone(),
             compensating_controls: decision.compensating_controls.clone(),
-            _resolved_executable: match &action {
+            _resolved_executable: match action {
                 AuthorityAction::ExecuteCommand { argv, .. } => argv
                     .first()
                     .and_then(|argv0| std::fs::canonicalize(argv0).ok()),
                 _ => None,
             },
-            expires_at,
+            expires_at: validated.expires_at,
             memory_scope: decision.matched_rule.as_deref().and_then(|name| {
                 self.bundle
                     .rules
@@ -1873,7 +1938,7 @@ impl PolicyAuthorityEngine {
                     .find(|r| r.name == name)
                     .and_then(|r| r.memory_scope.clone())
             }),
-        })
+        }
     }
 
     fn evaluate_at(

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 84
+**Status revision:** 85
 
-**Stage:** security: replace serde_yaml
+**Stage:** authority: approval consumption ordering
 
-**Summary:** Replace serde_yaml (unsafe-libyaml, RUSTSEC-2024-0449) with serde-saphyr behind one strict wrapper, sea_forge_core::yaml; proven against reference identities and verdicts from the old parser over 107 real and 690 adversarial documents.
+**Summary:** grant_after_approval validates the grant before appending the consumption record, so a refused request no longer spends the approval.
 
 **Verified:**
 
@@ -43,6 +43,7 @@
 - YAML parsing goes through sea_forge_core::yaml only: duplicate keys, merge keys, unknown tags, null collections, quoted or non-canonical booleans and non-canonical integers are rejected; input, depth, node and alias limits are bounded.
 - Corpus proof: all 107 real documents keep accept/reject, policy identities, hashes and probe verdicts; no adversarial document is newly accepted.
 - domainforge-core pinned to =0.20.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
+- Approval consumption: a mismatched action, missing assurance or mismatched committed decision is refused without an approval_grant_consumption record; eight concurrent strict callers yield exactly one grant.
 
 **Limits:**
 
@@ -75,6 +76,7 @@
 - The macOS fix is verified by CI only.
 - Stricter than before: an explicit null collection (for example a bare `rules:`) and True/TRUE booleans no longer load.
 - Fields under serde flatten or internally tagged enums (planner AgentTask max_turns and token_budget) skip the spelling check; explicit YAML core tags are honoured.
+- Approval consumption residual: a grant window that closes between validation and the ledger append still spends the approval.
 
 **Next:** Review and merge the security migration; rebase the other open branches on it.
 
