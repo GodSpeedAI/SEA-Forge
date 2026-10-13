@@ -12,7 +12,7 @@ and the failure-mode reference; the full architecture lives in
 ## Prerequisites
 
 Install three host tools: Git, [Devbox](https://www.jetify.com/devbox), and
-[direnv](https://direnv.net/). Everything else (Rust 1.92.0, `just`, `sops`,
+[direnv](https://direnv.net/). Everything else (Rust 1.99.0, `just`, `sops`,
 `age`, `gitleaks`, `cargo-deny`) is pinned by Devbox and `rust-toolchain.toml`.
 
 ## First-time setup
@@ -108,6 +108,25 @@ updates) so they pass the title check.
 | `cargo deny check` fails on advisories | a workspace dep has a known advisory | `cargo update -p <crate>` to a fixed version; if impossible, document an `ignore` entry in `deny.toml` with the advisory ID and a re-evaluation date |
 | `gitleaks detect` finds a secret | a real or apparent secret was committed | rotate the secret immediately; then scrub history if needed; never just add a false-positive allowlist entry |
 | `CI / gate` fails on `cargo build --locked` | `Cargo.lock` is stale relative to `Cargo.toml` | run `cargo update -p <crate>` or `cargo generate-lockfile` locally, commit `Cargo.lock`, push |
+
+## Updating the Rust toolchain
+
+Two versions, two jobs. Do not conflate them:
+
+- **Development and CI toolchain**: `channel` in `rust-toolchain.toml` (currently 1.99.0). It is the only pin; CI, `just setup`, `just sync`, and the pre-commit hook all resolve through it. Nothing else should name a dev version.
+- **MSRV**: `rust-version` in the root `Cargo.toml` (currently 1.92.0), the lowest Rust we support. The CI `msrv` job builds the workspace with that exact version, overriding `rust-toolchain.toml`. Raise it only as a deliberate compatibility decision, not as part of a routine stable bump.
+
+Routine bump to a newer stable release:
+
+```sh
+rustup check                                  # shows the newest stable
+# edit rust-toolchain.toml: channel = "<new version>"
+just setup                                    # installs it with rustfmt + clippy
+just toolchain-check                          # rustc must equal the channel
+just ci                                       # full gate on the new compiler
+```
+
+Then update the current-state docs that name the dev version (grep for the old version string, excluding `.agents/reports`, `.agents/evidence`, `.agents/plans`, `.agents/status-archive`, `.agents/specs`, and `docs/decisions`). Leave MSRV mentions alone. Record the change in `.agents/CURRENT_STATUS.yaml` and `.agents/CURRENT_STATUS.md`. Never use beta or nightly channels.
 
 ## Updating dependencies
 

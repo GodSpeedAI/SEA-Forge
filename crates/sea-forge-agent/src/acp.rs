@@ -1285,10 +1285,7 @@ mod tests {
                 let id = value.get("id").and_then(Value::as_u64);
                 if let Some(id) = id {
                     // Flush scripted notifications/agent-requests, then one response.
-                    loop {
-                        let Some(item) = script_iter.next() else {
-                            break;
-                        };
+                    for item in script_iter.by_ref() {
                         if let Some(method) = item.get("method").and_then(Value::as_str) {
                             let params = item.get("params").cloned().unwrap_or(Value::Null);
                             let line = if let Some(req_id) = item.get("id") {

@@ -2889,13 +2889,14 @@ fn validate_ledger_references(
                 ));
             }
         }
-        Some("pre_mint_only") if token.identity_status_after == IdentityStatus::PreMint => {
-            if token.degraded_controls.is_empty() {
-                return Err(m8_error(
-                    "artifact_attestation_error",
-                    "pre_mint degraded token has no compensating controls",
-                ));
-            }
+        Some("pre_mint_only")
+            if token.identity_status_after == IdentityStatus::PreMint
+                && token.degraded_controls.is_empty() =>
+        {
+            return Err(m8_error(
+                "artifact_attestation_error",
+                "pre_mint degraded token has no compensating controls",
+            ));
         }
         _ => {}
     }

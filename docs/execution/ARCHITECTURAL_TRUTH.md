@@ -241,7 +241,7 @@ require a new authentication and authorization contract and is not inferred.
 
 ## Technology Constraints
 
-- Stable Rust 1.92.0, edition 2021, locked Cargo dependencies.
+- Stable Rust 1.99.0 (dev and CI; MSRV 1.92.0), edition 2021, locked Cargo dependencies.
 - Synchronous kernel; Tokio/HTTP only in approved edges.
 - Linux primary, macOS secondary; Landlock/Seatbelt fail closed.
 - Tauri 2 + React 19 + Bun development workspace; Bun is not shipped.

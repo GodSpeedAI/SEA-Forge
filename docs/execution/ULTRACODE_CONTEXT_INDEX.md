@@ -144,7 +144,7 @@ SEA_FORGE_ROOT=/tmp/probe/state ./target/debug/sea-forge-server &
 
 ## External prerequisites
 
-- Stable Rust 1.92.0 (`rust-toolchain.toml`)
+- Stable Rust 1.99.0 (`rust-toolchain.toml`; MSRV 1.92.0)
 - Bun 1.4.0 (`workbench/`)
 - Devbox (`devbox.json`) for system tools
 - Linux host for primary verification; macOS for Seatbelt

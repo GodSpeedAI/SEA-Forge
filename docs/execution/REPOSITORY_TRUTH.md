@@ -28,7 +28,7 @@ The README and AGENTS.md describe the project as a "minimum governed kernel (two
 
 | Layer | Tool | Pin | Evidence |
 |---|---|---|---|
-| Rust toolchain | rustup→rustc/cargo | `1.92.0` (stable, minimal profile, +rustfmt +clippy) | `rust-toolchain.toml` |
+| Rust toolchain | rustup→rustc/cargo | `1.99.0` (stable, minimal profile, +rustfmt +clippy) | `rust-toolchain.toml` |
 | Rust edition | cargo | `2021` | `Cargo.toml:30` |
 | Workspace deps | cargo + `--locked` | 331 entries in Cargo.lock | `Cargo.lock` |
 | Lint policy | clippy | `clippy::all = warn (priority -1)`, run with `-D warnings`; `unsafe_code = deny` workspace-wide | `Cargo.toml:36-40` |
@@ -281,7 +281,7 @@ None encountered this pass. The four ignored Rust tests are intentional platform
 
 ## 20. Environmental blockers
 
-None. All host tools (`cargo 1.92.0`, `rustc 1.92.0`, `just 1.55.1`, `devbox`, `bun 1.4.0`, `node lts`, `python3`) are present and pinned. No missing prerequisites.
+None. All host tools (`cargo 1.99.0`, `rustc 1.99.0` (MSRV 1.92.0), `just 1.55.1`, `devbox`, `bun 1.4.0`, `node lts`, `python3`) are present and pinned. No missing prerequisites.
 
 ## 21. Evidence index
 

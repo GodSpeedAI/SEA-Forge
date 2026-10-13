@@ -49,7 +49,7 @@ just proof                              # minimum kernel proofs P1–P4b
 
 ## 6. Rust Toolchain & Build Discipline
 
-* Toolchain: Rust 2021, pinned stable `1.92.0`, rustfmt defaults, clippy (`-D warnings`). `unsafe_code = "deny"` is enforced workspace-wide in `Cargo.toml`.
+* Toolchain: Rust 2021, dev and CI toolchain pinned stable `1.99.0` (`rust-toolchain.toml`); MSRV `1.92.0` (`Cargo.toml` `rust-version`, tested by the CI `msrv` job), rustfmt defaults, clippy (`-D warnings`). `unsafe_code = "deny"` is enforced workspace-wide in `Cargo.toml`.
 * Single compile writer: Only one agent may compile against `target/` at a time. Never run `cargo clean` while compiling or as a routine response to failures.
 * Diagnosing build storage: Use `just timings`, `just cache-stats` (`sccache`), and `du -sh target`.
 * WSL memory constraints: Do not increase Cargo build jobs or nextest concurrency to mask slow builds. Diagnose memory pressure on OOM failures.
