@@ -1,5 +1,7 @@
 # Repository Truth — SEA Forge (sea-rs)
 
+> **Status update (2026-10-13): the `src-tauri` desktop shell was removed.** The Workbench is a web app. Statements in this file about the Tauri host, the bundled sidecar, `just workbench-package`, `workbench-demo`, `workbench-e2e-real` and `workbench-tauri-test` describe the state before that removal; see ADR-004's status update.
+
 Census pass 1, completed 2026-07-27. Inspected commit `8361f25` on branch `frontend` (5 commits ahead of `origin/frontend`). Working tree clean except `.jolli/jollimemory/debug.log` (transient agent memory log). This document records **executable evidence**, not narrative.
 
 ## 1. Repository identity and inspected commit

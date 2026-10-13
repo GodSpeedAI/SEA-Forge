@@ -140,9 +140,6 @@ cat <<EOF
 
   Seeded cell: $CELL
 
-  Open it in the Workbench:
-      SEA_FORGE_ROOT=$CELL SEA_FORGE_SOCKET=$SOCK just workbench-demo
-
   Or inspect it from the command line:
       $CLI case list --root $CELL
 

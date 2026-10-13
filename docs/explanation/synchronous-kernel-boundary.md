@@ -40,6 +40,8 @@ Asynchronous runtimes and HTTP stacks (`tokio`, `hyper`, `h2`, `rustls`, `mio`) 
 
 ## 3. The Standalone Tauri Workspace Boundary (ADR-004)
 
+> Status (2026-10-13): the `src-tauri` workspace described in this section was removed. The section is kept as history of the boundary decision; see ADR-004's status update.
+
 A subtle but critical architectural decision was made in **ADR-004** regarding the desktop application (`workbench/apps/desktop/src-tauri`):
 
 ### The Risk

@@ -46,7 +46,7 @@
 * **What it is not:** It is not a natural language narration or a subjective log message.
 
 ### SFWP (SEA Forge Wire Protocol)
-* **What it is:** The versioned (v1) NDJSON protocol operating over local Unix domain sockets between `sea-forge-server` and clients (such as the Tauri desktop host).
+* **What it is:** The versioned (v1) NDJSON protocol operating over local Unix domain sockets between `sea-forge-server` and clients (such as client adapters).
 * **What it is not:** It is not a remote REST, gRPC, or WebSocket API.
 
 ### `jcs-nfc-v1`

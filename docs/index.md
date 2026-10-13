@@ -80,7 +80,7 @@ To navigate this codebase confidently, understand these eight core concepts:
 5. **ActionGrant**: A non-cloneable, non-serializable move-only Rust struct minted by the authority engine upon an `Allow` decision. It is consumed by `sea-forge-runtime::execute()`. No process can spawn without holding this grant.
 6. **Settlement (`SettlementEvent`)**: The independent evaluation of run evidence against pre-committed `SettlementCriteria`. Acceptance produces a non-empty, machine-readable `basis` (e.g. `["authority_allow", "exit_zero", "required_artifact_present:model.sea"]`).
 7. **Integrity Ledger (`LedgerStream`)**: An append-only binary/JSONL journal indexed by ULID, secured by hash chains, Merkle Mountain Ranges (MMR), and optional multi-witness cryptographic signatures.
-8. **SFWP (SEA Forge Wire Protocol)**: The versioned (v1) NDJSON protocol over a Unix domain socket connecting the Tauri desktop host to `sea-forge-server`.
+8. **SFWP (SEA Forge Wire Protocol)**: The versioned (v1) NDJSON protocol over a Unix domain socket connecting Workbench clients to `sea-forge-server` (the Tauri desktop host was removed on 2026-10-13).
 
 ---
 

@@ -6,9 +6,10 @@ user-invocable: true
 
 # Building the SEA Forge Workbench
 
-Implement the SEA Forge Workbench: a Tauri 2 desktop application whose React
-renderer talks to `sea-forge-server` only through a typed Rust bridge over the
-existing Unix-socket NDJSON surface. Every slice preserves the kernel's
+Implement the SEA Forge Workbench: a React web application. The Tauri 2 desktop
+shell was removed on 2026-10-13, so the renderer's backend bridge is pending
+replacement. The target remains that the renderer talks to `sea-forge-server`
+only through a typed bridge over the existing Unix-socket NDJSON surface. Every slice preserves the kernel's
 governance invariants: authority before side effects, evidence before
 settlement, settlement before capability.
 
@@ -21,7 +22,7 @@ grounded in the actual repository rather than in specification examples.
 ## Trigger conditions
 
 Use this skill when a task involves any of: Workbench routes or screens,
-semantic or domain components, view models, XState machines, the Tauri host or
+semantic or domain components, view models, XState machines, the renderer
 bridge, SFWP queries/commands/events, generated frontend contracts, Thoth
 interaction adapters (AG-UI or CopilotKit), event reconnect/cursor logic,
 frontend evidence/settlement/capability views, Bun workspace tooling, or
@@ -43,7 +44,7 @@ source document, not a competitor).
 
 | Layer | Decision |
 |---|---|
-| Desktop shell | Tauri 2 (owns socket access, correlation, channels, reconnect, dialogs, drafts) |
+| Desktop shell | None since 2026-10-13 (the Tauri 2 host was removed; its former duties are open) |
 | Frontend runtime/pkg | Bun (`bun.lock`, `bunfig.toml`, `packageManager: bun@<exact>`); Node never the product runtime |
 | Renderer | React 19 + TypeScript + Vite |
 | Design substrate | `@astryxdesign/core` + `@astryxdesign/theme-neutral` + `@astryxdesign/cli` (+ `@stylexjs/stylex` peer), precompiled CSS + SEA Forge theme + CSS Modules |
@@ -53,7 +54,7 @@ source document, not a competitor).
 | Forms | `react-hook-form` + `ajv` (+ `@hookform/resolvers`); schemas generated from Rust, never handwritten Zod domain schemas |
 | Dense data | Astryx Table by default; `@tanstack/react-table` / `@tanstack/react-virtual` only where virtualization/compound filtering is needed |
 | Thoth interaction | `ThothInteractionPort` with `DirectAgUiAdapter` (canonical) and optional OSS-only `CopilotKitAdapter` |
-| Testing | Vitest, React Testing Library, Storybook, Playwright, axe-core, plus Rust integration tests for the Tauri host |
+| Testing | Vitest, React Testing Library, Storybook, Playwright, axe-core, |
 
 Excluded: Tailwind, shadcn, Redux, Next.js/SSR, GraphQL-as-primary, Copilot
 Cloud and all proprietary CopilotKit services, global Zustand (unless a

@@ -418,111 +418,10 @@ no-async-kernel:
 # kernel `check`/`ci` gates — the frontend is developed and gated separately
 # per docs/decisions/ADR-004-workbench-stack.md.
 [group('quality')]
-workbench-check: workbench-contracts-gate workbench-tauri-test
+workbench-check: workbench-contracts-gate
     #!/usr/bin/env bash
     {{set}}
     cd workbench && bun install --frozen-lockfile && bun run check && bun run build && bun run test
-
-# Stage the server binary where `bundle.externalBin` expects it.
-#
-# Decision U-06: the packaged Workbench supervises its own kernel, so the server
-# ships inside the bundle as a Tauri sidecar. Tauri resolves sidecars by
-# target-triple suffix, and its build script fails outright when the named
-# binary is absent — which is why this is a dependency of every recipe that
-# compiles the host, not just of the packaging one.
-#
-# The staged copy is a build artifact and is gitignored. `debug` keeps the
-# workbench test loop fast; packaging uses `release`.
-[group('workbench')]
-workbench-sidecar profile='debug':
-    #!/usr/bin/env bash
-    {{set}}
-    triple="$(rustc -vV | sed -n 's/^host: //p')"
-    if [ "{{profile}}" = "release" ]; then
-        cargo build --locked --release -p sea-forge-server --bin sea-forge-server
-        built="target/release/sea-forge-server"
-    else
-        cargo build --locked -p sea-forge-server --bin sea-forge-server
-        built="target/debug/sea-forge-server"
-    fi
-    dest="workbench/apps/desktop/src-tauri/binaries/sea-forge-server-${triple}"
-    mkdir -p "$(dirname "$dest")"
-    # `cp` rather than a symlink: Tauri's bundler copies the file into the
-    # package, and a dangling link would ship a broken sidecar.
-    cp -f "$built" "$dest"
-    echo "[sidecar] staged {{profile}} sea-forge-server -> $dest"
-
-# Launch the Tauri desktop application with a debug sidecar.
-[group('workbench')]
-workbench-tauri-dev: (workbench-sidecar 'debug')
-    #!/usr/bin/env bash
-    {{set}}
-    cd workbench && bun install --frozen-lockfile
-    cd apps/desktop && bun run tauri dev
-
-# Build the standalone Tauri host crate without packaging the Workbench.
-[group('workbench')]
-workbench-host-build:
-    cargo build --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
-
-# Build the installable Linux packages (SF-012).
-#
-# `deb` and `rpm` only. Every other target `tauri.conf.json` used to list has
-# been removed for the same reason: advertising a target nobody has built is
-# the over-claim SF-013 forbids.
-#
-#   * macOS (`app`, `dmg`) — the packet requires its Seatbelt journey to pass
-#     before macOS may be called supported, and that has not been run.
-#   * `appimage` — needs `libfuse2`, which AppImage's own tooling dlopens as
-#     `libfuse.so.2`. This host has FUSE 3 only, so linuxdeploy exits before
-#     producing anything. Re-enable by installing `libfuse2` and adding
-#     `"appimage"` back to `bundle.targets`; nothing else has to change.
-[group('workbench')]
-workbench-package: (workbench-sidecar 'release')
-    #!/usr/bin/env bash
-    {{set}}
-    cd workbench && bun install --frozen-lockfile
-    cd apps/desktop && bun run tauri build
-    echo "[package] bundles under workbench/apps/desktop/src-tauri/target/release/bundle/"
-
-# Inventory the built package: what actually ships, and what must not.
-#
-# The acceptance criteria are negative claims ("no Bun runtime, no untracked
-# generated source"), and a negative claim nobody checks is just a hope.
-[group('workbench')]
-workbench-package-inventory:
-    #!/usr/bin/env bash
-    {{set}}
-    bundle="workbench/apps/desktop/src-tauri/target/release/bundle"
-    deb="$(find "$bundle/deb" -name '*.deb' -print -quit 2>/dev/null || true)"
-    if [ -z "$deb" ]; then
-        echo "fail: no .deb found under $bundle — run 'just workbench-package' first" >&2
-        exit 1
-    fi
-    echo "[inventory] $deb"
-    contents="$(dpkg-deb -c "$deb")"
-    echo "$contents" | awk '{print $6, $3}' | sort
-    status=0
-    # A Bun or Node runtime in the bundle would mean the renderer is being
-    # served rather than compiled in — the frontend must ship as static assets.
-    if echo "$contents" | grep -Eq '/(bun|node|npm|deno)$'; then
-        echo "fail: a JavaScript runtime is present in the bundle" >&2
-        status=1
-    fi
-    # The sidecar is the whole point of U-06; a bundle without it cannot start
-    # a cell on a clean host.
-    if ! echo "$contents" | grep -q 'sea-forge-server'; then
-        echo "fail: the sea-forge-server sidecar is missing from the bundle" >&2
-        status=1
-    fi
-    # Source maps expose the renderer's original sources and are not needed to
-    # run it.
-    if echo "$contents" | grep -q '\.map$'; then
-        echo "fail: source maps are present in the bundle" >&2
-        status=1
-    fi
-    if [ "$status" -ne 0 ]; then exit 1; fi
-    echo "[inventory] ok: sidecar present, no JS runtime, no source maps"
 
 # --- demonstration cell -----------------------------------------------------
 
@@ -548,30 +447,6 @@ cell-reset root='':
     {{set}}
     scripts/reset-cell.sh {{root}} --yes
 
-# Open the packaged Workbench against the demonstration cell.
-#
-# No server is started here on purpose: the app supervises its own kernel
-# (U-06), so this is also the demonstration that it does.
-[group('workbench')]
-workbench-demo root='':
-    #!/usr/bin/env bash
-    {{set}}
-    cell="{{root}}"
-    [ -n "$cell" ] || cell="${SEA_FORGE_DEMO_ROOT:-$HOME/.sea-forge-demo}"
-    app="workbench/apps/desktop/src-tauri/target/release/sea-forge-workbench"
-    if [ ! -x "$app" ]; then
-        echo "no packaged Workbench at $app — run 'just workbench-package' first" >&2
-        exit 1
-    fi
-    if [ ! -d "$cell" ]; then
-        echo "no cell at $cell — run 'just cell-seed' first" >&2
-        exit 1
-    fi
-    echo "[demo] opening $cell"
-    SEA_FORGE_ROOT="$cell" \
-      SEA_FORGE_SOCKET="${SEA_FORGE_DEMO_SOCKET:-/tmp/sea-forge-demo.sock}" \
-      "$app"
-
 # Browser-only renderer evidence, driven by agent-browser without injecting
 # `__TAURI_INTERNALS__`. This is deliberately not an integrated Tauri claim:
 # Chrome cannot exercise Tauri's Linux WebKit bridge. It proves the renderer
@@ -593,44 +468,6 @@ workbench-e2e-case-authoring:
     #!/usr/bin/env bash
     {{set}}
     scripts/workbench-e2e-case-authoring.sh
-
-# Native Linux integration evidence. This packages the app, seeds a temporary
-# cell through real kernel/server operations, and drives the compiled WebKit
-# Workbench through Tauri's native WebDriver intermediary. It fails closed when
-# the machine lacks the documented `webkit2gtk-driver` prerequisite; it never
-# substitutes the mocked Playwright harness.
-[group('workbench')]
-workbench-e2e-real filter='':
-    #!/usr/bin/env bash
-    {{set}}
-    scripts/workbench-e2e-real.sh --preflight
-    just workbench-package
-    scripts/workbench-e2e-real.sh "{{filter}}"
-
-# The desktop host's own Rust tests.
-#
-# `src-tauri` is a separate Cargo workspace (ADR-004, K-06), so
-# `cargo test --workspace` from the repo root never compiles it. Nothing else
-# ran these, and the gap was not theoretical: the SF-005 identity gate made
-# every protected verb require an actor block, which broke the host's
-# `tests/bridge.rs` correlation-recovery scenarios — and the whole kernel suite
-# stayed green through it, because it never built them.
-#
-# This is the host's transport: the SFWP socket client, response pairing,
-# reconnect, and the actor the renderer is structurally unable to forge. It
-# needs a gate of its own precisely because it is out of the root workspace's
-# reach.
-[group('quality')]
-workbench-tauri-test: (workbench-sidecar 'debug')
-    #!/usr/bin/env bash
-    {{set}}
-    # Lint before test, for the same reason the tests exist at all: the root
-    # workspace's `just lint` cannot see this crate either, so without this line
-    # `src-tauri` is the one place in the repository where clippy never runs.
-    # It found dead code and an `.err().expect()` the day it was added.
-    cargo clippy --all-targets --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml -- -D warnings
-    cargo test --locked --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
-    cargo fmt --check --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
 
 # Regenerate Rust schemas and their TypeScript/AJV projections.
 [group('quality')]
@@ -679,25 +516,7 @@ workbench-contracts-gate:
     # The contracts gate invokes the token drift script directly because the
     # repository pins no separate Node toolchain.
     bun packages/sea-forge-ui-tokens/scripts/check-drift.mjs
-    # ADR-004: src-tauri is its own Cargo workspace root. If its `[workspace]`
-    # table were removed, cargo would walk up and adopt the repository root,
-    # pulling Tauri's async dependency tree into the kernel workspace (BUILD-01).
-    # `cargo metadata` names the root it actually resolved, which a grep for
-    # `[workspace]` cannot.
-    expected="$(cd apps/desktop/src-tauri && pwd -P)"
-    # `|| true`: removing the table makes cargo error outright rather than
-    # report a different root, and under `set -e` that would kill the recipe
-    # before it could say why. An empty `actual` fails the comparison below and
-    # prints the fix.
-    actual="$(cargo metadata --no-deps --offline --format-version 1 \
-        --manifest-path apps/desktop/src-tauri/Cargo.toml 2>/dev/null \
-        | jq -r .workspace_root || true)"
-    if [ "$actual" != "$expected" ]; then
-        echo "fail: src-tauri resolved to workspace root '$actual', expected '$expected'." >&2
-        echo "      restore the empty [workspace] table in apps/desktop/src-tauri/Cargo.toml (ADR-004)." >&2
-        exit 1
-    fi
-    echo "ok: generated contracts, UI tokens, and the Tauri workspace boundary are current"
+    echo "ok: generated contracts and UI tokens are current"
 
 # Start the Workbench Vite dev server in the background (http://localhost:1420).
 [group('workbench')]

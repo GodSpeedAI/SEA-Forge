@@ -10,8 +10,8 @@ that could not be verified are marked `UNKNOWN — repository evidence not found
   edition 2021, `rust-version 1.92.0`, `unsafe_code = "deny"`).
 - Workbench exists at `workbench/`: Bun 1.4.0 workspace
   (`workbench/package.json:6-7`) with a React/Vite renderer at
-  `apps/desktop/`, a standalone Tauri 2 host workspace at
-  `apps/desktop/src-tauri/`, and token/theme/contracts/component packages
+  `apps/desktop/` (the former standalone Tauri 2 host at
+  `apps/desktop/src-tauri/` was removed on 2026-10-13), and token/theme/contracts/component packages
   under `packages/`.
 - Task runner: `justfile` via devbox. Gates: `devbox run -- just check`,
   `just test`, `just context-check`, `just fmt-check`, `just lint`,
@@ -21,8 +21,7 @@ that could not be verified are marked `UNKNOWN — repository evidence not found
   ADR-002 dependency approvals, ADR-003 additive contracts).
 - Frontend gates: `bun run check`, `bun run build`, `bun run test`, and
   `bunx playwright test` from `workbench/`; `just workbench-check` is the
-  root convenience gate. The Tauri host remains outside the root Cargo
-  workspace by design (ADR-004).
+  root convenience gate. The Tauri host was removed; see ADR-004's status update.
 
 ## Server and transport (the wire the Workbench must speak)
 
@@ -98,15 +97,15 @@ verbs; the catalog is not proof that roadmap methods exist.
 ## Packaging / release
 
 - `just release-check`, `scripts/`, devbox environment. Desktop packaging
-  (Tauri bundling, signing, icons): `UNKNOWN — repository evidence not found`
-  — greenfield in the packaging milestone.
+  (Tauri bundling, signing, icons): removed with the Tauri host on 2026-10-13;
+  no desktop packaging exists.
 
 ## Missing seams (summary for planners)
 
 | Seam | Status |
 |---|---|
 | Frontend workspace (Bun/Vite/React) | EXISTS (`workbench/`) |
-| Tauri host crate | EXISTS (`workbench/apps/desktop/src-tauri/`) |
+| Tauri host crate | REMOVED 2026-10-13 (was `workbench/apps/desktop/src-tauri/`) |
 | SFWP envelope/negotiation/request-status | EXISTS |
 | Event subscription + cursor + gap recovery | EXISTS |
 | JSON Schema / TS generation | EXISTS |

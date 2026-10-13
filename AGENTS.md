@@ -31,7 +31,7 @@ If instructions and a normative spec conflict, stop and report the conflict. Sur
 Instructions live at the narrowest scope that completely governs them:
 
 * **`crates/` (`crates/AGENTS.md`)**: Governs all 22 Rust workspace crates. Owns the synchronous kernel boundary (19 synchronous kernel crates vs 2 async edge crates: `sea-forge-server` and `sea-forge-agent`), the package-scoped feedback loop (`just crate-check`, `just crate-test`), domain invariants, SFWP contract synchronization, and Rust build/toolchain discipline.
-* **`workbench/` (`workbench/AGENTS.md`)**: Governs the desktop frontend (Bun workspace + Tauri 2 host + React 19 renderer). Owns renderer/host boundaries, generated schemas/tokens, and E2E testing evidence rules (`workbench-e2e-*`).
+* **`workbench/` (`workbench/AGENTS.md`)**: Governs the Workbench frontend (Bun workspace + React 19 web renderer; the Tauri desktop shell was removed on 2026-10-13). Owns renderer/host boundaries, generated schemas/tokens, and E2E testing evidence rules (`workbench-e2e-*`).
 * **`.agents/` (`.agents/AGENTS.md`)**: Governs the durable agent workbench. Owns normative specs vs tactical plans, status handoff contracts verified by `just status-check` (`scripts/check-agent-context.sh`), and memory ledgers (`OBSERVED_DEBT.md`, `LESSONS.md`, `OPEN_QUESTIONS.md`).
 
 ## 3. Investigation and Retrieval

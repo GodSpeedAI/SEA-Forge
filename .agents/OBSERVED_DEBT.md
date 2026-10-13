@@ -153,25 +153,16 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Scope: this is a caution for later implementation tasks, not a defect to
   fix during Task 1's grounding pass itself.
 
-## Open: Tauri host crate's Cargo workspace boundary has no automated gate
+## Open: Workbench renderer has no backend bridge after the Tauri host removal
 
-- Observed: 2026-07-24
-- Evidence: `workbench/apps/desktop/src-tauri/Cargo.toml` declares an empty
-  `[workspace]` table to keep the Tauri host (and its `tokio` dependency) out
-  of the root kernel Cargo workspace (`docs/decisions/ADR-004-workbench-stack.md`).
-  `just no-async-kernel` only enumerates a fixed list of kernel crate names —
-  it does not verify this boundary itself.
-- Impact: a future edit that deletes the `[workspace]` table (e.g. during
-  boilerplate cleanup) would silently pull `tokio` into scope of the root
-  workspace's dependency graph, or break the build if the root workspace's
-  explicit `members` list doesn't include the new path — neither failure mode
-  is caught by an existing gate.
-- Next move: add a `workbench-check` (or `no-async-kernel`) assertion that
-  `cargo metadata --manifest-path workbench/apps/desktop/src-tauri/Cargo.toml
-  --no-deps` reports a workspace root equal to that same path (i.e. it is its
-  own workspace, not absorbed by the root one).
-- Scope: out of scope for Task 2 (stack proof only); the fix belongs with
-  whichever task next touches `justfile`'s quality gates.
+- Observed: 2026-10-13
+- Evidence: the `src-tauri` desktop shell was removed (ADR-004 status update). Twelve non-test renderer modules under
+  `workbench/apps/desktop/src/` still import `@tauri-apps/api/core` or `/event` (`invoke`/`listen`), for example
+  `src/hooks/governedQuery.ts`, `src/hooks/useIdentity.ts`, `src/machines/caseAuthoringMachine.ts`. No HTTP or socket path exists.
+- Impact: `invoke` has no native host to answer it, so the web app builds and unit-tests green but cannot load live data or run protected commands.
+- Next move: replace the `invoke`/`listen` seam with a browser-reachable transport (for example a gateway over SFWP), then remove
+  `@tauri-apps/api` from `workbench/apps/desktop/package.json`. The Playwright mock (`e2e/tauriMock.ts`) follows that seam.
+- Scope: owner decision on the replacement transport; the removal itself did not rewrite frontend runtime code.
 
 ## Open: Historical frontend planning documents fail repository-wide diff whitespace checks
 

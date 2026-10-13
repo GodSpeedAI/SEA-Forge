@@ -8,7 +8,7 @@ denied paths**, not only the verdict.
 
 ## Test layers
 
-### Rust bridge tests (Tauri host crate)
+### Rust bridge tests (Tauri host crate, removed 2026-10-13)
 Integration tests for: every typed command (happy + denial + stale +
 ambiguity), channel ordering and backpressure, reconnect with cursor resume,
 `request.get_status` recovery after simulated socket drop mid-request,
@@ -66,7 +66,7 @@ governed denial surface (not a blank page), search-state round-trips, event
 reduction updates the view, unknown enum variants render `unknown` and mark
 the view stale.
 
-### Desktop end-to-end tests (Playwright against the Tauri dev build)
+### Desktop end-to-end tests (Playwright against the Vite dev build; the Tauri build was removed 2026-10-13)
 Primary-path journeys, keyboard-only completion, and the proof scenarios
 below against a real `sea-forge-server` on a temp root.
 

@@ -112,4 +112,4 @@ On the Case Horizon page:
 
 Stop the development server in Terminal 2 (`Ctrl+C`) and stop the cell server in Terminal 1 (`Ctrl+C`).
 
-To learn more about the desktop architecture and Tauri IPC bridge, see the [Workbench Desktop Subsystem Guide](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/workbench-desktop.md).
+To learn more about the Workbench architecture and its data bridge, see the [Workbench Desktop Subsystem Guide](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/workbench-desktop.md).
