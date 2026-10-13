@@ -87,7 +87,7 @@
 - Workbench renderer: twelve runtime modules still call the Tauri bridge (invoke/listen) with no other transport, so the workbench has no backend at runtime until that bridge is replaced. The workbench completion evaluation input therefore records the integrated evaluation as BLOCKED.
 - Toolchain: devbox run could not be verified locally (Nix cache timeout); the MSRV (1.92) CI job has not run on GitHub before this change.
 
-**Next:** Review and merge the security migration; rebase the other open branches on it.
+**Next:** Confirm the MSRV (1.92) job on main after merge; then rebase the remaining open branches onto the 1.99.0 toolchain.
 
 **Evidence:**
 

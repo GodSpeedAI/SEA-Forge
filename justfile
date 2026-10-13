@@ -68,7 +68,11 @@ toolchain-check:
     cargo --version
     cargo clippy --version
     echo "channel (rust-toolchain.toml): $pin"
-    active="$(rustc --version | awk '{print $2}')"
+    if ! printf '%s' "$pin" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        echo "toolchain-check: channel '$pin' is not an exact version; pin rust-toolchain.toml to major.minor.patch" >&2
+        exit 1
+    fi
+    active="$(rustc --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
     if [ "$active" != "$pin" ]; then
         echo "toolchain-check: rustc $active != channel $pin" >&2
         exit 1
