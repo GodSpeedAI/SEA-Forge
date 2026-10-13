@@ -1,7 +1,7 @@
 # SEA Forge Canonical Architecture
 
 > **The architectural specification of the SEA Forge governed capability-execution kernel.**  
-> Governs: Crates M0–M16 · SFWP v1 · Tauri Desktop Host · React Workbench
+> Governs: Crates M0–M16 · SFWP v1 · React Workbench (web app; the Tauri desktop host was removed 2026-10-13)
 
 ---
 
@@ -12,7 +12,7 @@
 ### Status & Authority
 
 * **Normative Source of Truth:** Implementation code and conformance test suites (`just proof`, `just ci`, `just crate-test <crate>`) are authoritative.
-* **Architecture State:** The workspace contains **22 Rust crates**, a standalone **Tauri 2 Cargo workspace**, and a **Bun workspace** (`workbench/`).
+* **Architecture State:** The workspace contains **22 Rust crates**, and a **Bun workspace** (`workbench/`). The former standalone Tauri 2 Cargo workspace (`src-tauri`) was removed on 2026-10-13.
 * **Platforms:** Linux is the primary target (utilizing Landlock ABI v1–v6); macOS is secondary (utilizing Seatbelt `sandbox-exec`).
 
 ---
@@ -25,15 +25,15 @@ SEA Forge is structured into five distinct, strictly governed architectural laye
 flowchart TB
     subgraph L1 ["Layer 1: Presentation & Desktop Host"]
         WB["React 19 Workbench (apps/desktop)"]
-        TAURI["Tauri 2 Host (src-tauri - Standalone Workspace)"]
-        WB <-->|Closed Typed Commands| TAURI
+        BRIDGE["Renderer data bridge (not yet replaced after the Tauri host removal)"]
+        WB <-->|Closed Typed Commands| BRIDGE
     end
 
     subgraph L2 ["Layer 2: Service & Ingress Edge"]
         SOCK["Unix Domain Socket (server.sock - 0600)"]
         SRV["sea-forge-server (Tokio, SFWP v1, Admission Queue)"]
         CLI["sea-forge CLI (24 Commands)"]
-        TAURI <-->|SFWP v1 NDJSON| SOCK
+        BRIDGE <-->|SFWP v1 NDJSON| SOCK
         SOCK <--> SRV
     end
 
@@ -75,7 +75,7 @@ flowchart TB
 
 ### Layer 1: Presentation & Desktop Host (`workbench/`)
 * **React 19 Renderer:** Pure view layer. Owns route navigation, reversible form drafts, TanStack queries, XState workflow state machines, and G1–G9 guard evaluations. It has zero access to the filesystem, network sockets, or raw SQL.
-* **Tauri 2 Host (`src-tauri`):** A **deliberately standalone Cargo workspace**. It owns the Unix domain socket client connection, supervises the local server process, maintains a durable event cursor in `app_data_dir/sfwp-cursor.json`, and exposes a closed enum bridge (`SfwpQuery` and `SfwpCommand`) to the frontend.
+* **Tauri 2 Host (`src-tauri`) — removed 2026-10-13:** It used to own the Unix domain socket client connection, supervise the local server process, and expose a closed enum bridge (`SfwpQuery` and `SfwpCommand`) to the frontend. No Rust host exists in the repository now; see ADR-004's status update.
 
 ### Layer 2: Service & Ingress Edge
 * **`sea-forge-server`:** Long-running application service listening on an owner-only Unix domain socket (`0600`). Implements SFWP v1, connection rate-limiting, an 8-waiter admission queue, request correlation for idempotency, and live event broadcasts.
@@ -104,7 +104,7 @@ flowchart TB
 | **DOM-01** | **Settlement Is Independent of Exit Status** | Process exit code 0 is merely one piece of evidence (`require_exit_zero`). Settlement acceptance requires non-empty basis proofs meeting all pre-committed criteria. |
 | **DOM-02** | **Every Activation Is an Episode** | Every sandboxed task execution produces a complete set of 6 records: `plan.json`, `authority.json`, `trace.jsonl`, `evidence.jsonl`, `settlement.json`, `semantic-envelope.json`. |
 | **DOM-03** | **DomainForge Candidate Precedes Authority** | Domain-bound plans resolve a hash-pinned `.sea` model before authority evaluation. DomainForge generates candidate semantics; SEA Forge decides final authority. |
-| **BUILD-01** | **Synchronous Kernel Boundary** | 19 kernel crates forbid async runtimes (`tokio`) and HTTP clients (`reqwest`). Tokio lives exclusively in `sea-forge-server`, `sea-forge-agent`, and the Tauri host. |
+| **BUILD-01** | **Synchronous Kernel Boundary** | 19 kernel crates forbid async runtimes (`tokio`) and HTTP clients (`reqwest`). Tokio lives exclusively in `sea-forge-server`, `sea-forge-agent`. |
 | **DATA-01** | **History Is Append-Only; Views Are Rebuildable** | Source of truth is append-only JSONL and hash-chained ledgers. SQLite databases and JSON caches can be deleted and reconstructed deterministically. |
 | **DATA-02** | **Canonical Run Locator** | Every run is resolvable across flat (`<root>/runs/<id>`) and case-owned (`<root>/cases/<case>/runs/<id>`) layouts through one unified resolver (`run_views::run_dir`). |
 | **DATA-03** | **Request IDs Are Idempotency Keys** | A repeated request ID returns the stored terminal outcome without re-executing side effects. Changed payloads with existing IDs fail closed. |
@@ -158,12 +158,8 @@ Host Environment
 │   └── SFWP v1 Dispatcher (spawn_blocking for kernel tasks)
 │
 ├── Workbench Desktop App (PID B)
-│   ├── Tauri Host Subprocess
-│   │   ├── Connects to <cell_root>/server.sock
-│   │   ├── Runs reconnect & event loop
-│   │   └── Persists cursor in sfwp-cursor.json
-│   └── WebKit / WebView Renderer Subprocess
-│       └── React 19 UI communicating via typed Tauri IPC
+│   └── Workbench web renderer (no native host since 2026-10-13)
+│       └── React 19 UI; backend bridge pending replacement
 │
 └── Sandboxed Children (PIDs C1..Cn)
     ├── Spawned by server or CLI
@@ -187,8 +183,8 @@ SEA Forge maintains a strict separation between immutable truth and rebuildable 
 1. **Host-to-Server Boundary (Unix Domain Socket):**
    * Socket file permissions are set to `0600` (owner-only access).
    * Peer UID verification ensures that requests originate from the same operating-system user.
-2. **Renderer-to-Host Boundary (Tauri IPC):**
-   * The React renderer communicates via a closed enum bridge (`SfwpQuery` / `SfwpCommand`).
+2. **Renderer-to-Host Boundary:**
+   * The React renderer communicates via a closed enum bridge (`SfwpQuery` / `SfwpCommand`); the Tauri IPC implementation of that bridge was removed on 2026-10-13.
    * Generic IPC string commands and direct socket calls from the webview are strictly forbidden.
 3. **Kernel-to-Child Boundary (OS Jail Sandbox):**
    * Children run under Landlock (Linux) with `LANDLOCK_ACCESS_FS_READ` / `WRITE` restricted exclusively to `workspace/` and `artifacts/`.
@@ -212,5 +208,5 @@ For in-depth specifications of individual components, consult the subsystem guid
 * [DomainForge Semantic Boundary](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/domainforge-boundary.md)
 * [Server & Wire Protocol (SFWP v1)](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/server-sfwp.md)
 * [Thoth Orchestration & Autonomous Agents](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/thoth-agent.md)
-* [Workbench Desktop & Tauri Host](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/workbench-desktop.md)
+* [Workbench Desktop (Tauri host removed 2026-10-13)](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/workbench-desktop.md)
 * [Spec-to-Code Pipelines & IP Transitions](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/spec-pipeline-ip.md)

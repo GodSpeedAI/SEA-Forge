@@ -103,7 +103,6 @@ If the gate outputs:
 ```text
 [contracts-gate] schema diff clean
 [contracts-gate] typescript contracts clean
-[contracts-gate] standalone tauri workspace preserved
 ```
 Your contract update is complete and ready for commit.
 

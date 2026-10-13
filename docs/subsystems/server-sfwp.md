@@ -33,7 +33,7 @@ The **Server & Wire Protocol (SFWP)** subsystem is the asynchronous edge adapter
 
 ```mermaid
 flowchart TB
-    TAURI["Tauri Desktop Host"] -->|NDJSON over server.sock (0600)| LISTENER["tokio::net::UnixListener"]
+    TAURI["Workbench client (Tauri host removed 2026-10-13)"] -->|NDJSON over server.sock (0600)| LISTENER["tokio::net::UnixListener"]
     LISTENER --> DISPATCH["SFWP Dispatcher"]
     
     DISPATCH -->|Inspect (readiness, case.list)| PROJ["In-Memory View Projections"]

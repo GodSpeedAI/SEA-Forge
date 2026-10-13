@@ -4,6 +4,8 @@
 
 Accepted
 
+Status update (2026-10-13): the `src-tauri` desktop shell was removed. The Workbench is a web app. The decisions below about the Tauri host, its standalone Cargo workspace, and the `@tauri-apps/cli` pin describe the state before that removal and are kept as history.
+
 ## Date
 
 2026-07-24

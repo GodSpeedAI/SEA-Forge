@@ -43,14 +43,6 @@
 
 .tmp/
 
-# Tauri sidecar staging: built by `just workbench-sidecar`, never committed.
-workbench/apps/desktop/src-tauri/binaries/
-
-# Pinned local desktop-test tooling. The reproducible version and setup
-# instructions live in scripts/workbench-e2e-real.sh; the executable itself is
-# a machine-local build artifact.
-workbench/.tools/
-
 .cargo/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).

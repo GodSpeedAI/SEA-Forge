@@ -1,7 +1,8 @@
 // Package sfwp is the live adapter for the governed case authority: an NDJSON client for the
 // kernel's Unix-socket protocol (plan casework-live-wiring-production T05, resolves SEAM-4).
 //
-// It mirrors the reference client (workbench/apps/desktop/src-tauri/src/{bridge,socket}.rs):
+// It mirrors the reference client the removed Tauri desktop host used
+// (workbench/apps/desktop/src-tauri/src/{bridge,socket}.rs, deleted 2026-10-13; see git history):
 // verb-tagged snake_case request objects, an `actor` block (and optional `on_behalf_of` sibling)
 // on protected verbs, request_id correlation, request.get_status recovery after a reconnect, and
 // the authority's error classes preserved verbatim rather than flattened into strings. It does not

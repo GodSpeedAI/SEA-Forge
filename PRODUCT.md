@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Operators, reviewers and sponsors, and delegated agents doing governed work in the SEA Forge Workbench (Tauri 2 host + React 19 renderer).
+Operators, reviewers and sponsors, and delegated agents doing governed work in the SEA Forge Workbench (React 19 web renderer).
 
 Operator context: on-call or focused desk work, dim or mixed ambient light, 27-inch or laptop screen, one consequential run in focus. They check readiness, draft a case, pass preflight, commit, monitor execution, judge approvals, inspect evidence, and accept or reject settlement.
 

@@ -7,8 +7,8 @@ additions). "It was easier" is not a conflict.
 
 ## Locked stack and responsibility boundaries
 
-### Tauri 2 — desktop shell
-Owns: native packaging, OS integration, Unix-socket access, file dialogs,
+### Tauri 2 — desktop shell (removed 2026-10-13)
+Historically owned: native packaging, OS integration, Unix-socket access, file dialogs,
 local draft persistence APIs, request correlation, event-channel bridging,
 reconnect behavior, content streaming. The WebView renderer **never** touches
 the Unix socket, the filesystem under `.sea-forge/`, or SQL directly.
@@ -17,8 +17,8 @@ the Unix socket, the filesystem under `.sea-forge/`, or SQL directly.
 Canonical package manager, lockfile owner (`bun.lock`), script runner, dev
 runtime, and test runner where compatible. Enforce with `bunfig.toml` and
 `"packageManager": "bun@<exact-version>"`. Bun is a **development** tool: the
-shipped app is Tauri Rust binary + OS WebView + compiled assets — prove this
-with the packaging gate ("Bun absent from shipped bundle"). If an upstream
+no shipped app bundle exists since the Tauri shell was removed; any future
+packaging gate must still prove "Bun absent from shipped bundle". If an upstream
 tool genuinely requires Node: prove the incompatibility, isolate the command,
 document it as a temporary tooling exception with a removal path. The repo has
 no other JS workspace, so no migration question exists — the Workbench Bun

@@ -1,5 +1,7 @@
 # Architectural Truth
 
+> **Status update (2026-10-13): the `src-tauri` desktop shell was removed.** The Workbench is a web app. Statements in this file about the Tauri host, the bundled sidecar, `just workbench-package`, `workbench-demo`, `workbench-e2e-real` and `workbench-tauri-test` describe the state before that removal; see ADR-004's status update.
+
 Date: 2026-07-27  
 Branch and commit inspected: `frontend` at `8361f25ff0bbfc13c56c96ccb82161f317b4d0e6`
 

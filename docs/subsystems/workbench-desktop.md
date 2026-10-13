@@ -1,7 +1,9 @@
 # Subsystem: Workbench Desktop & Tauri Host
 
-> **Tauri 2 native host, React 19 desktop interface, Astryx design system, and G1–G9 route guards.**  
-> Governed workspaces: `workbench/` (Bun workspace), `workbench/apps/desktop/src-tauri` (Standalone Cargo workspace) · Governing ADR: `ADR-004`
+> **Status update (2026-10-13): the `src-tauri` desktop shell was removed.** The Workbench is a React 19 web app. The sections below that describe the Tauri host, its bridge, its standalone Cargo workspace and its packaging are historical; the React UI, Astryx design system and G1–G9 route guards still apply.
+
+> **React 19 interface, Astryx design system, and G1–G9 route guards.**  
+> Governed workspaces: `workbench/` (Bun workspace) · Governing ADR: `ADR-004`
 
 ---
 
@@ -112,9 +114,7 @@ If any blocking guard evaluates to `failed`, the router renders a `GovernedDenia
 
 ## 8. Source Trail
 
-* [`workbench/apps/desktop/src-tauri/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src-tauri/src/lib.rs) — Tauri host entry point and event loop.
-* [`workbench/apps/desktop/src-tauri/src/supervisor.rs`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src-tauri/src/supervisor.rs) — Cell process supervisor.
-* [`workbench/apps/desktop/src-tauri/src/bridge.rs`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src-tauri/src/bridge.rs) — Closed Tauri IPC query/command router.
+* The Tauri host sources (`workbench/apps/desktop/src-tauri/`) were removed on 2026-10-13; see ADR-004's status update and git history before that date.
 * [`workbench/apps/desktop/src/router.tsx`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/router.tsx) — TanStack Router configuration and route guard integration.
 * [`workbench/apps/desktop/src/guards/guards.ts`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/guards/guards.ts) — G1–G9 guard predicate definitions.
 * [`docs/decisions/ADR-004-workbench-stack.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-004-workbench-stack.md) — Architectural decision record governing the workbench stack.
