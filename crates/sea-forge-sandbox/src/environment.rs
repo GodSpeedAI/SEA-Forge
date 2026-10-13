@@ -120,11 +120,12 @@ pub fn load_pinned_environment(
             }
         }
     }
-    let spec: EnvironmentSpec = serde_yaml::from_slice(&bytes).map_err(|e| ForgeError::Config {
-        class: "environment_unavailable",
-        path: path.clone(),
-        message: format!("invalid environment yaml: {e}"),
-    })?;
+    let spec: EnvironmentSpec =
+        sea_forge_core::yaml::from_slice(&bytes).map_err(|e| ForgeError::Config {
+            class: "environment_unavailable",
+            path: path.clone(),
+            message: format!("invalid environment yaml: {e}"),
+        })?;
     if spec.name != name || spec.version != version {
         return Err(ForgeError::Config {
             class: "environment_unavailable",
@@ -142,7 +143,7 @@ pub fn store_builtin_environment(root: &Path) -> Result<std::path::PathBuf, Forg
     let path = envs_dir.join("demo_env@0.1.0.yaml");
     if !path.exists() {
         let spec = demo_environment();
-        let yaml = serde_yaml::to_string(&spec)
+        let yaml = sea_forge_core::yaml::to_string(&spec)
             .map_err(|e| ForgeError::Internal(format!("serialize demo_env: {e}")))?;
         fs::write(&path, yaml).map_err(|e| ForgeError::io("write demo_env", e))?;
     }

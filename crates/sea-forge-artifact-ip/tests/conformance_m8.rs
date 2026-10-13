@@ -75,7 +75,7 @@ fn append_rights_profile_with_authority(
         .find(|r| r.artifact_id == record.artifact_id)
         .unwrap();
     let action = canonical_rights_action(registration, &["approved".into()]);
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         "version: \"0.1\"\nrules:\n  - name: rights\n    verdict: allow\n    actor_role: operator\n    operation_kind: review_artifact_rights\n",
     )
     .unwrap();
@@ -645,7 +645,7 @@ fn authorized_transition(
         gate.required_settlement_strength.as_deref().unwrap_or("local"),
         gate.requires_approval,
     );
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&policy).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&policy).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
     let actor = Actor {
         actor_id: input.actor_id.clone(),
@@ -999,7 +999,7 @@ fn retire_artifact(root: &std::path::Path, artifact_id: &str) -> ArtifactLifecyc
         plan_item_id: "lifecycle".into(),
     };
     let action = canonical_lifecycle_action(&input);
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         "version: \"0.1\"\nrules:\n  - name: lifecycle\n    verdict: allow\n    actor_role: operator\n    operation_kind: artifact_lifecycle\n",
     )
     .unwrap();
@@ -1715,7 +1715,7 @@ fn attestation_grant(
     sea_forge_core::types::AuthorityDecision,
     sea_forge_ledger::CommittedRecordRef,
 ) {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: attest
@@ -2940,7 +2940,7 @@ fn all_source_licenses_must_match_transition_policy() {
         &["internal".into(), "proprietary".into()],
         &gate,
     );
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&format!(
         "version: \"0.1\"\nrules:\n  - name: transition\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: synthesize\n    from_stage: cognitive\n    to_stage: intellectual\n    modes: [derive]\n    gate_profile_ref: {}\n    required_settlement_strength: local\n    qualifying_value_evidence_kinds: [adoption]\n    requires_approval: false\n    license_allowlist: [internal]\n",
         gate.profile_ref
     ))

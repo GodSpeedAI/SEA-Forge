@@ -31,7 +31,7 @@ pub fn show(root: &Path, reference: &str) -> Result<u8, ForgeError> {
     let spec = load_pinned_environment(root, reference)?;
     println!(
         "{}",
-        serde_yaml::to_string(&spec)
+        sea_forge_core::yaml::to_string(&spec)
             .map_err(|e| ForgeError::Internal(format!("serialize: {e}")))?
     );
     Ok(0)

@@ -25,7 +25,7 @@ fn world_registry() -> (WorldRegistry, String) {
 }
 
 fn bundle(rules: &str) -> AuthorityPolicyBundle {
-    serde_yaml::from_str(&format!(
+    sea_forge_core::yaml::from_str(&format!(
         "version: \"0.1\"\nallow_degraded: true\nrules:\n{rules}"
     ))
     .unwrap()
@@ -226,7 +226,7 @@ fn a_boundary_policy_without_constraints_cannot_even_be_loaded() {
         "version: \"0.1\"\nrules:\n{}",
         rule("bounded", "cognate_action", "    disposition: boundary\n")
     );
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&yaml).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&yaml).unwrap();
     assert!(PolicyAuthorityEngine::new(bundle).is_err());
 }
 
@@ -369,7 +369,7 @@ fn subjects_is_rejected_where_it_has_no_meaning() {
         ("cognate_action", "    subjects: [\"\"]\n"),
     ] {
         let yaml = format!("version: \"0.1\"\nrules:\n{}", rule("r", kind, extra));
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&yaml).unwrap();
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&yaml).unwrap();
         assert!(
             PolicyAuthorityEngine::new(bundle).is_err(),
             "{kind} {extra}"

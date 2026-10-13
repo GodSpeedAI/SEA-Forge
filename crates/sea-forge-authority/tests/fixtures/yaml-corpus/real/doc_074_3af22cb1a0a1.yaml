@@ -1,0 +1,14 @@
+version: "0.1"
+policy_surfaces:
+  external_api:
+    mode: deny-by-default
+    allow_hosts: [127.0.0.1]
+rules:
+  - name: allow-agent-probe
+    verdict: allow
+    actor_role: operator
+    operation_kind: agent_probe
+  - name: allow-secret-access
+    verdict: allow
+    actor_role: operator
+    operation_kind: secret_access

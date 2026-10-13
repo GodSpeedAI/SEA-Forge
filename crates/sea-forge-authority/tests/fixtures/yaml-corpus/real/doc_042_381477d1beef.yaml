@@ -1,0 +1,6 @@
+version: "0.1"
+rules:
+  - name: now-denied
+    verdict: deny
+    actor_role: service
+    operation_kind: cognate_action

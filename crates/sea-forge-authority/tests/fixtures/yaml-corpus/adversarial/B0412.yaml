@@ -1,0 +1,4 @@
+defaults: &t {allow_degraded: true}
+<<: *t
+version: "0.1"
+rules: []

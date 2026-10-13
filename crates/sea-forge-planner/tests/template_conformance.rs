@@ -145,13 +145,13 @@ fn template_pin_rejects_same_version_with_changed_bytes() {
     let templates = root.join("templates");
     fs::create_dir_all(&templates).unwrap();
     let path = templates.join("demo@1.0.0.yaml");
-    fs::write(&path, serde_yaml::to_string(&template()).unwrap()).unwrap();
+    fs::write(&path, sea_forge_core::yaml::to_string(&template()).unwrap()).unwrap();
     load_pinned(&root, "demo@1.0.0").unwrap();
     fs::write(
         &path,
         format!(
             "{}\n# changed\n",
-            serde_yaml::to_string(&template()).unwrap()
+            sea_forge_core::yaml::to_string(&template()).unwrap()
         ),
     )
     .unwrap();

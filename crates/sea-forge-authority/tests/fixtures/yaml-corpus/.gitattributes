@@ -1,0 +1,2 @@
+# Test inputs are byte-exact, including CRLF and BOM cases.
+* -text

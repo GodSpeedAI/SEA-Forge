@@ -1,0 +1,18 @@
+version: "0.1"
+settlement_authorities:
+  - authority_ref: local
+    adapter: local
+    trust_anchor_ref: local-kernel
+    declarer_actor_id: operator
+    permitted_declarer_roles: [operator]
+    standing_basis: local-only
+  - authority_ref: swe_seed_prod
+    adapter: swe_seed
+    command: ["/opt/swe-seed", "declare"]
+    timeout_secs: 30
+    trust_anchor_ref: key://swe-seed/current
+    declarer_actor_id: swe_seed
+    permitted_declarer_roles: [R-AA]
+    standing_basis: externally-attested
+    may_issue_strong: true
+rules: []

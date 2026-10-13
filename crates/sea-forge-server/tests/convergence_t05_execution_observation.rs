@@ -88,7 +88,8 @@ fn harness(name: &str) -> Harness {
 
 /// One REAL Allow decision through the production engine.
 fn allow_decision(h: &Harness, sequence: usize) -> AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(ALLOW_POLICY).expect("policy yaml");
+    let bundle: AuthorityPolicyBundle =
+        sea_forge_core::yaml::from_str(ALLOW_POLICY).expect("policy yaml");
     let engine = PolicyAuthorityEngine::new(bundle).expect("engine");
     let action = AuthorityAction::ExecuteCommand {
         argv: vec![

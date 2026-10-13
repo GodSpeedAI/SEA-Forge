@@ -46,7 +46,7 @@ fn cell() -> Cell {
 }
 
 fn bundle(yaml: &str) -> AuthorityPolicyBundle {
-    serde_yaml::from_str(yaml).unwrap()
+    sea_forge_core::yaml::from_str(yaml).unwrap()
 }
 
 /// A fresh engine per call, as the server does: opaque constraints never carry between requests.

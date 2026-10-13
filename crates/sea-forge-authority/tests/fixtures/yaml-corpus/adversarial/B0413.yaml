@@ -1,0 +1,7 @@
+version: "0.1"
+policy_engines:
+  - &e {engine: opa, fail_mode: closed, required: true}
+  - <<: *e
+    engine: x
+    required: false
+rules: []

@@ -1,0 +1,18 @@
+version: "0.1"
+rules:
+  - name: attest
+    verdict: allow
+    actor_role: operator
+    operation_kind: attest_artifact_identity
+    ledger: ifl
+    requester_roles: [operator]
+    approver_roles: [R-SO]
+    degraded_mode: forbidden
+  - name: attest-degraded
+    verdict: allow
+    actor_role: operator
+    operation_kind: attest_artifact_identity
+    ledger: ifl
+    requester_roles: [operator]
+    approver_roles: [R-SO]
+    degraded_mode: pre_mint_only

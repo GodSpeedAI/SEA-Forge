@@ -648,7 +648,7 @@ mod tests {
     fn adopt_makes_imported_active() {
         let tmp = tempfile::tempdir().unwrap();
         let stream = LedgerStream::open(tmp.path(), "extensions", "test").unwrap();
-        let bundle = serde_yaml::from_str::<AuthorityPolicyBundle>(
+        let bundle = sea_forge_core::yaml::from_str::<AuthorityPolicyBundle>(
                 "version: \"0.1\"\nrules:\n  - name: adopt\n    verdict: allow\n    actor_role: operator\n    operation_kind: adopt_extension\n",
             )
             .unwrap();

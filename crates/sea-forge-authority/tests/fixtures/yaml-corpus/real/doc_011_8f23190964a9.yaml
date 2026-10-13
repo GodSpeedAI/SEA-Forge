@@ -1,0 +1,15 @@
+version: "0.2"
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+policy_engines:
+  - engine: domainforge
+    fail_mode: closed
+    required: true
+rules:
+  - name: allow-write
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: ""

@@ -1,0 +1,13 @@
+version: "0.1"
+allow_degraded: true
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+rules:
+  - name: constrained-write
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: ""
+{extra_policy}

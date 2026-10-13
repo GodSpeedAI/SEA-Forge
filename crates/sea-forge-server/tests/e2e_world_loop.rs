@@ -132,7 +132,7 @@ fn hop_3_verified_intake_decision_execution_and_settlement() {
     };
     // `E2E_POLICY_VERDICT=deny` drives the denied path of the loop.
     let verdict = std::env::var("E2E_POLICY_VERDICT").unwrap_or_else(|_| "allow".into());
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&policy(&verdict)).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&policy(&verdict)).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle).unwrap();
     let action = AuthorityAction::ExecuteCommand {
         argv: vec![argv0.to_string_lossy().into_owned(), "--version".into()],

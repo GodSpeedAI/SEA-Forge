@@ -1,0 +1,10 @@
+version: "0.1"
+settlement_authorities:
+  - authority_ref: local
+    adapter: local
+    trust_anchor_ref: local-kernel
+    declarer_actor_id: operator
+    permitted_declarer_roles: [operator]
+    standing_basis: local-only
+    may_issue_strong: true
+rules: []

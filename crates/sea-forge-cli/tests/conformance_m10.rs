@@ -186,7 +186,7 @@ fn t10_4_tampered_builtin_template_is_rejected_before_authority_no_side_effects(
     }
     fs::write(
         templates_dir.join("odi_adlc_case@0.1.0.yaml"),
-        serde_yaml::to_string(&tampered).unwrap(),
+        sea_forge_core::yaml::to_string(&tampered).unwrap(),
     )
     .unwrap();
 

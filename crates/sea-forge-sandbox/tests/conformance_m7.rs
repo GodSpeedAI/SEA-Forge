@@ -312,8 +312,8 @@ fn environment_parse_evaluator_score_exit_and_stdout() {
 #[test]
 fn environment_demo_environment_round_trips() {
     let spec = demo_environment();
-    let yaml = serde_yaml::to_string(&spec).unwrap();
+    let yaml = sea_forge_core::yaml::to_string(&spec).unwrap();
     let back: sea_forge_sandbox::environment::EnvironmentSpec =
-        serde_yaml::from_str(&yaml).unwrap();
+        sea_forge_core::yaml::from_str(&yaml).unwrap();
     assert_eq!(spec, back);
 }

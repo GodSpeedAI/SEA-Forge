@@ -1,0 +1,55 @@
+version: "0.2"
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+  - principal: security_officer
+    actor_type: human
+    role: R-SO
+  - principal: wrong_resolver
+    actor_type: human
+    role: R-DEV
+rules:
+  - name: synthesize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: synthesize
+    from_stage: cognitive
+    to_stage: intellectual
+    modes: [promote]
+    gate_profile_ref: synthesize@1
+    required_settlement_strength: local
+    qualifying_value_evidence_kinds: []
+    requires_approval: false
+    license_allowlist: [internal]
+  - name: productize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: productize
+    from_stage: intellectual
+    to_stage: product
+    modes: [promote]
+    gate_profile_ref: productize@1
+    required_settlement_strength: local
+    qualifying_value_evidence_kinds: []
+    requires_approval: false
+    license_allowlist: [internal]
+  - name: capitalize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    from_stage: product
+    to_stage: capital
+    modes: [promote]
+    gate_profile_ref: capitalize@1
+    required_settlement_strength: strong
+    qualifying_value_evidence_kinds: [adoption]
+    requires_approval: true
+    license_allowlist: [internal]
+  - name: resolve-approval
+    verdict: allow
+    actor_role: R-SO
+    operation_kind: approval_resolution

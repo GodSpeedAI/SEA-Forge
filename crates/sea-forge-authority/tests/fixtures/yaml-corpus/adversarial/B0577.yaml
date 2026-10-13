@@ -1,0 +1,14 @@
+name: demo_env
+version: 0.1.0
+description: demo environment
+base: NULL
+provides:
+  commands:
+    - echo
+evaluators:
+  check:
+    kind: command
+    argv:
+      - echo
+      - ok
+    score_from: exit

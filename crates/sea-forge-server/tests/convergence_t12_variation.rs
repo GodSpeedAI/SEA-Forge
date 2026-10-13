@@ -103,7 +103,7 @@ fn harness(tag: &str) -> Harness {
     }
 }
 fn allow_decision(h: &Harness, seq: usize) -> sea_forge_core::types::AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: allow-local-cmd
@@ -142,7 +142,7 @@ rules:
         .unwrap()
 }
 fn deny_decision(h: &Harness) -> sea_forge_core::types::AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules: []
 "#,
@@ -176,7 +176,7 @@ rules: []
         .unwrap()
 }
 fn escalate_decision(h: &Harness) -> sea_forge_core::types::AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: escalate-local-cmd

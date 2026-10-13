@@ -322,8 +322,8 @@ impl ServerConfig {
         }
         let text =
             std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
-        let config: Self =
-            serde_yaml::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
+        let config: Self = sea_forge_core::yaml::from_str(&text)
+            .map_err(|e| format!("parse {}: {e}", path.display()))?;
         config.validate().map_err(|message| {
             format!(
                 "{}: invalid server configuration: {message}",

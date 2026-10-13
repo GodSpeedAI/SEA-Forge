@@ -1,0 +1,11 @@
+version: "0.1"
+identity_bindings:
+  - principal: service_one
+    actor_type: service
+    role: service
+rules:
+  - name: allow-service-write
+    verdict: allow
+    actor_role: service
+    operation_kind: write_file
+    path_prefix: ""

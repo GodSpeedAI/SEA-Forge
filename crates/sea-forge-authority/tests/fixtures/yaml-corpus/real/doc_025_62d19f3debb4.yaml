@@ -1,0 +1,6 @@
+version: "0.1"
+rules:
+  - name: no
+    verdict: deny
+    actor_role: service
+    operation_kind: world_transition

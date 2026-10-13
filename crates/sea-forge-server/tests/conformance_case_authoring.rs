@@ -85,7 +85,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
     let template = sequential_agents_template(STUB_ENDPOINT).unwrap();
     std::fs::write(
         templates_dir.join(format!("{TEMPLATE_REF}.yaml")),
-        serde_yaml::to_string(&template).unwrap(),
+        sea_forge_core::yaml::to_string(&template).unwrap(),
     )
     .unwrap();
 

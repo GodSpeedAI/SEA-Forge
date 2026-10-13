@@ -1,0 +1,13 @@
+
+name: legacy
+version: "0.1.0"
+description: no control-flow fields
+plan:
+  items:
+    - plan_item_id: item_01
+      name: lone
+      settlement_criteria:
+        require_exit_zero: true
+        required_artifacts: []
+        stdout_must_contain: null
+        require_approval: false

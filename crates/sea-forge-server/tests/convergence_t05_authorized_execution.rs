@@ -104,7 +104,8 @@ fn decide(
     h: &Harness,
     extra_env_keys: &[&str],
 ) -> sea_forge_core::types::AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(policy).expect("policy yaml");
+    let bundle: AuthorityPolicyBundle =
+        sea_forge_core::yaml::from_str(policy).expect("policy yaml");
     let engine = PolicyAuthorityEngine::new(bundle).expect("engine");
     let mut env_keys: BTreeSet<String> = ["PATH", "HOME"].iter().map(|k| k.to_string()).collect();
     env_keys.extend(extra_env_keys.iter().map(|k| k.to_string()));
@@ -271,7 +272,7 @@ fn t05_denied_authority_produces_no_invocation_and_no_side_effect() {
         ],
         cwd: ".".into(),
     };
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(DENY_POLICY).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(DENY_POLICY).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle).unwrap();
     let grant = engine.grant(&decision, &committed, &action, None);
     assert!(grant.is_err(), "a denied decision must never mint a grant");
@@ -304,7 +305,7 @@ fn t05_escalated_authority_produces_no_invocation_and_no_side_effect() {
         ],
         cwd: ".".into(),
     };
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(ESCALATE_POLICY).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(ESCALATE_POLICY).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle).unwrap();
     assert!(engine.grant(&decision, &committed, &action, None).is_err());
 }
@@ -457,7 +458,7 @@ fn t05_side_effect_helper() {
 fn t05_governed_side_effect_runs_only_after_authorization_and_emission() {
     let h = harness("full-cycle");
     let argv0 = h.sea_forge_argv0.to_string_lossy().into_owned();
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(ALLOW_POLICY).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(ALLOW_POLICY).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle).unwrap();
 
     let mut env: BTreeMap<String, String> = BTreeMap::new();

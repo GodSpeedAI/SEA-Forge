@@ -1,0 +1,23 @@
+
+name: bad_sentry
+version: "0.1.0"
+parameters:
+  src: { type: string, required: true }
+plan:
+  items:
+    - plan_item_id: item_01
+      name: one
+      entry_criteria:
+        - on: { source: "${src}", event: settlement_status }
+      settlement_criteria:
+        require_exit_zero: false
+        required_artifacts: []
+        stdout_must_contain: null
+        require_approval: false
+    - plan_item_id: ${src}
+      name: src_placeholder
+      settlement_criteria:
+        require_exit_zero: false
+        required_artifacts: []
+        stdout_must_contain: null
+        require_approval: false

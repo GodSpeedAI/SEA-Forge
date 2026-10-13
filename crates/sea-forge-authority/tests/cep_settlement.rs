@@ -65,7 +65,7 @@ fn with<T>(
     criteria: SettlementCriteria,
     f: impl FnOnce(&CepAuthorityService<'_>) -> T,
 ) -> T {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(policy_yaml).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(policy_yaml).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
     let service = CepAuthorityService {
         engine: &engine,

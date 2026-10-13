@@ -1,0 +1,15 @@
+
+version: "0.1"
+rules: []
+identity_bindings:
+  - principal: agent_test
+    actor_type: human
+    role: R-SO
+policy_surfaces:
+  self_disclosure:
+    mode: deny-by-default
+    grants:
+      - name: so-role-grant
+        actor_role: R-SO
+        claim_classes:
+          - declared_capability

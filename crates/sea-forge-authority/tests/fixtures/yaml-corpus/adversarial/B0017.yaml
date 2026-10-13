@@ -1,0 +1,3 @@
+version: "0.1"
+rules:
+  - {name: x, verdict: deny, actor_role: operator, operation_kind: y, requires_approval: true, requires_approval: false}

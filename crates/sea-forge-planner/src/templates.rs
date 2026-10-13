@@ -480,11 +480,12 @@ pub fn instantiate(
 pub fn load(path: &Path) -> Result<PlanTemplate, ForgeError> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| ForgeError::io(format!("read template {}", path.display()), e))?;
-    let template: PlanTemplate = serde_yaml::from_str(&text).map_err(|e| ForgeError::Config {
-        class: "schema_error",
-        path: path.into(),
-        message: e.to_string(),
-    })?;
+    let template: PlanTemplate =
+        sea_forge_core::yaml::from_str(&text).map_err(|e| ForgeError::Config {
+            class: "schema_error",
+            path: path.into(),
+            message: e.to_string(),
+        })?;
     // Validate name pattern
     if !template
         .name
@@ -615,7 +616,7 @@ fn store_template(root: &Path, template: &PlanTemplate) -> Result<PathBuf, Forge
     match OpenOptions::new().create_new(true).write(true).open(&path) {
         Ok(mut file) => file
             .write_all(
-                serde_yaml::to_string(template)
+                sea_forge_core::yaml::to_string(template)
                     .map_err(|error| ForgeError::Serialization(error.to_string()))?
                     .as_bytes(),
             )

@@ -1,0 +1,65 @@
+version: "0.1"
+identity:
+  source: test
+  allow_unresolved: false
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+  - principal: security_officer
+    actor_type: human
+    role: R-SO
+sod_rules:
+  - name: capitalization_requester_approver
+    requester_role: operator
+    approver_role: R-SO
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    allow_same_principal: false
+settlement_authorities:
+  - authority_ref: swe_seed_test
+    adapter: swe_seed
+    command: ["{bin}", "internal-test-swe-seed"]
+    timeout_secs: 5
+    trust_anchor_ref: test-anchor
+    declarer_actor_id: swe_seed_verifier
+    permitted_declarer_roles: [R-AA]
+    standing_basis: test-attested-verifier
+    may_issue_strong: true
+rules:
+  - name: transition
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: synthesize
+    from_stage: cognitive
+    to_stage: intellectual
+    modes: [promote]
+    gate_profile_ref: synthesize@1
+    required_settlement_strength: local
+    qualifying_value_evidence_kinds: []
+    requires_approval: false
+    license_allowlist: [internal]
+  - name: write
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: ""
+  - name: evaluate
+    verdict: allow
+    actor_role: operator
+    operation_kind: execute_command
+    argv0: sea-forge
+    environment: transition_env@0.1.0
+  - name: attest
+    verdict: allow
+    actor_role: operator
+    operation_kind: attest_artifact_identity
+    ledger: ifl
+    requester_roles: [operator]
+    approver_roles: [R-SO]
+    degraded_mode: forbidden
+  - name: resolve-approval
+    verdict: allow
+    actor_role: R-SO
+    operation_kind: approval_resolution

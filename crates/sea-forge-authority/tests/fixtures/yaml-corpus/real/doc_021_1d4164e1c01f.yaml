@@ -1,0 +1,7 @@
+version: "0.1"
+rules:
+  - name: execute
+    verdict: allow
+    actor_role: operator
+    operation_kind: execute_command
+    argv0: {argv0}
