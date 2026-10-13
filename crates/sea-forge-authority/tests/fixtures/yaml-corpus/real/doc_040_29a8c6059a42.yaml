@@ -1,0 +1,29 @@
+version: "0.1"
+policy_surfaces:
+  file:
+    deny_write: []
+rules:
+  - name: allow-everything
+    verdict: allow
+    actor_role: operator
+    operation_kind: delete_file
+  - name: allow-everything-2
+    verdict: allow
+    actor_role: operator
+    operation_kind: generated_zone_mutation
+  - name: allow-everything-3
+    verdict: allow
+    actor_role: operator
+    operation_kind: spec_mutation
+  - name: allow-everything-4
+    verdict: allow
+    actor_role: operator
+    operation_kind: settlement_authority_mutation
+  - name: allow-everything-5
+    verdict: allow
+    actor_role: operator
+    operation_kind: policy_mutation
+  - name: allow-everything-6
+    verdict: allow
+    actor_role: operator
+    operation_kind: evidence_mutation

@@ -129,7 +129,7 @@ fn main() {
         .expect("sequential_agents_template must accept a valid endpoint id");
     std::fs::write(
         templates_dir.join(format!("{TEMPLATE_REF}.yaml")),
-        serde_yaml::to_string(&template).expect("serialize template"),
+        sea_forge_core::yaml::to_string(&template).expect("serialize template"),
     )
     .expect("write template file");
 
@@ -152,7 +152,7 @@ rules:\n\
 
     std::fs::write(
         root.join("server.yaml"),
-        serde_yaml::to_string(&config).expect("serialize ServerConfig"),
+        sea_forge_core::yaml::to_string(&config).expect("serialize ServerConfig"),
     )
     .expect("write server.yaml");
 

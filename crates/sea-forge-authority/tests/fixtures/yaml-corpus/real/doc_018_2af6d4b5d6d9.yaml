@@ -1,0 +1,13 @@
+version: "0.2"
+allow_degraded: true
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+rules:
+  - name: mutate-policy
+    verdict: allow
+    disposition: degraded
+    compensating_controls: [audit]
+    actor_role: operator
+    operation_kind: policy_mutation

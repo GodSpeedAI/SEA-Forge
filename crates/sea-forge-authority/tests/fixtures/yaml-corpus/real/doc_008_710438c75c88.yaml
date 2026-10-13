@@ -1,0 +1,6 @@
+version: "0.2"
+policy_engines:
+  - engine: opa
+    fail_mode: pass
+    required: true
+rules: []

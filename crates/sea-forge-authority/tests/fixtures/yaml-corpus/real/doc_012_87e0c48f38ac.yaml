@@ -1,0 +1,11 @@
+version: "0.1"
+identity_bindings:
+  - principal: agent_one
+    actor_type: agent
+    role: agent
+{sponsor_yaml}rules:
+  - name: allow-write
+    verdict: allow
+    actor_role: agent
+    operation_kind: write_file
+    path_prefix: ""

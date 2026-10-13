@@ -911,26 +911,20 @@ impl AuthorityPolicyBundle {
             path: path.into(),
             message: e.to_string(),
         })?;
-        let yaml: serde_yaml::Value =
-            serde_yaml::from_str(&text).map_err(|error| ForgeError::Config {
-                class: "parse_error",
-                path: path.into(),
-                message: error.location().map_or_else(
-                    || "invalid YAML".into(),
-                    |location| {
-                        format!(
-                            "invalid YAML at line {}, column {}",
-                            location.line(),
-                            location.column()
-                        )
-                    },
-                ),
-            })?;
-        let mut bundle: Self = serde_yaml::from_value(yaml).map_err(|_| ForgeError::Config {
-            class: "schema_error",
+        sea_forge_core::yaml::check_syntax(&text).map_err(|error| ForgeError::Config {
+            class: "parse_error",
             path: path.into(),
-            message: "policy does not match the required schema".into(),
+            message: error.line().zip(error.column()).map_or_else(
+                || "invalid YAML".into(),
+                |(line, column)| format!("invalid YAML at line {line}, column {column}"),
+            ),
         })?;
+        let mut bundle: Self =
+            sea_forge_core::yaml::from_str(&text).map_err(|_| ForgeError::Config {
+                class: "schema_error",
+                path: path.into(),
+                message: "policy does not match the required schema".into(),
+            })?;
         bundle.validate(path)?;
         if bundle.version == "0.2" {
             let base = bundle
@@ -3051,7 +3045,7 @@ mod tests {
     use sea_forge_ledger::LedgerStream;
 
     fn engine() -> PolicyAuthorityEngine {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         ).unwrap();
         PolicyAuthorityEngine::new(bundle).unwrap()
@@ -3269,7 +3263,7 @@ mod tests {
 
     #[test]
     fn reserved_transition_grant_rejects_a_substituted_action() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nrules:\n  - name: transition\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: synthesize\n    from_stage: cognitive\n    to_stage: intellectual\n    modes: [promote]\n    gate_profile_ref: synthesize@1\n    required_settlement_strength: local\n    qualifying_value_evidence_kinds: []\n    requires_approval: false\n    license_allowlist: [internal]\n",
         )
         .unwrap();
@@ -3303,7 +3297,7 @@ mod tests {
         CommittedRecordRef,
         CommittedRecordRef,
     ) {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nrules:\n  - name: capitalize\n    verdict: allow\n    actor_role: operator\n    operation_kind: transition_artifact_stage\n    transition_kind: capitalize\n    from_stage: product\n    to_stage: capital\n    modes: [promote]\n    gate_profile_ref: capital@1\n    required_settlement_strength: strong\n    qualifying_value_evidence_kinds: [adoption]\n    requires_approval: true\n    license_allowlist: [internal]\n",
         )
         .unwrap();
@@ -3645,7 +3639,9 @@ mod tests {
         ] {
             let mut parameters = valid.clone();
             parameters[field] = replacement;
-            let engine = PolicyAuthorityEngine::new(serde_yaml::from_str(policy).unwrap()).unwrap();
+            let engine =
+                PolicyAuthorityEngine::new(sea_forge_core::yaml::from_str(policy).unwrap())
+                    .unwrap();
             let action = AuthorityAction::Reserved {
                 resource_type: "transition_artifact_stage".into(),
                 resource_id: "art_model".into(),
@@ -3678,7 +3674,9 @@ mod tests {
         ] {
             let mut parameters = valid.clone();
             parameters[field] = replacement;
-            let engine = PolicyAuthorityEngine::new(serde_yaml::from_str(policy).unwrap()).unwrap();
+            let engine =
+                PolicyAuthorityEngine::new(sea_forge_core::yaml::from_str(policy).unwrap())
+                    .unwrap();
             let action = AuthorityAction::Reserved {
                 resource_type: "attest_artifact_identity".into(),
                 resource_id: "art_model".into(),
@@ -3693,7 +3691,7 @@ mod tests {
 
     #[test]
     fn allowlisted_api_host_reaches_unsupported_surface_escalation() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str("version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [known.example]\nrules: []\n").unwrap();
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str("version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [known.example]\nrules: []\n").unwrap();
         let engine = PolicyAuthorityEngine::new(bundle).unwrap();
         let actor = actor();
         let action = AuthorityAction::ExternalApi {
@@ -3727,19 +3725,19 @@ mod tests {
 
     #[test]
     fn engine_constructor_rejects_unvalidated_allow_any_command_bundle() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str("version: \"0.1\"\nrules:\n  - name: unsafe\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n").unwrap();
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str("version: \"0.1\"\nrules:\n  - name: unsafe\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n").unwrap();
         assert!(PolicyAuthorityEngine::new(bundle).is_err());
     }
 
     #[test]
     fn configured_engine_must_fail_closed_and_unavailability_blocks() {
-        let fail_open: AuthorityPolicyBundle = serde_yaml::from_str(
+        let fail_open: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.2\"\npolicy_engines:\n  - engine: opa\n    fail_mode: pass\n    required: true\nrules: []\n",
         )
         .unwrap();
         assert!(PolicyAuthorityEngine::new(complete_v02(fail_open)).is_err());
 
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.2\"\npolicy_engines:\n  - engine: opa\n    fail_mode: closed\n    required: true\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap();
@@ -3755,7 +3753,7 @@ mod tests {
 
     #[test]
     fn v02_identity_map_resolves_and_unknown_identity_escalates() {
-        let bundle: AuthorityPolicyBundle = complete_v02(serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = complete_v02(sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap());
@@ -3767,7 +3765,7 @@ mod tests {
 
     #[test]
     fn domainforge_candidate_is_composed_with_local_authority() {
-        let bundle: AuthorityPolicyBundle = complete_v02(serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = complete_v02(sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\npolicy_engines:\n  - engine: domainforge\n    fail_mode: closed\n    required: true\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap());
@@ -3823,7 +3821,7 @@ mod tests {
             ("", Verdict::Escalate),
             ("    sponsor: human_owner\n", Verdict::Allow),
         ] {
-            let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+            let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&format!(
                 "version: \"0.1\"\nidentity_bindings:\n  - principal: agent_one\n    actor_type: agent\n    role: agent\n{sponsor_yaml}rules:\n  - name: allow-write\n    verdict: allow\n    actor_role: agent\n    operation_kind: write_file\n    path_prefix: \"\"\n"
             ))
             .unwrap();
@@ -3860,7 +3858,7 @@ mod tests {
 
     #[test]
     fn configured_service_identity_can_authorize() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nidentity_bindings:\n  - principal: service_one\n    actor_type: service\n    role: service\nrules:\n  - name: allow-service-write\n    verdict: allow\n    actor_role: service\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap();
@@ -3896,7 +3894,7 @@ mod tests {
 
     #[test]
     fn opaque_constraint_preempts_repeated_ambiguous_action() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nrules:\n  - name: review-write\n    verdict: escalate\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap();
@@ -3913,7 +3911,7 @@ mod tests {
 
     #[test]
     fn approval_required_rule_escalates_without_resolution() {
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.1\"\nrules:\n  - name: approved-write\n    verdict: allow\n    requires_approval: true\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap();
@@ -3930,7 +3928,7 @@ mod tests {
 
     #[test]
     fn configured_sod_approver_role_propagates_to_decision() {
-        let base: AuthorityPolicyBundle = serde_yaml::from_str(
+        let base: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: mutate-policy\n    verdict: allow\n    actor_role: operator\n    operation_kind: policy_mutation\n",
         )
         .unwrap();
@@ -3988,7 +3986,7 @@ mod tests {
     // compare across cells, and settle — identically.
     #[test]
     fn policy_bundle_hash_is_independent_of_source_base_path() {
-        let base: AuthorityPolicyBundle = serde_yaml::from_str(
+        let base: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nallow_degraded: true\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: mutate-policy\n    verdict: allow\n    actor_role: operator\n    operation_kind: policy_mutation\n",
         )
         .unwrap();
@@ -4019,7 +4017,7 @@ mod tests {
 
     #[test]
     fn rule_disposition_cannot_override_rbac_or_sod() {
-        let base: AuthorityPolicyBundle = serde_yaml::from_str(
+        let base: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nallow_degraded: true\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: mutate-policy\n    verdict: allow\n    disposition: degraded\n    compensating_controls: [audit]\n    actor_role: operator\n    operation_kind: policy_mutation\n",
         )
         .unwrap();
@@ -4110,7 +4108,7 @@ mod tests {
             .unwrap();
         assert_eq!(decision.verdict, Verdict::Escalate);
         assert_eq!(decision.reason_codes, ["identity_unresolved"]);
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str("version: \"0.1\"\nrules:\n  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n").unwrap();
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str("version: \"0.1\"\nrules:\n  - name: allow-self\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n").unwrap();
         let engine = PolicyAuthorityEngine::new(bundle).unwrap();
         let substitute = AuthorityAction::ExecuteCommand {
             argv: vec!["/tmp/sea-forge".into(), "validate".into()],
@@ -4233,7 +4231,7 @@ mod tests {
         // The harness policy only allows write_file; add an execute_command
         // allow bound to the trusted self-executable so the decision is an
         // Allow under the `untrusted_executable` gate.
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&format!(
             "version: \"0.1\"\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n  - name: allow-self-cmd\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: {}\n",
             std::env::current_exe()
                 .unwrap()
@@ -4364,7 +4362,7 @@ mod tests {
     fn execution_grant_rejects_timeout_or_artifact_substitution() {
         let executable = std::env::current_exe().unwrap();
         let argv0 = executable.file_name().unwrap().to_string_lossy();
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&format!(
             "version: \"0.1\"\nrules:\n  - name: execute\n    verdict: allow\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: {argv0}\n"
         ))
         .unwrap();
@@ -4424,7 +4422,7 @@ mod tests {
                 vec!["audit".into()],
             ),
         ] {
-            let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&format!(
+            let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&format!(
                 "version: \"0.1\"\nallow_degraded: true\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: constrained-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n{extra_policy}"
             ))
             .unwrap();
@@ -4613,7 +4611,7 @@ mod resolver_tests {
     }
 
     fn capitalize_sod_bundle(requester_role: &str) -> AuthorityPolicyBundle {
-        let mut base: AuthorityPolicyBundle = serde_yaml::from_str(
+        let mut base: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
             r#"version: "0.2"
 identity_bindings:
   - principal: operator_local

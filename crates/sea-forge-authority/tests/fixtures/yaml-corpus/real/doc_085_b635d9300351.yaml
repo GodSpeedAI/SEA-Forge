@@ -1,0 +1,11 @@
+version: "0.1"
+rules:
+  - name: allow-actions
+    verdict: allow
+    actor_role: service
+    operation_kind: cognate_action
+  - name: gate-capabilities
+    verdict: allow
+    actor_role: service
+    operation_kind: cognate_capability
+    requires_approval: true

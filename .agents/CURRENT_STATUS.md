@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 82
+**Status revision:** 83
 
-**Stage:** repo-hygiene
+**Stage:** security: replace serde_yaml
 
-**Summary:** Agent instructions now say to commit often at meaningful milestones, and Jolli runtime state is untracked and gitignored so it stops dirtying the tree.
+**Summary:** Replace serde_yaml (unsafe-libyaml, RUSTSEC-2024-0449) with serde-saphyr behind one strict wrapper, sea_forge_core::yaml; proven against reference identities and verdicts from the old parser over 107 real and 690 adversarial documents.
 
 **Verified:**
 
@@ -40,6 +40,8 @@
 - self_model_cli passes on Linux; 40 repeat runs without failure.
 - Rust workspace 1246 pass / 0 fail; clippy -D warnings clean.
 - just check run on this branch before push
+- YAML parsing goes through sea_forge_core::yaml only: duplicate keys, merge keys, unknown tags, null collections, quoted or non-canonical booleans and non-canonical integers are rejected; input, depth, node and alias limits are bounded.
+- Corpus proof: all 107 real documents keep accept/reject, policy identities, hashes and probe verdicts; no adversarial document is newly accepted.
 
 **Limits:**
 
@@ -70,8 +72,11 @@
 - The symlink guard fix is verified on Linux only; macOS is verified by CI.
 - The macOS self_model_cli failure is not yet explained.
 - The macOS fix is verified by CI only.
+- unsafe-libyaml is still in the lock through domainforge-core 0.19.0, so cargo deny advisories still fails until a domainforge-core release without serde_yaml is published and pinned.
+- Stricter than before: an explicit null collection (for example a bare `rules:`) and True/TRUE booleans no longer load.
+- Fields under serde flatten or internally tagged enums (planner AgentTask max_turns and token_budget) skip the spelling check; explicit YAML core tags are honoured.
 
-**Next:** Merge via auto-merge once CI is green; T13 not started.
+**Next:** Publish a domainforge-core release without serde_yaml, pin it here, and confirm cargo deny passes.
 
 **Evidence:**
 

@@ -1,0 +1,6 @@
+version: "0.1"
+policy_surfaces:
+  external_api:
+    mode: deny-by-default
+    allow_hosts: [known.example]
+rules: []

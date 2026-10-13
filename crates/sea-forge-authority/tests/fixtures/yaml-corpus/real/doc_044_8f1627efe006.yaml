@@ -1,0 +1,6 @@
+version: "0.1"
+rules:
+  - name: any
+    verdict: allow
+    actor_role: agent
+    operation_kind: cognate_action

@@ -63,7 +63,7 @@ fn cell() -> Cell {
 }
 
 fn with<T>(c: &Cell, policy: &str, f: impl FnOnce(&CepAuthorityService<'_>) -> T) -> T {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(policy).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(policy).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
     let service = CepAuthorityService {
         engine: &engine,

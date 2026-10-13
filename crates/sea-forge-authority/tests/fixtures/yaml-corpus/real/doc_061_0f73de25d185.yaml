@@ -1,0 +1,13 @@
+
+version: "0.1"
+rules: []
+policy_surfaces:
+  self_disclosure:
+    mode: deny-by-default
+    grants:
+      - name: full-grant
+        actor_role: operator_local
+        claim_classes:
+          - declared_capability
+          - installed_capability
+          - demonstrated_capability

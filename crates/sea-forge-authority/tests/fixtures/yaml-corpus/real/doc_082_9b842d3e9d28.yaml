@@ -1,0 +1,15 @@
+version: "0.1"
+policy_surfaces:
+  external_api:
+    mode: deny-by-default
+    allow_hosts: [argv]
+rules:
+  - name: allow-jailed-agent-task
+    verdict: allow
+    actor_role: operator
+    operation_kind: agent_task
+    sandbox_class: jail
+  - name: allow-acp-permission
+    verdict: allow
+    actor_role: operator
+    operation_kind: sandbox_execution

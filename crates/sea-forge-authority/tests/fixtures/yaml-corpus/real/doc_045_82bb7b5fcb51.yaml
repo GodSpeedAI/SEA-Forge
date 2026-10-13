@@ -1,0 +1,7 @@
+version: "0.1"
+rules:
+  - name: gated
+    verdict: allow
+    actor_role: service
+    operation_kind: cognate_action
+    requires_approval: true

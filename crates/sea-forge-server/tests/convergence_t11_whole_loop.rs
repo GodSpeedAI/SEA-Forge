@@ -104,7 +104,8 @@ fn harness(tag: &str) -> Harness {
 }
 
 fn allow_decision(h: &Harness, seq: usize) -> sea_forge_core::types::AuthorityDecision {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(AUTH_DECISION_ALLOW_POLICY).unwrap();
+    let bundle: AuthorityPolicyBundle =
+        sea_forge_core::yaml::from_str(AUTH_DECISION_ALLOW_POLICY).unwrap();
     let engine = PolicyAuthorityEngine::new(bundle).unwrap();
     let action = AuthorityAction::ExecuteCommand {
         argv: vec![

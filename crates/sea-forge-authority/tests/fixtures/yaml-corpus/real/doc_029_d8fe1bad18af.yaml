@@ -1,0 +1,6 @@
+version: "0.1"
+rules:
+  - name: incomplete-transition
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage

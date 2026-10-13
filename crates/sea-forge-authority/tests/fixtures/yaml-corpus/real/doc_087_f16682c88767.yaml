@@ -1,0 +1,14 @@
+version: "0.1"
+rules:
+  - name: a
+    verdict: allow
+    actor_role: service
+    operation_kind: cognate_action
+  - name: e
+    verdict: allow
+    actor_role: service
+    operation_kind: evidence_mutation
+  - name: s
+    verdict: allow
+    actor_role: service
+    operation_kind: settlement_declaration

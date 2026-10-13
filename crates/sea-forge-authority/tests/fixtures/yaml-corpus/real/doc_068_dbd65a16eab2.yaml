@@ -1,0 +1,4 @@
+version: "0.1"
+identity:
+  allow_unresolved: super-secret-token
+rules: []

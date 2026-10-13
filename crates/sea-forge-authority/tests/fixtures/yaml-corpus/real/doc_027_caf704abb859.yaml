@@ -1,0 +1,4 @@
+version: "0.1"
+allow_degraded: true
+rules:
+{rules}

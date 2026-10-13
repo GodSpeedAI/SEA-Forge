@@ -1,0 +1,13 @@
+version: "0.1"
+rules:
+  - &r1
+    name: allow-read
+    verdict: allow
+    actor_role: operator
+    operation_kind: file_read
+    requires_approval: false
+  - <<: *r1
+    name: deny-write
+    verdict: deny
+    actor_role: agent
+    operation_kind: file_write

@@ -1,0 +1,10 @@
+version: "0.1"
+rules:
+  - name: open
+    verdict: allow
+    actor_role: service
+    operation_kind: world_transition
+  - name: approvers
+    verdict: allow
+    actor_role: operator
+    operation_kind: approval_resolution

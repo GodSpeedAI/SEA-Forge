@@ -14,7 +14,6 @@ sea-forge-domain = { path = "../sea-forge-domain", version = "0.1.0" }
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
 sha2.workspace = true
 
 [dev-dependencies]

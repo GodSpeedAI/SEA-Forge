@@ -1,0 +1,15 @@
+version: "0.1"
+rules:
+  - name: capitalize
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: capitalize
+    from_stage: product
+    to_stage: capital
+    modes: [promote]
+    gate_profile_ref: capital@1
+    required_settlement_strength: strong
+    qualifying_value_evidence_kinds: [adoption]
+    requires_approval: true
+    license_allowlist: [internal]

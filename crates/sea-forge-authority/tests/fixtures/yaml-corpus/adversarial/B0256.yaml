@@ -1,0 +1,27 @@
+version: 0.1
+default: deny
+allow_degraded: false
+identity:
+  source: local-slice-default
+  allow_unresolved: false
+policy_engines:
+  - engine: opa
+    fail_mode: closed
+    required: false
+integrity_ledger:
+  min_witnesses: 1
+rules:
+  - name: allow-read
+    verdict: allow
+    actor_role: operator
+    operation_kind: file_read
+    path_prefix: /work
+    argv0: sh
+    requires_approval: false
+  - name: deny-write
+    verdict: deny
+    actor_role: agent
+    operation_kind: file_write
+    boundary_constraints:
+      network:
+        - none

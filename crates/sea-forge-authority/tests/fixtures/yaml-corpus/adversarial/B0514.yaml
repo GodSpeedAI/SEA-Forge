@@ -1,0 +1,15 @@
+name: demo_env
+version: 0.1.0
+description: demo environment
+base:
+  - path: README.md
+    content: hello
+provides:
+  commands:
+    - echo
+evaluators:
+  check:
+    argv:
+      - echo
+      - ok
+    score_from: exit

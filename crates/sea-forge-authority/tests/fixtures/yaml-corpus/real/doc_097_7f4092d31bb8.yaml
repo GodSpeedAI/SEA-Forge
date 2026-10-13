@@ -1,0 +1,14 @@
+
+version: "0.1"
+rules: []
+policy_surfaces:
+  self_disclosure:
+    mode: deny-by-default
+    grants:
+      - name: fresh-required
+        actor_role: agent_test
+        claim_classes:
+          - declared_capability
+          - installed_capability
+          - demonstrated_capability
+        require_fresh_snapshot: true

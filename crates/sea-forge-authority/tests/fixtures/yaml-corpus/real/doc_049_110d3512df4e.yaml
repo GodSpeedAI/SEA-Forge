@@ -1,0 +1,15 @@
+version: "0.1"
+rules:
+  - name: transition
+    verdict: allow
+    actor_role: operator
+    operation_kind: transition_artifact_stage
+    transition_kind: {transition_kind}
+    from_stage: {from_stage}
+    to_stage: {to_stage}
+    modes: [{mode}]
+    gate_profile_ref: {}
+    required_settlement_strength: {}
+    qualifying_value_evidence_kinds: {evidence}
+    requires_approval: {}
+    license_allowlist: {license_allowlist}

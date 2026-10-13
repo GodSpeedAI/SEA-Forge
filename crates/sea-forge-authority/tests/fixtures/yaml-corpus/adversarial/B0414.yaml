@@ -1,0 +1,5 @@
+version: "0.1"
+identity: &i {source: x, allow_unresolved: true}
+identity2:
+  <<: *i
+rules: []

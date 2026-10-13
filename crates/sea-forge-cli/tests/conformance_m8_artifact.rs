@@ -176,7 +176,7 @@ fn environment(root: &Path, bin: &Path, succeeds: bool) {
     };
     fs::write(
         path,
-        serde_yaml::to_string(&sea_forge_sandbox::EnvironmentSpec {
+        sea_forge_core::yaml::to_string(&sea_forge_sandbox::EnvironmentSpec {
             name: "transition_env".into(),
             version: "0.1.0".into(),
             description: String::new(),
@@ -292,7 +292,7 @@ fn append_authorized_rights_profile(
     registration: &sea_forge_artifact_ip::ArtifactRegistrationRecord,
 ) {
     let action = canonical_rights_action(registration, &["approved".into()]);
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         "version: \"0.1\"\nrules:\n  - name: rights\n    verdict: allow\n    actor_role: operator\n    operation_kind: review_artifact_rights\n",
     )
     .unwrap();

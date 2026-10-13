@@ -27,7 +27,7 @@ fn candidate(disposition: D) -> GovernanceVerdict {
 
 #[test]
 fn m8_transition_rule_missing_required_contract_is_schema_error() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: incomplete-transition
@@ -43,7 +43,7 @@ rules:
 
 #[test]
 fn settlement_authority_descriptor_selects_one_strong_adapter_and_local_cannot_be_strong() {
-    let valid: AuthorityPolicyBundle = serde_yaml::from_str(
+    let valid: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 settlement_authorities:
   - authority_ref: local
@@ -72,7 +72,7 @@ rules: []
         "swe_seed_prod"
     );
 
-    let invalid: AuthorityPolicyBundle = serde_yaml::from_str(
+    let invalid: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 settlement_authorities:
   - authority_ref: local
@@ -94,7 +94,7 @@ rules: []
 
 #[test]
 fn m8_attestation_rule_missing_role_constraints_is_schema_error() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: incomplete-attestation
@@ -134,7 +134,7 @@ rules:
     requires_approval: {requires_approval}
 "#
         );
-        let bundle: AuthorityPolicyBundle = serde_yaml::from_str(&yaml).unwrap();
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&yaml).unwrap();
         assert_eq!(
             PolicyAuthorityEngine::new(bundle).err().unwrap().class(),
             "schema_error"
@@ -144,7 +144,7 @@ rules:
 
 #[test]
 fn m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 policy_surfaces:
   external_api:
@@ -248,7 +248,7 @@ rules:
 
 #[test]
 fn m13_agent_task_requires_exact_endpoint_policy_and_grant_binding() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 policy_surfaces:
   external_api:
@@ -482,7 +482,7 @@ fn recall_action(entity_id: &str, requester_entity: &str) -> AuthorityAction {
 }
 
 fn recall_bundle(memory_scope: &str) -> AuthorityPolicyBundle {
-    serde_yaml::from_str(&format!(
+    sea_forge_core::yaml::from_str(&format!(
         r#"version: "0.1"
 rules:
   - name: recall-scoped
@@ -563,7 +563,7 @@ fn memory_scope_any_allows_all() {
 
 #[test]
 fn memory_scope_missing_denies() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: recall-no-scope
@@ -636,7 +636,7 @@ fn memory_scope_grant_carries_boundary() {
 
 #[test]
 fn misspelled_top_level_bundle_key_is_rejected() {
-    let result: Result<AuthorityPolicyBundle, _> = serde_yaml::from_str(
+    let result: Result<AuthorityPolicyBundle, _> = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 polcy_rules:
   - name: typo
@@ -652,7 +652,7 @@ polcy_rules:
     );
 
     // Control: the correctly spelled minimal bundle parses.
-    let ok: AuthorityPolicyBundle = serde_yaml::from_str(
+    let ok: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 rules:
   - name: rule
@@ -669,7 +669,7 @@ rules:
 
 #[test]
 fn reserved_mutator_into_generated_zone_denies_even_under_allow_all_policy() {
-    let bundle: AuthorityPolicyBundle = serde_yaml::from_str(
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"
 policy_surfaces:
   file:

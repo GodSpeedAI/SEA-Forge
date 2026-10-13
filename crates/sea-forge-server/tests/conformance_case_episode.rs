@@ -39,14 +39,16 @@ use std::sync::Arc;
 /// *local* allow for `execute_command` with any other argv0 as a
 /// `schema_error`, so policy cannot hand out local shell execution.
 fn policy(root: &Path, verdict: Option<&str>) -> PathBuf {
+    // `rules: []` rather than a bare `rules:`: the strict YAML boundary rejects a
+    // null sequence, and the intent here is an empty rule list.
     let rules = match verdict {
         Some(verdict) => format!(
-            "  - name: {verdict}-command\n    verdict: {verdict}\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n"
+            "rules:\n  - name: {verdict}-command\n    verdict: {verdict}\n    actor_role: operator\n    operation_kind: execute_command\n    argv0: sea-forge\n"
         ),
-        None => String::new(),
+        None => "rules: []\n".to_string(),
     };
     let path = root.join(format!("{}.yaml", verdict.unwrap_or("deny")));
-    fs::write(&path, format!("version: \"0.1\"\nrules:\n{rules}")).unwrap();
+    fs::write(&path, format!("version: \"0.1\"\n{rules}")).unwrap();
     path
 }
 

@@ -1,0 +1,7 @@
+version: "0.1"
+rules:
+  - name: command
+    verdict: allow
+    actor_role: R-SO
+    operation_kind: execute_command
+    argv0: sea-forge

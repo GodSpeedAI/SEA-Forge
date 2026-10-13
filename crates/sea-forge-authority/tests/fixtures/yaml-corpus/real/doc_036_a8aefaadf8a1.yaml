@@ -1,0 +1,7 @@
+version: "0.1"
+rules:
+  - name: recall-scoped
+    verdict: allow
+    actor_role: operator
+    operation_kind: recall_memory
+    memory_scope: {memory_scope}
