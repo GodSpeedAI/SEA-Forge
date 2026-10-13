@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 85
+**Status revision:** 86
 
-**Stage:** authority: approval consumption ordering
+**Stage:** ci: casework live workflow
 
-**Summary:** grant_after_approval validates the grant before appending the consumption record, so a request refused during validation no longer spends the approval; the expiry race after validation is listed under limits.
+**Summary:** The Casework live workflow builds the sea-forge CLI and installs the UI dependencies its jobs need.
 
 **Verified:**
 
@@ -44,6 +44,7 @@
 - Corpus proof: all 107 real documents keep accept/reject, policy identities, hashes and probe verdicts; no adversarial document is newly accepted.
 - domainforge-core pinned to =0.20.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
 - Approval consumption: a mismatched action, missing assurance or mismatched committed decision is refused without an approval_grant_consumption record; eight concurrent strict callers yield exactly one grant.
+- Casework live on GitHub: the go-live job passes; the ladder passes 11 of 11 journeys on re-run.
 
 **Limits:**
 
@@ -77,6 +78,7 @@
 - Stricter than before: an explicit null collection (for example a bare `rules:`) and True/TRUE booleans no longer load.
 - Fields under serde flatten or internally tagged enums (planner AgentTask max_turns and token_budget) skip the spelling check; explicit YAML core tags are honoured.
 - Approval consumption residual: a grant window that closes between validation and the ledger append still spends the approval.
+- Casework live ladder journey L-RECOV (kill -9 recovery) timed out once on GitHub and passed on re-run; treat as flaky until it has a longer record.
 
 **Next:** Review and merge the security migration; rebase the other open branches on it.
 
