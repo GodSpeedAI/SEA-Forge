@@ -11,7 +11,7 @@ Three build roots, deliberately not one:
 
 | Root | Toolchain | Contents |
 |---|---|---|
-| `.` | cargo 1.92.0, edition 2021 | 22-crate Rust workspace — the kernel, CLI, and local server |
+| `.` | cargo 1.99.0 (MSRV 1.92.0), edition 2021 | 22-crate Rust workspace — the kernel, CLI, and local server |
 | `workbench/` | bun 1.3.14 | Bun workspace — desktop app, UI components, UI tokens, generated contracts |
 | `workbench/apps/desktop/src-tauri/` | cargo, **standalone workspace** | Tauri host (ADR-004) |
 

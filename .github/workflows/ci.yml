@@ -93,6 +93,32 @@ jobs:
       - name: build
         run: devbox run -- just build
 
+  # MSRV gate. Cargo.toml `rust-version` (1.92.0) is the lowest toolchain we
+  # support; every other job builds with rust-toolchain.toml (current stable).
+  # The RUSTUP_TOOLCHAIN override goes through `env` inside `devbox run` because
+  # devbox.json sets RUSTUP_TOOLCHAIN="" and would otherwise win over a step env.
+  msrv:
+    name: MSRV (1.92)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Install MSRV toolchain
+        run: devbox run -- rustup toolchain install 1.92.0 --profile minimal --no-self-update
+
+      - name: Verify MSRV compiler
+        run: devbox run -- env RUSTUP_TOOLCHAIN=1.92.0 rustc --version
+
+      - name: check (MSRV)
+        run: devbox run -- env RUSTUP_TOOLCHAIN=1.92.0 cargo check --workspace --all-targets --locked
+
   # The product's other half: the web renderer. `just workbench-check` runs the
   # generated-contract drift gate, the UI token drift check, and the renderer
   # suite (typecheck, build, unit tests). The desktop shell was removed, so no
@@ -146,7 +172,7 @@ jobs:
   # `just ci` is equivalent to the union of lint + test + macos.
   gate:
     name: gate
-    needs: [lint, test, workbench, macos]
+    needs: [lint, test, msrv, workbench, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -155,6 +181,7 @@ jobs:
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           TEST_RESULT: ${{ needs.test.result }}
+          MSRV_RESULT: ${{ needs.msrv.result }}
           WORKBENCH_RESULT: ${{ needs.workbench.result }}
           MACOS_RESULT: ${{ needs.macos.result }}
         run: |
@@ -170,10 +197,11 @@ jobs:
           # those vars by name.
           echo "lint:      $LINT_RESULT"
           echo "test:      $TEST_RESULT"
+          echo "msrv:      $MSRV_RESULT"
           echo "workbench: $WORKBENCH_RESULT"
           echo "macos:     $MACOS_RESULT"
           fail=0
-          for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" \
+          for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" "msrv:$MSRV_RESULT" \
                        "workbench:$WORKBENCH_RESULT" "macos:$MACOS_RESULT"; do
             name="${entry%%:*}"
             r="${entry#*:}"

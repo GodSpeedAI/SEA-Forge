@@ -58,6 +58,27 @@ lint:
 typecheck:
     cargo check --workspace --all-targets --locked
 
+# Print the active compiler and fail if rustc is not the rust-toolchain.toml channel.
+[group('quality')]
+toolchain-check:
+    #!/usr/bin/env bash
+    {{set}}
+    pin="$(sed -n 's/^channel *= *"\(.*\)".*/\1/p' rust-toolchain.toml)"
+    rustc --version
+    cargo --version
+    cargo clippy --version
+    echo "channel (rust-toolchain.toml): $pin"
+    if ! printf '%s' "$pin" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        echo "toolchain-check: channel '$pin' is not an exact version; pin rust-toolchain.toml to major.minor.patch" >&2
+        exit 1
+    fi
+    active="$(rustc --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+    if [ "$active" != "$pin" ]; then
+        echo "toolchain-check: rustc $active != channel $pin" >&2
+        exit 1
+    fi
+    echo "toolchain-check: ok"
+
 # Type-check one workspace crate. Example: `just crate-check sea-forge-core`.
 [group('quality')]
 crate-check crate:

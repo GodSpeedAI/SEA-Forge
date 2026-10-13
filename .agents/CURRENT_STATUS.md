@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 89
+**Status revision:** 90
 
-**Stage:** workbench: remove Tauri shell
+**Stage:** toolchain: Rust 1.99.0
 
-**Summary:** Removed the Tauri desktop shell and retired the packaged-desktop completion evaluation: the evaluation input now records the integrated evaluation as BLOCKED until the renderer bridge is replaced, and its check rejects references to removed recipes.
+**Summary:** Development and CI toolchain pinned to Rust 1.99.0; the workspace MSRV stays 1.92.0 and is checked by a required CI job.
 
 **Verified:**
 
@@ -48,6 +48,7 @@
 - Deflake: ACP budget test 30 of 30 plain and 10 of 10 under CPU load; sfwp_supervisor 10 of 10.
 - Tauri removal: workbench typecheck and lint pass and 212 unit tests pass without the shell; the root Cargo workspace and Cargo.lock are unaffected.
 - just workbench-completion-eval-inputs-check passes with the retired packaged-desktop commands and rejects an input naming a removed desktop-shell recipe
+- Rust 1.99.0: fmt, clippy -D warnings and per-crate tests pass on rustc 1.99.0; cargo +1.92.0 check --workspace --all-targets --locked passes.
 
 **Limits:**
 
@@ -84,8 +85,9 @@
 - Casework live ladder journey L-RECOV (kill -9 recovery) timed out once on GitHub and passed on re-run; treat as flaky until it has a longer record.
 - The agent-browser ladder journey L-RECOV (15 s wait for a panel to close, e2e/journeys-live/helpers.ts) timed out once on GitHub and was not changed.
 - Workbench renderer: twelve runtime modules still call the Tauri bridge (invoke/listen) with no other transport, so the workbench has no backend at runtime until that bridge is replaced. The workbench completion evaluation input therefore records the integrated evaluation as BLOCKED.
+- Toolchain: devbox run could not be verified locally (Nix cache timeout); the MSRV (1.92) CI job has not run on GitHub before this change.
 
-**Next:** Review and merge the security migration; rebase the other open branches on it.
+**Next:** Confirm the MSRV (1.92) job on main after merge; then rebase the remaining open branches onto the 1.99.0 toolchain.
 
 **Evidence:**
 

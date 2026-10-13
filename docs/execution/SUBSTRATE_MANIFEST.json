@@ -28,7 +28,7 @@
   ],
   "languages": {
     "rust": {
-      "toolchain_pin": "rust-toolchain.toml channel=1.92.0 (components: rustfmt, clippy, profile: minimal)",
+      "toolchain_pin": "rust-toolchain.toml channel=1.99.0 (components: rustfmt, clippy, profile: minimal)",
       "edition": "2021",
       "loc_in_crates": 76025,
       "files": 154,
@@ -277,7 +277,7 @@
   "known_environmental_requirements": [
     "Host tools (3): git, devbox, direnv",
     "Pinned via devbox: git 2.49.0, rustup 1.28.2, just 1.55.1, direnv 2.37.0, sops 3.10.2, age 1.2.1, gitleaks 8.30.1, cargo-deny 0.19.9",
-    "Pinned via rust-toolchain.toml: Rust 1.92.0 (stable, minimal profile + rustfmt + clippy)",
+    "Pinned via rust-toolchain.toml: Rust 1.99.0 (stable, minimal profile + rustfmt + clippy)",
     "Pinned via workbench/package.json: bun 1.4.0 (canary Zig->Rust rewrite; reversible to stable per ADR-004)",
     "Linux primary, macOS secondary; CI runs ubuntu-latest + macos-latest",
     "Optional age key at $SOPS_AGE_KEY_FILE (default ~/.config/sops/key.txt) for secrets decryption; offline gates work without it",

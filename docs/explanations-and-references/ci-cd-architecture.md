@@ -16,7 +16,7 @@ smaller layer of controls is GitHub-only because they depend on GitHub itself.
 
 | Concern | Source of truth |
 | --- | --- |
-| Pinned toolchain | `rust-toolchain.toml` (Rust 1.92.0, rustfmt + clippy) |
+| Pinned toolchain | `rust-toolchain.toml` (Rust 1.99.0, rustfmt + clippy). MSRV 1.92.0 is separate, see the `msrv` CI job |
 | Pinned system tools | `devbox.json` + `devbox.lock` (git, rustup, just, direnv, sops, age, gitleaks, cargo-deny) |
 | Dependencies | `Cargo.lock` (committed); installed via `cargo fetch --locked` |
 | Formatting | `cargo fmt --all` (config in `rustfmt` defaults) |
