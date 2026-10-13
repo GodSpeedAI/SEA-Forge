@@ -1673,14 +1673,19 @@ mod tests {
 
     #[tokio::test]
     async fn notifications_cannot_outlive_episode_wall_clock_budget() {
+        // Budget B = per_turn (50ms) * max_turns (4) = 200ms, measured by the
+        // episode from the end of the handshake. The outer timeout T (10s) only
+        // catches an episode that never ends; the elapsed bound (5s, measured
+        // from before the handshake) leaves slack for a loaded runner, where
+        // the process can be descheduled for well over the 200ms budget.
         let session = fixture_notification_stream().await;
         let started = std::time::Instant::now();
         let outcome = time::timeout(
-            Duration::from_millis(300),
+            Duration::from_secs(10),
             session.run_episode(
                 "task",
                 4,
-                Duration::from_millis(10),
+                Duration::from_millis(50),
                 || false,
                 &DenyAllMediator,
             ),
@@ -1690,8 +1695,8 @@ mod tests {
         assert_eq!(outcome.termination, AcpTermination::TurnCapExceeded);
         assert_eq!(outcome.turns_used, 0);
         assert!(
-            started.elapsed() < Duration::from_millis(200),
-            "episode must not wait for the outer test timeout"
+            started.elapsed() < Duration::from_secs(5),
+            "episode must end by its own budget, not wait for the outer test timeout"
         );
     }
 

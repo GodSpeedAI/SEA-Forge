@@ -303,13 +303,51 @@ fn case_events(root: &Path, case_id: &str) -> Vec<Value> {
     read_jsonl(&root.join("cases").join(case_id).join("case-events.jsonl"))
 }
 
+/// Reads the records of a JSONL file that a live server may still be appending
+/// to. The writer emits each record and then its `\n` as separate writes, so a
+/// trailing fragment without `\n` can be a record still in flight and is
+/// ignored. Every newline-terminated line must parse: a malformed complete
+/// line is a real bug and panics.
 fn read_jsonl(path: &Path) -> Vec<Value> {
-    fs::read_to_string(path)
-        .unwrap_or_default()
+    parse_complete_jsonl(&fs::read(path).unwrap_or_default())
+}
+
+fn parse_complete_jsonl(bytes: &[u8]) -> Vec<Value> {
+    let complete = match bytes.iter().rposition(|byte| *byte == b'\n') {
+        Some(last_newline) => &bytes[..=last_newline],
+        None => &[],
+    };
+    String::from_utf8_lossy(complete)
         .lines()
         .filter(|line| !line.trim().is_empty())
         .map(|line| serde_json::from_str(line).unwrap())
         .collect()
+}
+
+#[cfg(test)]
+mod read_jsonl_tests {
+    use super::parse_complete_jsonl;
+    use serde_json::json;
+
+    #[test]
+    fn complete_lines_parse() {
+        let parsed = parse_complete_jsonl(b"{\"kind\":\"a\"}\n\n{\"kind\":\"b\"}\n");
+        assert_eq!(parsed, vec![json!({"kind": "a"}), json!({"kind": "b"})]);
+    }
+
+    #[test]
+    fn trailing_partial_line_is_ignored() {
+        let parsed = parse_complete_jsonl(b"{\"kind\":\"a\"}\n{\"kind\":\"b\", \"x\":\"cut");
+        assert_eq!(parsed, vec![json!({"kind": "a"})]);
+        assert!(parse_complete_jsonl(b"{\"kind\":\"partial\"}").is_empty());
+        assert!(parse_complete_jsonl(b"").is_empty());
+    }
+
+    #[test]
+    #[should_panic]
+    fn malformed_complete_line_panics() {
+        parse_complete_jsonl(b"{\"kind\":\"a\"}\n{\"kind\":\n");
+    }
 }
 
 fn kinds_of(events: &[Value]) -> Vec<String> {
