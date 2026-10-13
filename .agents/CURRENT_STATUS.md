@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 86
+**Status revision:** 87
 
-**Stage:** ci: casework live workflow
+**Stage:** tests: deflake timing-sensitive tests
 
-**Summary:** The Casework live workflow builds the sea-forge CLI and installs the UI dependencies its jobs need.
+**Summary:** Two timing-sensitive tests no longer fail on a loaded runner: the live-server jsonl reader ignores an unterminated trailing line, and the ACP budget test uses a wider margin while asserting the same termination reason.
 
 **Verified:**
 
@@ -45,6 +45,7 @@
 - domainforge-core pinned to =0.20.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
 - Approval consumption: a mismatched action, missing assurance or mismatched committed decision is refused without an approval_grant_consumption record; eight concurrent strict callers yield exactly one grant.
 - Casework live on GitHub: the go-live job passes; the ladder passes 11 of 11 journeys on re-run.
+- Deflake: ACP budget test 30 of 30 plain and 10 of 10 under CPU load; sfwp_supervisor 10 of 10.
 
 **Limits:**
 
@@ -79,6 +80,7 @@
 - Fields under serde flatten or internally tagged enums (planner AgentTask max_turns and token_budget) skip the spelling check; explicit YAML core tags are honoured.
 - Approval consumption residual: a grant window that closes between validation and the ledger append still spends the approval.
 - Casework live ladder journey L-RECOV (kill -9 recovery) timed out once on GitHub and passed on re-run; treat as flaky until it has a longer record.
+- The agent-browser ladder journey L-RECOV (15 s wait for a panel to close, e2e/journeys-live/helpers.ts) timed out once on GitHub and was not changed.
 
 **Next:** Review and merge the security migration; rebase the other open branches on it.
 
