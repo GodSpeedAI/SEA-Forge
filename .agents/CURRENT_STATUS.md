@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 92
+**Status revision:** 93
 
 **Stage:** semantic-cell-execution: governed cell episode
 
-**Summary:** Governed Semantic Cell episode: ExecuteSandboxCommand guest-command action (host ExecuteCommand gate unchanged); PromoteChangeset is approval-only, promoted through grant_after_approval and a trusted compare-and-swap; a real OPA 1.21.1 subprocess candidate replaces the placeholder engine; OpenShell backend and Git-backed changesets added. Live MicroVM proof remains BLOCKED / UNPROVEN.
+**Summary:** Governed Semantic Cell episode: ExecuteSandboxCommand guest-command action (host ExecuteCommand gate unchanged); PromoteChangeset is approval-only, promoted through grant_after_approval and a trusted compare-and-swap; a real OPA 1.21.1 subprocess candidate replaces the placeholder engine; OpenShell backend and Git-backed changesets added. Live MicroVM proof remains BLOCKED / UNPROVEN. Test Git fixtures run with an empty environment.
 
 **Verified:**
 
@@ -57,6 +57,7 @@
 - Real OPA 1.21.1 subprocess candidate (OpaCandidate::evaluate) replaces the placeholder engine; failures become Deny candidates. The 7 real-OPA authority tests and 6 real-OPA cell-episode tests pass locally with --ignored against opa 1.21.1.
 - Projection lock (openshell.lock) covers exactly three artifacts: policy.yaml, sandbox.json and mapping-report.json.
 - Semantic-cell integration on Rust 1.99.0 and the strict YAML boundary: clippy --workspace --all-targets -D warnings and fmt clean; authority, changeset, sandbox, runtime and case-runner tests pass (297 passed, 0 failed); cell_episode 24 pass by default.
+- Test isolation: with GIT_DIR, GIT_INDEX_FILE and GIT_WORK_TREE pointing at a decoy repository, the changeset and case-runner tests pass (50 passed, 0 failed) and leave the decoy's HEAD, refs, config, index and object count unchanged.
 
 **Limits:**
 

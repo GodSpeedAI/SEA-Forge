@@ -185,8 +185,13 @@ fn gate_input(name: &str) -> Value {
 }
 
 fn git(dir: &Path, args: &[&str]) -> String {
+    // Start from an empty environment: a Git hook exports GIT_DIR and
+    // GIT_INDEX_FILE, and an inherited value would aim these fixture commands
+    // at the repository running the tests instead of the temporary one.
     let out = Command::new("git")
         .current_dir(dir)
+        .env_clear()
+        .envs(std::env::var_os("PATH").map(|path| ("PATH", path)))
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_SYSTEM", "/dev/null")
         .env("GIT_AUTHOR_NAME", "t")
@@ -666,7 +671,11 @@ fn advance_main(h: &Harness) -> String {
         other = other.display(),
         sha = sha.display(),
     );
+    // Empty environment for the same reason as `git` above: an inherited
+    // GIT_DIR would redirect this clone-and-push at another repository.
     let status = Command::new("sh")
+        .env_clear()
+        .envs(std::env::var_os("PATH").map(|path| ("PATH", path)))
         .arg("-c")
         .arg(snippet)
         .status()
