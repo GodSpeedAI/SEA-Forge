@@ -69,14 +69,24 @@ jobs:
       # The native-events live test drives a real browser through agent-browser
       # and fails (does not skip) when the CLI is missing. Version matches the
       # e2e README ("CLI v0.38+").
-      - name: Install agent-browser and Chromium
+      # bun follows workbench/package.json (packageManager bun@1.4.0), as in
+      # the ladder job below.
+      - name: Install bun, agent-browser and Chromium
         run: |
-          npm install -g --prefix "$HOME/.local" agent-browser@0.38.1
+          npm install -g --prefix "$HOME/.local" bun@1.4.0 agent-browser@0.38.1
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/agent-browser" install --with-deps
 
-      - name: Build the kernel binary
-        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server
+      # The native-events live test starts the UI's own Vite binary from
+      # node_modules and fails (does not skip) when it is absent.
+      - name: Install UI dependencies
+        working-directory: apps/godspeed-cognitive-ui
+        run: bun install --frozen-lockfile
+
+      # The live Ask test requires an existing target/debug/sea-forge and
+      # refuses to build it, so the CLI is built here with the kernel.
+      - name: Build the kernel and CLI binaries
+        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server -p sea-forge-cli --bin sea-forge
 
       - name: Go tests (default tags)
         working-directory: apps/godspeed-casework-go
@@ -114,8 +124,10 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/agent-browser" install --with-deps
 
-      - name: Build the kernel binary
-        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server
+      # The ladder harness needs the CLI as well as the kernel and does not
+      # build either.
+      - name: Build the kernel and CLI binaries
+        run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server -p sea-forge-cli --bin sea-forge
 
       - name: Live ladder
         run: devbox run -- just casework-e2e-live
