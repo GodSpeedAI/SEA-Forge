@@ -4,7 +4,7 @@
 
 **Stage:** authority: approval consumption ordering
 
-**Summary:** grant_after_approval validates the grant before appending the consumption record, so a refused request no longer spends the approval.
+**Summary:** grant_after_approval validates the grant before appending the consumption record, so a request refused during validation no longer spends the approval; the expiry race after validation is listed under limits.
 
 **Verified:**
 
