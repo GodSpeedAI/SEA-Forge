@@ -353,6 +353,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                         .then_some(options.timeout_secs),
                     env_keys,
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 })?;
                 let request = stream.commit_typed(
@@ -520,6 +521,14 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                                 }
                                 Operation::AgentTask { .. } => {
                                     unreachable!("agent_task is rejected before execution")
+                                }
+                                Operation::ExecuteSandboxCommand { .. } => {
+                                    return Err(ForgeError::Plan {
+                                        class: "plan_schema_error",
+                                        message:
+                                            "execute_sandbox_command is not accepted in a case plan"
+                                                .into(),
+                                    });
                                 }
                             }
                         }
@@ -918,6 +927,7 @@ fn resume_artifact_transition(
             timeout_secs: Some(options.timeout_secs),
             env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: Some((
                 item.environment.as_deref().unwrap_or(""),
                 environment.provides.commands.as_slice(),

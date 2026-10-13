@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "contract": "domainforge.rego.decision/v1",
+    "input_errors": [],
+    "model": {
+      "hash": "sha256:7ed5d9b70ec8a6b74815caa97d0735c3233ed555a739dc943cf9248b3c36631f",
+      "projection": "domainforge-rego/v1"
+    },
+    "outcome": "allow",
+    "reasons": [],
+    "results": {
+      "godspeed.cells.repair::dependency_files_immutable": "true"
+    }
+  },
+  "input": {
+    "facts": {}
+  }
+}

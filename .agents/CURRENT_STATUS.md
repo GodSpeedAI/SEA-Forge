@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 91
+**Status revision:** 92
 
-**Stage:** ci: deterministic sibling-cancel test
+**Stage:** semantic-cell-execution: governed cell episode
 
-**Summary:** The M13 sibling-cancel conformance test no longer depends on timing: its stub signals when all three siblings are connected and holds responses until the cancel is accepted.
+**Summary:** Governed Semantic Cell episode: ExecuteSandboxCommand guest-command action (host ExecuteCommand gate unchanged); PromoteChangeset is approval-only, promoted through grant_after_approval and a trusted compare-and-swap; a real OPA 1.21.1 subprocess candidate replaces the placeholder engine; OpenShell backend and Git-backed changesets added. Live MicroVM proof remains BLOCKED / UNPROVEN.
 
 **Verified:**
 
@@ -50,6 +50,13 @@
 - just workbench-completion-eval-inputs-check passes with the retired packaged-desktop commands and rejects an input naming a removed desktop-shell recipe
 - Rust 1.99.0: fmt, clippy -D warnings and per-crate tests pass on rustc 1.99.0; cargo +1.92.0 check --workspace --all-targets --locked passes.
 - Deflake: t13_3_cancel_one_of_three_siblings_settle_normally passes 30 of 30; conformance_m13 passes 25 of 25; clippy -D warnings and fmt clean for sea-forge-server.
+- sea-forge-changeset: 15 tests pass against real git (export without Git metadata, explicit changeset, deterministic proposal commit, compare-and-swap promotion, stale-base refusal).
+- sea-forge-sandbox OpenShell adapter: openshell_stub tests pass against stub openshell and openshell-prover executables (control flow and failure handling only; not isolation).
+- ExecuteSandboxCommand guest-command action added (policy kind execute_sandbox_command); host ExecuteCommand gate and untrusted_executable check unchanged.
+- PromoteChangeset is approval-only: its rule must require approval, the only grant path is grant_after_approval, and the compare-and-swap is performed by the trusted promotion path.
+- Real OPA 1.21.1 subprocess candidate (OpaCandidate::evaluate) replaces the placeholder engine; failures become Deny candidates. The 7 real-OPA authority tests and 6 real-OPA cell-episode tests pass locally with --ignored against opa 1.21.1.
+- Projection lock (openshell.lock) covers exactly three artifacts: policy.yaml, sandbox.json and mapping-report.json.
+- Semantic-cell integration on Rust 1.99.0 and the strict YAML boundary: clippy --workspace --all-targets -D warnings and fmt clean; authority, changeset, sandbox, runtime and case-runner tests pass (297 passed, 0 failed); cell_episode 24 pass by default.
 
 **Limits:**
 
@@ -87,8 +94,14 @@
 - The agent-browser ladder journey L-RECOV (15 s wait for a panel to close, e2e/journeys-live/helpers.ts) timed out once on GitHub and was not changed.
 - Workbench renderer: twelve runtime modules still call the Tauri bridge (invoke/listen) with no other transport, so the workbench has no backend at runtime until that bridge is replaced. The workbench completion evaluation input therefore records the integrated evaluation as BLOCKED.
 - Toolchain: devbox run could not be verified locally (Nix cache timeout); the MSRV (1.92) CI job has not run on GitHub before this change.
+- OpenShell backend is verified only against stub executables; no live gateway, MicroVM, or real enforcement has been exercised.
+- Live MicroVM proof is BLOCKED / UNPROVEN: the WSL2 host has no /dev/kvm (nestedVirtualization=false). The 6 tests in crates/sea-forge-case-runner/tests/cell_episode_live.rs are ignored and have never executed.
+- Changeset promotion requires the target ref not to be checked out in a working tree; a promotion that loses a race after its pre-check can leave unreferenced objects in the authoritative repository (refs unchanged).
+- The OpenShell 0.1.3 MicroVM driver has no per-sandbox CPU or memory limits (gateway-level vcpus and mem_mib only).
+- The RepairAgent model's single projected policy is constant true; real-OPA deny and escalate outcomes are exercised with the separate fixture fixtures/policies/gate.
+- The real-OPA tests are ignored by default and are not yet in CI: the authority-opa job that runs them is proposed separately on branch ci/authority-opa and has never run on GitHub.
 
-**Next:** Confirm the MSRV (1.92) job on main after merge; then rebase the remaining open branches onto the 1.99.0 toolchain.
+**Next:** Run the live MicroVM proof on a KVM host (BLOCKED on this WSL2 host); review the separate authority-opa CI job (branch ci/authority-opa); keep the approval-only promotion path unchanged.
 
 **Evidence:**
 

@@ -153,6 +153,16 @@ pub enum Operation {
         argv: Vec<String>,
         cwd: String,
     },
+    /// A command that runs inside an OpenShell sandbox defined by one
+    /// DomainForge projection. It never runs on the host.
+    ExecuteSandboxCommand {
+        argv: Vec<String>,
+        cwd: String,
+        cell_id: String,
+        model_hash: String,
+        policy_digest: String,
+        image: String,
+    },
     AgentProbe {
         endpoint_ref: String,
         model: String,
@@ -181,6 +191,16 @@ pub enum AuthorityAction {
     ExecuteCommand {
         argv: Vec<String>,
         cwd: String,
+    },
+    /// A command that runs inside an OpenShell sandbox defined by one
+    /// DomainForge projection. It never runs on the host.
+    ExecuteSandboxCommand {
+        argv: Vec<String>,
+        cwd: String,
+        cell_id: String,
+        model_hash: String,
+        policy_digest: String,
+        image: String,
     },
     ExternalApi {
         host: String,
@@ -223,6 +243,24 @@ pub enum AuthorityAction {
     GithubPr {
         has_required_evidence: bool,
     },
+    /// The authority to move an authoritative Git reference to one exact
+    /// proposed changeset. Always escalates; grantable only after approval.
+    PromoteChangeset {
+        /// Canonical absolute path of the authoritative repository.
+        repository: String,
+        /// Full reference, e.g. `refs/heads/main`.
+        reference: String,
+        /// Commit the reference must still point at.
+        expected_base: String,
+        /// Proposal commit to promote.
+        proposed_commit: String,
+        /// Tree of the proposal commit.
+        proposed_tree: String,
+        /// sea-forge-changeset digest, `sha256:<64 hex>`.
+        changeset_digest: String,
+        /// Sorted changed paths.
+        paths: Vec<String>,
+    },
     Reserved {
         resource_type: String,
         resource_id: String,
@@ -244,6 +282,21 @@ impl From<&Operation> for AuthorityAction {
             Operation::ExecuteCommand { argv, cwd } => Self::ExecuteCommand {
                 argv: argv.clone(),
                 cwd: cwd.clone(),
+            },
+            Operation::ExecuteSandboxCommand {
+                argv,
+                cwd,
+                cell_id,
+                model_hash,
+                policy_digest,
+                image,
+            } => Self::ExecuteSandboxCommand {
+                argv: argv.clone(),
+                cwd: cwd.clone(),
+                cell_id: cell_id.clone(),
+                model_hash: model_hash.clone(),
+                policy_digest: policy_digest.clone(),
+                image: image.clone(),
             },
             Operation::AgentProbe {
                 endpoint_ref,

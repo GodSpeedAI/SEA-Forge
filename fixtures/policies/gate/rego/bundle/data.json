@@ -1,0 +1,51 @@
+{
+  "domainforge": {
+    "model": {
+      "collections": [
+        "entities"
+      ],
+      "identity": {
+        "hash": "sha256:e61ecd1c669c7d04d29e6140e7b4362c3b1456c9f41d708f9318b17b0c1a609f",
+        "projection": "domainforge-rego/v1"
+      },
+      "policies": {
+        "gate::may": {
+          "id": "03c51d9d-66b8-54c8-a1de-e31577ee826a",
+          "kind": "Constraint",
+          "modality": "Permission",
+          "name": "may",
+          "namespace": "gate",
+          "priority": 1,
+          "rationale": null,
+          "severity": "info",
+          "tags": [],
+          "version": "1.0.0"
+        },
+        "gate::must": {
+          "id": "d9f37b64-7910-5a72-971a-89b6c702f419",
+          "kind": "Constraint",
+          "modality": "Obligation",
+          "name": "must",
+          "namespace": "gate",
+          "priority": 9,
+          "rationale": null,
+          "severity": "error",
+          "tags": [],
+          "version": "1.0.0"
+        },
+        "gate::never": {
+          "id": "623eabf2-2da6-50f8-af10-adccdf6f1930",
+          "kind": "Constraint",
+          "modality": "Prohibition",
+          "name": "never",
+          "namespace": "gate",
+          "priority": 4,
+          "rationale": null,
+          "severity": "error",
+          "tags": [],
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}

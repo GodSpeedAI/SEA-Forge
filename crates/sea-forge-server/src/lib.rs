@@ -3620,6 +3620,7 @@ fn record_cancellation(
         timeout_secs: None,
         env_keys: Default::default(),
         domainforge_candidate: None,
+        opa_candidate: None,
         environment: None,
     })?;
     let authority_ref = agent_probe::commit_view(

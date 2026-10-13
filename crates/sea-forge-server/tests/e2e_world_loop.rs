@@ -153,6 +153,7 @@ fn hop_3_verified_intake_decision_execution_and_settlement() {
             timeout_secs: Some(10),
             env_keys: ["PATH", "HOME"].iter().map(|k| k.to_string()).collect(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();

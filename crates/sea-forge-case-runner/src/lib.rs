@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 pub mod case_ops;
+pub mod cell_episode;
 
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
@@ -289,6 +290,7 @@ fn run_stage_episode(
         timeout_secs: Some(600),
         env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
         domainforge_candidate: domainforge_candidate.as_ref(),
+        opa_candidate: None,
         environment: None,
     })?;
     let decision_ref = stream.commit_typed(

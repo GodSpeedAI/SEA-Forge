@@ -7,6 +7,7 @@ use std::{
 pub mod environment;
 pub mod jail;
 pub mod local;
+pub mod openshell;
 
 pub use environment::{
     demo_environment, load_pinned_environment, materialize_base, parse_env_ref,
@@ -15,12 +16,17 @@ pub use environment::{
 };
 pub use jail::JailSandbox;
 pub use local::LocalSandbox;
+pub use openshell::{
+    probe_host_virtualization, projection_identity, OpenShellBinding, OpenShellSandbox,
+    ProjectionIdentity,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SandboxClass {
     Local,
     Jail,
     Microvm,
+    OpenShell,
 }
 
 impl fmt::Display for SandboxClass {
@@ -29,6 +35,7 @@ impl fmt::Display for SandboxClass {
             SandboxClass::Local => write!(f, "local"),
             SandboxClass::Jail => write!(f, "jail"),
             SandboxClass::Microvm => write!(f, "microvm"),
+            SandboxClass::OpenShell => write!(f, "openshell"),
         }
     }
 }
@@ -40,6 +47,7 @@ impl std::str::FromStr for SandboxClass {
             "local" => Ok(SandboxClass::Local),
             "jail" => Ok(SandboxClass::Jail),
             "microvm" => Ok(SandboxClass::Microvm),
+            "openshell" => Ok(SandboxClass::OpenShell),
             other => Err(ForgeError::Input(format!("unknown sandbox class: {other}"))),
         }
     }
@@ -166,7 +174,17 @@ pub fn select_sandbox(class: SandboxClass) -> Result<Box<dyn ExecutionSandbox>, 
             "unsupported_sandbox_class_error",
             "microvm backend is not available",
         )),
+        SandboxClass::OpenShell => Err(SandboxError::new(
+            "openshell_binding_missing",
+            "the openshell backend needs a projection binding; use select_openshell",
+        )),
     }
+}
+
+/// The OpenShell backend cannot be selected by class alone: it must be bound
+/// to the DomainForge projection that defines the sandbox.
+pub fn select_openshell(binding: OpenShellBinding) -> Box<dyn ExecutionSandbox> {
+    Box::new(OpenShellSandbox::new(binding))
 }
 
 pub fn validate_relative_path(path: &str) -> Result<(), ForgeError> {

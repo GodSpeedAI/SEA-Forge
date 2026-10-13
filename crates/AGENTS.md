@@ -4,7 +4,7 @@ Durable operating instructions for the 22 Rust workspace crates under `crates/`.
 
 ## 1. Synchronous Kernel vs. Async Edge Boundary
 
-* **19 kernel crates MUST remain strictly synchronous**: `sea-forge-core`, `sea-forge-domain`, `sea-forge-authority`, `sea-forge-planner`, `sea-forge-sandbox`, `sea-forge-runtime`, `sea-forge-trace`, `sea-forge-evidence`, `sea-forge-settlement`, `sea-forge-capability`, `sea-forge-extension`, `sea-forge-ledger`, `sea-forge-domainforge`, `sea-forge-spec-pipeline`, `sea-forge-cell`, `sea-forge-artifact-ip`, `sea-forge-self-model`, `sea-forge-thoth`, `sea-forge-case-runner`.
+* **20 kernel crates MUST remain strictly synchronous**: `sea-forge-core`, `sea-forge-domain`, `sea-forge-authority`, `sea-forge-planner`, `sea-forge-sandbox`, `sea-forge-runtime`, `sea-forge-trace`, `sea-forge-evidence`, `sea-forge-settlement`, `sea-forge-capability`, `sea-forge-extension`, `sea-forge-ledger`, `sea-forge-domainforge`, `sea-forge-spec-pipeline`, `sea-forge-cell`, `sea-forge-artifact-ip`, `sea-forge-self-model`, `sea-forge-thoth`, `sea-forge-case-runner`, `sea-forge-changeset`.
 * **Forbidden in kernel**: `tokio`, `async-std`, `smol`, `embassy`, `executor`, `reqwest`, `hyper`, `ureq`, `isahc`, `surf`, `attohttpc`, `minreq`, `actix-http`, `awc`.
 * **Edge exceptions**: Only `sea-forge-server` and `sea-forge-agent` may depend on async runtimes (`tokio`) or HTTP clients (`reqwest`).
 * **Mechanical check**: Run `just no-async-kernel` to verify dependency boundaries.

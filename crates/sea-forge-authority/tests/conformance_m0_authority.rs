@@ -194,6 +194,7 @@ rules:
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -300,6 +301,7 @@ rules:
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -520,6 +522,7 @@ fn evaluate_recall(
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap()
@@ -613,6 +616,7 @@ fn memory_scope_grant_carries_boundary() {
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -735,6 +739,7 @@ rules:
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             })
             .unwrap();
@@ -780,6 +785,7 @@ rules:
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();

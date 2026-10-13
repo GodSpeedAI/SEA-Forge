@@ -416,11 +416,18 @@ fn operation_and_resource(action: &AuthorityAction) -> (String, String) {
             "execute_command".into(),
             argv.first().cloned().unwrap_or_default(),
         ),
+        AuthorityAction::ExecuteSandboxCommand { argv, .. } => (
+            "execute_sandbox_command".into(),
+            argv.first().cloned().unwrap_or_default(),
+        ),
         AuthorityAction::ExternalApi { host } => ("external_api".into(), host.clone()),
         AuthorityAction::AgentProbe { host, .. } => ("external_api".into(), host.clone()),
         AuthorityAction::AgentTask { host, .. } => ("external_api".into(), host.clone()),
         AuthorityAction::GitCommit { .. } => ("git_commit".into(), "repository".into()),
         AuthorityAction::GithubPr { .. } => ("github_pr".into(), "pull_request".into()),
+        AuthorityAction::PromoteChangeset { reference, .. } => {
+            ("promote_changeset".into(), reference.clone())
+        }
         AuthorityAction::Reserved {
             resource_type,
             resource_id,

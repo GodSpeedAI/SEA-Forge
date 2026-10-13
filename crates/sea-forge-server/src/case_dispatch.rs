@@ -790,6 +790,7 @@ pub(crate) fn execute_sandbox(
         timeout_secs: Some(timeout),
         env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
         domainforge_candidate: domainforge_candidate.as_ref(),
+        opa_candidate: None,
         environment: None,
     })?;
     let ledger = LedgerStream::open(&root, format!("case-{case_id}"), entity)?;

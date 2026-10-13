@@ -1,0 +1,25 @@
+{
+  "domainforge": {
+    "model": {
+      "collections": [],
+      "identity": {
+        "hash": "sha256:7ed5d9b70ec8a6b74815caa97d0735c3233ed555a739dc943cf9248b3c36631f",
+        "projection": "domainforge-rego/v1"
+      },
+      "policies": {
+        "godspeed.cells.repair::dependency_files_immutable": {
+          "id": "3fb990e7-6fc5-5179-8ba0-4895cef3db6b",
+          "kind": "Constraint",
+          "modality": "Prohibition",
+          "name": "dependency_files_immutable",
+          "namespace": "godspeed.cells.repair",
+          "priority": 5,
+          "rationale": "Agents may not modify dependency manifests or lockfiles without escalation.",
+          "severity": "error",
+          "tags": [],
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}

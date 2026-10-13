@@ -15,5 +15,11 @@ sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 chrono.workspace = true
 wait-timeout.workspace = true
 
+[dev-dependencies]
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+
 [lints]
 workspace = true

@@ -1,0 +1,102 @@
+{
+  "$id": "domainforge.rego.decision/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "domainforge.rego.decision/v1"
+    },
+    "input_errors": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "model": {
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "projection": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hash",
+        "projection"
+      ],
+      "type": "object"
+    },
+    "outcome": {
+      "enum": [
+        "allow",
+        "deny",
+        "escalate"
+      ]
+    },
+    "reasons": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "code": {
+            "enum": [
+              "violated",
+              "unknown",
+              "evaluation_error",
+              "malformed_input"
+            ]
+          },
+          "modality": {
+            "type": "string"
+          },
+          "policy": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "info"
+            ]
+          }
+        },
+        "required": [
+          "policy",
+          "code",
+          "modality",
+          "severity",
+          "priority",
+          "blocking"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "results": {
+      "additionalProperties": {
+        "enum": [
+          "true",
+          "false",
+          "unknown",
+          "error"
+        ]
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "contract",
+    "outcome",
+    "results",
+    "reasons",
+    "input_errors",
+    "model"
+  ],
+  "type": "object"
+}

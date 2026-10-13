@@ -1,0 +1,47 @@
+{
+  "expected": {
+    "contract": "domainforge.rego.decision/v1",
+    "input_errors": [
+      "facts: expected object"
+    ],
+    "model": {
+      "hash": "sha256:e61ecd1c669c7d04d29e6140e7b4362c3b1456c9f41d708f9318b17b0c1a609f",
+      "projection": "domainforge-rego/v1"
+    },
+    "outcome": "deny",
+    "reasons": [
+      {
+        "blocking": true,
+        "code": "malformed_input",
+        "modality": "Obligation",
+        "policy": "gate::must",
+        "priority": 9,
+        "severity": "error"
+      },
+      {
+        "blocking": true,
+        "code": "malformed_input",
+        "modality": "Prohibition",
+        "policy": "gate::never",
+        "priority": 4,
+        "severity": "error"
+      },
+      {
+        "blocking": false,
+        "code": "malformed_input",
+        "modality": "Permission",
+        "policy": "gate::may",
+        "priority": 1,
+        "severity": "info"
+      }
+    ],
+    "results": {
+      "gate::may": "error",
+      "gate::must": "error",
+      "gate::never": "error"
+    }
+  },
+  "input": {
+    "facts": null
+  }
+}

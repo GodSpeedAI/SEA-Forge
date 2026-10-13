@@ -1,0 +1,15 @@
+{
+  "$id": "domainforge.rego.input/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "facts": {
+      "properties": {},
+      "required": [],
+      "type": "object"
+    }
+  },
+  "required": [
+    "facts"
+  ],
+  "type": "object"
+}

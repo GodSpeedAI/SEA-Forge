@@ -337,6 +337,14 @@ pub fn validate_proposal(plan: &mut CasePlan) -> Result<(), ForgeError> {
                         });
                     }
                 }
+                sea_forge_core::types::Operation::ExecuteSandboxCommand { .. } => {
+                    // Case plans have no OpenShell projection to authorize
+                    // against, so a sandbox command is refused at plan time.
+                    return Err(ForgeError::Plan {
+                        class: "plan_schema_error",
+                        message: "execute_sandbox_command is not accepted in a case plan".into(),
+                    });
+                }
                 sea_forge_core::types::Operation::AgentProbe {
                     endpoint_ref,
                     model,

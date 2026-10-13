@@ -1,0 +1,222 @@
+{
+  "cell_id": "9093569307216df6",
+  "classes": {
+    "adapter": "enforced by OpenShell after an explicit, recorded adaptation",
+    "baseline": "not declared by the Cell; required for any process to run",
+    "enforced": "enforced by OpenShell as declared"
+  },
+  "obligations": [
+    {
+      "discharge": "probe `uname -m` in the sandbox and refuse on mismatch",
+      "kind": "architecture",
+      "value": "x86_64"
+    },
+    {
+      "discharge": "apply the mutation decision to any changeset touching these paths before promotion",
+      "kind": "protected_paths",
+      "mutation": "escalate",
+      "paths": [
+        "pyproject.toml",
+        "uv.lock"
+      ],
+      "source": "da5608615ab2d28d"
+    },
+    {
+      "discharge": "evaluate through the authority using the model's Rego projection",
+      "kind": "policy",
+      "modality": "Prohibition",
+      "name": "dependency_files_immutable",
+      "source": "d33206689bd346b7"
+    },
+    {
+      "discharge": "run the evidence probes in the sandbox and refuse on failure; OpenShell does not verify image contents",
+      "kind": "image_contents",
+      "requirements": [
+        {
+          "kind": "system",
+          "name": "ca-certificates",
+          "version": null
+        },
+        {
+          "kind": "system",
+          "name": "curl",
+          "version": null
+        },
+        {
+          "kind": "system",
+          "name": "git",
+          "version": "2.45"
+        },
+        {
+          "kind": "system",
+          "name": "openssl",
+          "version": "3"
+        },
+        {
+          "kind": "system",
+          "name": "pkg-config",
+          "version": null
+        },
+        {
+          "kind": "runtime",
+          "name": "python",
+          "version": "3.13"
+        },
+        {
+          "kind": "tool",
+          "name": "just",
+          "version": "1.43"
+        },
+        {
+          "kind": "tool",
+          "name": "uv",
+          "version": "0.9"
+        }
+      ]
+    }
+  ],
+  "openshell_version": "0.1.3",
+  "phases": {
+    "exec": "applied per command",
+    "gateway": "set in the gateway's driver configuration",
+    "live": "may be updated on a running sandbox",
+    "startup": "fixed when the sandbox starts"
+  },
+  "projection": "domainforge-openshell/v1",
+  "rules": [
+    {
+      "class": "adapter",
+      "note": "runtime_user 'agent' runs as OpenShell's unprivileged 'sandbox' account; the non-root property is enforced, the account name is not preserved",
+      "phase": "startup",
+      "source": "9093569307216df6",
+      "target": "policy.yaml#/process"
+    },
+    {
+      "class": "adapter",
+      "note": "target '/workspace' is relocated under /sandbox; the host source is uploaded, never mounted",
+      "phase": "startup",
+      "source": "46534542baa7b5fd",
+      "target": "policy.yaml#/filesystem_policy/read_write//sandbox/workspace"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//bin"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//dev/urandom"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//etc"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//lib"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//lib64"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//proc"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//sandbox"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//sbin"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//usr"
+    },
+    {
+      "class": "baseline",
+      "note": "scratch space inside the sandbox",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_write//dev/null"
+    },
+    {
+      "class": "baseline",
+      "note": "scratch space inside the sandbox",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_write//tmp"
+    },
+    {
+      "class": "enforced",
+      "note": "hard_requirement: the sandbox must not start if Landlock is unavailable",
+      "phase": "startup",
+      "source": "9093569307216df6",
+      "target": "policy.yaml#/landlock"
+    },
+    {
+      "class": "enforced",
+      "note": "https pypi.godspeed.internal:443 for operation 'read', restricted to the Cell's declared executables",
+      "phase": "live",
+      "source": "6388423bd89b2550",
+      "target": "policy.yaml#/network_policies/cell_resolve_python_packages"
+    },
+    {
+      "class": "enforced",
+      "note": "cpu: set in the gateway's [openshell.drivers.vm] table; the MicroVM driver has no per-sandbox limits",
+      "phase": "gateway",
+      "source": "9093569307216df6",
+      "target": "sandbox.json#/vm_shape/vcpus"
+    },
+    {
+      "class": "enforced",
+      "note": "memory_mb: set in the gateway's [openshell.drivers.vm] table; the MicroVM driver has no per-sandbox limits",
+      "phase": "gateway",
+      "source": "9093569307216df6",
+      "target": "sandbox.json#/vm_shape/mem_mib"
+    },
+    {
+      "class": "enforced",
+      "note": "disk_mb: set in the gateway's [openshell.drivers.vm] table; the MicroVM driver has no per-sandbox limits",
+      "phase": "gateway",
+      "source": "9093569307216df6",
+      "target": "sandbox.json#/vm_shape/overlay_disk_mib"
+    },
+    {
+      "class": "enforced",
+      "note": "timeout_seconds: passed to every exec; OpenShell reports exit 124 on expiry",
+      "phase": "exec",
+      "source": "9093569307216df6",
+      "target": "sandbox.json#/exec_timeout_seconds"
+    }
+  ],
+  "schema": "domainforge.openshell.mapping/v1"
+}

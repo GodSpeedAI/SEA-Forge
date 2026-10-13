@@ -16,6 +16,8 @@ sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }
 sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.1.0" }
+sea-forge-changeset = { path = "../sea-forge-changeset", version = "0.1.0" }
+sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true

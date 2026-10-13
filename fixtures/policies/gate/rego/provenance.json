@@ -1,0 +1,27 @@
+{
+  "created_at": "2026-07-11T00:00:00Z",
+  "files": {
+    "bundle/.manifest": "sha256:e5a1efd600076287ef2b4093053cf7f72fa8a01415dea3ed5c673f1c47d551a1",
+    "bundle/data.json": "sha256:3c45074cee7d31966f0ecdcc1f3d1979a07dbced753a9897a449d61533339eaf",
+    "bundle/domainforge/policy/decision.rego": "sha256:c4907fa025ae0c11b026960917dc42557d4efa931b3c876f2f94c7d684945111",
+    "bundle/domainforge/policy/policies.rego": "sha256:1e13cddea7213860e386b930b1afb1d9735973f6f449eeb4deba9e461b5d13b0",
+    "bundle/domainforge/sea/lib.rego": "sha256:3b25cf212b4cbd15a34e2b20a7f86a7faa997b93bb77f9fec3ba0da945204177",
+    "contracts/decision.schema.json": "sha256:8b4005e2eefb4ed3d1b745a6401b242c3d415130f4ea2c92f4e7c3f6ce655064",
+    "contracts/input.schema.json": "sha256:ff02567859c2bbef14264b514f9107145b8f976a4761f2358fe660a0231d42cc",
+    "fidelity-report.json": "sha256:b90c4722b782406d34b37382ef20c5113c936aa15d91c04457c19b97c7cee731",
+    "fixtures/empty.json": "sha256:5ee98d2b09e3c8d08157d627900694411aa5a90fa1707f8c56a6ab1328036bb6",
+    "fixtures/incomplete.json": "sha256:5ee98d2b09e3c8d08157d627900694411aa5a90fa1707f8c56a6ab1328036bb6",
+    "fixtures/malformed.json": "sha256:3b150f62d1771caf0794fee56bea69f6f7beb1e97bec5d2a0a5ac8da0a0e798b",
+    "fixtures/model.json": "sha256:5ee98d2b09e3c8d08157d627900694411aa5a90fa1707f8c56a6ab1328036bb6",
+    "tests/decision_test.rego": "sha256:6fa84083aebaee311243380990d5c6e594266f878c9b8a1b633e1dffd6b23580"
+  },
+  "generator": "domainforge-core 0.19.0",
+  "model": {
+    "hash": "sha256:e61ecd1c669c7d04d29e6140e7b4362c3b1456c9f41d708f9318b17b0c1a609f",
+    "projection": "domainforge-rego/v1"
+  },
+  "model_ref": "fixtures/policies/gate/source/model.sea",
+  "policy_count": 3,
+  "projection": "domainforge-rego/v1",
+  "schema": "domainforge.rego.provenance/v1"
+}

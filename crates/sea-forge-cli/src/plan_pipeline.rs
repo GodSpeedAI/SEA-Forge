@@ -269,6 +269,7 @@ fn run_plan_inner(
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 })?;
                 let request = stream.commit_typed(
@@ -319,6 +320,7 @@ fn run_plan_inner(
                         .then_some(options.timeout_secs),
                     env_keys,
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment,
                 })?;
                 let request = stream.commit_typed(
@@ -768,6 +770,14 @@ fn run_plan_inner(
                                 }
                                 Operation::AgentTask { .. } => {
                                     unreachable!("agent_task is rejected before execution")
+                                }
+                                Operation::ExecuteSandboxCommand { .. } => {
+                                    return Err(ForgeError::Plan {
+                                        class: "plan_schema_error",
+                                        message:
+                                            "execute_sandbox_command is not accepted in a case plan"
+                                                .into(),
+                                    });
                                 }
                             }
                         }

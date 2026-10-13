@@ -1,0 +1,30 @@
+{
+  "$id": "domainforge.rego.input/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "facts": {
+      "properties": {
+        "entities": {
+          "items": {
+            "description": "Fields the policies read. A missing field is Unknown, not false.",
+            "properties": {
+              "capacity": {},
+              "kind": {},
+              "name": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entities"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "facts"
+  ],
+  "type": "object"
+}

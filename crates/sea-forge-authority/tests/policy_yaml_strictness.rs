@@ -479,6 +479,7 @@ fn evaluate_and_grant(bundle: AuthorityPolicyBundle, action: &AuthorityAction) -
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -783,6 +784,7 @@ fn evaluate(bundle: AuthorityPolicyBundle, action: &AuthorityAction) -> Verdict 
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap()
