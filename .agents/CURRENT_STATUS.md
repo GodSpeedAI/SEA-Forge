@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 90
+**Status revision:** 91
 
-**Stage:** toolchain: Rust 1.99.0
+**Stage:** ci: deterministic sibling-cancel test
 
-**Summary:** Development and CI toolchain pinned to Rust 1.99.0; the workspace MSRV stays 1.92.0 and is checked by a required CI job.
+**Summary:** The M13 sibling-cancel conformance test no longer depends on timing: its stub signals when all three siblings are connected and holds responses until the cancel is accepted.
 
 **Verified:**
 
@@ -49,6 +49,7 @@
 - Tauri removal: workbench typecheck and lint pass and 212 unit tests pass without the shell; the root Cargo workspace and Cargo.lock are unaffected.
 - just workbench-completion-eval-inputs-check passes with the retired packaged-desktop commands and rejects an input naming a removed desktop-shell recipe
 - Rust 1.99.0: fmt, clippy -D warnings and per-crate tests pass on rustc 1.99.0; cargo +1.92.0 check --workspace --all-targets --locked passes.
+- Deflake: t13_3_cancel_one_of_three_siblings_settle_normally passes 30 of 30; conformance_m13 passes 25 of 25; clippy -D warnings and fmt clean for sea-forge-server.
 
 **Limits:**
 

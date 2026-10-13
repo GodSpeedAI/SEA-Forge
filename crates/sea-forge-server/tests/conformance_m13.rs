@@ -1218,15 +1218,22 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
 async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let address = listener.local_addr().unwrap();
+    // The stub reports each accepted connection and then holds every response
+    // until the test releases it, so the cancel below provably arrives while
+    // all three siblings are mid-flight rather than racing a fixed delay.
+    let (accepted_tx, mut accepted_rx) = tokio::sync::watch::channel(0_usize);
+    let (release_tx, release_rx) = tokio::sync::watch::channel(false);
     let stub_task = tokio::spawn(async move {
         let mut handlers = vec![];
         for _ in 0..3 {
             let Ok((mut stream, _)) = listener.accept().await else {
                 break;
             };
+            accepted_tx.send_modify(|accepted| *accepted += 1);
+            let mut release = release_rx.clone();
             handlers.push(tokio::spawn(async move {
-                // Delay so cancellation can arrive mid-flight.
-                tokio::time::sleep(Duration::from_millis(200)).await;
+                // A dropped sender (test panic) also releases the stub.
+                let _ = release.wait_for(|released| *released).await;
                 let mut req = vec![0_u8; 4096];
                 let _ = stream.read(&mut req).await;
                 let body =
@@ -1313,8 +1320,14 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     let task_b = mk_delegate(run_b.clone());
     let task_c = mk_delegate(run_c.clone());
 
-    // Give the delegations time to register before cancelling.
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // All three delegations are registered and waiting on the provider.
+    tokio::time::timeout(
+        Duration::from_secs(10),
+        accepted_rx.wait_for(|accepted| *accepted == 3),
+    )
+    .await
+    .expect("all three siblings reach the provider")
+    .expect("stub is still accepting");
 
     let cancel_result = sea_forge_server::handle_request(
         Request::CancelDelegation {
@@ -1328,6 +1341,7 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
     )
     .await;
     assert_eq!(cancel_result["state"], "cancellation_requested");
+    let _ = release_tx.send(true);
 
     let res_a = task_a.await.unwrap();
     let res_b = task_b.await.unwrap();
