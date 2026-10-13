@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 88
+**Status revision:** 89
 
 **Stage:** workbench: remove Tauri shell
 
-**Summary:** The Tauri desktop shell (workbench/apps/desktop/src-tauri) and the recipes, CI job and scripts that existed only to build or package it are removed; the web app remains.
+**Summary:** Removed the Tauri desktop shell and retired the packaged-desktop completion evaluation: the evaluation input now records the integrated evaluation as BLOCKED until the renderer bridge is replaced, and its check rejects references to removed recipes.
 
 **Verified:**
 
@@ -35,8 +35,8 @@
 - just status-check passes on a clean checkout of main.
 - just check (status, fmt, clippy, typecheck, cargo-deny, gitleaks) run on a clean checkout of main.
 - After the merge: Rust workspace 1246 pass / 0 fail; clippy -D warnings clean; Go vet and go test -p 1 ./... ok; UI typecheck clean, 373 tests pass.
-- just workbench-tauri-test passes locally; conformance_m5 passes on Linux (4 pass, 2 helper ignores); clippy clean for sea-forge-case-runner.
-- sea-forge-sandbox tests pass on Linux including destination_swapped_to_symlink_between_check_and_write_is_refused; conformance_m16 16 pass; just workbench-tauri-test passes with the updated lockfile. macOS result pending CI.
+- conformance_m5 passes on Linux (4 pass, 2 helper ignores); clippy clean for sea-forge-case-runner.
+- sea-forge-sandbox tests pass on Linux including destination_swapped_to_symlink_between_check_and_write_is_refused; conformance_m16 16 pass. macOS result pending CI.
 - self_model_cli passes on Linux; 40 repeat runs without failure.
 - Rust workspace 1246 pass / 0 fail; clippy -D warnings clean.
 - just check run on this branch before push
@@ -47,6 +47,7 @@
 - Casework live on GitHub: the go-live job passes; the ladder passes 11 of 11 journeys on re-run.
 - Deflake: ACP budget test 30 of 30 plain and 10 of 10 under CPU load; sfwp_supervisor 10 of 10.
 - Tauri removal: workbench typecheck and lint pass and 212 unit tests pass without the shell; the root Cargo workspace and Cargo.lock are unaffected.
+- just workbench-completion-eval-inputs-check passes with the retired packaged-desktop commands and rejects an input naming a removed desktop-shell recipe
 
 **Limits:**
 
@@ -82,7 +83,7 @@
 - Approval consumption residual: a grant window that closes between validation and the ledger append still spends the approval.
 - Casework live ladder journey L-RECOV (kill -9 recovery) timed out once on GitHub and passed on re-run; treat as flaky until it has a longer record.
 - The agent-browser ladder journey L-RECOV (15 s wait for a panel to close, e2e/journeys-live/helpers.ts) timed out once on GitHub and was not changed.
-- Workbench renderer: twelve runtime modules still call the Tauri bridge (invoke/listen) with no other transport, so the workbench has no backend at runtime until that bridge is replaced; just workbench-completion-eval-inputs-check fails because its recorded input names removed recipes.
+- Workbench renderer: twelve runtime modules still call the Tauri bridge (invoke/listen) with no other transport, so the workbench has no backend at runtime until that bridge is replaced. The workbench completion evaluation input therefore records the integrated evaluation as BLOCKED.
 
 **Next:** Review and merge the security migration; rebase the other open branches on it.
 

@@ -33,8 +33,12 @@ actual_story_ids="$(jq -c '[.declared_exclusions[].story_ids[]] | sort' "$FIXTUR
 
 grep -Fq "$FIXTURE" "$INPUT" || fail "evaluator input does not reference the machine-checkable exclusion fixture"
 grep -Fq 'Execution mode required: `INTEGRATED`' "$INPUT" || fail "evaluator input must prohibit mocked completion claims"
-grep -Fq 'just workbench-package' "$INPUT" || fail "evaluator input lacks the packaged Linux build command"
 grep -Fq 'just cell-seed /tmp/sea-forge-workbench-eval-cell' "$INPUT" || fail "evaluator input lacks the real temporary-cell setup"
-grep -Fq 'just workbench-demo /tmp/sea-forge-workbench-eval-cell' "$INPUT" || fail "evaluator input lacks the packaged application start command"
+# The packaged desktop shell was removed; the input must say the integrated
+# evaluation is blocked and must not send an evaluator to recipes that are gone.
+grep -Fq 'Integrated evaluation status: `BLOCKED`' "$INPUT" || fail "evaluator input must record that the integrated evaluation is blocked"
+if grep -Eq 'just workbench-(package|package-inventory|demo|tauri-test)' "$INPUT"; then
+  fail "evaluator input names a removed desktop-shell recipe"
+fi
 
 printf 'workbench completion evaluator inputs check passed\n'
