@@ -503,6 +503,36 @@ fn stub_valid_allow_reaches_allow() {
     assert_eq!(decide(&bundle, Some(&candidate)).verdict, Verdict::Allow);
 }
 
+/// An allow candidate evaluated over one policy's Rego bundle is refused by an
+/// engine whose policy names a different bundle, required or not.
+#[test]
+fn candidate_from_another_bundle_is_denied() {
+    let staged = staged_bundle();
+    let bundle = bundle_for(staged.path(), true, true);
+    let cli = stub(
+        staged.path(),
+        OPA_VERSION,
+        &printf(&eval_output(&good_allow())),
+    );
+    let candidate = OpaCandidate::evaluate(&bundle, &binding(cli), &valid_input()).unwrap();
+    assert_eq!(candidate.trace().failure, None);
+    assert_eq!(decide(&bundle, Some(&candidate)).verdict, Verdict::Allow);
+
+    let other = staged_gate();
+    for required in [true, false] {
+        let foreign = bundle_for(other.path(), true, required);
+        assert_ne!(foreign.sources[0].sha256, bundle.sources[0].sha256);
+        let decision = decide(&foreign, Some(&candidate));
+        assert_eq!(decision.verdict, Verdict::Deny, "required={required}");
+        let (disposition, _) = opa_record(&decision);
+        assert_eq!(disposition_name(&disposition), "deny");
+    }
+
+    let mut unsourced = bundle_for(staged.path(), true, true);
+    unsourced.sources.clear();
+    assert_eq!(decide(&unsourced, Some(&candidate)).verdict, Verdict::Deny);
+}
+
 #[test]
 fn stub_escalate_reaches_escalate() {
     let staged = staged_bundle();

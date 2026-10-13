@@ -47,6 +47,7 @@ EXPECTED_VERSION="0.1.3"
 TEST_FILE="$REPO_ROOT/crates/sea-forge-case-runner/tests/cell_episode_live.rs"
 
 GATEWAY_PID=""
+GATEWAY_REGISTERED=0
 
 blocked() {
     echo "BLOCKED: $*" >&2
@@ -64,8 +65,11 @@ cleanup() {
         kill "$GATEWAY_PID" 2>/dev/null || true
         wait "$GATEWAY_PID" 2>/dev/null || true
     fi
-    # Best effort: the registration may never have been added.
-    openshell gateway remove "$GATEWAY_NAME" >/dev/null 2>&1 || true
+    # Remove only a registration this run added; an earlier exit must not
+    # delete an operator's existing gateway of the same name.
+    if [[ "$GATEWAY_REGISTERED" == 1 ]]; then
+        openshell gateway remove "$GATEWAY_NAME" >/dev/null 2>&1 || true
+    fi
     exit "$rc"
 }
 trap cleanup EXIT
@@ -253,6 +257,7 @@ echo "OK: gateway answered on http://127.0.0.1:$PORT"
 
 openshell gateway add "http://127.0.0.1:$PORT" --local --name "$GATEWAY_NAME" \
     || fail "could not register gateway $GATEWAY_NAME"
+GATEWAY_REGISTERED=1
 
 # ---------------------------------------------------------------------------
 # Live tests. Only cargo's exit status decides success.

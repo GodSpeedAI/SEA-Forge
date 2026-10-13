@@ -2545,6 +2545,11 @@ impl PolicyAuthorityEngine {
                 }
             } else if configured.engine == "opa" {
                 match opa_candidate {
+                    // A candidate evaluated over another policy's Rego bundle
+                    // is not this engine's verdict: refuse it, whatever it says.
+                    Some(candidate) if !candidate.is_bound_to(&self.bundle) => {
+                        GovernanceDisposition::Deny
+                    }
                     Some(candidate) => candidate.disposition(),
                     None if configured.required => GovernanceDisposition::Deny,
                     None => GovernanceDisposition::Escalate,
@@ -2565,7 +2570,11 @@ impl PolicyAuthorityEngine {
                 boundaries: BTreeMap::new(),
                 compensating_controls: BTreeSet::new(),
                 reason: if let Some(candidate) = opa {
-                    candidate.reason()
+                    if candidate.is_bound_to(&self.bundle) {
+                        candidate.reason()
+                    } else {
+                        "opa:candidate_bundle_mismatch".into()
+                    }
                 } else if configured.engine == "domainforge" && domainforge_candidate.is_some() {
                     "domainforge candidate normalized".into()
                 } else {

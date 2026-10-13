@@ -160,6 +160,20 @@ impl OpaCandidate {
         self.disposition.clone()
     }
 
+    /// Whether this candidate was evaluated over the Rego bundle that `bundle`
+    /// names: the `rego_provenance` source hash must equal the provenance hash
+    /// this evaluation verified. An engine must not accept a candidate built
+    /// from another policy's bundle.
+    pub(crate) fn is_bound_to(&self, bundle: &AuthorityPolicyBundle) -> bool {
+        bundle
+            .sources
+            .iter()
+            .find(|source| source.surface == "rego_provenance")
+            .is_some_and(|source| {
+                self.trace.provenance_sha256.strip_prefix("sha256:") == Some(source.sha256.as_str())
+            })
+    }
+
     /// The verdict reason: the decision outcome, or the failure code.
     pub(crate) fn reason(&self) -> String {
         match &self.trace.failure {

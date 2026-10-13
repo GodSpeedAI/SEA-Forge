@@ -2,7 +2,9 @@
 //! (local and jail) must refuse it before anything is spawned.
 
 use sea_forge_core::types::{ExecutionRequest, Operation};
-use sea_forge_sandbox::{ExecutionSandbox, JailSandbox, LocalSandbox, NetworkPosture, SandboxSpec};
+#[cfg(target_os = "linux")]
+use sea_forge_sandbox::JailSandbox;
+use sea_forge_sandbox::{ExecutionSandbox, LocalSandbox, NetworkPosture, SandboxSpec};
 use std::collections::BTreeMap;
 use std::path::Path;
 
