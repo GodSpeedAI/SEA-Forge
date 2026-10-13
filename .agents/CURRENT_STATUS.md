@@ -1,6 +1,6 @@
 # Current status
 
-**Status revision:** 83
+**Status revision:** 84
 
 **Stage:** security: replace serde_yaml
 
@@ -42,6 +42,7 @@
 - just check run on this branch before push
 - YAML parsing goes through sea_forge_core::yaml only: duplicate keys, merge keys, unknown tags, null collections, quoted or non-canonical booleans and non-canonical integers are rejected; input, depth, node and alias limits are bounded.
 - Corpus proof: all 107 real documents keep accept/reject, policy identities, hashes and probe verdicts; no adversarial document is newly accepted.
+- domainforge-core pinned to =0.20.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
 
 **Limits:**
 
@@ -72,11 +73,10 @@
 - The symlink guard fix is verified on Linux only; macOS is verified by CI.
 - The macOS self_model_cli failure is not yet explained.
 - The macOS fix is verified by CI only.
-- unsafe-libyaml is still in the lock through domainforge-core 0.19.0, so cargo deny advisories still fails until a domainforge-core release without serde_yaml is published and pinned.
 - Stricter than before: an explicit null collection (for example a bare `rules:`) and True/TRUE booleans no longer load.
 - Fields under serde flatten or internally tagged enums (planner AgentTask max_turns and token_budget) skip the spelling check; explicit YAML core tags are honoured.
 
-**Next:** Publish a domainforge-core release without serde_yaml, pin it here, and confirm cargo deny passes.
+**Next:** Review and merge the security migration; rebase the other open branches on it.
 
 **Evidence:**
 
