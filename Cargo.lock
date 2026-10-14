@@ -536,9 +536,9 @@ dependencies = [
 
 [[package]]
 name = "domainforge-core"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99883554013440c4b84a5fc62e050eccce00211cc86b7288552ea265931da205"
+checksum = "aa5ac810051fd601cdd81880a8d98b5f546dda3b6764f2ac0af4243365040056"
 dependencies = [
  "anyhow",
  "base64",
@@ -1818,9 +1818,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "once_cell",
  "ring",

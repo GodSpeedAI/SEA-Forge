@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 96
+**Status revision:** 97
 
-**Stage:** test: recovery restart diagnostics
+**Stage:** domainforge-0.21.0-pin
 
-**Summary:** The Go live-recovery harness now reports, when the restarted server's socket never appears, whether the server process exited and the tail of its log.
+**Summary:** SEA-Forge pins domainforge-core =0.21.0 (EXPECTED_DOMAINFORGE_VERSION and devbox CLI install match). The RepairAgent OpenShell and Rego fixtures and the gate Rego fixture were regenerated with the released 0.21.0 CLI; output is byte-identical to the committed projections except the provenance generator field. rustls 0.23.45 -> 0.23.46 clears RUSTSEC-2026-0346/0347, which failed cargo deny on main.
 
 **Verified:**
 
@@ -42,7 +42,7 @@
 - just check run on this branch before push
 - YAML parsing goes through sea_forge_core::yaml only: duplicate keys, merge keys, unknown tags, null collections, quoted or non-canonical booleans and non-canonical integers are rejected; input, depth, node and alias limits are bounded.
 - Corpus proof: all 107 real documents keep accept/reject, policy identities, hashes and probe verdicts; no adversarial document is newly accepted.
-- domainforge-core pinned to =0.20.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
+- domainforge-core pinned to =0.21.0, which no longer depends on serde_yaml: unsafe-libyaml and serde_yaml are absent from Cargo.lock and cargo deny passes (advisories, bans, licenses, sources) with no suppressions.
 - Approval consumption: a mismatched action, missing assurance or mismatched committed decision is refused without an approval_grant_consumption record; eight concurrent strict callers yield exactly one grant.
 - Casework live on GitHub: the go-live job passes; the ladder passes 11 of 11 journeys on re-run.
 - Deflake: ACP budget test 30 of 30 plain and 10 of 10 under CPU load; sfwp_supervisor 10 of 10.
@@ -61,6 +61,9 @@
 - OPA candidate binding: a candidate evaluated over another policy's Rego bundle is denied whether or not opa is required (opa_candidate::candidate_from_another_bundle_is_denied); opa_candidate passes 29 of 29 and cell_episode 30 of 30 with --include-ignored against opa 1.21.1.
 - authority-opa CI job added and required by gate; the pinned digest 668506eb...5031 equals the GitHub asset digest and the release's .sha256 for opa v1.21.1 linux amd64 static.
 - Recovery diagnostics: go vet -tags live clean; TestLiveKillMidCommitRecovery passes 25 of 25 locally against a real server build (the CI failure was not reproduced).
+- cargo deny check: advisories, bans, licenses, sources ok after rustls 0.23.46
+- domainforge 0.21.0 regeneration: openshell/ identical; rego/ and gate rego/ differ only in provenance generator
+- cargo test sea-forge-domainforge, -authority, -case-runner, -changeset: 27 test binaries ok; opa_candidate --include-ignored 29 passed with real opa
 
 **Limits:**
 
