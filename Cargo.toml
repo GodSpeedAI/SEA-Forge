@@ -12,6 +12,7 @@ members = [
     "crates/sea-forge-trace",
     "crates/sea-forge-evidence",
     "crates/sea-forge-settlement",
+    "crates/sea-forge-changeset",
     "crates/sea-forge-capability",
     "crates/sea-forge-extension",
     "crates/sea-forge-ledger",

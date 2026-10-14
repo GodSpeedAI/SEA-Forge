@@ -126,11 +126,13 @@ fn source_ref(entry: &LedgerEntry, record_id: String) -> SourceRecordRef {
 fn operation_resource(action: &AuthorityAction) -> Option<String> {
     match action {
         AuthorityAction::WriteFile { path, .. } => Some(path.clone()),
-        AuthorityAction::ExecuteCommand { cwd, .. } => Some(cwd.clone()),
+        AuthorityAction::ExecuteCommand { cwd, .. }
+        | AuthorityAction::ExecuteSandboxCommand { cwd, .. } => Some(cwd.clone()),
         AuthorityAction::ExternalApi { host } => Some(host.clone()),
         AuthorityAction::AgentProbe { endpoint_ref, .. }
         | AuthorityAction::AgentTask { endpoint_ref, .. } => Some(endpoint_ref.clone()),
         AuthorityAction::GitCommit { paths } => Some(paths.join(",")),
+        AuthorityAction::PromoteChangeset { reference, .. } => Some(reference.clone()),
         AuthorityAction::Reserved { resource_id, .. } => Some(resource_id.clone()),
         AuthorityAction::GithubPr { .. } | AuthorityAction::Unclassified { .. } => None,
     }
@@ -140,11 +142,13 @@ fn operation_kind(action: &AuthorityAction) -> &'static str {
     match action {
         AuthorityAction::WriteFile { .. } => "write_file",
         AuthorityAction::ExecuteCommand { .. } => "execute_command",
+        AuthorityAction::ExecuteSandboxCommand { .. } => "execute_sandbox_command",
         AuthorityAction::ExternalApi { .. } => "external_api",
         AuthorityAction::AgentProbe { .. } => "agent_probe",
         AuthorityAction::AgentTask { .. } => "agent_task",
         AuthorityAction::GitCommit { .. } => "git_commit",
         AuthorityAction::GithubPr { .. } => "github_pr",
+        AuthorityAction::PromoteChangeset { .. } => "promote_changeset",
         AuthorityAction::Reserved { .. } => "reserved",
         AuthorityAction::Unclassified { .. } => "unclassified",
     }

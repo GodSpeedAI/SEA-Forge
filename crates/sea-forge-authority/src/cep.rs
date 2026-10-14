@@ -808,6 +808,7 @@ impl CepAuthorityService<'_> {
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })?)
     }
@@ -996,6 +997,7 @@ impl CepAuthorityService<'_> {
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })?;
         if decision.verdict != Verdict::Allow {
@@ -1175,6 +1177,7 @@ impl CepAuthorityService<'_> {
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })?;
         // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it

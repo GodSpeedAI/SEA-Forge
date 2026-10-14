@@ -13,6 +13,7 @@ sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 chrono.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 sha2.workspace = true
 wait-timeout.workspace = true
 
@@ -26,7 +27,6 @@ landlock = "0.4"
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }
-serde_json.workspace = true
 tempfile.workspace = true
 
 [lints]

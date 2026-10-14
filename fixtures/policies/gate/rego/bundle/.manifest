@@ -1,0 +1,10 @@
+{
+  "metadata": {
+    "projection": "domainforge-rego/v1"
+  },
+  "rego_version": 1,
+  "revision": "sha256:e61ecd1c669c7d04d29e6140e7b4362c3b1456c9f41d708f9318b17b0c1a609f",
+  "roots": [
+    "domainforge"
+  ]
+}

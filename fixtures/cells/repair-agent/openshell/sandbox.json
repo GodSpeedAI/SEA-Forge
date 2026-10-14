@@ -1,0 +1,143 @@
+{
+  "cell_id": "9093569307216df6",
+  "compute_driver": "vm",
+  "container_limits": {
+    "cpu": "4",
+    "disk": null,
+    "memory": "8192Mi"
+  },
+  "credentials": [
+    {
+      "delivered": false,
+      "delivery": "ephemeral",
+      "name": "package-mirror-token",
+      "provider": "sea-forge",
+      "scope": "package-mirror:read"
+    }
+  ],
+  "dependency_sets": [
+    {
+      "ecosystem": "python",
+      "install": "uv sync --frozen",
+      "lockfile": "uv.lock",
+      "manifest": "pyproject.toml",
+      "mutation": "escalate",
+      "name": "python-application"
+    }
+  ],
+  "evidence_probes": [
+    {
+      "command": "python --version",
+      "id": "30625ecf31554840",
+      "source": "tool-probe"
+    },
+    {
+      "command": "just --version",
+      "id": "4c34151122a23ed0",
+      "source": "tool-probe"
+    },
+    {
+      "command": "metric:environment-proof",
+      "id": "98effa122673c364",
+      "source": "metric"
+    },
+    {
+      "command": "uv --version",
+      "id": "9da0689fd3c638b7",
+      "source": "tool-probe"
+    },
+    {
+      "command": "uv sync --frozen",
+      "id": "d210b25802e8ec4d",
+      "source": "dependency-set"
+    }
+  ],
+  "exec_timeout_seconds": 1800,
+  "obligations": [
+    {
+      "discharge": "probe `uname -m` in the sandbox and refuse on mismatch",
+      "kind": "architecture",
+      "value": "x86_64"
+    },
+    {
+      "discharge": "apply the mutation decision to any changeset touching these paths before promotion",
+      "kind": "protected_paths",
+      "mutation": "escalate",
+      "paths": [
+        "pyproject.toml",
+        "uv.lock"
+      ],
+      "source": "da5608615ab2d28d"
+    },
+    {
+      "discharge": "evaluate through the authority using the model's Rego projection",
+      "kind": "policy",
+      "modality": "Prohibition",
+      "name": "dependency_files_immutable",
+      "source": "d33206689bd346b7"
+    },
+    {
+      "discharge": "run the evidence probes in the sandbox and refuse on failure; OpenShell does not verify image contents",
+      "kind": "image_contents",
+      "requirements": [
+        {
+          "kind": "system",
+          "name": "ca-certificates",
+          "version": null
+        },
+        {
+          "kind": "system",
+          "name": "curl",
+          "version": null
+        },
+        {
+          "kind": "system",
+          "name": "git",
+          "version": "2.45"
+        },
+        {
+          "kind": "system",
+          "name": "openssl",
+          "version": "3"
+        },
+        {
+          "kind": "system",
+          "name": "pkg-config",
+          "version": null
+        },
+        {
+          "kind": "runtime",
+          "name": "python",
+          "version": "3.13"
+        },
+        {
+          "kind": "tool",
+          "name": "just",
+          "version": "1.43"
+        },
+        {
+          "kind": "tool",
+          "name": "uv",
+          "version": "0.9"
+        }
+      ]
+    }
+  ],
+  "openshell_version": "0.1.3",
+  "schema": "domainforge.openshell.sandbox/v1",
+  "vm_shape": {
+    "mem_mib": 8192,
+    "overlay_disk_mib": 20480,
+    "vcpus": 4
+  },
+  "workdir": "/sandbox",
+  "workspaces": [
+    {
+      "declared_target": "/workspace",
+      "mode": "read-write",
+      "name": "workspace",
+      "sandbox_path": "/sandbox/workspace",
+      "source": "."
+    }
+  ]
+}

@@ -409,6 +409,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                     .then_some(options.timeout_secs),
                 env_keys,
                 domainforge_candidate: domainforge_candidate.as_ref(),
+                opa_candidate: None,
                 environment: env_ctx,
             })?;
             let event = trace.append(

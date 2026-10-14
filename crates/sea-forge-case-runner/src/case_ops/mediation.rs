@@ -207,6 +207,7 @@ pub(super) fn authorize_with_bundle_callback<T>(
         timeout_secs: None,
         env_keys: Default::default(),
         domainforge_candidate: domainforge_candidate.as_ref(),
+        opa_candidate: None,
         environment: None,
     })?;
     let committed = stream.commit_typed("authority_decision", vec![], &decision, vec![])?;

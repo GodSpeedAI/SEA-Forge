@@ -1973,7 +1973,9 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
+ "sea-forge-changeset",
  "sea-forge-core",
+ "sea-forge-evidence",
  "sea-forge-ledger",
  "sea-forge-planner",
  "sea-forge-runtime",
@@ -1996,6 +1998,16 @@ dependencies = [
  "serde_json",
  "sha2",
  "tar",
+ "tempfile",
+]
+
+[[package]]
+name = "sea-forge-changeset"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
  "tempfile",
 ]
 
@@ -2128,7 +2140,11 @@ dependencies = [
  "chrono",
  "sea-forge-authority",
  "sea-forge-core",
+ "sea-forge-ledger",
  "sea-forge-sandbox",
+ "serde_json",
+ "sha2",
+ "tempfile",
  "wait-timeout",
 ]
 

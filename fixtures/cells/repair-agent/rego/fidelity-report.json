@@ -1,0 +1,48 @@
+{
+  "caveats": [
+    "Numbers compare exactly in OPA and as f64 in the evaluator; results can differ for integers beyond 2^53.",
+    "Equality on array- or object-valued fields compares integer and float forms of the same number as equal in OPA and as different in the evaluator.",
+    "Results reflect the evaluator's default three-valued mode; the boolean mode is not projected."
+  ],
+  "classes": {
+    "adapter": "an explicit target adaptation, verified against a reference implementation",
+    "isomorphic": "the per-policy True/False/Unknown/error result equals the DomainForge evaluator's",
+    "structural": "carried as data with the same shape; not evaluated",
+    "unrepresentable": "cannot be projected; the projection fails with REGO001"
+  },
+  "decision_contract": {
+    "classification": "adapter",
+    "contract": "domainforge.rego.decision/v1",
+    "reason": "The evaluator reports per-policy violations and has no aggregate outcome. deny: any error-severity policy is violated or fails to evaluate, or the input is malformed; escalate: otherwise, any error-severity policy is Unknown; allow: otherwise. Priority orders reasons only; the evaluator does not use it to resolve conflicts."
+  },
+  "metadata": {
+    "classification": "structural",
+    "fields": [
+      "id",
+      "name",
+      "namespace",
+      "version",
+      "kind",
+      "rationale",
+      "tags"
+    ]
+  },
+  "model": {
+    "hash": "sha256:7ed5d9b70ec8a6b74815caa97d0735c3233ed555a739dc943cf9248b3c36631f",
+    "projection": "domainforge-rego/v1"
+  },
+  "policies": [
+    {
+      "classification": "isomorphic",
+      "constructs": [],
+      "policy": "godspeed.cells.repair::dependency_files_immutable"
+    }
+  ],
+  "projection": "domainforge-rego/v1",
+  "schema": "domainforge.rego.fidelity/v1",
+  "verification": {
+    "evaluator": "opa (see tests/decision_test.rego for this model's fixtures)",
+    "reference": "domainforge_core::policy::Policy::evaluate_with_mode (three-valued)",
+    "suite": "domainforge-core/tests/rego_projection_tests.rs"
+  }
+}

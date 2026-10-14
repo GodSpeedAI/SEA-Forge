@@ -155,6 +155,7 @@ fn allow_decision(h: &Harness, sequence: usize) -> AuthorityDecision {
             timeout_secs: Some(10),
             env_keys: ["PATH", "HOME"].iter().map(|k| k.to_string()).collect(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .expect("evaluation")

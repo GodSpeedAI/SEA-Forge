@@ -1,0 +1,4 @@
+@namespace "gate"
+Policy must per Constraint Obligation priority 9 as: forall e in entities: (e.capacity < 100)
+Policy may per Constraint Permission priority 1 as: exists e in entities: (e.name = "A")
+Policy never per Constraint Prohibition priority 4 as: not (exists e in entities: (e.kind = "x"))

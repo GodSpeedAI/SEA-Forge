@@ -383,6 +383,7 @@ pub async fn execute_with_permission_broker(
         timeout_secs: Some(snapshot.timeout.as_secs()),
         env_keys: Default::default(),
         domainforge_candidate: None,
+        opa_candidate: None,
         environment: None,
     })?;
     let decision_ref = commit_view(
@@ -472,6 +473,7 @@ pub async fn execute_with_permission_broker(
                     timeout_secs: Some(snapshot.timeout.as_secs()),
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 })?;
                 let secret_ledger =
@@ -1689,6 +1691,7 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
                 timeout_secs: Some(self.timeout_secs),
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             }) {
                 Ok(d) => d,

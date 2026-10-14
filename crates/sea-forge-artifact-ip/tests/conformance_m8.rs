@@ -99,6 +99,7 @@ fn append_rights_profile_with_authority(
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -667,6 +668,7 @@ fn authorized_transition(
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -1023,6 +1025,7 @@ fn retire_artifact(root: &std::path::Path, artifact_id: &str) -> ArtifactLifecyc
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -1758,6 +1761,7 @@ rules:
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();
@@ -2965,6 +2969,7 @@ fn all_source_licenses_must_match_transition_policy() {
             timeout_secs: None,
             env_keys: Default::default(),
             domainforge_candidate: None,
+            opa_candidate: None,
             environment: None,
         })
         .unwrap();

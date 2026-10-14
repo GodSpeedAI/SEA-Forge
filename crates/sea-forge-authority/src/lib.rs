@@ -1,4 +1,7 @@
 pub mod cep;
+pub mod opa;
+
+pub use opa::{OpaBinding, OpaCandidate, OpaTrace, OPA_VERSION};
 
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
@@ -74,6 +77,7 @@ struct ValidatedGrant {
     env_keys: BTreeSet<String>,
     sandbox_class: String,
     expires_at: chrono::DateTime<Utc>,
+    action_hash: String,
 }
 
 /// Move-only proof that one exact action may execute in one exact context.
@@ -96,11 +100,18 @@ pub struct ActionGrant {
     /// (`untrusted_executable`), carried so the spawn path can re-check it.
     /// Never serialized — grants are move-only, in-memory artifacts.
     _resolved_executable: Option<PathBuf>,
+    /// Canonical hash of the granted action (the decision's bound payload hash).
+    action_hash: String,
 }
 
 impl ActionGrant {
     pub fn sandbox_class(&self) -> &str {
         &self.sandbox_class
+    }
+
+    /// Canonical hash of the exact action this grant authorizes.
+    pub fn action_hash(&self) -> &str {
+        &self.action_hash
     }
 
     /// The matched `memory_scope` boundary from the authorizing rule, if this
@@ -116,6 +127,15 @@ impl ActionGrant {
     /// window to a same-instant race.
     pub fn resolved_executable(&self) -> Option<&PathBuf> {
         self._resolved_executable.as_ref()
+    }
+
+    /// The values the authorizing decision allows for `dimension`; empty when
+    /// the decision does not constrain it.
+    pub fn boundary(&self, dimension: &str) -> &[String] {
+        self.boundaries
+            .get(dimension)
+            .map(Vec::as_slice)
+            .unwrap_or_default()
     }
 
     /// Authority-derived TCP ports this grant permits a jail-class run to bind
@@ -301,6 +321,10 @@ impl DomainForgeCandidate {
                 "execute_command",
                 argv.first().map(String::as_str).unwrap_or(""),
             ),
+            AuthorityAction::ExecuteSandboxCommand { argv, .. } => (
+                "execute_sandbox_command",
+                argv.first().map(String::as_str).unwrap_or(""),
+            ),
             AuthorityAction::Reserved {
                 resource_type,
                 resource_id,
@@ -311,6 +335,9 @@ impl DomainForgeCandidate {
             AuthorityAction::AgentTask { host, .. } => ("external_api", host.as_str()),
             AuthorityAction::GitCommit { .. } => ("git_commit", "repository"),
             AuthorityAction::GithubPr { .. } => ("github_pr", "pull_request"),
+            AuthorityAction::PromoteChangeset { reference, .. } => {
+                ("promote_changeset", reference.as_str())
+            }
             AuthorityAction::Unclassified { .. } => ("unclassified", "unknown"),
         };
         let trace = evaluate_authority(model, operation_kind, resource_id, evidence_refs)?;
@@ -1198,6 +1225,8 @@ impl AuthorityPolicyBundle {
                 rule.operation_kind.as_str(),
                 "write_file"
                     | "execute_command"
+                    | "execute_sandbox_command"
+                    | "promote_changeset"
                     | "agent_probe"
                     | "agent_task"
                     | "external_api"
@@ -1251,6 +1280,18 @@ impl AuthorityPolicyBundle {
                     message: "policy contains an unsupported operation_kind".into(),
                 });
             }
+            // A promote_changeset rule may never allow outright: it must
+            // escalate for human approval, and it carries no sandbox class.
+            if rule.operation_kind == "promote_changeset" {
+                if rule.verdict == Verdict::Allow && rule.requires_approval != Some(true) {
+                    return Err(schema("promote_changeset requires approval".into()));
+                }
+                if rule.sandbox_class.is_some() {
+                    return Err(schema(
+                        "promote_changeset does not accept a sandbox class".into(),
+                    ));
+                }
+            }
             if rule.operation_kind == "execute_command"
                 && rule.verdict == Verdict::Allow
                 && rule.sandbox_class.as_deref().unwrap_or("local") == "local"
@@ -1263,9 +1304,42 @@ impl AuthorityPolicyBundle {
             if rule
                 .sandbox_class
                 .as_deref()
-                .is_some_and(|class| !matches!(class, "local" | "jail" | "microvm"))
+                .is_some_and(|class| !matches!(class, "local" | "jail" | "microvm" | "openshell"))
             {
                 return Err(schema("unknown sandbox class".into()));
+            }
+            // OpenShell is reachable only through the typed sandbox-command
+            // action. A host command rule must never be relabelled into it.
+            let sandbox_command = rule.operation_kind == "execute_sandbox_command";
+            if rule.sandbox_class.as_deref() == Some("openshell") && !sandbox_command {
+                return Err(schema(
+                    "sandbox class openshell applies only to execute_sandbox_command".into(),
+                ));
+            }
+            // An OpenShell sandbox command is defined by a DomainForge
+            // projection. Every rule, whatever its verdict, must pin the
+            // Cell, model, policy and image it covers, so no projection the
+            // executor is handed can be authorized by an unpinned rule.
+            if sandbox_command && rule.sandbox_class.as_deref() != Some("openshell") {
+                return Err(schema(
+                    "execute_sandbox_command requires sandbox class openshell".into(),
+                ));
+            }
+            if sandbox_command && rule.argv0.as_deref().is_none_or(str::is_empty) {
+                return Err(schema(
+                    "execute_sandbox_command requires a non-empty argv0".into(),
+                ));
+            }
+            if sandbox_command
+                && CELL_BINDING_DIMENSIONS.iter().any(|dimension| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| values.len() != 1 || values[0].is_empty())
+                })
+            {
+                return Err(schema(
+                    "execute_sandbox_command requires exactly one cell_id, model_hash, openshell_policy_digest and sandbox_image boundary".into(),
+                ));
             }
             if rule.disposition == Some(NormalizedDisposition::Degraded)
                 && (!self.allow_degraded || rule.compensating_controls.is_empty())
@@ -1308,6 +1382,12 @@ impl AuthorityPolicyBundle {
                         | "env_keys"
                         | "sandbox_class"
                         | "max_manager_iterations"
+                        | "cell_id"
+                        | "model_hash"
+                        | "openshell_policy_digest"
+                        | "sandbox_image"
+                        | "repository"
+                        | "reference"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
@@ -1363,6 +1443,16 @@ impl AuthorityPolicyBundle {
     }
 }
 
+/// Boundary dimensions that bind an OpenShell sandbox command to one
+/// DomainForge projection: the Cell, the model it was projected from, the
+/// policy, and the sandbox image.
+pub const CELL_BINDING_DIMENSIONS: [&str; 4] = [
+    "cell_id",
+    "model_hash",
+    "openshell_policy_digest",
+    "sandbox_image",
+];
+
 fn trusted_policy_argv0(argv0: &str) -> bool {
     if argv0 == "sea-forge" {
         return true;
@@ -1410,6 +1500,7 @@ pub struct AuthorityEvaluation<'a> {
     pub timeout_secs: Option<u64>,
     pub env_keys: BTreeSet<String>,
     pub domainforge_candidate: Option<&'a DomainForgeCandidate>,
+    pub opa_candidate: Option<&'a OpaCandidate>,
     /// `(item_env_ref, provides_commands)` — when the PlanItem declares an
     /// environment, pass its reference and the spec's `provides.commands` list
     /// so policy rules with `environment:` can enforce intersection (§7.6).
@@ -1792,6 +1883,15 @@ impl PolicyAuthorityEngine {
         sandbox_class: Option<String>,
         approval_expiry: Option<chrono::DateTime<Utc>>,
     ) -> Result<ValidatedGrant, ForgeError> {
+        // Defence in depth: a PromoteChangeset is grantable only through
+        // grant_after_approval*, never by an unconditional Allow grant.
+        if matches!(action, AuthorityAction::PromoteChangeset { .. })
+            && expected_verdict == Verdict::Allow
+        {
+            return Err(ForgeError::Input(
+                "promote_changeset cannot be granted without approval".into(),
+            ));
+        }
         if committed.record_kind() != "authority_decision" {
             return Err(ForgeError::Input(
                 "authority decision has the wrong committed record kind".into(),
@@ -1895,6 +1995,7 @@ impl PolicyAuthorityEngine {
         let sandbox_class = sandbox_class
             .ok_or_else(|| ForgeError::Input("authority decision grants no sandbox".into()))?;
         Ok(ValidatedGrant {
+            action_hash,
             workspace_root,
             artifacts_root,
             timeout_secs,
@@ -1931,6 +2032,7 @@ impl PolicyAuthorityEngine {
                 _ => None,
             },
             expires_at: validated.expires_at,
+            action_hash: validated.action_hash,
             memory_scope: decision.matched_rule.as_deref().and_then(|name| {
                 self.bundle
                     .rules
@@ -1961,6 +2063,7 @@ impl PolicyAuthorityEngine {
             timeout_secs,
             env_keys,
             domainforge_candidate,
+            opa_candidate,
             environment,
         } = input;
         let (kind, resource_type, resource_id, parameters) = match action {
@@ -1975,6 +2078,26 @@ impl PolicyAuthorityEngine {
                 "shell_cmd",
                 argv.first().cloned().unwrap_or_default(),
                 json!({"argv":argv,"cwd":cwd}),
+            ),
+            AuthorityAction::ExecuteSandboxCommand {
+                argv,
+                cwd,
+                cell_id,
+                model_hash,
+                policy_digest,
+                image,
+            } => (
+                "execute_sandbox_command",
+                "sandbox_cmd",
+                argv.first().cloned().unwrap_or_default(),
+                json!({
+                    "argv":argv,
+                    "cwd":cwd,
+                    "cell_id":cell_id,
+                    "model_hash":model_hash,
+                    "policy_digest":policy_digest,
+                    "image":image,
+                }),
             ),
             AuthorityAction::ExternalApi { host } => (
                 "external_api",
@@ -2067,6 +2190,28 @@ impl PolicyAuthorityEngine {
                 "github_pr",
                 "pull-request".into(),
                 json!({"has_required_evidence":has_required_evidence}),
+            ),
+            AuthorityAction::PromoteChangeset {
+                repository,
+                reference,
+                expected_base,
+                proposed_commit,
+                proposed_tree,
+                changeset_digest,
+                paths,
+            } => (
+                "promote_changeset",
+                "repository",
+                reference.clone(),
+                json!({
+                    "repository": repository,
+                    "reference": reference,
+                    "expected_base": expected_base,
+                    "proposed_commit": proposed_commit,
+                    "proposed_tree": proposed_tree,
+                    "changeset_digest": changeset_digest,
+                    "paths": paths,
+                }),
             ),
             AuthorityAction::Reserved {
                 resource_type,
@@ -2398,25 +2543,51 @@ impl PolicyAuthorityEngine {
                     _ if configured.required => GovernanceDisposition::Deny,
                     _ => GovernanceDisposition::Escalate,
                 }
+            } else if configured.engine == "opa" {
+                match opa_candidate {
+                    // A candidate evaluated over another policy's Rego bundle
+                    // is not this engine's verdict: refuse it, whatever it says.
+                    Some(candidate) if !candidate.is_bound_to(&self.bundle) => {
+                        GovernanceDisposition::Deny
+                    }
+                    Some(candidate) => candidate.disposition(),
+                    None if configured.required => GovernanceDisposition::Deny,
+                    None => GovernanceDisposition::Escalate,
+                }
             } else if configured.required {
                 GovernanceDisposition::Deny
             } else {
                 GovernanceDisposition::Escalate
+            };
+            let opa = if configured.engine == "opa" {
+                opa_candidate
+            } else {
+                None
             };
             candidates.push(GovernanceVerdict {
                 engine: configured.engine.clone(),
                 disposition,
                 boundaries: BTreeMap::new(),
                 compensating_controls: BTreeSet::new(),
-                reason: if configured.engine == "domainforge" && domainforge_candidate.is_some() {
+                reason: if let Some(candidate) = opa {
+                    if candidate.is_bound_to(&self.bundle) {
+                        candidate.reason()
+                    } else {
+                        "opa:candidate_bundle_mismatch".into()
+                    }
+                } else if configured.engine == "domainforge" && domainforge_candidate.is_some() {
                     "domainforge candidate normalized".into()
                 } else {
                     "configured authority engine unavailable".into()
                 },
-                evidence_refs: domainforge_candidate
-                    .filter(|_| configured.engine == "domainforge")
-                    .map(|candidate| candidate.trace.evidence_refs.clone())
-                    .unwrap_or_else(|| vec![format!("engine:{}:candidate", configured.engine)]),
+                evidence_refs: if let Some(candidate) = opa {
+                    candidate.evidence_refs()
+                } else {
+                    domainforge_candidate
+                        .filter(|_| configured.engine == "domainforge")
+                        .map(|candidate| candidate.trace.evidence_refs.clone())
+                        .unwrap_or_else(|| vec![format!("engine:{}:candidate", configured.engine)])
+                },
             });
         }
         candidates.sort();
@@ -2624,11 +2795,13 @@ fn sod_rule_matches_action(rule: &SodRule, actor_role: &str, action: &AuthorityA
     let (action_kind, parameters) = match action {
         AuthorityAction::WriteFile { .. } => ("write_file", None),
         AuthorityAction::ExecuteCommand { .. } => ("execute_command", None),
+        AuthorityAction::ExecuteSandboxCommand { .. } => ("execute_sandbox_command", None),
         AuthorityAction::ExternalApi { .. } => ("external_api", None),
         AuthorityAction::AgentProbe { .. } => ("agent_probe", None),
         AuthorityAction::AgentTask { .. } => ("agent_task", None),
         AuthorityAction::GitCommit { .. } => ("git_commit", None),
         AuthorityAction::GithubPr { .. } => ("github_pr", None),
+        AuthorityAction::PromoteChangeset { .. } => ("promote_changeset", None),
         AuthorityAction::Reserved {
             resource_type,
             parameters,
@@ -2665,7 +2838,37 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
     if rule.actor_role != actor.role {
         return false;
     }
+    // A sandbox command is matched only by a sandbox-command rule, and a
+    // sandbox-command rule only by a sandbox command. Host commands never
+    // reach a sandbox rule, and sandbox commands never reach a host rule.
+    let sandbox_rule = rule.operation_kind == "execute_sandbox_command";
+    let sandbox_action = matches!(action, AuthorityAction::ExecuteSandboxCommand { .. });
+    if sandbox_rule != sandbox_action {
+        return false;
+    }
+    // A promote_changeset rule matches only a PromoteChangeset action, and a
+    // PromoteChangeset action only by a promote_changeset rule. A Reserved
+    // action named `promote_changeset` or a `git_commit` rule never matches.
+    let promote_rule = rule.operation_kind == "promote_changeset";
+    let promote_action = matches!(action, AuthorityAction::PromoteChangeset { .. });
+    if promote_rule != promote_action {
+        return false;
+    }
     match action {
+        AuthorityAction::PromoteChangeset {
+            repository,
+            reference,
+            ..
+        } => {
+            // Boundary constraints, when present, must list the exact value.
+            [("repository", repository), ("reference", reference)]
+                .iter()
+                .all(|(dimension, value)| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| values.iter().any(|allowed| allowed == *value))
+                })
+        }
         AuthorityAction::WriteFile { path, .. } => {
             let prefix = rule.path_prefix.as_deref().unwrap_or("");
             // Segment-aware prefix: `docs` matches `docs` and `docs/x` but not
@@ -2676,6 +2879,23 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                 && sea_forge_core::path::path_prefix_matches(&normalized, prefix)
         }
         AuthorityAction::ExecuteCommand { .. } => rule.operation_kind == "execute_command",
+        // The guest argv0 is matched exactly: OpenShell binds the guest path,
+        // so no basename or host lookup is applied here.
+        AuthorityAction::ExecuteSandboxCommand {
+            argv,
+            cell_id,
+            model_hash,
+            policy_digest,
+            image,
+            ..
+        } => {
+            rule.argv0.is_some()
+                && rule.argv0.as_deref() == argv.first().map(String::as_str)
+                && sandbox_boundary_is(rule, "cell_id", cell_id)
+                && sandbox_boundary_is(rule, "model_hash", model_hash)
+                && sandbox_boundary_is(rule, "openshell_policy_digest", policy_digest)
+                && sandbox_boundary_is(rule, "sandbox_image", image)
+        }
         AuthorityAction::Reserved {
             resource_type,
             parameters,
@@ -2704,6 +2924,15 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
         AuthorityAction::AgentTask { .. } => rule.operation_kind == "agent_task",
         _ => false,
     }
+}
+
+/// True when the rule's boundary `dimension` is exactly the single `value`.
+/// Sandbox-command rules are validated to carry exactly one value per binding
+/// dimension, so this is the exact-match test for the binding.
+fn sandbox_boundary_is(rule: &PolicyRule, dimension: &str, value: &str) -> bool {
+    rule.boundary_constraints
+        .get(dimension)
+        .is_some_and(|values| values.len() == 1 && values[0] == value)
 }
 
 fn matches_approval_resolution_parameters(parameters: &Value, actor: &Actor) -> bool {
@@ -2934,6 +3163,25 @@ fn malformed_action(action: &AuthorityAction) -> bool {
         AuthorityAction::ExecuteCommand { argv, cwd } => {
             argv.is_empty() || invalid_relative_path(cwd)
         }
+        AuthorityAction::ExecuteSandboxCommand {
+            argv,
+            cwd,
+            cell_id,
+            model_hash,
+            policy_digest,
+            image,
+        } => {
+            argv.first().is_none_or(String::is_empty)
+                || invalid_relative_path(cwd)
+                || [
+                    cell_id.as_str(),
+                    model_hash.as_str(),
+                    policy_digest.as_str(),
+                    image.as_str(),
+                ]
+                .iter()
+                .any(|value| value.is_empty() || value.trim() != *value)
+        }
         AuthorityAction::ExternalApi { host } => host.is_empty(),
         AuthorityAction::AgentProbe {
             endpoint_ref,
@@ -2990,6 +3238,39 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 || *max_turns == 0
         }
         AuthorityAction::GitCommit { paths } => paths.is_empty(),
+        AuthorityAction::PromoteChangeset {
+            repository,
+            reference,
+            expected_base,
+            proposed_commit,
+            proposed_tree,
+            changeset_digest,
+            paths,
+        } => {
+            [
+                repository.as_str(),
+                reference.as_str(),
+                expected_base.as_str(),
+                proposed_commit.as_str(),
+                proposed_tree.as_str(),
+                changeset_digest.as_str(),
+            ]
+            .iter()
+            .any(|value| value.is_empty() || value.trim() != *value)
+                || !Path::new(repository).is_absolute()
+                || !valid_promoted_reference(reference)
+                || ![expected_base, proposed_commit, proposed_tree]
+                    .iter()
+                    .all(|id| is_lower_hex(id, 40) || is_lower_hex(id, 64))
+                || !changeset_digest
+                    .strip_prefix("sha256:")
+                    .is_some_and(|hex| is_lower_hex(hex, 64))
+                || paths.is_empty()
+                // Sorted and duplicate-free: each path strictly after its predecessor.
+                || paths.windows(2).any(|pair| pair[0] >= pair[1])
+                || paths.iter().any(|path| invalid_relative_path(path))
+                || expected_base == proposed_commit
+        }
         AuthorityAction::Reserved {
             resource_type,
             resource_id,
@@ -3050,6 +3331,22 @@ fn malformed_action(action: &AuthorityAction) -> bool {
         }
         _ => false,
     }
+}
+
+/// A lowercase hex string of exactly `len` characters.
+fn is_lower_hex(value: &str, len: usize) -> bool {
+    value.len() == len
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// A full ref under `refs/` with no `..`, no whitespace and no trailing `/`.
+fn valid_promoted_reference(reference: &str) -> bool {
+    reference.starts_with("refs/")
+        && !reference.contains("..")
+        && !reference.chars().any(char::is_whitespace)
+        && !reference.ends_with('/')
 }
 
 fn invalid_relative_path(path: &str) -> bool {
@@ -3234,6 +3531,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -3262,6 +3560,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -3390,6 +3689,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -3778,6 +4078,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -3872,6 +4173,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: Some(&candidate),
+                    opa_candidate: None,
                     environment: None,
                 })
                 .unwrap();
@@ -3914,6 +4216,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 })
                 .unwrap();
@@ -3951,6 +4254,7 @@ mod tests {
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             })
             .unwrap();
@@ -4021,6 +4325,7 @@ mod tests {
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             })
             .unwrap();
@@ -4117,6 +4422,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 })
                 .unwrap();
@@ -4165,6 +4471,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -4195,6 +4502,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_abcdef".into(),
@@ -4413,6 +4721,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                     environment: None,
                 },
                 "act_expired".into(),
@@ -4452,6 +4761,7 @@ mod tests {
                 timeout_secs: Some(10),
                 env_keys: BTreeSet::from(["PATH".into()]),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             })
             .unwrap();
@@ -4512,6 +4822,7 @@ mod tests {
                     timeout_secs: None,
                     env_keys: Default::default(),
                     domainforge_candidate: None,
+                    opa_candidate: None,
                 environment: None,
                 })
                 .unwrap();
@@ -4774,6 +5085,7 @@ rules:
                 timeout_secs: None,
                 env_keys: Default::default(),
                 domainforge_candidate: None,
+                opa_candidate: None,
                 environment: None,
             })
             .unwrap()
