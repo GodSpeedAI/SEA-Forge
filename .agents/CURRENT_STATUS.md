@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 97
+**Status revision:** 98
 
-**Stage:** domainforge-0.21.0-pin
+**Stage:** m46-lineage-transition
 
-**Summary:** SEA-Forge pins domainforge-core =0.21.0 (EXPECTED_DOMAINFORGE_VERSION and devbox CLI install match). The RepairAgent OpenShell and Rego fixtures and the gate Rego fixture were regenerated with the released 0.21.0 CLI; output is byte-identical to the committed projections except the provenance generator field. rustls 0.23.45 -> 0.23.46 clears RUSTSEC-2026-0346/0347, which failed cargo deny on main.
+**Summary:** M-46 closed (lineage half): SEA-Forge refuses a request citing work it decided in another world unless extensions.godspeed.authority_request.transition_ref names the ledger entry of an allowed transition from that world to the request's world; the transition record's authority_decision_ref carries the unique ledger entry. In-flight work stays pinned. Re-applied from hooks-and-m46 (b551524) onto main; also drops the leftover jollimemory hook from .gemini/settings.json.
 
 **Verified:**
 
@@ -64,6 +64,8 @@
 - cargo deny check: advisories, bans, licenses, sources ok after rustls 0.23.46
 - domainforge 0.21.0 regeneration: openshell/ identical; rego/ and gate rego/ differ only in provenance generator
 - cargo test sea-forge-domainforge, -authority, -case-runner, -changeset: 27 test binaries ok; opa_candidate --include-ignored 29 passed with real opa
+- cargo test -p sea-forge-authority: 13 test binaries ok (incl. cep_transition)
+- cargo test -p sea-forge-server --test conformance_cep_authority: 10 passed
 
 **Limits:**
 
