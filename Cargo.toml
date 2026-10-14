@@ -44,7 +44,7 @@ all = { level = "warn", priority = -1 }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4", features = ["derive"] }
 ed25519-dalek = { version = "2", default-features = false, features = ["std", "serde", "rand_core"] }
-getrandom = "0.3"
+getrandom = "0.4"
 rand = "0.8"
 schemars = "1"
 serde = { version = "1", features = ["derive"] }

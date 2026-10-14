@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 99
+**Status revision:** 100
 
-**Stage:** m46-lineage-transition
+**Stage:** deps-dependabot-2026-10-14
 
-**Summary:** Restored the just e2e-world-loop recipe that the casework/live-wiring squash dropped; scripts/e2e-world-loop.sh and the docs that cite the recipe were already on main.
+**Summary:** Applied the pending SEA-Forge Dependabot updates except sha2: GitHub Actions to node24 majors (checkout v7.0.1, upload-artifact v7.0.2, action-semantic-pull-request v6.1.1, release-please-action v5.0.0, dependency-review-action v5.0.0; no pull_request_target/workflow_run triggers, so checkout v7's fork block does not apply), getrandom 0.3 -> 0.4 (no code changes), compatible minor Cargo bumps (clap, schemars, zeroize, libc, landlock, tokio), vitest 4.1.10 -> 4.1.11 with bun.lock regenerated. sha2 0.11 needs 92 digest-formatting call sites rewritten and goes in its own PR.
 
 **Verified:**
 
@@ -67,6 +67,8 @@
 - cargo test -p sea-forge-authority: 13 test binaries ok (incl. cep_transition)
 - cargo test -p sea-forge-server --test conformance_cep_authority: 10 passed
 - just --list shows e2e-world-loop
+- cargo check --workspace --all-targets ok with getrandom 0.4
+- workbench bun install --frozen-lockfile: no changes after regenerating bun.lock
 
 **Limits:**
 
