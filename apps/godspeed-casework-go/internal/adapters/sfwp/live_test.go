@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -184,7 +185,48 @@ func (c *liveCell) start() {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	c.t.Fatalf("server socket %s never appeared; log at %s", c.socket, c.logPath)
+	// The log lives in the test's temp dir and is gone after cleanup, so the
+	// failure itself must say whether the server exited and what it printed:
+	// a crashed server and a slow one are otherwise indistinguishable.
+	c.t.Fatalf("server socket %s never appeared within 20s; server process: %s; log tail (%s):\n%s",
+		c.socket, processState(c.proc.Pid), c.logPath, logTail(c.logPath, 4096))
+}
+
+// processState reports the kernel's view of pid: a zombie means the server
+// exited before binding its socket. Linux only; elsewhere it says so.
+func processState(pid int) string {
+	raw, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+	if err != nil {
+		return fmt.Sprintf("pid %d state unavailable (%v)", pid, err)
+	}
+	// Format: "pid (comm) state ..."; comm may contain spaces, so split after
+	// the last ')'.
+	text := string(raw)
+	end := strings.LastIndex(text, ")")
+	if end < 0 || end+2 >= len(text) {
+		return fmt.Sprintf("pid %d state unparseable", pid)
+	}
+	switch state := text[end+2]; state {
+	case 'Z':
+		return fmt.Sprintf("pid %d exited (zombie, not yet reaped)", pid)
+	default:
+		return fmt.Sprintf("pid %d still running (state %c)", pid, state)
+	}
+}
+
+// logTail returns at most limit trailing bytes of the file at path.
+func logTail(path string, limit int) string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Sprintf("<cannot read log: %v>", err)
+	}
+	if len(raw) == 0 {
+		return "<log is empty>"
+	}
+	if len(raw) > limit {
+		raw = raw[len(raw)-limit:]
+	}
+	return string(raw)
 }
 
 // kill SIGKILLs the server (the crash simulation - no graceful drain).
