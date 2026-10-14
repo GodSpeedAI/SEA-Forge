@@ -168,11 +168,60 @@ jobs:
       - name: Canonical CI sweep
         run: devbox run -- just ci
 
+  # OPA candidate: the real pinned opa 1.21.1 over the DomainForge Rego bundle,
+  # plus the cell episode tests that are marked #[ignore] (run here with
+  # --include-ignored). The opa binary comes from the official GitHub release.
+  # It is checked against a digest pinned below, which equals both the asset
+  # digest GitHub reports for release v1.21.1 and that release's published
+  # .sha256 file. The pin does not prove the binary matches a source build.
+  authority-opa:
+    name: authority-opa (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Install OPA 1.21.1 (release binary, sha256 verified)
+        env:
+          OPA_VERSION: "1.21.1"
+          # Digest of the v1.21.1 release asset, pinned here so a replaced
+          # release cannot pass verification.
+          OPA_SHA256: "668506eb17a2eaa1fce6cc0d1f42ef85125d4ac5bda5fc74d1152d0c77145031"
+        run: |
+          set -euo pipefail
+          base="https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}"
+          work="$RUNNER_TEMP/opa-download"
+          bin_dir="$RUNNER_TEMP/opa-bin"
+          mkdir -p "$work" "$bin_dir"
+          cd "$work"
+          curl --proto '=https' --tlsv1.2 -fsSLo opa_linux_amd64_static "$base/opa_linux_amd64_static"
+          echo "${OPA_SHA256}  opa_linux_amd64_static" | sha256sum -c -
+          install -m 0755 opa_linux_amd64_static "$bin_dir/opa"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+          "$bin_dir/opa" version | grep -qx "Version: ${OPA_VERSION}"
+
+      - name: OPA candidate tests (real opa, stubs, tamper cases)
+        run: devbox run -- cargo test -p sea-forge-authority --test opa_candidate -- --include-ignored
+
+      - name: Cell episode tests
+        run: devbox run -- cargo test -p sea-forge-case-runner --test cell_episode -- --include-ignored
+
   # Stable gate. Branch protection requires exactly this check name. Local
   # `just ci` is equivalent to the union of lint + test + macos.
   gate:
     name: gate
-    needs: [lint, test, msrv, workbench, macos]
+    needs: [lint, test, msrv, workbench, macos, authority-opa]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -184,6 +233,7 @@ jobs:
           MSRV_RESULT: ${{ needs.msrv.result }}
           WORKBENCH_RESULT: ${{ needs.workbench.result }}
           MACOS_RESULT: ${{ needs.macos.result }}
+          AUTHORITY_OPA_RESULT: ${{ needs.authority-opa.result }}
         run: |
           set -uo pipefail
           # `needs.<job>.result` is one of: success, failure, cancelled, skipped.
@@ -200,9 +250,11 @@ jobs:
           echo "msrv:      $MSRV_RESULT"
           echo "workbench: $WORKBENCH_RESULT"
           echo "macos:     $MACOS_RESULT"
+          echo "authority-opa: $AUTHORITY_OPA_RESULT"
           fail=0
           for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" "msrv:$MSRV_RESULT" \
-                       "workbench:$WORKBENCH_RESULT" "macos:$MACOS_RESULT"; do
+                       "workbench:$WORKBENCH_RESULT" "macos:$MACOS_RESULT" \
+                       "authority-opa:$AUTHORITY_OPA_RESULT"; do
             name="${entry%%:*}"
             r="${entry#*:}"
             case "$r" in
