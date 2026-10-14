@@ -247,7 +247,10 @@ pub fn preview(
         }
     };
 
-    let instruction_sha256 = format!("sha256:{:x}", Sha256::digest(params.instruction.as_bytes()));
+    let instruction_sha256 = format!(
+        "sha256:{}",
+        hex::encode(Sha256::digest(params.instruction.as_bytes()))
+    );
     let action = action_for_delegation(
         &snapshot,
         &params.endpoint,
@@ -260,7 +263,7 @@ pub fn preview(
     // order and therefore stable, whereas a `Value` round trip depends on
     // whether `serde_json` was built with `preserve_order`.
     let action_bytes = serde_json::to_vec(&action).unwrap_or_default();
-    let contract_digest = format!("sha256:{:x}", Sha256::digest(&action_bytes));
+    let contract_digest = format!("sha256:{}", hex::encode(Sha256::digest(&action_bytes)));
 
     let contract = JobContractPreview {
         provider_kind: action_field(&action, "provider_kind"),

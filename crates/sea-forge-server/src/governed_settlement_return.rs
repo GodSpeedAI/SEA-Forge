@@ -63,7 +63,7 @@ const EXECUTION_STATUSES: [&str; 5] = [
 const SETTLEMENT_STATUSES: [&str; 2] = ["accepted", "rejected"];
 
 fn sha256_hex(input: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(input))
+    hex::encode(Sha256::digest(input))
 }
 
 /// Why an operational settlement could not be evaluated, emitted, or accepted

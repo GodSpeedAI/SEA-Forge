@@ -19,6 +19,7 @@ wait-timeout.workspace = true
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
 serde_json.workspace = true
 sha2.workspace = true
+hex.workspace = true
 tempfile.workspace = true
 
 [lints]

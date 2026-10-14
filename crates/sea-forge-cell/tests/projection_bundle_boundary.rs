@@ -110,11 +110,11 @@ fn self_model_projections_round_trip_through_federation() {
     )
     .unwrap();
     assert_eq!(
-        format!("{:x}", Sha256::digest(&round_tripped_kg)),
+        hex::encode(Sha256::digest(&round_tripped_kg)),
         sha256_hex(&kg_bytes)
     );
     assert_eq!(
-        format!("{:x}", Sha256::digest(&round_tripped_snap)),
+        hex::encode(Sha256::digest(&round_tripped_snap)),
         sha256_hex(&snap_bytes)
     );
 
@@ -125,7 +125,7 @@ fn self_model_projections_round_trip_through_federation() {
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 #[test]

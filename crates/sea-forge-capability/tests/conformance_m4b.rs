@@ -422,7 +422,7 @@ fn rebuild_writes_queryable_fts5_schema_and_source_commitment() {
     hasher.update(&source_bytes);
     assert_eq!(
         stored_sha256,
-        format!("{:x}", hasher.finalize()),
+        hex::encode(hasher.finalize()),
         "meta must commit to the exact items.jsonl source digest"
     );
 }

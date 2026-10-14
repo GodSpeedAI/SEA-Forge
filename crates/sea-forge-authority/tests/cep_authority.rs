@@ -16,7 +16,7 @@ fn world_registry() -> (WorldRegistry, String) {
         entry_uri: "demo.sea".into(),
         files: vec![SourceFile {
             uri: "demo.sea".into(),
-            sha256: format!("{:x}", Sha256::digest(SRC.as_bytes())),
+            sha256: hex::encode(Sha256::digest(SRC.as_bytes())),
             content: SRC.into(),
         }],
     };

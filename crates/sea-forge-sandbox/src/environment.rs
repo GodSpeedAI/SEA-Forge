@@ -93,7 +93,7 @@ pub fn load_pinned_environment(
         path: path.clone(),
         message: format!("environment {reference} not found"),
     })?;
-    let digest = format!("sha256:{:x}", Sha256::digest(&bytes));
+    let digest = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
     let envs_dir_clone = envs_dir.clone();
     let pins = envs_dir_clone.join(".pins");
     fs::create_dir_all(&pins).map_err(|e| ForgeError::io("create env pins directory", e))?;

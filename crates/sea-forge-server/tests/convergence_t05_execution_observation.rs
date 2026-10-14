@@ -25,7 +25,7 @@ const WORLD: &str =
     "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn sha256_hex(input: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(input))
+    hex::encode(Sha256::digest(input))
 }
 
 fn local_model_sha256() -> String {
@@ -579,7 +579,7 @@ fn t05_missing_or_placeholder_identity_in_observation_is_rejected() {
     let fallback = {
         let mut hasher = Sha256::new();
         hasher.update(b"agentic_capability_loop");
-        format!("{:x}", hasher.finalize())
+        hex::encode(hasher.finalize())
     };
     for pseudo in [fallback.clone(), "0".repeat(64), "deadbeef".into()] {
         let mut bad = base();

@@ -243,7 +243,7 @@ pub fn import(root: &Path, bundle: &Path) -> Result<BundleManifest, ForgeError> 
                 ),
             ));
         }
-        let hash = format!("{:x}", Sha256::digest(&data));
+        let hash = hex::encode(Sha256::digest(&data));
         if hash != expected.sha256 {
             return Err(tamper_error(
                 bundle,
@@ -344,7 +344,7 @@ fn push_file(
     files: &mut Vec<BundleFile>,
 ) -> Result<(), ForgeError> {
     let bytes = fs::read(src).map_err(|e| ForgeError::io(format!("read {}", src.display()), e))?;
-    let hash = format!("{:x}", Sha256::digest(&bytes));
+    let hash = hex::encode(Sha256::digest(&bytes));
     files.push(BundleFile {
         path: arc.into(),
         sha256: hash,

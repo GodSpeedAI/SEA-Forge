@@ -101,7 +101,7 @@ fn sha256_file(path: &Path) -> Result<String, SandboxError> {
             format!("{}: {e}", path.display()),
         )
     })?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 fn read_json(path: &Path) -> Result<Value, SandboxError> {
@@ -346,7 +346,7 @@ impl OpenShellSandbox {
     /// One sandbox per artifacts directory, which is unique per run.
     fn name(spec: &SandboxSpec) -> String {
         let digest = Sha256::digest(spec.artifacts_root.to_string_lossy().as_bytes());
-        format!("sf-{}", &format!("{digest:x}")[..16])
+        format!("sf-{}", &hex::encode(digest)[..16])
     }
 
     fn evidence_dir(spec: &SandboxSpec) -> PathBuf {

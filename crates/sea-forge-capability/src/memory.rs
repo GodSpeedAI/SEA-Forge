@@ -27,7 +27,7 @@ pub fn compute_dedup_key(kind: &MemoryKind, statement: &str, entity_id: &str) ->
     hasher.update(statement.trim().to_lowercase().as_bytes());
     hasher.update(b"\x00");
     hasher.update(entity_id.as_bytes());
-    format!("{:x}", hasher.finalize())
+    hex::encode(hasher.finalize())
 }
 
 // ── Extraction ──
@@ -202,7 +202,7 @@ fn source_commitment(items_path: &Path) -> Result<String, ForgeError> {
     let bytes = std::fs::read(items_path).map_err(|e| ForgeError::io("read memory items", e))?;
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hex::encode(hasher.finalize()))
 }
 
 fn sqlite_error(context: &str, error: rusqlite::Error) -> ForgeError {

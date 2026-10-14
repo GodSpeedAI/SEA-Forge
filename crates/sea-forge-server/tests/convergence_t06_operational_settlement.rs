@@ -35,7 +35,7 @@ const WORLD: &str =
     "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn sha256_hex(input: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(input))
+    hex::encode(Sha256::digest(input))
 }
 
 /// Independent reimplementation of the family's canonical payload form:

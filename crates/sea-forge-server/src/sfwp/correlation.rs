@@ -72,7 +72,7 @@ pub fn payload_hash(payload: &serde_json::Value) -> String {
     use sha2::{Digest, Sha256};
     let mut canonical = String::new();
     canonicalize(payload, &mut canonical);
-    format!("{:x}", Sha256::digest(canonical.as_bytes()))
+    hex::encode(Sha256::digest(canonical.as_bytes()))
 }
 
 /// Write `value` in canonical (sorted-key) JSON form.

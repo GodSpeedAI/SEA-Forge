@@ -59,7 +59,7 @@ pub const EXECUTION_OBSERVATION: &str = "ExecutionObservation";
 pub(crate) fn fallback_pseudo_hash() -> String {
     let mut h = Sha256::new();
     h.update(b"agentic_capability_loop");
-    format!("{:x}", h.finalize())
+    hex::encode(h.finalize())
 }
 
 /// Map a wire `source_agent` onto its canonical component id. Same vocabulary
@@ -146,7 +146,7 @@ pub(crate) fn canonical_payload_json(payload: &Value) -> String {
 /// (F-10). Stable across re-wraps that keep the payload intact.
 pub(crate) fn idempotency_key(event_type: &str, payload: &Value) -> String {
     let content = format!("{}|{}|{}", "", event_type, canonical_payload_json(payload));
-    format!("{:x}", Sha256::digest(content.as_bytes()))
+    hex::encode(Sha256::digest(content.as_bytes()))
 }
 
 pub(crate) fn utc_now() -> String {

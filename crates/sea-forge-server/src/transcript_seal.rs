@@ -118,7 +118,7 @@ pub fn verify_sealed_transcript(
         )
     })?;
 
-    let actual = format!("sha256:{:x}", Sha256::digest(&plaintext));
+    let actual = format!("sha256:{}", hex::encode(Sha256::digest(&plaintext)));
     if actual != expected_sha256 {
         return Err(ForgeError::Input(
             "sealed_verification_failed: digest mismatch".into(),
@@ -151,7 +151,7 @@ mod tests {
     use super::*;
 
     fn digest(bytes: &[u8]) -> String {
-        format!("sha256:{:x}", Sha256::digest(bytes))
+        format!("sha256:{}", hex::encode(Sha256::digest(bytes)))
     }
 
     #[test]

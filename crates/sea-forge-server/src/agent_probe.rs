@@ -143,7 +143,7 @@ pub async fn probe(
         &config.root.join("runs").join(&run).join("intent.json"),
         vec![],
     )?;
-    let prompt_hash = format!("sha256:{:x}", Sha256::digest(prompt.as_bytes()));
+    let prompt_hash = format!("sha256:{}", hex::encode(Sha256::digest(prompt.as_bytes())));
     let operation = Operation::AgentProbe {
         endpoint_ref: endpoint_id.into(),
         model: model.clone(),
@@ -339,8 +339,8 @@ pub async fn probe(
     match completion {
         Ok(response) => {
             let response_hash = format!(
-                "sha256:{:x}",
-                Sha256::digest(response.message.content.as_bytes())
+                "sha256:{}",
+                hex::encode(Sha256::digest(response.message.content.as_bytes()))
             );
             let evidence = json!({"endpoint_ref": endpoint_id, "provider_kind": snapshot.kind, "status":"schema_valid", "response_sha256": response_hash});
             let evidence_ref = commit_view(
@@ -499,7 +499,10 @@ pub fn endpoint_adapter_version(endpoint: &sea_forge_agent::EndpointSnapshot) ->
 /// schema. It binds a real, stable shape — a fabricated digest would be
 /// provenance theater on a record that gates side-effect authority.
 fn empty_probe_output_sha256() -> String {
-    format!("sha256:{:x}", Sha256::digest(br#"{"type":"object"}"#))
+    format!(
+        "sha256:{}",
+        hex::encode(Sha256::digest(br#"{"type":"object"}"#))
+    )
 }
 
 fn register_endpoint(

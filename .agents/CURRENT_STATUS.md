@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 100
+**Status revision:** 101
 
-**Stage:** deps-dependabot-2026-10-14
+**Stage:** deps-sha2-0.11
 
-**Summary:** Applied the pending SEA-Forge Dependabot updates except sha2: GitHub Actions to node24 majors (checkout v7.0.1, upload-artifact v7.0.2, action-semantic-pull-request v6.1.1, release-please-action v5.0.0, dependency-review-action v5.0.0; no pull_request_target/workflow_run triggers, so checkout v7's fork block does not apply), getrandom 0.3 -> 0.4 (no code changes), compatible minor Cargo bumps (clap, schemars, zeroize, libc, landlock, tokio), vitest 4.1.10 -> 4.1.11 with bun.lock regenerated. sha2 0.11 needs 92 digest-formatting call sites rewritten and goes in its own PR.
+**Summary:** sha2 0.10 -> 0.11 (Dependabot #2): the digest output no longer implements LowerHex, so 94 digest formatting sites use hex::encode (identical lowercase output); hex 0.4 added as a workspace dependency. Integer {:02x} byte loops are unchanged.
 
 **Verified:**
 
@@ -69,6 +69,8 @@
 - just --list shows e2e-world-loop
 - cargo check --workspace --all-targets ok with getrandom 0.4
 - workbench bun install --frozen-lockfile: no changes after regenerating bun.lock
+- cargo test --workspace: 149 test binaries ok (golden hashes unchanged)
+- cargo clippy --workspace --all-targets -D warnings clean; cargo deny ok
 
 **Limits:**
 

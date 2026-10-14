@@ -555,7 +555,10 @@ pub fn validate_descriptor(descriptor: &ExtensionDescriptor) -> Result<(), Forge
 fn hash_descriptor(descriptor: &ExtensionDescriptor) -> Result<String, ForgeError> {
     let bytes =
         serde_json::to_vec(descriptor).map_err(|e| ForgeError::Serialization(e.to_string()))?;
-    Ok(format!("sha256:{:x}", sha2::Sha256::digest(&bytes)))
+    Ok(format!(
+        "sha256:{}",
+        hex::encode(sha2::Sha256::digest(&bytes))
+    ))
 }
 
 fn chrono_now() -> String {

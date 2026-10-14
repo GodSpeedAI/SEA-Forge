@@ -277,7 +277,10 @@ pub async fn execute_with_permission_broker(
         vec![],
     )?;
 
-    let instruction_hash = format!("sha256:{:x}", Sha256::digest(instruction.as_bytes()));
+    let instruction_hash = format!(
+        "sha256:{}",
+        hex::encode(Sha256::digest(instruction.as_bytes()))
+    );
     let operation = Operation::AgentTask {
         endpoint_ref: endpoint_id.into(),
         instruction: instruction.into(),
@@ -660,8 +663,10 @@ pub async fn execute_with_permission_broker(
     let schema_evidence_ref = match request.response_schema {
         Some(schema) => {
             let schema_sha256 = format!(
-                "sha256:{:x}",
-                Sha256::digest(serde_json::to_vec(schema).unwrap_or_default())
+                "sha256:{}",
+                hex::encode(Sha256::digest(
+                    serde_json::to_vec(schema).unwrap_or_default()
+                ))
             );
             Some(commit_view(
                 &ledger,
@@ -904,8 +909,8 @@ async fn submit_swe_seed_declaration(
         &evidence.harvested_refs,
     )?;
     let verifier_sha256 = format!(
-        "sha256:{:x}",
-        Sha256::digest(evidence.harvested_refs.join(",").as_bytes())
+        "sha256:{}",
+        hex::encode(Sha256::digest(evidence.harvested_refs.join(",").as_bytes()))
     );
     let mut source_evidence_refs = evidence.harvested_refs.clone();
     source_evidence_refs.push(evidence_entry_ulid.into());
@@ -1450,9 +1455,9 @@ fn harvest_swe_seed(
             .strip_prefix(&canonical_workspace)
             .map_err(|_| ForgeError::UnsafePath("invalid SWE_SEED evidence path".into()))?;
         refs.push(format!(
-            "{run}:{}:sha256:{:x}",
+            "{run}:{}:sha256:{}",
             relative.to_string_lossy(),
-            Sha256::digest(&bytes)
+            hex::encode(Sha256::digest(&bytes))
         ));
     }
     Ok(refs)
@@ -1641,8 +1646,10 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
             let mapped =
                 sea_forge_agent::acp::KNOWN_TOOL_KINDS.contains(&request.tool_kind.as_str());
             let raw_sha256 = format!(
-                "sha256:{:x}",
-                Sha256::digest(serde_json::to_vec(&request.raw).unwrap_or_default())
+                "sha256:{}",
+                hex::encode(Sha256::digest(
+                    serde_json::to_vec(&request.raw).unwrap_or_default()
+                ))
             );
             let action = AuthorityAction::Reserved {
                 resource_type: "sandbox_execution".into(),

@@ -29,7 +29,7 @@ fn sha256_domain(domain: &str, bytes: &[u8]) -> String {
     payload.extend_from_slice(domain.as_bytes());
     payload.push(0);
     payload.extend_from_slice(bytes);
-    format!("sha256:{:x}", Sha256::digest(&payload))
+    format!("sha256:{}", hex::encode(Sha256::digest(&payload)))
 }
 
 // Used by the bounded reader for every native byte-position advance.
@@ -67,7 +67,7 @@ pub fn hash_canonical<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     let value =
         serde_json::to_value(value).map_err(|e| ForgeError::Serialization(e.to_string()))?;
     let bytes = canonical_json(&value)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 pub fn payload_hash(payload: &Value) -> Result<String, ForgeError> {
     let bytes = canonical_json(payload)?;
@@ -201,7 +201,7 @@ impl MmrState {
             hasher.update(b"sea-forge/mmr-node/v1\0");
             hasher.update(left.as_bytes());
             hasher.update(current.as_bytes());
-            current = format!("sha256:{:x}", hasher.finalize());
+            current = format!("sha256:{}", hex::encode(hasher.finalize()));
             size /= 2;
         }
         peaks.push(current);
@@ -310,7 +310,7 @@ fn hash_mmr_node(left: &str, right: &str) -> String {
     hasher.update(b"sea-forge/mmr-node/v1\0");
     hasher.update(left.as_bytes());
     hasher.update(right.as_bytes());
-    format!("sha256:{:x}", hasher.finalize())
+    format!("sha256:{}", hex::encode(hasher.finalize()))
 }
 
 /// Verify a Merkle inclusion proof against a single root hash.
@@ -1355,7 +1355,7 @@ impl LedgerStream {
             source_entry_ulids,
             source_payload_hash: committed.payload_hash.clone(),
             view_path: path.to_string_lossy().into_owned(),
-            view_sha256: format!("sha256:{:x}", Sha256::digest(bytes)),
+            view_sha256: format!("sha256:{}", hex::encode(Sha256::digest(bytes))),
             status: if write_result.is_ok() {
                 ViewStatus::Current
             } else {
@@ -1987,7 +1987,7 @@ impl LedgerStream {
                     e,
                 )
             })?;
-            let actual_sha256 = format!("sha256:{:x}", Sha256::digest(&bytes));
+            let actual_sha256 = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
             if actual_sha256 != expected_sha256 {
                 return Err(ForgeError::Internal(format!(
                     "ledger_integrity_error: legacy_import sha256 mismatch for {path}"

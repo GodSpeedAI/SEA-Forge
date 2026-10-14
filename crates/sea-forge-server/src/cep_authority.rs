@@ -54,13 +54,13 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
             key.update(Sha256::digest(content.as_bytes()));
             files.push(SourceFile {
                 uri: relative.clone(),
-                sha256: format!("{:x}", Sha256::digest(content.as_bytes())),
+                sha256: hex::encode(Sha256::digest(content.as_bytes())),
                 content,
             });
         }
         sets.push((world.name.clone(), world.entry.clone(), files));
     }
-    let key = format!("{:x}", key.finalize());
+    let key = hex::encode(key.finalize());
     if let Some(hit) = cache()
         .lock()
         .map_err(|_| "world cache poisoned".to_string())?

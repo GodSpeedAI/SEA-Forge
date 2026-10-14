@@ -31,7 +31,7 @@ const RESULT_KEY: &str = "godspeed.cells.repair::dependency_files_immutable";
 const TIMEOUT: Duration = Duration::from_secs(60);
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn copy_dir(from: &Path, to: &Path) {

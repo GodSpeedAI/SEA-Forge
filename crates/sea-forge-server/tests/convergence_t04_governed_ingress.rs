@@ -42,7 +42,7 @@ fn accept(body: &Value, local: &str) -> Result<(), GovernedIngressError> {
 
 fn other_digest(seed: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    format!("{:x}", Sha256::digest(seed))
+    hex::encode(Sha256::digest(seed))
 }
 
 // --- E4 happy path: real producer output through the real gate -----------------
@@ -204,7 +204,7 @@ fn t04_placeholder_pseudo_identity_is_rejected() {
     // The standalone fallback constant.
     let mut h = Sha256::new();
     h.update(b"agentic_capability_loop");
-    let fallback = format!("{:x}", h.finalize());
+    let fallback = hex::encode(h.finalize());
     body["request"]["payload"]["domain_model_hash"] = json!(fallback.clone());
     body["context_packet"]["payload"]["domain_model_hash"] = json!(fallback.clone());
     let err = accept(&body, &fallback).unwrap_err();

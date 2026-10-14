@@ -294,7 +294,7 @@ fn cell_digest(root: &Path) -> String {
         );
         hasher.update(fs::read(path).unwrap_or_default());
     }
-    format!("{:x}", hasher.finalize())
+    hex::encode(hasher.finalize())
 }
 
 /// Everything a refused protected request must leave untouched, printed for

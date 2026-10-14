@@ -156,7 +156,7 @@ pub fn resolve_template_digest_source(
         .join(format!("{name}@{version}.yaml"));
     let bytes = std::fs::read(&path).ok()?;
     use sha2::{Digest, Sha256};
-    let sha = format!("sha256:{:x}", Sha256::digest(&bytes));
+    let sha = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
     Some(serde_json::json!(sha))
 }
 

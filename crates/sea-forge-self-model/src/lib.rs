@@ -49,7 +49,7 @@ pub const KERNEL_VERSION: &str = "0.1";
 const RELEASE_EPOCH_SECONDS: i64 = 1_752_635_200; // 2026-07-16T00:00:00Z
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 /// Canonical JSON for self-model identity hashes. SUP-09d: this now
@@ -68,7 +68,7 @@ fn canonical_json(value: &serde_json::Value) -> Result<Vec<u8>, ForgeError> {
 pub fn canonical_sha256<T: Serialize>(value: &T) -> Result<String, ForgeError> {
     let v = serde_json::to_value(value)?;
     let bytes = canonical_json(&v)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 // ── Bundled models ───────────────────────────────────────────────────────────
@@ -457,7 +457,7 @@ pub fn snapshot_hash(
         "release_id": release_id,
     });
     let bytes = canonical_json(&tuple)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 /// Assemble a snapshot from its verified sources. Computes `snapshot_hash` and

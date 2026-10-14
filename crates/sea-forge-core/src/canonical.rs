@@ -98,7 +98,7 @@ mod tests {
         let decomposed = json!({"name": format!("A{}", '\u{0308}')});
         let h = |v: &serde_json::Value| {
             let bytes = canonical_json(v).unwrap();
-            format!("sha256:{:x}", Sha256::digest(&bytes))
+            format!("sha256:{}", hex::encode(Sha256::digest(&bytes)))
         };
         assert_eq!(h(&composed), h(&decomposed));
     }

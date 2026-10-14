@@ -19,7 +19,7 @@ const RUN_FILES: &[&str] = &[
 ];
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 /// Lay down two run directories under `<root>/runs/<id>/` with the

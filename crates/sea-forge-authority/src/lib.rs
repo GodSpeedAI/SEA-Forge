@@ -20,7 +20,7 @@ use std::{
 };
 
 fn sha256_bytes(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 /// SUP-09d: delegates to the single shared canonical primitive in core.

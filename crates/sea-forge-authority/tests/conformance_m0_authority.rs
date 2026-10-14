@@ -433,7 +433,7 @@ fn domainforge_authority_is_model_semantic() {
     let source = include_str!("../../sea-forge-domainforge/tests/fixtures/demo.sea");
     let source_hash = {
         use sha2::{Digest, Sha256};
-        format!("{:x}", Sha256::digest(source.as_bytes()))
+        hex::encode(Sha256::digest(source.as_bytes()))
     };
     let model = sea_forge_domainforge::load_validate(&sea_forge_domainforge::SeaSourceSet {
         entry_uri: "demo.sea".into(),

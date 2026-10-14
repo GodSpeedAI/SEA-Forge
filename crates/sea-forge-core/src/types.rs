@@ -338,7 +338,10 @@ impl From<&Operation> for AuthorityAction {
                 credential_ref: None,
                 instruction_sha256: {
                     use sha2::Digest;
-                    format!("sha256:{:x}", sha2::Sha256::digest(instruction.as_bytes()))
+                    format!(
+                        "sha256:{}",
+                        hex::encode(sha2::Sha256::digest(instruction.as_bytes()))
+                    )
                 },
                 max_turns: *max_turns,
                 token_budget: *token_budget,

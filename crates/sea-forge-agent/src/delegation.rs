@@ -197,7 +197,7 @@ pub fn produce_transcript(
     RedactedTranscript {
         entries: redacted,
         canonical_bytes,
-        sha256: format!("sha256:{hash:x}"),
+        sha256: format!("sha256:{}", hex::encode(hash)),
     }
 }
 
@@ -722,7 +722,10 @@ mod tests {
             content: "some content".into(),
         }];
         let produced = produce_transcript(&entries, &[]);
-        let rehash = format!("sha256:{:x}", Sha256::digest(&produced.canonical_bytes));
+        let rehash = format!(
+            "sha256:{}",
+            hex::encode(Sha256::digest(&produced.canonical_bytes))
+        );
         assert_eq!(produced.sha256, rehash);
     }
 

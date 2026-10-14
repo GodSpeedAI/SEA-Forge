@@ -41,7 +41,7 @@ pub const EVENT_TYPE: &str = "GovernedWorkRequest";
 fn fallback_pseudo_hash() -> String {
     let mut h = Sha256::new();
     h.update(b"agentic_capability_loop");
-    format!("{:x}", h.finalize())
+    hex::encode(h.finalize())
 }
 
 /// Map a wire `source_agent` onto its canonical component id. Same vocabulary

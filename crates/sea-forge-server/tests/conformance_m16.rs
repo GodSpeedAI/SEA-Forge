@@ -659,8 +659,8 @@ async fn t16_7_acp_transcript_redaction_scrubs_sentinels_before_hash_and_storage
     );
     // Re-hashing the stored bytes reproduces the committed digest exactly.
     let rehash = format!(
-        "sha256:{:x}",
-        <sha2::Sha256 as sha2::Digest>::digest(artifact.as_bytes())
+        "sha256:{}",
+        hex::encode(<sha2::Sha256 as sha2::Digest>::digest(artifact.as_bytes()))
     );
     assert_eq!(rehash, sha, "stored artifact bytes diverge from digest");
 

@@ -86,7 +86,7 @@ pub fn digest_of(value: &serde_json::Value) -> Result<String, ForgeError> {
     // sorting object keys ourselves.
     let canonical = canonicalize(value);
     let bytes = serde_json::to_vec(&canonical)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 /// Recursively sort object keys so digests are stable across map orderings.
