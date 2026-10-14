@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 95
+**Status revision:** 96
 
-**Stage:** ci: required authority-opa job
+**Stage:** test: recovery restart diagnostics
 
-**Summary:** A required authority-opa CI job runs the real-OPA authority and cell-episode tests against opa 1.21.1 verified by a pinned SHA-256 digest.
+**Summary:** The Go live-recovery harness now reports, when the restarted server's socket never appears, whether the server process exited and the tail of its log.
 
 **Verified:**
 
@@ -60,6 +60,7 @@
 - Test isolation: with GIT_DIR, GIT_INDEX_FILE and GIT_WORK_TREE pointing at a decoy repository, the changeset and case-runner tests pass (50 passed, 0 failed) and leave the decoy's HEAD, refs, config, index and object count unchanged.
 - OPA candidate binding: a candidate evaluated over another policy's Rego bundle is denied whether or not opa is required (opa_candidate::candidate_from_another_bundle_is_denied); opa_candidate passes 29 of 29 and cell_episode 30 of 30 with --include-ignored against opa 1.21.1.
 - authority-opa CI job added and required by gate; the pinned digest 668506eb...5031 equals the GitHub asset digest and the release's .sha256 for opa v1.21.1 linux amd64 static.
+- Recovery diagnostics: go vet -tags live clean; TestLiveKillMidCommitRecovery passes 25 of 25 locally against a real server build (the CI failure was not reproduced).
 
 **Limits:**
 
@@ -104,6 +105,7 @@
 - The RepairAgent model's single projected policy is constant true; real-OPA deny and escalate outcomes are exercised with the separate fixture fixtures/policies/gate.
 - The real-OPA tests are ignored by default locally; the authority-opa CI job runs them. Its opa digest pin shows the binary is the published release asset, not that it matches a source build. The job has not run on main before this change.
 - An OPA candidate is bound to its Rego bundle but not to the action under evaluation; one candidate can be passed to several evaluate calls.
+- TestLiveKillMidCommitRecovery has failed intermittently on GitHub (restarted server's socket never appeared within 20 s) and the cause is not known; it may be a real restart defect after SIGKILL rather than a slow runner. The harness now prints process state and log tail on that failure.
 
 **Next:** Run the live MicroVM proof on a KVM host (BLOCKED on this WSL2 host); keep the approval-only promotion path unchanged; diagnose the intermittent TestLiveKillMidCommitRecovery restart failure.
 
