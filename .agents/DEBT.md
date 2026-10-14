@@ -347,7 +347,11 @@ honest. IDs are `M-nn` (migration) to avoid colliding with the repository's own 
 - **Close:** a DomainForge world diff, then compute compatibility and let policy distinguish.
 
 ### M-46 A transition moves nothing
-- **Status:** open. **Observed.**
+- **Status:** closed 2026-10-14 (lineage half). **Observed.**
+- Decision (operator, 2026-10-14): a request citing work this authority decided in another world is refused
+  (`cep_transition_refused`) unless it carries `transition_ref`, the ledger entry of an allowed transition from that
+  world to the request's world. In-flight work stays pinned to its world and is never re-pinned; see
+  `.agents/specs/cep-world-ref-migration.spec.md` "Lineage across worlds".
 - An allowed transition is a recorded fact. Nothing moves Cognate's pinned world, in-flight runs, continuations or
   pending approvals; the old world stays valid and a new request in the new world is needed. Nothing refuses
   requests that mix worlds within one lineage beyond the existing approval binding.
