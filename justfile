@@ -1615,3 +1615,9 @@ casework-cell-backup archive:
 [group('casework')]
 casework-cell-restore archive target:
     scripts/casework-cell-restore.sh "{{archive}}" "{{target}}"
+
+# One pinned world from GodSpeed-Agent E1 to the evidence it records, across real production surfaces in five
+# repos, plus the refusal paths. Needs sibling checkouts (override with *_ROOT) and the domainforge CLI.
+[group('quality')]
+e2e-world-loop:
+    ./scripts/e2e-world-loop.sh

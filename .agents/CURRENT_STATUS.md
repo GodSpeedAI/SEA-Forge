@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 98
+**Status revision:** 99
 
 **Stage:** m46-lineage-transition
 
-**Summary:** M-46 closed (lineage half): SEA-Forge refuses a request citing work it decided in another world unless extensions.godspeed.authority_request.transition_ref names the ledger entry of an allowed transition from that world to the request's world; the transition record's authority_decision_ref carries the unique ledger entry. In-flight work stays pinned. Re-applied from hooks-and-m46 (b551524) onto main; also drops the leftover jollimemory hook from .gemini/settings.json.
+**Summary:** Restored the just e2e-world-loop recipe that the casework/live-wiring squash dropped; scripts/e2e-world-loop.sh and the docs that cite the recipe were already on main.
 
 **Verified:**
 
@@ -66,6 +66,7 @@
 - cargo test sea-forge-domainforge, -authority, -case-runner, -changeset: 27 test binaries ok; opa_candidate --include-ignored 29 passed with real opa
 - cargo test -p sea-forge-authority: 13 test binaries ok (incl. cep_transition)
 - cargo test -p sea-forge-server --test conformance_cep_authority: 10 passed
+- just --list shows e2e-world-loop
 
 **Limits:**
 
