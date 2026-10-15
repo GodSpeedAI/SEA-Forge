@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 101
+**Status revision:** 102
 
-**Stage:** deps-sha2-0.11
+**Stage:** coderabbit-review-only
 
-**Summary:** sha2 0.10 -> 0.11 (Dependabot #2): the digest output no longer implements LowerHex, so 94 digest formatting sites use hex::encode (identical lowercase output); hex 0.4 added as a workspace dependency. Integer {:02x} byte loops are unchanged.
+**Summary:** CodeRabbit is review-only: .coderabbit.yml turns off request_changes_workflow and fail_commit_status and disables every committing finishing touch (autofix, fix_ci, unit_tests, docstrings, simplify, resolve_merge_conflict). Branch rules are unchanged.
 
 **Verified:**
 
