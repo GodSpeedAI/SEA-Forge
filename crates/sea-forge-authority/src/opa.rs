@@ -216,7 +216,7 @@ fn config(class: &'static str, path: &Path, message: impl Into<String>) -> Forge
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn sha256_prefixed(bytes: &[u8]) -> String {

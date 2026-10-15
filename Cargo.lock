@@ -392,6 +392,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
+name = "const-oid"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,7 +491,7 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
  "curve25519-dalek-derive",
- "digest",
+ "digest 0.10.7",
  "fiat-crypto",
  "rustc_version",
  "subtle",
@@ -509,7 +515,7 @@ version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
- "const-oid",
+ "const-oid 0.9.6",
  "zeroize",
 ]
 
@@ -521,6 +527,17 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "crypto-common 0.1.7",
+]
+
+[[package]]
+name = "digest"
+version = "0.11.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+dependencies = [
+ "block-buffer 0.12.1",
+ "const-oid 0.10.2",
+ "crypto-common 0.2.2",
 ]
 
 [[package]]
@@ -561,7 +578,7 @@ dependencies = [
  "serde",
  "serde-saphyr",
  "serde_json",
- "sha2",
+ "sha2 0.10.9",
  "thiserror 1.0.69",
  "toml",
  "unicode-normalization",
@@ -596,7 +613,7 @@ dependencies = [
  "ed25519",
  "rand_core 0.6.4",
  "serde",
- "sha2",
+ "sha2 0.10.9",
  "subtle",
  "zeroize",
 ]
@@ -898,6 +915,12 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "http"
@@ -1907,12 +1930,13 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 name = "sea-forge-agent"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "reqwest",
  "sea-forge-core",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "tokio",
  "tracing",
@@ -1924,6 +1948,7 @@ dependencies = [
 name = "sea-forge-artifact-ip"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "sea-forge-authority",
  "sea-forge-capability",
  "sea-forge-core",
@@ -1933,7 +1958,7 @@ dependencies = [
  "sea-forge-settlement",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -1942,12 +1967,13 @@ name = "sea-forge-authority"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-core",
  "sea-forge-domainforge",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "unicode-normalization",
 ]
@@ -1957,13 +1983,14 @@ name = "sea-forge-capability"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "rusqlite",
  "sea-forge-core",
  "sea-forge-ledger",
  "sea-forge-settlement",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -1992,11 +2019,12 @@ name = "sea-forge-cell"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-core",
  "sea-forge-sandbox",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tar",
  "tempfile",
 ]
@@ -2005,9 +2033,10 @@ dependencies = [
 name = "sea-forge-changeset"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2017,6 +2046,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "hex",
  "sea-forge-artifact-ip",
  "sea-forge-authority",
  "sea-forge-capability",
@@ -2038,7 +2068,7 @@ dependencies = [
  "sea-forge-trace",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "tracing",
  "tracing-subscriber",
@@ -2050,10 +2080,11 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "getrandom 0.4.3",
+ "hex",
  "serde",
  "serde-saphyr",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "unicode-normalization",
  "wait-timeout",
@@ -2071,10 +2102,11 @@ name = "sea-forge-domainforge"
 version = "0.1.0"
 dependencies = [
  "domainforge-core",
+ "hex",
  "sea-forge-core",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2082,11 +2114,12 @@ dependencies = [
 name = "sea-forge-evidence"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "sea-forge-core",
  "sea-forge-sandbox",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "unicode-normalization",
 ]
 
@@ -2095,12 +2128,13 @@ name = "sea-forge-extension"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2111,11 +2145,12 @@ dependencies = [
  "chrono",
  "ed25519-dalek",
  "getrandom 0.4.3",
+ "hex",
  "rand 0.8.7",
  "sea-forge-core",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "unicode-normalization",
 ]
@@ -2124,12 +2159,13 @@ dependencies = [
 name = "sea-forge-planner"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "sea-forge-core",
  "sea-forge-domain",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2138,12 +2174,13 @@ name = "sea-forge-runtime"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
  "sea-forge-sandbox",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "wait-timeout",
 ]
@@ -2153,6 +2190,7 @@ name = "sea-forge-sandbox"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "landlock",
  "libc",
  "sea-forge-authority",
@@ -2161,7 +2199,7 @@ dependencies = [
  "sea-forge-settlement",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "wait-timeout",
 ]
@@ -2171,12 +2209,13 @@ name = "sea-forge-self-model"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-core",
  "sea-forge-domainforge",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "unicode-normalization",
 ]
@@ -2188,6 +2227,7 @@ dependencies = [
  "chacha20poly1305",
  "chrono",
  "getrandom 0.4.3",
+ "hex",
  "schemars",
  "sea-forge-agent",
  "sea-forge-authority",
@@ -2206,7 +2246,7 @@ dependencies = [
  "sea-forge-trace",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "tokio",
  "tracing",
@@ -2233,12 +2273,13 @@ name = "sea-forge-spec-pipeline"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hex",
  "sea-forge-core",
  "sea-forge-domainforge",
  "sea-forge-ledger",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2254,7 +2295,7 @@ dependencies = [
  "sea-forge-self-model",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
 ]
 
@@ -2387,7 +2428,18 @@ checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
- "digest",
+ "digest 0.10.7",
+]
+
+[[package]]
+name = "sha2"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.3.0",
+ "digest 0.11.3",
 ]
 
 [[package]]

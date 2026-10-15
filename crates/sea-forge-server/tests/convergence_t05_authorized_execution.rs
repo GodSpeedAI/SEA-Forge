@@ -32,7 +32,7 @@ const WORLD: &str =
     "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn sha256_hex(input: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(input))
+    hex::encode(Sha256::digest(input))
 }
 
 /// A stable, real digest for the canonical model under test — never one of
@@ -353,7 +353,7 @@ fn t05_emission_refuses_placeholder_and_drifted_model_identity() {
     let fallback = {
         let mut hasher = Sha256::new();
         hasher.update(b"agentic_capability_loop");
-        format!("{:x}", hasher.finalize())
+        hex::encode(hasher.finalize())
     };
     assert!(matches!(
         emit_authorized_invocation(

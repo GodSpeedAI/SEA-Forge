@@ -319,7 +319,7 @@ pub(crate) fn descriptor_config_hash(config: &AgentEndpointConfig) -> Result<Str
     let mut canonical = config.clone();
     canonical.status = None;
     let bytes = serde_json::to_vec(&canonical).map_err(|e| e.to_string())?;
-    Ok(format!("sha256:{:x}", Sha256::digest(bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(bytes))))
 }
 
 #[cfg(test)]

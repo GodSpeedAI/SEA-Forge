@@ -120,7 +120,7 @@ pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.21.0";
 
 /// Return the SHA-256 digest of `bytes` as 64 lowercase hexadecimal characters.
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn sha256_content(content: &str) -> String {

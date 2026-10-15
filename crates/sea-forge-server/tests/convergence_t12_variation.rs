@@ -41,7 +41,7 @@ const WORLD: &str =
     "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn sha256_hex(b: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(b))
+    hex::encode(Sha256::digest(b))
 }
 
 const WR_SUCCESS: &str = "wr-gsf-t12-success-001";

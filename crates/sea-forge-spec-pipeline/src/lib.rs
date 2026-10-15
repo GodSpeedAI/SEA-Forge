@@ -34,7 +34,7 @@ pub fn compute_stage_hash(stage: &SpecPipelineStage) -> Result<String, ForgeErro
         "status": stage.status,
     });
     let bytes = serde_json::to_vec(&canonical)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 /// Compute the chain hash over all stages in order.
@@ -46,7 +46,7 @@ pub fn compute_chain_hash(stages: &[SpecPipelineStage]) -> Result<String, ForgeE
         let stage_hash = compute_stage_hash(stage)?;
         hasher.update(stage_hash.as_bytes());
         hasher.update(prior_hash.as_bytes());
-        prior_hash = format!("{:x}", hasher.clone().finalize());
+        prior_hash = hex::encode(hasher.clone().finalize());
         hasher = Sha256::new();
     }
     Ok(format!("sha256:{prior_hash}"))
@@ -311,7 +311,7 @@ pub fn compute_rebuild_hash(
         "output_refs": output_refs,
     });
     let bytes = serde_json::to_vec(&canonical)?;
-    Ok(format!("sha256:{:x}", Sha256::digest(&bytes)))
+    Ok(format!("sha256:{}", hex::encode(Sha256::digest(&bytes))))
 }
 
 /// Build a ProjectionRecord from a successful projection.
@@ -330,7 +330,7 @@ pub fn build_projection_record(
 ) -> Result<ProjectionRecord, ForgeError> {
     let mut output_refs = Vec::new();
     for (path, content) in outputs {
-        let sha = format!("sha256:{:x}", Sha256::digest(content.as_bytes()));
+        let sha = format!("sha256:{}", hex::encode(Sha256::digest(content.as_bytes())));
         output_refs.push(StageFile {
             path: path.clone(),
             sha256: sha,
@@ -428,7 +428,7 @@ pub fn verify_byte_identity(a: &[StageFile], b: &[StageFile]) -> Result<bool, Fo
 
 /// Hash file content for stage I/O records.
 pub fn hash_content(content: &[u8]) -> String {
-    format!("sha256:{:x}", Sha256::digest(content))
+    format!("sha256:{}", hex::encode(Sha256::digest(content)))
 }
 
 /// Compute the input_hash for a projection (hash of all source file hashes).

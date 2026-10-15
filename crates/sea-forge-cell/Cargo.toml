@@ -13,6 +13,7 @@ sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+hex.workspace = true
 tar.workspace = true
 chrono.workspace = true
 

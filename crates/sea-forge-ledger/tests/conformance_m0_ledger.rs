@@ -97,7 +97,7 @@ fn build_tree(leaves: &[String]) -> Vec<Vec<String>> {
             hasher.update(b"sea-forge/mmr-node/v1\0");
             hasher.update(pair[0].as_bytes());
             hasher.update(pair[1].as_bytes());
-            next.push(format!("sha256:{:x}", hasher.finalize()));
+            next.push(format!("sha256:{}", hex::encode(hasher.finalize())));
         }
         levels.push(next);
     }

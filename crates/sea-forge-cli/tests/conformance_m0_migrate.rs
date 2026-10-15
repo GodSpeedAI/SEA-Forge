@@ -164,7 +164,10 @@ fn conformance_m0_migrate_imports_v01_root_losslessly_and_blocks_re_migration() 
     // which would pass for a migration that hashed one file and moved another.
     let digest_of = |path: &std::path::Path| {
         use sha2::{Digest, Sha256};
-        format!("sha256:{:x}", Sha256::digest(fs::read(path).unwrap()))
+        format!(
+            "sha256:{}",
+            hex::encode(Sha256::digest(fs::read(path).unwrap()))
+        )
     };
     let mut relocated_run_files = 0;
     for entry in &entries {

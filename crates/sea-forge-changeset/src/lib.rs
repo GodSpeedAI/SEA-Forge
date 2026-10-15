@@ -116,7 +116,10 @@ impl Changeset {
             "proposed_commit": self.proposed_commit,
             "entries": self.entries,
         });
-        format!("sha256:{:x}", Sha256::digest(body.to_string().as_bytes()))
+        format!(
+            "sha256:{}",
+            hex::encode(Sha256::digest(body.to_string().as_bytes()))
+        )
     }
 }
 

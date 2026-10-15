@@ -154,7 +154,7 @@ fn collect_templates(root: &Path, out: &mut AssetListResult) {
             .to_string();
         let digest = std::fs::read(&path).ok().map(|bytes| {
             use sha2::{Digest, Sha256};
-            format!("sha256:{:x}", Sha256::digest(&bytes))
+            format!("sha256:{}", hex::encode(Sha256::digest(&bytes)))
         });
         match sea_forge_planner::templates::load(&path) {
             Ok(template) => {

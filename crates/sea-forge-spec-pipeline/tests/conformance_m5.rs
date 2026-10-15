@@ -4,7 +4,7 @@ use sea_forge_spec_pipeline::*;
 use sha2::{Digest, Sha256};
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn source_file(uri: &str, content: &str) -> SourceFile {

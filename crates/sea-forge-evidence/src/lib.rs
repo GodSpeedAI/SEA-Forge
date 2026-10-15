@@ -16,7 +16,7 @@ use std::{
 };
 
 pub fn sha256_bytes(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 pub fn sha256_file(path: &Path) -> Result<String, ForgeError> {
     let mut file =
@@ -32,7 +32,7 @@ pub fn sha256_file(path: &Path) -> Result<String, ForgeError> {
         }
         hash.update(&buf[..n]);
     }
-    Ok(format!("{:x}", hash.finalize()))
+    Ok(hex::encode(hash.finalize()))
 }
 /// SUP-09d: delegates to the single shared canonical primitive in core.
 pub fn canonical_json<T: Serialize>(value: &T) -> Result<Vec<u8>, ForgeError> {

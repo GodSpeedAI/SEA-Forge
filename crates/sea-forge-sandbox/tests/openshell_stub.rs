@@ -136,7 +136,7 @@ struct Harness {
 }
 
 fn digest(bytes: &[u8]) -> String {
-    format!("sha256:{:x}", Sha256::digest(bytes))
+    format!("sha256:{}", hex::encode(Sha256::digest(bytes)))
 }
 
 fn write_script(path: &Path, body: &str, log: &Path, ctl_dir: &Path) {

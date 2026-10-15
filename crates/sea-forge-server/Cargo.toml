@@ -30,6 +30,7 @@ schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+hex.workspace = true
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "fs", "macros"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true

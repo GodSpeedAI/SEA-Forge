@@ -67,7 +67,7 @@ impl SettlementCriteria {
             "min_reliability": self.min_reliability,
         }))
         .unwrap_or_default();
-        format!("sha256:{:x}", Sha256::digest(bytes))
+        format!("sha256:{}", hex::encode(Sha256::digest(bytes)))
     }
     /// Valid criteria: at least one supporting item and a known reliability level.
     pub fn validate(&self) -> Result<(), String> {
@@ -1630,7 +1630,7 @@ impl CepAuthorityService<'_> {
 
 fn sha_short(text: &str) -> String {
     use sha2::{Digest, Sha256};
-    format!("{:x}", Sha256::digest(text.as_bytes()))[..16].to_string()
+    hex::encode(Sha256::digest(text.as_bytes()))[..16].to_string()
 }
 
 fn settlement_status_of(envelope: &Value) -> &'static str {

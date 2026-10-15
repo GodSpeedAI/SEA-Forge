@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 100
+**Status revision:** 101
 
-**Stage:** deps-dependabot-2026-10-14
+**Stage:** deps-sha2-0.11
 
-**Summary:** Applied the pending SEA-Forge Dependabot updates except sha2: GitHub Actions to node24 majors (checkout v7.0.1, upload-artifact v7.0.2, action-semantic-pull-request v6.1.1, release-please-action v5.0.0, dependency-review-action v5.0.0; no pull_request_target/workflow_run triggers, so checkout v7's fork block does not apply), getrandom 0.3 -> 0.4 (no code changes), compatible minor Cargo bumps (clap, schemars, zeroize, libc, landlock, tokio), vitest 4.1.10 -> 4.1.11 with bun.lock regenerated. sha2 0.11 needs 92 digest-formatting call sites rewritten and goes in its own PR.
+**Summary:** sha2 0.10 -> 0.11 (Dependabot #2): the digest output no longer implements LowerHex, so 94 digest formatting sites use hex::encode (identical lowercase output); hex 0.4 added as a workspace dependency. Integer {:02x} byte loops are unchanged.
 
 **Verified:**
 
@@ -61,13 +61,13 @@
 - OPA candidate binding: a candidate evaluated over another policy's Rego bundle is denied whether or not opa is required (opa_candidate::candidate_from_another_bundle_is_denied); opa_candidate passes 29 of 29 and cell_episode 30 of 30 with --include-ignored against opa 1.21.1.
 - authority-opa CI job added and required by gate; the pinned digest 668506eb...5031 equals the GitHub asset digest and the release's .sha256 for opa v1.21.1 linux amd64 static.
 - Recovery diagnostics: go vet -tags live clean; TestLiveKillMidCommitRecovery passes 25 of 25 locally against a real server build (the CI failure was not reproduced).
-- cargo deny check: advisories, bans, licenses, sources ok after rustls 0.23.46
+- cargo deny check: advisories, bans, licenses, sources ok (rustls 0.23.46, sha2 0.11, hex 0.4)
 - domainforge 0.21.0 regeneration: openshell/ identical; rego/ and gate rego/ differ only in provenance generator
 - cargo test sea-forge-domainforge, -authority, -case-runner, -changeset: 27 test binaries ok; opa_candidate --include-ignored 29 passed with real opa
 - cargo test -p sea-forge-authority: 13 test binaries ok (incl. cep_transition)
 - cargo test -p sea-forge-server --test conformance_cep_authority: 10 passed
 - just --list shows e2e-world-loop
-- cargo check --workspace --all-targets ok with getrandom 0.4
+- cargo test --workspace: 149 test binaries ok and clippy --all-targets -D warnings clean on getrandom 0.4 and sha2 0.11; golden hashes unchanged
 - workbench bun install --frozen-lockfile: no changes after regenerating bun.lock
 
 **Limits:**

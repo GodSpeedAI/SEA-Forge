@@ -24,7 +24,7 @@ pub struct SelfModelProjection {
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 /// Deterministic projection id from kind + snapshot hash prefix, so rebuilds of

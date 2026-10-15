@@ -193,8 +193,10 @@ pub fn reconcile_swe_seed_declarations(
             declaration_ids: declaration_ids.clone(),
         };
         let idempotency_key = format!(
-            "{case_id}:{run_id}:sha256:{:x}",
-            <sha2::Sha256 as sha2::Digest>::digest(declaration_ids.join(",").as_bytes())
+            "{case_id}:{run_id}:sha256:{}",
+            hex::encode(<sha2::Sha256 as sha2::Digest>::digest(
+                declaration_ids.join(",").as_bytes()
+            ))
         );
         let committed = ledger.commit_typed_once(
             "swe_seed_correlation",

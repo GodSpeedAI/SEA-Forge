@@ -255,7 +255,7 @@ fn continuation_digest(domain: DigestDomain, value: Option<&str>) -> Result<Stri
             hasher.update(value.as_bytes());
         }
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hex::encode(hasher.finalize()))
 }
 
 fn parse_canonical_u64(value: &str) -> Result<u64, TokenError> {

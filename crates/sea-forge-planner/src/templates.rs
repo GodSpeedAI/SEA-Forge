@@ -531,7 +531,7 @@ pub fn load_pinned(root: &Path, reference: &str) -> Result<PlanTemplate, ForgeEr
     let path = templates.join(format!("{name}@{version}.yaml"));
     let bytes = std::fs::read(&path)
         .map_err(|error| ForgeError::io(format!("read template {}", path.display()), error))?;
-    let digest = format!("sha256:{:x}", Sha256::digest(&bytes));
+    let digest = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
     let pins = templates.join(".pins");
     std::fs::create_dir_all(&pins)
         .map_err(|error| ForgeError::io("create template pins directory", error))?;

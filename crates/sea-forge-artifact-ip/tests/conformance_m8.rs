@@ -17,7 +17,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn domain_model_for_anchors() -> sea_forge_domainforge::DomainModel {

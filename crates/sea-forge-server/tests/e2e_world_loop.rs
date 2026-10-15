@@ -32,7 +32,7 @@ fn policy(verdict: &str) -> String {
 }
 
 fn sha256_hex(b: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(b))
+    hex::encode(Sha256::digest(b))
 }
 
 fn read(dir: &Path, name: &str) -> Value {

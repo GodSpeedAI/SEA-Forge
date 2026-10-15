@@ -40,7 +40,7 @@ fn register(worlds: &mut WorldRegistry, name: &str, src: &str) -> String {
         entry_uri: "demo.sea".into(),
         files: vec![SourceFile {
             uri: "demo.sea".into(),
-            sha256: format!("{:x}", Sha256::digest(src.as_bytes())),
+            sha256: hex::encode(Sha256::digest(src.as_bytes())),
             content: src.into(),
         }],
     };
