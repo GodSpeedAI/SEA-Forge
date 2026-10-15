@@ -61,16 +61,14 @@
 - OPA candidate binding: a candidate evaluated over another policy's Rego bundle is denied whether or not opa is required (opa_candidate::candidate_from_another_bundle_is_denied); opa_candidate passes 29 of 29 and cell_episode 30 of 30 with --include-ignored against opa 1.21.1.
 - authority-opa CI job added and required by gate; the pinned digest 668506eb...5031 equals the GitHub asset digest and the release's .sha256 for opa v1.21.1 linux amd64 static.
 - Recovery diagnostics: go vet -tags live clean; TestLiveKillMidCommitRecovery passes 25 of 25 locally against a real server build (the CI failure was not reproduced).
-- cargo deny check: advisories, bans, licenses, sources ok after rustls 0.23.46
+- cargo deny check: advisories, bans, licenses, sources ok (rustls 0.23.46, sha2 0.11, hex 0.4)
 - domainforge 0.21.0 regeneration: openshell/ identical; rego/ and gate rego/ differ only in provenance generator
 - cargo test sea-forge-domainforge, -authority, -case-runner, -changeset: 27 test binaries ok; opa_candidate --include-ignored 29 passed with real opa
 - cargo test -p sea-forge-authority: 13 test binaries ok (incl. cep_transition)
 - cargo test -p sea-forge-server --test conformance_cep_authority: 10 passed
 - just --list shows e2e-world-loop
-- cargo check --workspace --all-targets ok with getrandom 0.4
+- cargo test --workspace: 149 test binaries ok and clippy --all-targets -D warnings clean on getrandom 0.4 and sha2 0.11; golden hashes unchanged
 - workbench bun install --frozen-lockfile: no changes after regenerating bun.lock
-- cargo test --workspace: 149 test binaries ok (golden hashes unchanged)
-- cargo clippy --workspace --all-targets -D warnings clean; cargo deny ok
 
 **Limits:**
 
