@@ -1,0 +1,184 @@
+{
+  "suite": "SEA-Forge-security-v1",
+  "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+  "hash_algorithm": "SHA-256",
+  "reference": "refs/tags/sea-forge-security-v1-2026-10-16",
+  "files": {
+    ".agents/evidence/security-v1/final-candidate/results.json": {
+      "sha256": "353a1a4e1d16e08ff634a09a5fd209d7a6956762af318d52fb55c80d71316427",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/final-candidate/rust-A.log": {
+      "sha256": "24d549949172b804dd50222c3daa39fffba19fa4f4d1dede0d9659a969264132",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/final-candidate/rust-B.log": {
+      "sha256": "76a546477ef6bedb8bbe9f0be90c915056d212f53cb1f810ac8a0ff8da16bd8c",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/freeze-baseline/results.json": {
+      "sha256": "e4ab321aee95df88b9fcc129bf90a99186ecaff3d1757d6c3ddbfbf48bc1661b",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/freeze-baseline/rust-A.log": {
+      "sha256": "56add0f83391ed452439a8a53ef0feb73b9b0b45ee212e4af2fa523c29348343",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/freeze-baseline/rust-B.log": {
+      "sha256": "206c1ee0c445c5dd4a88f2b335c846388e0491971a01c33341aa07baf3cccbc6",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/idempotency-scan-analysis.json": {
+      "sha256": "7260b7a174d1662e515b3e65a2fdb06eeb6299686541f53b63802372e96a217c",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/initial-executable/results.json": {
+      "sha256": "8669d76d2080b31efa4cf75fed8ec1fea495439c8b4c881b4fc0fed03291d205",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/initial-executable/rust-A.log": {
+      "sha256": "bb09ce6c98eaca36d10ec0610aa09ade0ec6ede7db8d61fda7a5c082b38045b6",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/initial-executable/rust-B.log": {
+      "sha256": "2cb4ce50c8c51e4a9a7d06b8430ca5e9b72aa155ac1c3b7788d807e97bb6f273",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/quality-summary.json": {
+      "sha256": "6490fb166d80e7909dc50a09f5e1484cc165619ad360dacfc0d38d10a1add38a",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/00-regression.log": {
+      "sha256": "fbec29fe46de276cd05bcc1a54ee8ad9552ee7c680ab9ff3e32b7739939387c6",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/01-regression.log": {
+      "sha256": "85d595efae531e419caa7d71432f4863f7fa198c4a027728a0d0a006e1f9b4ab",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/02-regression.log": {
+      "sha256": "0178220e24e2c32870113cbcd7e60a14187ab089ff1b77c6935ca24687754dfe",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/03-regression.log": {
+      "sha256": "e9b298ce62c76fcd791b1b6b6aed0381b67b44556f8e3d2e86defaab274fde21",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/04-regression.log": {
+      "sha256": "de3d00edc410e180be4718a0a700c323d3a9e81b9030cae5560f1a32aeacb035",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/05-regression.log": {
+      "sha256": "1daf0e1517ad4e03ed8ef24ce3b1b2181d4e085ebce52957f5b50283c7b577ac",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-baseline/results.json": {
+      "sha256": "21f7cb5f6ab739d74f74664e3578e59d03f2a0ac05b773513a83ece9fc279640",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-server-after-build/00-regression.log": {
+      "sha256": "e3845f0d9bcde56a11c3ff0aa77209e18d9732a9118a97344ac4bb177157b1f9",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-server-after-build/01-regression.log": {
+      "sha256": "0df64107f574ae7a3e9ec9fb3b7e6b03a382590e8504fa9acf5a49baf4fd3bac",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/regression-server-after-build/results.json": {
+      "sha256": "c0454b63b625720e4c251bea1726b5ddd9222c0b68de11e03267d0ac8946c3d5",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/required-gates/00-regression.log": {
+      "sha256": "384ea90a8eab6b569a536225d444268cc7eecc7b0b7326c7473e0a63893b06d4",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/required-gates/01-regression.log": {
+      "sha256": "124f6ed0bc16c5cc8606efaf05343e8120d2c9d5913b17ae4eb7fe6ccaf900d4",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/required-gates/results.json": {
+      "sha256": "2614f8aea48cd3ff8132a99a6551c96d1c14a4564030e62fd1c8dab346f2b4e9",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/tag-ruleset-observed.json": {
+      "sha256": "8f23717e71e41a6d245e6a5cff29405df5dd436c92fa386141891a1832cf8a4a",
+      "mode": "100644"
+    },
+    ".agents/evidence/security-v1/tag-ruleset-request.json": {
+      "sha256": "8e9f552c3e229e06bd253ba647a2659f94b0dfafe2840edacb2b13e2c8a8e564",
+      "mode": "100644"
+    },
+    ".agents/specs/security-acceptance-v1.spec.md": {
+      "sha256": "ff1e3d5427676a794e58c6b2bd099d17fc15dac052300ff89041982bb219a633",
+      "mode": "100644"
+    },
+    "crates/sea-forge-server/tests/security_acceptance_v1.rs": {
+      "sha256": "8022c7850719980cf626e380797d3974503ed195c727ec7482f4a86fde3404e8",
+      "mode": "100644"
+    },
+    "docs/decisions/ADR-010-security-acceptance-v1.md": {
+      "sha256": "bb3123e5958eaf02da2a8256dcc14602e6b3594c3bb333f5b0a5d1c12aa349d6",
+      "mode": "100644"
+    },
+    "tests/security-v1/.gitignore": {
+      "sha256": "32dae3052f331ee34d628ef535709b301259a45df7c7522c4d35dcf49873f00b",
+      "mode": "100644"
+    },
+    "tests/security-v1/BASELINE.md": {
+      "sha256": "1afa1860428a30cb8aa7d78b8257261888ad49a54c6d576f81bda25355478c10",
+      "mode": "100644"
+    },
+    "tests/security-v1/CONTRACT.md": {
+      "sha256": "ebb7b5a60f769961d47d6da3170a8538b46e8535dd529eb4fb0d0011648b65a4",
+      "mode": "100644"
+    },
+    "tests/security-v1/HANDOFF.md": {
+      "sha256": "8441dd951fa96ccd2406742062f1e804942afb755faaca66cf0d2f66380e7f4e",
+      "mode": "100644"
+    },
+    "tests/security-v1/README.md": {
+      "sha256": "ce6d77debf1b588670406479572b78df76f2dd98dbfc055f1f1b4310de5eeeb5",
+      "mode": "100644"
+    },
+    "tests/security-v1/attacks.json": {
+      "sha256": "72f767d92ee62a4d1b99295fe7fce5843212852e5e5647b09893c72a15f3fd2e",
+      "mode": "100644"
+    },
+    "tests/security-v1/inventory.json": {
+      "sha256": "781aa12f17d3fc354944b645c859f0a2a4a706d74dea0f919ba18944a4b913ae",
+      "mode": "100644"
+    },
+    "tests/security-v1/mcp_probe.py": {
+      "sha256": "d5c19efee45819c98e4b5d54afa4758fbbe5c2c65f03129a49e11a82dac91b54",
+      "mode": "100644"
+    },
+    "tests/security-v1/mcp_upstream.py": {
+      "sha256": "39afc0879857780b2ebf19984060b992eff65a7ae8f491fa606bdef70b2fc037",
+      "mode": "100644"
+    },
+    "tests/security-v1/postgres_fixture.py": {
+      "sha256": "fb6400337d9b1b5485d0c8840b5a901b75f29ade192d7a17a4b98773c2701751",
+      "mode": "100644"
+    },
+    "tests/security-v1/postgres_probe.py": {
+      "sha256": "6fb9dfe7f3a4c196a4eded6cb530e6b7bd4636afbb8330422e1ec99e13205ae8",
+      "mode": "100644"
+    },
+    "tests/security-v1/regression.py": {
+      "sha256": "caf5aa49c628458a2ab9d0a357383e5b66d41c270a73a6631f4ebf46fd8b10da",
+      "mode": "100644"
+    },
+    "tests/security-v1/run.py": {
+      "sha256": "961bd70398ca90aefa1699d511772a167b1a1c652814e5944750546dbf782b0a",
+      "mode": "100644"
+    },
+    "tests/security-v1/selftest.py": {
+      "sha256": "ed8c478b010ac28e98af6d114e37299960e22630d7798647bb2ec2c496a92584",
+      "mode": "100644"
+    },
+    "tests/security-v1/verify.py": {
+      "sha256": "43ffa6e8eddcef64d29e1ef38493f4006efc5187cb370694653b921213a0c715",
+      "mode": "100644"
+    }
+  }
+}

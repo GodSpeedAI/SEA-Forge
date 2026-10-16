@@ -1,0 +1,17 @@
+{
+  "repository": "GodSpeedAI/SEA-Forge",
+  "source": "GitHub REST rulesets API, POST followed by independent GET",
+  "id": 25250801,
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["refs/tags/sea-forge-security-v1-2026-10-16"]
+    }
+  },
+  "rules": [{"type":"update"},{"type":"deletion"}],
+  "remote_protection_configured": true,
+  "administrator_limit": "Repository administrators can change the ruleset; retain the full frozen commit independently."
+}

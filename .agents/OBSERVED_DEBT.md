@@ -1,5 +1,23 @@
 # Observed Debt
 
+## Open: Security acceptance v1 exposes workload identity and settlement trust gaps
+
+- Observed: 2026-10-16.
+- Evidence: `.agents/evidence/security-v1/initial-executable/results.json` and
+  `tests/security-v1/BASELINE.md`; actual same-connection actor substitution
+  changed the protected approval journal to `resolved_by=operator_b`. An actual
+  filesystem write returned EACCES and preserved the original digest, while the
+  public operational settlement API accepted the caller's success observation.
+- Impact: the new SEC-01 and SEC-12 behavioral obligations are SECURITY-RED.
+  Native PostgreSQL and MCP probes are blocked on prerequisites; broader
+  credential, revocation, exposure and delegation obligations lack integrated
+  observations and cannot be represented as passing security controls.
+- Next move: satisfy the frozen observable obligations in
+  `tests/security-v1/HANDOFF.md` without modifying v1; add separately versioned
+  supplementary coverage for the explicitly inventoried harness gaps.
+- Scope: this phase is contract/tests/fixtures/evidence only; production
+  security mechanisms must not be implemented to make the baseline green.
+
 Record concrete debt, gaps, risks, or defects found while working but outside
 the current task. Each entry needs evidence, impact, and a next move. Remove an
 entry when resolved; do not use this file as a backlog of ideas.

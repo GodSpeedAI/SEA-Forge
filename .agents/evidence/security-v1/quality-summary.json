@@ -1,0 +1,17 @@
+{
+  "scope": "test-only security acceptance v1",
+  "production_source_changed": false,
+  "dependencies_changed": false,
+  "checks": [
+    {"command":"RUSTC_WRAPPER= just check","exit_code":0,"observed":"all gates green: status, format, clippy -D warnings, typecheck, cargo-deny and repository history gitleaks"},
+    {"command":"python3 tests/security-v1/selftest.py","exit_code":0,"passed":7,"scope":"harness correctness, not product security PASS"},
+    {"command":"RUSTC_WRAPPER= just test","exit_code":101,"passed":1460,"failed":2,"ignored":23,"failures":["security_v1_a_sec01_same_uid_cannot_claim_another_approver","security_v1_a_sec12_resource_rejection_cannot_settle_as_success"]},
+    {"command":"RUSTC_WRAPPER= just proof","exit_code":0},
+    {"command":"gitleaks protect --staged --no-banner --redact","exit_code":0,"observed":"no leaks found after exact public-identifier exception"},
+    {"command":"graft build","exit_code":0,"nodes":9601,"edges":19106,"cards":792},
+    {"command":"git diff --check","exit_code":0}
+  ],
+  "initial_environment_blocks": ["sccache EPERM; resolved with empty RUSTC_WRAPPER", "restricted wait-timeout EPERM; real fixtures rerun with normal local process permissions", "server M16 required built CLI; just build supplied prerequisite", "server doctest missing rlib; canonical workspace test subsequently completed with only the two intended acceptance failures"],
+  "security_assertions_weakened": false,
+  "production_mechanisms_implemented": false
+}

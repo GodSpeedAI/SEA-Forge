@@ -1,0 +1,22 @@
+{
+  "suite": "SEA-Forge-security-v1",
+  "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+  "cases": [
+    {"id":"SEC-01.same_uid_approval","gate":"A","probe":"rust","coverage":"Same-UID actor substitution reaches actual approval persistence; self-approval and legitimate control included."},
+    {"id":"SEC-01.workload_binding","gate":"A","probe":"gap","reason":"No independently authenticated per-workload credential exists in the current UID-plus-actor-claim transport; administrator/gateway/missing identity matrix not yet fully observed."},
+    {"id":"SEC-03.mcp","gate":"A","probe":"mcp","coverage":"Executable standard MCP stdio probe with independent unrestricted upstream; currently no product ingress is provisioned."},
+    {"id":"SEC-04.mcp_canonical","gate":"A","probe":"mcp","coverage":"Frozen raw-byte ambiguity corpus against production MCP ingress; absent ingress is blocked, never omitted."},
+    {"id":"SEC-05.postgres_native","gate":"A","probe":"postgres","coverage":"Disposable local cluster and native role enforcement only; no SEA Forge credential issuer is substituted by this fixture."},
+    {"id":"SEC-05.workload_access","gate":"A","probe":"gap","reason":"No SEA Forge database credential/session access interface binds workload identity to the native role fixture."},
+    {"id":"SEC-12.false_settlement","gate":"A","probe":"rust","coverage":"Resource rejection and successful control versus operational settlement; existing ledger integrity and causal correlation."},
+    {"id":"SEC-12.end_to_end_attribution","gate":"A","probe":"gap","reason":"Observer correlation does not establish trusted workload authentication or resource-signed outcome provenance through all production routes."},
+    {"id":"SEC-02.credential_lifecycle","gate":"B","probe":"gap","reason":"Existing ACP broker/redaction does not expose a verified workload-bound credential issuance/renewal/expiry test interface."},
+    {"id":"SEC-06.child_environment","gate":"B","probe":"rust","coverage":"Real governed runtime child with synthetic inherited credential and bounded shell positive control; environment only."},
+    {"id":"SEC-06.alternate_paths","gate":"B","probe":"gap","reason":"Credential store, host filesystem, network and alternate database access paths are not all observable through the current fixture."},
+    {"id":"SEC-07.scoped_elevation","gate":"B","probe":"gap","reason":"Authority approval-consumption tests exist, but independently authenticated approver, real resource privilege expiry and clock control are not integrated."},
+    {"id":"SEC-08.active_revocation","gate":"B","probe":"gap","reason":"No active PostgreSQL/MCP session revocation barrier and access interface is available."},
+    {"id":"SEC-09.exposure","gate":"C","probe":"gap","reason":"No trusted sensitive-plaintext read observer, context exposure propagation or destination enforcement fixture is available."},
+    {"id":"SEC-10.injection","gate":"C","probe":"gap","reason":"Scripted attack corpus is frozen, but real MCP/output enforcement cannot currently dispatch and observe these attempts."},
+    {"id":"SEC-11.delegation","gate":"C","probe":"gap","reason":"Existing delegation claim checks do not observe child resource effects after exposure, parent revocation and approval expiry."}
+  ]
+}

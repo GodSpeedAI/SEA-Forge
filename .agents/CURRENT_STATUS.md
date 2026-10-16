@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 101
+**Status revision:** 103
 
-**Stage:** deps-sha2-0.11
+**Stage:** security-acceptance-v1-ready-to-pin
 
-**Summary:** sha2 0.10 -> 0.11 (Dependabot #2): the digest output no longer implements LowerHex, so 94 digest formatting sites use hex::encode (identical lowercase output); hex 0.4 added as a workspace dependency. Integer {:02x} byte loops are unchanged.
+**Summary:** SEC-01..12 test-only behavioral contract and frozen candidates complete: 2 observed SECURITY-RED, 1 narrow PASS, 3 INFRASTRUCTURE-BLOCKED, 10 NOT-YET-EXECUTABLE. Native PostgreSQL assertions support external URI or optional local provisioning with separated credentials. Full workspace tests fail only the two intended assertions; quality and minimum proofs pass. Dedicated GitHub frozen-tag update/deletion protection is active; commit/hash pin publication is next.
 
 **Verified:**
 
@@ -69,6 +69,11 @@
 - just --list shows e2e-world-loop
 - cargo test --workspace: 149 test binaries ok and clippy --all-targets -D warnings clean on getrandom 0.4 and sha2 0.11; golden hashes unchanged
 - workbench bun install --frozen-lockfile: no changes after regenerating bun.lock
+- Security v1 initial executable run: 2 SECURITY-RED, 1 narrow PASS, 3 INFRASTRUCTURE-BLOCKED, 10 NOT-YET-EXECUTABLE; actual approval mutation and EACCES-backed false settlement observed.
+- Security harness self-checks pass; external-commit verifier detects working-file/manifest tampering and ignores Git replacement refs.
+- Existing authority/runtime/sandbox/ledger/settlement regressions pass. After building the CLI prerequisite, server unit/integration tests recorded 483 pass/0 fail/2 ignore; canonical just test recorded 1460 pass/2 intended acceptance failures/23 existing ignored and no other failure.
+- just check and just proof pass; 7 harness self-checks pass; staged gitleaks passes with exact public idempotency-digest/path/rule exceptions.
+- GitHub ruleset 25250801 independently read back active for only sea-forge-security-v1-2026-10-16; updates/deletion blocked, no bypass actors.
 
 **Limits:**
 
@@ -114,8 +119,10 @@
 - The real-OPA tests are ignored by default locally; the authority-opa CI job runs them. Its opa digest pin shows the binary is the published release asset, not that it matches a source build. The job has not run on main before this change.
 - An OPA candidate is bound to its Rego bundle but not to the action under evaluation; one candidate can be passed to several evaluate calls.
 - TestLiveKillMidCommitRecovery has failed intermittently on GitHub (restarted server's socket never appeared within 20 s) and the cause is not known; it may be a real restart defect after SIGKILL rather than a slow runner. The harness now prints process state and log tail on that failure.
+- Security v1 is not a green gate: PostgreSQL binaries absent, no production MCP ingress provisioned, full workload/broker/active-revocation/exposure/delegation observations missing.
+- Frozen tag is not yet published in this snapshot. Existing ignored real OPA, MicroVM and ACP release gates remain unproven, not passing security acceptance coverage.
 
-**Next:** Run the live MicroVM proof on a KVM host (BLOCKED on this WSL2 host); keep the approval-only promotion path unchanged; diagnose the intermittent TestLiveKillMidCommitRecovery restart failure.
+**Next:** Commit the SHA-256 manifest and acceptance suite, publish only the dedicated protected frozen tag, verify remote commit and frozen file integrity, record receipt, then stop without implementing production security.
 
 **Evidence:**
 
@@ -156,7 +163,18 @@
 - .gitignore
 - .agents/WORKBENCH-SLICE-PROMPT.md
 - .agents/specs/cognitive-environment/RUN_PLAN.md
+- tests/security-v1
+- crates/sea-forge-server/tests/security_acceptance_v1.rs
+- .agents/evidence/security-v1/initial-executable
+- .agents/evidence/security-v1/regression-baseline
+- tests/security-v1/BASELINE.md
+- tests/security-v1/HANDOFF.md
+- .agents/evidence/security-v1/freeze-baseline
+- .agents/evidence/security-v1/required-gates
+- .agents/evidence/security-v1/tag-ruleset-observed.json
+- .agents/evidence/security-v1/quality-summary.json
+- docs/decisions/ADR-010-security-acceptance-v1.md
 
-**Spec:** .agents/specs/godspeed.casework-cognitive-environment-spec.yaml
+**Spec:** .agents/specs/security-acceptance-v1.spec.md
 
 **Ledger:** .agents/DEBT.md

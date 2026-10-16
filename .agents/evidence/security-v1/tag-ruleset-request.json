@@ -1,0 +1,16 @@
+{
+  "name": "Freeze SEA Forge security acceptance v1 (2026-10-16)",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/sea-forge-security-v1-2026-10-16"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {"type": "update"},
+    {"type": "deletion"}
+  ]
+}

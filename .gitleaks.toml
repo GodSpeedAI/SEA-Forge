@@ -103,3 +103,41 @@ targetRules = ["generic-api-key"]
 paths = [
   '''^\.agents/evidence/godspeed-bounded-judgment/''',
 ]
+
+# Security acceptance v1: verified public idempotency digests, not credentials.
+# See .agents/evidence/security-v1/idempotency-scan-analysis.json. Exact values
+# AND exact evidence paths AND one rule; future/new values still fail scanning.
+[[allowlists]]
+description = "security v1 frozen evidence: exact public SHA-256 idempotency identifiers"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = [
+  '''^\.agents/evidence/security-v1/final-candidate/results\.json$''',
+  '''^\.agents/evidence/security-v1/final-candidate/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/freeze-baseline/results\.json$''',
+  '''^\.agents/evidence/security-v1/freeze-baseline/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/initial-executable/results\.json$''',
+  '''^\.agents/evidence/security-v1/initial-executable/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/required-gates/00-regression\.log$''',
+]
+regexes = [
+  '''^02d610a83bda0a398d92554caa89be1a7ba39b13b6229c3db64de0b43d93bf35$''',
+  '''^2404772a6095fb91cf981764a57544cc8faac23df276432c93f354b5fd98c86c$''',
+  '''^309130860bcd21854fff251b02b9f65056c39f759d6e4a1eb8e11cb1648f819c$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^6f6ce3160b7098c559fbfe2b8f2a2709b1854ae728cbfc8404484382f89817ed$''',
+  '''^72c56963e904f99b9ec5e181f8b365ff42bdb1f47535c1a806151e5927f16a25$''',
+  '''^7e1bd522651046653eb693ef050cdc27125911d23d66c8b14b588e00f57c97c6$''',
+  '''^8bd88073ff11a52d6bbb121bbe26b1b658b40e237bd557729fb38b9656db88d6$''',
+  '''^8be9ac2c833bc79057defcb39964f81fb29cffbd993b93bc49e817c7201ce2fd$''',
+  '''^b8b51299e23ddc25fbbaca7489521994895987849831aaccf4e860a26e6c6187$''',
+  '''^bc38124cb7753c9bf704e3c774dcb56fac71b3083390a66b0e6da1d3acc01de6$''',
+  '''^bd78f09371bdc1ebe0c5a9d52fb540e4def2779fde8c2fe3f668f9f869312fa8$''',
+  '''^d9f3c473f2315f975ff9202060617f2dbf40a6dd1c181735e9956f21711466b7$''',
+  '''^e24b5facaedaefe9dede5e38e4c8299a170d4b3ecb9e77511a5f3517cdb9b256$''',
+  '''^eb04a8ab6c4677094f0369d2f149484eb885bb59cbc1f9bda4c1e7220d2ecad9$''',
+  '''^f6fc80ca47d28212810914ac1f6a8bacf962af1936568b023f4ccb48d58ca2a8$''',
+  '''^f7cec6e4eb47af30a3bac36a308c334fcdf329979633dc87355e6a3d362e49a9$''',
+]

@@ -1,0 +1,70 @@
+{
+  "recorded_at": "2026-10-16T15:22:13.003787+00:00",
+  "commands": [
+    {
+      "command": [
+        "just",
+        "crate-test",
+        "sea-forge-authority"
+      ],
+      "exit_code": 0,
+      "log": "00-regression.log",
+      "sha256": "fbec29fe46de276cd05bcc1a54ee8ad9552ee7c680ab9ff3e32b7739939387c6"
+    },
+    {
+      "command": [
+        "just",
+        "crate-test",
+        "sea-forge-runtime"
+      ],
+      "exit_code": 0,
+      "log": "01-regression.log",
+      "sha256": "85d595efae531e419caa7d71432f4863f7fa198c4a027728a0d0a006e1f9b4ab"
+    },
+    {
+      "command": [
+        "just",
+        "crate-test",
+        "sea-forge-sandbox"
+      ],
+      "exit_code": 0,
+      "log": "02-regression.log",
+      "sha256": "0178220e24e2c32870113cbcd7e60a14187ab089ff1b77c6935ca24687754dfe"
+    },
+    {
+      "command": [
+        "just",
+        "crate-test",
+        "sea-forge-ledger"
+      ],
+      "exit_code": 0,
+      "log": "03-regression.log",
+      "sha256": "e9b298ce62c76fcd791b1b6b6aed0381b67b44556f8e3d2e86defaab274fde21"
+    },
+    {
+      "command": [
+        "just",
+        "crate-test",
+        "sea-forge-settlement"
+      ],
+      "exit_code": 0,
+      "log": "04-regression.log",
+      "sha256": "de3d00edc410e180be4718a0a700c323d3a9e81b9030cae5560f1a32aeacb035"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "sea-forge-server",
+        "--locked",
+        "--",
+        "--skip",
+        "security_v1"
+      ],
+      "exit_code": 101,
+      "log": "05-regression.log",
+      "sha256": "1daf0e1517ad4e03ed8ef24ce3b1b2181d4e085ebce52957f5b50283c7b577ac"
+    }
+  ]
+}
