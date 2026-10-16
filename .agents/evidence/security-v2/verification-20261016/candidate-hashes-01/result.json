@@ -1,0 +1,12 @@
+{
+  "command": [
+    "python3",
+    "-c",
+    "import hashlib,json,stat;from pathlib import Path;d=json.loads(Path(\"tests/security-v2/candidate-manifest.json\").read_text());assert d[\"status\"]==\"candidate-not-frozen\" and d[\"independent_reference\"] is None;assert all(hashlib.sha256(Path(x[\"path\"]).read_bytes()).hexdigest()==x[\"sha256\"] and oct(stat.S_IMODE(Path(x[\"path\"]).stat().st_mode))==x[\"mode\"] for x in d[\"files\"]);print(\"10 candidate test/source/fixture hashes and modes match; no supplementary freeze claimed\")"
+  ],
+  "started_at": "2026-10-16T20:14:00.175441+00:00",
+  "finished_at": "2026-10-16T20:14:00.295478+00:00",
+  "exit_code": 0,
+  "log_sha256": "b09002009315da998911ebb9f79c174e705d5c94767669336ffb23bb91589095",
+  "source_head": "e96c45ca2e39f05ea3f15e83a7554d2745ebd9a5"
+}

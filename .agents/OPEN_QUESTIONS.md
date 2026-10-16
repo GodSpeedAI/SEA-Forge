@@ -50,3 +50,21 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
   depends on the answer (adr-identity-delegation.md, "Gateway principal: which role").
 - Related: revocation timing is commit/restart-bounded until `reload_config()` gains more call
   sites (ADR Revocation section, corrected 2026-09-24 per critic F-7).
+
+## Open: security workload isolation and remaining legacy identity controls (2026-10-16)
+
+- Context and executable observations: `.agents/reports/security-implementation-20261016.md`.
+- Decision needed: select an operator-provided separate-host-UID or isolated
+  OpenShell environment, or authorize a safe Linux process-control dependency
+  and a production launcher whose boundaries must pass actual isolation tests.
+  Rootless namespaces alone did not protect an open regular-file descriptor
+  from a same-host-UID observer; socket theft was not tested.
+- Recommendation: use verified isolation before delivering any credential or
+  authentication endpoint. Private-channel API success is not process identity.
+- Separate scope decision: authorize migrating the affected CEP authority and
+  SFWP case-mutation legacy controls to real private authenticated principals,
+  preserving every positive, journal and separation-of-duty assertion. Only
+  the strong conformance_identity control has been approved and migrated.
+- Impact: four legacy assertions currently fail. Restoring secondary actor
+  claims on unauthenticated same-UID sockets would undermine the required
+  boundary. Frozen v1 files and expected behavior must remain untouched.
