@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "-p",
+    "sea-forge-server",
+    "--test",
+    "conformance_identity",
+    "approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones",
+    "--",
+    "--nocapture"
+  ],
+  "started_at": "2026-10-16T19:44:49.991503+00:00",
+  "finished_at": "2026-10-16T19:45:14.816451+00:00",
+  "exit_code": 101,
+  "log_sha256": "fca8061444b54fbdaa7cb4441f880bd2e30f14d2ba89a32789b55806f6b465aa",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

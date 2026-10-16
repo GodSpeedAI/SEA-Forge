@@ -206,9 +206,15 @@ pub enum IdentityRefusal {
     /// The cell configures no identity bindings at all.
     Unconfigured,
     /// The claimed actor is not bound to this uid.
-    NotBound { actor_id: String, uid: u32 },
+    NotBound {
+        actor_id: String,
+        uid: u32,
+    },
     /// The actor is bound to this uid but not in the role it claimed.
-    RoleNotHeld { actor_id: String, role: ActorRole },
+    RoleNotHeld {
+        actor_id: String,
+        role: ActorRole,
+    },
     /// The request attributes its work to a different actor than it verified.
     ///
     /// `entity` is what reaches the authority engine and lands in the ledger as
@@ -216,7 +222,10 @@ pub enum IdentityRefusal {
     /// disagree the cell would verify one identity and record another — which
     /// would defeat separation of duty by letting a submitter file work under a
     /// name they are not, then approve it under the name they are.
-    EntityMismatch { actor_id: String, entity: String },
+    EntityMismatch {
+        actor_id: String,
+        entity: String,
+    },
     /// The actor resolving this approval is the one whose work it gates.
     ///
     /// U-07 answer 3: the approver is identified independently and compared
@@ -232,7 +241,12 @@ pub enum IdentityRefusal {
     /// your actor", while this means "not the gateway, not allowlisted, role
     /// widened, or delegation unconfigured". Operators triaging a refusal
     /// must be able to tell the two apart.
-    DelegationRefused { reason: String },
+    DelegationRefused {
+        reason: String,
+    },
+    AuthenticationRefused {
+        reason: String,
+    },
 }
 
 impl IdentityRefusal {
@@ -246,6 +260,7 @@ impl IdentityRefusal {
             Self::EntityMismatch { .. } => "identity_entity_mismatch",
             Self::SelfApproval { .. } => "separation_of_duty",
             Self::DelegationRefused { .. } => "identity_delegation_refused",
+            Self::AuthenticationRefused { .. } => "identity_authentication_refused",
         }
     }
 
@@ -279,6 +294,9 @@ impl IdentityRefusal {
                  cannot resolve it; approval requires a different actor"
             ),
             Self::DelegationRefused { reason } => format!("delegated identity refused: {reason}"),
+            Self::AuthenticationRefused { reason } => {
+                format!("workload authentication refused: {reason}")
+            }
         }
     }
 
@@ -297,6 +315,7 @@ impl IdentityRefusal {
             Self::DelegationRefused { .. } => {
                 "Send on_behalf_of only from the gateway uid for an allowlisted actor and a held role"
             }
+            Self::AuthenticationRefused { .. } => "Obtain a fresh authority-issued private connection for this exact request",
         }
     }
 
@@ -341,6 +360,33 @@ pub struct IdentityBindings {
 }
 
 impl IdentityBindings {
+    pub(crate) fn resolve_authenticated_claim(
+        &self,
+        claim: &ActorClaim,
+        peer: Option<PeerIdentity>,
+    ) -> Result<ResolvedActor, IdentityRefusal> {
+        let peer = peer.ok_or(IdentityRefusal::UnknownPeer)?;
+        let binding = self
+            .bindings
+            .iter()
+            .find(|binding| binding.actor_id == claim.actor_id)
+            .ok_or_else(|| IdentityRefusal::NotBound {
+                actor_id: claim.actor_id.clone(),
+                uid: peer.uid,
+            })?;
+        if !binding.roles.contains(&claim.role) {
+            return Err(IdentityRefusal::RoleNotHeld {
+                actor_id: claim.actor_id.clone(),
+                role: claim.role.clone(),
+            });
+        }
+        Ok(ResolvedActor {
+            actor_id: claim.actor_id.clone(),
+            role: claim.role.clone(),
+            uid: peer.uid,
+            delegation: None,
+        })
+    }
     pub fn is_empty(&self) -> bool {
         self.bindings.is_empty()
     }
@@ -624,7 +670,8 @@ impl IdentityBindings {
         let bound = self
             .bindings
             .iter()
-            .find(|binding| binding.uid == peer.uid && binding.actor_id == claim.actor_id)
+            .find(|binding| binding.uid == peer.uid)
+            .filter(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
                 uid: peer.uid,

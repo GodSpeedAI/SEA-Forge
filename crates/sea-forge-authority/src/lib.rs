@@ -102,9 +102,20 @@ pub struct ActionGrant {
     _resolved_executable: Option<PathBuf>,
     /// Canonical hash of the granted action (the decision's bound payload hash).
     action_hash: String,
+    committed_decision: CommittedRecordRef,
 }
 
 impl ActionGrant {
+    /// Durable decision that was verified when this grant was minted.
+    pub fn committed_decision(&self) -> &CommittedRecordRef {
+        &self.committed_decision
+    }
+
+    /// Expiry carried by the issued grant, for an adapter's independent lease.
+    pub fn expires_at(&self) -> chrono::DateTime<Utc> {
+        self.expires_at
+    }
+
     pub fn sandbox_class(&self) -> &str {
         &self.sandbox_class
     }
@@ -1273,6 +1284,7 @@ impl AuthorityPolicyBundle {
                     | "cognate_action"
                     | "cognate_capability"
                     | "world_transition"
+                    | "mcp_tool_call"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -1291,6 +1303,26 @@ impl AuthorityPolicyBundle {
                         "promote_changeset does not accept a sandbox class".into(),
                     ));
                 }
+            }
+            if rule.operation_kind == "mcp_tool_call"
+                && ["mcp_server", "mcp_tool"].iter().any(|dimension| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| {
+                            values.is_empty() || values.iter().any(String::is_empty)
+                        })
+                })
+            {
+                return Err(schema(
+                    "mcp_tool_call requires explicit server and tool boundaries".into(),
+                ));
+            }
+            if rule.operation_kind != "mcp_tool_call"
+                && ["mcp_server", "mcp_tool"]
+                    .iter()
+                    .any(|dimension| rule.boundary_constraints.contains_key(*dimension))
+            {
+                return Err(schema("MCP boundaries apply only to mcp_tool_call".into()));
             }
             if rule.operation_kind == "execute_command"
                 && rule.verdict == Verdict::Allow
@@ -1388,6 +1420,8 @@ impl AuthorityPolicyBundle {
                         | "sandbox_image"
                         | "repository"
                         | "reference"
+                        | "mcp_server"
+                        | "mcp_tool"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
@@ -1844,7 +1878,7 @@ impl PolicyAuthorityEngine {
         if Utc::now() > validated.expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
-        Ok(self.mint_grant(decision, action, assurance, validated))
+        Ok(self.mint_grant(decision, committed_decision, action, assurance, validated))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1867,7 +1901,7 @@ impl PolicyAuthorityEngine {
             sandbox_class,
             approval_expiry,
         )?;
-        Ok(self.mint_grant(decision, action, assurance, validated))
+        Ok(self.mint_grant(decision, committed, action, assurance, validated))
     }
 
     /// Every check that can make `grant_exact` fail. Apart from the one-time
@@ -2009,12 +2043,14 @@ impl PolicyAuthorityEngine {
     fn mint_grant(
         &self,
         decision: &AuthorityDecision,
+        committed: &CommittedRecordRef,
         action: &AuthorityAction,
         assurance: Option<&PreActionAssurance>,
         validated: ValidatedGrant,
     ) -> ActionGrant {
         ActionGrant {
             action: action.clone(),
+            committed_decision: committed.clone(),
             run_id: decision.run_id.clone(),
             plan_item_id: decision.plan_item_id.clone(),
             workspace_root: validated.workspace_root,
@@ -2898,11 +2934,29 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
         }
         AuthorityAction::Reserved {
             resource_type,
+            resource_id,
             parameters,
-            ..
         } => {
             rule.operation_kind == *resource_type
                 && match resource_type.as_str() {
+                    "mcp_tool_call" => {
+                        let server = parameter_str(parameters, "server");
+                        let tool = parameter_str(parameters, "tool");
+                        match (server, tool) {
+                            (Some(server), Some(tool)) => {
+                                serde_json::from_str::<[String; 2]>(resource_id).is_ok_and(
+                                    |resource| resource[0] == server && resource[1] == tool,
+                                ) && [("mcp_server", server), ("mcp_tool", tool)].iter().all(
+                                    |(dimension, value)| {
+                                        rule.boundary_constraints.get(*dimension).is_some_and(
+                                            |values| values.iter().any(|allowed| allowed == value),
+                                        )
+                                    },
+                                ) && parameter_str(parameters, "request_sha256").is_some()
+                            }
+                            _ => false,
+                        }
+                    }
                     "transition_artifact_stage" => matches_transition_parameters(rule, parameters),
                     "attest_artifact_identity" => {
                         matches_attestation_parameters(rule, parameters, actor)
@@ -3324,10 +3378,14 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "cognate_action",
                 "cognate_capability",
                 "world_transition",
+                "mcp_tool_call",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()
                 || !parameters.is_object()
+                || (resource_type == "mcp_tool_call"
+                    && !parameter_str(parameters, "request_sha256")
+                        .is_some_and(|digest| is_lower_hex(digest, 64)))
         }
         _ => false,
     }

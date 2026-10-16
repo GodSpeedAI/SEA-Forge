@@ -1,0 +1,58 @@
+{
+  "status": "candidate-not-frozen",
+  "independent_reference": null,
+  "v1_commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+  "v1_manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+  "files": [
+    {
+      "path": "crates/sea-forge-authority/tests/mcp_boundary.rs",
+      "sha256": "b9c93885e2f1f431e57cfa78344d5f4ee96abd30cf704c2ab7851cb9bbfdab4c",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-sandbox/tests/observation_file.rs",
+      "sha256": "cbaf71742a3928bf10a3ee7edba2bcb7a48cdb280e9d9f0ede46c8a1ed19a6f6",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/file_effect_observation.rs",
+      "sha256": "5d40ab2ab37dbec6014ea47a2eafcfc58bd6e293d908027a00cb690b3c3aaea8",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/conformance_identity.rs",
+      "sha256": "0b68cc5058f8d612b7a3183414e83204cf7e65aaf1bc3793b8bc4aa55a104113",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/src/mcp_protocol.rs",
+      "sha256": "1af23c70cd5592094be818adb3e50824be549ca094860aeb593551efcec8df9a",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/src/workload_connection.rs",
+      "sha256": "ef5c200c1db7fbcade33722b9870ba49558e466695bfca867c7f133b4b1b783a",
+      "mode": "0o644"
+    },
+    {
+      "path": "tests/security-v2/mcp-policy.yaml",
+      "sha256": "9a22879156589f5c0ffc8a9493bfa74456e4b742cc08f1c55708c6d57a91f9da",
+      "mode": "0o644"
+    },
+    {
+      "path": "tests/security-v2/provision_mcp.py",
+      "sha256": "d009ccc4cf4c0b75dce2ee13c4f8e02da32357009be650c9ae774302cbb6b9e0",
+      "mode": "0o644"
+    },
+    {
+      "path": "tests/security-v2/capture.py",
+      "sha256": "7a211f1278fc40a5bca10ea9f7897a2b31e0ad54b91bd99a9ad2f39878d382a4",
+      "mode": "0o644"
+    },
+    {
+      "path": "tests/security-v2/README.md",
+      "sha256": "5ac8c0df146ddbaff0d75ad4b7cc75a83aff849185b04eb82f3681632c5dd846",
+      "mode": "0o644"
+    }
+  ]
+}

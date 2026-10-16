@@ -7,7 +7,10 @@ use std::{
 pub mod environment;
 pub mod jail;
 pub mod local;
+mod observation;
 pub mod openshell;
+
+pub use observation::{open_observation_file, open_observation_root};
 
 pub use environment::{
     demo_environment, load_pinned_environment, materialize_base, parse_env_ref,

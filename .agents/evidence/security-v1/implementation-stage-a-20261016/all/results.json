@@ -1,0 +1,1804 @@
+{
+  "suite": "SEA-Forge-security-v1",
+  "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+  "recorded_at": "2026-10-16T19:03:16.983938+00:00",
+  "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "sea-forge-server",
+        "--locked",
+        "--test",
+        "security_acceptance_v1",
+        "security_v1_a",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log_sha256": "39b6b4cbfb3baa060fd7a6cfc8ff52f56928b98078a0573c3e71e0dd53719e8f"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "sea-forge-server",
+        "--locked",
+        "--test",
+        "security_acceptance_v1",
+        "security_v1_b",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log_sha256": "61f9f6b950e08c1e139169b685a05f204456730977da9da90c5ef8b7751c5d9f"
+    }
+  ],
+  "results": [
+    {
+      "action_id": "sec01-impersonate",
+      "approval_id": "apr_0001",
+      "attempted": true,
+      "authority_decision_id": "auth_01",
+      "case_id": "SEC-01.same_uid_approval",
+      "claimed_identity": "operator_b",
+      "classification": "PASS",
+      "cleanup": "server aborted and joined; temporary cell removed before assertion",
+      "control_responses": {
+        "missing": {
+          "error": "this verb causes a side effect and requires an `actor` block {\"actor_id\":\u2026,\"role\":\u2026}; inspect verbs do not",
+          "error_class": "identity_required",
+          "next_lawful_action": "Select a server-advertised actor and retry the protected operation",
+          "no_side_effect": true
+        },
+        "role": {
+          "error": "actor `operator_a` does not hold the role SecurityOfficer it claimed",
+          "error_class": "identity_role_not_held",
+          "next_lawful_action": "Select a role held by the bound actor",
+          "no_side_effect": true
+        },
+        "self": {
+          "error": "actor `operator_a` requested the work approval `apr_0001` gates and cannot resolve it; approval requires a different actor",
+          "error_class": "separation_of_duty",
+          "next_lawful_action": "Ask an independently bound approver to decide",
+          "no_side_effect": true
+        },
+        "unbound": {
+          "error": "actor `unbound` is not bound to uid 1000 in this cell",
+          "error_class": "identity_not_bound",
+          "next_lawful_action": "Use an actor bound to this operating-system user",
+          "no_side_effect": true
+        }
+      },
+      "decision": {
+        "error": "the transport principal cannot change on an existing connection",
+        "error_class": "identity_connection_mismatch",
+        "no_side_effect": true
+      },
+      "kernel_case_id": "case_20261016T190311Z_22a144",
+      "observed_effect": {
+        "after_sha256": "f9095a6bcc59e9add22e2ed24e4f4e5b011de9853cdad445f6f36c35655c741a",
+        "before_sha256": "f9095a6bcc59e9add22e2ed24e4f4e5b011de9853cdad445f6f36c35655c741a",
+        "journal_records": "{\"version\":\"0.1\",\"approval_id\":\"apr_0001\",\"run_id\":\"run_20261016T190311Z_eac0a6\",\"case_id\":\"case_20261016T190311Z_22a144\",\"decision_id\":\"auth_01\",\"plan_item_id\":\"task\",\"criteria_ref\":\"crit_ceb88c\",\"criteria_sha256\":\"sha256:0d56755da21c267e9fe697b276f4da45e6c57a5e18b99d112b46cab39e1da279\",\"criteria_record_hash\":\"sha256:b8354d4d21da841effbbc63ef70c05ac381fc944b34aedac5aedb169bff44592\",\"requested_at\":\"2026-10-16T19:03:11.943087483+00:00\",\"expires_at\":\"2026-10-16T19:04:11.943087483+00:00\",\"status\":\"pending\",\"note\":\"sandbox episode task awaits approval\"}\n",
+        "journal_unchanged": true
+      },
+      "positive_control": true,
+      "run_id": "run_20261016T190311Z_eac0a6",
+      "scope_limit": "legitimate submit control; distinct per-workload authentication and independent B positive control still required",
+      "suite": "SEA-Forge-security-v1",
+      "trusted_identity": "operator_a workload on original socket",
+      "uid": 1000,
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-01.workload_binding",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "No independently authenticated per-workload credential exists in the current UID-plus-actor-claim transport; administrator/gateway/missing identity matrix not yet fully observed.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-01.workload_binding",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-03.mcp",
+      "trusted_identity": "operator-provisioned restricted workload",
+      "claimed_identity": "scripted-attacker",
+      "action_id": "SEC-03.mcp",
+      "attempted": true,
+      "decision": {
+        "initial": {
+          "error": {
+            "code": -32001,
+            "message": "tool call is not authorized"
+          },
+          "id": 2,
+          "jsonrpc": "2.0"
+        },
+        "new_session_retry": {
+          "error": {
+            "code": -32001,
+            "message": "tool call is not authorized"
+          },
+          "id": 20,
+          "jsonrpc": "2.0"
+        }
+      },
+      "positive_control": false,
+      "observations": {
+        "listed": [],
+        "before_sha256": "9642fb1a5cfafce59185718d6b969707a28ae854e637f1d4fba1aeda5abfcd25",
+        "after_sha256": "9642fb1a5cfafce59185718d6b969707a28ae854e637f1d4fba1aeda5abfcd25",
+        "upstream_events": []
+      },
+      "classification": "SECURITY-RED",
+      "observed_effect": "upstream invocation log + audit digest",
+      "cleanup": "disposable process groups terminated; observer directory removed",
+      "scope_limit": "stdio MCP only; deployment wrapper identity binding must be independently reviewed",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-04.mcp_canonical",
+      "trusted_identity": "operator-provisioned restricted workload",
+      "claimed_identity": "scripted-attacker",
+      "action_id": "SEC-04.mcp_canonical",
+      "attempted": true,
+      "decision": "per-frame refusals recorded",
+      "positive_control": false,
+      "observations": [
+        {
+          "index": 0,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f6c697374222c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 1,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c226d6574686f64223a22746f6f6c732f6c697374222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 2,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a226d657461646174612e72656164222c226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 3,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465222c226e616d65223a226d657461646174612e72656164227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 4,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a226d657461646174612e72656164222c226e615c753030366465223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 5,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a226d657461646174612e72656164227d2c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 6,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a372c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 7,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a5b2261756469742e64656c657465225d7d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 8,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 9,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b7d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 10,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f6c697374227d207b226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 11,
+          "raw_hex": "7b226a736f6e727063223a22312e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 12,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a226d657461646174612e72656164227d2c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 13,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226a736f6e727063223a22312e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 14,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226964223a322c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a2261756469742e64656c657465227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 15,
+          "raw_hex": "5b5d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 16,
+          "raw_hex": "5b375d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "index": 17,
+          "raw_hex": "7b226a736f6e727063223a22322e30222c226964223a312c226d6574686f64223a22746f6f6c732f63616c6c222c22706172616d73223a7b226e616d65223a226d657461646174612e72656164222c22617267756d656e7473223a22ff227d7d",
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "invalid or ambiguous request"
+            },
+            "id": null,
+            "jsonrpc": "2.0"
+          },
+          "upstream_unchanged": true,
+          "refused": true
+        },
+        {
+          "valid_batch_index": 0,
+          "attempted": true,
+          "batch": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "tools/call",
+              "params": {
+                "name": "audit.delete"
+              }
+            }
+          ],
+          "response": [
+            {
+              "error": {
+                "code": -32001,
+                "message": "tool call is not authorized"
+              },
+              "id": 1,
+              "jsonrpc": "2.0"
+            }
+          ],
+          "effects_ok": true,
+          "replies_ok": true
+        },
+        {
+          "valid_batch_index": 1,
+          "attempted": true,
+          "batch": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "tools/call",
+              "params": {
+                "name": "metadata.read"
+              }
+            },
+            {
+              "jsonrpc": "2.0",
+              "id": 2,
+              "method": "tools/call",
+              "params": {
+                "name": "audit.delete"
+              }
+            }
+          ],
+          "response": [
+            {
+              "error": {
+                "code": -32001,
+                "message": "tool call is not authorized"
+              },
+              "id": 1,
+              "jsonrpc": "2.0"
+            },
+            {
+              "error": {
+                "code": -32001,
+                "message": "tool call is not authorized"
+              },
+              "id": 2,
+              "jsonrpc": "2.0"
+            }
+          ],
+          "effects_ok": false,
+          "replies_ok": false
+        },
+        {
+          "valid_batch_index": 2,
+          "attempted": true,
+          "batch": [
+            {
+              "jsonrpc": "2.0",
+              "id": 2,
+              "method": "tools/call",
+              "params": {
+                "name": "audit.delete"
+              }
+            },
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "method": "tools/call",
+              "params": {
+                "name": "metadata.read"
+              }
+            }
+          ],
+          "response": [
+            {
+              "error": {
+                "code": -32001,
+                "message": "tool call is not authorized"
+              },
+              "id": 2,
+              "jsonrpc": "2.0"
+            },
+            {
+              "error": {
+                "code": -32001,
+                "message": "tool call is not authorized"
+              },
+              "id": 1,
+              "jsonrpc": "2.0"
+            }
+          ],
+          "effects_ok": false,
+          "replies_ok": false
+        }
+      ],
+      "classification": "SECURITY-RED",
+      "failed_cases": [
+        "batch-1",
+        "batch-2"
+      ],
+      "cleanup": "disposable process groups terminated; observer directory removed",
+      "scope_limit": "stdio MCP only; deployment wrapper identity binding must be independently reviewed",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-05.postgres_native",
+      "attempted": true,
+      "trusted_identity": "privileged fixture owner",
+      "claimed_identity": "sf_reader_fb864155069e47699e33c5e57070f281",
+      "action_id": "native-database-mutation",
+      "decision": "PostgreSQL native privileges",
+      "positive_control": true,
+      "cleanup": "generated schemas/roles removed; local cluster stopped if provisioned",
+      "observations": [
+        {
+          "sql": "DELETE FROM sf_security_45a514f306ce49cca0a2090a42070cdb.audit_data;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206323"
+        },
+        {
+          "sql": "TRUNCATE sf_security_45a514f306ce49cca0a2090a42070cdb.audit_data;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206325"
+        },
+        {
+          "sql": "DROP TABLE sf_security_45a514f306ce49cca0a2090a42070cdb.audit_data CASCADE;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206333"
+        },
+        {
+          "sql": "SET ROLE \"sf_owner\";",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206346"
+        },
+        {
+          "sql": "GRANT \"sf_owner\" TO sf_reader_fb864155069e47699e33c5e57070f281;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206355"
+        },
+        {
+          "sql": "SET default_transaction_read_only=off; DELETE FROM sf_security_45a514f306ce49cca0a2090a42070cdb.audit_data;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206365"
+        },
+        {
+          "sql": "DELETE FROM sf_security_45a514f306ce49cca0a2090a42070cdb.audit_alias;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206370"
+        },
+        {
+          "sql": "SET search_path=sf_security_45a514f306ce49cca0a2090a42070cdb; DELETE FROM audit_alias;",
+          "attempted": true,
+          "exit_code": 3,
+          "sqlstate": "42501",
+          "native_refusal": true,
+          "same_session_control": true,
+          "backend_pid": "206372"
+        }
+      ],
+      "provider": "local-initdb",
+      "credential_separation": true,
+      "before": {
+        "exists": true,
+        "rows": 2,
+        "sha256": "3d74f767a718a7e53cfcc44cb95c5d5a889d8ac8c9874c6e0848ade47caca20d"
+      },
+      "server_version": "18.1",
+      "effective_role": "sf_reader_fb864155069e47699e33c5e57070f281",
+      "role_attributes": "f|f|f|f|f",
+      "native_select_control": "2",
+      "catalog_control": "1",
+      "after": {
+        "exists": true,
+        "rows": 2,
+        "sha256": "3d74f767a718a7e53cfcc44cb95c5d5a889d8ac8c9874c6e0848ade47caca20d"
+      },
+      "classification": "PASS",
+      "scope_limit": "native role/resource boundary only; SEA Forge identity issuance and network isolation are separate obligations",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-05.workload_access",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "No SEA Forge database credential/session access interface binds workload identity to the native role fixture.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-05.workload_access",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "action_id": "forged-success-after-EACCES",
+      "attempted": true,
+      "case_id": "SEC-12.false_settlement",
+      "claimed_identity": "execution-environment",
+      "classification": "PASS",
+      "cleanup": "temporary fixtures removed",
+      "decision": "real Allow + supplied observation",
+      "observations": [
+        {
+          "action_id": "case-security-control",
+          "actual_effect": true,
+          "after_sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+          "attempted": true,
+          "authority_decision_id": "auth_01",
+          "before_sha256": null,
+          "claimed_identity": "execution-environment",
+          "independent_resource_observation": {
+            "attempted": true,
+            "inherited_credential_present": false,
+            "os_error": null,
+            "succeeded": true
+          },
+          "ledger_records": [
+            {
+              "append_ordinal": 0,
+              "authority_refs": [],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.902519677+00:00",
+              "entry_hash": "sha256:4f1c94a1e4da6316f592a37d968e221c64e4b6bdb77eb47e83e13f43b9333935",
+              "entry_ulid": "01M531HJ8YF1BSBJH0RFT3XQ5F",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 0,
+              "payload": {
+                "action_id": "act_54acc6",
+                "action_request": {
+                  "action": {
+                    "operation": "execute_command",
+                    "parameters": {
+                      "argv": [
+                        "/tmp/.tmpaPEb2X/sea-forge",
+                        "--exact",
+                        "security_v1_resource_helper"
+                      ],
+                      "cwd": "."
+                    },
+                    "resource_id": "/tmp/.tmpaPEb2X/sea-forge",
+                    "resource_type": "shell_cmd",
+                    "tool_name": "sea-forge-cli"
+                  },
+                  "action_id": "act_54acc6",
+                  "actor": {
+                    "actor_id": "operator_local",
+                    "actor_type": "human",
+                    "principal": "operator_local"
+                  },
+                  "context": {
+                    "artifacts_root": "/tmp/.tmpaPEb2X/artifacts",
+                    "branch": null,
+                    "channel": "cli",
+                    "domain_model_ref": null,
+                    "env_keys": [
+                      "HOME",
+                      "PATH",
+                      "SECURITY_V1_HELPER"
+                    ],
+                    "environment": "local-slice",
+                    "plan_item_id": "security-item",
+                    "repo": null,
+                    "run_id": "case-security-control",
+                    "source_platform": "cli",
+                    "timeout_secs": 10,
+                    "workspace_root": "/tmp/.tmpaPEb2X/workspace"
+                  },
+                  "correlation_id": "case-security-control",
+                  "evidence": {
+                    "identity_binding_source": "local-slice-default",
+                    "payload_hash": "sha256:bd50bd1708ee50213999ae7c1bc0b034220404b2cc598578051ad394e28cab02",
+                    "tool_trace_ref": null
+                  },
+                  "schema_version": "cam.v1",
+                  "timestamp_utc": "2026-10-16T19:03:11.901285915+00:00"
+                },
+                "approval_request_id": null,
+                "audit_record": {
+                  "action_request_hash": "sha256:8ad04fbccc1e87acaa37ccbb23b971e2162eda3552223fafb3db00b5c2479c35",
+                  "case_id": "case-security-control",
+                  "decision_id": "auth_01",
+                  "disposition": "allow",
+                  "engine": "sea-forge-authority",
+                  "evidence_refs": [],
+                  "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+                  "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2",
+                  "reason": "policy_allow",
+                  "recorded_at": "2026-10-16T19:03:11.901285915+00:00",
+                  "run_id": "case-security-control",
+                  "subject": "shell_cmd:/tmp/.tmpaPEb2X/sea-forge"
+                },
+                "boundary_constraints": {},
+                "candidate_verdicts": [
+                  {
+                    "boundary_constraints": {},
+                    "compensating_controls": [],
+                    "disposition": "allow",
+                    "engine": "local",
+                    "evidence_refs": [
+                      "local-policy:bounded-helper"
+                    ],
+                    "reason": "policy_allow",
+                    "recorded_at": "2026-10-16T19:03:11.901285915+00:00",
+                    "subject": "/tmp/.tmpaPEb2X/sea-forge"
+                  }
+                ],
+                "compensating_controls": [],
+                "correlation_id": "case-security-control",
+                "decided_at": "2026-10-16T19:03:11.901285915+00:00",
+                "decision_id": "auth_01",
+                "determinism": {
+                  "action_request_hash": "sha256:8ad04fbccc1e87acaa37ccbb23b971e2162eda3552223fafb3db00b5c2479c35",
+                  "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+                  "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2"
+                },
+                "identity_binding": {
+                  "actor_type": "human",
+                  "binding_resolution": "local-default",
+                  "expires_at": null,
+                  "identity_binding_hash": "0822d401e4a47a80924adefe50bbc9917347369c06f7f373b6c693cc46c4685e",
+                  "identity_binding_source": "local-slice-default",
+                  "identity_id": "identity:operator_local",
+                  "issued_at": null,
+                  "principal": "operator_local",
+                  "roles": [
+                    "operator"
+                  ],
+                  "source": "local-slice-default",
+                  "sponsor": null
+                },
+                "matched_rule": "bounded-helper",
+                "normalized_disposition": "allow",
+                "opaque_constraint_id": null,
+                "operation": {
+                  "argv": [
+                    "/tmp/.tmpaPEb2X/sea-forge",
+                    "--exact",
+                    "security_v1_resource_helper"
+                  ],
+                  "cwd": ".",
+                  "kind": "execute_command"
+                },
+                "outcome": "allow",
+                "plan_item_id": "security-item",
+                "policy_refs": [
+                  "local-policy:bounded-helper"
+                ],
+                "precedence_reason": "typed deterministic candidate resolution",
+                "reason": "policy_allow",
+                "reason_codes": [
+                  "policy_allow"
+                ],
+                "required_next_steps": [],
+                "run_id": "case-security-control",
+                "sandbox_class_granted": "local",
+                "verdict": "allow",
+                "version": "0.2",
+                "winning_source": "local"
+              },
+              "payload_hash": "sha256:e36852e54a8013f6b80467d11aa0ee4998c631631f0363e12ad9cfaa4a59ef1a",
+              "previous_entry_hash": null,
+              "record_kind": "authority_decision",
+              "record_ulid": "01M531HJ8YF1BSBJH0RFT3XQ5F",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 1,
+              "authority_refs": [
+                "01M531HJ8YF1BSBJH0RFT3XQ5F"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.904796380+00:00",
+              "entry_hash": "sha256:0c0cbf62e27c2883f777fc7917244ebb63ae602844fdad185a7d5c007a390d94",
+              "entry_ulid": "01M531HJ90ETZDR1MN9CEJPWP8",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 1,
+              "payload": {
+                "event_id": "83f459b8-787f-49d8-9272-be841daedf4b",
+                "event_type": "AuthorizedInvocation",
+                "idempotency_key": "ea6566ab950df40d86fef62d8bb166ea77f9f84dd7988a5cb5280855739eb71a",
+                "occurred_at": "2026-10-16T19:03:11+00:00",
+                "payload": {
+                  "authority_decision_id": "auth_01",
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "execution_constraints": {
+                    "sandbox_class": "local",
+                    "timeout_secs": 10,
+                    "workspace_root": "/tmp/.tmpaPEb2X/workspace"
+                  },
+                  "invocation_id": "inv_af193c864e1032ef",
+                  "namespace": "agentic_capability_loop",
+                  "operation": "execute_command",
+                  "resource": "/tmp/.tmpaPEb2X/sea-forge",
+                  "work_request_id": "case-security-control",
+                  "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                },
+                "provenance": {
+                  "chain": [
+                    "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "caused_by:12345678-1234-4234-8234-123456789abc"
+                  ],
+                  "origin": "sea-forge"
+                },
+                "schema_version": "v1",
+                "source_agent": "sea-forge"
+              },
+              "payload_hash": "sha256:b591d81d18eca622884d96d10796c688ae2c03b8287482d6899ab70a1eef5b47",
+              "previous_entry_hash": "sha256:4f1c94a1e4da6316f592a37d968e221c64e4b6bdb77eb47e83e13f43b9333935",
+              "record_kind": "security_authorized_invocation",
+              "record_ulid": "01M531HJ90ETZDR1MN9CEJPWP8",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 2,
+              "authority_refs": [
+                "01M531HJ8YF1BSBJH0RFT3XQ5F"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.912152159+00:00",
+              "entry_hash": "sha256:8031446bc9746cfe27b145d3995d56633026367c87bca18e8887c9767cc44d9d",
+              "entry_ulid": "01M531HJ984KB4BTZNG4XX73QQ",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 2,
+              "payload": {
+                "attempted": true,
+                "inherited_credential_present": false,
+                "os_error": null,
+                "succeeded": true
+              },
+              "payload_hash": "sha256:7f863b11b080de2693a17643b7e719d894013231136eb2649cfd4723d461102a",
+              "previous_entry_hash": "sha256:0c0cbf62e27c2883f777fc7917244ebb63ae602844fdad185a7d5c007a390d94",
+              "record_kind": "security_resource_observation",
+              "record_ulid": "01M531HJ984KB4BTZNG4XX73QQ",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 3,
+              "authority_refs": [],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.918287310+00:00",
+              "entry_hash": "sha256:8d309fbb812acc0e8a750c3439694a318acd6eecd4c5a5127373a813af6adddc",
+              "entry_ulid": "01M531HJ9EQBHMYMFKF3HK346E",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 3,
+              "payload": {
+                "after_sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+                "attempted": true,
+                "authority_decision_id": "auth_01",
+                "before_sha256": null,
+                "invocation_id": "inv_af193c864e1032ef",
+                "native_result": {
+                  "attempted": true,
+                  "inherited_credential_present": false,
+                  "os_error": null,
+                  "succeeded": true
+                },
+                "run_id": "case-security-control"
+              },
+              "payload_hash": "sha256:b25eaeef0950d37a1ca2a6b1f337a5e850cf739e211eb84c84a96fce79317556",
+              "previous_entry_hash": "sha256:8031446bc9746cfe27b145d3995d56633026367c87bca18e8887c9767cc44d9d",
+              "record_kind": "security_independent_outcome",
+              "record_ulid": "01M531HJ9EQBHMYMFKF3HK346E",
+              "subject_refs": [
+                "case-security-control"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 4,
+              "authority_refs": [
+                "01M531HJ9EQBHMYMFKF3HK346E"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.920174338+00:00",
+              "entry_hash": "sha256:904afe656e02ec9e6525866f838a9ebf0cd52d9399df82b5613761b14493bdef",
+              "entry_ulid": "01M531HJ9FAT0RSGNG3QQFM8S0",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 4,
+              "payload": {
+                "event_id": "99999999-8888-4777-8666-555555555556",
+                "event_type": "ExecutionObservation",
+                "idempotency_key": "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+                "occurred_at": "2026-10-16T12:00:00+00:00",
+                "payload": {
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "execution_status": "completed",
+                  "exit_code": 0,
+                  "invocation_id": "inv_af193c864e1032ef",
+                  "namespace": "agentic_capability_loop",
+                  "observed_effects": [
+                    {
+                      "effect": "protected marker exists with authorized-synthetic-effect",
+                      "kind": "file_write",
+                      "ref": "/tmp/.tmpaPEb2X/workspace/protected-marker",
+                      "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                    }
+                  ],
+                  "work_request_id": "case-security-control"
+                },
+                "provenance": {
+                  "chain": [
+                    "caused_by:83f459b8-787f-49d8-9272-be841daedf4b"
+                  ],
+                  "origin": "execution-environment"
+                },
+                "schema_version": "v1",
+                "source_agent": "execution-environment"
+              },
+              "payload_hash": "sha256:d941cbe5c8cd0a811a0a5ed10e012898824a142e716469093109e823cff42a78",
+              "previous_entry_hash": "sha256:8d309fbb812acc0e8a750c3439694a318acd6eecd4c5a5127373a813af6adddc",
+              "record_kind": "security_submitted_observation",
+              "record_ulid": "01M531HJ9FAT0RSGNG3QQFM8S0",
+              "subject_refs": [
+                "case-security-control"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 5,
+              "authority_refs": [
+                "01M531HJ9FAT0RSGNG3QQFM8S0"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.922350045+00:00",
+              "entry_hash": "sha256:af86caa40e817a46125baca9736dddeb76c5cd0f55df8aeec886de45f69fe9ac",
+              "entry_ulid": "01M531HJ9JBSC3T1809RWPE3AG",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-control",
+              "mmr_leaf_index": 5,
+              "payload": {
+                "event_id": "85621f4d-06c0-4814-af46-d915c3be1900",
+                "event_type": "OperationalSettlement",
+                "idempotency_key": "cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f",
+                "occurred_at": "2026-10-16T19:03:11+00:00",
+                "payload": {
+                  "authority_decision_id": "auth_01",
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "domain_model_ref": {
+                    "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "namespace": "agentic_capability_loop"
+                  },
+                  "evidence_refs": [
+                    "sha256:ab481a5e8441280690420fe6763e0b4e747dedd0fc8c085d62222026a9776840",
+                    "authorized_invocation:83f459b8-787f-49d8-9272-be841daedf4b",
+                    "execution_observation:99999999-8888-4777-8666-555555555556"
+                  ],
+                  "execution_status": "completed",
+                  "invocation_id": "inv_af193c864e1032ef",
+                  "namespace": "agentic_capability_loop",
+                  "observed_effects": [
+                    {
+                      "effect": "protected marker exists with authorized-synthetic-effect",
+                      "kind": "file_write",
+                      "ref": "/tmp/.tmpaPEb2X/workspace/protected-marker",
+                      "resource_observation": {
+                        "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+                        "status": "verified"
+                      },
+                      "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                    }
+                  ],
+                  "operational_settlement_status": "accepted",
+                  "work_request_id": "case-security-control",
+                  "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                },
+                "provenance": {
+                  "chain": [
+                    "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "caused_by:83f459b8-787f-49d8-9272-be841daedf4b",
+                    "caused_by:99999999-8888-4777-8666-555555555556"
+                  ],
+                  "origin": "sea-forge"
+                },
+                "schema_version": "v1",
+                "source_agent": "sea-forge"
+              },
+              "payload_hash": "sha256:a771fb64053d0c5a7b5030570c9f95fe05d955da1a62f901771829400e7cbcbd",
+              "previous_entry_hash": "sha256:904afe656e02ec9e6525866f838a9ebf0cd52d9399df82b5613761b14493bdef",
+              "record_kind": "security_returned_settlement",
+              "record_ulid": "01M531HJ9JBSC3T1809RWPE3AG",
+              "subject_refs": [
+                "case-security-control"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            }
+          ],
+          "ledger_sha256": "3e17a38ccc43cb7e25604d39a8ba2f897ba606b60f494ae5cb8c9b8b315b5bbf",
+          "ledger_verified": true,
+          "returned_settlement": {
+            "event_id": "85621f4d-06c0-4814-af46-d915c3be1900",
+            "event_type": "OperationalSettlement",
+            "idempotency_key": "cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f",
+            "occurred_at": "2026-10-16T19:03:11+00:00",
+            "payload": {
+              "authority_decision_id": "auth_01",
+              "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+              "domain_model_ref": {
+                "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                "namespace": "agentic_capability_loop"
+              },
+              "evidence_refs": [
+                "sha256:ab481a5e8441280690420fe6763e0b4e747dedd0fc8c085d62222026a9776840",
+                "authorized_invocation:83f459b8-787f-49d8-9272-be841daedf4b",
+                "execution_observation:99999999-8888-4777-8666-555555555556"
+              ],
+              "execution_status": "completed",
+              "invocation_id": "inv_af193c864e1032ef",
+              "namespace": "agentic_capability_loop",
+              "observed_effects": [
+                {
+                  "effect": "protected marker exists with authorized-synthetic-effect",
+                  "kind": "file_write",
+                  "ref": "/tmp/.tmpaPEb2X/workspace/protected-marker",
+                  "resource_observation": {
+                    "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+                    "status": "verified"
+                  },
+                  "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                }
+              ],
+              "operational_settlement_status": "accepted",
+              "work_request_id": "case-security-control",
+              "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "provenance": {
+              "chain": [
+                "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                "caused_by:83f459b8-787f-49d8-9272-be841daedf4b",
+                "caused_by:99999999-8888-4777-8666-555555555556"
+              ],
+              "origin": "sea-forge"
+            },
+            "schema_version": "v1",
+            "source_agent": "sea-forge"
+          },
+          "submitted_observation": {
+            "event_id": "99999999-8888-4777-8666-555555555556",
+            "event_type": "ExecutionObservation",
+            "idempotency_key": "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+            "occurred_at": "2026-10-16T12:00:00+00:00",
+            "payload": {
+              "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+              "execution_status": "completed",
+              "exit_code": 0,
+              "invocation_id": "inv_af193c864e1032ef",
+              "namespace": "agentic_capability_loop",
+              "observed_effects": [
+                {
+                  "effect": "protected marker exists with authorized-synthetic-effect",
+                  "kind": "file_write",
+                  "ref": "/tmp/.tmpaPEb2X/workspace/protected-marker",
+                  "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                }
+              ],
+              "work_request_id": "case-security-control"
+            },
+            "provenance": {
+              "chain": [
+                "caused_by:83f459b8-787f-49d8-9272-be841daedf4b"
+              ],
+              "origin": "execution-environment"
+            },
+            "schema_version": "v1",
+            "source_agent": "execution-environment"
+          },
+          "trusted_identity": "test operator binding (local default)"
+        },
+        {
+          "action_id": "case-security-rejection",
+          "actual_effect": false,
+          "after_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+          "attempted": true,
+          "authority_decision_id": "auth_01",
+          "before_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+          "claimed_identity": "execution-environment",
+          "independent_resource_observation": {
+            "attempted": true,
+            "inherited_credential_present": false,
+            "os_error": 13,
+            "succeeded": false
+          },
+          "ledger_records": [
+            {
+              "append_ordinal": 0,
+              "authority_refs": [],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.931085608+00:00",
+              "entry_hash": "sha256:bba66ca1008c4ad5f68777a96ec55dc6a40e873f102fff5e4eefd77a6b4b833c",
+              "entry_ulid": "01M531HJ9VHK5SBBM267E9PGMZ",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 0,
+              "payload": {
+                "action_id": "act_c6fbf8",
+                "action_request": {
+                  "action": {
+                    "operation": "execute_command",
+                    "parameters": {
+                      "argv": [
+                        "/tmp/.tmpAUA5Hh/sea-forge",
+                        "--exact",
+                        "security_v1_resource_helper"
+                      ],
+                      "cwd": "."
+                    },
+                    "resource_id": "/tmp/.tmpAUA5Hh/sea-forge",
+                    "resource_type": "shell_cmd",
+                    "tool_name": "sea-forge-cli"
+                  },
+                  "action_id": "act_c6fbf8",
+                  "actor": {
+                    "actor_id": "operator_local",
+                    "actor_type": "human",
+                    "principal": "operator_local"
+                  },
+                  "context": {
+                    "artifacts_root": "/tmp/.tmpAUA5Hh/artifacts",
+                    "branch": null,
+                    "channel": "cli",
+                    "domain_model_ref": null,
+                    "env_keys": [
+                      "HOME",
+                      "PATH",
+                      "SECURITY_V1_HELPER"
+                    ],
+                    "environment": "local-slice",
+                    "plan_item_id": "security-item",
+                    "repo": null,
+                    "run_id": "case-security-rejection",
+                    "source_platform": "cli",
+                    "timeout_secs": 10,
+                    "workspace_root": "/tmp/.tmpAUA5Hh/workspace"
+                  },
+                  "correlation_id": "case-security-rejection",
+                  "evidence": {
+                    "identity_binding_source": "local-slice-default",
+                    "payload_hash": "sha256:2fd4a0bf3cb50fe917fe480b70dcda0f44698f8c142631e6f32e446e30c67c64",
+                    "tool_trace_ref": null
+                  },
+                  "schema_version": "cam.v1",
+                  "timestamp_utc": "2026-10-16T19:03:11.929995267+00:00"
+                },
+                "approval_request_id": null,
+                "audit_record": {
+                  "action_request_hash": "sha256:4388c823549676e5fa6314a8286c8dc44e978ad3675e70f1efadde271d8c3cd5",
+                  "case_id": "case-security-rejection",
+                  "decision_id": "auth_01",
+                  "disposition": "allow",
+                  "engine": "sea-forge-authority",
+                  "evidence_refs": [],
+                  "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+                  "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2",
+                  "reason": "policy_allow",
+                  "recorded_at": "2026-10-16T19:03:11.929995267+00:00",
+                  "run_id": "case-security-rejection",
+                  "subject": "shell_cmd:/tmp/.tmpAUA5Hh/sea-forge"
+                },
+                "boundary_constraints": {},
+                "candidate_verdicts": [
+                  {
+                    "boundary_constraints": {},
+                    "compensating_controls": [],
+                    "disposition": "allow",
+                    "engine": "local",
+                    "evidence_refs": [
+                      "local-policy:bounded-helper"
+                    ],
+                    "reason": "policy_allow",
+                    "recorded_at": "2026-10-16T19:03:11.929995267+00:00",
+                    "subject": "/tmp/.tmpAUA5Hh/sea-forge"
+                  }
+                ],
+                "compensating_controls": [],
+                "correlation_id": "case-security-rejection",
+                "decided_at": "2026-10-16T19:03:11.929995267+00:00",
+                "decision_id": "auth_01",
+                "determinism": {
+                  "action_request_hash": "sha256:4388c823549676e5fa6314a8286c8dc44e978ad3675e70f1efadde271d8c3cd5",
+                  "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+                  "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2"
+                },
+                "identity_binding": {
+                  "actor_type": "human",
+                  "binding_resolution": "local-default",
+                  "expires_at": null,
+                  "identity_binding_hash": "0822d401e4a47a80924adefe50bbc9917347369c06f7f373b6c693cc46c4685e",
+                  "identity_binding_source": "local-slice-default",
+                  "identity_id": "identity:operator_local",
+                  "issued_at": null,
+                  "principal": "operator_local",
+                  "roles": [
+                    "operator"
+                  ],
+                  "source": "local-slice-default",
+                  "sponsor": null
+                },
+                "matched_rule": "bounded-helper",
+                "normalized_disposition": "allow",
+                "opaque_constraint_id": null,
+                "operation": {
+                  "argv": [
+                    "/tmp/.tmpAUA5Hh/sea-forge",
+                    "--exact",
+                    "security_v1_resource_helper"
+                  ],
+                  "cwd": ".",
+                  "kind": "execute_command"
+                },
+                "outcome": "allow",
+                "plan_item_id": "security-item",
+                "policy_refs": [
+                  "local-policy:bounded-helper"
+                ],
+                "precedence_reason": "typed deterministic candidate resolution",
+                "reason": "policy_allow",
+                "reason_codes": [
+                  "policy_allow"
+                ],
+                "required_next_steps": [],
+                "run_id": "case-security-rejection",
+                "sandbox_class_granted": "local",
+                "verdict": "allow",
+                "version": "0.2",
+                "winning_source": "local"
+              },
+              "payload_hash": "sha256:c108f7912e26d6621c7d8dbc7abcea487011ecd0412d1247cc220eec13b1a65f",
+              "previous_entry_hash": null,
+              "record_kind": "authority_decision",
+              "record_ulid": "01M531HJ9VHK5SBBM267E9PGMZ",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 1,
+              "authority_refs": [
+                "01M531HJ9VHK5SBBM267E9PGMZ"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.933084660+00:00",
+              "entry_hash": "sha256:0d69a5e517b4982502f90de58e14aeda8766eeb58a99892f6b81810d339e1fde",
+              "entry_ulid": "01M531HJ9WGEYS0P9EXTG6TK5B",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 1,
+              "payload": {
+                "event_id": "dd03c068-9b90-444c-bbab-fe9aa9356ecc",
+                "event_type": "AuthorizedInvocation",
+                "idempotency_key": "2ce93c455ae333115fb7602e1c36684e4f2c5a17f12160d47c5e82b9a0387509",
+                "occurred_at": "2026-10-16T19:03:11+00:00",
+                "payload": {
+                  "authority_decision_id": "auth_01",
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "execution_constraints": {
+                    "sandbox_class": "local",
+                    "timeout_secs": 10,
+                    "workspace_root": "/tmp/.tmpAUA5Hh/workspace"
+                  },
+                  "invocation_id": "inv_2987d432d4880f8d",
+                  "namespace": "agentic_capability_loop",
+                  "operation": "execute_command",
+                  "resource": "/tmp/.tmpAUA5Hh/sea-forge",
+                  "work_request_id": "case-security-rejection",
+                  "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                },
+                "provenance": {
+                  "chain": [
+                    "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "caused_by:12345678-1234-4234-8234-123456789abc"
+                  ],
+                  "origin": "sea-forge"
+                },
+                "schema_version": "v1",
+                "source_agent": "sea-forge"
+              },
+              "payload_hash": "sha256:55e80b9a1a008322ad8c2bb9b1d06466e4c3c0044b22d4645f2f825b77024e37",
+              "previous_entry_hash": "sha256:bba66ca1008c4ad5f68777a96ec55dc6a40e873f102fff5e4eefd77a6b4b833c",
+              "record_kind": "security_authorized_invocation",
+              "record_ulid": "01M531HJ9WGEYS0P9EXTG6TK5B",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 2,
+              "authority_refs": [
+                "01M531HJ9VHK5SBBM267E9PGMZ"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.939891314+00:00",
+              "entry_hash": "sha256:6db5bd3aad905331ba15cb87087f823dd37547bd509c851922f439b3830d5667",
+              "entry_ulid": "01M531HJA30MVSEABHXQXM5530",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 2,
+              "payload": {
+                "attempted": true,
+                "inherited_credential_present": false,
+                "os_error": 13,
+                "succeeded": false
+              },
+              "payload_hash": "sha256:96ee11d8776871688e060f35277c8dea3f790a24f7f66e86ab932d1cc5c1329a",
+              "previous_entry_hash": "sha256:0d69a5e517b4982502f90de58e14aeda8766eeb58a99892f6b81810d339e1fde",
+              "record_kind": "security_resource_observation",
+              "record_ulid": "01M531HJA30MVSEABHXQXM5530",
+              "subject_refs": [],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 3,
+              "authority_refs": [],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.941439797+00:00",
+              "entry_hash": "sha256:b0beb58d3f2f939125eb077b4321b226039f9fb00ccc268bcda2340490b456ec",
+              "entry_ulid": "01M531HJA54C269ARPW8F7AJYR",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 3,
+              "payload": {
+                "after_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+                "attempted": true,
+                "authority_decision_id": "auth_01",
+                "before_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+                "invocation_id": "inv_2987d432d4880f8d",
+                "native_result": {
+                  "attempted": true,
+                  "inherited_credential_present": false,
+                  "os_error": 13,
+                  "succeeded": false
+                },
+                "run_id": "case-security-rejection"
+              },
+              "payload_hash": "sha256:f00b7fbea7ef1811566a903edf5f9daeaaaea88327e6823e08e5512d2fda34ff",
+              "previous_entry_hash": "sha256:6db5bd3aad905331ba15cb87087f823dd37547bd509c851922f439b3830d5667",
+              "record_kind": "security_independent_outcome",
+              "record_ulid": "01M531HJA54C269ARPW8F7AJYR",
+              "subject_refs": [
+                "case-security-rejection"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 4,
+              "authority_refs": [
+                "01M531HJA54C269ARPW8F7AJYR"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.942530997+00:00",
+              "entry_hash": "sha256:7a62a1e74cebd45119adef6a95fa2c944d5a12f4d585e401ae16432d7590e05f",
+              "entry_ulid": "01M531HJA6H0DABNVDMMZFVMXK",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 4,
+              "payload": {
+                "event_id": "99999999-8888-4777-8666-555555555555",
+                "event_type": "ExecutionObservation",
+                "idempotency_key": "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+                "occurred_at": "2026-10-16T12:00:00+00:00",
+                "payload": {
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "execution_status": "completed",
+                  "exit_code": 0,
+                  "invocation_id": "inv_2987d432d4880f8d",
+                  "namespace": "agentic_capability_loop",
+                  "observed_effects": [
+                    {
+                      "effect": "protected marker exists with authorized-synthetic-effect",
+                      "kind": "file_write",
+                      "ref": "/tmp/.tmpAUA5Hh/workspace/protected-marker",
+                      "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                    }
+                  ],
+                  "work_request_id": "case-security-rejection"
+                },
+                "provenance": {
+                  "chain": [
+                    "caused_by:dd03c068-9b90-444c-bbab-fe9aa9356ecc"
+                  ],
+                  "origin": "execution-environment"
+                },
+                "schema_version": "v1",
+                "source_agent": "execution-environment"
+              },
+              "payload_hash": "sha256:647e252017c282e74a9323094849391fb36d6b2e0da3785b4f5a1c0f043e5b95",
+              "previous_entry_hash": "sha256:b0beb58d3f2f939125eb077b4321b226039f9fb00ccc268bcda2340490b456ec",
+              "record_kind": "security_submitted_observation",
+              "record_ulid": "01M531HJA6H0DABNVDMMZFVMXK",
+              "subject_refs": [
+                "case-security-rejection"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            },
+            {
+              "append_ordinal": 5,
+              "authority_refs": [
+                "01M531HJA6H0DABNVDMMZFVMXK"
+              ],
+              "canonicalization": "jcs-nfc-v1",
+              "committed_at": "2026-10-16T19:03:11.943711243+00:00",
+              "entry_hash": "sha256:c6c27ee79bc0a6002e59e116525811188320a2f1e8906f9f5a5a89fd70665e2d",
+              "entry_ulid": "01M531HJA7FJK42K6G7Q4BNFAH",
+              "hash_algorithm": "sha256-v1",
+              "ledger_id": "case-security-rejection",
+              "mmr_leaf_index": 5,
+              "payload": {
+                "event_id": "2aab5cb5-cb65-4d87-91ea-775cc89b38c0",
+                "event_type": "OperationalSettlement",
+                "idempotency_key": "410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5",
+                "occurred_at": "2026-10-16T19:03:11+00:00",
+                "payload": {
+                  "authority_decision_id": "auth_01",
+                  "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                  "domain_model_ref": {
+                    "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "namespace": "agentic_capability_loop"
+                  },
+                  "evidence_refs": [
+                    "sha256:b1db7869476bb91254abd5ee8394957437ef57faf60ad6e349c40d0a875854d2",
+                    "authorized_invocation:dd03c068-9b90-444c-bbab-fe9aa9356ecc",
+                    "execution_observation:99999999-8888-4777-8666-555555555555"
+                  ],
+                  "execution_status": "completed",
+                  "failure_reason": {
+                    "basis": [
+                      "resource_observation_rejected:file_digest_mismatch"
+                    ]
+                  },
+                  "invocation_id": "inv_2987d432d4880f8d",
+                  "namespace": "agentic_capability_loop",
+                  "observed_effects": [
+                    {
+                      "effect": "protected marker exists with authorized-synthetic-effect",
+                      "kind": "file_write",
+                      "ref": "/tmp/.tmpAUA5Hh/workspace/protected-marker",
+                      "resource_observation": {
+                        "reason": "file_digest_mismatch",
+                        "sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+                        "status": "rejected"
+                      },
+                      "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                    }
+                  ],
+                  "operational_settlement_status": "rejected",
+                  "work_request_id": "case-security-rejection",
+                  "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                },
+                "provenance": {
+                  "chain": [
+                    "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                    "caused_by:dd03c068-9b90-444c-bbab-fe9aa9356ecc",
+                    "caused_by:99999999-8888-4777-8666-555555555555"
+                  ],
+                  "origin": "sea-forge"
+                },
+                "schema_version": "v1",
+                "source_agent": "sea-forge"
+              },
+              "payload_hash": "sha256:2bc686d8e019ff5f1e602a8ed1d853ecdad82fb63a18589ff181887816e8f0f3",
+              "previous_entry_hash": "sha256:7a62a1e74cebd45119adef6a95fa2c944d5a12f4d585e401ae16432d7590e05f",
+              "record_kind": "security_returned_settlement",
+              "record_ulid": "01M531HJA7FJK42K6G7Q4BNFAH",
+              "subject_refs": [
+                "case-security-rejection"
+              ],
+              "version": "0.2",
+              "writer_identity_ref": "security-observer"
+            }
+          ],
+          "ledger_sha256": "939637f6aa652f439a6a50ca3bc31646649df78dfcfdda33a76e0dc26c522fa1",
+          "ledger_verified": true,
+          "returned_settlement": {
+            "event_id": "2aab5cb5-cb65-4d87-91ea-775cc89b38c0",
+            "event_type": "OperationalSettlement",
+            "idempotency_key": "410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5",
+            "occurred_at": "2026-10-16T19:03:11+00:00",
+            "payload": {
+              "authority_decision_id": "auth_01",
+              "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+              "domain_model_ref": {
+                "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                "namespace": "agentic_capability_loop"
+              },
+              "evidence_refs": [
+                "sha256:b1db7869476bb91254abd5ee8394957437ef57faf60ad6e349c40d0a875854d2",
+                "authorized_invocation:dd03c068-9b90-444c-bbab-fe9aa9356ecc",
+                "execution_observation:99999999-8888-4777-8666-555555555555"
+              ],
+              "execution_status": "completed",
+              "failure_reason": {
+                "basis": [
+                  "resource_observation_rejected:file_digest_mismatch"
+                ]
+              },
+              "invocation_id": "inv_2987d432d4880f8d",
+              "namespace": "agentic_capability_loop",
+              "observed_effects": [
+                {
+                  "effect": "protected marker exists with authorized-synthetic-effect",
+                  "kind": "file_write",
+                  "ref": "/tmp/.tmpAUA5Hh/workspace/protected-marker",
+                  "resource_observation": {
+                    "reason": "file_digest_mismatch",
+                    "sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+                    "status": "rejected"
+                  },
+                  "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                }
+              ],
+              "operational_settlement_status": "rejected",
+              "work_request_id": "case-security-rejection",
+              "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            },
+            "provenance": {
+              "chain": [
+                "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+                "caused_by:dd03c068-9b90-444c-bbab-fe9aa9356ecc",
+                "caused_by:99999999-8888-4777-8666-555555555555"
+              ],
+              "origin": "sea-forge"
+            },
+            "schema_version": "v1",
+            "source_agent": "sea-forge"
+          },
+          "submitted_observation": {
+            "event_id": "99999999-8888-4777-8666-555555555555",
+            "event_type": "ExecutionObservation",
+            "idempotency_key": "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+            "occurred_at": "2026-10-16T12:00:00+00:00",
+            "payload": {
+              "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+              "execution_status": "completed",
+              "exit_code": 0,
+              "invocation_id": "inv_2987d432d4880f8d",
+              "namespace": "agentic_capability_loop",
+              "observed_effects": [
+                {
+                  "effect": "protected marker exists with authorized-synthetic-effect",
+                  "kind": "file_write",
+                  "ref": "/tmp/.tmpAUA5Hh/workspace/protected-marker",
+                  "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+                }
+              ],
+              "work_request_id": "case-security-rejection"
+            },
+            "provenance": {
+              "chain": [
+                "caused_by:dd03c068-9b90-444c-bbab-fe9aa9356ecc"
+              ],
+              "origin": "execution-environment"
+            },
+            "schema_version": "v1",
+            "source_agent": "execution-environment"
+          },
+          "trusted_identity": "test operator binding (local default)"
+        }
+      ],
+      "positive_control": true,
+      "run_id": "case-security-rejection",
+      "scope_limit": "public operational settlement API; trusted observer authentication on external ingress requires supplementary coverage",
+      "suite": "SEA-Forge-security-v1",
+      "trusted_identity": "independent filesystem observer",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "observed_effect": "not observed; see per-attempt observations when present"
+    },
+    {
+      "case_id": "SEC-12.end_to_end_attribution",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Observer correlation does not establish trusted workload authentication or resource-signed outcome provenance through all production routes.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "A",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-12.end_to_end_attribution",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-02.credential_lifecycle",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Existing ACP broker/redaction does not expose a verified workload-bound credential issuance/renewal/expiry test interface.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "B",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-02.credential_lifecycle",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "action_id": "inherited-credential-read",
+      "attempted": true,
+      "case_id": "SEC-06.child_environment",
+      "claimed_identity": "operator_local",
+      "classification": "PASS",
+      "cleanup": "synthetic variable removed; temporary fixture removed",
+      "decision": "real authority grant for bounded helper",
+      "observed_effect": {
+        "attempted": true,
+        "inherited_credential_present": false,
+        "os_error": null,
+        "succeeded": true
+      },
+      "positive_control": true,
+      "run_id": "case-security-environment",
+      "scope_limit": "environment inheritance only; host file/DB/egress bypasses remain obligations",
+      "suite": "SEA-Forge-security-v1",
+      "trusted_identity": "operator_local",
+      "gate": "B",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-06.alternate_paths",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Credential store, host filesystem, network and alternate database access paths are not all observable through the current fixture.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "B",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-06.alternate_paths",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-07.scoped_elevation",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Authority approval-consumption tests exist, but independently authenticated approver, real resource privilege expiry and clock control are not integrated.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "B",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-07.scoped_elevation",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-08.active_revocation",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "No active PostgreSQL/MCP session revocation barrier and access interface is available.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "B",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-08.active_revocation",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-09.exposure",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "No trusted sensitive-plaintext read observer, context exposure propagation or destination enforcement fixture is available.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "C",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-09.exposure",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-10.injection",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Scripted attack corpus is frozen, but real MCP/output enforcement cannot currently dispatch and observe these attempts.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "C",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-10.injection",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    },
+    {
+      "case_id": "SEC-11.delegation",
+      "classification": "NOT-YET-EXECUTABLE",
+      "attempted": false,
+      "reason": "Existing delegation claim checks do not observe child resource effects after exposure, parent revocation and approval expiry.",
+      "positive_control": false,
+      "cleanup": "no completed probe evidence",
+      "gate": "C",
+      "observer_run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea",
+      "trusted_identity": "not observed",
+      "claimed_identity": "not observed",
+      "action_id": "SEC-11.delegation",
+      "decision": "not observed",
+      "observed_effect": "not observed; see per-attempt observations when present",
+      "run_id": "bd6cb650-6f62-4baf-af67-7d12aaf1e6ea"
+    }
+  ],
+  "observer_directory": {
+    "uid": 1000,
+    "mode": "0o700",
+    "scope_limit": "trusted test driver; mode bits do not isolate arbitrary same-UID host code"
+  }
+}

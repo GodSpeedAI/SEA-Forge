@@ -1,0 +1,108 @@
+{
+  "record_type": "local_isolation_probe",
+  "recorded_at": "2026-10-16",
+  "scope": "rootless bubblewrap user/pid/mount-proc namespace regular-file descriptor visibility and util-linux user namespace UID mapping",
+  "host_identity": {
+    "uid": 1000,
+    "gid": 1000
+  },
+  "tools": {
+    "bubblewrap": "bubblewrap 0.11.1",
+    "unshare": "util-linux 2.41.3",
+    "newuidmap": "not installed (command -v returned no path)",
+    "newgidmap": "not installed (command -v returned no path)",
+    "bwrap_mode_owner": "-rwxr-xr-x nobody:nogroup /usr/bin/bwrap"
+  },
+  "descriptor_probe": {
+    "descriptor_object_type": "regular file containing only a synthetic test sentinel",
+    "bwrap_argv": [
+      "bwrap",
+      "--unshare-user",
+      "--unshare-pid",
+      "--ro-bind",
+      "/",
+      "/",
+      "--proc",
+      "/proc",
+      "--dev",
+      "/dev",
+      "--uid",
+      "0",
+      "--gid",
+      "0",
+      "--die-with-parent",
+      "--json-status-fd",
+      "<status-fd; actual value 4>",
+      "--",
+      "/bin/sh",
+      "-c",
+      "cat /proc/self/uid_map; cat /proc/self/gid_map; id -u; exec 9</tmp/sea-forge-isolation-sentinel-6rscw6bv; exec /bin/sleep 20"
+    ],
+    "bwrap_json_status": {
+      "child-pid": 14,
+      "mnt-namespace": 4026532294,
+      "pid-namespace": 4026532295
+    },
+    "sandbox_stdout": [
+      "         0       1000          1",
+      "         0       1000          1",
+      "0"
+    ],
+    "synthetic_sentinel": "SEA_FORGE_SYNTHETIC_FD_SENTINEL_20261016",
+    "sentinel_path_during_probe": "/tmp/sea-forge-isolation-sentinel-6rscw6bv",
+    "payload_host_pid": 15,
+    "payload_host_proc_uid_line": "Uid:\t1000\t1000\t1000\t1000",
+    "payload_host_proc_gid_line": "Gid:\t1000\t1000\t1000\t1000",
+    "separate_observer": {
+      "host_uid": 1000,
+      "exit_code": 0,
+      "fd_target": "/tmp/sea-forge-isolation-sentinel-6rscw6bv",
+      "read_bytes": "SEA_FORGE_SYNTHETIC_FD_SENTINEL_20261016"
+    },
+    "effect": "same-host-UID process outside bwrap opened /proc/15/fd/9 for a regular file and read the synthetic sentinel bytes",
+    "cleanup": {
+      "bwrap_exit_code_after_terminate": -15,
+      "payload_proc_present_after_cleanup": false,
+      "payload_fd_present_after_cleanup": false,
+      "sentinel_removed": true,
+      "cleanup_confirmed": true
+    }
+  },
+  "user_namespace_mapping": {
+    "root_mapping_command": [
+      "unshare",
+      "--user",
+      "--map-root-user",
+      "sh",
+      "-c",
+      "id -u; cat /proc/self/uid_map; cat /proc/self/gid_map"
+    ],
+    "root_mapping_exit_code": 0,
+    "root_mapping_stdout": [
+      "0",
+      "         0       1000          1",
+      "         0       1000          1"
+    ],
+    "root_mapping_stderr": "",
+    "auto_mapping_command": [
+      "unshare",
+      "--user",
+      "--map-auto",
+      "sh",
+      "-c",
+      "cat /proc/self/uid_map; cat /proc/self/gid_map"
+    ],
+    "auto_mapping_exit_code": 127,
+    "auto_mapping_stdout": "",
+    "auto_mapping_stderr": "unshare: failed to execute newuidmap: No such file or directory",
+    "subuid_entry": "sprime01:100000:65536",
+    "subgid_entry": "sprime01:100000:65536"
+  },
+  "conclusion": "On this host, rootless bwrap PID and proc namespaces did not prevent an external process with the same host UID from reading regular-file descriptor contents through host /proc. This does not demonstrate opening or duplicating a Unix socket descriptor, stealing a Unix socket endpoint, or ptrace/process-memory access; none was tested. unshare --map-root-user maps namespace root to the same host UID; subordinate ranges are configured but auto mapping fails because newuidmap is absent. No distinct host UID identity was demonstrated.",
+  "limits": [
+    "This is local evidence from one Linux environment, not adversarial validation.",
+    "It does not test SELinux/AppArmor, a different host UID, or a production launcher.",
+    "The descriptor was a regular file; no Unix socket FD duplication, socket endpoint theft, ptrace, or process-memory read was tested.",
+    "The sentinel file and sandbox process were removed after the probe."
+  ]
+}

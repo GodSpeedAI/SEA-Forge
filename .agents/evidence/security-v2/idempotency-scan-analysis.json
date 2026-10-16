@@ -1,0 +1,110 @@
+{
+  "recorded_date": "2026-10-16",
+  "classification": "public synthetic fixture idempotency hashes, not credentials",
+  "observed_by": "Luna read-only reconnaissance",
+  "command": "gitleaks dir --config .gitleaks.toml --report-format json --report-path - --redact --no-banner <run-directory>",
+  "before": {
+    "exit_per_run": 1,
+    "total_findings": 72,
+    "unknown_findings": 0
+  },
+  "scope": "Each exclusion requires exact file path, exact hash and generic-api-key; no directory-wide or generic-hex exclusions.",
+  "files": [
+    {
+      "path": ".agents/evidence/security-v1/implementation-prechange-20261016/all/results.json",
+      "rule": "generic-api-key",
+      "occurrences": 10,
+      "public_idempotency_sha256": [
+        "0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061",
+        "3b32cbc8cd424358601f33a4e72085d2e38cbbae5518d8f4b3a04706f336632d",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "e45006e145317696713a4d77303529a76b37e12756fe677805a207d564fd921d",
+        "f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-prechange-20261016/all/rust-A.log",
+      "rule": "generic-api-key",
+      "occurrences": 8,
+      "public_idempotency_sha256": [
+        "0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-stage-a-20261016/all/results.json",
+      "rule": "generic-api-key",
+      "occurrences": 10,
+      "public_idempotency_sha256": [
+        "2ce93c455ae333115fb7602e1c36684e4f2c5a17f12160d47c5e82b9a0387509",
+        "410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f",
+        "ea6566ab950df40d86fef62d8bb166ea77f9f84dd7988a5cb5280855739eb71a"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-stage-a-20261016/all/rust-A.log",
+      "rule": "generic-api-key",
+      "occurrences": 8,
+      "public_idempotency_sha256": [
+        "410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/results.json",
+      "rule": "generic-api-key",
+      "occurrences": 10,
+      "public_idempotency_sha256": [
+        "24cb2bf4b4746b0fa672be72b78c1581bf856772e14f0df2ee893a5b73ec45b2",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a",
+        "d7cb299a6f9f0c2b80fb175c46c752d503d2d327a7fcbe4dc523644454b7aadb"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/rust-A.log",
+      "rule": "generic-api-key",
+      "occurrences": 8,
+      "public_idempotency_sha256": [
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-checkpoint-20261016/all/results.json",
+      "rule": "generic-api-key",
+      "occurrences": 10,
+      "public_idempotency_sha256": [
+        "3c0dde816f8499c78da12902e16184c341f9764354018d166f24b45400d1e311",
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7",
+        "d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa",
+        "ffb39997fa02d93f9a9a7dfaf053bf3ac09c62e8541d7691865a1aa1792e44cc"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-checkpoint-20261016/all/rust-A.log",
+      "rule": "generic-api-key",
+      "occurrences": 8,
+      "public_idempotency_sha256": [
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7",
+        "d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa"
+      ]
+    }
+  ]
+}

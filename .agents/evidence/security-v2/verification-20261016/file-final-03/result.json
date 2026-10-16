@@ -1,0 +1,16 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "-p",
+    "sea-forge-server",
+    "--test",
+    "file_effect_observation"
+  ],
+  "started_at": "2026-10-16T20:08:17.104468+00:00",
+  "finished_at": "2026-10-16T20:10:40.542823+00:00",
+  "exit_code": 0,
+  "log_sha256": "75f7661062573a85a900d343202a87dda259b48fb5bb4f43c8cc942997d2f982",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

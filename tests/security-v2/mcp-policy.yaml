@@ -1,0 +1,9 @@
+version: "0.1"
+rules:
+  - name: metadata-only-mcp
+    verdict: allow
+    actor_role: operator
+    operation_kind: mcp_tool_call
+    boundary_constraints:
+      mcp_server: [security-upstream]
+      mcp_tool: [metadata.read]

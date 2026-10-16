@@ -1,0 +1,13 @@
+{
+  "command": [
+    "just",
+    "crate-test",
+    "sea-forge-sandbox",
+    "observation_root_refuses_symlinks"
+  ],
+  "started_at": "2026-10-16T19:55:20.056203+00:00",
+  "finished_at": "2026-10-16T19:55:27.978781+00:00",
+  "exit_code": 101,
+  "log_sha256": "8a9461302ed0477b73d07f3edf0a99140b390f69f7aed8245a817cbefb77f516",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

@@ -141,3 +141,118 @@ regexes = [
   '''^f6fc80ca47d28212810914ac1f6a8bacf962af1936568b023f4ccb48d58ca2a8$''',
   '''^f7cec6e4eb47af30a3bac36a308c334fcdf329979633dc87355e6a3d362e49a9$''',
 ]
+
+# Implementation evidence: reviewed synthetic public idempotency digests.
+# Each tuple is constrained to one file, one scanner rule and exact values.
+# See .agents/evidence/security-v2/idempotency-scan-analysis.json.
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-prechange-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-prechange-20261016/all/results\.json$''']
+regexes = [
+  '''^0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061$''',
+  '''^3b32cbc8cd424358601f33a4e72085d2e38cbbae5518d8f4b3a04706f336632d$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^e45006e145317696713a4d77303529a76b37e12756fe677805a207d564fd921d$''',
+  '''^f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-prechange-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-prechange-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-20261016/all/results\.json$''']
+regexes = [
+  '''^2ce93c455ae333115fb7602e1c36684e4f2c5a17f12160d47c5e82b9a0387509$''',
+  '''^410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f$''',
+  '''^ea6566ab950df40d86fef62d8bb166ea77f9f84dd7988a5cb5280855739eb71a$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-fixed-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/results\.json$''']
+regexes = [
+  '''^24cb2bf4b4746b0fa672be72b78c1581bf856772e14f0df2ee893a5b73ec45b2$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a$''',
+  '''^d7cb299a6f9f0c2b80fb175c46c752d503d2d327a7fcbe4dc523644454b7aadb$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-fixed-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-checkpoint-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-checkpoint-20261016/all/results\.json$''']
+regexes = [
+  '''^3c0dde816f8499c78da12902e16184c341f9764354018d166f24b45400d1e311$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7$''',
+  '''^d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa$''',
+  '''^ffb39997fa02d93f9a9a7dfaf053bf3ac09c62e8541d7691865a1aa1792e44cc$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-checkpoint-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-checkpoint-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7$''',
+  '''^d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa$''',
+]

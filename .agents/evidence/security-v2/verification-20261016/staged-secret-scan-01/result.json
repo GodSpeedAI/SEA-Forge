@@ -1,0 +1,17 @@
+{
+  "command": [
+    "gitleaks",
+    "git",
+    "--staged",
+    "--config",
+    ".gitleaks.toml",
+    "--no-banner",
+    "--redact",
+    "."
+  ],
+  "started_at": "2026-10-16T20:07:10.773746+00:00",
+  "finished_at": "2026-10-16T20:07:11.216791+00:00",
+  "exit_code": 0,
+  "log_sha256": "7c2590a34334549bba3bd47bbd40b3a0900e9ce82ec7581a6d29c63012e22a67",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

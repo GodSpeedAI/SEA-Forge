@@ -1,0 +1,22 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "-p",
+    "sea-forge-server",
+    "--test",
+    "file_effect_observation",
+    "--test",
+    "convergence_t05_authorized_execution",
+    "--test",
+    "convergence_t06_operational_settlement",
+    "--test",
+    "sfwp_delegated_identity"
+  ],
+  "started_at": "2026-10-16T19:57:17.492863+00:00",
+  "finished_at": "2026-10-16T19:57:47.878907+00:00",
+  "exit_code": 0,
+  "log_sha256": "5d9defe6a1c119554594a6106a10547ffc26b3271d8839a9a3f61c5b94c0877a",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}
