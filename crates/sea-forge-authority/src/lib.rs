@@ -1285,6 +1285,7 @@ impl AuthorityPolicyBundle {
                     | "cognate_capability"
                     | "world_transition"
                     | "mcp_tool_call"
+                    | "database_session"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -1323,6 +1324,28 @@ impl AuthorityPolicyBundle {
                     .any(|dimension| rule.boundary_constraints.contains_key(*dimension))
             {
                 return Err(schema("MCP boundaries apply only to mcp_tool_call".into()));
+            }
+            if rule.operation_kind == "database_session"
+                && ["db_resource", "db_scope"].iter().any(|dimension| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| {
+                            values.is_empty() || values.iter().any(String::is_empty)
+                        })
+                })
+            {
+                return Err(schema(
+                    "database_session requires explicit resource and scope boundaries".into(),
+                ));
+            }
+            if rule.operation_kind != "database_session"
+                && ["db_resource", "db_scope"]
+                    .iter()
+                    .any(|dimension| rule.boundary_constraints.contains_key(*dimension))
+            {
+                return Err(schema(
+                    "database boundaries apply only to database_session".into(),
+                ));
             }
             if rule.operation_kind == "execute_command"
                 && rule.verdict == Verdict::Allow
@@ -1423,6 +1446,8 @@ impl AuthorityPolicyBundle {
                         | "reference"
                         | "mcp_server"
                         | "mcp_tool"
+                        | "db_resource"
+                        | "db_scope"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
@@ -2958,6 +2983,28 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                             _ => false,
                         }
                     }
+                    "database_session" => {
+                        match (
+                            parameter_str(parameters, "resource"),
+                            parameter_str(parameters, "scope"),
+                        ) {
+                            (Some(resource), Some(scope)) => {
+                                serde_json::from_str::<[String; 2]>(resource_id)
+                                    .is_ok_and(|id| id[0] == resource && id[1] == scope)
+                                    && [("db_resource", resource), ("db_scope", scope)].iter().all(
+                                        |(dimension, value)| {
+                                            rule.boundary_constraints.get(*dimension).is_some_and(
+                                                |values| {
+                                                    values.iter().any(|allowed| allowed == value)
+                                                },
+                                            )
+                                        },
+                                    )
+                                    && parameters.get("workload_uid").is_some_and(Value::is_u64)
+                            }
+                            _ => false,
+                        }
+                    }
                     "transition_artifact_stage" => matches_transition_parameters(rule, parameters),
                     "attest_artifact_identity" => {
                         matches_attestation_parameters(rule, parameters, actor)
@@ -3380,6 +3427,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "cognate_capability",
                 "world_transition",
                 "mcp_tool_call",
+                "database_session",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

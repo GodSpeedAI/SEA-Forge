@@ -50,6 +50,7 @@ pub mod governed_work_ingress;
 pub mod identity;
 pub mod mcp;
 mod mcp_protocol;
+pub mod postgres;
 pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;

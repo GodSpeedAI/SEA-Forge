@@ -446,6 +446,7 @@ pub async fn execute_with_permission_broker(
             criteria_ref.clone(),
             &sandbox_class,
             &config.mcp_servers,
+            &config.postgres,
             &actor,
         )
         .await?;
@@ -1207,6 +1208,7 @@ async fn run_acp_episode(
     criteria_ref: sea_forge_ledger::CommittedRecordRef,
     sandbox_class: &str,
     mcp_servers: &[crate::mcp::McpServerConfig],
+    postgres: &[crate::postgres::PostgresResourceConfig],
     actor: &Actor,
 ) -> Result<
     (
@@ -1247,7 +1249,7 @@ async fn run_acp_episode(
     // Brokered MCP needs a kernel-distinct workload identity to bind the
     // broker socket to; shared-UID classes would let the agent reach the
     // upstream's resources directly.
-    if !mcp_servers.is_empty() && sandbox_class != "isolated" {
+    if (!mcp_servers.is_empty() || !postgres.is_empty()) && sandbox_class != "isolated" {
         return Err(ForgeError::Config {
             class: "mcp_requires_isolated_workload",
             path: root.join("server.yaml"),
@@ -1261,6 +1263,21 @@ async fn run_acp_episode(
     let mut workload_identity = None;
     #[cfg(target_os = "linux")]
     let mut mcp_listeners: Vec<crate::mcp::McpListenerGuard> = Vec::new();
+    #[cfg(target_os = "linux")]
+    let mut db_sessions: Vec<(
+        crate::postgres::PostgresBroker,
+        crate::postgres::DatabaseSession,
+    )> = Vec::new();
+    // Database session issuance/revocation evidence, only when configured.
+    let control_ledger = if postgres.is_empty() {
+        None
+    } else {
+        Some(LedgerStream::open(
+            root,
+            format!("dbsessions-{run}"),
+            "sea-forge-control-plane",
+        )?)
+    };
     let session = match sandbox_class {
         "local" => AcpSession::spawn(spawn)
             .map(|(session, _)| session)
@@ -1377,13 +1394,52 @@ async fn run_acp_episode(
                 artifacts_root: artifacts,
                 network: sea_forge_sandbox::NetworkPosture::Denied,
             };
+            let mut workload_env = spawn.env.clone();
+            if let Some(control_ledger) = control_ledger.as_ref() {
+                let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+                for resource in postgres {
+                    let broker = crate::postgres::PostgresBroker::new(resource.clone()).map_err(
+                        |error| ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: error.to_string(),
+                        },
+                    )?;
+                    for scope in broker.offered_scopes().to_vec() {
+                        let issued = broker
+                            .issue(
+                                &engine,
+                                bundle,
+                                actor,
+                                control_ledger,
+                                run,
+                                &workspace,
+                                &scope,
+                                identity.host_uid,
+                            )
+                            .map_err(|error| ForgeError::Config {
+                                class: "database_session_error",
+                                path: root.join("server.yaml"),
+                                message: error.to_string(),
+                            })?;
+                        if let Some(session) = issued {
+                            workload_env.push((broker.env_key(&scope), session.conninfo()));
+                            db_sessions.push((
+                                crate::postgres::PostgresBroker::new(resource.clone())
+                                    .map_err(|error| ForgeError::Internal(error.to_string()))?,
+                                session,
+                            ));
+                        }
+                    }
+                }
+            }
             let child = workload::spawn_interactive(
                 &identity,
                 &helper,
                 &confinement,
                 &spawn.argv,
                 &workspace,
-                &spawn.env,
+                &workload_env,
             )
             .map_err(isolation_error)?;
             workload_identity = Some(identity);
@@ -1471,9 +1527,25 @@ async fn run_acp_episode(
             Vec::new()
         }
     };
-    // Stop the brokers (killing their upstreams), then release the slot.
+    // Stop the brokers (killing their upstreams), revoke database sessions
+    // (ending live backends), then release the slot.
     #[cfg(target_os = "linux")]
     drop(mcp_listeners);
+    #[cfg(target_os = "linux")]
+    for (broker, session) in &db_sessions {
+        let revoked = control_ledger
+            .as_ref()
+            .ok_or_else(|| "database ledger missing".to_string())
+            .and_then(|ledger| {
+                broker
+                    .revoke(session, ledger, run, "episode_ended")
+                    .map_err(|error| error.to_string())
+            });
+        if revoked.is_err() {
+            outcome.termination = DelegationTermination::EndpointError;
+            outcome.error_subcode = Some("database_revocation_failed".into());
+        }
+    }
     #[cfg(target_os = "linux")]
     drop(workload_identity);
     Ok((outcome, continuation_key, harvested))

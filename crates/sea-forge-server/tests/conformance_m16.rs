@@ -141,6 +141,41 @@ fn exercise_brokered_mcp(servers: &Value) {
     .unwrap();
 }
 
+/// Inside the isolated ACP child: use the issued workload-bound database
+/// session, then attempt a destructive statement. PostgreSQL decides.
+fn exercise_database_session() {
+    let conninfo = std::env::var("SEA_FORGE_PG_APP_DB_AUDIT_READ").unwrap();
+    let psql = |sql: &str| {
+        let out = std::process::Command::new("psql")
+            .args([
+                conninfo.as_str(),
+                "-w",
+                "-X",
+                "-At",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-v",
+                "VERBOSITY=sqlstate",
+                "-c",
+                sql,
+            ])
+            .output()
+            .unwrap();
+        format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout).trim(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        )
+    };
+    let results = json!({
+        "read": psql("SELECT count(*) FROM audit_log"),
+        "delete": psql("DELETE FROM audit_log"),
+        "whoami": psql("SELECT current_user"),
+        "write_scope_offered": std::env::var_os("SEA_FORGE_PG_APP_DB_AUDIT_WRITE").is_some(),
+    });
+    std::fs::write("pg-results.json", serde_json::to_vec(&results).unwrap()).unwrap();
+}
+
 /// Scripted ACP child used by the portable M16 tests. The parent process
 /// launches this same test binary with `--exact acp_fixture_child --nocapture`.
 #[test]
@@ -182,6 +217,9 @@ fn acp_fixture_child() {
                 assert!(message["params"]["mcpServers"].is_array());
                 if mode.contains("mcp") {
                     exercise_brokered_mcp(&message["params"]["mcpServers"]);
+                }
+                if mode.contains("pg") {
+                    exercise_database_session();
                 }
                 write_rpc(json!({
                     "jsonrpc": "2.0",
@@ -903,6 +941,97 @@ async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream(
         .as_str()
         .unwrap()
         .ends_with("sea-forge-mcp-connect"));
+}
+
+#[path = "support/pg_cluster.rs"]
+mod pg_cluster;
+
+/// SEC-05/SEC-08 on the production ACP path: an isolated agent receives only
+/// the database scope authority allows, as its own native role; PostgreSQL
+/// refuses the destructive statement; the role is revoked when the episode
+/// ends.
+#[tokio::test]
+#[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
+async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
+    use std::os::unix::fs::PermissionsExt;
+    let Some((install, _pool, _helper, _state)) = pg_cluster::prerequisites() else {
+        return;
+    };
+    let cluster = pg_cluster::start_cluster(&install);
+    let broker = sea_forge_server::postgres::PostgresBroker::new(cluster.config.clone()).unwrap();
+    let before = pg_cluster::digest(&broker);
+    let root = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o711)).unwrap();
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nrules:\n  - name: allow-isolated-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n    sandbox_class: isolated\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n  - name: audit-reader-session\n    verdict: allow\n    actor_role: operator\n    operation_kind: database_session\n    boundary_constraints:\n      db_resource: [app-db]\n      db_scope: [audit-read]\n",
+    )
+    .unwrap();
+    let secret = root.path().join("launcher.secret");
+    std::fs::write(&secret, "SECRET-LAUNCHER").unwrap();
+    std::fs::set_permissions(&secret, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let mut config = server_config(root.path(), "read", "isolated_pg");
+    config.agent.endpoints[0].env.extend([
+        format!("FIXTURE_LAUNCHER_SECRET={}", secret.display()),
+        format!("PATH={}:/usr/bin:/bin", install.join("bin").display()),
+        format!("LD_LIBRARY_PATH={}", install.join("lib").display()),
+    ]);
+    let mut resource = cluster.config.clone();
+    resource.offer = vec!["audit-read".into(), "audit-write".into()];
+    config.postgres = vec![resource];
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    let results: Value = serde_json::from_slice(
+        &std::fs::read(
+            root.path()
+                .join("runs")
+                .join(&run)
+                .join("workspace/pg-results.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(results["read"], "3", "{results}");
+    assert!(
+        results["delete"].as_str().unwrap().contains("42501"),
+        "{results}"
+    );
+    assert!(
+        results["whoami"].as_str().unwrap().starts_with("sfw_"),
+        "{results}"
+    );
+    assert_eq!(
+        results["write_scope_offered"], false,
+        "unauthorized scope issued"
+    );
+    assert_eq!(pg_cluster::digest(&broker), before);
+    // Revoked at episode end: no workload role survives.
+    assert_eq!(
+        broker
+            .admin_sql("SELECT count(*) FROM pg_roles WHERE rolname LIKE 'sfw_%'")
+            .unwrap(),
+        "0"
+    );
+    let ledger = LedgerStream::open(
+        root.path(),
+        format!("dbsessions-{run}"),
+        "sea-forge-control-plane",
+    )
+    .unwrap();
+    let kinds: Vec<String> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .map(|e| e.record_kind)
+        .collect();
+    for kind in [
+        "database_session_issued",
+        "database_session_refused",
+        "database_session_revoked",
+    ] {
+        assert!(kinds.iter().any(|k| k == kind), "missing {kind}: {kinds:?}");
+    }
 }
 
 /// Sentinel-aware transcript redaction on the ACP path: plaintext secrets in

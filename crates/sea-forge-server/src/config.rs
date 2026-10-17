@@ -227,6 +227,10 @@ pub struct ServerConfig {
     /// default: agents get no MCP servers.
     #[serde(default)]
     pub mcp_servers: Vec<crate::mcp::McpServerConfig>,
+    /// PostgreSQL resources whose workload-bound sessions isolated agents may
+    /// receive (authority decides each scope). Empty by default.
+    #[serde(default)]
+    pub postgres: Vec<crate::postgres::PostgresResourceConfig>,
 }
 
 /// The socket file name inside a cell root. Every surface (server, CLI,
@@ -317,6 +321,7 @@ impl Default for ServerConfig {
             // Disabled by default: no CEP authority loop until an operator opts in.
             cep_authority: CepAuthorityConfig::default(),
             mcp_servers: Vec::new(),
+            postgres: Vec::new(),
         }
     }
 }
