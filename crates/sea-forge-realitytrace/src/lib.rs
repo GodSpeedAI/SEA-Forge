@@ -321,3 +321,138 @@ pub fn record_evidence(
     )
     .map_err(|refusal| TraceError::RealityTrace(format!("{refusal:?}")))
 }
+
+/// Evidence category of a SEA Forge security record. The categories never
+/// merge: a workload's request is a claim, the authority verdict a decision,
+/// what the broker did an enforcement act, what a trusted observer saw an
+/// observation, and the broker's closing record a settlement.
+pub fn record_category(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        EXPECTATION_KIND => "expectation",
+        "authority_decision" | "mcp_discovery_decision" => "decision",
+        "mcp_attempt" => "claim",
+        "mcp_forward_attempt"
+        | "mcp_peer_refused"
+        | "mcp_protocol_refusal"
+        | "mcp_session_revoked"
+        | "database_session_issued"
+        | "database_elevation_issued"
+        | "database_session_renewed"
+        | "database_session_refused"
+        | "database_session_revoked"
+        | "exposure_context_derived"
+        | "exposure_context_revoked" => "enforcement",
+        "exposure_observed" => "observation",
+        "mcp_settlement" => "settlement",
+        _ => return None,
+    })
+}
+
+/// A trusted observer's own artifact (an upstream's invocation log, a
+/// database catalog digest), attached to a trace by content digest. The
+/// observer, not the workload or the broker, produced it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NativeObservation {
+    pub observer: String,
+    pub source: String,
+    pub bytes: Vec<u8>,
+}
+
+/// Project every brokered attempt (successful and failed) in `entries` into
+/// the security-trace contract for an auditor. Each record keeps its
+/// category, ledger reference and hash, and its causal parents; each
+/// attempt (`mcp_attempt`, session issuance or refusal, exposure
+/// observation, peer or protocol refusal) lists the records that follow from
+/// it. An MCP attempt with no settlement is reported `unresolved`, never
+/// inferred. Native observations travel with their SHA-256 so the auditor
+/// can check them against the observer's original bytes.
+pub fn project_attempts(entries: &[LedgerEntry], native: &[NativeObservation]) -> Value {
+    use sha2::{Digest, Sha256};
+    let by_ulid: std::collections::BTreeMap<&str, &LedgerEntry> =
+        entries.iter().map(|e| (e.entry_ulid.as_str(), e)).collect();
+    let mut unresolved = Vec::new();
+    let records: Vec<Value> = entries
+        .iter()
+        .map(|entry| {
+            let category = record_category(&entry.record_kind);
+            if category.is_none() {
+                unresolved.push(format!("uncategorized:{}", entry.record_kind));
+            }
+            json!({
+                "category": category,
+                "ledger": entry_ref(entry),
+                "parents": entry.authority_refs,
+                "record": entry.payload,
+            })
+        })
+        .collect();
+    let roots = [
+        "mcp_attempt",
+        "mcp_peer_refused",
+        "mcp_protocol_refusal",
+        "database_session_issued",
+        "database_session_refused",
+        "database_elevation_issued",
+        "exposure_observed",
+    ];
+    let attempts: Vec<Value> = entries
+        .iter()
+        .filter(|e| roots.contains(&e.record_kind.as_str()))
+        .map(|root| {
+            // Everything caused (transitively) by the root, in ledger order.
+            let mut chain = vec![root.entry_ulid.as_str()];
+            for entry in entries {
+                if entry
+                    .authority_refs
+                    .iter()
+                    .any(|parent| chain.contains(&parent.as_str()))
+                    && !chain.contains(&entry.entry_ulid.as_str())
+                {
+                    chain.push(entry.entry_ulid.as_str());
+                }
+            }
+            let decision = root
+                .authority_refs
+                .iter()
+                .filter_map(|r| by_ulid.get(r.as_str()))
+                .find(|e| record_category(&e.record_kind) == Some("decision"))
+                .map(|e| json!({"entry_ulid": e.entry_ulid, "verdict": e.payload["verdict"]}));
+            let settlement = chain
+                .iter()
+                .filter_map(|u| by_ulid.get(u))
+                .find(|e| e.record_kind == "mcp_settlement")
+                .map(|e| {
+                    json!({"entry_ulid": e.entry_ulid, "status": e.payload["status"],
+                    "forwarded": e.payload["forwarded"]})
+                });
+            if root.record_kind == "mcp_attempt" && settlement.is_none() {
+                unresolved.push(format!("unsettled:{}", root.entry_ulid));
+            }
+            json!({
+                "root": {"kind": root.record_kind, "entry_ulid": root.entry_ulid},
+                "decision": decision,
+                "chain": chain,
+                "settlement": settlement,
+            })
+        })
+        .collect();
+    let native: Vec<Value> = native
+        .iter()
+        .map(|o| {
+            json!({
+                "category": "native_observation",
+                "observer": o.observer,
+                "source": o.source,
+                "sha256": format!("sha256:{}", hex::encode(Sha256::digest(&o.bytes))),
+                "bytes": o.bytes.len(),
+            })
+        })
+        .collect();
+    json!({
+        "schema": TRACE_SCHEMA,
+        "records": records,
+        "attempts": attempts,
+        "native_observations": native,
+        "unresolved": unresolved,
+    })
+}
