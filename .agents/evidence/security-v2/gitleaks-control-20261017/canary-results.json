@@ -1,0 +1,235 @@
+{
+ "canaries": [
+  {
+   "id": "P1",
+   "description": "positive control: exact allowed value, allowed path",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C1",
+   "description": "allowed path, field shape, NEW 64-hex value",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C2",
+   "description": "allowed path, credential-like api_key",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C3",
+   "description": "allowed value moved to another allowed tuple's path",
+   "path": ".agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace.json"
+  },
+  {
+   "id": "C4",
+   "description": "allowed value in an unlisted path",
+   "path": ".agents/evidence/security-v2/other-20261017/x.json"
+  },
+  {
+   "id": "C5",
+   "description": "allowed value altered: uppercase",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C6",
+   "description": "allowed value altered: extended to 66 hex",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C7",
+   "description": "allowed value altered: different field name",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C8",
+   "description": "credential on the same line as an allowed digest",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  },
+  {
+   "id": "C9",
+   "description": "AWS access key id in allowed path",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/rust-A.log"
+  },
+  {
+   "id": "C10",
+   "description": "GitHub PAT in allowed path",
+   "path": ".agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace.json"
+  },
+  {
+   "id": "C11",
+   "description": "PEM private key in allowed path",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/rust-A.log"
+  },
+  {
+   "id": "C12",
+   "description": "Slack bot token in allowed path",
+   "path": ".agents/evidence/security-v1/continuation-20261017/all/results.json"
+  }
+ ],
+ "configs": {
+  "committed": {
+   "exit": 1,
+   "detected": {
+    "P1": [
+     "generic-api-key"
+    ],
+    "C1": [
+     "generic-api-key"
+    ],
+    "C2": [
+     "generic-api-key"
+    ],
+    "C3": [
+     "generic-api-key"
+    ],
+    "C4": [
+     "generic-api-key"
+    ],
+    "C5": [
+     "generic-api-key"
+    ],
+    "C6": [
+     "generic-api-key"
+    ],
+    "C7": [
+     "generic-api-key"
+    ],
+    "C8": [
+     "generic-api-key"
+    ],
+    "C9": [
+     "aws-access-token"
+    ],
+    "C10": [
+     "github-pat"
+    ],
+    "C11": [
+     "private-key"
+    ],
+    "C12": [
+     "slack-bot-token"
+    ]
+   }
+  },
+  "committed-repinned": {
+   "exit": 1,
+   "detected": {
+    "P1": [],
+    "C1": [
+     "generic-api-key"
+    ],
+    "C2": [
+     "generic-api-key"
+    ],
+    "C3": [
+     "generic-api-key"
+    ],
+    "C4": [
+     "generic-api-key"
+    ],
+    "C5": [
+     "generic-api-key"
+    ],
+    "C6": [
+     "generic-api-key"
+    ],
+    "C7": [],
+    "C8": [
+     "generic-api-key"
+    ],
+    "C9": [
+     "aws-access-token"
+    ],
+    "C10": [
+     "github-pat"
+    ],
+    "C11": [
+     "private-key"
+    ],
+    "C12": [
+     "slack-bot-token"
+    ]
+   }
+  },
+  "previous-line-regex-repinned": {
+   "exit": 1,
+   "detected": {
+    "P1": [],
+    "C1": [],
+    "C2": [
+     "generic-api-key"
+    ],
+    "C3": [],
+    "C4": [
+     "generic-api-key"
+    ],
+    "C5": [
+     "generic-api-key"
+    ],
+    "C6": [
+     "generic-api-key"
+    ],
+    "C7": [
+     "generic-api-key"
+    ],
+    "C8": [],
+    "C9": [
+     "aws-access-token"
+    ],
+    "C10": [
+     "github-pat"
+    ],
+    "C11": [
+     "private-key"
+    ],
+    "C12": [
+     "slack-bot-token"
+    ]
+   }
+  },
+  "default-no-allowlist": {
+   "exit": 1,
+   "detected": {
+    "P1": [
+     "generic-api-key"
+    ],
+    "C1": [
+     "generic-api-key"
+    ],
+    "C2": [
+     "generic-api-key"
+    ],
+    "C3": [
+     "generic-api-key"
+    ],
+    "C4": [
+     "generic-api-key"
+    ],
+    "C5": [
+     "generic-api-key"
+    ],
+    "C6": [
+     "generic-api-key"
+    ],
+    "C7": [
+     "generic-api-key"
+    ],
+    "C8": [
+     "generic-api-key"
+    ],
+    "C9": [
+     "aws-access-token"
+    ],
+    "C10": [
+     "github-pat"
+    ],
+    "C11": [
+     "private-key"
+    ],
+    "C12": [
+     "slack-bot-token"
+    ]
+   }
+  }
+ }
+}

@@ -297,20 +297,53 @@ regexes = [
   '''^ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396$''',
 ]
 
-# Security continuation evidence (2026-10-17): the generic-api-key matches are
-# `idempotency_key` fields holding 64-hex SHA-256 digests of synthetic test
-# identifiers (frozen v1 runner output and the SEC-12 RealityTrace bundle),
-# verified by masked inspection; no credential material. Every condition must
-# hold: these two commits, these paths, this rule, and a line whose match is
-# exactly an idempotency_key digest. Pending operator confirmation.
+# Security continuation evidence (2026-10-17): `idempotency_key` fields holding
+# content-derived SHA-256 digests (sha256("|event_type|canonical payload") or
+# sha256(case id)), every value recomputed from its public preimage; no
+# credential material. Provisionally retained by the operator 2026-10-17, conditional on
+# canary-verified exact scoping: one commit AND one file AND one rule AND exact values.
+# Analysis and canary results: .agents/evidence/security-v2/gitleaks-control-20261017/.
+
 [[allowlists]]
-description = "security continuation evidence: idempotency_key SHA-256 digests (2026-10-17)"
+description = "continuation 2026-10-17 recomputed idempotency digests: sec12-trace.json @ 7cdee13"
 condition = "AND"
-commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676", "7cdee134b2804defbf5a131b4434fa662f2da376"]
+commits = ["7cdee134b2804defbf5a131b4434fa662f2da376"]
 targetRules = ["generic-api-key"]
-regexTarget = "line"
-regexes = ['''"idempotency_key":\s*"[0-9a-f]{64}"''']
-paths = [
-  '''^\.agents/evidence/security-v1/continuation-20261017/all/(results\.json|rust-A\.log)$''',
-  '''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''',
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''']
+regexes = [
+  '''^1b322c8467625eaa323065d4dddc4bb057c3cc452e3871355c30881b17897205$''',
+  '''^483ced183ad98a4025a331887b4487ec5a5d7e0b0e8ec35a60efd92925741032$''',
+  '''^a40d34cf3bf1d343368c94ed75ddf8450cd5c2399300738c35a4133f6752f9e9$''',
+  '''^cf635f82893e9c3195c4a6020a703008d19a42208111b5740f9b1db2a63b1e55$''',
+]
+
+[[allowlists]]
+description = "continuation 2026-10-17 recomputed idempotency digests: results.json @ c112482"
+condition = "AND"
+commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676"]
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/results\.json$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
+  '''^dc81f0712a185286079d08854f23a70bf81fea8b31ad9dd765272502861cf22d$''',
+  '''^f4b4057f37b53f7fa2e7e0a3b2895b8ea70f639be285d624131b954fbdd98755$''',
+]
+
+[[allowlists]]
+description = "continuation 2026-10-17 recomputed idempotency digests: rust-A.log @ c112482"
+condition = "AND"
+commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676"]
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
 ]
