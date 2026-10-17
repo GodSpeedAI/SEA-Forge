@@ -42,6 +42,10 @@ pub struct PostgresResourceConfig {
     /// each one. Issued sessions arrive as `SEA_FORGE_PG_<RESOURCE>_<SCOPE>`.
     #[serde(default)]
     pub offer: Vec<String>,
+    /// Scope -> exposure label recorded on the agent's context when a session
+    /// for that scope is issued (the broker cannot see query results).
+    #[serde(default)]
+    pub exposure: BTreeMap<String, String>,
 }
 
 fn default_ttl() -> u64 {
@@ -147,6 +151,10 @@ impl PostgresBroker {
 
     pub fn name(&self) -> &str {
         &self.config.name
+    }
+
+    pub fn scope_exposure(&self, scope: &str) -> Option<&str> {
+        self.config.exposure.get(scope).map(String::as_str)
     }
 
     pub fn offered_scopes(&self) -> &[String] {

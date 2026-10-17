@@ -1379,6 +1379,9 @@ async fn run_acp_episode(
                             bundle.clone(),
                             actor.clone(),
                             server.clone(),
+                            // Exposure follows the case across items and
+                            // resumed runs (over-restricts rather than leaks).
+                            Some(format!("case:{case}")),
                         )
                         .map_err(|error| ForgeError::io("start MCP broker", error))?,
                     );
@@ -1424,6 +1427,21 @@ async fn run_acp_episode(
                                 message: error.to_string(),
                             })?;
                         if let Some(session) = issued {
+                            // Direct database access exposes whatever the
+                            // scope can read; label the case at grant time.
+                            if let Some(label) = broker.scope_exposure(&scope) {
+                                crate::exposure::ExposureRegistry::open(
+                                    root,
+                                    "sea-forge-control-plane",
+                                )?
+                                .record(
+                                    &format!("case:{case}"),
+                                    label,
+                                    &format!("postgres:{}/{scope}", broker.name()),
+                                    &session.decision_id,
+                                )
+                                .map_err(|error| ForgeError::Internal(error.to_string()))?;
+                            }
                             workload_env.push((broker.env_key(&scope), session.conninfo()));
                             // Live access ends at expiry even mid-episode.
                             let reaper = broker.expiry_reaper(

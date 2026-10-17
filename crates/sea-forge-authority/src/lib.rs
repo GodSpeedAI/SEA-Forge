@@ -1448,6 +1448,7 @@ impl AuthorityPolicyBundle {
                         | "mcp_tool"
                         | "db_resource"
                         | "db_scope"
+                        | "permitted_exposure"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
@@ -2964,6 +2965,7 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
             parameters,
         } => {
             rule.operation_kind == *resource_type
+                && exposure_permitted(rule, parameters)
                 && match resource_type.as_str() {
                     "mcp_tool_call" => {
                         let server = parameter_str(parameters, "server");
@@ -3056,6 +3058,25 @@ fn matches_approval_resolution_parameters(parameters: &Value, actor: &Actor) -> 
         && required_roles.is_some_and(|roles| {
             roles.is_empty() || role.as_deref().is_some_and(|role| roles.contains(&role))
         })
+}
+
+/// SEC-09/SEC-11: an action taken from an execution context that has
+/// received sensitive plaintext carries that context's exposure labels. A
+/// rule matches it only when it explicitly permits every label, so exposed
+/// contexts fall to default deny for any destination not authorized for the
+/// data they hold. Malformed labels never match.
+fn exposure_permitted(rule: &PolicyRule, parameters: &Value) -> bool {
+    match parameters.get("exposure") {
+        None => true,
+        Some(Value::Array(labels)) => labels.iter().all(|label| {
+            label.as_str().is_some_and(|label| {
+                rule.boundary_constraints
+                    .get("permitted_exposure")
+                    .is_some_and(|allowed| allowed.iter().any(|a| a == label))
+            })
+        }),
+        Some(_) => false,
+    }
 }
 
 fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {

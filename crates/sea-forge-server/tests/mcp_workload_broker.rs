@@ -68,7 +68,9 @@ fn start(fx: &Fixture, uid: u32) -> sea_forge_server::mcp::McpListenerGuard {
                 fx.observer.display().to_string(),
             )]
             .into(),
+            classify: Default::default(),
         },
+        None,
     )
     .unwrap()
 }

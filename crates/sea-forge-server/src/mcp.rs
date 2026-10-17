@@ -32,6 +32,12 @@ struct Config {
     upstream_argv: Vec<String>,
     #[serde(default)]
     upstream_env: BTreeMap<String, String>,
+    /// Execution context whose exposure state this session reads and feeds.
+    #[serde(default)]
+    context: Option<String>,
+    /// Tools whose results are sensitive plaintext: tool -> exposure label.
+    #[serde(default)]
+    classify: BTreeMap<String, String>,
 }
 
 fn digest(value: &Value) -> String {
@@ -51,6 +57,7 @@ struct Broker {
     sequence: usize,
     initialized: bool,
     ready: bool,
+    exposure: Option<crate::exposure::ExposureRegistry>,
     _child: Child,
     input: ChildStdin,
     output: BufReader<ChildStdout>,
@@ -87,6 +94,13 @@ impl Broker {
             .stderr(Stdio::null())
             .kill_on_drop(true)
             .spawn()?;
+        let exposure = match &config.context {
+            Some(_) => Some(crate::exposure::ExposureRegistry::open(
+                &config.root,
+                "sea-forge-mcp-broker",
+            )?),
+            None => None,
+        };
         let input = child.stdin.take().ok_or("upstream stdin unavailable")?;
         let output = BufReader::new(child.stdout.take().ok_or("upstream stdout unavailable")?);
         Ok(Self {
@@ -98,19 +112,42 @@ impl Broker {
             sequence: 0,
             initialized: false,
             ready: false,
+            exposure,
             _child: child,
             input,
             output,
         })
     }
 
-    fn action(&self, name: &str, request: &Value) -> AuthorityAction {
+    /// Exposure labels of this session's execution context (empty without one).
+    fn exposure_labels(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        match (&self.exposure, &self.config.context) {
+            (Some(registry), Some(context)) => registry.labels(context),
+            _ => Ok(Vec::new()),
+        }
+    }
+
+    fn context_revoked(&self) -> Result<bool, Box<dyn std::error::Error>> {
+        match (&self.exposure, &self.config.context) {
+            (Some(registry), Some(context)) => registry.revoked(context),
+            _ => Ok(false),
+        }
+    }
+
+    fn action(&self, name: &str, request: &Value, exposure: &[String]) -> AuthorityAction {
+        let mut parameters =
+            json!({"server":self.config.server,"tool":name,"request_sha256":digest(request)});
+        // A context-bound session always states its exposure, even when empty,
+        // so destination rules are evaluated against it.
+        if self.config.context.is_some() {
+            parameters["exposure"] = json!(exposure);
+        }
         AuthorityAction::Reserved {
             resource_type: "mcp_tool_call".into(),
             resource_id: json!([self.config.server, name]).to_string(),
             // Hash the complete canonical request instead of recording
             // potentially sensitive arguments in authority/evidence ledgers.
-            parameters: json!({"server":self.config.server,"tool":name,"request_sha256":digest(request)}),
+            parameters,
         }
     }
 
@@ -183,7 +220,17 @@ impl Broker {
         let name = request.value["params"]["name"]
             .as_str()
             .ok_or("missing tool")?;
-        let action = self.action(name, &request.value);
+        if self.context_revoked()? {
+            self.ledger.commit_typed("mcp_settlement", vec![self.session.clone()],
+                &json!({"tool":name,"status":"rejected","forwarded":false,"reason":"context_revoked"}), vec![])?;
+            return Ok(refusal(
+                request.id.as_ref(),
+                -32003,
+                "execution context revoked",
+            ));
+        }
+        let exposure = self.exposure_labels()?;
+        let action = self.action(name, &request.value, &exposure);
         let decision = self.evaluate(&action)?;
         let committed = self.ledger.commit_typed(
             "authority_decision",
@@ -206,7 +253,7 @@ impl Broker {
         let grant = self.engine.grant(&decision, &committed, &action, None)?;
         // The same parsed request is hashed here and serialized to upstream.
         // No attacker bytes or independently reinterpreted name are forwarded.
-        let forwarded_action = self.action(name, &request.value);
+        let forwarded_action = self.action(name, &request.value, &exposure);
         grant.authorize_with_controls(
             &forwarded_action,
             &self.session,
@@ -225,6 +272,20 @@ impl Broker {
             value.get("error").is_none()
                 && value.pointer("/result/isError") != Some(&Value::Bool(true))
         });
+        // Trusted exposure observation: this broker is forwarding the
+        // classified plaintext to the context right now.
+        if let (Ok(value), true, Some(label)) =
+            (&response, accepted, self.config.classify.get(name))
+        {
+            if let (Some(registry), Some(context)) = (&self.exposure, &self.config.context) {
+                registry.record(
+                    context,
+                    label,
+                    &format!("mcp:{}/{name}", self.config.server),
+                    &digest(value),
+                )?;
+            }
+        }
         self.ledger.commit_typed("mcp_settlement", vec![self.session.clone()],
             &json!({"decision_id":decision.decision_id,"status":if accepted{"accepted"}else{"rejected"},"forwarded":true,
                 "response_sha256":response.as_ref().ok().map(digest),"observation":"upstream_response_only"}), vec![forward.entry_ulid().into()])?;
@@ -252,6 +313,10 @@ impl Broker {
             "ping" => json!({"jsonrpc":"2.0","id":id,"result":{}}),
             "tools/call" if self.ready => self.tool_call(request).await?,
             "tools/list" if self.ready => {
+                if self.context_revoked()? {
+                    return Ok(id.map(|_| refusal(id, -32003, "execution context revoked")));
+                }
+                let exposure = self.exposure_labels()?;
                 let mut response = self.exchange(request).await?;
                 if let Some(tools) = response
                     .pointer_mut("/result/tools")
@@ -263,7 +328,7 @@ impl Broker {
                             return Err("invalid upstream tool descriptor".into());
                         };
                         let probe = json!({"jsonrpc":"2.0","id":0,"method":"tools/call","params":{"name":name,"arguments":{}}});
-                        let action = self.action(name, &probe);
+                        let action = self.action(name, &probe, &exposure);
                         let decision = self.evaluate(&action)?;
                         self.ledger.commit_typed(
                             "mcp_discovery_decision",
@@ -360,6 +425,10 @@ pub struct McpServerConfig {
     pub argv: Vec<String>,
     #[serde(default)]
     pub env: BTreeMap<String, String>,
+    /// Tools returning sensitive plaintext: tool -> exposure label recorded
+    /// on the calling context when the broker forwards a result.
+    #[serde(default)]
+    pub classify: BTreeMap<String, String>,
 }
 
 /// Stops a workload's broker (and kills an open session's upstream) on drop.
@@ -426,6 +495,7 @@ pub fn serve_workload(
     bundle: AuthorityPolicyBundle,
     actor: Actor,
     server: McpServerConfig,
+    context: Option<String>,
 ) -> std::io::Result<McpListenerGuard> {
     listener.set_nonblocking(true)?;
     let (stop_tx, mut stop) = tokio::sync::oneshot::channel::<()>();
@@ -452,6 +522,8 @@ pub fn serve_workload(
                     server: server.name.clone(),
                     upstream_argv: server.argv.clone(),
                     upstream_env: server.env.clone(),
+                    context: context.clone(),
+                    classify: server.classify.clone(),
                 };
                 loop {
                     let stream = tokio::select! {

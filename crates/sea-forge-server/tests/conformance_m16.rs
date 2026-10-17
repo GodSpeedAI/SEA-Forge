@@ -879,6 +879,7 @@ async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream(
             observer.display().to_string(),
         )]
         .into(),
+        classify: Default::default(),
     }];
     let case = case_id().unwrap();
     let (run, result) = execute_fixture(&config, &case).await;
@@ -978,6 +979,7 @@ async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
     ]);
     let mut resource = cluster.config.clone();
     resource.offer = vec!["audit-read".into(), "audit-write".into()];
+    resource.exposure = [("audit-read".to_string(), "confidential".to_string())].into();
     config.postgres = vec![resource];
     let case = case_id().unwrap();
     let (run, result) = execute_fixture(&config, &case).await;
@@ -1025,6 +1027,13 @@ async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
         .into_iter()
         .map(|e| e.record_kind)
         .collect();
+    // The case context is now exposed to what the issued scope can read.
+    let registry =
+        sea_forge_server::exposure::ExposureRegistry::open(root.path(), "auditor").unwrap();
+    assert_eq!(
+        registry.labels(&format!("case:{case}")).unwrap(),
+        ["confidential"]
+    );
     for kind in [
         "database_session_issued",
         "database_session_refused",

@@ -44,6 +44,7 @@ mod cep_authority;
 pub mod config;
 pub mod delegation;
 pub mod delegation_audit;
+pub mod exposure;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;

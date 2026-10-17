@@ -95,6 +95,7 @@ pub fn start_cluster(install: &Path) -> Cluster {
             ]),
             session_ttl_secs: 600,
             offer: vec![],
+            exposure: BTreeMap::new(),
         },
     };
     let init = cluster
