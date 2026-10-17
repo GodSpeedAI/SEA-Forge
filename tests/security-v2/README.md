@@ -51,3 +51,29 @@ Before any supplementary freeze, add executable evidence for every remaining
 obligation, obtain independent review, hash the complete suite and fixtures,
 and retain its separate full Git commit outside implementation write access.
 Mode-0600 files and caller-supplied actor names do not separate same-UID workloads.
+
+## 2026-10-17 candidates (not frozen; awaiting independent review)
+
+Run with real prerequisites; absent prerequisites report NOT-EXECUTABLE
+unless the matching `SEA_FORGE_REQUIRE_*` variable makes them fail:
+
+```sh
+export SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1 SEA_FORGE_REQUIRE_POSTGRES=1
+export SEA_FORGE_SECURITY_PG_INSTALL=$HOME/.pg0/installation/18.1.0  # pg0 PostgreSQL 18.1
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-sandbox --test workload_isolation
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-server --test conformance_m16 --test mcp_workload_broker \
+  --test postgres_broker --test exposure_flow
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-realitytrace --test sec12_trace
+```
+
+| File | Obligation exercised |
+| --- | --- |
+| `crates/sea-forge-sandbox/tests/workload_isolation.rs` | SEC-01/06 cross-workload isolation; shared-identity mutation control |
+| `crates/sea-forge-server/tests/conformance_m16.rs` (`t16_4b`–`t16_4d`) | isolated ACP launch, brokered MCP, workload-bound DB session on the production path |
+| `crates/sea-forge-server/tests/mcp_workload_broker.rs` | SEC-01/03/08 peer refusal, fresh sessions, shutdown, revocation barrier |
+| `crates/sea-forge-server/tests/postgres_broker.rs` | SEC-02/05/07/08 native privileges, revocation, TTL, renewal, JIT elevation |
+| `crates/sea-forge-server/tests/exposure_flow.rs` + `exposure_upstream.py` | SEC-09/10/11 exposure, injection, resumption, delegation, attribution |
+| `crates/sea-forge-realitytrace/tests/sec12_trace.rs` | SEC-12 RealityTrace trace and independent auditor reconstruction |
+
+Mutation controls run for each are recorded in the matching
+`.agents/evidence/security-v2/*-20261017/README.md`.

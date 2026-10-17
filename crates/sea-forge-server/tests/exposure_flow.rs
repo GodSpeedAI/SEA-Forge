@@ -231,6 +231,31 @@ fn exposure_restricts_destinations_across_injection_transforms_resumption_and_de
     );
     drop((child, clean, parent_guard, child_guard, clean_guard));
 
+    // Every brokered attempt is attributed to the kernel-verified workload
+    // and its context, next to the decision and the request digest.
+    let uid = std::fs::metadata("/proc/self").unwrap().uid();
+    let attempts: Vec<Value> = std::fs::read_dir(fx.root.join("ledgers"))
+        .unwrap()
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().starts_with("mcp-"))
+        .flat_map(|e| {
+            let lines = std::fs::read_to_string(e.path().join("entries.jsonl")).unwrap_or_default();
+            lines
+                .lines()
+                .map(|l| serde_json::from_str::<Value>(l).unwrap())
+                .collect::<Vec<_>>()
+        })
+        .filter(|e| e["record_kind"] == "mcp_attempt")
+        .map(|e| e["payload"].clone())
+        .collect();
+    assert!(!attempts.is_empty());
+    assert!(
+        attempts.iter().all(|a| a["workload_uid"] == uid
+            && a["context"].is_string()
+            && a["decision_id"].is_string()
+            && a["request_sha256"].is_string()),
+        "{attempts:?}"
+    );
     // Upstream observation: no sink ever received exposed data or calls
     // made from exposed contexts; only the two unexposed notifications ran.
     let calls = log(&fx);

@@ -53,6 +53,47 @@
       "path": "tests/security-v2/README.md",
       "sha256": "5ac8c0df146ddbaff0d75ad4b7cc75a83aff849185b04eb82f3681632c5dd846",
       "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-sandbox/tests/workload_isolation.rs",
+      "sha256": "2e1708737215a86b5a967c4602f26ce3b7e99d5b95659ecda1716794359b2d0e",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/conformance_m16.rs",
+      "sha256": "10b2d9eddfdd73ac4342ece71666922fab36a9dcade70b3b46f73aabd55d91ac",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/mcp_workload_broker.rs",
+      "sha256": "6e9fd5e3535bb00645c9493f468523f15a4bb340f976c5cf3c3dac096197a6ab",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/postgres_broker.rs",
+      "sha256": "3ec5e7d93511003e342f9d1ecfc594772e402b5ec0c7183873dcb07137b883dd",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/support/pg_cluster.rs",
+      "sha256": "6e823200fcc017e760abf9cab10b72962328d5deece7e8d5bc6b1f767d5c11e4",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/exposure_flow.rs",
+      "sha256": "c089469df379875145227b03e3a8a4002950fddd8811d12b66966638e090e8c7",
+      "mode": "0o644"
+    },
+    {
+      "path": "crates/sea-forge-realitytrace/tests/sec12_trace.rs",
+      "sha256": "c8967992c254c6387815ac53a2063a79413cbf0ea0b6cbefaf6c3cfacb7269dc",
+      "mode": "0o644"
+    },
+    {
+      "path": "tests/security-v2/exposure_upstream.py",
+      "sha256": "273bffedaa456c9956b88aa5c739f07948e454202ac57e46482882d6c3e8cb19",
+      "mode": "0o644"
     }
-  ]
+  ],
+  "review_required": "independent review of each file before freezing; do not freeze from the builder's own review"
 }

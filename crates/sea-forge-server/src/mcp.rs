@@ -38,6 +38,9 @@ struct Config {
     /// Tools whose results are sensitive plaintext: tool -> exposure label.
     #[serde(default)]
     classify: BTreeMap<String, String>,
+    /// Kernel-verified (`SO_PEERCRED`) host UID of the connected workload.
+    #[serde(default)]
+    workload_uid: Option<u32>,
 }
 
 fn digest(value: &Value) -> String {
@@ -240,7 +243,8 @@ impl Broker {
         )?;
         let decision_ref = committed.entry_ulid().to_owned();
         let attempt = self.ledger.commit_typed("mcp_attempt", vec![self.session.clone()],
-            &json!({"session":self.session,"decision_id":decision.decision_id,"request_sha256":digest(&request.value),"tool":name}), vec![decision_ref.clone()])?;
+            &json!({"session":self.session,"decision_id":decision.decision_id,"request_sha256":digest(&request.value),"tool":name,
+                "workload_uid":self.config.workload_uid,"context":self.config.context,"exposure":exposure}), vec![decision_ref.clone()])?;
         if decision.verdict != Verdict::Allow {
             self.ledger.commit_typed("mcp_settlement", vec![self.session.clone()],
                 &json!({"decision_id":decision.decision_id,"status":"rejected","forwarded":false,"reason":"authority_not_granted"}), vec![attempt.entry_ulid().into()])?;
@@ -288,6 +292,7 @@ impl Broker {
         }
         self.ledger.commit_typed("mcp_settlement", vec![self.session.clone()],
             &json!({"decision_id":decision.decision_id,"status":if accepted{"accepted"}else{"rejected"},"forwarded":true,
+                "workload_uid":self.config.workload_uid,"context":self.config.context,
                 "response_sha256":response.as_ref().ok().map(digest),"observation":"upstream_response_only"}), vec![forward.entry_ulid().into()])?;
         response
     }
@@ -524,6 +529,7 @@ pub fn serve_workload(
                     upstream_env: server.env.clone(),
                     context: context.clone(),
                     classify: server.classify.clone(),
+                    workload_uid: Some(workload_uid),
                 };
                 loop {
                     let stream = tokio::select! {

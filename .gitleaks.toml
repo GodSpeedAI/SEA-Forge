@@ -296,3 +296,21 @@ paths = ['''^\.agents/evidence/security-v2/continuation-20261016/migration-revie
 regexes = [
   '''^ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396$''',
 ]
+
+# Security continuation evidence (2026-10-17): the generic-api-key matches are
+# `idempotency_key` fields holding 64-hex SHA-256 digests of synthetic test
+# identifiers (frozen v1 runner output and the SEC-12 RealityTrace bundle),
+# verified by masked inspection; no credential material. Every condition must
+# hold: these two commits, these paths, this rule, and a line whose match is
+# exactly an idempotency_key digest. Pending operator confirmation.
+[[allowlists]]
+description = "security continuation evidence: idempotency_key SHA-256 digests (2026-10-17)"
+condition = "AND"
+commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676", "7cdee134b2804defbf5a131b4434fa662f2da376"]
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''"idempotency_key":\s*"[0-9a-f]{64}"''']
+paths = [
+  '''^\.agents/evidence/security-v1/continuation-20261017/all/(results\.json|rust-A\.log)$''',
+  '''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''',
+]

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "just",
+    "check"
+  ],
+  "started_at": "2026-10-17T15:57:46.026776+00:00",
+  "finished_at": "2026-10-17T15:58:40.691067+00:00",
+  "exit_code": 0,
+  "log_sha256": "4e939bbcec68e40fc651851b076a1761fd1a193260aec40fc3476bfb3539421f",
+  "source_head": "2115b5d8b666be4d68e22f7408e713419606780d"
+}
