@@ -445,6 +445,8 @@ pub async fn execute_with_permission_broker(
             criteria.clone(),
             criteria_ref.clone(),
             &sandbox_class,
+            &config.mcp_servers,
+            &actor,
         )
         .await?;
         continuation_key = cont;
@@ -1204,6 +1206,8 @@ async fn run_acp_episode(
     criteria: sea_forge_core::types::SettlementCriteriaRecord,
     criteria_ref: sea_forge_ledger::CommittedRecordRef,
     sandbox_class: &str,
+    mcp_servers: &[crate::mcp::McpServerConfig],
+    actor: &Actor,
 ) -> Result<
     (
         sea_forge_agent::DelegationOutcome,
@@ -1240,9 +1244,23 @@ async fn run_acp_episode(
             .max_request_bytes
             .saturating_add(snapshot.max_response_bytes),
     };
+    // Brokered MCP needs a kernel-distinct workload identity to bind the
+    // broker socket to; shared-UID classes would let the agent reach the
+    // upstream's resources directly.
+    if !mcp_servers.is_empty() && sandbox_class != "isolated" {
+        return Err(ForgeError::Config {
+            class: "mcp_requires_isolated_workload",
+            path: root.join("server.yaml"),
+            message: format!(
+                "MCP servers are offered only to isolated agents, not '{sandbox_class}'"
+            ),
+        });
+    }
     // Holds the exclusive subordinate identity until the session ends.
     #[cfg(target_os = "linux")]
     let mut workload_identity = None;
+    #[cfg(target_os = "linux")]
+    let mut mcp_listeners: Vec<crate::mcp::McpListenerGuard> = Vec::new();
     let session = match sandbox_class {
         "local" => AcpSession::spawn(spawn)
             .map(|(session, _)| session)
@@ -1308,6 +1326,52 @@ async fn run_acp_episode(
             workload::grant_exclusive_access(&workspace, &identity).map_err(isolation_error)?;
             workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
             let helper = workload::sibling_helper().map_err(isolation_error)?;
+            let mut offered = Vec::new();
+            if !mcp_servers.is_empty() {
+                let mcp_dir = root.join("runs").join(run).join("mcp");
+                std::fs::create_dir_all(&mcp_dir)
+                    .map_err(|error| ForgeError::io("create MCP socket dir", error))?;
+                workload::grant_exclusive_access(&mcp_dir, &identity).map_err(isolation_error)?;
+                let connector =
+                    workload::sibling_binary("sea-forge-mcp-connect").map_err(isolation_error)?;
+                for server in mcp_servers {
+                    if server.name.is_empty()
+                        || !server
+                            .name
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+                    {
+                        return Err(ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: "invalid MCP server name".into(),
+                        });
+                    }
+                    let socket = mcp_dir.join(format!("{}.sock", server.name));
+                    let listener = std::os::unix::net::UnixListener::bind(&socket)
+                        .map_err(|error| ForgeError::io("bind MCP broker socket", error))?;
+                    workload::grant_exclusive_access(&socket, &identity)
+                        .map_err(isolation_error)?;
+                    mcp_listeners.push(
+                        crate::mcp::serve_workload(
+                            listener,
+                            identity.host_uid,
+                            root.to_path_buf(),
+                            workspace.clone(),
+                            bundle.clone(),
+                            actor.clone(),
+                            server.clone(),
+                        )
+                        .map_err(|error| ForgeError::io("start MCP broker", error))?,
+                    );
+                    offered.push(json!({
+                        "name": server.name,
+                        "command": connector,
+                        "args": [socket],
+                        "env": [],
+                    }));
+                }
+            }
             let confinement = workload::WorkloadConfinement {
                 workspace_root: workspace.clone(),
                 artifacts_root: artifacts,
@@ -1335,6 +1399,7 @@ async fn run_acp_episode(
                     .saturating_add(snapshot.max_response_bytes),
             )
             .map_err(ForgeError::Internal)?
+            .with_mcp_servers(offered)
         }
         other => {
             return Err(ForgeError::Config {
@@ -1406,7 +1471,9 @@ async fn run_acp_episode(
             Vec::new()
         }
     };
-    // Release the workload slot only after the session is finished.
+    // Stop the brokers (killing their upstreams), then release the slot.
+    #[cfg(target_os = "linux")]
+    drop(mcp_listeners);
     #[cfg(target_os = "linux")]
     drop(workload_identity);
     Ok((outcome, continuation_key, harvested))

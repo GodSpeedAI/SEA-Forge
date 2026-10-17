@@ -29,6 +29,10 @@ rustix = { version = "1", features = ["fs"] }
 name = "sea-forge-workload-exec"
 path = "src/bin/sea-forge-workload-exec.rs"
 
+[[bin]]
+name = "sea-forge-mcp-connect"
+path = "src/bin/sea-forge-mcp-connect.rs"
+
 [dev-dependencies]
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
 sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.1.0" }

@@ -21,7 +21,7 @@ use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 const MAX_FRAME: usize = 1024 * 1024;
 const UPSTREAM_TIMEOUT: Duration = Duration::from_secs(10);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 struct Config {
     root: PathBuf,
@@ -67,6 +67,13 @@ impl Broker {
             return Err("invalid MCP broker configuration".into());
         }
         let bundle = AuthorityPolicyBundle::load(&config.policy)?;
+        Self::launch(config, bundle)
+    }
+
+    fn launch(
+        config: Config,
+        bundle: AuthorityPolicyBundle,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let engine = PolicyAuthorityEngine::new(bundle.clone())?;
         let session = format!("mcp-{}", crate::governed_execution_boundary::new_event_id());
         let ledger = LedgerStream::open(&config.root, &session, &config.actor.actor_id)?;
@@ -341,4 +348,142 @@ pub fn run(config_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
     runtime.block_on(broker._child.wait())?;
     Ok(())
+}
+
+/// One operator-configured upstream MCP server. Its argv and environment
+/// (including any upstream credential) stay with the trusted launcher; the
+/// workload only ever reaches the broker socket.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct McpServerConfig {
+    pub name: String,
+    pub argv: Vec<String>,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+}
+
+/// Stops a workload's broker (and kills an open session's upstream) on drop.
+pub struct McpListenerGuard {
+    stop: Option<tokio::sync::oneshot::Sender<()>>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Drop for McpListenerGuard {
+    fn drop(&mut self) {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// Serve brokered sessions for exactly one isolated workload on `listener`.
+///
+/// Every connection must come from `workload_uid` (kernel `SO_PEERCRED`);
+/// anything else is refused and recorded without reaching an upstream. Each
+/// accepted connection is a fresh broker session with its own upstream
+/// process, so reconnection never inherits another session's state.
+#[allow(clippy::too_many_arguments)]
+pub fn serve_workload(
+    listener: std::os::unix::net::UnixListener,
+    workload_uid: u32,
+    root: PathBuf,
+    workspace: PathBuf,
+    bundle: AuthorityPolicyBundle,
+    actor: Actor,
+    server: McpServerConfig,
+) -> std::io::Result<McpListenerGuard> {
+    listener.set_nonblocking(true)?;
+    let (stop_tx, mut stop) = tokio::sync::oneshot::channel::<()>();
+    let thread = std::thread::Builder::new()
+        .name(format!("mcp-broker-{}", server.name))
+        .spawn(move || {
+            let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            else {
+                return;
+            };
+            runtime.block_on(async move {
+                let Ok(listener) = tokio::net::UnixListener::from_std(listener) else {
+                    return;
+                };
+                let config = Config {
+                    root: root.clone(),
+                    workspace,
+                    policy: PathBuf::new(),
+                    actor: actor.clone(),
+                    server: server.name.clone(),
+                    upstream_argv: server.argv.clone(),
+                    upstream_env: server.env.clone(),
+                };
+                loop {
+                    let stream = tokio::select! {
+                        _ = &mut stop => return,
+                        accepted = listener.accept() => match accepted {
+                            Ok((stream, _)) => stream,
+                            Err(_) => return,
+                        },
+                    };
+                    let peer = stream.peer_cred().ok().map(|cred| cred.uid());
+                    if peer != Some(workload_uid) {
+                        let stream_id = format!("mcp-listener-{}", server.name);
+                        if let Ok(ledger) = LedgerStream::open(&root, &stream_id, &actor.actor_id) {
+                            let _ = ledger.commit_typed(
+                                "mcp_peer_refused",
+                                vec![server.name.clone()],
+                                &json!({"server": server.name, "expected_uid": workload_uid,
+                                    "peer_uid": peer, "forwarded": false}),
+                                vec![],
+                            );
+                        }
+                        continue;
+                    }
+                    let Ok(mut broker) = Broker::launch(config.clone(), bundle.clone()) else {
+                        return;
+                    };
+                    let stopped = tokio::select! {
+                        _ = &mut stop => true,
+                        _ = broker.serve_stream(stream) => false,
+                    };
+                    let _ = broker._child.kill().await;
+                    if stopped {
+                        return;
+                    }
+                }
+            });
+        })?;
+    Ok(McpListenerGuard {
+        stop: Some(stop_tx),
+        thread: Some(thread),
+    })
+}
+
+impl Broker {
+    async fn serve_stream(
+        &mut self,
+        stream: tokio::net::UnixStream,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let (read, mut write) = stream.into_split();
+        let mut read = BufReader::new(read);
+        loop {
+            let mut bytes = Vec::new();
+            let count = (&mut read)
+                .take((MAX_FRAME + 1) as u64)
+                .read_until(b'\n', &mut bytes)
+                .await?;
+            if count == 0 {
+                return Ok(());
+            }
+            if count > MAX_FRAME || !bytes.ends_with(b"\n") {
+                return Err("MCP frame exceeds limit or is incomplete".into());
+            }
+            if let Some(response) = self.frame(&bytes).await? {
+                write.write_all(format!("{response}\n").as_bytes()).await?;
+                write.flush().await?;
+            }
+        }
+    }
 }

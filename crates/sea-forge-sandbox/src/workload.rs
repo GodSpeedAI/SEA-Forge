@@ -306,16 +306,21 @@ pub fn spawn_interactive(
 /// Locate the helper next to the running executable (installed layouts and
 /// `target/<profile>`), failing closed when it is absent.
 pub fn sibling_helper() -> Result<PathBuf, SandboxError> {
+    sibling_binary("sea-forge-workload-exec")
+}
+
+/// Locate a SEA Forge binary installed next to the running executable.
+pub fn sibling_binary(name: &str) -> Result<PathBuf, SandboxError> {
     let exe = std::env::current_exe().map_err(|e| unavailable(e.to_string()))?;
     let dir = exe
         .parent()
         .ok_or_else(|| unavailable("executable has no parent"))?;
     [dir.to_path_buf(), dir.join("..")]
         .into_iter()
-        .map(|d| d.join("sea-forge-workload-exec"))
+        .map(|d| d.join(name))
         .find(|p| p.is_file())
         .and_then(|p| p.canonicalize().ok())
-        .ok_or_else(|| unavailable("sea-forge-workload-exec helper not found"))
+        .ok_or_else(|| unavailable(format!("{name} not found")))
 }
 
 #[cfg(test)]

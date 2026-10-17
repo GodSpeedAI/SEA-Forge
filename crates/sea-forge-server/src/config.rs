@@ -222,6 +222,11 @@ pub struct ServerConfig {
     /// The CEP authority loop for Cognate (migration Stage 6). Off unless enabled.
     #[serde(default)]
     pub cep_authority: CepAuthorityConfig,
+    /// Upstream MCP servers offered to `isolated` ACP agents only, always
+    /// through the per-workload broker socket (ADR-011 decision 7). Empty by
+    /// default: agents get no MCP servers.
+    #[serde(default)]
+    pub mcp_servers: Vec<crate::mcp::McpServerConfig>,
 }
 
 /// The socket file name inside a cell root. Every surface (server, CLI,
@@ -311,6 +316,7 @@ impl Default for ServerConfig {
             gateway: None,
             // Disabled by default: no CEP authority loop until an operator opts in.
             cep_authority: CepAuthorityConfig::default(),
+            mcp_servers: Vec::new(),
         }
     }
 }

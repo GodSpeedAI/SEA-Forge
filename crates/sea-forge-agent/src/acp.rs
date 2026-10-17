@@ -189,6 +189,9 @@ pub struct AcpSession {
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<RpcResult>>>>,
     prompt_in_flight: Arc<AtomicU64>,
     session_cwd: Option<std::path::PathBuf>,
+    /// ACP `mcpServers` offered to the agent. Only trusted, brokered entries
+    /// are ever set here (empty unless the launcher configures them).
+    mcp_servers: Vec<serde_json::Value>,
     max_response_bytes: usize,
     max_transcript_bytes: usize,
     #[allow(dead_code)]
@@ -501,6 +504,7 @@ impl AcpSession {
             pending,
             prompt_in_flight,
             session_cwd,
+            mcp_servers: Vec::new(),
             max_response_bytes,
             max_transcript_bytes,
             process_group: ProcessGroupGuard(process_group),
@@ -509,6 +513,12 @@ impl AcpSession {
     }
 
     /// Construct a session from a child spawned by the jail adapter.
+    /// Offer launcher-provided, brokered MCP servers to the agent session.
+    pub fn with_mcp_servers(mut self, servers: Vec<serde_json::Value>) -> Self {
+        self.mcp_servers = servers;
+        self
+    }
+
     pub fn from_std_child(
         child: std::process::Child,
         stdin: std::process::ChildStdin,
@@ -701,7 +711,7 @@ impl AcpSession {
                 serde_json::json!({
                     "sessionId": key,
                     "cwd": cwd,
-                    "mcpServers": [],
+                    "mcpServers": self.mcp_servers,
                 }),
             )
         } else {
@@ -709,7 +719,7 @@ impl AcpSession {
                 "session/new",
                 serde_json::json!({
                     "cwd": cwd,
-                    "mcpServers": [],
+                    "mcpServers": self.mcp_servers,
                 }),
             )
         };
