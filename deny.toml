@@ -78,3 +78,5 @@ wildcards = "deny"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# RealityTrace evidence library, pinned by rev in sea-forge-realitytrace.
+allow-git = ["https://github.com/GodSpeedAI/RealityTrace"]

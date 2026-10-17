@@ -1,0 +1,17 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-j",
+    "2",
+    "-p",
+    "sea-forge-realitytrace",
+    "--",
+    "--test-threads=1"
+  ],
+  "started_at": "2026-10-17T14:57:13.432475+00:00",
+  "finished_at": "2026-10-17T14:57:14.918025+00:00",
+  "exit_code": 0,
+  "log_sha256": "db36d150480b9fe13fdc2a4a2a3d6a3ed152befb495c55fbdde58a9a9e8f786c",
+  "source_head": "e71f0440e77929686a58bedd8edd32fbd44ec55a"
+}
