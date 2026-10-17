@@ -63,7 +63,9 @@ export SEA_FORGE_SECURITY_PG_INSTALL=$HOME/.pg0/installation/18.1.0  # pg0 Postg
 RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-sandbox --test workload_isolation
 RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-server --test conformance_m16 --test mcp_workload_broker \
   --test postgres_broker --test exposure_flow
-RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-realitytrace --test sec12_trace
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-realitytrace
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-sandbox --test workload_boundary
+RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-runtime --test isolated_execute_command
 ```
 
 | File | Obligation exercised |
@@ -74,6 +76,11 @@ RUSTC_WRAPPER= cargo test -j 2 -p sea-forge-realitytrace --test sec12_trace
 | `crates/sea-forge-server/tests/postgres_broker.rs` | SEC-02/05/07/08 native privileges, revocation, TTL, renewal, JIT elevation |
 | `crates/sea-forge-server/tests/exposure_flow.rs` + `exposure_upstream.py` | SEC-09/10/11 exposure, injection, resumption, delegation, attribution |
 | `crates/sea-forge-realitytrace/tests/sec12_trace.rs` | SEC-12 RealityTrace trace and independent auditor reconstruction |
+| `crates/sea-forge-sandbox/tests/workload_boundary.rs` | SEC-01/06 read posture, launcher-death lifeline, orphan reaping before slot reissue, layered network denial (round 2; ADV-A05/A06/A07/A19/A20) |
+| `crates/sea-forge-runtime/tests/isolated_execute_command.rs` | SEC-01/06 planned `execute_command` under the `isolated` class (round 2) |
+| `crates/sea-forge-realitytrace/tests/broker_attempt_trace.rs` | SEC-03/09/12 auditor reconstruction of every brokered attempt from raw ledger and upstream native log (round 2) |
 
 Mutation controls run for each are recorded in the matching
-`.agents/evidence/security-v2/*-20261017/README.md`.
+`.agents/evidence/security-v2/*-20261017/README.md`; round 2 code-level
+mutations are in `round2-20261017/`. Requirement and threat mapping per file:
+`candidate-manifest.json` (builder's mapping; needs independent confirmation).
