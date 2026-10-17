@@ -366,6 +366,38 @@ pub struct McpServerConfig {
 pub struct McpListenerGuard {
     stop: Option<tokio::sync::oneshot::Sender<()>>,
     thread: Option<std::thread::JoinHandle<()>>,
+    root: PathBuf,
+    server: String,
+    actor: String,
+}
+
+impl McpListenerGuard {
+    /// SEC-08 revocation barrier: stop accepting, end any open session and
+    /// kill its upstream, and only then record the acknowledgement. Nothing
+    /// can be forwarded for this workload after the returned record.
+    pub fn revoke(mut self, reason: &str) -> Result<Value, Box<dyn std::error::Error>> {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+        if let Some(thread) = self.thread.take() {
+            thread.join().map_err(|_| "MCP broker thread panicked")?;
+        }
+        let record = json!({"server": self.server, "reason": reason,
+            "barrier": "listener_closed_session_ended_upstream_killed",
+            "acknowledged_at": chrono::Utc::now().to_rfc3339()});
+        LedgerStream::open(
+            &self.root,
+            format!("mcp-listener-{}", self.server),
+            &self.actor,
+        )?
+        .commit_typed(
+            "mcp_session_revoked",
+            vec![self.server.clone()],
+            &record,
+            vec![],
+        )?;
+        Ok(record)
+    }
 }
 
 impl Drop for McpListenerGuard {
@@ -397,6 +429,8 @@ pub fn serve_workload(
 ) -> std::io::Result<McpListenerGuard> {
     listener.set_nonblocking(true)?;
     let (stop_tx, mut stop) = tokio::sync::oneshot::channel::<()>();
+    let (guard_root, guard_server, guard_actor) =
+        (root.clone(), server.name.clone(), actor.actor_id.clone());
     let thread = std::thread::Builder::new()
         .name(format!("mcp-broker-{}", server.name))
         .spawn(move || {
@@ -458,6 +492,9 @@ pub fn serve_workload(
     Ok(McpListenerGuard {
         stop: Some(stop_tx),
         thread: Some(thread),
+        root: guard_root,
+        server: guard_server,
+        actor: guard_actor,
     })
 }
 

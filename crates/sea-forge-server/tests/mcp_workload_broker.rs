@@ -199,3 +199,49 @@ fn reconnection_is_a_fresh_session_and_shutdown_kills_the_upstream() {
         "only the first session's permitted call ran"
     );
 }
+
+#[test]
+fn revocation_barrier_ends_the_live_session_before_acknowledging() {
+    let fx = fixture();
+    let guard = start(&fx, own_uid());
+    let mut client = Client::connect(&fx.socket);
+    client.handshake();
+    // Pre-revocation control: the permitted call reaches the upstream.
+    assert!(client.call(call_tool(2, "metadata.read")).unwrap()["result"].is_object());
+    let pids = spawned(&fx);
+    let ack = guard.revoke("operator revocation").unwrap();
+    // The upstream is gone before the acknowledgement exists.
+    for pid in &pids {
+        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).unwrap_or_default();
+        assert!(
+            status.is_empty() || status.contains("State:\tZ"),
+            "upstream {pid} survived"
+        );
+    }
+    assert_eq!(client.call(call_tool(3, "metadata.read")), None);
+    assert!(
+        UnixStream::connect(&fx.socket).is_err() || {
+            let mut late = Client::connect(&fx.socket);
+            late.call(json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}))
+                .is_none()
+        }
+    );
+    let log = std::fs::read_to_string(fx.observer.join("invocations.jsonl")).unwrap();
+    assert_eq!(
+        log.lines().count(),
+        1,
+        "an effect was forwarded after the barrier"
+    );
+    let ledger = LedgerStream::open(
+        &fx.root,
+        "mcp-listener-security-upstream",
+        "metadata-workload",
+    )
+    .unwrap();
+    let records = ledger.read_entries().unwrap();
+    assert_eq!(records.last().unwrap().record_kind, "mcp_session_revoked");
+    assert_eq!(
+        records.last().unwrap().payload["acknowledged_at"],
+        ack["acknowledged_at"]
+    );
+}

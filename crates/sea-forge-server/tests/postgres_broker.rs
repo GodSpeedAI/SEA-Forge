@@ -324,3 +324,369 @@ echo done; }} > {ws}/results"#
         .revoke(&session, &ledger, "run-pg-ttl", "cleanup")
         .unwrap();
 }
+
+const ELEVATION_POLICY: &str = "version: \"0.1\"\nidentity_bindings:\n  - principal: audit-agent\n    actor_type: human\n    role: operator\n  - principal: security_officer\n    actor_type: human\n    role: R-SO\n  - principal: developer\n    actor_type: human\n    role: R-DEV\nsod_rules:\n  - name: elevation-needs-security-officer\n    requester_role: operator\n    approver_role: R-SO\n    operation_kind: database_session\nrules:\n  - name: audit-writer-elevation\n    verdict: allow\n    actor_role: operator\n    operation_kind: database_session\n    requires_approval: true\n    boundary_constraints:\n      db_resource: [app-db]\n      db_scope: [audit-write]\n";
+
+fn criteria_record() -> sea_forge_core::types::SettlementCriteriaRecord {
+    use sea_forge_core::types::*;
+    use sea_forge_ledger::types::hash_canonical;
+    let criteria = SettlementCriteria {
+        require_exit_zero: true,
+        ..Default::default()
+    };
+    let mut record = SettlementCriteriaRecord {
+        version: "0.2".into(),
+        criteria_id: "crit_jit_elevation".into(),
+        criteria_sha256: hash_canonical(&criteria).unwrap(),
+        criteria,
+        origin_refs: vec![OriginRef {
+            kind: OriginRefKind::ImplementationDefined,
+            reference: "jit-elevation-test".into(),
+            sha256: "sha256:origin".into(),
+            role: OriginRole::AcceptanceSource,
+            evidence_refs: vec![],
+            domain_model_ref: None,
+        }],
+        derivation: CriteriaDerivation {
+            method: DerivationMethod::ImplementationDefined,
+            actor_ref: "audit-agent".into(),
+            producer_ref: None,
+            rationale: "JIT elevation fixture".into(),
+        },
+        declared_at: "2026-10-17T00:00:00Z".into(),
+        criteria_record_hash: String::new(),
+    };
+    record.criteria_record_hash = hash_canonical(&record).unwrap();
+    record
+}
+
+fn approval(
+    decision: &sea_forge_core::types::AuthorityDecision,
+    criteria: &sea_forge_core::types::SettlementCriteriaRecord,
+    id: &str,
+    resolver: &str,
+    window: chrono::Duration,
+) -> sea_forge_core::types::ApprovalRequest {
+    let now = chrono::Utc::now();
+    sea_forge_core::types::ApprovalRequest {
+        version: "0.2".into(),
+        approval_id: id.into(),
+        run_id: decision.run_id.clone(),
+        case_id: decision.audit_record.case_id.clone().unwrap(),
+        decision_id: decision.decision_id.clone(),
+        plan_item_id: decision.plan_item_id.clone(),
+        criteria_ref: Some(criteria.criteria_id.clone()),
+        criteria_sha256: Some(criteria.criteria_sha256.clone()),
+        criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
+        job_contract_ref: None,
+        requested_at: now.to_rfc3339(),
+        expires_at: (now + window).to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        status: sea_forge_core::types::ApprovalStatus::Approved,
+        resolved_by: Some(resolver.into()),
+        resolved_at: Some(now.to_rfc3339()),
+        note: None,
+    }
+}
+
+fn sfw_roles(broker: &PostgresBroker) -> String {
+    broker
+        .admin_sql("SELECT count(*) FROM pg_roles WHERE rolname LIKE 'sfw_%'")
+        .unwrap()
+}
+
+#[test]
+fn jit_elevation_needs_independent_one_use_approval_and_ends_at_the_resource() {
+    let Some((install, pool, helper, _state)) = prerequisites() else {
+        return;
+    };
+    let mut cluster = start_cluster(&install);
+    cluster.config.session_ttl_secs = 600;
+    let broker = PostgresBroker::new(cluster.config.clone()).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(ELEVATION_POLICY).unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let requester = Actor {
+        actor_id: "audit-agent".into(),
+        role: ActorRole::Operator,
+    };
+    let identity = pool.acquire().unwrap();
+    let dirs = workload_dirs(&cluster.base, "agent", &identity);
+    let ledger = LedgerStream::open(&cluster.base, "case-jit", "control-plane").unwrap();
+    let action = broker.session_action("audit-write", identity.host_uid);
+    let decision = engine
+        .evaluate(sea_forge_authority::AuthorityEvaluation {
+            actor: &requester,
+            binding: bundle.resolve_identity("audit-agent", ActorRole::Operator),
+            run_id: "run-jit",
+            case_id: "case-jit",
+            plan_item_id: "database-session",
+            sequence: 1,
+            action: &action,
+            workspace_root: &dirs.workspace_root,
+            evidence_refs: vec![],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            opa_candidate: None,
+            environment: None,
+        })
+        .unwrap();
+    assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Escalate);
+    // Without approval the plain issuance path grants nothing.
+    assert!(broker
+        .issue(
+            &engine,
+            &bundle,
+            &requester,
+            &ledger,
+            "run-jit",
+            &dirs.workspace_root,
+            "audit-write",
+            identity.host_uid
+        )
+        .unwrap()
+        .is_none());
+    let decision_ref = ledger
+        .commit_typed("authority_decision", vec![], &decision, vec![])
+        .unwrap();
+    let criteria = criteria_record();
+    let criteria_ref = ledger
+        .commit_typed("settlement_criteria", vec![], &criteria, vec![])
+        .unwrap();
+    let issue = |approval: &sea_forge_core::types::ApprovalRequest, scope: &str, uid: u32| {
+        let approval_ref = ledger
+            .commit_typed("approval_resolution", vec![], approval, vec![])
+            .unwrap();
+        broker.issue_with_approval(
+            &engine,
+            &decision,
+            &decision_ref,
+            approval,
+            &approval_ref,
+            &criteria,
+            &criteria_ref,
+            &ledger,
+            &dirs.workspace_root,
+            scope,
+            uid,
+        )
+    };
+    let window = chrono::Duration::seconds(4);
+    let refused = |result: Result<_, Box<dyn std::error::Error>>| match result {
+        Ok(_) => panic!("elevation unexpectedly issued"),
+        Err(error) => error.to_string(),
+    };
+    // Self-approval and an approver outside the required role are refused.
+    assert!(refused(issue(
+        &approval(&decision, &criteria, "apr-self", "audit-agent", window),
+        "audit-write",
+        identity.host_uid,
+    ))
+    .contains("does not match the escalated decision"));
+    assert!(refused(issue(
+        &approval(&decision, &criteria, "apr-dev", "developer", window),
+        "audit-write",
+        identity.host_uid,
+    ))
+    .contains("SOD approver roles"));
+    let good = approval(&decision, &criteria, "apr-so", "security_officer", window);
+    // The approval cannot be redirected to another scope or workload.
+    assert!(refused(issue(&good, "audit-read", identity.host_uid))
+        .contains("does not grant this action"));
+    assert!(refused(issue(&good, "audit-write", identity.host_uid + 1))
+        .contains("does not grant this action"));
+    assert_eq!(
+        sfw_roles(&broker),
+        "0",
+        "a refused elevation created a role"
+    );
+    let session = issue(&good, "audit-write", identity.host_uid).unwrap();
+    // One use: the consumed approval cannot mint a second session.
+    assert!(refused(issue(&good, "audit-write", identity.host_uid)).contains("already granted"));
+    assert_eq!(sfw_roles(&broker), "1");
+    let reaper = broker.expiry_reaper(
+        &session,
+        cluster.base.clone(),
+        "case-jit".into(),
+        "run-jit".into(),
+    );
+
+    let ws = dirs.workspace_root.display();
+    let script = format!(
+        r#"{{ psql "$PGCONN" -w -X -At -c "INSERT INTO audit_log VALUES (4,'approved-jit')" >/dev/null 2>&1 && echo "in_window:ok" || echo "in_window:refused"
+PGAPPNAME=held psql "$PGCONN" -w -X -At -c 'SELECT pg_sleep(30)' > {ws}/held.out 2>&1; echo "held_rc:$?"
+psql "$PGCONN" -w -X -At -c "INSERT INTO audit_log VALUES (5,'after-expiry')" >/dev/null 2>&1 && echo "after_expiry:ok" || echo "after_expiry:refused"
+echo done; }} > {ws}/results"#
+    );
+    let mut child = spawn_workload(
+        &identity,
+        &helper,
+        &dirs,
+        &install,
+        &session.conninfo(),
+        &script,
+    );
+    let start = Instant::now();
+    while !broker
+        .active_backends(&session.role)
+        .unwrap()
+        .iter()
+        .any(|(_, a)| a == "held")
+    {
+        assert!(
+            start.elapsed() < Duration::from_secs(10),
+            "held query never started"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    reaper.join();
+    let text = wait_for(&dirs.workspace_root.join("results"), "done");
+    child.wait().unwrap();
+    let rows = verdicts(&text);
+    assert_eq!(rows["in_window"], "ok", "{text}");
+    assert_ne!(
+        rows["held_rc"], "0",
+        "live elevated session survived expiry: {text}"
+    );
+    assert_eq!(rows["after_expiry"], "refused", "{text}");
+    assert_eq!(
+        broker
+            .admin_sql("SELECT string_agg(id::text, ',' ORDER BY id) FROM audit_log")
+            .unwrap(),
+        "1,2,3,4"
+    );
+    assert_eq!(sfw_roles(&broker), "0");
+    let kinds: Vec<String> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .map(|e| e.record_kind)
+        .collect();
+    assert_eq!(
+        kinds
+            .iter()
+            .filter(|k| *k == "database_elevation_issued")
+            .count(),
+        1
+    );
+    assert!(kinds.iter().any(|k| k == "database_session_revoked"));
+}
+
+#[test]
+fn renewal_redecides_and_a_refused_renewal_ends_the_live_session() {
+    let Some((install, pool, helper, _state)) = prerequisites() else {
+        return;
+    };
+    let cluster = start_cluster(&install);
+    let broker = PostgresBroker::new(cluster.config.clone()).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(POLICY).unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let actor = Actor {
+        actor_id: "audit-agent".into(),
+        role: ActorRole::Operator,
+    };
+    let ledger = LedgerStream::open(&cluster.base, "run-renew", "control-plane").unwrap();
+    let identity = pool.acquire().unwrap();
+    let dirs = workload_dirs(&cluster.base, "agent", &identity);
+    let mut session = broker
+        .issue(
+            &engine,
+            &bundle,
+            &actor,
+            &ledger,
+            "run-renew",
+            &dirs.workspace_root,
+            "audit-read",
+            identity.host_uid,
+        )
+        .unwrap()
+        .unwrap();
+    let valid_until = |role: &str| {
+        broker
+            .admin_sql(&format!(
+                "SELECT rolvaliduntil FROM pg_roles WHERE rolname = '{role}'"
+            ))
+            .unwrap()
+    };
+    let before = valid_until(&session.role);
+    std::thread::sleep(Duration::from_millis(1100));
+    broker
+        .renew(
+            &engine,
+            &bundle,
+            &actor,
+            &ledger,
+            "run-renew",
+            &dirs.workspace_root,
+            &mut session,
+            identity.host_uid,
+        )
+        .unwrap();
+    assert_ne!(
+        valid_until(&session.role),
+        before,
+        "renewal did not move VALID UNTIL"
+    );
+
+    let ws = dirs.workspace_root.display();
+    let script = format!(
+        r#"{{ PGAPPNAME=held psql "$PGCONN" -w -X -At -c 'SELECT pg_sleep(30)' > {ws}/held.out 2>&1; echo "held_rc:$?"; echo done; }} > {ws}/results"#
+    );
+    let mut child = spawn_workload(
+        &identity,
+        &helper,
+        &dirs,
+        &install,
+        &session.conninfo(),
+        &script,
+    );
+    let start = Instant::now();
+    while broker.active_backends(&session.role).unwrap().is_empty() {
+        assert!(
+            start.elapsed() < Duration::from_secs(10),
+            "held query never started"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    // Policy withdraws the scope: renewal is refused and revokes live access.
+    let withdrawn: AuthorityPolicyBundle =
+        sea_forge_core::yaml::from_str("version: \"0.1\"\nrules: []\n").unwrap();
+    let withdrawn_engine = PolicyAuthorityEngine::new(withdrawn.clone()).unwrap();
+    assert!(broker
+        .renew(
+            &withdrawn_engine,
+            &withdrawn,
+            &actor,
+            &ledger,
+            "run-renew",
+            &dirs.workspace_root,
+            &mut session,
+            identity.host_uid
+        )
+        .is_err());
+    let text = wait_for(&dirs.workspace_root.join("results"), "done");
+    child.wait().unwrap();
+    assert_ne!(verdicts(&text)["held_rc"], "0", "{text}");
+    assert_eq!(sfw_roles(&broker), "0");
+    // A revoked session cannot be renewed back into existence.
+    assert!(broker
+        .renew(
+            &engine,
+            &bundle,
+            &actor,
+            &ledger,
+            "run-renew",
+            &dirs.workspace_root,
+            &mut session,
+            identity.host_uid
+        )
+        .is_err());
+    let kinds: Vec<String> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .map(|e| e.record_kind)
+        .collect();
+    assert!(kinds.iter().any(|k| k == "database_session_renewed"));
+    assert!(kinds.iter().any(|k| k == "database_session_revoked"));
+}

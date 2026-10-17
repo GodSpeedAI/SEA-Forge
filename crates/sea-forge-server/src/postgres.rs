@@ -94,6 +94,7 @@ pub struct DatabaseSession {
     pub role: String,
     password: String,
     pub expires_at: String,
+    expires: chrono::DateTime<chrono::Utc>,
     pub decision_id: String,
     socket_dir: PathBuf,
     port: u16,
@@ -246,36 +247,225 @@ impl PostgresBroker {
         }
         let grant = engine.grant(&decision, &committed, &action, None)?;
         grant.authorize(&action, run_id, "database-session", workspace)?;
+        let expires =
+            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
+        let session = self.mint(scope, group, workload_uid, expires, &decision.decision_id)?;
+        ledger.commit_typed(
+            "database_session_issued",
+            vec![run_id.into()],
+            &json!({"resource": self.config.name, "scope": scope, "native_role": session.role,
+                "group_role": group, "workload_uid": workload_uid, "expires_at": session.expires_at,
+                "decision_id": decision.decision_id}),
+            vec![committed.entry_ulid().to_string()],
+        )?;
+        Ok(Some(session))
+    }
+
+    /// The exact authority action for one (scope, workload) session.
+    pub fn session_action(&self, scope: &str, workload_uid: u32) -> AuthorityAction {
+        AuthorityAction::Reserved {
+            resource_type: "database_session".into(),
+            resource_id: json!([self.config.name, scope]).to_string(),
+            parameters: json!({"resource": self.config.name, "scope": scope,
+                "workload_uid": workload_uid, "ttl_secs": self.config.session_ttl_secs}),
+        }
+    }
+
+    fn mint(
+        &self,
+        scope: &str,
+        group: &str,
+        workload_uid: u32,
+        expires: chrono::DateTime<chrono::Utc>,
+        decision_id: &str,
+    ) -> Result<DatabaseSession, PostgresError> {
         let role = format!("sfw_{workload_uid}_{}", random_hex(6)?);
         let password = random_hex(32)?;
-        let expires_at = (chrono::Utc::now()
-            + chrono::Duration::seconds(self.config.session_ttl_secs as i64))
-        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let expires_at = expires.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         // Identifiers are validated; the password and timestamp are hex/RFC3339.
         self.admin_sql(&format!(
             "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION \
              NOBYPASSRLS CONNECTION LIMIT 4 PASSWORD '{password}' VALID UNTIL '{expires_at}'; \
              GRANT {group} TO {role} WITH INHERIT TRUE, SET FALSE, ADMIN FALSE;"
         ))?;
-        ledger.commit_typed(
-            "database_session_issued",
-            vec![run_id.into()],
-            &json!({"resource": self.config.name, "scope": scope, "native_role": role,
-                "group_role": group, "workload_uid": workload_uid, "expires_at": expires_at,
-                "decision_id": decision.decision_id}),
-            vec![committed.entry_ulid().to_string()],
-        )?;
-        Ok(Some(DatabaseSession {
+        Ok(DatabaseSession {
             resource: self.config.name.clone(),
             scope: scope.into(),
             role,
             password,
             expires_at,
-            decision_id: decision.decision_id,
+            expires,
+            decision_id: decision_id.into(),
             socket_dir: self.config.socket_dir.clone(),
             port: self.config.port,
             database: self.config.database.clone(),
-        }))
+        })
+    }
+
+    /// SEC-07 just-in-time elevation: issue a scope whose policy escalates,
+    /// only through the existing approval grant (independent resolver,
+    /// separation of duties, exact action, one use). The session expires at
+    /// the earlier of the approval window and the session TTL; pair it with
+    /// [`PostgresBroker::expiry_reaper`] so live backends end at expiry.
+    #[allow(clippy::too_many_arguments)]
+    pub fn issue_with_approval(
+        &self,
+        engine: &PolicyAuthorityEngine,
+        decision: &sea_forge_core::types::AuthorityDecision,
+        decision_ref: &sea_forge_ledger::CommittedRecordRef,
+        approval: &sea_forge_core::types::ApprovalRequest,
+        approval_ref: &sea_forge_ledger::CommittedRecordRef,
+        criteria: &sea_forge_core::types::SettlementCriteriaRecord,
+        criteria_ref: &sea_forge_ledger::CommittedRecordRef,
+        ledger: &LedgerStream,
+        workspace: &Path,
+        scope: &str,
+        workload_uid: u32,
+    ) -> Result<DatabaseSession, Box<dyn std::error::Error>> {
+        let group = self
+            .config
+            .scopes
+            .get(scope)
+            .ok_or_else(|| err(format!("unknown database scope {scope}")))?;
+        let action = self.session_action(scope, workload_uid);
+        let grant = engine.grant_after_approval(
+            decision,
+            decision_ref,
+            &action,
+            approval,
+            approval_ref,
+            criteria,
+            criteria_ref,
+            None,
+            ledger,
+        )?;
+        grant.authorize(&action, &decision.run_id, &decision.plan_item_id, workspace)?;
+        let window = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
+            .map_err(|_| err("approval expiry is not RFC 3339"))?
+            .with_timezone(&chrono::Utc);
+        let ttl =
+            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
+        let session = self.mint(
+            scope,
+            group,
+            workload_uid,
+            ttl.min(window),
+            &decision.decision_id,
+        )?;
+        ledger.commit_typed(
+            "database_elevation_issued",
+            vec![decision.run_id.clone()],
+            &json!({"resource": self.config.name, "scope": scope, "native_role": session.role,
+                "group_role": group, "workload_uid": workload_uid, "expires_at": session.expires_at,
+                "decision_id": decision.decision_id, "approval_id": approval.approval_id,
+                "resolved_by": approval.resolved_by}),
+            vec![approval_ref.entry_ulid().to_string()],
+        )?;
+        Ok(session)
+    }
+
+    /// SEC-02 renewal: re-decide under current policy. Anything but Allow
+    /// revokes the session (no fallback credential); a revoked or disabled
+    /// role cannot be renewed.
+    #[allow(clippy::too_many_arguments)]
+    pub fn renew(
+        &self,
+        engine: &PolicyAuthorityEngine,
+        bundle: &AuthorityPolicyBundle,
+        actor: &Actor,
+        ledger: &LedgerStream,
+        run_id: &str,
+        workspace: &Path,
+        session: &mut DatabaseSession,
+        workload_uid: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let role = identifier(&session.role)?.to_string();
+        if self.admin_sql(&format!(
+            "SELECT rolcanlogin FROM pg_roles WHERE rolname = '{role}'"
+        ))? != "t"
+        {
+            return Err(err("session is revoked and cannot be renewed").into());
+        }
+        let action = self.session_action(&session.scope, workload_uid);
+        let decision = engine.evaluate(AuthorityEvaluation {
+            actor,
+            binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
+            run_id,
+            case_id: run_id,
+            plan_item_id: "database-session",
+            sequence: 1,
+            action: &action,
+            workspace_root: workspace,
+            evidence_refs: vec![],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            domainforge_candidate: None,
+            opa_candidate: None,
+            environment: None,
+        })?;
+        let committed =
+            ledger.commit_typed("authority_decision", vec![run_id.into()], &decision, vec![])?;
+        if decision.verdict != Verdict::Allow {
+            self.revoke(session, ledger, run_id, "renewal_refused")?;
+            return Err(err("renewal refused by authority; session revoked").into());
+        }
+        engine
+            .grant(&decision, &committed, &action, None)?
+            .authorize(&action, run_id, "database-session", workspace)?;
+        let expires =
+            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
+        let expires_at = expires.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        self.admin_sql(&format!("ALTER ROLE {role} VALID UNTIL '{expires_at}'"))?;
+        session.expires = expires;
+        session.expires_at = expires_at.clone();
+        ledger.commit_typed(
+            "database_session_renewed",
+            vec![run_id.into()],
+            &json!({"resource": self.config.name, "native_role": role,
+                "expires_at": expires_at, "decision_id": decision.decision_id}),
+            vec![committed.entry_ulid().to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// End a session's live access when it expires (`VALID UNTIL` alone only
+    /// stops new logins). Extend the deadline after renewal; dropping the
+    /// guard stops the reaper without revoking.
+    pub fn expiry_reaper(
+        &self,
+        session: &DatabaseSession,
+        ledger_root: PathBuf,
+        ledger_stream: String,
+        run_id: String,
+    ) -> ExpiryReaper {
+        let (tx, rx) = std::sync::mpsc::channel::<chrono::DateTime<chrono::Utc>>();
+        let broker = PostgresBroker {
+            config: self.config.clone(),
+        };
+        let role = session.role.clone();
+        let mut deadline = session.expires;
+        let thread = std::thread::spawn(move || loop {
+            let wait = (deadline - chrono::Utc::now()).to_std().unwrap_or_default();
+            match rx.recv_timeout(wait) {
+                Ok(next) => deadline = next,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    if let Ok(ledger) = LedgerStream::open(
+                        &ledger_root,
+                        ledger_stream.as_str(),
+                        "sea-forge-control-plane",
+                    ) {
+                        let _ = broker.revoke_role(&role, &ledger, &run_id, "expired");
+                    }
+                    return;
+                }
+            }
+        });
+        ExpiryReaper {
+            extend: Some(tx),
+            thread: Some(thread),
+        }
     }
 
     /// Backends currently attributed to `role` (pid, application_name).
@@ -302,7 +492,25 @@ impl PostgresBroker {
         run_id: &str,
         reason: &str,
     ) -> Result<Value, Box<dyn std::error::Error>> {
-        let role = identifier(&session.role)?;
+        self.revoke_role(&session.role, ledger, run_id, reason)
+    }
+
+    fn revoke_role(
+        &self,
+        role: &str,
+        ledger: &LedgerStream,
+        run_id: &str,
+        reason: &str,
+    ) -> Result<Value, Box<dyn std::error::Error>> {
+        let role = identifier(role)?;
+        if self.admin_sql(&format!(
+            "SELECT count(*) FROM pg_roles WHERE rolname = '{role}'"
+        ))? == "0"
+        {
+            // Already revoked (for example by the expiry reaper).
+            return Ok(json!({"resource": self.config.name, "native_role": role,
+                "already_revoked": true, "reason": reason}));
+        }
         self.admin_sql(&format!("ALTER ROLE {role} NOLOGIN"))?;
         let terminated = self.admin_sql(&format!(
             "SELECT count(*) FROM (SELECT pg_terminate_backend(pid, 5000) FROM pg_stat_activity \
@@ -311,7 +519,7 @@ impl PostgresBroker {
         // Verify while the role still names its backends: once dropped,
         // pg_stat_activity no longer attributes survivors to it.
         let remaining = self.active_backends(role)?.len();
-        let record = json!({"resource": session.resource, "native_role": role,
+        let record = json!({"resource": self.config.name, "native_role": role,
             "terminated_backends": terminated.parse::<u64>().unwrap_or(0),
             "remaining_backends": remaining, "reason": reason});
         ledger.commit_typed(
@@ -326,5 +534,36 @@ impl PostgresBroker {
         }
         self.admin_sql(&format!("DROP ROLE {role}"))?;
         Ok(record)
+    }
+}
+
+/// Revokes its session at expiry unless dropped first.
+pub struct ExpiryReaper {
+    extend: Option<std::sync::mpsc::Sender<chrono::DateTime<chrono::Utc>>>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl ExpiryReaper {
+    /// Move the deadline after a successful renewal.
+    pub fn extend_to(&self, session: &DatabaseSession) {
+        if let Some(tx) = &self.extend {
+            let _ = tx.send(session.expires);
+        }
+    }
+
+    /// Wait for the reaper to fire (tests and shutdown ordering).
+    pub fn join(mut self) {
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+impl Drop for ExpiryReaper {
+    fn drop(&mut self) {
+        self.extend.take();
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
     }
 }

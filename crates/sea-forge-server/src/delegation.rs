@@ -1267,6 +1267,7 @@ async fn run_acp_episode(
     let mut db_sessions: Vec<(
         crate::postgres::PostgresBroker,
         crate::postgres::DatabaseSession,
+        crate::postgres::ExpiryReaper,
     )> = Vec::new();
     // Database session issuance/revocation evidence, only when configured.
     let control_ledger = if postgres.is_empty() {
@@ -1424,10 +1425,18 @@ async fn run_acp_episode(
                             })?;
                         if let Some(session) = issued {
                             workload_env.push((broker.env_key(&scope), session.conninfo()));
+                            // Live access ends at expiry even mid-episode.
+                            let reaper = broker.expiry_reaper(
+                                &session,
+                                root.to_path_buf(),
+                                format!("dbsessions-{run}"),
+                                run.to_string(),
+                            );
                             db_sessions.push((
                                 crate::postgres::PostgresBroker::new(resource.clone())
                                     .map_err(|error| ForgeError::Internal(error.to_string()))?,
                                 session,
+                                reaper,
                             ));
                         }
                     }
@@ -1532,13 +1541,14 @@ async fn run_acp_episode(
     #[cfg(target_os = "linux")]
     drop(mcp_listeners);
     #[cfg(target_os = "linux")]
-    for (broker, session) in &db_sessions {
+    for (broker, session, reaper) in db_sessions {
+        drop(reaper);
         let revoked = control_ledger
             .as_ref()
             .ok_or_else(|| "database ledger missing".to_string())
             .and_then(|ledger| {
                 broker
-                    .revoke(session, ledger, run, "episode_ended")
+                    .revoke(&session, ledger, run, "episode_ended")
                     .map_err(|error| error.to_string())
             });
         if revoked.is_err() {
