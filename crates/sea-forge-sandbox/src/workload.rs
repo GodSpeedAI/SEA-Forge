@@ -68,15 +68,31 @@ fn delegation(file: &str, user: &str, id: u32) -> Result<(u32, u32), SandboxErro
         .ok_or_else(|| unavailable(format!("{file} has no delegation for {user}")))
 }
 
-fn login_name(uid: u32) -> Result<String, SandboxError> {
+/// Login name and home directory of `uid` from `/etc/passwd`.
+fn passwd_entry(uid: u32) -> Result<(String, PathBuf), SandboxError> {
     let passwd = fs::read_to_string("/etc/passwd").map_err(|e| unavailable(e.to_string()))?;
     passwd
         .lines()
         .find_map(|line| {
             let fields: Vec<&str> = line.split(':').collect();
-            (fields.len() > 2 && fields[2] == uid.to_string()).then(|| fields[0].to_string())
+            (fields.len() > 5 && fields[2] == uid.to_string())
+                .then(|| (fields[0].to_string(), PathBuf::from(fields[5])))
         })
         .ok_or_else(|| unavailable(format!("no passwd entry for uid {uid}")))
+}
+
+/// One slot-lock directory per launching user and host, whatever control
+/// plane root launches the workload: the subordinate delegation is per user,
+/// so every launcher drawing on it must contend on the same locks.
+fn host_slot_dir(uid: u32, home: &Path) -> PathBuf {
+    let runtime = PathBuf::from(format!("/run/user/{uid}"));
+    let private = fs::metadata(&runtime)
+        .is_ok_and(|meta| meta.is_dir() && meta.uid() == uid && meta.mode() & 0o077 == 0);
+    if private {
+        runtime.join("sea-forge").join("workload-slots")
+    } else {
+        home.join(".local/state/sea-forge/workload-slots")
+    }
 }
 
 fn current_ids() -> Result<(u32, u32), SandboxError> {
@@ -85,9 +101,10 @@ fn current_ids() -> Result<(u32, u32), SandboxError> {
 }
 
 impl WorkloadIdentityPool {
-    /// Discover the delegation for the current user. `state_dir` must be a
-    /// launcher-private directory; it is created with mode 0700.
-    pub fn from_host(state_dir: &Path) -> Result<Self, SandboxError> {
+    /// Discover the delegation for the current user. Slot locks live in one
+    /// per-user host directory (mode 0700) shared by every launcher, so two
+    /// control planes can never hold the same subordinate identity.
+    pub fn from_host() -> Result<Self, SandboxError> {
         for helper in [UNSHARE].iter().chain(MAPPERS.iter()) {
             let meta = fs::metadata(helper).map_err(|e| unavailable(format!("{helper}: {e}")))?;
             if MAPPERS.contains(helper) && (meta.uid() != 0 || meta.mode() & 0o4000 == 0) {
@@ -98,12 +115,12 @@ impl WorkloadIdentityPool {
         if uid == 0 {
             return Err(unavailable("refusing to launch workloads from host root"));
         }
-        let user = login_name(uid)?;
+        let (user, home) = passwd_entry(uid)?;
         let (uid_base, uid_count) = delegation("/etc/subuid", &user, uid)?;
         let (gid_base, gid_count) = delegation("/etc/subgid", &user, uid)?;
-        let slots = state_dir.join("workload-slots");
+        let slots = host_slot_dir(uid, &home);
         fs::create_dir_all(&slots).map_err(|e| unavailable(e.to_string()))?;
-        for dir in [state_dir, slots.as_path()] {
+        for dir in [slots.parent().unwrap_or(&slots), slots.as_path()] {
             fs::set_permissions(dir, fs::Permissions::from_mode(0o700))
                 .map_err(|e| unavailable(e.to_string()))?;
         }
@@ -126,7 +143,10 @@ impl WorkloadIdentityPool {
                 .write(true)
                 .open(self.slots.join(format!("{slot}.lock")))
                 .map_err(|e| unavailable(e.to_string()))?;
-            if lock.try_lock().is_ok() {
+            // A free lock is not enough: a workload that outlived its
+            // launcher still runs under the slot's UID. Reap it as the
+            // namespace owner, and skip the slot if anything survives.
+            if lock.try_lock().is_ok() && reap_identity(self.uid_base + slot) {
                 return Ok(WorkloadIdentity {
                     host_uid: self.uid_base + slot,
                     host_gid: self.gid_base + slot,
@@ -137,6 +157,58 @@ impl WorkloadIdentityPool {
         }
         Err(unavailable("every subordinate workload identity is in use"))
     }
+}
+
+/// Host PIDs of processes holding `uid` as any of their real, effective,
+/// saved or filesystem UIDs.
+pub fn processes_of(uid: u32) -> Vec<i32> {
+    let Ok(entries) = fs::read_dir("/proc") else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().to_str()?.parse::<i32>().ok())
+        .filter(|pid| {
+            fs::read_to_string(format!("/proc/{pid}/status")).is_ok_and(|status| {
+                status
+                    .lines()
+                    .find(|line| line.starts_with("Uid:"))
+                    .is_some_and(|line| {
+                        line.split_whitespace()
+                            .skip(1)
+                            .any(|id| id == uid.to_string())
+                    })
+            })
+        })
+        .collect()
+}
+
+/// Kill every process under `uid` and report whether none remain. The
+/// launcher owns each workload's user namespace, so it may signal them.
+fn reap_identity(uid: u32) -> bool {
+    use rustix::process::{kill_process, Pid, Signal};
+    for _ in 0..50 {
+        let live = processes_of(uid);
+        if live.is_empty() {
+            return true;
+        }
+        for pid in live {
+            if let Some(pid) = Pid::from_raw(pid) {
+                let _ = kill_process(pid, Signal::KILL);
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    processes_of(uid).is_empty()
+}
+
+/// End a workload's DAC reach into a tree granted by
+/// [`grant_exclusive_access`]: mode 0700 sets the ACL mask to none, so the
+/// named workload entry no longer grants anything while the launcher (owner)
+/// keeps full access. Call once the workload has exited.
+pub fn revoke_exclusive_access(root: &Path) -> Result<(), SandboxError> {
+    fs::set_permissions(root, fs::Permissions::from_mode(0o700))
+        .map_err(|e| unavailable(format!("revoke {}: {e}", root.display())))
 }
 
 // POSIX ACL xattr encoding (linux/posix_acl_xattr.h).
@@ -213,24 +285,88 @@ pub fn grant_exclusive_access(
 pub struct WorkloadConfinement {
     pub workspace_root: PathBuf,
     pub artifacts_root: PathBuf,
+    /// Operator-declared runtime trees (agent installation, interpreter
+    /// prefix) readable in addition to the system set; see
+    /// [`validate_read_paths`].
+    pub read_paths: Vec<PathBuf>,
     pub network: NetworkPosture,
 }
 
-/// Build the launch command for `argv` under `identity`. The caller supplies
-/// stdio, environment (already cleared) and cwd. `helper` is the absolute
-/// path to the `sea-forge-workload-exec` binary.
+/// Check operator-declared workload read paths: each must be absolute,
+/// existing and canonical (no symlink indirection), and none may be `/`, a
+/// home directory itself, or contain any `protected` path (the control-plane
+/// root, launcher state). Returns the paths unchanged when every check holds.
+pub fn validate_read_paths(
+    paths: &[PathBuf],
+    protected: &[&Path],
+) -> Result<Vec<PathBuf>, SandboxError> {
+    let refuse = |path: &Path, why: &str| {
+        Err(SandboxError::new(
+            "schema_error",
+            format!("workload read path {}: {why}", path.display()),
+        ))
+    };
+    for path in paths {
+        if !path.is_absolute() {
+            return refuse(path, "must be absolute");
+        }
+        match path.canonicalize() {
+            Ok(canonical) if canonical == *path => {}
+            Ok(_) => return refuse(path, "must be canonical (no symlinks or dot segments)"),
+            Err(error) => return refuse(path, &error.to_string()),
+        }
+        if path.parent().is_none() || path.parent() == Some(Path::new("/home")) {
+            return refuse(path, "exposes a whole home or the root filesystem");
+        }
+        for guarded in protected {
+            let guarded = guarded
+                .canonicalize()
+                .unwrap_or_else(|_| guarded.to_path_buf());
+            if guarded.starts_with(path) {
+                return refuse(path, "contains a protected control-plane path");
+            }
+        }
+    }
+    Ok(paths.to_vec())
+}
+
+/// The launcher's end of a workload's lifeline pipe. The workload's pid
+/// namespace ends as soon as this is dropped or the launcher dies, so keep it
+/// alive exactly as long as the workload may run.
+#[derive(Debug)]
+pub struct Lifeline {
+    _write: std::os::fd::OwnedFd,
+    _read: std::os::fd::OwnedFd,
+}
+
+/// Build the launch command for `argv` under `identity`, and the lifeline
+/// that bounds it. The caller supplies stdio, environment (already cleared)
+/// and cwd, and must hold the [`Lifeline`] until the workload has exited.
+/// `helper` is the absolute path to the `sea-forge-workload-exec` binary.
 pub fn isolated_command(
     identity: &WorkloadIdentity,
     helper: &Path,
     confinement: &WorkloadConfinement,
     argv: &[String],
-) -> Result<Command, SandboxError> {
+) -> Result<(Command, Lifeline), SandboxError> {
+    use std::os::fd::AsRawFd;
     if argv.is_empty() {
         return Err(SandboxError::new("input_error", "workload argv is empty"));
     }
     if !helper.is_absolute() {
         return Err(unavailable("workload helper path must be absolute"));
     }
+    // Only the read end crosses exec; the write end stays close-on-exec in
+    // the launcher, so its closure is the launcher's exit.
+    let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC)
+        .map_err(|e| unavailable(format!("lifeline pipe: {e}")))?;
+    rustix::io::fcntl_setfd(&read, rustix::io::FdFlags::empty())
+        .map_err(|e| unavailable(format!("lifeline pipe: {e}")))?;
+    // The helper reopens the read end by path as the subordinate identity.
+    // Read-only for others: the workload can never open a second write end
+    // that would keep the pipe alive past the launcher.
+    rustix::fs::fchmod(&read, rustix::fs::Mode::from_raw_mode(0o444))
+        .map_err(|e| unavailable(format!("lifeline pipe: {e}")))?;
     let mut command = Command::new(UNSHARE);
     command
         .env_clear()
@@ -263,11 +399,24 @@ pub fn isolated_command(
         .arg(&confinement.workspace_root)
         .arg("--artifacts")
         .arg(&confinement.artifacts_root);
+    for path in &confinement.read_paths {
+        command.arg("--read").arg(path);
+    }
     for port in confinement.network.granted_ports() {
         command.arg("--tcp-port").arg(port.to_string());
     }
-    command.arg("--").args(argv);
-    Ok(command)
+    command
+        .arg("--lifeline")
+        .arg(read.as_raw_fd().to_string())
+        .arg("--")
+        .args(argv);
+    Ok((
+        command,
+        Lifeline {
+            _write: write,
+            _read: read,
+        },
+    ))
 }
 
 /// Spawn an interactive isolated workload whose stdio stays connected to the
@@ -282,7 +431,7 @@ pub fn spawn_interactive(
 ) -> Result<crate::jail::InteractiveJailChild, SandboxError> {
     use std::os::unix::process::CommandExt;
     use std::process::Stdio;
-    let mut command = isolated_command(identity, helper, confinement, argv)?;
+    let (mut command, lifeline) = isolated_command(identity, helper, confinement, argv)?;
     command
         .current_dir(cwd)
         .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
@@ -300,6 +449,7 @@ pub fn spawn_interactive(
         stdin,
         stdout,
         stderr,
+        lifeline: Some(lifeline),
     })
 }
 

@@ -35,6 +35,7 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
     let confinement = WorkloadConfinement {
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
+        read_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();
@@ -76,22 +77,30 @@ fn spawn_workload(
     conninfo: &str,
     script: &str,
 ) -> Child {
-    isolated_command(
+    // The client installation is the only runtime tree it may read.
+    let dirs = WorkloadConfinement {
+        read_paths: vec![install.canonicalize().unwrap()],
+        ..dirs.clone()
+    };
+    let (mut command, lifeline) = isolated_command(
         identity,
         helper,
-        dirs,
+        &dirs,
         &["/bin/sh".into(), "-c".into(), script.into()],
     )
-    .unwrap()
-    .env(
-        "PATH",
-        format!("{}:/usr/bin:/bin", install.join("bin").display()),
-    )
-    .env("LD_LIBRARY_PATH", install.join("lib"))
-    .env("PGCONN", conninfo)
-    .stdin(Stdio::null())
-    .spawn()
-    .unwrap()
+    .unwrap();
+    // Session lifetime, not workload lifetime, is under test here.
+    std::mem::forget(lifeline);
+    command
+        .env(
+            "PATH",
+            format!("{}:/usr/bin:/bin", install.join("bin").display()),
+        )
+        .env("LD_LIBRARY_PATH", install.join("lib"))
+        .env("PGCONN", conninfo)
+        .stdin(Stdio::null())
+        .spawn()
+        .unwrap()
 }
 
 #[test]
@@ -689,4 +698,89 @@ fn renewal_redecides_and_a_refused_renewal_ends_the_live_session() {
         .collect();
     assert!(kinds.iter().any(|k| k == "database_session_renewed"));
     assert!(kinds.iter().any(|k| k == "database_session_revoked"));
+}
+
+/// ADV-B07: with the launcher (and so the expiry reaper) gone, `VALID
+/// UNTIL` alone left a live backend running past expiry. The next issuance
+/// on the cluster now ends every expired, unreaped session first.
+#[test]
+fn expired_sessions_without_a_reaper_end_at_the_next_issuance() {
+    let Some((install, pool, helper, _state)) = prerequisites() else {
+        return;
+    };
+    let mut cluster = start_cluster(&install);
+    cluster.config.session_ttl_secs = 2;
+    let broker = PostgresBroker::new(cluster.config.clone()).unwrap();
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(POLICY).unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let actor = Actor {
+        actor_id: "audit-agent".into(),
+        role: ActorRole::Operator,
+    };
+    let ledger = LedgerStream::open(&cluster.base, "run-pg-orphan", "control-plane").unwrap();
+    let identity = pool.acquire().unwrap();
+    let dirs = workload_dirs(&cluster.base, "agent", &identity);
+    let issue = || {
+        broker
+            .issue(
+                &engine,
+                &bundle,
+                &actor,
+                &ledger,
+                "run-pg-orphan",
+                &dirs.workspace_root,
+                "audit-read",
+                identity.host_uid,
+            )
+            .unwrap()
+            .unwrap()
+    };
+    // No expiry reaper is started: the launcher that would own it is dead.
+    let orphaned = issue();
+    let mut child = spawn_workload(
+        &identity,
+        &helper,
+        &dirs,
+        &install,
+        &orphaned.conninfo(),
+        "psql \"$PGCONN\" -X -At -c 'SELECT pg_sleep(60)' >/dev/null 2>&1",
+    );
+    let start = std::time::Instant::now();
+    while broker.active_backends(&orphaned.role).unwrap().is_empty() {
+        assert!(
+            start.elapsed() < Duration::from_secs(15),
+            "backend never connected"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    std::thread::sleep(Duration::from_secs(3));
+    // Control: past VALID UNTIL, the database alone has not ended it.
+    assert!(
+        !broker.active_backends(&orphaned.role).unwrap().is_empty(),
+        "expired backend already gone without reconciliation"
+    );
+    // Positive control: the next issuance works, and reconciles first.
+    let next = issue();
+    assert!(broker.active_backends(&orphaned.role).unwrap().is_empty());
+    assert_eq!(
+        broker
+            .admin_sql(&format!(
+                "SELECT count(*) FROM pg_roles WHERE rolname = '{}'",
+                orphaned.role
+            ))
+            .unwrap(),
+        "0"
+    );
+    let reasons: Vec<String> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.record_kind == "database_session_revoked")
+        .map(|e| e.payload["reason"].as_str().unwrap_or_default().to_string())
+        .collect();
+    assert_eq!(reasons, ["expired_unreaped"]);
+    child.wait().unwrap();
+    broker
+        .revoke(&next, &ledger, "run-pg-orphan", "cleanup")
+        .unwrap();
 }

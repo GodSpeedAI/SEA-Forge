@@ -42,11 +42,11 @@ fn apply_landlock(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
     network: &NetworkPosture,
-    null_device_writable: bool,
+    workload: Option<&[std::path::PathBuf]>,
 ) -> Result<(), SandboxError> {
     use landlock::{
         path_beneath_rules, Access, AccessFs, AccessNet, CompatLevel, Compatible, NetPort, Ruleset,
-        RulesetAttr, RulesetCreatedAttr, RulesetStatus,
+        RulesetAttr, RulesetCreatedAttr, RulesetStatus, Scope, ABI,
     };
 
     fn map_err<E: std::fmt::Display>(error: E) -> SandboxError {
@@ -60,37 +60,61 @@ fn apply_landlock(
     let fs_read = AccessFs::from_read(JAIL_NET_ABI);
     let net_all = AccessNet::from_all(JAIL_NET_ABI);
 
-    let created = Ruleset::default()
+    let ruleset = Ruleset::default()
         // Network first, under a hard requirement: on a pre-v4 kernel this
         // errors instead of degrading, giving fail-closed setup.
         .set_compatibility(CompatLevel::HardRequirement)
         .handle_access(net_all)
-        .map_err(map_err)?
-        // Filesystem best-effort so FS confinement still works on kernels
-        // between the FS-only and network ABIs.
-        .set_compatibility(CompatLevel::BestEffort)
-        .handle_access(fs_all)
-        .map_err(map_err)?
-        .create()
-        .map_err(map_err)?
-        // Read-write for workspace and artifacts.
-        .add_rules(path_beneath_rules([workspace_root, artifacts_root], fs_all))
-        .map_err(map_err)?
-        // Read-only for the rest of the filesystem so the child can load its
-        // interpreter and libraries.
-        .add_rules(path_beneath_rules([std::path::Path::new("/")], fs_read))
         .map_err(map_err)?;
-    // Isolated workloads run ordinary shells that redirect to /dev/null; the
-    // device discards writes, so granting it widens no data path.
-    let created = if null_device_writable {
-        created
-            .add_rules(path_beneath_rules(
-                [std::path::Path::new("/dev/null")],
-                fs_read | AccessFs::WriteFile,
-            ))
+    let created = match workload {
+        // Trusted jail class: best-effort filesystem rights, read on `/`.
+        None => ruleset
+            // Filesystem best-effort so FS confinement still works on kernels
+            // between the FS-only and network ABIs.
+            .set_compatibility(CompatLevel::BestEffort)
+            .handle_access(fs_all)
             .map_err(map_err)?
-    } else {
-        created
+            .create()
+            .map_err(map_err)?
+            // Read-write for workspace and artifacts.
+            .add_rules(path_beneath_rules([workspace_root, artifacts_root], fs_all))
+            .map_err(map_err)?
+            // Read-only for the rest of the filesystem so the child can load
+            // its interpreter and libraries.
+            .add_rules(path_beneath_rules([std::path::Path::new("/")], fs_read))
+            .map_err(map_err)?,
+        // Isolated workloads (SEC-06): every right of the scoping ABI is a
+        // hard requirement, reads are limited to the system trees plus the
+        // operator-declared runtime paths, and abstract UNIX sockets and
+        // signals outside the workload's Landlock domain are unreachable.
+        Some(read_paths) => {
+            let fs_all = AccessFs::from_all(ABI::V6);
+            let fs_read = AccessFs::from_read(ABI::V6);
+            let mut readable: Vec<std::path::PathBuf> = WORKLOAD_SYSTEM_READ
+                .iter()
+                .map(std::path::PathBuf::from)
+                .filter(|path| path.exists())
+                .collect();
+            readable.extend(read_paths.iter().cloned());
+            ruleset
+                .handle_access(fs_all)
+                .map_err(map_err)?
+                .scope(Scope::from_all(ABI::V6))
+                .map_err(map_err)?
+                .create()
+                .map_err(map_err)?
+                .add_rules(path_beneath_rules([workspace_root, artifacts_root], fs_all))
+                .map_err(map_err)?
+                .add_rules(path_beneath_rules(&readable, fs_read))
+                .map_err(map_err)?
+                // Ordinary shells redirect to /dev/null; the device discards
+                // writes, so granting it widens no data path.
+                .add_rules(path_beneath_rules(
+                    [std::path::Path::new("/dev/null")],
+                    fs_read | AccessFs::WriteFile,
+                ))
+                .map_err(map_err)?
+        }
     };
 
     // Add per-port TCP grants for an explicit network posture. Default denial
@@ -136,15 +160,27 @@ fn apply_landlock(
     Ok(())
 }
 
-/// Apply the jail posture to the calling thread. Used by the trusted
-/// `sea-forge-workload-exec` helper inside a workload namespace.
+/// System trees an isolated workload may read and execute: binaries,
+/// libraries, configuration, its own procfs and devices. Home directories,
+/// `/tmp`, `/run`, `/var`, `/sys`, `/mnt` and `/srv` are not readable.
+#[cfg(target_os = "linux")]
+pub const WORKLOAD_SYSTEM_READ: [&str; 10] = [
+    "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/etc", "/proc", "/dev",
+];
+
+/// Apply the isolated-workload posture to the calling thread: read-write on
+/// `workspace_root`/`artifacts_root`, read on [`WORKLOAD_SYSTEM_READ`] and
+/// `read_paths` only, scoped abstract sockets and signals, and TCP per
+/// `network`. Used by the trusted `sea-forge-workload-exec` helper inside a
+/// workload namespace.
 #[cfg(target_os = "linux")]
 pub fn restrict_current_thread(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
+    read_paths: &[std::path::PathBuf],
     network: &NetworkPosture,
 ) -> Result<(), SandboxError> {
-    apply_landlock(workspace_root, artifacts_root, network, true)
+    apply_landlock(workspace_root, artifacts_root, network, Some(read_paths))
 }
 
 #[derive(Debug)]
@@ -157,6 +193,9 @@ pub struct InteractiveJailChild {
     pub stdin: std::process::ChildStdin,
     pub stdout: std::process::ChildStdout,
     pub stderr: std::process::ChildStderr,
+    /// Isolated workloads only: dropping it ends the workload's namespace.
+    #[cfg(target_os = "linux")]
+    pub lifeline: Option<crate::workload::Lifeline>,
 }
 
 /// Restrict the current thread with the same Landlock posture as `JailSandbox`
@@ -183,7 +222,7 @@ pub fn spawn_interactive(
         }
         std::fs::create_dir_all(workspace_root).map_err(map_err)?;
         std::fs::create_dir_all(artifacts_root).map_err(map_err)?;
-        apply_landlock(workspace_root, artifacts_root, network, false)?;
+        apply_landlock(workspace_root, artifacts_root, network, None)?;
         let mut command = std::process::Command::new(&argv[0]);
         command
             .args(&argv[1..])
@@ -214,6 +253,7 @@ pub fn spawn_interactive(
             stdin,
             stdout,
             stderr,
+            lifeline: None,
         })
     }
     #[cfg(not(target_os = "linux"))]
@@ -427,7 +467,7 @@ fn run_jailed(
     // Apply filesystem + network Landlock confinement to this thread (inherited
     // by the child). Fails closed with `jail_unavailable` when the requested
     // posture cannot be enforced — never a silent fallback to `local`.
-    apply_landlock(workspace_root, artifacts_root, network, false)?;
+    apply_landlock(workspace_root, artifacts_root, network, None)?;
 
     let mut command = Command::new(&argv[0]);
     command

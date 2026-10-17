@@ -2467,6 +2467,7 @@ dependencies = [
  "chrono",
  "getrandom 0.4.3",
  "hex",
+ "rustix",
  "schemars",
  "sea-forge-agent",
  "sea-forge-authority",

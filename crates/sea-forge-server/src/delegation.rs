@@ -447,6 +447,7 @@ pub async fn execute_with_permission_broker(
             &sandbox_class,
             &config.mcp_servers,
             &config.postgres,
+            &config.workload_read_paths,
             &actor,
         )
         .await?;
@@ -1209,6 +1210,7 @@ async fn run_acp_episode(
     sandbox_class: &str,
     mcp_servers: &[crate::mcp::McpServerConfig],
     postgres: &[crate::postgres::PostgresResourceConfig],
+    workload_read_paths: &[std::path::PathBuf],
     actor: &Actor,
 ) -> Result<
     (
@@ -1261,6 +1263,9 @@ async fn run_acp_episode(
     // Holds the exclusive subordinate identity until the session ends.
     #[cfg(target_os = "linux")]
     let mut workload_identity = None;
+    // The isolated workload's pid namespace lives exactly as long as this.
+    #[cfg(target_os = "linux")]
+    let mut workload_lifeline = None;
     #[cfg(target_os = "linux")]
     let mut mcp_listeners: Vec<crate::mcp::McpListenerGuard> = Vec::new();
     #[cfg(target_os = "linux")]
@@ -1338,8 +1343,7 @@ async fn run_acp_episode(
             let artifacts = root.join("runs").join(run).join("artifacts");
             std::fs::create_dir_all(&artifacts)
                 .map_err(|error| ForgeError::io("create ACP artifacts", error))?;
-            let pool = workload::WorkloadIdentityPool::from_host(&root.join("workload-state"))
-                .map_err(isolation_error)?;
+            let pool = workload::WorkloadIdentityPool::from_host().map_err(isolation_error)?;
             let identity = pool.acquire().map_err(isolation_error)?;
             workload::grant_exclusive_access(&workspace, &identity).map_err(isolation_error)?;
             workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
@@ -1396,6 +1400,13 @@ async fn run_acp_episode(
             let confinement = workload::WorkloadConfinement {
                 workspace_root: workspace.clone(),
                 artifacts_root: artifacts,
+                read_paths: workload::validate_read_paths(workload_read_paths, &[root]).map_err(
+                    |error| ForgeError::Config {
+                        class: "schema_error",
+                        path: root.join("server.yaml"),
+                        message: error.to_string(),
+                    },
+                )?,
                 network: sea_forge_sandbox::NetworkPosture::Denied,
             };
             let mut workload_env = spawn.env.clone();
@@ -1470,6 +1481,7 @@ async fn run_acp_episode(
             )
             .map_err(isolation_error)?;
             workload_identity = Some(identity);
+            workload_lifeline = child.lifeline;
             AcpSession::from_std_child(
                 child.child,
                 child.stdin,
@@ -1536,7 +1548,18 @@ async fn run_acp_episode(
         )
         .await;
     let continuation_key = acp_outcome.continuation_key.clone();
-    let mut outcome = acp_outcome_to_delegation(acp_outcome);
+    // Credentials this episode issued to the workload are redacted from the
+    // transcript like the HTTP path's endpoint credential: an agent that
+    // echoes its connection string must not persist it in evidence.
+    #[cfg(target_os = "linux")]
+    let issued: Vec<String> = db_sessions
+        .iter()
+        .flat_map(|(_, session, _)| [session.conninfo(), session.password().to_string()])
+        .collect();
+    #[cfg(not(target_os = "linux"))]
+    let issued: Vec<String> = Vec::new();
+    let issued: Vec<&str> = issued.iter().map(String::as_str).collect();
+    let mut outcome = acp_outcome_to_delegation(acp_outcome, &issued);
     // F-24: the SWE_SEED harvest runs git subprocesses and walks the
     // workspace tree — keep that off the async worker.
     let harvest_snapshot = snapshot.clone();
@@ -1572,6 +1595,23 @@ async fn run_acp_episode(
         if revoked.is_err() {
             outcome.termination = DelegationTermination::EndpointError;
             outcome.error_subcode = Some("database_revocation_failed".into());
+        }
+    }
+    // End the workload's namespace (any process the agent left behind), then
+    // withdraw the slot UID's reach into this run's trees before the lock is
+    // released and the UID can be issued again.
+    #[cfg(target_os = "linux")]
+    drop(workload_lifeline);
+    #[cfg(target_os = "linux")]
+    if workload_identity.is_some() {
+        let run_dir = root.join("runs").join(run);
+        for tree in ["workspace", "artifacts", "mcp"] {
+            let path = run_dir.join(tree);
+            if path.exists() && sea_forge_sandbox::workload::revoke_exclusive_access(&path).is_err()
+            {
+                outcome.termination = DelegationTermination::EndpointError;
+                outcome.error_subcode = Some("workload_revocation_failed".into());
+            }
         }
     }
     #[cfg(target_os = "linux")]
@@ -1618,7 +1658,8 @@ fn harvest_swe_seed(
     }
 
     let harness = workspace.join(".agent-harness");
-    if !harness.is_dir() {
+    // The workspace is workload-written: never follow a planted symlink.
+    if !std::fs::symlink_metadata(&harness).is_ok_and(|meta| meta.file_type().is_dir()) {
         return Err(ForgeError::Input(
             "configured SWE_SEED run produced no .agent-harness evidence".into(),
         ));
@@ -1664,7 +1705,27 @@ fn harvest_swe_seed(
                 "SWE_SEED evidence escaped .agent-harness".into(),
             ));
         }
-        let bytes = std::fs::read(&canonical)
+        // Bound the read by the opened file itself (no symlink, regular
+        // file, apparent size) so a sparse or swapped file cannot make the
+        // launcher allocate more than the limit.
+        let file = {
+            use std::os::unix::fs::OpenOptionsExt;
+            std::fs::OpenOptions::new()
+                .read(true)
+                .custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32)
+                .open(&canonical)
+                .map_err(|error| ForgeError::io("open SWE_SEED evidence", error))?
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|error| ForgeError::io("stat SWE_SEED evidence", error))?;
+        if !metadata.is_file() || metadata.len() > 1_048_576 {
+            return Err(ForgeError::Input(
+                "SWE_SEED evidence file exceeds 1 MiB".into(),
+            ));
+        }
+        let mut bytes = Vec::new();
+        std::io::Read::read_to_end(&mut std::io::Read::take(file, 1_048_577), &mut bytes)
             .map_err(|error| ForgeError::io("read SWE_SEED evidence", error))?;
         if bytes.len() > 1_048_576 {
             return Err(ForgeError::Input(
@@ -1723,6 +1784,7 @@ fn latest_disconnected_continuation(
 /// common evidence/settlement postamble treats HTTP and ACP uniformly.
 fn acp_outcome_to_delegation(
     outcome: sea_forge_agent::AcpOutcome,
+    known_secrets: &[&str],
 ) -> sea_forge_agent::DelegationOutcome {
     let raw_entries: Vec<sea_forge_agent::TranscriptEntry> = outcome
         .transcript
@@ -1736,7 +1798,7 @@ fn acp_outcome_to_delegation(
     // sentinel corpus, canonicalize, and hash the exact canonical bytes BEFORE
     // any summary or artifact is derived. Previously ACP transcripts reached
     // hashing/storage with no redaction at all.
-    let produced = sea_forge_agent::produce_transcript(&raw_entries, &[]);
+    let produced = sea_forge_agent::produce_transcript(&raw_entries, known_secrets);
     let entries = produced.entries;
     let sha = produced.sha256;
     let tool_calls = entries.iter().filter(|e| e.role == "tool").count() as u32;

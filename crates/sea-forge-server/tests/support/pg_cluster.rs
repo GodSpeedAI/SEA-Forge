@@ -54,7 +54,7 @@ pub fn prerequisites() -> Option<Prerequisites> {
         return skip("SEA_FORGE_SECURITY_PG_INSTALL unset".into());
     };
     let state = tempfile::tempdir().unwrap();
-    let pool = match WorkloadIdentityPool::from_host(&state.path().join("s")) {
+    let pool = match WorkloadIdentityPool::from_host() {
         Ok(pool) => pool,
         Err(error) => return skip(error.to_string()),
     };

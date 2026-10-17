@@ -276,11 +276,11 @@ impl Broker {
             value.get("error").is_none()
                 && value.pointer("/result/isError") != Some(&Value::Bool(true))
         });
-        // Trusted exposure observation: this broker is forwarding the
-        // classified plaintext to the context right now.
-        if let (Ok(value), true, Some(label)) =
-            (&response, accepted, self.config.classify.get(name))
-        {
+        // Trusted exposure observation: this broker is forwarding a
+        // classified tool's response to the context right now. Error and
+        // `isError` payloads are forwarded too and may carry the plaintext
+        // (ADV-B09), so any forwarded response labels the context.
+        if let (Ok(value), Some(label)) = (&response, self.config.classify.get(name)) {
             if let (Some(registry), Some(context)) = (&self.exposure, &self.config.context) {
                 registry.record(
                     context,
@@ -599,6 +599,31 @@ impl Broker {
                 write.write_all(format!("{response}\n").as_bytes()).await?;
                 write.flush().await?;
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::McpServerConfig;
+
+    /// Only stdio upstreams are representable: an HTTP, SSE or streamable
+    /// HTTP server cannot be configured, so the broker is never bypassed by
+    /// offering an agent a network transport it would reach directly.
+    #[test]
+    fn network_mcp_transports_are_not_configurable() {
+        let stdio = "name: tickets\nargv: [/usr/bin/python3, upstream.py]\n";
+        assert!(sea_forge_core::yaml::from_str::<McpServerConfig>(stdio).is_ok());
+        for remote in [
+            "name: tickets\nurl: https://mcp.example/sse\nargv: []\n",
+            "name: tickets\ntransport: sse\nargv: [x]\n",
+            "name: tickets\ntype: http\nargv: [x]\n",
+            "name: tickets\nheaders: {Authorization: x}\nargv: [x]\n",
+        ] {
+            assert!(
+                sea_forge_core::yaml::from_str::<McpServerConfig>(remote).is_err(),
+                "accepted: {remote}"
+            );
         }
     }
 }

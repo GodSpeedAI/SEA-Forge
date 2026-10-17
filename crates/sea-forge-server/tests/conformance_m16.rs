@@ -335,7 +335,18 @@ fn acp_fixture_child() {
                         )
                         .unwrap();
                     }
-                    finish_prompt(prompt_id.unwrap(), session_id, "done");
+                    if mode.contains("pg") {
+                        // An agent echoing its own connection string.
+                        let conninfo = std::env::var("SEA_FORGE_PG_APP_DB_AUDIT_READ").unwrap();
+                        std::fs::write("conninfo.txt", &conninfo).unwrap();
+                        finish_prompt(
+                            prompt_id.unwrap(),
+                            session_id,
+                            &format!("connected with {conninfo}"),
+                        );
+                    } else {
+                        finish_prompt(prompt_id.unwrap(), session_id, "done");
+                    }
                 }
             }
             None if id == Some(901) => {
@@ -454,6 +465,15 @@ fn server_config(root: &Path, tool_kind: &str, mode: &str) -> ServerConfig {
     ServerConfig {
         root: root.to_path_buf(),
         agent,
+        // Isolated fixture agents are this test binary and its sibling
+        // connector; that build directory is their only runtime tree.
+        workload_read_paths: vec![std::env::current_exe()
+            .unwrap()
+            .parent()
+            .and_then(Path::parent)
+            .unwrap()
+            .canonicalize()
+            .unwrap()],
         ..ServerConfig::default()
     }
 }
@@ -785,10 +805,7 @@ async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
 #[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
 async fn t16_4b_isolated_agent_runs_under_dedicated_host_identity() {
     if sea_forge_sandbox::workload::sibling_helper().is_err()
-        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host(
-            &tempfile::tempdir().unwrap().path().join("probe"),
-        )
-        .is_err()
+        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host().is_err()
     {
         assert!(
             std::env::var_os("SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION").is_none(),
@@ -835,10 +852,7 @@ async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream(
     use std::os::unix::fs::PermissionsExt;
     if sea_forge_sandbox::workload::sibling_binary("sea-forge-mcp-connect").is_err()
         || sea_forge_sandbox::workload::sibling_helper().is_err()
-        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host(
-            &tempfile::tempdir().unwrap().path().join("probe"),
-        )
-        .is_err()
+        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host().is_err()
     {
         assert!(
             std::env::var_os("SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION").is_none(),
@@ -972,6 +986,10 @@ async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
     std::fs::write(&secret, "SECRET-LAUNCHER").unwrap();
     std::fs::set_permissions(&secret, std::fs::Permissions::from_mode(0o600)).unwrap();
     let mut config = server_config(root.path(), "read", "isolated_pg");
+    // psql is the agent's runtime: declare its installation readable.
+    config
+        .workload_read_paths
+        .push(install.canonicalize().unwrap());
     config.agent.endpoints[0].env.extend([
         format!("FIXTURE_LAUNCHER_SECRET={}", secret.display()),
         format!("PATH={}:/usr/bin:/bin", install.join("bin").display()),
@@ -1008,6 +1026,46 @@ async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
         "unauthorized scope issued"
     );
     assert_eq!(pg_cluster::digest(&broker), before);
+    // The issued credential never reaches persisted evidence: the agent
+    // echoed it, the stored transcript and every record outside the
+    // workload's own workspace carry only the redaction marker.
+    let echoed = std::fs::read_to_string(
+        root.path()
+            .join("runs")
+            .join(&run)
+            .join("workspace/conninfo.txt"),
+    )
+    .unwrap();
+    let password = echoed
+        .split_whitespace()
+        .find_map(|field| field.strip_prefix("password="))
+        .unwrap()
+        .to_string();
+    assert_eq!(password.len(), 64, "{echoed}");
+    let workspace = root.path().join("runs").join(&run).join("workspace");
+    let mut pending = vec![root.path().to_path_buf()];
+    let mut transcript_seen = false;
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.starts_with(&workspace) || !entry.file_type().unwrap().is_file() {
+                if entry.file_type().unwrap().is_dir() && !path.starts_with(&workspace) {
+                    pending.push(path);
+                }
+                continue;
+            }
+            let bytes = std::fs::read(&path).unwrap_or_default();
+            let text = String::from_utf8_lossy(&bytes);
+            assert!(
+                !text.contains(&password),
+                "credential persisted in {}",
+                path.display()
+            );
+            transcript_seen |= text.contains("connected with") && text.contains("[REDACTED]");
+        }
+    }
+    assert!(transcript_seen, "redacted transcript not persisted");
+    assert!(!format!("{result:?}").contains(&password));
     // Revoked at episode end: no workload role survives.
     assert_eq!(
         broker

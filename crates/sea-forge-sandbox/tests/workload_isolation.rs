@@ -35,7 +35,7 @@ fn fixture() -> Option<Fixture> {
     let base = tempfile::tempdir().expect("tempdir");
     // Traverse-only so workloads can reach their own directories by name.
     fs::set_permissions(base.path(), fs::Permissions::from_mode(0o711)).expect("chmod base");
-    match WorkloadIdentityPool::from_host(&base.path().join("state")) {
+    match WorkloadIdentityPool::from_host() {
         Ok(pool) => Some(Fixture {
             base: base.path().to_path_buf(),
             _base: base,
@@ -57,6 +57,7 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
     let confinement = WorkloadConfinement {
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
+        read_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();
@@ -68,17 +69,21 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
 }
 
 fn spawn(identity: &WorkloadIdentity, confinement: &WorkloadConfinement, script: &str) -> Child {
-    isolated_command(
+    let (mut command, lifeline) = isolated_command(
         identity,
         Path::new(HELPER),
         confinement,
         &["/bin/sh".into(), "-c".into(), script.into()],
     )
-    .unwrap()
-    .env("PATH", "/usr/bin:/bin")
-    .stdin(Stdio::null())
-    .spawn()
-    .expect("spawn isolated workload")
+    .unwrap();
+    // These attacks are about identity, not lifetime: keep each workload's
+    // lifeline open for the test process (workload_boundary.rs covers it).
+    std::mem::forget(lifeline);
+    command
+        .env("PATH", "/usr/bin:/bin")
+        .stdin(Stdio::null())
+        .spawn()
+        .expect("spawn isolated workload")
 }
 
 fn wait_for(path: &Path) -> String {
@@ -269,5 +274,26 @@ fn slots_are_exclusive_while_held() {
     assert_ne!(first.slot, second.slot);
     let slot = first.slot;
     drop(first);
-    assert_eq!(fx.pool.acquire().unwrap().slot, slot);
+    // Slots are shared host-wide, so a concurrent test may hold the released
+    // slot for a moment; it must become acquirable again, never `second`'s.
+    let start = Instant::now();
+    let mut lower = Vec::new();
+    loop {
+        let next = fx.pool.acquire().unwrap();
+        assert_ne!(next.slot, second.slot, "held slot issued twice");
+        if next.slot == slot {
+            break;
+        }
+        // Lowest free slot first: keep lower ones so the released one is next.
+        if next.slot < slot {
+            lower.push(next);
+            continue;
+        }
+        drop(next);
+        assert!(
+            start.elapsed() < Duration::from_secs(20),
+            "released slot never reissued"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }

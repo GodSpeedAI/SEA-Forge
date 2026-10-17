@@ -81,13 +81,32 @@ pub fn execute(
         }
     }
 
-    let sandbox = select_sandbox(sandbox_class).map_err(|e: sea_forge_sandbox::SandboxError| {
-        ForgeError::Config {
-            class: e.class,
-            path: workspace.into(),
-            message: e.message,
+    let sandbox_error = |e: sea_forge_sandbox::SandboxError| ForgeError::Config {
+        class: e.class,
+        path: workspace.into(),
+        message: e.message,
+    };
+    let sandbox = match sandbox_class {
+        // The authority-bound executable is the only command an isolated
+        // run may start; its own directory is the one runtime tree it may
+        // read beyond the system set, and never one containing the run.
+        #[cfg(target_os = "linux")]
+        SandboxClass::Isolated => {
+            let tree = resolved_executable
+                .as_deref()
+                .and_then(Path::parent)
+                .map(Path::to_path_buf)
+                .ok_or_else(|| {
+                    ForgeError::Input("isolated execution has no bound executable".into())
+                })?;
+            let reads =
+                sea_forge_sandbox::workload::validate_read_paths(&[tree], &[workspace, artifacts])
+                    .map_err(sandbox_error)?;
+            Box::new(sea_forge_sandbox::IsolatedSandbox::new(reads).map_err(sandbox_error)?)
+                as Box<dyn sea_forge_sandbox::ExecutionSandbox>
         }
-    })?;
+        _ => select_sandbox(sandbox_class).map_err(sandbox_error)?,
+    };
     let spec = SandboxSpec {
         workspace_root: workspace.to_path_buf(),
         artifacts_root: artifacts.to_path_buf(),

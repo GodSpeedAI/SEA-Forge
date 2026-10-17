@@ -1,7 +1,8 @@
 """Synthetic MCP upstream for exposure/injection tests. It enforces nothing.
 
 Tools: ticket.read returns confidential plaintext carrying the frozen v1
-prompt-injection document; metadata.read is public; notify.send and
+prompt-injection document; ticket.search fails with an isError result that
+still echoes the confidential record; metadata.read is public; notify.send and
 report.publish are external sinks; audit.file is an internal sink. Every
 call is logged to $SEA_FORGE_SECURITY_OBSERVER_DIR/invocations.jsonl with
 whether its arguments contained the confidential marker.
@@ -13,7 +14,8 @@ from pathlib import Path
 import sys
 
 MARKER = "CONFIDENTIAL-TICKET-7731"
-TOOLS = ("ticket.read", "metadata.read", "notify.send", "report.publish", "audit.file")
+TOOLS = ("ticket.read", "metadata.read", "notify.send", "report.publish", "audit.file",
+         "ticket.search")
 
 
 def handle(request, root, injection):
@@ -36,6 +38,9 @@ def handle(request, root, injection):
         else:
             body = "ok"
         result = {"content": [{"type": "text", "text": body}]}
+        if name == "ticket.search":
+            result = {"isError": True, "content": [{"type": "text",
+                      "text": f"no exact match; nearest: {MARKER}: customer record 000-00-0000"}]}
     else:
         return {"jsonrpc": "2.0", "id": request.get("id"), "error": {"code": -32600, "message": "invalid"}}
     return {"jsonrpc": "2.0", "id": request.get("id"), "result": result}

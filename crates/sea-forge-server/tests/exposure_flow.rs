@@ -18,7 +18,7 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: reads\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [ticket.read, metadata.read]\n      permitted_exposure: [confidential]\n  - name: external-sinks-for-unexposed-work\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [notify.send, report.publish]\n  - name: internal-audit-sink\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [audit.file]\n      permitted_exposure: [confidential]\n";
+const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: reads\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [ticket.read, metadata.read, ticket.search]\n      permitted_exposure: [confidential]\n  - name: external-sinks-for-unexposed-work\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [notify.send, report.publish]\n  - name: internal-audit-sink\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [exposure-upstream]\n      mcp_tool: [audit.file]\n      permitted_exposure: [confidential]\n";
 
 struct Fixture {
     _dir: tempfile::TempDir,
@@ -73,7 +73,11 @@ fn broker(fx: &Fixture, context: &str) -> (McpListenerGuard, PathBuf) {
                 ("SEA_FORGE_INJECTION_TEXT".to_string(), fx.injection.clone()),
             ]
             .into(),
-            classify: [("ticket.read".to_string(), "confidential".to_string())].into(),
+            classify: [
+                ("ticket.read".to_string(), "confidential".to_string()),
+                ("ticket.search".to_string(), "confidential".to_string()),
+            ]
+            .into(),
         },
         Some(context.into()),
     )
@@ -180,7 +184,15 @@ fn exposure_restricts_destinations_across_injection_transforms_resumption_and_de
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names, ["ticket.read", "metadata.read", "audit.file"]);
+    assert_eq!(
+        names,
+        [
+            "ticket.read",
+            "metadata.read",
+            "audit.file",
+            "ticket.search"
+        ]
+    );
     // Explicitly authorized work for confidential data stays possible.
     assert!(allowed(&agent.call("audit.file", json!({"ticket": text}))));
 
@@ -267,4 +279,38 @@ fn exposure_restricts_destinations_across_injection_transforms_resumption_and_de
         .iter()
         .filter(|c| c["tool"] != "audit.file")
         .all(|c| c["carries_secret"] == false));
+}
+
+/// ADV-B09: a classified tool that fails still forwards its payload. An
+/// `isError` result echoing the record exposes the context like a success.
+#[test]
+fn classified_error_responses_expose_the_context() {
+    let fx = fixture();
+    let registry = ExposureRegistry::open(&fx.root, "test-auditor").unwrap();
+    let (guard, socket) = broker(&fx, "run-error");
+    let mut agent = Client::connect(&socket);
+    // Positive control: the sink works before any exposure.
+    assert!(allowed(
+        &agent.call("notify.send", json!({"message": "triage"}))
+    ));
+    let failed = agent.call("ticket.search", json!({"q": "7731"}));
+    assert_eq!(failed["result"]["isError"], true, "{failed}");
+    assert!(failed["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("CONFIDENTIAL-TICKET-7731"));
+    assert_eq!(registry.labels("run-error").unwrap(), ["confidential"]);
+    assert_eq!(
+        agent.call("notify.send", json!({"message": "nearest record"}))["error"]["code"],
+        -32001
+    );
+    drop((agent, guard));
+    let sent = log(&fx)
+        .iter()
+        .filter(|c| c["tool"] == "notify.send")
+        .count();
+    assert_eq!(
+        sent, 1,
+        "only the pre-exposure notification reached the sink"
+    );
 }

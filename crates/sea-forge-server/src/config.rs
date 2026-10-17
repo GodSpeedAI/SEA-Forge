@@ -231,6 +231,12 @@ pub struct ServerConfig {
     /// receive (authority decides each scope). Empty by default.
     #[serde(default)]
     pub postgres: Vec<crate::postgres::PostgresResourceConfig>,
+    /// Runtime trees (agent installation, interpreter prefix) an `isolated`
+    /// workload may read besides the system set (SEC-06). Each must be
+    /// absolute and canonical and may not contain the control-plane root or
+    /// be a whole home directory. Empty by default.
+    #[serde(default)]
+    pub workload_read_paths: Vec<PathBuf>,
 }
 
 /// The socket file name inside a cell root. Every surface (server, CLI,
@@ -322,6 +328,7 @@ impl Default for ServerConfig {
             cep_authority: CepAuthorityConfig::default(),
             mcp_servers: Vec::new(),
             postgres: Vec::new(),
+            workload_read_paths: Vec::new(),
         }
     }
 }

@@ -118,6 +118,11 @@ impl std::fmt::Debug for DatabaseSession {
 
 impl DatabaseSession {
     /// libpq connection string handed to the workload (Unix socket only).
+    /// The session password, for redacting it from workload-produced text.
+    pub fn password(&self) -> &str {
+        &self.password
+    }
+
     pub fn conninfo(&self) -> String {
         format!(
             "host={} port={} dbname={} user={} password={}",
@@ -128,6 +133,31 @@ impl DatabaseSession {
             self.password
         )
     }
+}
+
+/// When a session issued at `now` must end: the session TTL, cut short by
+/// an approval window when the session exists only because of an approval
+/// (SEC-07). An approval window that has already closed (`window <= now`)
+/// is refused rather than minting an already-expired credential. Whole
+/// seconds, rounded down, because `VALID UNTIL` is written at second
+/// precision: access never outlives the computed deadline.
+pub fn session_deadline(
+    now: chrono::DateTime<chrono::Utc>,
+    ttl_secs: u64,
+    approval_window: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<chrono::DateTime<chrono::Utc>, PostgresError> {
+    use chrono::{DurationRound, TimeDelta};
+    if ttl_secs == 0 || ttl_secs > i64::MAX as u64 / 1000 {
+        return Err(err("session TTL out of range"));
+    }
+    if approval_window.is_some_and(|window| window <= now) {
+        return Err(err("approval window has closed"));
+    }
+    let ttl = now + chrono::Duration::seconds(ttl_secs as i64);
+    let deadline = approval_window.map_or(ttl, |window| ttl.min(window));
+    deadline
+        .duration_trunc(TimeDelta::seconds(1))
+        .map_err(|e| err(format!("deadline: {e}")))
 }
 
 pub struct PostgresBroker {
@@ -218,6 +248,9 @@ impl PostgresBroker {
             .scopes
             .get(scope)
             .ok_or_else(|| err(format!("unknown database scope {scope}")))?;
+        // A launcher that died left its reapers with it: end every expired
+        // session first, so no expired role outlives the next issuance.
+        self.reconcile_expired(ledger, run_id)?;
         let action = AuthorityAction::Reserved {
             resource_type: "database_session".into(),
             resource_id: json!([self.config.name, scope]).to_string(),
@@ -255,8 +288,7 @@ impl PostgresBroker {
         }
         let grant = engine.grant(&decision, &committed, &action, None)?;
         grant.authorize(&action, run_id, "database-session", workspace)?;
-        let expires =
-            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
+        let expires = session_deadline(chrono::Utc::now(), self.config.session_ttl_secs, None)?;
         let session = self.mint(scope, group, workload_uid, expires, &decision.decision_id)?;
         ledger.commit_typed(
             "database_session_issued",
@@ -294,7 +326,9 @@ impl PostgresBroker {
         self.admin_sql(&format!(
             "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION \
              NOBYPASSRLS CONNECTION LIMIT 4 PASSWORD '{password}' VALID UNTIL '{expires_at}'; \
-             GRANT {group} TO {role} WITH INHERIT TRUE, SET FALSE, ADMIN FALSE;"
+             ALTER ROLE {role} SET idle_session_timeout = '{idle_ms}'; \
+             GRANT {group} TO {role} WITH INHERIT TRUE, SET FALSE, ADMIN FALSE;",
+            idle_ms = self.config.session_ttl_secs.saturating_mul(1000)
         ))?;
         Ok(DatabaseSession {
             resource: self.config.name.clone(),
@@ -351,15 +385,12 @@ impl PostgresBroker {
         let window = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
             .map_err(|_| err("approval expiry is not RFC 3339"))?
             .with_timezone(&chrono::Utc);
-        let ttl =
-            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
-        let session = self.mint(
-            scope,
-            group,
-            workload_uid,
-            ttl.min(window),
-            &decision.decision_id,
+        let expires = session_deadline(
+            chrono::Utc::now(),
+            self.config.session_ttl_secs,
+            Some(window),
         )?;
+        let session = self.mint(scope, group, workload_uid, expires, &decision.decision_id)?;
         ledger.commit_typed(
             "database_elevation_issued",
             vec![decision.run_id.clone()],
@@ -421,8 +452,7 @@ impl PostgresBroker {
         engine
             .grant(&decision, &committed, &action, None)?
             .authorize(&action, run_id, "database-session", workspace)?;
-        let expires =
-            chrono::Utc::now() + chrono::Duration::seconds(self.config.session_ttl_secs as i64);
+        let expires = session_deadline(chrono::Utc::now(), self.config.session_ttl_secs, None)?;
         let expires_at = expires.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         self.admin_sql(&format!("ALTER ROLE {role} VALID UNTIL '{expires_at}'"))?;
         session.expires = expires;
@@ -490,6 +520,26 @@ impl PostgresBroker {
                 Some((pid.parse().ok()?, app.to_string()))
             })
             .collect())
+    }
+
+    /// Revoke every broker-minted role whose `VALID UNTIL` has passed
+    /// (sessions of a launcher that died before its reaper fired). Returns the
+    /// revoked role names.
+    pub fn reconcile_expired(
+        &self,
+        ledger: &LedgerStream,
+        run_id: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let expired = self.admin_sql(
+            "SELECT rolname FROM pg_roles WHERE rolname LIKE 'sfw\\_%' \
+             AND rolvaliduntil IS NOT NULL AND rolvaliduntil <= now() ORDER BY rolname",
+        )?;
+        let mut revoked = Vec::new();
+        for role in expired.lines().filter(|line| !line.is_empty()) {
+            self.revoke_role(role, ledger, run_id, "expired_unreaped")?;
+            revoked.push(role.to_string());
+        }
+        Ok(revoked)
     }
 
     /// Revoke: refuse new logins, end live backends, then drop the role.
@@ -573,5 +623,36 @@ impl Drop for ExpiryReaper {
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::session_deadline;
+    use chrono::{DateTime, Duration, Utc};
+
+    fn t(secs: i64) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339("2026-10-17T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc)
+            + Duration::seconds(secs)
+    }
+
+    /// Injected clock: an approval window closing at T+10 bounds a 300 s
+    /// session issued at T+9; at T+10 and T+11 the window is closed and no
+    /// credential is minted.
+    #[test]
+    fn approval_window_bounds_and_then_refuses_elevated_sessions() {
+        assert_eq!(session_deadline(t(0), 300, Some(t(10))).unwrap(), t(10));
+        assert_eq!(session_deadline(t(9), 300, Some(t(10))).unwrap(), t(10));
+        assert!(session_deadline(t(10), 300, Some(t(10))).is_err());
+        assert!(session_deadline(t(11), 300, Some(t(10))).is_err());
+        // The TTL wins when it ends first; without approval it alone applies.
+        assert_eq!(session_deadline(t(0), 5, Some(t(10))).unwrap(), t(5));
+        assert_eq!(session_deadline(t(0), 300, None).unwrap(), t(300));
+        // Sub-second instants round down, never up.
+        let fractional = t(0) + Duration::milliseconds(900);
+        assert_eq!(session_deadline(fractional, 2, None).unwrap(), t(2));
+        assert!(session_deadline(t(0), 0, None).is_err());
     }
 }
