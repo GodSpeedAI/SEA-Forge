@@ -33,6 +33,17 @@ approval/journal assertions and adds authenticated actor-switch, fresh public
 connection and separation-of-duty negative controls. Its private principals
 are established by real committed authority grants, not request actor labels.
 
+The operator subsequently authorized migration of three CEP authority controls
+and one SFWP case-mutation control whose legitimate multi-actor workflows
+depended on same-UID actor substitution. Preserve their original approval,
+replay, transition, execution and separation-of-duty assertions. Use the same
+production private-channel grant mechanism and add actual actor-switch and
+fresh-public-socket attempts with independent journal observations. Reviewed
+legacy regression coverage does not qualify isolated workload identity or
+discharge any original v1 gap. Candidate hashes and purposes live under
+`tests/security-v2/migrations`; qualification still requires a separate
+supplementary contract review and freeze.
+
 No authority decision, process exit, response stamp or unexecuted inventory gap
 is native-effect evidence. File witnesses cannot establish write causality or
 hostile same-UID isolation. Native PostgreSQL tests cannot establish product

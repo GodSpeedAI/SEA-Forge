@@ -1,0 +1,130 @@
+{
+  "record_type": "outside_tool_sandbox_read_only_wsl_host_preflight",
+  "recorded_at": "2026-10-16",
+  "execution_scope": "exec_command with approved require_escalated; read-only host inspection and transient namespace commands",
+  "host": {
+    "virtualization": {
+      "argv": ["systemd-detect-virt"],
+      "exit_code": 0,
+      "stdout": "wsl",
+      "stderr": ""
+    },
+    "uname": "Linux Yoga7i 6.18.54.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct  6 19:13:07 UTC 2026 x86_64 GNU/Linux",
+    "pid1_comm": "systemd",
+    "uid": 1000,
+    "gid": 1000,
+    "cap_inh": "0000000000000000",
+    "cap_prm": "0000000000000000",
+    "cap_eff": "0000000000000000",
+    "cap_bnd": "000001ffffffffff",
+    "no_new_privs": 0,
+    "seccomp_mode": 2,
+    "current_uid_map": "         0          0 4294967295",
+    "current_gid_map": "         0          0 4294967295",
+    "commands": [
+      "systemd-detect-virt",
+      "uname -a",
+      "read /proc/1/comm",
+      "read /proc/self/status entries Cap(Inh|Prm|Eff|Bnd), NoNewPrivs, Seccomp",
+      "read /proc/self/uid_map and /proc/self/gid_map"
+    ]
+  },
+  "subordinate_ids": {
+    "subuid": "sprime01:100000:65536",
+    "subgid": "sprime01:100000:65536",
+    "newuidmap": null,
+    "newgidmap": null
+  },
+  "tools": {
+    "bwrap": {"path": "/usr/bin/bwrap", "version": "bubblewrap 0.11.1"},
+    "unshare": {"path": "/usr/bin/unshare", "version": "unshare from util-linux 2.41.3"},
+    "setpriv": {"path": "/usr/bin/setpriv", "version": "setpriv from util-linux 2.41.3"},
+    "prlimit": {"path": "/usr/bin/prlimit", "version": "prlimit from util-linux 2.41.3"},
+    "systemd-run": {"path": "/usr/bin/systemd-run", "version": "systemd 259 (259.5-0ubuntu3.4)"},
+    "openshell": "/home/sprime01/.local/bin/openshell",
+    "docker": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/docker",
+    "dockerd": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/dockerd",
+    "podman": null,
+    "rootlesskit": null,
+    "slirp4netns": null,
+    "fuse-overlayfs": null
+  },
+  "namespace_probes": {
+    "user_namespace_root_mapping": {
+      "argv": ["unshare", "--user", "--map-root-user", "sh", "-c", "id -u; cat /proc/self/uid_map; cat /proc/self/gid_map"],
+      "exit_code": 0,
+      "stdout": "0\n         0       1000          1\n         0       1000          1",
+      "stderr": ""
+    },
+    "automatic_subordinate_mapping": {
+      "argv": ["unshare", "--user", "--map-auto", "sh", "-c", "cat /proc/self/uid_map; cat /proc/self/gid_map"],
+      "exit_code": 127,
+      "stdout": "",
+      "stderr": "unshare: failed to execute newuidmap: No such file or directory"
+    },
+    "user_and_network_namespace": {
+      "argv": ["unshare", "--user", "--map-root-user", "--net", "true"],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "bwrap_readonly_user_pid": {
+      "argv": ["/usr/bin/bwrap", "--unshare-user", "--unshare-pid", "--ro-bind", "/usr", "/usr", "--ro-bind", "/lib", "/lib", "--ro-bind", "/lib64", "/lib64", "--proc", "/proc", "--dev", "/dev", "--", "/usr/bin/gnutrue"],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "bwrap_readonly_user_pid_network": {
+      "argv": ["/usr/bin/bwrap", "--unshare-user", "--unshare-pid", "--ro-bind", "/usr", "/usr", "--ro-bind", "/lib", "/lib", "--ro-bind", "/lib64", "/lib64", "--proc", "/proc", "--dev", "/dev", "--unshare-net", "--", "/usr/bin/gnutrue"],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "bwrap_probe_scope": "Only /usr/bin/gnutrue was executed. /usr, /lib, and /lib64 were read-only binds; /proc and /dev were transient namespace mounts. This was not a workload launch or a check of SEA Forge policies."
+  },
+  "cgroups": {
+    "version": 2,
+    "self_path": "0::/non-systemd",
+    "mountinfo": "128 119 0:25 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime shared:23 - cgroup2 cgroup2 rw,nsdelegate",
+    "controllers": ["cpuset", "cpu", "io", "memory", "hugetlb", "pids", "rdma"],
+    "root_subtree_control": ["cpu", "memory", "pids"],
+    "paths": {
+      "/sys/fs/cgroup": {"mode": "0755", "uid": 0, "gid": 0, "writable_by_current": false},
+      "/sys/fs/cgroup/cgroup.subtree_control": {"mode": "0644", "uid": 0, "gid": 0, "writable_by_current": false},
+      "/sys/fs/cgroup/non-systemd": {"mode": "0755", "uid": 0, "gid": 0, "writable_by_current": false}
+    },
+    "permission_probe": "Python os.stat and os.access(path, os.W_OK); no write was attempted",
+    "result": "No writable delegated workload cgroup observed. This does not establish whether another operator-managed delegation could be provisioned."
+  },
+  "landlock": {
+    "query": "x86_64 syscall 444 with LANDLOCK_CREATE_RULESET_VERSION flag 1",
+    "argv": ["python3", "-c", "import ctypes,os; l=ctypes.CDLL(None,use_errno=True); ctypes.set_errno(0); r=l.syscall(ctypes.c_long(444),ctypes.c_void_p(0),ctypes.c_size_t(0),ctypes.c_uint(1)); e=ctypes.get_errno(); print('result',r,'errno',e)"],
+    "exit_code": 0,
+    "stdout": "result 7 errno 0",
+    "limits": "ABI query only; no ruleset was created, enforced, or tested against a resource operation."
+  },
+  "interpretation": {
+    "established": [
+      "This probe ran outside the tool sandbox and observed WSL2 with a full current UID/GID map and NoNewPrivs=0.",
+      "Unprivileged one-ID user namespaces and transient bwrap user, PID, and network namespaces worked.",
+      "Automatic subordinate-ID mapping did not work because newuidmap is absent; no distinct host UID was created or verified.",
+      "No effective capabilities or writable delegated cgroup path were observed for the current process."
+    ],
+    "not_established": [
+      "A production launcher capable of assigning different host UIDs/GIDs to SEA Forge workloads.",
+      "That bwrap, OpenShell, Landlock, or any current integration provides private credentials or correct production isolation.",
+      "A security guarantee from the Landlock ABI query alone.",
+      "Socket descriptor theft; the earlier separate probe read a regular-file descriptor only."
+    ],
+    "operator_prerequisite": "Before claiming workload separation by host identity, provide a trusted launcher/mapping mechanism that can assign and independently verify unique host-visible UID/GID values for each workload. Configured subordinate-ID ranges alone are insufficient when newuidmap/newgidmap are absent. No daemon is inherently required solely for host UID separation; writable cgroup delegation is separately needed only for aggregate cgroup-enforced limits."
+  },
+  "safety": {
+    "sudo_invoked": false,
+    "root_changing_commands_invoked": false,
+    "packages_installed": false,
+    "security_settings_changed": false,
+    "credentials_or_secret_configs_read": false,
+    "persistent_filesystem_writes_by_probe": false,
+    "repository_code_or_tests_changed": false
+  }
+}

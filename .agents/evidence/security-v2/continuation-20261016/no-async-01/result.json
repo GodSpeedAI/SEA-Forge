@@ -1,0 +1,11 @@
+{
+  "command": [
+    "just",
+    "no-async-kernel"
+  ],
+  "started_at": "2026-10-17T01:51:40.660492+00:00",
+  "finished_at": "2026-10-17T01:52:21.397325+00:00",
+  "exit_code": 0,
+  "log_sha256": "e55e4e9ee282fde147a064b6319be6d80523f69d48760322fabd2af23919cb66",
+  "source_head": "dd494c1ae865487fa928647703be275087a943b0"
+}

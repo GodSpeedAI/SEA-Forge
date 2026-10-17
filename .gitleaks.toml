@@ -256,3 +256,43 @@ regexes = [
   '''^93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7$''',
   '''^d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa$''',
 ]
+
+# Continuation evidence: independently classified public integrity identifiers.
+# Exact file/value/rule conjunctions; see the continuation scan analysis.
+[[allowlists]]
+description = "public synthetic idempotency digest: all/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-continuation-20261016/all/results\.json$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^91c51f76fd0df47177698796a536b0e52228f772179f7af168a11d371c532980$''',
+  '''^e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2$''',
+  '''^f0d6c0f0dea649df46d8642120e7ca927a863058c7cf881fe1a636d8a620eb05$''',
+]
+
+[[allowlists]]
+description = "public synthetic idempotency digest: all/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-continuation-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2$''',
+]
+
+[[allowlists]]
+description = "reviewed source integrity SHA256; recomputed against source: continuation-20261016/migration-review.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v2/continuation-20261016/migration-review\.json$''']
+regexes = [
+  '''^ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396$''',
+]

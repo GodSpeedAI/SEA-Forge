@@ -1,0 +1,47 @@
+{
+  "recorded_date": "2026-10-16",
+  "observed_by": "Luna read-only recon",
+  "scanner": "gitleaks 8.30.1 directory mode, redacted output",
+  "before": {
+    "v1_findings": 18,
+    "v2_findings": 1,
+    "migration_fixture_findings": 0
+  },
+  "classification": "All findings independently attributed to known public idempotency or recomputed source SHA256 values; no credential finding established.",
+  "scope": "Each exception requires one exact file, one exact digest and generic-api-key; no generic hex, directory-wide or credential exception.",
+  "entries": [
+    {
+      "path": ".agents/evidence/security-v1/implementation-continuation-20261016/all/results.json",
+      "count": 10,
+      "kind": "public synthetic idempotency digest",
+      "values": [
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "91c51f76fd0df47177698796a536b0e52228f772179f7af168a11d371c532980",
+        "e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2",
+        "f0d6c0f0dea649df46d8642120e7ca927a863058c7cf881fe1a636d8a620eb05"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/implementation-continuation-20261016/all/rust-A.log",
+      "count": 8,
+      "kind": "public synthetic idempotency digest",
+      "values": [
+        "4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd",
+        "471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c",
+        "60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9",
+        "e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2"
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v2/continuation-20261016/migration-review.json",
+      "count": 1,
+      "kind": "reviewed source integrity SHA256; recomputed against source",
+      "source_file": "crates/sea-forge-server/tests/support/authenticated.rs",
+      "values": [
+        "ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "record_type": "read_only_host_preflight",
+  "recorded_at": "2026-10-16",
+  "host": {
+    "virtualization": "wsl",
+    "kernel_release": "6.18.54.1-microsoft-standard-WSL2",
+    "architecture": "x86_64",
+    "pid_1_comm": "codex",
+    "uid": 1000,
+    "gid": 1000,
+    "cap_inh": "0000000000000000",
+    "cap_prm": "0000000000000000",
+    "cap_eff": "0000000000000000",
+    "cap_bnd": "0000000000000000",
+    "cap_eff_names": [],
+    "no_new_privs": 1,
+    "seccomp_mode": 2,
+    "current_uid_map": "1000 0 1",
+    "current_gid_map": "1000 0 1"
+  },
+  "user_namespace": {
+    "command_success": [
+      "unshare",
+      "--user",
+      "--map-root-user",
+      "sh",
+      "-c",
+      "id -u; cat /proc/self/uid_map; cat /proc/self/gid_map"
+    ],
+    "exit_code": 0,
+    "stdout": [
+      "0",
+      "         0       1000          1",
+      "         0       1000          1"
+    ],
+    "command_auto_map": [
+      "unshare",
+      "--user",
+      "--map-auto",
+      "sh",
+      "-c",
+      "cat /proc/self/uid_map; cat /proc/self/gid_map"
+    ],
+    "auto_map_exit_code": 127,
+    "auto_map_stdout": "",
+    "auto_map_stderr": "unshare: failed to execute newuidmap: No such file or directory",
+    "subuid": "sprime01:100000:65536",
+    "subgid": "sprime01:100000:65536",
+    "newuidmap_path": null,
+    "newgidmap_path": null,
+    "interpretation": "Namespace root maps to host-visible UID/GID 1000. This is not a distinct host identity. Configured subordinate ranges could not be used by util-linux because newuidmap/newgidmap are absent; current process also has no capabilities and NoNewPrivs=1."
+  },
+  "tools": {
+    "bwrap": {
+      "path": "/usr/bin/bwrap",
+      "version": "bubblewrap 0.11.1",
+      "mode_owner": "-rwxr-xr-x nobody:nogroup /usr/bin/bwrap"
+    },
+    "unshare": {
+      "path": "/usr/bin/unshare",
+      "version": "util-linux 2.41.3"
+    },
+    "setpriv": {
+      "path": "/usr/bin/setpriv",
+      "version": "util-linux 2.41.3",
+      "dumpable_option": false
+    },
+    "prlimit": {
+      "path": "/usr/bin/prlimit",
+      "version": "util-linux 2.41.3"
+    },
+    "openshell_cli": {
+      "path": "/home/sprime01/.local/bin/openshell",
+      "version_checked": false,
+      "notes": "binary present; this preflight did not inspect configuration or credentials and did not establish UID mapping or private FD transport"
+    },
+    "podman": null,
+    "docker_cli": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/docker",
+    "dockerd": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/dockerd",
+    "runc": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/runc",
+    "containerd_binary": "/home/sprime01/.local/share/mise/installs/docker-cli/latest/docker/containerd",
+    "systemd_run": {
+      "path": "/usr/bin/systemd-run",
+      "version": "systemd 259 (259.5-0ubuntu3.4)"
+    },
+    "systemd_user_sockets": {
+      "/run/user/1000/systemd/private": {
+        "present": true,
+        "mode": "0700",
+        "uid": 1000,
+        "gid": 1000
+      },
+      "/run/user/1000/bus": {
+        "present": true,
+        "mode": "0666",
+        "uid": 1000,
+        "gid": 1000
+      },
+      "interpretation": "Sockets exist, but this probe did not create a unit or establish cgroup delegation; /proc/self/cgroup is /non-systemd and /sys/fs/cgroup is read-only."
+    },
+    "docker_rootless_helpers": {
+      "dockerd_rootless_sh": null,
+      "rootlesskit": null,
+      "slirp4netns": null,
+      "fuse_overlayfs": null,
+      "containerd_rootless_setup": null
+    },
+    "nerdctl": null,
+    "crun": null,
+    "firecracker": null,
+    "qemu_system_x86_64": null,
+    "device_paths": {
+      "/dev/fuse": null,
+      "/dev/kvm": null
+    },
+    "runtime_sockets_checked": {
+      "/run/user/1000/podman/podman.sock": null,
+      "/run/docker.sock": null,
+      "/run/containerd/containerd.sock": null,
+      "/run/user/1000/docker.sock": null
+    }
+  },
+  "network_namespaces": {
+    "unshare_user_net_command": [
+      "unshare",
+      "--user",
+      "--map-root-user",
+      "--net",
+      "true"
+    ],
+    "unshare_user_net_exit_code": 0,
+    "bwrap_user_net_command": [
+      "bwrap",
+      "--unshare-user",
+      "--unshare-net",
+      "--ro-bind",
+      "/",
+      "/",
+      "--proc",
+      "/proc",
+      "--dev",
+      "/dev",
+      "--",
+      "/usr/bin/true"
+    ],
+    "bwrap_user_net_exit_code": 1,
+    "bwrap_user_net_stderr": "bwrap: loopback: Failed to create NETLINK_ROUTE socket: Operation not permitted",
+    "interpretation": "Creating the transient net namespace succeeded with unshare, but bwrap could not configure its loopback device under this capability/seccomp profile. This does not prove a general network namespace policy."
+  },
+  "landlock": {
+    "query": "x86_64 syscall 444, landlock_create_ruleset(NULL, 0, LANDLOCK_CREATE_RULESET_VERSION=1)",
+    "result_abi": 7,
+    "errno": 0,
+    "repro_command": "python3 ctypes libc.syscall(444, NULL, 0, 1)",
+    "limits": "Version query only: no ruleset was created or enforced, and no actual allowed/denied resource operation was observed."
+  },
+  "cgroups": {
+    "version": 2,
+    "self_path": "/non-systemd",
+    "mountinfo": "816 815 0:25 / /sys/fs/cgroup ro,nosuid,nodev,noexec,relatime master:23 - cgroup2 cgroup2 rw,nsdelegate",
+    "controllers": [
+      "cpuset",
+      "cpu",
+      "io",
+      "memory",
+      "hugetlb",
+      "pids",
+      "rdma"
+    ],
+    "root_subtree_control": [
+      "cpu",
+      "memory",
+      "pids"
+    ],
+    "root_stat": {
+      "mode": "0755",
+      "uid": 65534,
+      "gid": 65534
+    },
+    "writable_delegated_workload_cgroup_observed": false,
+    "limits": "The mount is read-only in this process. Controller names being present does not establish delegation or writable per-workload controls."
+  },
+  "required_operator_prerequisite": {
+    "description": "A trusted operator-provided launcher outside this process's NoNewPrivs/seccomp boundary must establish unique host-visible UID/GID mappings for untrusted workloads, using validated subordinate-ID helpers (newuidmap/newgidmap) or another explicit controlled privilege path. It must verify host-visible IDs for launched workload PIDs; namespace-local uid/gid output is insufficient.",
+    "daemon_required_for_host_uid_separation": false,
+    "cgroup_required_for_host_uid_separation": false,
+    "cgroup_delegation_if_aggregate_hard_resource_limits_are_required": "A writable delegated cgroup controller is needed for aggregate hard memory/process controls; unavailable in this environment.",
+    "production_preflight_implemented_by_this_record": false
+  },
+  "safety_and_scope": {
+    "sudo_invoked": false,
+    "root_changing_commands_invoked": false,
+    "packages_installed": false,
+    "system_security_settings_changed": false,
+    "credentials_or_secret_configs_read": false,
+    "repository_code_or_tests_changed": false,
+    "prior_regular_file_probe_reference": "../../isolation-20261016/README.md",
+    "prior_probe_limit": "Regular-file descriptor content read through host /proc only. It does not prove Unix socket FD duplication or socket endpoint theft.",
+    "security_verification_claim": "Host prerequisite observations only; not production preflight behavior, complete enforcement, or adversarial validation."
+  }
+}
