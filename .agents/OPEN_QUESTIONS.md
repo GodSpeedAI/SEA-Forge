@@ -51,20 +51,25 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
 - Related: revocation timing is commit/restart-bounded until `reload_config()` gains more call
   sites (ADR Revocation section, corrected 2026-09-24 per critic F-7).
 
-## Open: security workload isolation and remaining legacy identity controls (2026-10-16)
+## Open: Linux workload UID-mapper prerequisite (2026-10-16)
 
-- Context and executable observations: `.agents/reports/security-implementation-20261016.md`.
-- Decision needed: select an operator-provided separate-host-UID or isolated
-  OpenShell environment, or authorize a safe Linux process-control dependency
-  and a production launcher whose boundaries must pass actual isolation tests.
-  Rootless namespaces alone did not protect an open regular-file descriptor
-  from a same-host-UID observer; socket theft was not tested.
-- Recommendation: use verified isolation before delivering any credential or
-  authentication endpoint. Private-channel API success is not process identity.
-- Separate scope decision: authorize migrating the affected CEP authority and
-  SFWP case-mutation legacy controls to real private authenticated principals,
-  preserving every positive, journal and separation-of-duty assertion. Only
-  the strong conformance_identity control has been approved and migrated.
-- Impact: four legacy assertions currently fail. Restoring secondary actor
-  claims on unauthenticated same-UID sockets would undermine the required
-  boundary. Frozen v1 files and expected behavior must remain untouched.
+- Current report: `.agents/reports/security-continuation-20261016.md`;
+  historical checkpoint: `.agents/reports/security-implementation-20261016.md`.
+- The operator selected Linux-first isolation and authorized all four
+  additional legacy migrations. Those controls now pass with independently
+  authority-issued private connections, preserving positive work and adding
+  old-path impersonation attempts. Fresh review accepted the regression scope.
+- Operator provisioning needed: the actual WSL host lacks `newuidmap` and
+  `newgidmap`. Subordinate UID/GID ranges exist and user/PID/network namespaces
+  work outside the tool sandbox; `unshare --map-auto` fails because the trusted
+  helpers are missing. Recommend the distribution's `uidmap` package or an
+  equivalent operator-provided runner. No service or global kernel-setting
+  change is requested; no privileged installation has been attempted.
+- Precision: earlier NoNewPrivs=1, PID1=codex and read-only cgroup observations
+  describe the tool sandbox. Actual host NoNewPrivs=0 and bwrap namespace probes
+  pass. Both records and a scope caveat are retained; neither proves distinct
+  host UIDs or credential isolation.
+- Impact: Stage A launcher/credential/PostgreSQL session integration remains
+  unfinished and cannot qualify until actual isolated resource execution is
+  demonstrated. Stage B/C must wait for Stage A. Frozen v1 and its gap inventory
+  remain untouched; passing regressions do not close those gaps.

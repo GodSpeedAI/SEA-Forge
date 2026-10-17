@@ -1,0 +1,25 @@
+{
+  "command": [
+    "git",
+    "commit",
+    "--only",
+    "-m",
+    "test(security): authenticate legacy multi-actor workflows",
+    "-m",
+    "Preserve CEP approval, replay and transitions plus SFWP proposer separation of duty using real authority-issued private connections. Attempt old same-socket and fresh-public-socket impersonation paths and verify native journals. Isolated production launch remains blocked on host UID-mapper prerequisites.",
+    "--",
+    ".gitleaks.toml",
+    ".agents/specs/security-implementation-v2.spec.md",
+    "crates/sea-forge-server/tests/conformance_cep_authority.rs",
+    "crates/sea-forge-server/tests/sfwp_case_mutations.rs",
+    "crates/sea-forge-server/tests/support/authenticated.rs",
+    "tests/security-v2/migrations",
+    ".agents/evidence/security-v2/continuation-20261016",
+    ".agents/evidence/security-v1/implementation-continuation-20261016"
+  ],
+  "started_at": "2026-10-17T01:59:04.816016+00:00",
+  "finished_at": "2026-10-17T01:59:10.027046+00:00",
+  "exit_code": 0,
+  "log_sha256": "03d608d69f94af99fd0b79d99eb73635f91c38f9d9e417fd03c5529461ef229d",
+  "source_head": "c8e2a57915a67889bb9cbd0d32ea2b85eda41631"
+}
