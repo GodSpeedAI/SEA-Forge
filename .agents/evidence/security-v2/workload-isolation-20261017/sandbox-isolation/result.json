@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-j",
+    "2",
+    "-p",
+    "sea-forge-sandbox",
+    "--test",
+    "workload_isolation",
+    "--",
+    "--nocapture"
+  ],
+  "started_at": "2026-10-17T14:43:40.573088+00:00",
+  "finished_at": "2026-10-17T14:43:46.162013+00:00",
+  "exit_code": 0,
+  "log_sha256": "0489be9c6d4b128948e51688c8ed669cfe276bfc1bac224fb84c80561e75311c",
+  "source_head": "55c902a682106608c931ac2fc80997594f62495c"
+}

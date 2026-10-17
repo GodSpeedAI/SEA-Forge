@@ -1240,6 +1240,9 @@ async fn run_acp_episode(
             .max_request_bytes
             .saturating_add(snapshot.max_response_bytes),
     };
+    // Holds the exclusive subordinate identity until the session ends.
+    #[cfg(target_os = "linux")]
+    let mut workload_identity = None;
     let session = match sandbox_class {
         "local" => AcpSession::spawn(spawn)
             .map(|(session, _)| session)
@@ -1273,6 +1276,53 @@ async fn run_acp_episode(
             })
             .await
             .map_err(|error| ForgeError::Internal(format!("jail spawn task panic: {error}")))??;
+            AcpSession::from_std_child(
+                child.child,
+                child.stdin,
+                child.stdout,
+                child.stderr,
+                workspace.clone(),
+                snapshot.max_response_bytes,
+                snapshot
+                    .max_request_bytes
+                    .saturating_add(snapshot.max_response_bytes),
+            )
+            .map_err(ForgeError::Internal)?
+        }
+        // SEC-01/SEC-06: a dedicated subordinate host identity per agent. Any
+        // missing prerequisite fails closed; there is no shared-UID fallback.
+        #[cfg(target_os = "linux")]
+        "isolated" => {
+            use sea_forge_sandbox::workload;
+            let isolation_error = |error: sea_forge_sandbox::SandboxError| ForgeError::Config {
+                class: "workload_isolation_unavailable",
+                path: root.join("server.yaml"),
+                message: error.to_string(),
+            };
+            let artifacts = root.join("runs").join(run).join("artifacts");
+            std::fs::create_dir_all(&artifacts)
+                .map_err(|error| ForgeError::io("create ACP artifacts", error))?;
+            let pool = workload::WorkloadIdentityPool::from_host(&root.join("workload-state"))
+                .map_err(isolation_error)?;
+            let identity = pool.acquire().map_err(isolation_error)?;
+            workload::grant_exclusive_access(&workspace, &identity).map_err(isolation_error)?;
+            workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
+            let helper = workload::sibling_helper().map_err(isolation_error)?;
+            let confinement = workload::WorkloadConfinement {
+                workspace_root: workspace.clone(),
+                artifacts_root: artifacts,
+                network: sea_forge_sandbox::NetworkPosture::Denied,
+            };
+            let child = workload::spawn_interactive(
+                &identity,
+                &helper,
+                &confinement,
+                &spawn.argv,
+                &workspace,
+                &spawn.env,
+            )
+            .map_err(isolation_error)?;
+            workload_identity = Some(identity);
             AcpSession::from_std_child(
                 child.child,
                 child.stdin,
@@ -1356,6 +1406,9 @@ async fn run_acp_episode(
             Vec::new()
         }
     };
+    // Release the workload slot only after the session is finished.
+    #[cfg(target_os = "linux")]
+    drop(workload_identity);
     Ok((outcome, continuation_key, harvested))
 }
 

@@ -106,6 +106,19 @@ fn acp_fixture_child() {
             Some("session/prompt") => {
                 prompt_id = id;
                 assert!(message["params"]["prompt"].is_array());
+                if mode.contains("isolated") {
+                    // SEC-01: a dedicated subordinate host identity, never the
+                    // launcher's own UID, and no reach into launcher secrets.
+                    let map = std::fs::read_to_string("/proc/self/uid_map").unwrap();
+                    let fields: Vec<&str> = map.split_whitespace().collect();
+                    assert_eq!(fields.len(), 3, "single-ID mapping expected: {map}");
+                    assert_ne!(fields[1], "1000", "workload runs as launcher UID");
+                    let secret = std::env::var("FIXTURE_LAUNCHER_SECRET").unwrap();
+                    assert!(
+                        std::fs::read(&secret).is_err(),
+                        "isolated ACP child read a launcher-private file"
+                    );
+                }
                 if mode.contains("jail") {
                     let escaped = std::env::temp_dir()
                         .join(format!("sea-forge-acp-escape-{}", std::process::id()));
@@ -629,6 +642,52 @@ async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
     assert!(entries(root.path(), &case)
         .iter()
         .any(|e| e.record_kind == "permission_request"));
+}
+
+/// SEC-01/SEC-06 on the production ACP launch path: the `isolated` class runs
+/// the agent under its own subordinate host identity with the jail posture.
+#[tokio::test]
+#[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
+async fn t16_4b_isolated_agent_runs_under_dedicated_host_identity() {
+    if sea_forge_sandbox::workload::sibling_helper().is_err()
+        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host(
+            &tempfile::tempdir().unwrap().path().join("probe"),
+        )
+        .is_err()
+    {
+        assert!(
+            std::env::var_os("SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION").is_none(),
+            "workload isolation required but unavailable"
+        );
+        eprintln!("NOT-EXECUTABLE: workload isolation prerequisites absent");
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nrules:\n  - name: allow-isolated-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n    sandbox_class: isolated\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n",
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    // Traverse-only root so the workload reaches its run workspace by name.
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o711)).unwrap();
+    let secret = root.path().join("launcher.secret");
+    std::fs::write(&secret, "SECRET-LAUNCHER").unwrap();
+    std::fs::set_permissions(&secret, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let mut config = server_config(root.path(), "read", "escalate_isolated_jail");
+    config.agent.endpoints[0]
+        .env
+        .push(format!("FIXTURE_LAUNCHER_SECRET={}", secret.display()));
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    // Trusted observation: the launcher still reads what the workload wrote.
+    let proof = root
+        .path()
+        .join("runs")
+        .join(&run)
+        .join("workspace/jail-proof.txt");
+    assert_eq!(std::fs::read_to_string(proof).unwrap(), "inside-workspace");
 }
 
 /// Sentinel-aware transcript redaction on the ACP path: plaintext secrets in

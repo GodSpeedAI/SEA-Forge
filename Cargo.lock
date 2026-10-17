@@ -2193,6 +2193,7 @@ dependencies = [
  "hex",
  "landlock",
  "libc",
+ "rustix",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-evidence",

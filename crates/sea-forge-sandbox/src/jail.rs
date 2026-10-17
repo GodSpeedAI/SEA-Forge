@@ -42,6 +42,7 @@ fn apply_landlock(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
     network: &NetworkPosture,
+    null_device_writable: bool,
 ) -> Result<(), SandboxError> {
     use landlock::{
         path_beneath_rules, Access, AccessFs, AccessNet, CompatLevel, Compatible, NetPort, Ruleset,
@@ -79,6 +80,18 @@ fn apply_landlock(
         // interpreter and libraries.
         .add_rules(path_beneath_rules([std::path::Path::new("/")], fs_read))
         .map_err(map_err)?;
+    // Isolated workloads run ordinary shells that redirect to /dev/null; the
+    // device discards writes, so granting it widens no data path.
+    let created = if null_device_writable {
+        created
+            .add_rules(path_beneath_rules(
+                [std::path::Path::new("/dev/null")],
+                fs_read | AccessFs::WriteFile,
+            ))
+            .map_err(map_err)?
+    } else {
+        created
+    };
 
     // Add per-port TCP grants for an explicit network posture. Default denial
     // adds no port rules, so handling BindTcp/ConnectTcp with an empty rule set
@@ -123,6 +136,17 @@ fn apply_landlock(
     Ok(())
 }
 
+/// Apply the jail posture to the calling thread. Used by the trusted
+/// `sea-forge-workload-exec` helper inside a workload namespace.
+#[cfg(target_os = "linux")]
+pub fn restrict_current_thread(
+    workspace_root: &std::path::Path,
+    artifacts_root: &std::path::Path,
+    network: &NetworkPosture,
+) -> Result<(), SandboxError> {
+    apply_landlock(workspace_root, artifacts_root, network, true)
+}
+
 #[derive(Debug)]
 pub struct JailSandbox;
 
@@ -159,7 +183,7 @@ pub fn spawn_interactive(
         }
         std::fs::create_dir_all(workspace_root).map_err(map_err)?;
         std::fs::create_dir_all(artifacts_root).map_err(map_err)?;
-        apply_landlock(workspace_root, artifacts_root, network)?;
+        apply_landlock(workspace_root, artifacts_root, network, false)?;
         let mut command = std::process::Command::new(&argv[0]);
         command
             .args(&argv[1..])
@@ -403,7 +427,7 @@ fn run_jailed(
     // Apply filesystem + network Landlock confinement to this thread (inherited
     // by the child). Fails closed with `jail_unavailable` when the requested
     // posture cannot be enforced — never a silent fallback to `local`.
-    apply_landlock(workspace_root, artifacts_root, network)?;
+    apply_landlock(workspace_root, artifacts_root, network, false)?;
 
     let mut command = Command::new(&argv[0]);
     command

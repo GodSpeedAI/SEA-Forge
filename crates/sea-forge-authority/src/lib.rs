@@ -1333,11 +1333,12 @@ impl AuthorityPolicyBundle {
                     "local allow execute_command requires trusted argv0 sea-forge".into(),
                 ));
             }
-            if rule
-                .sandbox_class
-                .as_deref()
-                .is_some_and(|class| !matches!(class, "local" | "jail" | "microvm" | "openshell"))
-            {
+            if rule.sandbox_class.as_deref().is_some_and(|class| {
+                !matches!(
+                    class,
+                    "local" | "jail" | "isolated" | "microvm" | "openshell"
+                )
+            }) {
                 return Err(schema("unknown sandbox class".into()));
             }
             // OpenShell is reachable only through the typed sandbox-command
