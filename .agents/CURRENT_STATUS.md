@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 110
+**Status revision:** 112
 
-**Stage:** security-round3-live-authorization-gaps-locally-tested
+**Stage:** security-round3-integrating
 
-**Summary:** Round 3 closes live authorization gaps and hardens isolation at the implementation level: a trusted-server PostgreSQL session supervisor ends expired sessions on live connections without a later issuance or the launcher; per-role in-DB timeouts are removed because a workload can SET them away; a process-wide exposure gate revokes issued DB credentials, across episodes and delegated contexts, before classified plaintext moves; the state tree is owner-only by DAC independent of Landlock; a seccomp filter refuses io_uring and namespace creation (including x32 numbers); pre-commit scans the staged index and four over-broad gitleaks allowlists are narrowed; federation exports state their runs' exposure labels; the owner-accepted evidence.recorded record kind is registered in RealityTrace (main 42879a8, pushed) and SEA-Forge pins it, ingesting proofs under the frozen security-acceptance producer. All LOCALLY TESTED with mutation controls; none independently re-verified or settled. Frozen v1 remains 6 PASS / 10 NOT-YET-EXECUTABLE. The branch also carries the operator's staged main-worktree changes (Explore agent definition, two editor workspace folders) and status revisions 104-108.
+**Summary:** Round 3 closes live authorization gaps and hardens isolation at the implementation level: a trusted-server PostgreSQL session supervisor ends expired sessions on live connections without a later issuance or the launcher; per-role in-DB timeouts are removed because a workload can SET them away; a process-wide exposure gate revokes issued DB credentials, across episodes and delegated contexts, before classified plaintext moves; the state tree is owner-only by DAC independent of Landlock; a seccomp filter refuses io_uring and namespace creation (including x32 numbers); pre-commit scans the staged index and four over-broad gitleaks allowlists are narrowed; federation exports state their runs' exposure labels; the owner-accepted evidence.recorded record kind is registered in RealityTrace (main 42879a8, pushed) and SEA-Forge pins it, ingesting proofs under the frozen security-acceptance producer. All LOCALLY TESTED with mutation controls; none independently re-verified or settled. Frozen v1 remains 6 PASS / 10 NOT-YET-EXECUTABLE. The branch also carries the operator's staged main-worktree changes (Explore agent definition, two editor workspace folders) and status revisions 104-108. Merged with origin/main (#31 CodeRabbit review-only, status record kept as revision 111) for integration through a squash-merge pull request.
 
 **Verified:**
 
