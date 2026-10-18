@@ -2,8 +2,8 @@
 //!
 //! `unshare` has already switched to the workload's subordinate identity and
 //! made this helper pid 1 of a fresh pid namespace. The helper applies the
-//! Landlock posture to itself, then runs the workload as its child, so the
-//! restriction is in force before any workload code runs.
+//! Landlock posture and the syscall filter to itself, then runs the workload
+//! as its child, so both are in force before any workload code runs.
 //!
 //! With `--lifeline FD`, the helper stays as the namespace's init: it reaps
 //! every orphan and exits as soon as the launcher's end of the lifeline pipe
@@ -71,6 +71,10 @@ fn main() {
     if let Err(error) =
         sea_forge_sandbox::jail::restrict_current_thread(&workspace, &artifacts, &reads, &network)
     {
+        fail(&error.to_string());
+    }
+    // After Landlock (which sets no_new_privs), before any workload code.
+    if let Err(error) = sea_forge_sandbox::syscall_filter::restrict_current_thread() {
         fail(&error.to_string());
     }
     let mut command = std::process::Command::new(&argv[0]);

@@ -211,6 +211,163 @@ pub fn revoke_exclusive_access(root: &Path) -> Result<(), SandboxError> {
         .map_err(|e| unavailable(format!("revoke {}: {e}", root.display())))
 }
 
+/// Restrict the creation mask of the calling process to owner-only (077).
+/// Directories with a default ACL (workload trees) keep their ACL-derived
+/// modes; everything else the control plane creates is private.
+pub fn restrict_creation_mask() {
+    rustix::process::umask(rustix::fs::Mode::from_raw_mode(0o077));
+}
+
+/// What [`harden_state_tree`] changed and what it refused to touch.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct HardeningReport {
+    pub directories: usize,
+    pub files: usize,
+    /// Entries left alone: symlinks, entries the launcher does not own, and
+    /// anything it could not change, with the reason.
+    pub skipped: Vec<(PathBuf, String)>,
+}
+
+/// Names of the per-run trees a workload may own entries in. They are
+/// masked (mode 0700, which also zeroes the ACL mask) but never descended.
+const WORKLOAD_TREES: [&str; 3] = ["workspace", "artifacts", "mcp"];
+
+/// Make an existing control-plane tree owner-only (SEC-06): directories
+/// 0700 (`traverse` directories 0711, traverse-only for workloads), files
+/// stripped of group and other bits. Symlinks are never followed or
+/// changed; every directory is opened `O_NOFOLLOW` and changed through its
+/// own descriptor, and files through an `O_NOFOLLOW` descriptor, so a
+/// concurrently swapped entry cannot redirect a change outside the tree.
+/// Entries not owned by the launcher are reported and left alone.
+pub fn harden_state_tree(
+    root: &Path,
+    traverse: &[PathBuf],
+) -> Result<HardeningReport, SandboxError> {
+    use rustix::fs::{openat, Mode, OFlags, CWD};
+    let (launcher, _) = current_ids()?;
+    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    let fd = openat(CWD, root, flags, Mode::empty())
+        .map_err(|e| unavailable(format!("open state root {}: {e}", root.display())))?;
+    let mut report = HardeningReport::default();
+    harden_dir(fd, root, launcher, traverse, false, &mut report)?;
+    Ok(report)
+}
+
+fn harden_dir(
+    fd: rustix::fd::OwnedFd,
+    path: &Path,
+    launcher: u32,
+    traverse: &[PathBuf],
+    masked_only: bool,
+    report: &mut HardeningReport,
+) -> Result<(), SandboxError> {
+    use rustix::fs::{fchmod, fstat, openat, statat, AtFlags, FileType, Mode, OFlags};
+    let stat = fstat(&fd).map_err(|e| unavailable(format!("{}: {e}", path.display())))?;
+    if stat.st_uid != launcher {
+        report
+            .skipped
+            .push((path.to_path_buf(), "not launcher-owned".into()));
+        return Ok(());
+    }
+    let mode = if traverse.iter().any(|t| t == path) {
+        0o711
+    } else {
+        0o700
+    };
+    fchmod(&fd, Mode::from_raw_mode(mode))
+        .map_err(|e| unavailable(format!("chmod {}: {e}", path.display())))?;
+    report.directories += 1;
+    if masked_only {
+        return Ok(());
+    }
+    let dir = rustix::fs::Dir::read_from(&fd)
+        .map_err(|e| unavailable(format!("list {}: {e}", path.display())))?;
+    for entry in dir {
+        let entry = entry.map_err(|e| unavailable(format!("list {}: {e}", path.display())))?;
+        let name = entry.file_name().to_owned();
+        let bytes = name.to_bytes();
+        if bytes == b"." || bytes == b".." {
+            continue;
+        }
+        let child = path.join(<std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(bytes));
+        let st = match statat(&fd, name.as_c_str(), AtFlags::SYMLINK_NOFOLLOW) {
+            Ok(st) => st,
+            Err(e) => {
+                report.skipped.push((child, e.to_string()));
+                continue;
+            }
+        };
+        let kind = FileType::from_raw_mode(st.st_mode);
+        if kind == FileType::Symlink {
+            report.skipped.push((child, "symlink".into()));
+            continue;
+        }
+        if st.st_uid != launcher {
+            report.skipped.push((child, "not launcher-owned".into()));
+            continue;
+        }
+        if kind == FileType::Directory {
+            let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+            match openat(&fd, name.as_c_str(), flags, Mode::empty()) {
+                Ok(child_fd) => {
+                    let workload_tree = path.parent().and_then(Path::file_name)
+                        == Some(std::ffi::OsStr::new("runs"))
+                        && WORKLOAD_TREES.iter().any(|t| bytes == t.as_bytes());
+                    harden_dir(child_fd, &child, launcher, traverse, workload_tree, report)?;
+                }
+                Err(e) => report.skipped.push((child, e.to_string())),
+            }
+        } else if kind == FileType::RegularFile {
+            // `fchmodat(AT_SYMLINK_NOFOLLOW)` is EOPNOTSUPP on Linux, so the
+            // file is opened without following and changed through its own
+            // descriptor, after checking it is still the entry just stat'ed.
+            let flags = OFlags::RDONLY
+                | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK
+                | OFlags::NOCTTY
+                | OFlags::CLOEXEC;
+            let changed = openat(&fd, name.as_c_str(), flags, Mode::empty()).and_then(|file| {
+                let now = fstat(&file)?;
+                if now.st_ino != st.st_ino || now.st_dev != st.st_dev || now.st_uid != launcher {
+                    return Err(rustix::io::Errno::STALE);
+                }
+                fchmod(&file, Mode::from_raw_mode(now.st_mode & 0o700))
+            });
+            match changed {
+                Ok(()) => report.files += 1,
+                Err(e) => report.skipped.push((child, e.to_string())),
+            }
+        } else {
+            report.skipped.push((child, "not a regular file".into()));
+        }
+    }
+    Ok(())
+}
+
+/// Make the directory chain from the control-plane root to a run directory
+/// traverse-only (0711) so the workload can reach its own granted trees by
+/// name, and nothing else. Each directory must be launcher-owned and not a
+/// symlink; the change is made through an `O_NOFOLLOW` descriptor.
+pub fn prepare_traversal(chain: &[PathBuf]) -> Result<(), SandboxError> {
+    use rustix::fs::{fchmod, fstat, openat, Mode, OFlags, CWD};
+    let (launcher, _) = current_ids()?;
+    for dir in chain {
+        let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+        let fd = openat(CWD, dir, flags, Mode::empty())
+            .map_err(|e| unavailable(format!("open {}: {e}", dir.display())))?;
+        let stat = fstat(&fd).map_err(|e| unavailable(e.to_string()))?;
+        if stat.st_uid != launcher {
+            return Err(unavailable(format!(
+                "{} is not launcher-owned",
+                dir.display()
+            )));
+        }
+        fchmod(&fd, Mode::from_raw_mode(0o711))
+            .map_err(|e| unavailable(format!("chmod {}: {e}", dir.display())))?;
+    }
+    Ok(())
+}
+
 // POSIX ACL xattr encoding (linux/posix_acl_xattr.h).
 const ACL_USER_OBJ: u16 = 0x01;
 const ACL_USER: u16 = 0x02;
