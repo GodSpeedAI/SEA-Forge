@@ -21,6 +21,10 @@ wait-timeout.workspace = true
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+# Descriptor-relative workspace observation (observation.rs) on other Unix.
+[target.'cfg(all(unix, not(target_os = "linux")))'.dependencies]
+rustix = { version = "1", features = ["fs"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 landlock = "0.4"
 rustix = { version = "1", features = ["fs", "pipe", "process"] }

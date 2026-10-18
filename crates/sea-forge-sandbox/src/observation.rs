@@ -21,10 +21,25 @@ fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<
         .map_err(|e| ForgeError::io("open scoped observation component", e))
 }
 
+/// Other Unix: open `name` relative to the pinned parent descriptor
+/// (`openat`) with `O_NOFOLLOW`, the same guarantee as the procfs walk above:
+/// each untrusted name is the final component of a no-follow open.
+#[cfg(all(unix, not(target_os = "linux")))]
+fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, ForgeError> {
+    use rustix::fs::{openat, Mode, OFlags};
+    let mut flags = OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
+    if directory {
+        flags |= OFlags::DIRECTORY;
+    }
+    openat(parent, name, flags, Mode::empty())
+        .map(File::from)
+        .map_err(|e| ForgeError::io("open scoped observation component", e.into()))
+}
+
 /// Pin an absolute workspace without following symlinks in any component.
 /// The host mount namespace and its root are trusted. Replacement of a name
 /// after opening it cannot redirect the remainder of this descriptor walk.
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub fn open_observation_root(path: &Path) -> Result<File, ForgeError> {
     use std::path::Component;
     if !path.is_absolute() {
@@ -48,10 +63,11 @@ pub fn open_observation_root(path: &Path) -> Result<File, ForgeError> {
 }
 
 /// Open a regular file without following any workload-controlled symlink.
-/// Linux procfs resolves each pinned parent descriptor; each untrusted name
+/// Each pinned parent descriptor resolves the next name (procfs on Linux,
+/// openat elsewhere); each untrusted name
 /// is the final component of an O_NOFOLLOW open. Renaming an ancestor cannot
 /// redirect subsequent opens. This reads effects; it grants no workload access.
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub fn open_observation_file(root: &File, relative: &str) -> Result<File, ForgeError> {
     use std::path::Component;
 
@@ -86,16 +102,16 @@ pub fn open_observation_file(root: &File, relative: &str) -> Result<File, ForgeE
     Err(ForgeError::UnsafePath("observation requires a file".into()))
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(unix))]
 pub fn open_observation_root(_path: &Path) -> Result<File, ForgeError> {
     Err(ForgeError::Input(
-        "scoped file observation requires Linux procfs".into(),
+        "scoped file observation requires a Unix descriptor walk".into(),
     ))
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(unix))]
 pub fn open_observation_file(_root: &File, _relative: &str) -> Result<File, ForgeError> {
     Err(ForgeError::Input(
-        "scoped file observation requires Linux procfs".into(),
+        "scoped file observation requires a Unix descriptor walk".into(),
     ))
 }

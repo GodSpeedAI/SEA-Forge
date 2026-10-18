@@ -1,4 +1,5 @@
-#![cfg(target_os = "linux")]
+// Any Unix: Linux walks procfs, other Unix walks openat; both must hold.
+#![cfg(unix)]
 
 use sea_forge_sandbox::{open_observation_file, open_observation_root};
 use std::fs::{self, File};
