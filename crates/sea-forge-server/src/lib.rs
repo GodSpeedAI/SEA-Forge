@@ -179,6 +179,7 @@ impl ServerState {
         // `seed` is zeroized on drop; the key zeroizes itself likewise.
         let continuation_signing_key = sea_forge_ledger::signing::SigningKey::from_bytes(&seed);
         drop(seed);
+        recover_interrupted_appends(&config)?;
         recover_cancelled_delegations(&config)?;
         // A SWE_SEED declaration may have been appended directly (out of
         // process) while the server was absent; join it against any
@@ -412,6 +413,35 @@ impl ServerState {
 /// Recover a cancellation whose control record committed before server loss.
 /// HTTP delegations are never resumed: recovery writes the sole terminal
 /// rejected/cancelled outcome from ledger truth.
+/// A kill between an entry write and its derived `mmr.json` leaves the cache
+/// behind `entries.jsonl` (F-04). Repair every ledger from its entries before
+/// anything verifies it, or the cell refuses to start ever again.
+fn recover_interrupted_appends(config: &ServerConfig) -> Result<(), ForgeError> {
+    let ledgers = config.root.join("ledgers");
+    if !ledgers.exists() {
+        return Ok(());
+    }
+    for dir in std::fs::read_dir(&ledgers).map_err(|e| ForgeError::io("read ledgers", e))? {
+        let dir = dir.map_err(|e| ForgeError::io("read ledger entry", e))?;
+        let name = dir.file_name().to_string_lossy().into_owned();
+        if name == "quarantine"
+            || !dir
+                .file_type()
+                .map_err(|e| ForgeError::io("read ledger entry type", e))?
+                .is_dir()
+            || !dir.path().join("entries.jsonl").exists()
+        {
+            continue;
+        }
+        let quarantined = LedgerStream::open(&config.root, &name, "sea-forge-server")?
+            .quarantine_incomplete_tail()?;
+        if quarantined > 0 {
+            tracing::warn!(ledger = %name, quarantined, "quarantined an interrupted ledger tail");
+        }
+    }
+    Ok(())
+}
+
 fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError> {
     let ledgers = config.root.join("ledgers");
     if !ledgers.exists() {

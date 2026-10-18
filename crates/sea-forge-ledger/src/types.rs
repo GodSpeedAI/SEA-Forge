@@ -2117,7 +2117,12 @@ impl LedgerStream {
 
     /// Move an incomplete uncheckpointed tail to quarantine.
     /// Returns the number of quarantined lines.
+    /// Holds the stream lock, so it never races an append.
     pub fn quarantine_incomplete_tail(&self) -> Result<usize, ForgeError> {
+        self.with_exclusive_lock(|| self.quarantine_incomplete_tail_locked())
+    }
+
+    fn quarantine_incomplete_tail_locked(&self) -> Result<usize, ForgeError> {
         let path = self.entries_path();
         if !path.exists() {
             return Ok(0);

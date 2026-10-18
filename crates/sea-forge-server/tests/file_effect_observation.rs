@@ -63,7 +63,7 @@ fn file_claims_require_scoped_resource_evidence_even_with_forged_witnesses() {
     };
     let correct = digest(b"actual contents");
     // Unsupported observers must fail closed, even for matching real bytes.
-    let matching_status = if cfg!(target_os = "linux") {
+    let matching_status = if cfg!(unix) {
         SettlementStatus::Accepted
     } else {
         SettlementStatus::Rejected
