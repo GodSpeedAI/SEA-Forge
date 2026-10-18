@@ -1,0 +1,144 @@
+== test-sea-forge-extension: cargo test -p sea-forge-extension --all-features --locked --no-fail-fast -j 1
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+   Compiling sea-forge-extension v0.1.0 (/home/sprime01/projects/_wt/sec-gaps/crates/sea-forge-extension)
+    Finished `test` profile [unoptimized] target(s) in 3.14s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_extension-6c5492a823015d71)
+
+running 18 tests
+test tests::empty_registry_validates ... ok
+test tests::authority_surface_maps_to_policy_surface ... ok
+test tests::immutable_runtime_adapter_allows_versioned_upgrade_in_place ... ok
+test tests::immutable_runtime_adapter_is_idempotent_for_same_version_and_hash ... ok
+test tests::immutable_runtime_adapter_rejects_non_runtime_kind ... ok
+test tests::imported_extension_starts_disabled ... ok
+test tests::immutable_runtime_adapter_rejects_same_version_hash_change ... ok
+test tests::quarantined_runtime_adapter_cannot_be_replaced_by_registration ... ok
+test tests::import_same_id_version_twice_is_rejected_and_never_duplicates ... ok
+test tests::register_built_in_makes_active ... ok
+test tests::reject_non_deterministic_projection_adapter ... ok
+test tests::reject_non_canonical_authority_surface ... ok
+test tests::validate_built_in_descriptor ... ok
+test tests::validate_descriptor_rejects_unsafe_extension_id ... ok
+test tests::validate_descriptor_rejects_unsafe_version ... ok
+test tests::load_verified_refuses_registry_bytes_the_ledger_never_committed ... ok
+test tests::register_built_in_hash_mismatch_is_error_not_silent_idempotence ... ok
+test tests::adopt_makes_imported_active ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/cep0008.rs (target/debug/deps/cep0008-299f5d80a8e5909c)
+
+running 24 tests
+test cep0008_all_required_fields_present ... ok
+test cep0008_empty_case_ref_fails_closed ... ok
+test cep0008_cell_id_in_metadata_not_top_level ... ok
+test cep0008_empty_entry_ulid_fails_closed ... ok
+test cep0008_empty_payload_hash_fails_closed ... ok
+test cep0008_empty_ledger_id_fails_closed ... ok
+test cep0008_empty_run_id_fails_closed ... ok
+test cep0008_empty_source_agent_fails_closed ... ok
+test cep0008_invalid_rfc3339_timestamp_fails_closed ... ok
+test cep0008_empty_settlement_timestamp_fails_closed ... ok
+test cep0008_event_type_is_composite ... ok
+test cep0008_idempotency_and_event_id_mapped ... ok
+test cep0008_malformed_ledger_id_fails_closed ... ok
+test cep0008_malformed_entry_ulid_fails_closed ... ok
+test cep0008_identical_inputs_identical_bytes ... ok
+test cep0008_no_cell_id_when_absent ... ok
+test cep0008_metadata_explicit_boundary_completeness_omission ... ok
+test cep0008_no_forbidden_top_level_fields ... ok
+test cep0008_schema_version_and_source_correct ... ok
+test cep0008_source_envelope_unchanged ... ok
+test cep0008_payload_sections_distinct ... ok
+test cep0008_trace_and_correlation_mapped ... ok
+test cep0008_malformed_payload_hash_fails_closed ... ok
+test cep0008_provenance_identifies_ledger_record ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests sea_forge_extension
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0

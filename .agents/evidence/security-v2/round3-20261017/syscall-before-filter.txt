@@ -1,0 +1,28 @@
+warning: unused import: `PathBuf`
+  --> crates/sea-forge-sandbox/tests/syscall_filter.rs:24:23
+   |
+24 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+
+running 1 test
+unfiltered: {"clone3_newuser":"ok","clone_newuser":"ok","fork":"ok","io_uring_enter":"EBADF","io_uring_register":"EINVAL","io_uring_setup":"ok","nested_mount":"ok","setns":"EBADF","subprocess":"ok","thread":"ok","unshare_user":"ok","unshare_user_mount":"ok","unshare_user_net":"ok","write":"ok"}
+isolated: {"clone3_newuser":"ok","clone_newuser":"ok","fork":"ok","io_uring_enter":"EBADF","io_uring_register":"EINVAL","io_uring_setup":"ok","nested_mount":"mount:EPERM","setns":"EBADF","subprocess":"ok","thread":"ok","unshare_user":"ok","unshare_user_mount":"ok","unshare_user_net":"ok","write":"ok"}
+
+thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (1803416) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:217:9:
+assertion `left == right` failed: io_uring_setup: {"clone3_newuser":"ok","clone_newuser":"ok","fork":"ok","io_uring_enter":"EBADF","io_uring_register":"EINVAL","io_uring_setup":"ok","nested_mount":"mount:EPERM","setns":"EBADF","subprocess":"ok","thread":"ok","unshare_user":"ok","unshare_user_mount":"ok","unshare_user_net":"ok","write":"ok"}
+  left: String("ok")
+ right: "EPERM"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+isolated_workloads_cannot_reach_io_uring_or_create_namespaces --- FAILED
+
+failures:
+
+failures:
+    isolated_workloads_cannot_reach_io_uring_or_create_namespaces
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `-p sea-forge-sandbox --test syscall_filter`

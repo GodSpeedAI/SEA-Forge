@@ -1,0 +1,22 @@
+[
+ {
+  "RuleID": "github-pat",
+  "Description": "Uncovered a GitHub Personal Access Token, potentially leading to unauthorized repository access and sensitive content exposure.",
+  "StartLine": 2,
+  "EndLine": 2,
+  "StartColumn": 10,
+  "EndColumn": 49,
+  "Match": "REDACTED",
+  "Secret": "REDACTED",
+  "File": "README",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.871928,
+  "Author": "",
+  "Email": "",
+  "Date": "0001-01-01T00:00:00Z",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "README:github-pat:2"
+ }
+]

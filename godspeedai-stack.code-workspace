@@ -44,6 +44,12 @@
 		},
 		{
 			"path": "../terminal-ui"
+		},
+		{
+			"path": "../cognate-workbench"
+		},
+		{
+			"path": "../godspeed-growth"
 		}
 	],
 	"settings": {}

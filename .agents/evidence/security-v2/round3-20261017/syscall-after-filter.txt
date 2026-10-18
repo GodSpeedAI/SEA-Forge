@@ -1,0 +1,15 @@
+warning: unused import: `PathBuf`
+  --> crates/sea-forge-sandbox/tests/syscall_filter.rs:24:23
+   |
+24 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+
+running 1 test
+unfiltered: {"clone3_newuser":"ok","clone_newuser":"ok","fork":"ok","io_uring_enter":"EBADF","io_uring_register":"EINVAL","io_uring_setup":"ok","nested_mount":"ok","setns":"EBADF","subprocess":"ok","thread":"ok","unshare_user":"ok","unshare_user_mount":"ok","unshare_user_net":"ok","write":"ok","x32_io_uring_setup":"ok","x32_unshare_user":"ok"}
+isolated: {"clone3_newuser":"ENOSYS","clone_newuser":"EPERM","fork":"ok","io_uring_enter":"EPERM","io_uring_register":"EPERM","io_uring_setup":"EPERM","nested_mount":"unshare:EPERM","setns":"EPERM","subprocess":"ok","thread":"ok","unshare_user":"EPERM","unshare_user_mount":"EPERM","unshare_user_net":"EPERM","write":"ok","x32_io_uring_setup":"EPERM","x32_unshare_user":"EPERM"}
+.
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+

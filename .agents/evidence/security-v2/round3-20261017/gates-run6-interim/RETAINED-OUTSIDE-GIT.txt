@@ -1,0 +1,1 @@
+test-sea-forge-realitytrace.log is retained outside Git (retention/round3-20261018.json): a failing test printed a full E8 whose synthetic idempotency key matches generic-api-key.

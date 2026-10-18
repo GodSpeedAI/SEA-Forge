@@ -1,0 +1,145 @@
+== test-sea-forge-artifact-ip: cargo test -p sea-forge-artifact-ip --all-features --locked --no-fail-fast -j 1
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 0.17s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_artifact_ip-4fc4f01d491aaf51)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m8.rs (target/debug/deps/conformance_m8-74448bc74a83845f)
+
+running 44 tests
+test all_source_licenses_must_match_transition_policy ... ok
+test attestation_without_passed_maturity_gate_leaves_stage_unchanged ... ok
+test conformance_m8_derive_rejects_incomplete_derived_from ... ok
+test conformance_m8_derive_rejects_output_identity_matching_any_input ... ok
+test conformance_m8_derive_rejects_result_artifact_reusing_any_source_id ... ok
+test conformance_m8_derive_rejects_source_identity_count_mismatch ... ok
+test conformance_m8_degraded_attestation_never_invents_missing_controls ... ok
+test conformance_m8_derive_rejects_source_identity_pair_mismatch ... ok
+test conformance_m8_fabricated_accepted_value_source_without_run_records_is_rejected ... ok
+test conformance_m8_attested_cognitive_stays_cognitive_and_controls_are_explicit ... ok
+test conformance_m8_generic_execution_result_is_not_value_evidence ... ok
+test conformance_m8_forged_attestation_action_cannot_reach_backend ... ok
+test conformance_m8_non_cognitive_multi_source_requires_parent_for_each_source ... ok
+test conformance_m8_domain_model_ref_requires_real_validated_model ... ok
+test conformance_m8_attestation_required_and_degraded ... ok
+test conformance_m8_attested_token_resolves_ledger_record ... ok
+test conformance_m8_pending_transition_is_idempotent_and_terminal_is_final ... ok
+test conformance_m8_rebuild_rejects_allow_for_substituted_transition_action ... ok
+test conformance_m8_pre_mint_token_requires_explicit_controls ... ok
+test conformance_m8_rebuild_rejects_attestation_without_exact_authority_binding ... ok
+test conformance_m8_registration_only_accepts_verified_descriptor_evidence ... ok
+test conformance_m8_registration_resolves_evidence_from_verified_ledger_not_caller ... ok
+test conformance_m8_rejects_teleport_before_transform_and_dag_corruption ... ok
+test conformance_m8_relabelled_value_evidence_is_rejected ... ok
+test conformance_m8_partial_strong_declaration_is_rejected ... ok
+test conformance_m8_required_metadata_rejects_missing_or_empty_product_contract_field ... ok
+test conformance_m8_required_metadata_rejects_unknown_selector ... ok
+test conformance_m8_promote_derive_product_capital_and_rebuild_are_governed ... ok
+test conformance_m8_rebuild_rejects_approval_for_unrelated_decision_and_criteria ... ok
+test conformance_m8_rights_profile_fabricated_accepted_without_authority_is_rejected ... ok
+test conformance_m8_transition_proposal_rejects_caller_governance_fields ... ok
+test conformance_m8_unresolved_governance_reference_rejects_transition ... ok
+test conformance_m8_semantic_anchor_class_must_match_gate ... ok
+test content_changing_capitalize_rejected ... ok
+test approval_only_capital_rejected ... ok
+test exact_transition_grant_cannot_be_reused_for_substituted_input ... ok
+test forged_stale_state_catalog_capital_files_removed_overwritten_by_rebuild ... ok
+test conformance_m8_semantic_anchor_must_resolve_in_ledgered_domain_model ... ok
+test value_evidence_without_underlying_accepted_evidence_is_rejected ... ok
+test deleting_middle_token_fails_complete_chain ... ok
+test conformance_m8_retirement_preserves_capital_maturity_and_ignores_forged_view ... ok
+test conformance_m8_rebuild_rejects_approval_with_missing_or_wrong_criteria_hashes ... ok
+test quality_only_capital_rejected ... ok
+test conformance_m8_value_evidence_acceptance_is_derived_from_sources ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
+
+   Doc-tests sea_forge_artifact_ip
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0

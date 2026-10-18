@@ -1,0 +1,177 @@
+== test-sea-forge-ledger: cargo test -p sea-forge-ledger --all-features --locked --no-fail-fast -j 1
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+   Compiling serde_json v1.0.151
+   Compiling serde-saphyr v1.3.0
+   Compiling chrono v0.4.45
+   Compiling sha2 v0.10.9
+   Compiling sea-forge-core v0.1.0 (/home/sprime01/projects/_wt/sec-gaps/crates/sea-forge-core)
+   Compiling ed25519-dalek v2.2.0
+   Compiling sea-forge-ledger v0.1.0 (/home/sprime01/projects/_wt/sec-gaps/crates/sea-forge-ledger)
+    Finished `test` profile [unoptimized] target(s) in 12.13s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_ledger-75a592035b28f7ba)
+
+running 37 tests
+test signing::tests::base64_round_trip ... ok
+test types::tests::append_creates_chained_entry ... ok
+test types::tests::bounded_reader_keeps_pin_immutable_when_a_supported_append_follows_pin ... ok
+test signing::non_ascii_tests::signature_verification_rejects_wide_chars_without_panic ... ok
+test types::tests::bounded_reader_offset_addition_is_checked_at_native_u64_boundary ... ok
+test types::tests::bounded_reader_preserves_unknown_top_level_and_hashed_payload_fields ... ok
+test types::tests::bounded_reader_proves_absent_and_zero_byte_streams_empty ... ok
+test types::tests::bounded_reader_regression_errors_remain_terminal_after_bad_physical_row ... ok
+test types::tests::bounded_reader_regression_rejects_pretty_json_resume_position ... ok
+test types::tests::bounded_reader_rejects_broken_ordinals_linkage_and_typed_hashes ... ok
+test types::tests::bounded_reader_rejects_corrupt_pin_and_resume_offset_arithmetic ... ok
+test types::tests::bounded_reader_rejects_nonregular_and_path_io_failures ... ok
+test types::tests::bounded_reader_rejects_resume_after_predecessor_bytes_change ... ok
+test types::tests::bounded_reader_rejects_valid_typed_resume_byte_changes ... ok
+test types::tests::bounded_reader_rejects_whitespace_torn_and_malformed_history ... ok
+test signing::tests::round_trip_sign_and_verify ... ok
+test types::tests::bounded_reader_resumes_from_original_pin_and_acknowledged_predecessor ... ok
+test types::tests::bounded_reader_returns_exact_typed_positions_and_distinct_completion ... ok
+test types::tests::bounded_reader_fails_closed_when_cooperative_lock_is_held ... ok
+test types::tests::checkpoint_coverage_rejects_post_checkpoint_record ... ok
+test types::tests::committed_truth_survives_failed_view_materialization ... ok
+test types::tests::concurrent_view_materializations_of_one_path_all_succeed ... ok
+test types::tests::detect_duplicate_ordinal ... ok
+test types::tests::detect_one_byte_alteration ... ok
+test types::tests::open_rejects_traversal_ledger_id ... ok
+test types::tests::payload_hash_is_domain_separated ... ok
+test types::tests::pre_action_assurance_rejects_duplicate_witnesses ... ok
+test types::tests::rebuild_record_view_is_byte_identical ... ok
+test types::tests::ulid_is_26_chars_and_sortable_prefix ... ok
+test types::tests::bounded_reader_never_returns_partial_row_or_treats_limit_as_complete ... ok
+test types::tests::bounded_reader_stops_before_aggregate_budget_cap_plus_one_without_partial_ack ... ok
+test types::tests::view_temp_never_writes_through_a_planted_symlink ... ok
+test types::tests::witnessed_assurance_commits_receipt_before_final_checkpoint ... ok
+test types::tests::bounded_reader_charges_pin_and_forward_reads_to_one_exact_page_budget ... ok
+test types::tests::bounded_reader_accepts_exact_row_cap_and_rejects_cap_plus_one ... ok
+test types::tests::bounded_reader_scans_at_most_500_global_rows_including_non_events ... ok
+test types::tests::verify_never_sees_a_half_written_append ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.03s
+
+     Running tests/conformance_m0_ledger.rs (target/debug/deps/conformance_m0_ledger-05d9b6a3b0a879e5)
+
+running 23 tests
+test commit_typed_once_rejects_conflicting_payload ... ok
+test commit_typed_once_returns_existing_record_for_same_payload ... ok
+test appending_onto_a_forged_tail_is_refused ... ok
+test m0_alter_one_byte_fails_verification ... ok
+test m0_approved_ciphertext_commitment_accepted ... ok
+test concurrent_processes_commit_typed_once_append_one_entry ... ok
+test concurrent_commit_typed_once_appends_one_entry ... ok
+test m0_crash_recovery_rebuilds_mmr_ahead_of_entries ... ok
+test m0_crash_recovery_quarantines_incomplete_tail ... ok
+test m0_create_and_verify_signed_checkpoint ... ok
+test m0_checkpoint_signature_verifies_under_public_key ... ok
+test m0_global_checkpoint_covers_all_streams ... ok
+test m0_private_key_block_rejected ... ok
+test m0_prove_entry_under_desync_is_typed_error_not_panic ... ok
+test m0_secret_sentinel_rejected_in_payload ... ok
+test m0_global_checkpoint_chain ... ok
+test m0_truncate_middle_entry_fails_verification ... ok
+test m0_witness_must_be_independent_from_acting_entity ... ok
+test m0_key_rotation_old_checkpoints_verify_under_old_key ... ok
+test m0_witness_receipt_detects_fork_substitution ... ok
+test m0_mmr_root_matches_recomputed_root ... ok
+test m0_global_stream_checkpoint_chain ... ok
+test m0_append_1000_mixed_records_and_verify_integrity ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.15s
+
+     Running tests/projection_boundary.rs (target/debug/deps/projection_boundary-07db4c0c41826d60)
+
+running 3 tests
+test legacy_reader_never_panics_when_new_kind_present ... ok
+test legacy_reader_skips_new_record_kind_without_deserializing ... ok
+test ledger_verify_is_immune_to_new_projection_variants ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sea_forge_ledger
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0

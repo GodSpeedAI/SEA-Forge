@@ -1,0 +1,18 @@
+
+running 1 test
+outside: workload=connected listener=Some("reached")
+declared: workload=connected listener=Some("reached")
+
+thread 'pathname_sockets_outside_declared_trees_are_unreachable' (1879291) panicked at crates/sea-forge-sandbox/tests/unix_socket_reach.rs:114:5:
+[("outside", "connected", Some("reached")), ("declared", "connected", Some("reached"))]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+pathname_sockets_outside_declared_trees_are_unreachable --- FAILED
+
+failures:
+
+failures:
+    pathname_sockets_outside_declared_trees_are_unreachable
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `-p sea-forge-sandbox --test unix_socket_reach`

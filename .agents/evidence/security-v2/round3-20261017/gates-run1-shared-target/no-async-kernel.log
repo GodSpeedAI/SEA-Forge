@@ -1,0 +1,3 @@
+== no-async-kernel: just no-async-kernel
+ok: no async runtime or HTTP client in 20 kernel crates
+exit=0

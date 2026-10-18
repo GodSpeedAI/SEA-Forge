@@ -1,0 +1,170 @@
+== test-sea-forge-case-runner: cargo test -p sea-forge-case-runner --all-features --locked --no-fail-fast -j 1
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+   Compiling sea-forge-runtime v0.1.0 (/home/sprime01/projects/_wt/sec-gaps/crates/sea-forge-runtime)
+   Compiling sea-forge-case-runner v0.1.0 (/home/sprime01/projects/_wt/sec-gaps/crates/sea-forge-case-runner)
+    Finished `test` profile [unoptimized] target(s) in 2.91s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_case_runner-7f8073b02d4a8d95)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/case_ops.rs (target/debug/deps/case_ops-8777ce66e8ea8f68)
+
+running 7 tests
+test propose_item_refuses_a_cycle_and_leaves_the_plan_untouched ... ok
+test reopen_refuses_a_case_that_is_not_closed ... ok
+test the_proposer_cannot_resolve_its_own_items_approval ... ok
+test the_requester_cannot_resolve_the_approval_their_own_action_opened ... ok
+test reopen_reactivates_a_closed_case_and_records_the_event ... ok
+test an_uninvolved_actor_resolves_the_approval_and_mints_the_authority_decision ... ok
+test reopen_records_the_requesters_reason_on_the_event ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/cell_episode.rs (target/debug/deps/cell_episode-65b64eeb88193fb2)
+
+running 30 tests
+test denied_execution_creates_no_sandbox_and_touches_nothing ... ok
+test grant_for_a_different_policy_digest_is_refused ... ok
+test host_execute_command_rule_cannot_authorize_the_sandbox_command ... ok
+test failed_command_is_rejected_and_not_promoted ... ok
+test denied_network_access_is_recorded_and_rejected ... ok
+test host_local_grant_does_not_authorize_the_sandbox_command ... ok
+test opa_allow_is_committed_before_the_sandbox_decision ... ignored, requires opa 1.21.1 on PATH
+test opa_configured_episode_can_still_request_and_complete_an_approved_promotion ... ignored, requires opa 1.21.1 on PATH
+test opa_input_without_facts_is_not_allowed ... ignored, requires opa 1.21.1 on PATH
+test approver_without_the_sod_role_does_not_promote ... ok
+test image_mismatch_is_not_authorized ... ok
+test authorized_repair_is_executed_settled_and_promoted ... ok
+test altered_proposal_is_refused_without_consuming_the_approval ... ok
+test real_opa_deny_blocks_the_episode_before_any_sandbox ... ignored, requires opa 1.21.1 on PATH
+test real_opa_escalation_blocks_the_episode_before_any_sandbox ... ignored, requires opa 1.21.1 on PATH
+test provider_expanded_effective_policy_is_refused ... ok
+test no_changes_is_accepted_with_nothing_to_promote ... ok
+test promotion_for_another_repository_is_refused ... ok
+test protected_dependency_file_change_escalates_and_is_not_promoted ... ok
+test required_opa_without_an_input_is_not_allowed ... ignored, requires opa 1.21.1 on PATH
+test rejected_approval_does_not_promote ... ok
+test required_opa_without_a_usable_decision_is_not_allowed ... ok
+test self_approval_does_not_promote ... ok
+test promotion_without_commit_authority_is_not_performed ... ok
+test tampered_projection_is_refused ... ok
+test replayed_approval_does_not_promote_again ... ok
+test rejected_settlement_and_escalated_validation_request_nothing ... ok
+test symlink_in_result_is_rejected_and_not_promoted ... ok
+test stale_base_at_commit_is_a_recorded_conflict ... ok
+test unavailable_gateway_fails_before_any_execution ... ok
+
+test result: ok. 24 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.57s
+
+     Running tests/cell_episode_live.rs (target/debug/deps/cell_episode_live-b81772d80ebf0f05)
+
+running 6 tests
+test live_artifacts_are_retrieved_and_sandbox_cleaned_up ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+test live_authorized_episode_runs_in_a_microvm ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+test live_host_filesystem_is_not_visible ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+test live_network_egress_is_denied ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+test live_non_bootstrap_image_is_used ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+test live_timeout_cancels_the_command ... ignored, requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)
+
+test result: ok. 0 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m5.rs (target/debug/deps/conformance_m5-bc8182bae2839508)
+
+running 6 tests
+test self_invoke_noop_fail ... ignored
+test self_invoke_noop_pass ... ignored
+test invalid_predecessor_chain_quarantines_the_stage ... ok
+test denied_generated_zone_edit_is_quarantined_before_authority ... ok
+test accepted_stage_settles_and_completes_case ... ok
+test downstream_sentry_blocked_by_rejected_predecessor ... ok
+
+test result: ok. 4 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests sea_forge_case_runner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0
