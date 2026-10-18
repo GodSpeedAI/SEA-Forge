@@ -41,7 +41,16 @@ struct Config {
     /// Kernel-verified (`SO_PEERCRED`) host UID of the connected workload.
     #[serde(default)]
     workload_uid: Option<u32>,
+    /// Exposure transition gate: runs with (context, label) before a
+    /// classified response reaches the context.
+    #[serde(skip)]
+    gate: Option<ExposureGate>,
 }
+
+/// Enforces an exposure transition before it happens: revokes every
+/// destination capability the new label set does not permit and returns
+/// only once revocation is effective. An error withholds the response.
+pub type ExposureGate = std::sync::Arc<dyn Fn(&str, &str) -> Result<(), String> + Send + Sync>;
 
 fn digest(value: &Value) -> String {
     hex::encode(Sha256::digest(value.to_string().as_bytes()))
@@ -282,6 +291,22 @@ impl Broker {
         // (ADV-B09), so any forwarded response labels the context.
         if let (Ok(value), Some(label)) = (&response, self.config.classify.get(name)) {
             if let (Some(registry), Some(context)) = (&self.exposure, &self.config.context) {
+                // Destinations the new exposure does not permit lose their
+                // capabilities first; the plaintext moves only afterwards.
+                if let Some(gate) = &self.config.gate {
+                    if let Err(reason) = gate(context, label) {
+                        self.ledger.commit_typed("mcp_settlement", vec![self.session.clone()],
+                            &json!({"decision_id":decision.decision_id,"status":"rejected","forwarded":false,
+                                "reason":"exposure_gate_failed","detail":reason,
+                                "workload_uid":self.config.workload_uid,"context":self.config.context,
+                                "response_sha256":digest(value)}), vec![forward.entry_ulid().into()])?;
+                        return Ok(refusal(
+                            request.id.as_ref(),
+                            -32004,
+                            "response withheld: exposure could not be enforced",
+                        ));
+                    }
+                }
                 registry.record(
                     context,
                     label,
@@ -502,6 +527,32 @@ pub fn serve_workload(
     server: McpServerConfig,
     context: Option<String>,
 ) -> std::io::Result<McpListenerGuard> {
+    serve_workload_gated(
+        listener,
+        workload_uid,
+        root,
+        workspace,
+        bundle,
+        actor,
+        server,
+        context,
+        None,
+    )
+}
+
+/// [`serve_workload`] with an exposure transition gate.
+#[allow(clippy::too_many_arguments)]
+pub fn serve_workload_gated(
+    listener: std::os::unix::net::UnixListener,
+    workload_uid: u32,
+    root: PathBuf,
+    workspace: PathBuf,
+    bundle: AuthorityPolicyBundle,
+    actor: Actor,
+    server: McpServerConfig,
+    context: Option<String>,
+    gate: Option<ExposureGate>,
+) -> std::io::Result<McpListenerGuard> {
     listener.set_nonblocking(true)?;
     let (stop_tx, mut stop) = tokio::sync::oneshot::channel::<()>();
     let (guard_root, guard_server, guard_actor) =
@@ -530,6 +581,7 @@ pub fn serve_workload(
                     context: context.clone(),
                     classify: server.classify.clone(),
                     workload_uid: Some(workload_uid),
+                    gate: gate.clone(),
                 };
                 loop {
                     let stream = tokio::select! {

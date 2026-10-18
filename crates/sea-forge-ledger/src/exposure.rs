@@ -11,7 +11,7 @@
 //!
 //! Using a brokered credential is not exposure: only plaintext the context
 //! received is labelled.
-use sea_forge_ledger::LedgerStream;
+use crate::LedgerStream;
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -149,6 +149,19 @@ impl ExposureRegistry {
             }
         }
         Ok(labels.into_iter().collect())
+    }
+
+    /// True when `context` is `ancestor` or descends from it, so a label
+    /// recorded on `ancestor` reaches `context`.
+    pub fn inherits(
+        &self,
+        context: &str,
+        ancestor: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        let states = self.states()?;
+        Ok(Self::lineage(&states, context)
+            .iter()
+            .any(|id| id == ancestor))
     }
 
     /// True when `context` or any ancestor was revoked.

@@ -44,7 +44,9 @@ mod cep_authority;
 pub mod config;
 pub mod delegation;
 pub mod delegation_audit;
-pub mod exposure;
+// Exposure state is a fold over a cell ledger stream; it lives with the
+// ledger so every component that exports cell data can consult it.
+pub use sea_forge_ledger::exposure;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;
@@ -1272,12 +1274,49 @@ async fn run_inner(
     // Both locks live for the server lifetime. The root lock makes an explicit
     // socket override unable to create a second concurrent writer for one cell.
     let _cell_lock = lock_cell_root(&config.root)?;
+    // SEC-06 independent of Landlock: everything the control plane creates
+    // is owner-only, and an existing tree is remediated before use. Only the
+    // root and `runs/` stay traverse-only so isolated workloads can reach
+    // their own granted run trees by name.
+    #[cfg(target_os = "linux")]
+    {
+        sea_forge_sandbox::workload::restrict_creation_mask();
+        let report = sea_forge_sandbox::workload::harden_state_tree(
+            &config.root,
+            &[config.root.clone(), config.root.join("runs")],
+        )
+        .map_err(ForgeError::from)?;
+        tracing::info!(
+            directories = report.directories,
+            files = report.files,
+            skipped = report.skipped.len(),
+            "state tree restricted to owner-only"
+        );
+        for (path, why) in &report.skipped {
+            tracing::warn!(
+                "state tree entry left unchanged: {} ({why})",
+                path.display()
+            );
+        }
+    }
     let _socket_lock = lock_socket_path(&socket_path)?;
     // The case-advance supervisor is opt-in (D-3): capture the startup
     // snapshot before `config` moves into the state. A config reload does
     // not spawn, stop, resize, or re-attribute a running supervisor — that
     // takes a restart, like the cell root itself.
     let supervisor_settings = config.supervisor.clone();
+    // SEC-02/08: database session expiry is enforced by the trusted server
+    // for its whole lifetime, independent of episodes and issuance.
+    #[cfg(target_os = "linux")]
+    let _database_supervisors = config
+        .postgres
+        .iter()
+        .map(|resource| {
+            postgres::PostgresBroker::new(resource.clone())
+                .map(|broker| broker.supervise(config.root.clone(), postgres::SUPERVISE_INTERVAL))
+                .map_err(|e| ForgeError::Input(e.to_string()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.

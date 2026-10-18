@@ -1012,7 +1012,24 @@ async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
         .unwrap(),
     )
     .unwrap();
-    assert_eq!(results["read"], "3", "{results}");
+    if results["read"] != "3" {
+        // Diagnose an early revocation: the session lifecycle as recorded
+        // (kinds and reasons only; issued credentials are never recorded).
+        let lifecycle: Vec<(String, Value, String)> = LedgerStream::open(
+            root.path(),
+            format!("dbsessions-{run}"),
+            "sea-forge-control-plane",
+        )
+        .and_then(|ledger| ledger.read_entries())
+        .map(|entries| {
+            entries
+                .into_iter()
+                .map(|e| (e.record_kind, e.payload["reason"].clone(), e.committed_at))
+                .collect()
+        })
+        .unwrap_or_default();
+        panic!("read failed: {results}; session lifecycle: {lifecycle:?}");
+    }
     assert!(
         results["delete"].as_str().unwrap().contains("42501"),
         "{results}"

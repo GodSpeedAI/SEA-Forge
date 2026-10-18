@@ -1268,12 +1268,15 @@ async fn run_acp_episode(
     let mut workload_lifeline = None;
     #[cfg(target_os = "linux")]
     let mut mcp_listeners: Vec<crate::mcp::McpListenerGuard> = Vec::new();
+    // Shared with every episode's MCP exposure gate: an exposure transition
+    // revokes already-issued sessions, in any episode whose context receives
+    // the label, whose scope does not admit it.
     #[cfg(target_os = "linux")]
-    let mut db_sessions: Vec<(
-        crate::postgres::PostgresBroker,
-        crate::postgres::DatabaseSession,
-        crate::postgres::ExpiryReaper,
-    )> = Vec::new();
+    let db_sessions = crate::postgres::LiveSessions::shared();
+    #[cfg(target_os = "linux")]
+    let db_episode = db_sessions.episode(run);
+    #[cfg(target_os = "linux")]
+    let db_owner = db_episode.owner().to_string();
     // Database session issuance/revocation evidence, only when configured.
     let control_ledger = if postgres.is_empty() {
         None
@@ -1345,6 +1348,14 @@ async fn run_acp_episode(
                 .map_err(|error| ForgeError::io("create ACP artifacts", error))?;
             let pool = workload::WorkloadIdentityPool::from_host().map_err(isolation_error)?;
             let identity = pool.acquire().map_err(isolation_error)?;
+            // Traverse-only path to this run's trees; every other
+            // control-plane entry stays owner-only (no Landlock reliance).
+            workload::prepare_traversal(&[
+                root.to_path_buf(),
+                root.join("runs"),
+                root.join("runs").join(run),
+            ])
+            .map_err(isolation_error)?;
             workload::grant_exclusive_access(&workspace, &identity).map_err(isolation_error)?;
             workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
             let helper = workload::sibling_helper().map_err(isolation_error)?;
@@ -1374,8 +1385,9 @@ async fn run_acp_episode(
                         .map_err(|error| ForgeError::io("bind MCP broker socket", error))?;
                     workload::grant_exclusive_access(&socket, &identity)
                         .map_err(isolation_error)?;
+                    let gate = db_sessions.gate(root.to_path_buf());
                     mcp_listeners.push(
-                        crate::mcp::serve_workload(
+                        crate::mcp::serve_workload_gated(
                             listener,
                             identity.host_uid,
                             root.to_path_buf(),
@@ -1386,6 +1398,7 @@ async fn run_acp_episode(
                             // Exposure follows the case across items and
                             // resumed runs (over-restricts rather than leaks).
                             Some(format!("case:{case}")),
+                            Some(gate),
                         )
                         .map_err(|error| ForgeError::io("start MCP broker", error))?,
                     );
@@ -1412,6 +1425,16 @@ async fn run_acp_episode(
             let mut workload_env = spawn.env.clone();
             if let Some(control_ledger) = control_ledger.as_ref() {
                 let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+                let registry =
+                    crate::exposure::ExposureRegistry::open(root, "sea-forge-control-plane")?;
+                let context = format!("case:{case}");
+                let labels_now = || -> Result<std::collections::BTreeSet<String>, ForgeError> {
+                    Ok(registry
+                        .labels(&context)
+                        .map_err(|error| ForgeError::Internal(error.to_string()))?
+                        .into_iter()
+                        .collect())
+                };
                 for resource in postgres {
                     let broker = crate::postgres::PostgresBroker::new(resource.clone()).map_err(
                         |error| ForgeError::Config {
@@ -1421,6 +1444,20 @@ async fn run_acp_episode(
                         },
                     )?;
                     for scope in broker.offered_scopes().to_vec() {
+                        // A context already holding labels this scope may
+                        // not receive is never issued a session for it.
+                        if !broker.scope_admits(&scope, &labels_now()?) {
+                            control_ledger.commit_typed(
+                                "database_session_refused",
+                                vec![run.to_string()],
+                                &json!({"resource": broker.name(), "scope": scope,
+                                    "workload_uid": identity.host_uid,
+                                    "reason": "exposure_not_permitted",
+                                    "labels": labels_now()?}),
+                                vec![],
+                            )?;
+                            continue;
+                        }
                         let issued = broker
                             .issue(
                                 &engine,
@@ -1438,21 +1475,6 @@ async fn run_acp_episode(
                                 message: error.to_string(),
                             })?;
                         if let Some(session) = issued {
-                            // Direct database access exposes whatever the
-                            // scope can read; label the case at grant time.
-                            if let Some(label) = broker.scope_exposure(&scope) {
-                                crate::exposure::ExposureRegistry::open(
-                                    root,
-                                    "sea-forge-control-plane",
-                                )?
-                                .record(
-                                    &format!("case:{case}"),
-                                    label,
-                                    &format!("postgres:{}/{scope}", broker.name()),
-                                    &session.decision_id,
-                                )
-                                .map_err(|error| ForgeError::Internal(error.to_string()))?;
-                            }
                             workload_env.push((broker.env_key(&scope), session.conninfo()));
                             // Live access ends at expiry even mid-episode.
                             let reaper = broker.expiry_reaper(
@@ -1461,12 +1483,36 @@ async fn run_acp_episode(
                                 format!("dbsessions-{run}"),
                                 run.to_string(),
                             );
-                            db_sessions.push((
-                                crate::postgres::PostgresBroker::new(resource.clone())
-                                    .map_err(|error| ForgeError::Internal(error.to_string()))?,
-                                session,
-                                reaper,
-                            ));
+                            let decision_id = session.decision_id.clone();
+                            db_sessions
+                                .push(
+                                    &db_owner,
+                                    &context,
+                                    root.to_path_buf(),
+                                    format!("dbsessions-{run}"),
+                                    crate::postgres::PostgresBroker::new(resource.clone())
+                                        .map_err(|error| ForgeError::Internal(error.to_string()))?,
+                                    session,
+                                    reaper,
+                                )
+                                .map_err(ForgeError::Internal)?;
+                            // Direct database access exposes whatever the
+                            // scope can read: label the case at grant time,
+                            // after revoking every live session (this one
+                            // included) the label is not permitted to reach.
+                            if let Some(label) = broker.scope_exposure(&scope) {
+                                db_sessions
+                                    .transition(&registry, &context, label)
+                                    .map_err(ForgeError::Internal)?;
+                                registry
+                                    .record(
+                                        &context,
+                                        label,
+                                        &format!("postgres:{}/{scope}", broker.name()),
+                                        &decision_id,
+                                    )
+                                    .map_err(|error| ForgeError::Internal(error.to_string()))?;
+                            }
                         }
                     }
                 }
@@ -1552,10 +1598,7 @@ async fn run_acp_episode(
     // transcript like the HTTP path's endpoint credential: an agent that
     // echoes its connection string must not persist it in evidence.
     #[cfg(target_os = "linux")]
-    let issued: Vec<String> = db_sessions
-        .iter()
-        .flat_map(|(_, session, _)| [session.conninfo(), session.password().to_string()])
-        .collect();
+    let issued: Vec<String> = db_sessions.secrets(&db_owner);
     #[cfg(not(target_os = "linux"))]
     let issued: Vec<String> = Vec::new();
     let issued: Vec<&str> = issued.iter().map(String::as_str).collect();
@@ -1582,21 +1625,12 @@ async fn run_acp_episode(
     #[cfg(target_os = "linux")]
     drop(mcp_listeners);
     #[cfg(target_os = "linux")]
-    for (broker, session, reaper) in db_sessions {
-        drop(reaper);
-        let revoked = control_ledger
-            .as_ref()
-            .ok_or_else(|| "database ledger missing".to_string())
-            .and_then(|ledger| {
-                broker
-                    .revoke(&session, ledger, run, "episode_ended")
-                    .map_err(|error| error.to_string())
-            });
-        if revoked.is_err() {
-            outcome.termination = DelegationTermination::EndpointError;
-            outcome.error_subcode = Some("database_revocation_failed".into());
-        }
+    if db_sessions.revoke_all(&db_owner, "episode_ended").is_err() {
+        outcome.termination = DelegationTermination::EndpointError;
+        outcome.error_subcode = Some("database_revocation_failed".into());
     }
+    #[cfg(target_os = "linux")]
+    drop(db_episode);
     // End the workload's namespace (any process the agent left behind), then
     // withdraw the slot UID's reach into this run's trees before the lock is
     // released and the UID can be issued again.

@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod exposure;
 pub mod signing;
 pub mod types;
 

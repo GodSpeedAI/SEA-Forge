@@ -46,6 +46,11 @@ pub struct PostgresResourceConfig {
     /// for that scope is issued (the broker cannot see query results).
     #[serde(default)]
     pub exposure: BTreeMap<String, String>,
+    /// Scope -> exposure labels that may flow into a session of that scope
+    /// (the database as a destination). Absent means none: a context holding
+    /// any label not listed loses the session, and cannot be issued one.
+    #[serde(default)]
+    pub permitted_exposure: BTreeMap<String, Vec<String>>,
 }
 
 fn default_ttl() -> u64 {
@@ -187,6 +192,17 @@ impl PostgresBroker {
         self.config.exposure.get(scope).map(String::as_str)
     }
 
+    /// Whether a context holding `labels` may hold a session of `scope`.
+    /// A scope's own exposure label is admitted: reading what it reads
+    /// widens nothing. Every other label must be explicitly permitted.
+    pub fn scope_admits(&self, scope: &str, labels: &std::collections::BTreeSet<String>) -> bool {
+        let permitted = self.config.permitted_exposure.get(scope);
+        let own = self.scope_exposure(scope);
+        labels.iter().all(|label| {
+            own == Some(label.as_str()) || permitted.is_some_and(|p| p.iter().any(|l| l == label))
+        })
+    }
+
     pub fn offered_scopes(&self) -> &[String] {
         &self.config.offer
     }
@@ -326,9 +342,12 @@ impl PostgresBroker {
         self.admin_sql(&format!(
             "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION \
              NOBYPASSRLS CONNECTION LIMIT 4 PASSWORD '{password}' VALID UNTIL '{expires_at}'; \
-             ALTER ROLE {role} SET idle_session_timeout = '{idle_ms}'; \
-             GRANT {group} TO {role} WITH INHERIT TRUE, SET FALSE, ADMIN FALSE;",
-            idle_ms = self.config.session_ttl_secs.saturating_mul(1000)
+             GRANT {group} TO {role} WITH INHERIT TRUE, SET FALSE, ADMIN FALSE;" // No per-role timeouts: any session may SET them away
+                                                                                 // (statement_timeout, idle_session_timeout, transaction_timeout
+                                                                                 // ...), so they bound nothing a resisting workload does. Live
+                                                                                 // backends end through revocation: the expiry reaper, the
+                                                                                 // server's session supervisor, exposure enforcement, and
+                                                                                 // episode teardown (tests/postgres_lifecycle.rs).
         ))?;
         Ok(DatabaseSession {
             resource: self.config.name.clone(),
@@ -506,6 +525,40 @@ impl PostgresBroker {
         }
     }
 
+    /// Run the session supervisor inside the trusted server: every
+    /// `interval` it revokes every expired broker role on this cluster
+    /// (terminate, verify, drop). Expiry is enforced without any later
+    /// issuance and whether or not the episode that issued the session is
+    /// still running. Dropping the guard stops it.
+    pub fn supervise(
+        &self,
+        ledger_root: PathBuf,
+        interval: std::time::Duration,
+    ) -> SessionSupervisor {
+        let (stop, rx) = std::sync::mpsc::channel::<()>();
+        let broker = PostgresBroker {
+            config: self.config.clone(),
+        };
+        let stream = format!("dbsupervisor-{}", self.config.name);
+        let thread = std::thread::spawn(move || loop {
+            if let Ok(ledger) =
+                LedgerStream::open(&ledger_root, stream.as_str(), "sea-forge-control-plane")
+            {
+                if let Err(error) = broker.reconcile_expired(&ledger, "supervisor") {
+                    tracing::warn!("database session supervisor sweep failed: {error}");
+                }
+            }
+            match rx.recv_timeout(interval) {
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                _ => return,
+            }
+        });
+        SessionSupervisor {
+            stop: Some(stop),
+            thread: Some(thread),
+        }
+    }
+
     /// Backends currently attributed to `role` (pid, application_name).
     pub fn active_backends(&self, role: &str) -> Result<Vec<(u32, String)>, PostgresError> {
         let role = identifier(role)?;
@@ -595,6 +648,24 @@ impl PostgresBroker {
     }
 }
 
+/// Stops the session supervisor on drop.
+pub struct SessionSupervisor {
+    stop: Option<std::sync::mpsc::Sender<()>>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Drop for SessionSupervisor {
+    fn drop(&mut self) {
+        drop(self.stop.take());
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// Supervisor sweep interval: expired sessions end within about this long.
+pub const SUPERVISE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// Revokes its session at expiry unless dropped first.
 pub struct ExpiryReaper {
     extend: Option<std::sync::mpsc::Sender<chrono::DateTime<chrono::Utc>>>,
@@ -654,5 +725,225 @@ mod tests {
         let fractional = t(0) + Duration::milliseconds(900);
         assert_eq!(session_deadline(fractional, 2, None).unwrap(), t(2));
         assert!(session_deadline(t(0), 0, None).is_err());
+    }
+
+    /// A scope admits exactly its own exposure label plus what is explicitly
+    /// permitted to it; owning a label never admits a different one, and a
+    /// write scope without permissions admits a read scope's label nowhere.
+    #[test]
+    fn scope_admits_only_its_own_label_and_explicit_permissions() {
+        let broker = super::PostgresBroker::new(
+            serde_json::from_value(serde_json::json!({
+                "name": "app-db", "psql_bindir": "/nonexistent", "socket_dir": "/nonexistent",
+                "port": 5432, "database": "app", "admin_role": "admin",
+                "scopes": {"audit-read": "audit_reader", "audit-write": "audit_writer"},
+                "exposure": {"audit-read": "confidential"},
+                "permitted_exposure": {"audit-read": ["internal"]},
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let set = |labels: &[&str]| labels.iter().map(|l| l.to_string()).collect();
+        assert!(broker.scope_admits("audit-read", &set(&[])));
+        assert!(broker.scope_admits("audit-read", &set(&["confidential"])));
+        assert!(broker.scope_admits("audit-read", &set(&["confidential", "internal"])));
+        assert!(!broker.scope_admits("audit-read", &set(&["restricted"])));
+        assert!(!broker.scope_admits("audit-read", &set(&["confidential", "restricted"])));
+        assert!(broker.scope_admits("audit-write", &set(&[])));
+        assert!(!broker.scope_admits("audit-write", &set(&["confidential"])));
+        assert!(!broker.scope_admits("unknown", &set(&["confidential"])));
+    }
+}
+
+/// One issued session while its episode runs.
+struct LiveSession {
+    /// The episode that issued it ([`EpisodeSessions::owner`]).
+    owner: String,
+    /// The exposure context its workload's data flows into.
+    context: String,
+    ledger_root: PathBuf,
+    ledger_stream: String,
+    broker: PostgresBroker,
+    session: DatabaseSession,
+    reaper: Option<ExpiryReaper>,
+    revoked: bool,
+}
+
+/// Live database sessions, across episodes. Exposure is tracked per
+/// context and inherited down delegation lineage, and concurrent episodes
+/// of one case share its context, so an exposure transition in one episode
+/// must revoke credentials held by any episode whose context receives the
+/// label. Redaction and teardown stay per episode (`owner`).
+#[derive(Clone, Default)]
+pub struct LiveSessions {
+    inner: std::sync::Arc<std::sync::Mutex<Vec<LiveSession>>>,
+}
+
+impl LiveSessions {
+    /// The directory shared by every episode of this server process (the
+    /// cell lock admits one server per control-plane root).
+    pub fn shared() -> Self {
+        static SHARED: std::sync::OnceLock<LiveSessions> = std::sync::OnceLock::new();
+        SHARED.get_or_init(LiveSessions::default).clone()
+    }
+
+    /// A unique owner for one episode of `run`. Dropping the guard revokes
+    /// whatever the episode still holds, on every exit path.
+    pub fn episode(&self, run: &str) -> EpisodeSessions {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        EpisodeSessions {
+            sessions: self.clone(),
+            owner: format!("{run}#{}#{n}", std::process::id()),
+        }
+    }
+
+    fn lock(&self) -> Result<std::sync::MutexGuard<'_, Vec<LiveSession>>, String> {
+        self.inner
+            .lock()
+            .map_err(|_| "database session state poisoned".to_string())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn push(
+        &self,
+        owner: &str,
+        context: &str,
+        ledger_root: PathBuf,
+        ledger_stream: String,
+        broker: PostgresBroker,
+        session: DatabaseSession,
+        reaper: ExpiryReaper,
+    ) -> Result<(), String> {
+        self.lock()?.push(LiveSession {
+            owner: owner.into(),
+            context: context.into(),
+            ledger_root,
+            ledger_stream,
+            broker,
+            session,
+            reaper: Some(reaper),
+            revoked: false,
+        });
+        Ok(())
+    }
+
+    /// Credentials `owner` issued (for redaction).
+    pub fn secrets(&self, owner: &str) -> Vec<String> {
+        self.lock()
+            .map(|live| {
+                live.iter()
+                    .filter(|s| s.owner == owner)
+                    .flat_map(|s| [s.session.conninfo(), s.session.password.clone()])
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Enforce the transition "`context` receives `label`" before it
+    /// happens: revoke every live session whose context inherits from
+    /// `context` and whose scope does not admit the resulting labels.
+    /// Returns once each revocation is verified (no backend survives); any
+    /// failure is an error and the transition must not proceed.
+    pub fn transition(
+        &self,
+        registry: &crate::exposure::ExposureRegistry,
+        context: &str,
+        label: &str,
+    ) -> Result<Vec<String>, String> {
+        let mut revoked = Vec::new();
+        for live in self.lock()?.iter_mut().filter(|s| !s.revoked) {
+            if !registry
+                .inherits(&live.context, context)
+                .map_err(|e| e.to_string())?
+            {
+                continue;
+            }
+            let mut labels: std::collections::BTreeSet<String> = registry
+                .labels(&live.context)
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .collect();
+            labels.insert(label.to_string());
+            if live.broker.scope_admits(&live.session.scope, &labels) {
+                continue;
+            }
+            drop(live.reaper.take());
+            let ledger = LedgerStream::open(
+                &live.ledger_root,
+                live.ledger_stream.as_str(),
+                "sea-forge-control-plane",
+            )
+            .map_err(|e| e.to_string())?;
+            live.broker
+                .revoke(
+                    &live.session,
+                    &ledger,
+                    &live.owner,
+                    "exposure_not_permitted",
+                )
+                .map_err(|e| e.to_string())?;
+            live.revoked = true;
+            revoked.push(live.session.role.clone());
+        }
+        Ok(revoked)
+    }
+
+    /// End every session `owner` still holds (episode end) and forget them.
+    pub fn revoke_all(&self, owner: &str, reason: &str) -> Result<(), String> {
+        let mut live = self.lock()?;
+        let mut failed = None;
+        for s in live.iter_mut().filter(|s| s.owner == owner && !s.revoked) {
+            drop(s.reaper.take());
+            let revoked = LedgerStream::open(
+                &s.ledger_root,
+                s.ledger_stream.as_str(),
+                "sea-forge-control-plane",
+            )
+            .map_err(|e| e.to_string())
+            .and_then(|ledger| {
+                s.broker
+                    .revoke(&s.session, &ledger, owner, reason)
+                    .map_err(|e| e.to_string())
+            });
+            match revoked {
+                Ok(_) => s.revoked = true,
+                Err(error) => failed = Some(error),
+            }
+        }
+        // A session whose revocation failed stays listed (NOLOGIN holds).
+        live.retain(|s| !(s.owner == owner && s.revoked));
+        failed.map_or(Ok(()), Err)
+    }
+
+    /// The MCP exposure gate over these sessions.
+    pub fn gate(&self, root: PathBuf) -> crate::mcp::ExposureGate {
+        let sessions = self.clone();
+        std::sync::Arc::new(move |context, label| {
+            let registry =
+                crate::exposure::ExposureRegistry::open(&root, "sea-forge-control-plane")
+                    .map_err(|e| e.to_string())?;
+            sessions.transition(&registry, context, label).map(|_| ())
+        })
+    }
+}
+
+/// One episode's ownership of its sessions in a [`LiveSessions`] directory.
+pub struct EpisodeSessions {
+    sessions: LiveSessions,
+    owner: String,
+}
+
+impl EpisodeSessions {
+    pub fn owner(&self) -> &str {
+        &self.owner
+    }
+}
+
+impl Drop for EpisodeSessions {
+    fn drop(&mut self) {
+        if let Err(error) = self.sessions.revoke_all(&self.owner, "episode_aborted") {
+            tracing::error!("database sessions of {} not revoked: {error}", self.owner);
+        }
     }
 }
