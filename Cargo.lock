@@ -2396,6 +2396,7 @@ name = "sea-forge-realitytrace"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "jsonschema",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
@@ -2436,6 +2437,7 @@ dependencies = [
  "sea-forge-core",
  "sea-forge-evidence",
  "sea-forge-settlement",
+ "seccompiler",
  "serde",
  "serde_json",
  "sha2 0.11.1",
@@ -2555,6 +2557,15 @@ name = "seahash"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b"
+
+[[package]]
+name = "seccompiler"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4ae55de56877481d112a559bbc12667635fdaf5e005712fd4e2b2fa50ffc884"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "semver"
@@ -2775,7 +2786,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "sxr-core"
 version = "0.3.0"
-source = "git+https://github.com/GodSpeedAI/RealityTrace?rev=0e2a97b4347c5dc6d8a6b9562d804d76b9fd450c#0e2a97b4347c5dc6d8a6b9562d804d76b9fd450c"
+source = "git+https://github.com/GodSpeedAI/RealityTrace?rev=42879a82115bcc3586a81a58c614ec5073656f6f#42879a82115bcc3586a81a58c614ec5073656f6f"
 dependencies = [
  "chrono",
  "hex",

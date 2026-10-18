@@ -431,6 +431,21 @@ fn auditor_reconstructs_denied_write_and_authorized_control_from_traces() {
     let control = run_case("case-sec12-control", false);
     assert_eq!(control.status, SettlementStatus::Accepted);
     let (proof, evidence) = trace(&control);
+    // Live emissions, divergent and equivalent, against the proposed
+    // evidence.recorded contract (contracts/evidence-recorded.v1.schema.json).
+    let contract = jsonschema::JSONSchema::compile(
+        &serde_json::from_str(include_str!(
+            "../contracts/evidence-recorded.v1.schema.json"
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    for e8 in [&trace(&attack).1, &evidence] {
+        assert!(
+            contract.is_valid(e8),
+            "E8 drifted from the proposed contract: {e8}"
+        );
+    }
     let found = audit(&control.ledger_path, &proof, &evidence).unwrap();
     assert_eq!(found.verdict, "equivalent");
     assert_eq!(found.settlement_status, "accepted");
@@ -630,4 +645,37 @@ fn broken_correlation_and_mutable_criteria_are_refused() {
         audit(&attack.ledger_path, &softened, &softened_evidence).unwrap_err(),
         "expectation drifted after freezing"
     );
+}
+
+/// ADR-012 obligation 1: RealityTrace binds the cycle to the frozen
+/// security-acceptance producer. E8 names it, and a proof stamped by the
+/// system under test, or by the SWE_SEED harness, is refused.
+#[test]
+fn proofs_are_bound_to_the_frozen_acceptance_producer() {
+    let s = run_case("case-sec12-producer", true);
+    let (proof, evidence) = trace(&s);
+    assert!(
+        evidence["provenance"]["chain"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("proof_producer:security_acceptance")),
+        "{evidence}"
+    );
+    let m = model();
+    for stamp in ["sea-forge", "swe-seed"] {
+        let mut forged = proof.clone();
+        forged["source_agent"] = json!(stamp);
+        let refused = record_evidence(
+            &forged,
+            &s.settlement,
+            &mut IngestState::new(),
+            &ctx(&m, PROOF_ID),
+            EVIDENCE_ID,
+            "sec12-protected-write",
+        );
+        assert!(
+            refused.is_err(),
+            "{stamp}-stamped proof admitted: {refused:?}"
+        );
+    }
 }

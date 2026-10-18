@@ -17,13 +17,15 @@ use sea_forge_ledger::LedgerEntry;
 use serde_json::{json, Value};
 use sxr_core::canonical_json::sha256_canonical;
 use sxr_core::evidence_emit::{emit_evidence_recorded, EvidenceEmission};
-use sxr_core::proof_ingest::{ingest, Admission, IngestParams, IngestState};
+use sxr_core::proof_ingest::{ingest_from, Admission, IngestParams, IngestState, ProofProducer};
 
 pub const TRACE_SCHEMA: &str = "sea-forge.security-trace/v1";
 /// Ledger record kind committed BEFORE the attempt; binds the expectation.
 pub const EXPECTATION_KIND: &str = "security_frozen_expectation";
-/// Who actually produced the E7 proof. RealityTrace's v1 ingest gate only
-/// admits the `swe-seed` producer label, so the true producer travels here.
+/// Who produces the E7 proof: the frozen security-acceptance suite, never
+/// SEA Forge itself. RealityTrace binds each cycle to this producer
+/// (`ProofProducer::SecurityAcceptance`) and refuses any other stamp,
+/// including `sea-forge`, the system under test.
 pub const PROOF_PRODUCER: &str = "sea-forge-security-acceptance";
 
 /// The immutable acceptance reference an expectation is frozen against.
@@ -252,7 +254,7 @@ pub fn proof_completed(
     Ok(json!({
         "schema_version": "v1",
         "event_id": ctx.proof_event_id,
-        "source_agent": "swe-seed",
+        "source_agent": PROOF_PRODUCER,
         "event_type": "ProofCompleted",
         "occurred_at": ctx.occurred_at,
         "idempotency_key": sha256_canonical(&json!([ctx.proof_event_id, work_request_id])),
@@ -299,7 +301,13 @@ pub fn record_evidence(
         expected_work_request_id: work_request_id,
         expected_settlement_event_id: settlement_event_id,
     };
-    let comparison = match ingest(proof, Some(settlement), &params, state) {
+    let comparison = match ingest_from(
+        ProofProducer::SecurityAcceptance,
+        proof,
+        Some(settlement),
+        &params,
+        state,
+    ) {
         Ok(Admission::First(comparison)) => comparison,
         Ok(Admission::DuplicateDelivery) => {
             return Err(TraceError::RealityTrace("duplicate delivery".into()))

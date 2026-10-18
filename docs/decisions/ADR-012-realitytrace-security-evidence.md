@@ -1,6 +1,6 @@
 # ADR-012: RealityTrace security evidence contract
 
-Status: contract accepted; first vertical slice (SEC-12 denied write) implemented.
+Status: contract accepted; first vertical slice (SEC-12 denied write) implemented; obligations 1–3 resolved 2026-10-18.
 
 ## Context
 
@@ -68,17 +68,23 @@ emits `EvidenceRecorded` (E8) via `sxr_core::evidence_emit`, whose
 Raw credentials and sensitive plaintext never enter these records; MCP
 arguments are already hashed (ADR-011 decision 7).
 
-## Open integration obligations
+## Integration obligations
 
-1. RealityTrace's v1 gate admits E7 only from the `swe-seed` producer label.
-   The slice uses that label and records the true producer in
-   `proof_contract.producer = sea-forge-security-acceptance`. Minimal
-   RealityTrace addition: admit a distinct frozen-acceptance producer.
-2. `EvidenceRecorded` has no row in RealityTrace's `record_kinds.csv`, so E8
-   is returned by the library but not persisted in an `sxr-ledger`.
-   Minimal addition: register `evidence.recorded`.
-3. `difference` is digest-level (`equivalent`/`divergent`); auditors receive
-   both canonical values but no field-level discrepancy structure.
+Resolved 2026-10-18 on RealityTrace `main` (42879a8, the `sxr-core` pin):
+
+1. ~~E7 admitted only from the `swe-seed` label.~~ The slice now stamps
+   `sea-forge-security-acceptance` and ingests with
+   `ProofProducer::SecurityAcceptance`; RealityTrace refuses `sea-forge` and
+   `swe-seed` stamps for these cycles and E8 names the producer
+   (`proofs_are_bound_to_the_frozen_acceptance_producer`).
+2. ~~`EvidenceRecorded` has no record kind.~~ `evidence.recorded` is
+   registered (an `evidence_packet`, mapped by `sxr-core`'s
+   `evidence_record`); see `docs/security/realitytrace-evidence-recorded-proposal.md`.
+3. ~~`difference` is digest-level only.~~ It also carries bounded
+   field-level entries (`fields`, `fields_truncated`).
+
+Open:
+
 4. Ledger observer attribution is `writer_identity_ref`, not a signature.
 5. Extend to identity, MCP, PostgreSQL, credential, exposure, delegation,
    injection evidence as those enforcement paths are qualified.
