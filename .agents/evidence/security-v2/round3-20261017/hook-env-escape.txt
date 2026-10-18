@@ -12,3 +12,11 @@ Fix: both temp-repo scripts unset `git rev-parse --local-env-vars` first
 Regression check (disposable sentinel repo as GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE):
   fixed scripts: canaries exit=0, context exit=0, sentinel config/index/HEAD unchanged
   control (pre-fix canaries from 6189e74): sentinel config gained user.name=canary -> reproduced
+
+Pre-existing intermittent failures seen during the gated pushes (not introduced here):
+  conformance_m12 t12_endpoint_registration_marks_self_model_snapshot_stale: once
+    under full-suite load; 3/3 pass alone.
+  conformance_sfwp request_admission_refuses_overflow_and_cancels_waiters_without_effects:
+    "pre-admission timeout reached provider" (5 vs 4); 1/13 on this branch and 1/40 on
+    unmodified origin/main (c9f8b4e), same assertion. A fifth provider connection while
+    four permits are held is an open admission question, left for its own investigation.

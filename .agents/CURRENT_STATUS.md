@@ -31,6 +31,7 @@
 - Work is on branch security/enforcement-gaps-20261017 (worktree ~/projects/_wt/sec-gaps); merge to main and any push need operator intent.
 - RealityTrace E8 field-level differences are bounded at 256 entries; ledger observer attribution is not a signature (ADR-012 obligation 4).
 - On GitHub Ubuntu runners, unprivileged mapped user namespaces are refused, so workload-isolation tests are NOT-EXECUTABLE in CI; they execute on hosts that allow them (this WSL host, with SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1).
+- Pre-existing intermittent server tests seen at the gated push, not introduced here: conformance_sfwp request_admission_refuses_overflow_and_cancels_waiters_without_effects ('pre-admission timeout reached provider', 5 vs 4) fails 1/13 on this branch and 1/40 on unmodified origin/main c9f8b4e; a fifth provider connection while four permits are held is an open admission question for its own investigation. conformance_m12 t12 failed once under full-suite load and passes alone.
 
 **Next:** Independent context-isolated re-attack of round 3 (all 38 prior scenarios plus new attacks); operator decisions on pathname-socket containment, the CI shallow-scan evidence matches and enabling federation export; then governed integration prep.
 
