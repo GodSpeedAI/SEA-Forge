@@ -802,7 +802,8 @@ async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
 /// SEC-01/SEC-06 on the production ACP launch path: the `isolated` class runs
 /// the agent under its own subordinate host identity with the jail posture.
 #[tokio::test]
-#[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
 async fn t16_4b_isolated_agent_runs_under_dedicated_host_identity() {
     if sea_forge_sandbox::workload::sibling_helper().is_err()
         || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host().is_err()
@@ -847,7 +848,8 @@ async fn t16_4b_isolated_agent_runs_under_dedicated_host_identity() {
 /// the observation: the denied tool never arrives, the permitted one does,
 /// and both bypasses (raw socket, running the upstream directly) fail.
 #[tokio::test]
-#[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
 async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream() {
     use std::os::unix::fs::PermissionsExt;
     if sea_forge_sandbox::workload::sibling_binary("sea-forge-mcp-connect").is_err()
@@ -958,6 +960,7 @@ async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream(
         .ends_with("sea-forge-mcp-connect"));
 }
 
+#[cfg(target_os = "linux")]
 #[path = "support/pg_cluster.rs"]
 mod pg_cluster;
 
@@ -966,7 +969,8 @@ mod pg_cluster;
 /// refuses the destructive statement; the role is revoked when the episode
 /// ends.
 #[tokio::test]
-#[cfg_attr(not(target_os = "linux"), ignore = "needs Linux workload isolation")]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
 async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
     use std::os::unix::fs::PermissionsExt;
     let Some((install, _pool, _helper, _state)) = pg_cluster::prerequisites() else {
