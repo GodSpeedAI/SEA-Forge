@@ -1287,6 +1287,10 @@ async fn run_acp_episode(
             "sea-forge-control-plane",
         )?)
     };
+    // Isolated workloads (read posture, database sessions) are Linux-only;
+    // elsewhere these inputs feed nothing.
+    #[cfg(not(target_os = "linux"))]
+    let _ = (&control_ledger, workload_read_paths, actor);
     let session = match sandbox_class {
         "local" => AcpSession::spawn(spawn)
             .map(|(session, _)| session)

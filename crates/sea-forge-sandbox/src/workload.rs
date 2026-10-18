@@ -54,6 +54,32 @@ pub struct WorkloadIdentity {
     _lock: File,
 }
 
+/// Delegated IDs and setuid mappers are not enough: a host can still forbid
+/// unprivileged user namespaces (for example AppArmor's
+/// `kernel.apparmor_restrict_unprivileged_userns`). Create one mapped the way
+/// workloads are, so an unusable host reports isolation unavailable instead
+/// of failing every launch.
+fn probe_mapped_namespace(uid_base: u32, gid_base: u32) -> Result<(), SandboxError> {
+    let out = Command::new(UNSHARE)
+        .env_clear()
+        .arg("--user")
+        .arg(format!("--map-users={WORKLOAD_INNER_ID}:{uid_base}:1"))
+        .arg(format!("--map-groups={WORKLOAD_INNER_ID}:{gid_base}:1"))
+        .arg(format!("--setuid={WORKLOAD_INNER_ID}"))
+        .arg(format!("--setgid={WORKLOAD_INNER_ID}"))
+        .args(["--", "/bin/true"])
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|e| unavailable(format!("{UNSHARE}: {e}")))?;
+    if out.status.success() {
+        return Ok(());
+    }
+    Err(unavailable(format!(
+        "host refuses mapped user namespaces: {}",
+        String::from_utf8_lossy(&out.stderr).trim()
+    )))
+}
+
 fn delegation(file: &str, user: &str, id: u32) -> Result<(u32, u32), SandboxError> {
     let text = fs::read_to_string(file).map_err(|e| unavailable(format!("{file}: {e}")))?;
     text.lines()
@@ -118,6 +144,7 @@ impl WorkloadIdentityPool {
         let (user, home) = passwd_entry(uid)?;
         let (uid_base, uid_count) = delegation("/etc/subuid", &user, uid)?;
         let (gid_base, gid_count) = delegation("/etc/subgid", &user, uid)?;
+        probe_mapped_namespace(uid_base, gid_base)?;
         let slots = host_slot_dir(uid, &home);
         fs::create_dir_all(&slots).map_err(|e| unavailable(e.to_string()))?;
         for dir in [slots.parent().unwrap_or(&slots), slots.as_path()] {

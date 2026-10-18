@@ -15,6 +15,7 @@
 - Defects found and fixed this round: fchmodat(AT_SYMLINK_NOFOLLOW) unsupported so files stayed 0644; bypassable per-role timeouts; scope_admits revoking a session's own read label.
 - RealityTrace 42879a8: fmt, clippy -D warnings, 209 tests pass; SEA-Forge realitytrace suite passes against it, including registered-row reconciliation and producer binding (mutation: SweSeed producer fails 5 of 6 sec12 tests).
 - Git hooks no longer hard-fail when devbox cannot reach its package cache: .githooks/run-recipe probes devbox with a time limit, falls back to the same just recipe on the host toolchain with a stderr notice, and SEA_FORGE_HOOK_TOOLCHAIN=devbox restores strict pinning (hook-runner.txt).
+- PR #32 CI round 1 failures fixed: isolation availability now probes a mapped user namespace (GitHub Ubuntu runners refuse them, so isolation tests report NOT-EXECUTABLE instead of failing), test jobs fetch the protected frozen v1 tag the SEC-12 auditor resolves, and Linux-only inputs are acknowledged on macOS.
 
 **Limits:**
 
@@ -25,6 +26,7 @@
 - A new generic-api-key match under casework evidence paths is still admitted; credential-specific rules are not.
 - Work is on branch security/enforcement-gaps-20261017 (worktree ~/projects/_wt/sec-gaps); merge to main and any push need operator intent.
 - RealityTrace E8 field-level differences are bounded at 256 entries; ledger observer attribution is not a signature (ADR-012 obligation 4).
+- On GitHub Ubuntu runners, unprivileged mapped user namespaces are refused, so workload-isolation tests are NOT-EXECUTABLE in CI; they execute on hosts that allow them (this WSL host, with SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1).
 
 **Next:** Independent context-isolated re-attack of round 3 (all 38 prior scenarios plus new attacks); operator decisions on pathname-socket containment, the CI shallow-scan evidence matches and enabling federation export; then governed integration prep.
 
