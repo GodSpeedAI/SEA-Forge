@@ -4,13 +4,21 @@ use std::fs::File;
 use std::path::Path;
 
 #[cfg(target_os = "linux")]
-fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, ForgeError> {
+fn open_child(
+    parent: &File,
+    name: &std::ffi::OsStr,
+    directory: bool,
+    follow: bool,
+) -> Result<File, ForgeError> {
     use std::os::fd::AsRawFd;
     use std::os::unix::fs::OpenOptionsExt;
     let path = Path::new("/proc/self/fd")
         .join(parent.as_raw_fd().to_string())
         .join(name);
-    let mut flags = libc::O_NOFOLLOW | libc::O_NONBLOCK;
+    let mut flags = libc::O_NONBLOCK;
+    if !follow {
+        flags |= libc::O_NOFOLLOW;
+    }
     if directory {
         flags |= libc::O_DIRECTORY;
     }
@@ -25,9 +33,17 @@ fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<
 /// (`openat`) with `O_NOFOLLOW`, the same guarantee as the procfs walk above:
 /// each untrusted name is the final component of a no-follow open.
 #[cfg(all(unix, not(target_os = "linux")))]
-fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<File, ForgeError> {
+fn open_child(
+    parent: &File,
+    name: &std::ffi::OsStr,
+    directory: bool,
+    follow: bool,
+) -> Result<File, ForgeError> {
     use rustix::fs::{openat, Mode, OFlags};
-    let mut flags = OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
+    let mut flags = OFlags::RDONLY | OFlags::NONBLOCK | OFlags::CLOEXEC;
+    if !follow {
+        flags |= OFlags::NOFOLLOW;
+    }
     if directory {
         flags |= OFlags::DIRECTORY;
     }
@@ -36,9 +52,28 @@ fn open_child(parent: &File, name: &std::ffi::OsStr, directory: bool) -> Result<
         .map_err(|e| ForgeError::io("open scoped observation component", e.into()))
 }
 
-/// Pin an absolute workspace without following symlinks in any component.
-/// The host mount namespace and its root are trusted. Replacement of a name
-/// after opening it cannot redirect the remainder of this descriptor walk.
+/// A symlink the host itself configured: owned by root, in a directory only
+/// root can change (macOS `/var` -> `/private/var`, Linux `/var/run`). It is
+/// part of the trusted host namespace; every other symlink is refused.
+#[cfg(unix)]
+fn host_symlink(parent: &File, name: &std::ffi::OsStr) -> bool {
+    use rustix::fs::{fstat, statat, AtFlags, FileType};
+    let (Ok(link), Ok(dir)) = (
+        statat(parent, name, AtFlags::SYMLINK_NOFOLLOW),
+        fstat(parent),
+    ) else {
+        return false;
+    };
+    FileType::from_raw_mode(link.st_mode as _) == FileType::Symlink
+        && link.st_uid == 0
+        && dir.st_uid == 0
+        && dir.st_mode & 0o022 == 0
+}
+
+/// Pin an absolute workspace without following any symlink the host did
+/// not configure itself. The host mount namespace and its root are trusted.
+/// Replacement of a name after opening it cannot redirect the remainder of
+/// this descriptor walk.
 #[cfg(unix)]
 pub fn open_observation_root(path: &Path) -> Result<File, ForgeError> {
     use std::path::Component;
@@ -51,7 +86,10 @@ pub fn open_observation_root(path: &Path) -> Result<File, ForgeError> {
     for component in path.components() {
         match component {
             Component::RootDir => {}
-            Component::Normal(name) => directory = open_child(&directory, name, true)?,
+            Component::Normal(name) => {
+                let follow = host_symlink(&directory, name);
+                directory = open_child(&directory, name, true, follow)?
+            }
             _ => {
                 return Err(ForgeError::UnsafePath(
                     "observation root is not normalized".into(),
@@ -88,7 +126,8 @@ pub fn open_observation_file(root: &File, relative: &str) -> Result<File, ForgeE
             ));
         };
         let final_component = index + 1 == components.len();
-        let file = open_child(&parent, name, !final_component)?;
+        // Inside the workspace nothing is followed, host-owned or not.
+        let file = open_child(&parent, name, !final_component, false)?;
         if final_component {
             if !file.metadata().is_ok_and(|m| m.is_file()) {
                 return Err(ForgeError::UnsafePath(

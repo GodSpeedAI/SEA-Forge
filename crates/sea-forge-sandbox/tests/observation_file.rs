@@ -51,3 +51,22 @@ fn observation_root_refuses_symlinks_in_every_component() {
     assert!(open_observation_root(std::path::Path::new("workspace")).is_err());
     assert!(open_observation_root(&workspace.join("../workspace")).is_err());
 }
+
+/// A symlink the host configured (root-owned, in a root-only directory) is
+/// part of the trusted namespace, like macOS `/var` or Linux `/var/run`.
+#[test]
+fn host_configured_symlinks_resolve_in_the_root_prefix() {
+    use std::os::unix::fs::MetadataExt;
+    let Some(link) = ["/var/run", "/var", "/tmp", "/lib", "/bin"]
+        .into_iter()
+        .map(std::path::Path::new)
+        .find(|p| {
+            fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_symlink() && m.uid() == 0)
+                && fs::metadata(p).is_ok_and(|m| m.is_dir())
+        })
+    else {
+        eprintln!("NOT-EXECUTABLE: no root-owned directory symlink on this host");
+        return;
+    };
+    assert!(open_observation_root(link).is_ok(), "{}", link.display());
+}

@@ -17,6 +17,7 @@
 - Git hooks no longer hard-fail when devbox cannot reach its package cache: .githooks/run-recipe probes devbox with a time limit, falls back to the same just recipe on the host toolchain with a stderr notice, and SEA_FORGE_HOOK_TOOLCHAIN=devbox restores strict pinning (hook-runner.txt).
 - PR #32 CI round 1 failures fixed: isolation availability now probes a mapped user namespace (GitHub Ubuntu runners refuse them, so isolation tests report NOT-EXECUTABLE instead of failing), test jobs fetch the protected frozen v1 tag the SEC-12 auditor resolves, and Linux-only code (delegation inputs, the isolated M16 tests and their PostgreSQL support) is compiled only on Linux, so macOS builds.
 - Workspace effect observation now works on all Unix: macOS had no observer (procfs-only), so it could never witness an effect and SEC-12 (including the frozen v1 positive control) could not settle there; other Unix now walks openat with O_NOFOLLOW, and the observer tests run on any Unix.
+- Pinning a workspace now follows only host-configured symlinks in its path prefix (root-owned, in a root-only directory, e.g. macOS /var -> /private/var); user-owned links are still refused and nothing inside the workspace is followed (mutation: trusting every link lets a user alias through).
 
 **Limits:**
 
