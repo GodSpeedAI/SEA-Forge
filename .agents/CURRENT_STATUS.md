@@ -14,6 +14,7 @@
 - Staged-secret canaries: 13 expectations met after the allowlist fixes; the original config admitted new secrets in four allowlisted path classes (staged-canaries-before).
 - Defects found and fixed this round: fchmodat(AT_SYMLINK_NOFOLLOW) unsupported so files stayed 0644; bypassable per-role timeouts; scope_admits revoking a session's own read label.
 - RealityTrace 42879a8: fmt, clippy -D warnings, 209 tests pass; SEA-Forge realitytrace suite passes against it, including registered-row reconciliation and producer binding (mutation: SweSeed producer fails 5 of 6 sec12 tests).
+- Git hooks no longer hard-fail when devbox cannot reach its package cache: .githooks/run-recipe probes devbox with a time limit, falls back to the same just recipe on the host toolchain with a stderr notice, and SEA_FORGE_HOOK_TOOLCHAIN=devbox restores strict pinning (hook-runner.txt).
 
 **Limits:**
 

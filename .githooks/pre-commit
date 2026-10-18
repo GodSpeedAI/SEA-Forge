@@ -12,15 +12,6 @@ if [ -z "$(git diff --cached --name-only)" ]; then
     exit 0
 fi
 
-# Prefer devbox-pinned just; fall back to plain just if devbox is unavailable
-# (e.g. a contributor who has not yet installed devbox). The fallback is
-# intentionally a degraded path, not the canonical one.
-if command -v devbox >/dev/null 2>&1; then
-    devbox run -- just pre-commit
-else
-    if ! command -v just >/dev/null 2>&1; then
-        echo "pre-commit: neither devbox nor just found on PATH; install devbox and run 'just setup'" >&2
-        exit 1
-    fi
-    just pre-commit
-fi
+# Toolchain choice (pinned devbox when it starts, host otherwise, or forced
+# with SEA_FORGE_HOOK_TOOLCHAIN) lives in run-recipe, shared by both hooks.
+exec "$(git rev-parse --show-toplevel)/.githooks/run-recipe" pre-commit pre-commit

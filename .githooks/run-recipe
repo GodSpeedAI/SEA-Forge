@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Run a `just` recipe for a git hook. Shared by pre-commit and pre-push so the
+# toolchain choice lives in one place.
+#
+# The recipe is the contract; devbox only pins tool versions. Prefer the
+# devbox toolchain when it can actually start, and fall back to the host
+# toolchain when it cannot: `devbox run` resolves packages from
+# cache.nixos.org, so offline or with a slow cache it fails before any check
+# runs, which used to block every commit and push. The fallback runs the same
+# recipe and says so on stderr; it never skips a check.
+#
+#   SEA_FORGE_HOOK_TOOLCHAIN=auto    (default) devbox if it starts, else host
+#   SEA_FORGE_HOOK_TOOLCHAIN=devbox  require the pinned toolchain; fail if it
+#                                    cannot start
+#   SEA_FORGE_HOOK_TOOLCHAIN=host    use the host toolchain without probing
+#   SEA_FORGE_HOOK_DEVBOX_TIMEOUT    seconds the devbox probe may take (20)
+#
+# Usage: .githooks/run-recipe <recipe> <hook-name>
+set -euo pipefail
+
+recipe=${1:?usage: run-recipe <recipe> <hook-name>}
+hook=${2:-hook}
+mode=${SEA_FORGE_HOOK_TOOLCHAIN:-auto}
+probe_secs=${SEA_FORGE_HOOK_DEVBOX_TIMEOUT:-20}
+
+case "$mode" in
+auto | devbox | host) ;;
+*)
+    echo "$hook: SEA_FORGE_HOOK_TOOLCHAIN must be auto, devbox or host (got '$mode')" >&2
+    exit 1
+    ;;
+esac
+
+reason=
+if [ "$mode" = host ]; then
+    reason="SEA_FORGE_HOOK_TOOLCHAIN=host"
+elif ! command -v devbox >/dev/null 2>&1; then
+    reason="devbox is not installed"
+elif ! timeout "$probe_secs" devbox run -- just --version >/dev/null 2>&1; then
+    reason="devbox could not start its environment (offline or package cache unreachable; probe limit ${probe_secs}s)"
+else
+    exec devbox run -- just "$recipe"
+fi
+
+if [ "$mode" = devbox ]; then
+    echo "$hook: pinned devbox toolchain required but unavailable: $reason" >&2
+    exit 1
+fi
+if ! command -v just >/dev/null 2>&1; then
+    echo "$hook: $reason, and just is not on PATH; install devbox and run 'just setup'" >&2
+    exit 1
+fi
+echo "$hook: $reason; running 'just $recipe' on the host toolchain (same checks, unpinned versions)" >&2
+exec just "$recipe"
