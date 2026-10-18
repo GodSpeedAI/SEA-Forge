@@ -13,6 +13,11 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
+# Git hooks export GIT_DIR, GIT_INDEX_FILE and friends for the repository
+# being pushed. Every git call below targets the throwaway repository, so drop
+# them first: left set, `git -C "$work/r"` would init, configure and commit
+# into the real repository instead.
+while read -r var; do unset "$var"; done < <(git rev-parse --local-env-vars)
 out="${1:-$(mktemp -d)}"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"

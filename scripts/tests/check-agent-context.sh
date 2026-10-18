@@ -4,6 +4,9 @@ set -eu
 SCRIPT=$(cd "$(dirname "$0")/.." && pwd)/check-agent-context.sh
 TMP_ROOT=${TMPDIR:-/tmp}/sea-forge-context-test-$$
 trap 'rm -rf "$TMP_ROOT"' EXIT HUP INT TERM
+# Run from a git hook, GIT_DIR and friends point at the real repository and
+# would redirect every `git -C "$repo"` below into it. Drop them.
+for var in $(git rev-parse --local-env-vars); do unset "$var"; done
 
 make_repo() {
   repo=$1
