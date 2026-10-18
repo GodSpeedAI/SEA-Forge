@@ -1,0 +1,20 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-j",
+    "2",
+    "-p",
+    "sea-forge-server",
+    "--test",
+    "conformance_m16",
+    "--",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "started_at": "2026-10-17T14:43:46.358413+00:00",
+  "finished_at": "2026-10-17T14:44:07.353432+00:00",
+  "exit_code": 0,
+  "log_sha256": "e26724154b0874d7edf13172c0dbdfbaba6bcd542b6c289d529a6208e177ee39",
+  "source_head": "55c902a682106608c931ac2fc80997594f62495c"
+}

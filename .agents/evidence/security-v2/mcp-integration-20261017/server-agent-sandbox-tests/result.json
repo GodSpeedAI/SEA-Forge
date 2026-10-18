@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-j",
+    "2",
+    "-p",
+    "sea-forge-server",
+    "-p",
+    "sea-forge-agent",
+    "-p",
+    "sea-forge-sandbox"
+  ],
+  "started_at": "2026-10-17T15:05:18.415446+00:00",
+  "finished_at": "2026-10-17T15:07:35.847387+00:00",
+  "exit_code": 0,
+  "log_sha256": "0816c3399d5f4d1c660bdf35e4bcf7b4fc4ec5b8034e236a59c4560057c3c482",
+  "source_head": "7cdee134b2804defbf5a131b4434fa662f2da376"
+}

@@ -1,0 +1,6 @@
+   Compiling sxr-core v0.3.0 (/home/sprime01/projects/sxr/sxr-core)
+    Checking sxr-df v0.2.1 (/home/sprime01/projects/sxr/sxr-df)
+    Checking sxr-ledger v0.2.1 (/home/sprime01/projects/sxr/sxr-ledger)
+    Checking sxr-git v0.2.1 (/home/sprime01/projects/sxr/sxr-git)
+    Checking realitytrace v0.3.0 (/home/sprime01/projects/sxr/sxr-cli)
+    Finished `dev` profile [unoptimized] target(s) in 11.99s

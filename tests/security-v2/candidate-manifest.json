@@ -1,0 +1,236 @@
+{
+  "status": "candidate-not-frozen",
+  "independent_reference": null,
+  "v1_commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+  "v1_manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+  "files": [
+    {
+      "path": "crates/sea-forge-authority/tests/mcp_boundary.rs",
+      "sha256": "b9c93885e2f1f431e57cfa78344d5f4ee96abd30cf704c2ab7851cb9bbfdab4c",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-03",
+        "SEC-04"
+      ],
+      "threat": "MCP tool authority boundary dimensions",
+      "controls_and_correlation": "policy-level only; no live broker"
+    },
+    {
+      "path": "crates/sea-forge-sandbox/tests/observation_file.rs",
+      "sha256": "cbaf71742a3928bf10a3ee7edba2bcb7a48cdb280e9d9f0ede46c8a1ed19a6f6",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-12"
+      ],
+      "threat": "trusted observation file integrity",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/tests/file_effect_observation.rs",
+      "sha256": "5d40ab2ab37dbec6014ea47a2eafcfc58bd6e293d908027a00cb690b3c3aaea8",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-12"
+      ],
+      "threat": "executor claims vs trusted file observation",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/tests/conformance_identity.rs",
+      "sha256": "0b68cc5058f8d612b7a3183414e83204cf7e65aaf1bc3793b8bc4aa55a104113",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01"
+      ],
+      "threat": "principal binding / same-UID approval",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/src/mcp_protocol.rs",
+      "sha256": "1af23c70cd5592094be818adb3e50824be549ca094860aeb593551efcec8df9a",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-04"
+      ],
+      "threat": "MCP framing canonicalization",
+      "controls_and_correlation": "CORRELATED: test module inside the implementation file"
+    },
+    {
+      "path": "crates/sea-forge-server/src/workload_connection.rs",
+      "sha256": "ef5c200c1db7fbcade33722b9870ba49558e466695bfca867c7f133b4b1b783a",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01",
+        "SEC-03"
+      ],
+      "threat": "SO_PEERCRED peer binding",
+      "controls_and_correlation": "CORRELATED: test module inside the implementation file"
+    },
+    {
+      "path": "tests/security-v2/mcp-policy.yaml",
+      "sha256": "9a22879156589f5c0ffc8a9493bfa74456e4b742cc08f1c55708c6d57a91f9da",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-03"
+      ],
+      "threat": "fixture",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "tests/security-v2/provision_mcp.py",
+      "sha256": "d009ccc4cf4c0b75dce2ee13c4f8e02da32357009be650c9ae774302cbb6b9e0",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-03"
+      ],
+      "threat": "fixture",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "tests/security-v2/capture.py",
+      "sha256": "7a211f1278fc40a5bca10ea9f7897a2b31e0ad54b91bd99a9ad2f39878d382a4",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-12"
+      ],
+      "threat": "evidence capture tool",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "tests/security-v2/README.md",
+      "sha256": "c4d20161d0a0056fe5faa5c39391bf3eb14efa5da933a07caf482ad64626bf43",
+      "mode": "0o644",
+      "requirements": [],
+      "threat": "documentation",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-sandbox/tests/workload_isolation.rs",
+      "sha256": "ba55876bb98646a1feda9f99180602bd43b53b3dc95b9af95b1de2949b62e9c5",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01",
+        "SEC-06"
+      ],
+      "threat": "cross-workload fd/environ/signal/nsenter/remap/file theft",
+      "controls_and_correlation": "mutation: shared identity -> attacks succeed"
+    },
+    {
+      "path": "crates/sea-forge-sandbox/tests/workload_boundary.rs",
+      "sha256": "eb29082ff09e6e91a1130195b8ee58c2f9d505e90e1a4d6bb080a20cad9898de",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01",
+        "SEC-06"
+      ],
+      "threat": "ADV-A05/A06/A07 host read visibility; ADV-A19/A20 orphan persistence and slot reuse; layered network denial (TCP, abstract UNIX)",
+      "controls_and_correlation": "mutations: widened read scope -> host file readable; launch without lifeline -> orphan survives SIGKILLed launcher; TCP grant drops netns so Landlock layer is tested alone"
+    },
+    {
+      "path": "crates/sea-forge-runtime/tests/isolated_execute_command.rs",
+      "sha256": "5fdc84099ad3ae635f8fdb22ed7d08ff4ffd3cae62985b5965d72fa24688a697",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01",
+        "SEC-06"
+      ],
+      "threat": "planned-command path runs under its own subordinate identity and read posture",
+      "controls_and_correlation": "positive control: authorized workspace write; no in-test mutation (relies on workload_boundary mutations)"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/conformance_m16.rs",
+      "sha256": "6defadf7574c4d2c782364e0812dd4beb433462fa70b13bda4b3dd91f7403efd",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-01",
+        "SEC-03",
+        "SEC-05",
+        "SEC-06"
+      ],
+      "threat": "production ACP launch: isolated identity, brokered MCP bypasses, workload-bound DB session, issued-credential redaction from persisted evidence",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/tests/mcp_workload_broker.rs",
+      "sha256": "6e9fd5e3535bb00645c9493f468523f15a4bb340f976c5cf3c3dac096197a6ab",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-03",
+        "SEC-08"
+      ],
+      "threat": "broker peer binding, revocation barrier",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/tests/postgres_broker.rs",
+      "sha256": "57664d4bf2bad47237f7f9a4b9ebe165a24d15ba422002d17df9692dc709ce98",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-02",
+        "SEC-05",
+        "SEC-07",
+        "SEC-08"
+      ],
+      "threat": "native privileges, expiry, JIT approval, renewal, ADV-B07 orphaned session reconciliation",
+      "controls_and_correlation": "mutation (run 2026-10-17): revocation verify-after-drop defect found; control: expired backend alive before reconciliation"
+    },
+    {
+      "path": "crates/sea-forge-server/tests/support/pg_cluster.rs",
+      "sha256": "1e3c2bf747180d704512eb71743af4cb441e27a319c0692c3cfa2ad8f2793986",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-05"
+      ],
+      "threat": "fixture",
+      "controls_and_correlation": ""
+    },
+    {
+      "path": "crates/sea-forge-server/tests/exposure_flow.rs",
+      "sha256": "fde406339d481f194950c9be1a8e9a68bd9d7594b7b59c172c773ba6cc8867a3",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-09",
+        "SEC-10",
+        "SEC-11"
+      ],
+      "threat": "exposure restricts destinations across injection, transformation, resumption, delegation; ADV-B09 classified error payloads",
+      "controls_and_correlation": "injection text from frozen v1 attacks.json"
+    },
+    {
+      "path": "crates/sea-forge-realitytrace/tests/sec12_trace.rs",
+      "sha256": "c8967992c254c6387815ac53a2063a79413cbf0ea0b6cbefaf6c3cfacb7269dc",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-12"
+      ],
+      "threat": "auditor reconstructs SEC-12 denied write without trusting the agent",
+      "controls_and_correlation": "forged/late/broken/mutated inputs"
+    },
+    {
+      "path": "crates/sea-forge-realitytrace/tests/broker_attempt_trace.rs",
+      "sha256": "0de67471b31506866d2f5f01ba549fe7ac02a6dd7125eac3bc2c0179170c4a6c",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-03",
+        "SEC-09",
+        "SEC-12"
+      ],
+      "threat": "auditor reconstructs every brokered attempt (success and failure) from raw ledger and upstream native log",
+      "controls_and_correlation": "mutations: tampered settlement, dropped settlement, forged upstream line"
+    },
+    {
+      "path": "tests/security-v2/exposure_upstream.py",
+      "sha256": "4f68375f854d23a75aad21a3be9b2c728c80e8d1c08c1134b1584eca2a8c8215",
+      "mode": "0o644",
+      "requirements": [
+        "SEC-09",
+        "SEC-10"
+      ],
+      "threat": "synthetic upstream fixture (enforces nothing)",
+      "controls_and_correlation": ""
+    }
+  ],
+  "review_required": "independent review of each file before freezing; do not freeze from the builder's own review",
+  "updated": "2026-10-17 round 2 (builder)",
+  "correlation_note": "Requirement and threat mapping is the builder's; an independent reviewer must confirm it before any file is frozen."
+}

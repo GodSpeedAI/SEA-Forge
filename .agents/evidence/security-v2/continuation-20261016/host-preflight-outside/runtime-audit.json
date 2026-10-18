@@ -1,0 +1,53 @@
+{
+  "record_type": "read_only_runtime_socket_and_openshell_status_audit",
+  "recorded_at": "2026-10-16",
+  "execution_scope": "exec_command with approved require_escalated; metadata-only inspection",
+  "socket_paths_checked": [
+    "/run/docker.sock",
+    "/var/run/docker.sock",
+    "/run/containerd/containerd.sock",
+    "/run/podman/podman.sock",
+    "/run/user/1000/podman/podman.sock",
+    "/run/user/1000/docker.sock",
+    "/home/sprime01/.docker/run/docker.sock"
+  ],
+  "socket_observations": "All listed paths were absent. No socket permissions were applicable. The inspection used os.stat and os.access only; it did not connect to any socket.",
+  "daemon_processes": {
+    "command": "pgrep -x -a NAME; output reduced to PID and process name, arguments discarded",
+    "names_checked": ["dockerd", "containerd", "podman", "conmon", "rootlesskit"],
+    "matches": [],
+    "result": "No matching live daemon/runtime processes were observed."
+  },
+  "docker_info": {
+    "queried": false,
+    "reason": "No Docker socket was present at the checked standard system or user paths, so the conditional safe read-only info query was not run."
+  },
+  "openshell": {
+    "binary": "/home/sprime01/.local/bin/openshell",
+    "help_inspected": true,
+    "read_only_status_query": ["openshell", "status", "--output", "json"],
+    "exit_code": 0,
+    "sanitized_stdout_bytes": 33,
+    "stderr_present": false,
+    "status_field": "not_configured",
+    "output_handling": "The full stdout and stderr were captured only in process memory and discarded; only the whitelisted status field and byte count were emitted. No gateway endpoint, identity, or credential field was emitted.",
+    "gateway_started_or_modified": false
+  },
+  "conclusion_and_limits": {
+    "conclusion": "No already-running Docker, Podman, containerd, rootlesskit, or OpenShell gateway path was observed at the checked standard sockets/processes. OpenShell reports not_configured.",
+    "limits": [
+      "This checks the listed standard socket locations and named process executables only; a manually configured runtime at an arbitrary custom path is outside scope.",
+      "No service was started, no container/sandbox was created, and no runtime socket was connected to.",
+      "This does not establish that an operator could not provide a distinct-host-UID launcher; it establishes that no existing runtime path was observed by these checks."
+    ]
+  },
+  "safety": {
+    "sudo_invoked": false,
+    "service_started": false,
+    "container_or_sandbox_created": false,
+    "runtime_socket_connected": false,
+    "configuration_or_credentials_read": false,
+    "persistent_filesystem_writes": false,
+    "repository_code_or_tests_changed": false
+  }
+}

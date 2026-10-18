@@ -397,7 +397,109 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
 /// default) would pass the gate and write the wrong name here.
 #[tokio::test]
 async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones() {
-    let (root, socket) = boot(two_actors()).await;
+    // A second actor claim on a same-UID socket was not authentication. The
+    // trusted launcher now issues independent, request-bounded capabilities
+    // through the production authority and private-connection APIs.
+    use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+    use sea_forge_core::types::{Actor, ActorRole};
+    use sea_forge_ledger::LedgerStream;
+    use sea_forge_server::workload_connection::{authentication_action, AuthenticatedConnection};
+
+    #[allow(clippy::too_many_arguments)]
+    async fn authenticated_client(
+        sender: &tokio::sync::mpsc::Sender<AuthenticatedConnection>,
+        engine: &PolicyAuthorityEngine,
+        bundle: &AuthorityPolicyBundle,
+        ledger: &LedgerStream,
+        root: &Path,
+        actor_id: &str,
+        request: &Value,
+        sequence: usize,
+    ) -> Client {
+        let actor = Actor {
+            actor_id: actor_id.into(),
+            role: ActorRole::Operator,
+        };
+        let issuer = Actor {
+            actor_id: "trusted-identity-issuer".into(),
+            role: ActorRole::SecurityOfficer,
+        };
+        let principal = format!("workload-{actor_id}");
+        let action = authentication_action(&principal, &actor, request);
+        let decision = engine
+            .evaluate(AuthorityEvaluation {
+                actor: &issuer,
+                binding: bundle.resolve_identity(&issuer.actor_id, issuer.role.clone()),
+                run_id: "identity-issuance",
+                case_id: "identity-issuance",
+                plan_item_id: "private-connection",
+                sequence,
+                action: &action,
+                workspace_root: root,
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: Some(60),
+                env_keys: Default::default(),
+                domainforge_candidate: None,
+                opa_candidate: None,
+                environment: None,
+            })
+            .unwrap();
+        assert_eq!(decision.verdict, sea_forge_core::types::Verdict::Allow);
+        let committed = ledger
+            .commit_typed("authority_decision", vec![], &decision, vec![])
+            .unwrap();
+        let grant = engine.grant(&decision, &committed, &action, None).unwrap();
+        let (server_stream, client_stream) = UnixStream::pair().unwrap();
+        let connection = AuthenticatedConnection::new(
+            server_stream,
+            grant,
+            &principal,
+            actor,
+            request,
+            "identity-issuance",
+            "private-connection",
+            root,
+        )
+        .unwrap();
+        sender
+            .send(connection)
+            .await
+            .unwrap_or_else(|_| panic!("trusted issuer disconnected"));
+        let (reader, writer) = client_stream.into_split();
+        Client {
+            reader: BufReader::new(reader),
+            writer,
+        }
+    }
+
+    let root = tempfile::tempdir().unwrap();
+    let socket = root.path().join("kernel.sock");
+    let config = ServerConfig {
+        root: root.path().into(),
+        socket_path: socket.clone(),
+        identity: two_actors(),
+        ..ServerConfig::default()
+    };
+    let (issuer_sender, issuer_receiver) = tokio::sync::mpsc::channel(8);
+    let server = tokio::spawn(async move {
+        sea_forge_server::run_authenticated(config, issuer_receiver)
+            .await
+            .unwrap();
+    });
+    for _ in 0..500 {
+        if socket.exists() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(socket.exists());
+    let issuer_bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
+        "version: \"0.1\"\nrules:\n  - name: trusted-private-connection-issuer\n    verdict: allow\n    actor_role: R-SO\n    operation_kind: identity_minting\n"
+    ).unwrap();
+    let issuer_engine = PolicyAuthorityEngine::new(issuer_bundle.clone()).unwrap();
+    let issuer_ledger =
+        LedgerStream::open(root.path(), "identity-issuance", "trusted-identity-issuer").unwrap();
     escalating_plan(root.path());
     // Escalate the item, then allow the resolution of what the escalation
     // opened: without the second rule the approval can never be resolved
@@ -410,15 +512,44 @@ async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones
          operation_kind: approval_resolution\n",
     )
     .unwrap();
-    let mut client = Client::connect(&socket).await;
-
-    let submitted = client
-        .call(json!({"verb": "submit",
+    let submit_request = json!({"verb": "submit",
                      "actor": {"actor_id": "operator_a", "role": "operator"},
                      "plan": "plan.json", "policy": "resolvable.yaml",
                      "entity": "operator_a", "process": "test", "timeout": 60,
-                     "request_id": "req-identity-submit-resolvable"}))
-        .await;
+                     "request_id": "req-identity-submit-resolvable"});
+    let mut client = authenticated_client(
+        &issuer_sender,
+        &issuer_engine,
+        &issuer_bundle,
+        &issuer_ledger,
+        root.path(),
+        "operator_a",
+        &submit_request,
+        1,
+    )
+    .await;
+    let mut changed_request = submit_request.clone();
+    changed_request["request_id"] = json!("outside-private-grant");
+    let changed_refused = client.call(changed_request).await;
+    assert_eq!(
+        changed_refused["error_class"],
+        "identity_authentication_refused"
+    );
+    let canonical = submit_request.to_string();
+    let ambiguous = format!(
+        "{},\"opaque\":1,\"opaque\":2}}\n",
+        &canonical[..canonical.len() - 1]
+    );
+    client.writer.write_all(ambiguous.as_bytes()).await.unwrap();
+    let mut response_line = String::new();
+    client.reader.read_line(&mut response_line).await.unwrap();
+    let ambiguous_refused: Value = serde_json::from_str(&response_line).unwrap();
+    assert_eq!(
+        ambiguous_refused["error_class"],
+        "identity_authentication_refused"
+    );
+    assert!(!root.path().join("approvals.jsonl").exists());
+    let submitted = client.call(submit_request).await;
     let case_id = submitted["case_id"]
         .as_str()
         .unwrap_or_else(|| panic!("submit did not return a case_id: {submitted}"))
@@ -455,12 +586,46 @@ async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones
 
     // Positive: operator_b — verified by the gate — resolves in-process, and
     // the journal names operator_b, not the submitter and not any default.
-    let by_other = client
-        .call(json!({"verb": "approval_decide",
+    let approve_request = json!({"verb": "approval_decide",
                      "actor": {"actor_id": "operator_b", "role": "operator"},
                      "case_id": case_id, "approval_id": approval_id, "decision": "approve",
-                     "request_id": "req-identity-decide-operator-b"}))
-        .await;
+                     "request_id": "req-identity-decide-operator-b"});
+    let switched = client.call(approve_request.clone()).await;
+    assert_eq!(switched["error_class"], "identity_authentication_refused");
+    let mut unauthenticated = Client::connect(&socket).await;
+    let forged = unauthenticated.call(approve_request.clone()).await;
+    assert_eq!(forged["error_class"], "identity_authentication_refused");
+    let self_request = json!({"verb":"approval_decide", "actor":{"actor_id":"operator_a","role":"operator"},
+        "case_id":case_id,"approval_id":approval_id,"decision":"approve","request_id":"authenticated-self-approval"});
+    let mut authenticated_submitter = authenticated_client(
+        &issuer_sender,
+        &issuer_engine,
+        &issuer_bundle,
+        &issuer_ledger,
+        root.path(),
+        "operator_a",
+        &self_request,
+        2,
+    )
+    .await;
+    let self_refused = authenticated_submitter.call(self_request).await;
+    assert_eq!(self_refused["error_class"], "separation_of_duty");
+    assert_eq!(
+        fs::read_to_string(root.path().join("approvals.jsonl")).unwrap(),
+        journal_before
+    );
+    let mut approver = authenticated_client(
+        &issuer_sender,
+        &issuer_engine,
+        &issuer_bundle,
+        &issuer_ledger,
+        root.path(),
+        "operator_b",
+        &approve_request,
+        3,
+    )
+    .await;
+    let by_other = approver.call(approve_request.clone()).await;
     assert_eq!(by_other["ok"], true, "{by_other}");
     let journal = fs::read_to_string(root.path().join("approvals.jsonl"))
         .expect("the in-process resolution must write the approvals journal");
@@ -480,6 +645,67 @@ async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones
         resolved["approval_id"], approval_id,
         "the journal line must name the resolved approval: {resolved}"
     );
+    let replay_refused = approver.call(approve_request).await;
+    assert_eq!(
+        replay_refused["error_class"],
+        "identity_authentication_refused"
+    );
+    assert_eq!(
+        fs::read_to_string(root.path().join("approvals.jsonl")).unwrap(),
+        journal
+    );
+    issuer_ledger.verify().unwrap();
+    let authentication_ledger =
+        LedgerStream::open(root.path(), "workload-authentication", "test-observer").unwrap();
+    authentication_ledger.verify().unwrap();
+    let authenticated = authentication_ledger.read_entries().unwrap();
+    let issuer_decisions = issuer_ledger.read_entries().unwrap();
+    assert_eq!(
+        authenticated.len(),
+        3,
+        "submit, self-approval, legitimate approval"
+    );
+    for entry in &authenticated {
+        assert_eq!(entry.record_kind, "workload_request_authenticated");
+        let proof = &entry.payload;
+        let decision = issuer_decisions
+            .iter()
+            .find(|decision| {
+                decision.entry_ulid == proof["committed_decision"]["entry_ulid"].as_str().unwrap()
+            })
+            .expect("authentication must name its actual committed issuer decision");
+        assert_eq!(entry.authority_refs, vec![decision.entry_ulid.clone()]);
+        assert_eq!(
+            proof["committed_decision"]["ledger_id"],
+            "identity-issuance"
+        );
+        assert_eq!(
+            proof["committed_decision"]["payload_hash"],
+            decision.payload_hash
+        );
+        assert_eq!(
+            proof["authentication_action_sha256"],
+            decision.payload["action_request"]["evidence"]["payload_hash"]
+        );
+        assert_eq!(
+            proof["actor"],
+            decision.payload["operation"]["parameters"]["actor"]
+        );
+        assert_eq!(
+            proof["request_sha256"],
+            decision.payload["operation"]["parameters"]["request_sha256"]
+        );
+    }
+    println!(
+        "AUTHENTICATED_IDENTITY_V2 {}",
+        json!({"legitimate_approval":by_other,"resolved":resolved,
+        "same_connection_switch":switched,"fresh_unauthenticated_connection":forged,"self_approval":self_refused,
+        "changed_request":changed_refused,"ambiguous_request":ambiguous_refused,"consumed_request":replay_refused,
+        "issuer_ledger_verified":true,"authentication_ledger_verified":true,"authenticated_requests":authenticated.len(),
+        "scope_limit":"private-channel authentication; hostile same-UID descriptor isolation remains separate"})
+    );
+    server.abort();
+    assert!(server.await.unwrap_err().is_cancelled());
 }
 
 /// `ask` is protected, so it carries the identity block — and it also has a

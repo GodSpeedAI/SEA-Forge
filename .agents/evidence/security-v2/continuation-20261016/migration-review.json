@@ -1,0 +1,25 @@
+{
+  "reviewer": "/root/migration_review",
+  "model": "gpt-6-luna",
+  "context": "fresh reviewer, original Git test versions reviewed before current diff",
+  "original_reference": "dd494c1ae865487fa928647703be275087a943b0",
+  "frozen_v1_reference": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+  "frozen_verification": "passed read-only pinned-object verifier; no protected-file diff",
+  "verdict": "acceptable for authorized legacy regression migration; no blocker within scope",
+  "retained_behaviors": [
+    "CEP independent approval, replay, revalidation and single use",
+    "CEP missing actor and invalid resolution refusals",
+    "CEP source-only and approved semantic world transitions and listing",
+    "SFWP successful A-proposes/B-executes escalation and proposer SoD refusal with unchanged journal"
+  ],
+  "negative_attempts": "claimed actor substitution on existing private connections and fresh public sockets, with native journal equality checks",
+  "authentication": "real authority evaluation, committed decision, exact grant and production private-channel server API",
+  "limits": "private capability API coverage only; not isolated OS identity, SEC-01..12 qualification or adversarial validation",
+  "qualification_evidence": false,
+  "independently_frozen_supplementary_contract": false,
+  "reviewed_sha256": {
+    "crates/sea-forge-server/tests/conformance_cep_authority.rs": "876aa3d9340df6c59338b8cc018de29dfd9e630da7c07c26b423c6003c87a775",
+    "crates/sea-forge-server/tests/sfwp_case_mutations.rs": "95b61318f00c75f09f3fe6f4779d3c36233e814340462d707a84dfc1f88c6fd2",
+    "crates/sea-forge-server/tests/support/authenticated.rs": "ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396"
+  }
+}

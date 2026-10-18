@@ -14,7 +14,34 @@ pub struct ExportOptions<'a> {
     pub out: &'a Path,
 }
 
+/// SEC-09: the union of exposure labels of every exported run's case
+/// context. A bundle carries `artifacts/`, which an isolated workload writes
+/// after receiving classified plaintext, so the export states that exposure
+/// and falls to default deny unless a rule permits every label. A run whose
+/// case cannot be established from its control-plane plan refuses the
+/// whole export.
+fn exported_exposure(root: &Path, run_ids: &[String]) -> Result<Vec<String>, ForgeError> {
+    let registry = sea_forge_ledger::exposure::ExposureRegistry::open(root, "sea-forge-export")?;
+    let mut labels = std::collections::BTreeSet::new();
+    for run_id in run_ids {
+        if !sea_forge_core::path::valid_id_segment(run_id, 128) {
+            return Err(ForgeError::UnsafePath(format!("invalid run id {run_id:?}")));
+        }
+        let plan_path = root.join("runs").join(run_id).join("plan.json");
+        let plan: sea_forge_core::types::CasePlan = serde_json::from_slice(
+            &std::fs::read(&plan_path).map_err(|e| ForgeError::io("read exported run plan", e))?,
+        )?;
+        labels.extend(
+            registry
+                .labels(&format!("case:{}", plan.case_id))
+                .map_err(|e| ForgeError::Internal(format!("exposure state unavailable: {e}")))?,
+        );
+    }
+    Ok(labels.into_iter().collect())
+}
+
 pub fn export(opts: ExportOptions) -> Result<u8, ForgeError> {
+    let exposure = exported_exposure(opts.root, opts.run_ids)?;
     let policy = super::mediated::policy_path(opts.root, opts.policy);
     super::mediated::authorize_read(
         opts.root,
@@ -30,6 +57,7 @@ pub fn export(opts: ExportOptions) -> Result<u8, ForgeError> {
             parameters: serde_json::json!({
                 "run_ids": opts.run_ids,
                 "templates": opts.templates,
+                "exposure": exposure,
             }),
         },
     )?;

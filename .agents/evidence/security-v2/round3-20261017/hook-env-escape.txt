@@ -1,0 +1,22 @@
+Incident 2026-10-18 14:38:12 -0400: pre-push `just ci` ran
+scripts/security/staged-secret-canaries.sh with the hook's GIT_DIR exported.
+Its throwaway-repo commands (`git -C "$work/r" init|config|add|commit`) acted on
+the pushing worktree: core.bare=true, user.name/email=canary,
+commit.gpgsign=false written to the shared .git/config; branch ref moved to a
+"seed" commit (f99c10a) holding only README + .gitleaks.toml; worktree index
+replaced. The push was rejected; nothing reached the remote. Working-tree
+files and the main checkout's index/HEAD were untouched.
+
+Fix: both temp-repo scripts unset `git rev-parse --local-env-vars` first
+(staged-secret-canaries.sh; pre-existing latent bug in check-agent-context.sh).
+Regression check (disposable sentinel repo as GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE):
+  fixed scripts: canaries exit=0, context exit=0, sentinel config/index/HEAD unchanged
+  control (pre-fix canaries from 6189e74): sentinel config gained user.name=canary -> reproduced
+
+Pre-existing intermittent failures seen during the gated pushes (not introduced here):
+  conformance_m12 t12_endpoint_registration_marks_self_model_snapshot_stale: once
+    under full-suite load; 3/3 pass alone.
+  conformance_sfwp request_admission_refuses_overflow_and_cancels_waiters_without_effects:
+    "pre-admission timeout reached provider" (5 vs 4); 1/13 on this branch and 1/40 on
+    unmodified origin/main (c9f8b4e), same assertion. A fifth provider connection while
+    four permits are held is an open admission question, left for its own investigation.

@@ -23,6 +23,9 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{unix::OwnedReadHalf, unix::OwnedWriteHalf, UnixStream};
 
+#[path = "support/authenticated.rs"]
+mod authenticated;
+
 // ---------------------------------------------------------------------------
 // Harness (mirrors conformance_approvals / conformance_identity)
 // ---------------------------------------------------------------------------
@@ -63,9 +66,8 @@ fn local_operator() -> IdentityBindings {
     IdentityBindings::local_operator("operator_local")
 }
 
-/// Two actors on this machine's uid: one proposer, one executor. The kernel
-/// fills in `SO_PEERCRED`, so both are legitimately claimable by this test —
-/// separation of duty must hold between the *actors*, not the uid.
+/// Configured proposer and executor. The multi-actor control authenticates
+/// each with an independent private capability; shared UID is not identity.
 fn two_actors() -> IdentityBindings {
     let uid = sea_forge_server::identity::current_uid().expect("uid must be readable");
     IdentityBindings {
@@ -1005,14 +1007,17 @@ async fn artifact_get_returns_content_addressed_bytes_and_refuses_unknown_digest
 /// and is refused as an SoD violation with `approvals.jsonl` unchanged.
 #[tokio::test]
 async fn the_proposer_cannot_resolve_its_own_discretionary_items_approval() {
-    let (root, socket) = boot(two_actors()).await;
+    let root = tempfile::tempdir().unwrap();
+    let mut cell = authenticated::Cell::start(boot_config(root.path(), two_actors())).await;
+    let proposer_identity =
+        authenticated::principal("operator_a", sea_forge_core::types::ActorRole::Operator);
+    let executor_identity =
+        authenticated::principal("operator_b", sea_forge_core::types::ActorRole::Operator);
     let escalate = write_policy(
         root.path(),
         "escalate.yaml",
         &format!("{ESCALATE_RULES}{ADD_ITEM_RULE}"),
     );
-    let mut proposer = Client::connect(&socket).await;
-
     // Submit the parked case as operator_a.
     let plan_path = root.path().join("plan-sod.json");
     fs::write(
@@ -1020,58 +1025,77 @@ async fn the_proposer_cannot_resolve_its_own_discretionary_items_approval() {
         serde_json::to_vec(&manual_sandbox_plan(root.path())).unwrap(),
     )
     .unwrap();
-    let submitted = proposer
-        .call(json!({
-            "verb": "submit",
-            "plan": "plan-sod.json",
-            "policy": escalate,
-            "entity": "operator_a",
-            "process": "test",
-            "timeout": 60,
-            "request_id": format!("req-sod-submit-{}", line_nonce()),
-            "actor": actor_block("operator_a"),
-        }))
-        .await;
+    let submit_request = json!({
+        "verb": "submit",
+        "plan": "plan-sod.json",
+        "policy": escalate,
+        "entity": "operator_a",
+        "process": "test",
+        "timeout": 60,
+        "request_id": format!("req-sod-submit-{}", line_nonce()),
+        "actor": actor_block("operator_a"),
+    });
+    let mut proposer = cell.connect_for(&proposer_identity, &submit_request).await;
+    let submitted = proposer.call(submit_request).await;
     let case_id = submitted["case_id"].as_str().expect("case_id").to_owned();
 
     // operator_a proposes a discretionary sandboxed item (auto-activatable).
-    let proposed = proposer
-        .call(json!({
-            "verb": "case_add_item",
-            "case_id": case_id,
-            "item": {
-                "plan_item_id": "disc",
-                "name": "discretionary",
-                "operations": [execute_operation(root.path())],
-                "entry_criteria": [], "exit_criteria": [],
-                "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
-                "item_kind": "sandboxed_task",
-                "markers": {"required": false},
-                "max_instances": 1,
-                "depends_on": []
-            },
-            "policy": escalate,
-            "request_id": format!("req-sod-add-{}", line_nonce()),
-            "actor": actor_block("operator_a"),
-        }))
+    let proposed = cell
+        .call_for(
+            &proposer_identity,
+            json!({
+                "verb": "case_add_item",
+                "case_id": case_id,
+                "item": {
+                    "plan_item_id": "disc",
+                    "name": "discretionary",
+                    "operations": [execute_operation(root.path())],
+                    "entry_criteria": [], "exit_criteria": [],
+                    "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
+                    "item_kind": "sandboxed_task",
+                    "markers": {"required": false},
+                    "max_instances": 1,
+                    "depends_on": []
+                },
+                "policy": escalate,
+                "request_id": format!("req-sod-add-{}", line_nonce()),
+                "actor": actor_block("operator_a"),
+            }),
+        )
         .await;
     assert_eq!(proposed["ok"], true, "{proposed}");
     assert_eq!(proposed["proposed_by"], "operator_a");
 
     // operator_b executes it; the escalate verdict opens an approval whose
     // requester is operator_b (the episode's entity).
-    let mut executor = Client::connect(&socket).await;
-    let executed = executor
-        .call(json!({
-            "verb": "item_execute",
-            "case_id": case_id,
-            "item_id": "disc",
-            "policy": escalate,
-            "timeout": 60,
-            "request_id": format!("req-sod-exec-{}", line_nonce()),
-            "actor": actor_block("operator_b"),
-        }))
+    let execution_request = json!({
+        "verb": "item_execute",
+        "case_id": case_id,
+        "item_id": "disc",
+        "policy": escalate,
+        "timeout": 60,
+        "request_id": format!("req-sod-exec-{}", line_nonce()),
+        "actor": actor_block("operator_b"),
+    });
+    let case_ledger_path = root
+        .path()
+        .join("ledgers")
+        .join(format!("case-{case_id}"))
+        .join("entries.jsonl");
+    let before_impersonation = fs::read(&case_ledger_path).unwrap();
+    let switched = proposer.call(execution_request.clone()).await;
+    assert_eq!(switched["error_class"], "identity_authentication_refused");
+    let mut public = Client::connect(&cell.socket).await;
+    let impersonated = public.call(execution_request.clone()).await;
+    assert_eq!(
+        impersonated["error_class"],
+        "identity_authentication_refused"
+    );
+    assert_eq!(fs::read(&case_ledger_path).unwrap(), before_impersonation);
+    let mut executor = cell
+        .connect_for(&executor_identity, &execution_request)
         .await;
+    let executed = executor.call(execution_request).await;
     assert_eq!(executed["ok"], true, "{executed}");
     assert_eq!(executed["episodes"][0]["settlement_status"], "escalated");
 
@@ -1087,16 +1111,19 @@ async fn the_proposer_cannot_resolve_its_own_discretionary_items_approval() {
     let before = fs::read(&approvals_path).unwrap();
 
     // The proposer tries to resolve its own item's approval.
-    let refused = proposer
-        .call(json!({
-            "verb": "approval_decide",
-            "case_id": case_id,
-            "approval_id": approval_id,
-            "decision": "approve",
-            "note": "trust me",
-            "request_id": format!("req-sod-decide-{}", line_nonce()),
-            "actor": actor_block("operator_a"),
-        }))
+    let refused = cell
+        .call_for(
+            &proposer_identity,
+            json!({
+                "verb": "approval_decide",
+                "case_id": case_id,
+                "approval_id": approval_id,
+                "decision": "approve",
+                "note": "trust me",
+                "request_id": format!("req-sod-decide-{}", line_nonce()),
+                "actor": actor_block("operator_a"),
+            }),
+        )
         .await;
     assert_eq!(refused["error_class"], "sod_violation", "{refused}");
     assert!(
@@ -1111,6 +1138,16 @@ async fn the_proposer_cannot_resolve_its_own_discretionary_items_approval() {
         before,
         "a refused resolution must leave approvals.jsonl unchanged"
     );
+    sea_forge_ledger::LedgerStream::open(root.path(), format!("case-{case_id}"), "test-observer")
+        .unwrap()
+        .verify()
+        .unwrap();
+    cell.verify_authentication();
+    println!(
+        "MIGRATED_CASE_SOD {}",
+        json!({"proposed_by":proposed["proposed_by"],"execution_status":executed["episodes"][0]["settlement_status"],"proposer_refusal":refused["error_class"],"public_impersonation":impersonated["error_class"],"same_connection_switch":switched["error_class"],"approvals_journal_unchanged":true,"case_ledger_verified":true})
+    );
+    cell.shutdown().await;
 }
 
 // ---------------------------------------------------------------------------

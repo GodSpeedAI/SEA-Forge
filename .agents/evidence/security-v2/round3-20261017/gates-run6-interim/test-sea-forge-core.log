@@ -1,0 +1,212 @@
+== test-sea-forge-core: cargo test -p sea-forge-core --all-features --locked --no-fail-fast -j 1
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 0.22s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_core-41c7e983cf2ef812)
+
+running 17 tests
+test approvals::tests::a_cell_with_no_journal_has_no_approvals_rather_than_an_error ... ok
+test approvals::tests::a_later_decision_supersedes_the_original_request ... ok
+test approvals::tests::a_status_lookup_does_not_answer_from_another_case ... ok
+test canonical::tests::keys_are_not_nfc_normalized_documented_asymmetry ... ok
+test canonical::tests::arrays_keep_order_and_nested_objects_sort ... ok
+test approvals::tests::resolving_one_case_does_not_clear_the_same_ordinal_in_another ... ok
+test canonical::tests::nfc_equivalent_spellings_hash_identically ... ok
+test canonical::tests::keys_are_sorted_and_values_nfc_normalized ... ok
+test ids::tests::ids_follow_the_persisted_grammar ... ok
+test path::tests::accepts_canonical_and_bare_dot ... ok
+test path::tests::normalization_collapses_aliases ... ok
+test path::tests::id_segment_grammar ... ok
+test types::tests::agent_probe_operation_uses_additive_tag ... ok
+test types::tests::settlement_status_round_trips ... ok
+test types::tests::operation_uses_tagged_snake_case_json ... ok
+test path::tests::prefix_is_segment_aware ... ok
+test path::tests::rejects_traversal_and_ambiguous_spellings ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/origin_ref_boundary.rs (target/debug/deps/origin_ref_boundary-e48049336f3bc388)
+
+running 2 tests
+test legacy_origin_ref_without_domain_model_ref_round_trips ... ok
+test old_reader_rejects_desired_outcome_variant_cleanly ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/projection_kind_boundary.rs (target/debug/deps/projection_kind_boundary-8b84e7acb57b7504)
+
+running 6 tests
+test self_model_error_class_is_distinct ... ok
+test legacy_records_still_deserialize_in_old_reader ... ok
+test old_reader_rejects_new_variants_cleanly_without_panic ... ok
+test new_variants_round_trip_in_current_reader ... ok
+test snapshot_id_uses_smsnap_prefix ... ok
+test unknown_projection_kind_string_is_rejected_not_silently_accepted ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/version_skew.rs (target/debug/deps/version_skew-218083a22248399c)
+
+running 1 test
+test exact_v01_minimum_record_readers_ignore_v02_additive_fields ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/yaml_strictness.rs (target/debug/deps/yaml_strictness-53e1d39599cb3dd9)
+
+running 67 tests
+test accepts_block_literal_and_folded_scalars ... ok
+test accepts_flatten_struct ... ok
+test accepts_plain_alias_of_mapping ... ok
+test accepts_canonical_integers ... ok
+test accepts_internally_tagged_enum_with_kind_not_first ... ok
+test accepts_integers_including_u64_max ... ok
+test accepts_plain_alias_of_scalar ... ok
+test accepts_plain_alias_of_scalar_in_nested_struct ... ok
+test accepts_quoted_strings_with_escapes ... ok
+test binary_tag_never_decodes_into_string_or_integer ... ok
+test accepts_true_and_false_booleans ... ok
+test from_slice_rejects_invalid_utf8 ... ok
+test accepts_plain_false_and_lists_in_nested_structs ... ok
+test omitted_default_fields_load_as_default ... ok
+test check_syntax_reports_location_for_syntax_error ... ok
+test open_issue_case_variant_boolean_in_flatten_is_accepted ... ok
+test check_syntax_rejects_duplicate_keys ... ok
+test open_issue_case_variant_boolean_in_tagged_enum_is_accepted ... ok
+test open_issue_noncanonical_integer_in_flatten_is_accepted ... ok
+test check_syntax_accepts_what_from_str_accepts ... ok
+test option_field_omitted_or_null_is_none ... ok
+test open_issue_noncanonical_integer_in_tagged_enum_is_accepted ... ok
+test deep_nesting_completes_without_stack_overflow ... ok
+test option_bool_null_and_omitted_are_none ... ok
+test rejects_binary_tag_decoding_into_string ... ok
+test rejects_byte_order_mark_prefix ... ok
+test rejects_binary_tag_for_integer_field ... ok
+test rejects_binary_tag_for_signed_integer_field ... ok
+test rejects_float_for_u64 ... ok
+test rejects_duplicate_key_in_struct ... ok
+test rejects_duplicate_key_in_map_field ... ok
+test rejects_missing_required_field ... ok
+test rejects_integer_keys_that_are_not_canonical ... ok
+test rejects_merge_key_that_would_inject_fields ... ok
+test rejects_non_canonical_integer_spellings_for_i64 ... ok
+test rejects_non_finite_floats_for_integer_field ... ok
+test rejects_non_canonical_integer_spellings_for_u64 ... ok
+test rejects_null_collection_inside_flatten_struct ... ok
+test rejects_null_collections_without_default ... ok
+test rejects_null_collection_and_quoted_integer_three_levels_down ... ok
+test rejects_noncanonical_boolean_words_in_flatten_and_tagged_enum ... ok
+test rejects_quoted_bool_inside_flatten_struct ... ok
+test rejects_null_collections_with_default ... ok
+test rejects_quoted_bool_three_levels_down ... ok
+test rejects_quoted_bool_two_levels_down ... ok
+test rejects_quoted_false_for_bool ... ok
+test rejects_quoted_integer_for_u64 ... ok
+test rejects_quoted_integer_inside_flatten_struct ... ok
+test rejects_quoted_true_for_bool ... ok
+test rejects_rules_inside_vec_of_structs ... ok
+test rejects_tab_indentation ... ok
+test rejects_rules_inside_map_value ... ok
+test rejects_second_document_in_stream ... ok
+test rejects_rules_inside_internally_tagged_enum ... ok
+test rejects_underscore_integer_for_u64 ... ok
+test rejects_trailing_garbage_after_document ... ok
+test rejects_unknown_field ... ok
+test rejects_yaml_1_1_boolean_words ... ok
+test round_trip_preserves_every_field_kind ... ok
+test string_field_accepts_plain_number_and_boolean_scalars ... ok
+test rejects_noncanonical_boolean_spellings ... ok
+test rejects_unsupported_local_tag ... ok
+test string_field_rejects_null_scalars ... ok
+test rejects_wrong_case_enum_variant ... ok
+test rejects_unterminated_quote ... ok
+test valid_fixture_loads ... ok
+test rejects_alias_bomb_within_bounded_time ... ok
+
+test result: ok. 67 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+   Doc-tests sea_forge_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+exit=0

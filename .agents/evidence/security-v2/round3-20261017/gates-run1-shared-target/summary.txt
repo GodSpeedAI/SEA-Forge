@@ -1,0 +1,43 @@
+544593be27762b0f4196179dd9fa8bb12aed39a9
+ M crates/sea-forge-sandbox/src/workload.rs
+ M crates/sea-forge-server/src/delegation.rs
+ M crates/sea-forge-server/src/exposure.rs
+ M crates/sea-forge-server/src/lib.rs
+ M crates/sea-forge-server/src/mcp.rs
+ M crates/sea-forge-server/src/postgres.rs
+ M crates/sea-forge-server/tests/exposure_flow.rs
+ M crates/sea-forge-server/tests/support/pg_cluster.rs
+?? .agents/evidence/security-v1/round2-20261017/
+?? .agents/evidence/security-v2/round3-20261017/
+?? crates/sea-forge-sandbox/tests/state_tree.rs
+?? crates/sea-forge-server/tests/postgres_lifecycle.rs
+check exit=1
+no-async-kernel exit=0
+proof exit=0
+test-sea-forge-core exit=0
+test-sea-forge-cli exit=101
+test-sea-forge-artifact-ip exit=0
+test-sea-forge-authority exit=0
+test-sea-forge-domainforge exit=0
+test-sea-forge-ledger exit=0
+test-sea-forge-capability exit=0
+test-sea-forge-settlement exit=0
+test-sea-forge-sandbox exit=0
+test-sea-forge-evidence exit=0
+test-sea-forge-case-runner exit=0
+test-sea-forge-changeset exit=0
+test-sea-forge-planner exit=0
+test-sea-forge-domain exit=0
+test-sea-forge-runtime exit=0
+test-sea-forge-spec-pipeline exit=0
+test-sea-forge-cell exit=0
+test-sea-forge-extension exit=0
+test-sea-forge-self-model exit=0
+test-sea-forge-thoth exit=0
+test-sea-forge-trace exit=0
+test-sea-forge-server exit=101
+test-sea-forge-agent exit=0
+test-sea-forge-realitytrace exit=0
+v1-baseline exit=1
+v1-frozen-diff-checked
+DONE

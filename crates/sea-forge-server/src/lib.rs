@@ -44,14 +44,21 @@ mod cep_authority;
 pub mod config;
 pub mod delegation;
 pub mod delegation_audit;
+// Exposure state is a fold over a cell ledger stream; it lives with the
+// ledger so every component that exports cell data can consult it.
+pub use sea_forge_ledger::exposure;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;
 pub mod identity;
+pub mod mcp;
+mod mcp_protocol;
+pub mod postgres;
 pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
 mod transcript_seal;
+pub mod workload_connection;
 mod world_pin;
 
 pub use config::{resolve_cell_root, resolve_socket_override, ServerConfig};
@@ -172,6 +179,7 @@ impl ServerState {
         // `seed` is zeroized on drop; the key zeroizes itself likewise.
         let continuation_signing_key = sea_forge_ledger::signing::SigningKey::from_bytes(&seed);
         drop(seed);
+        recover_interrupted_appends(&config)?;
         recover_cancelled_delegations(&config)?;
         // A SWE_SEED declaration may have been appended directly (out of
         // process) while the server was absent; join it against any
@@ -405,6 +413,35 @@ impl ServerState {
 /// Recover a cancellation whose control record committed before server loss.
 /// HTTP delegations are never resumed: recovery writes the sole terminal
 /// rejected/cancelled outcome from ledger truth.
+/// A kill between an entry write and its derived `mmr.json` leaves the cache
+/// behind `entries.jsonl` (F-04). Repair every ledger from its entries before
+/// anything verifies it, or the cell refuses to start ever again.
+fn recover_interrupted_appends(config: &ServerConfig) -> Result<(), ForgeError> {
+    let ledgers = config.root.join("ledgers");
+    if !ledgers.exists() {
+        return Ok(());
+    }
+    for dir in std::fs::read_dir(&ledgers).map_err(|e| ForgeError::io("read ledgers", e))? {
+        let dir = dir.map_err(|e| ForgeError::io("read ledger entry", e))?;
+        let name = dir.file_name().to_string_lossy().into_owned();
+        if name == "quarantine"
+            || !dir
+                .file_type()
+                .map_err(|e| ForgeError::io("read ledger entry type", e))?
+                .is_dir()
+            || !dir.path().join("entries.jsonl").exists()
+        {
+            continue;
+        }
+        let quarantined = LedgerStream::open(&config.root, &name, "sea-forge-server")?
+            .quarantine_incomplete_tail()?;
+        if quarantined > 0 {
+            tracing::warn!(ledger = %name, quarantined, "quarantined an interrupted ledger tail");
+        }
+    }
+    Ok(())
+}
+
 fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError> {
     let ledgers = config.root.join("ledgers");
     if !ledgers.exists() {
@@ -1236,6 +1273,24 @@ fn lock_socket_path(socket_path: &Path) -> Result<std::fs::File, ForgeError> {
 
 /// Start the server.
 pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>> {
+    run_inner(config, None).await
+}
+
+/// Run a workload-facing cell whose protected requests require an
+/// authority-issued private connection. The public socket remains inspect-only.
+/// The receiver belongs to the trusted launcher, never to a workload.
+pub async fn run_authenticated(
+    config: ServerConfig,
+    connections: mpsc::Receiver<workload_connection::AuthenticatedConnection>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_inner(config, Some(connections)).await
+}
+
+async fn run_inner(
+    config: ServerConfig,
+    mut authenticated: Option<mpsc::Receiver<workload_connection::AuthenticatedConnection>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let require_workload_auth = authenticated.is_some();
     let socket_path = config.resolved_socket_path();
 
     // Fail before the first side effect: `ServerState::new` creates the cell's
@@ -1249,12 +1304,49 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     // Both locks live for the server lifetime. The root lock makes an explicit
     // socket override unable to create a second concurrent writer for one cell.
     let _cell_lock = lock_cell_root(&config.root)?;
+    // SEC-06 independent of Landlock: everything the control plane creates
+    // is owner-only, and an existing tree is remediated before use. Only the
+    // root and `runs/` stay traverse-only so isolated workloads can reach
+    // their own granted run trees by name.
+    #[cfg(target_os = "linux")]
+    {
+        sea_forge_sandbox::workload::restrict_creation_mask();
+        let report = sea_forge_sandbox::workload::harden_state_tree(
+            &config.root,
+            &[config.root.clone(), config.root.join("runs")],
+        )
+        .map_err(ForgeError::from)?;
+        tracing::info!(
+            directories = report.directories,
+            files = report.files,
+            skipped = report.skipped.len(),
+            "state tree restricted to owner-only"
+        );
+        for (path, why) in &report.skipped {
+            tracing::warn!(
+                "state tree entry left unchanged: {} ({why})",
+                path.display()
+            );
+        }
+    }
     let _socket_lock = lock_socket_path(&socket_path)?;
     // The case-advance supervisor is opt-in (D-3): capture the startup
     // snapshot before `config` moves into the state. A config reload does
     // not spawn, stop, resize, or re-attribute a running supervisor — that
     // takes a restart, like the cell root itself.
     let supervisor_settings = config.supervisor.clone();
+    // SEC-02/08: database session expiry is enforced by the trusted server
+    // for its whole lifetime, independent of episodes and issuance.
+    #[cfg(target_os = "linux")]
+    let _database_supervisors = config
+        .postgres
+        .iter()
+        .map(|resource| {
+            postgres::PostgresBroker::new(resource.clone())
+                .map(|broker| broker.supervise(config.root.clone(), postgres::SUPERVISE_INTERVAL))
+                .map_err(|e| ForgeError::Input(e.to_string()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -1293,7 +1385,18 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
     }
 
     loop {
-        let (stream, _) = match listener.accept().await {
+        let incoming = if let Some(receiver) = authenticated.as_mut() {
+            tokio::select! {
+                accepted = listener.accept() => accepted.map(|(stream, _)| (stream, None)),
+                connection = receiver.recv() => match connection {
+                    Some(connection) => Ok((connection.stream, Some(connection.identity))),
+                    None => return Err("trusted workload issuer disconnected".into()),
+                }
+            }
+        } else {
+            listener.accept().await.map(|(stream, _)| (stream, None))
+        };
+        let (stream, workload_identity) = match incoming {
             Ok(accepted) => accepted,
             Err(e) => {
                 // One failed accept is not a reason to take the governed
@@ -1331,7 +1434,15 @@ pub async fn run(config: ServerConfig) -> Result<(), Box<dyn std::error::Error>>
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             let _permit = permit;
-            if let Err(e) = handle_connection(stream, state, peer).await {
+            if let Err(e) = handle_connection(
+                stream,
+                state,
+                peer,
+                workload_identity,
+                require_workload_auth,
+            )
+            .await
+            {
                 tracing::warn!("connection error: {e}");
             }
         });
@@ -1342,6 +1453,8 @@ async fn handle_connection(
     stream: UnixStream,
     state: Arc<ServerState>,
     peer: Option<crate::identity::PeerIdentity>,
+    mut workload_identity: Option<workload_connection::WorkloadIdentity>,
+    require_workload_auth: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -1378,6 +1491,11 @@ async fn handle_connection(
     // The live event subscription for this connection, if any (`AbortHandle`
     // is enough — no generalized registry needed).
     let mut subscription: Option<tokio::task::JoinHandle<()>> = None;
+    // Bind the transport principal after its first successful resolution.
+    // A configured gateway may multiplex end users, but the principal that
+    // owns the connection cannot change. This does not authenticate a fresh
+    // same-UID connection as a distinct workload.
+    let mut connection_principal: Option<String> = None;
 
     let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = loop {
         line.clear();
@@ -1434,7 +1552,16 @@ async fn handle_connection(
                 let _ = tx.send(format!("{response}\n")).await;
             }
             other => {
-                let response = dispatch_bounded(other, &state, line.trim(), peer).await;
+                let response = dispatch_bounded(
+                    other,
+                    &state,
+                    line.trim(),
+                    peer,
+                    &mut connection_principal,
+                    workload_identity.as_mut(),
+                    require_workload_auth,
+                )
+                .await;
                 let _ = tx.send(format!("{response}\n")).await;
             }
         }
@@ -1558,7 +1685,14 @@ async fn dispatch_admitted(
     state: Arc<ServerState>,
     raw_line: String,
     verified_actor: Option<crate::identity::ResolvedActor>,
+    authentication_expiry: Option<chrono::DateTime<chrono::Utc>>,
 ) -> serde_json::Value {
+    if authentication_expiry.is_some_and(|expiry| chrono::Utc::now() >= expiry) {
+        return crate::identity::IdentityRefusal::AuthenticationRefused {
+            reason: "private connection expired while awaiting admission".into(),
+        }
+        .response();
+    }
     if let Some((request_id, verb, hash)) = dedupe_key(&request, &raw_line) {
         // Check and bind are one admission claim. A second same-id request
         // waits here until the first has durably bound its payload, then sees
@@ -1679,6 +1813,9 @@ async fn dispatch_bounded(
     state: &Arc<ServerState>,
     raw_line: &str,
     peer: Option<crate::identity::PeerIdentity>,
+    connection_principal: &mut Option<String>,
+    workload_identity: Option<&mut workload_connection::WorkloadIdentity>,
+    require_workload_auth: bool,
 ) -> serde_json::Value {
     // SF-005 / U-07. The identity gate remains before admission: a refused
     // request never enters the waiting room and cannot have an effect to undo.
@@ -1698,21 +1835,62 @@ async fn dispatch_bounded(
     }
 
     let mut verified_actor: Option<crate::identity::ResolvedActor> = None;
+    let authentication_expiry = workload_identity
+        .as_ref()
+        .map(|identity| identity.expires_at());
+    let workload_proof = workload_identity.as_ref().map(|identity| identity.proof());
     if crate::identity::is_protected(&request) {
         let claim = crate::identity::ActorClaim::parse(raw_line);
         let on_behalf_of = crate::identity::ActorClaim::parse_on_behalf_of(raw_line);
-        match state.config().identity.resolve_delegated(
-            claim.as_ref(),
-            on_behalf_of.as_ref(),
-            state.config().gateway.as_ref(),
-            peer,
-        ) {
+        let resolution = if let Some(identity) = workload_identity {
+            identity.resolve(raw_line, &state.config().identity, peer)
+        } else if require_workload_auth {
+            Err(crate::identity::IdentityRefusal::AuthenticationRefused {
+                reason: "protected requests require an authority-issued private connection".into(),
+            })
+        } else {
+            state.config().identity.resolve_delegated(
+                claim.as_ref(),
+                on_behalf_of.as_ref(),
+                state.config().gateway.as_ref(),
+                peer,
+            )
+        };
+        match resolution {
             Ok(actor) => {
+                let principal = actor.delegation().map_or_else(
+                    || actor.actor_id(),
+                    |delegation| delegation.gateway_actor_id(),
+                );
+                match connection_principal {
+                    Some(bound) if bound != principal => {
+                        return serde_json::json!({
+                            "error": "the transport principal cannot change on an existing connection",
+                            "error_class": "identity_connection_mismatch",
+                            "no_side_effect": true,
+                        });
+                    }
+                    None => *connection_principal = Some(principal.to_owned()),
+                    Some(_) => {}
+                }
                 tracing::debug!(
                     actor_id = actor.actor_id(),
                     uid = actor.uid(),
                     "protected request attributed"
                 );
+                // Authentication proves an attempted request, including one
+                // later refused by authority or separation of duty. It does
+                // not assert admission, execution or successful settlement.
+                if let Some(proof) = workload_proof.as_ref() {
+                    if let Err(error) = workload_connection::record_authenticated_request(
+                        &state.root,
+                        request_id(&request),
+                        proof,
+                    ) {
+                        tracing::warn!("workload request refused: authentication evidence unavailable: {error}");
+                        return serde_json::json!({"error":"workload authentication evidence could not be committed", "error_class":"identity_evidence_unavailable", "no_side_effect":true});
+                    }
+                }
                 if let Some(provenance) = actor.delegation() {
                     tracing::debug!(
                         gateway_actor_id = provenance.gateway_actor_id(),
@@ -1846,7 +2024,14 @@ async fn dispatch_bounded(
                 request_id = request_id_for_work.as_deref().unwrap_or("<none>"),
                 "request admitted"
             );
-            let response = dispatch_admitted(request, state, raw_line, verified_actor).await;
+            let response = dispatch_admitted(
+                request,
+                state,
+                raw_line,
+                verified_actor,
+                authentication_expiry,
+            )
+            .await;
             drop(permit);
             response
         });

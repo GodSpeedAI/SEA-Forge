@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:proposal:realitytrace:evidence-recorded:v1",
+  "title": "EvidenceRecorded (E8) v1 \u2014 registered as evidence.recorded (RealityTrace 42879a8)",
+  "description": "RealityTrace's expected-versus-observed comparison after proof_ingest, as emitted by sxr-core evidence_emit at rev 0e2a97b. Closed at every level: a field not listed here is a contract change, so plaintext or credential material cannot be added silently. Covers the pinned emitter (0e2a97b) and the field-level and producer-bound shape of 8c95489: `difference.fields`/`fields_truncated` and a `proof_producer:` provenance line are optional additions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "event_type",
+    "occurred_at",
+    "idempotency_key",
+    "payload",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "v1"
+    },
+    "event_id": {
+      "$ref": "#/$defs/event_id"
+    },
+    "source_agent": {
+      "const": "realitytrace"
+    },
+    "event_type": {
+      "const": "EvidenceRecorded"
+    },
+    "occurred_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idempotency_key": {
+      "$ref": "#/$defs/hex64"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain_model_hash",
+        "world_ref",
+        "namespace",
+        "work_request_id",
+        "affordance_id",
+        "expected_outcome",
+        "observed_outcome",
+        "difference",
+        "proof_result_ref",
+        "operational_settlement_ref",
+        "domain_model_ref"
+      ],
+      "properties": {
+        "domain_model_hash": {
+          "$ref": "#/$defs/hex64"
+        },
+        "world_ref": {
+          "type": "string",
+          "pattern": "^world:[^@\\s]+@sha256:[0-9a-f]{64}$"
+        },
+        "namespace": {
+          "const": "agentic_capability_loop"
+        },
+        "work_request_id": {
+          "$ref": "#/$defs/identity"
+        },
+        "affordance_id": {
+          "$ref": "#/$defs/identity"
+        },
+        "expected_outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "observed_outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "difference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verdict",
+            "expected_sha256",
+            "observed_sha256"
+          ],
+          "properties": {
+            "verdict": {
+              "enum": [
+                "equivalent",
+                "divergent"
+              ]
+            },
+            "expected_sha256": {
+              "$ref": "#/$defs/hex64"
+            },
+            "observed_sha256": {
+              "$ref": "#/$defs/hex64"
+            },
+            "fields": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "pointer",
+                  "change",
+                  "expected_sha256",
+                  "observed_sha256"
+                ],
+                "properties": {
+                  "pointer": {
+                    "type": "string"
+                  },
+                  "change": {
+                    "enum": [
+                      "changed",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "expected_sha256": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/hex64"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "observed_sha256": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/hex64"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "fields_truncated": {
+              "type": "boolean"
+            }
+          },
+          "dependentRequired": {
+            "fields": [
+              "fields_truncated"
+            ],
+            "fields_truncated": [
+              "fields"
+            ]
+          }
+        },
+        "proof_result_ref": {
+          "$ref": "#/$defs/sha256_ref"
+        },
+        "operational_settlement_ref": {
+          "$ref": "#/$defs/sha256_ref"
+        },
+        "domain_model_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "namespace",
+            "model_hash"
+          ],
+          "properties": {
+            "namespace": {
+              "const": "agentic_capability_loop"
+            },
+            "model_hash": {
+              "$ref": "#/$defs/hex64"
+            }
+          }
+        },
+        "context_bundle_ref": {}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "chain"
+      ],
+      "properties": {
+        "origin": {
+          "const": "realitytrace"
+        },
+        "chain": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 4,
+          "description": "Order and counts (model anchor first, exactly two caused_by parents, at most one proof_producer) are invariants checked outside the schema.",
+          "items": {
+            "type": "string",
+            "pattern": "^(domain_model_hash:[0-9a-f]{64}|caused_by:\\S+|proof_producer:\\S+)$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hex64": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "pattern": "^\\S(.*\\S)?$"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9A-HJKMNP-TV-Z]{26})$"
+    },
+    "outcome": {
+      "not": {
+        "type": "null"
+      }
+    }
+  }
+}

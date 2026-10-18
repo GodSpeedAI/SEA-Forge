@@ -1,0 +1,385 @@
+   Compiling getrandom v0.3.4
+   Compiling ahash v0.8.12
+   Compiling clap_builder v4.6.6
+   Compiling clap v4.6.6
+   Compiling jsonschema v0.18.3
+   Compiling sxr-core v0.3.0 (/home/sprime01/projects/sxr/sxr-core)
+   Compiling rand_core v0.9.5
+   Compiling ppv-lite86 v0.2.21
+   Compiling rand_chacha v0.9.0
+   Compiling rand v0.9.5
+   Compiling ulid v1.2.1
+   Compiling hashbrown v0.14.5
+   Compiling hashlink v0.9.1
+   Compiling libsqlite3-sys v0.30.1
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling fallible-iterator v0.3.0
+   Compiling rusqlite v0.32.1
+   Compiling sxr-df v0.2.1 (/home/sprime01/projects/sxr/sxr-df)
+   Compiling sxr-ledger v0.2.1 (/home/sprime01/projects/sxr/sxr-ledger)
+   Compiling sxr-git v0.2.1 (/home/sprime01/projects/sxr/sxr-git)
+   Compiling sxr-verify v0.2.1 (/home/sprime01/projects/sxr/sxr-verify)
+   Compiling realitytrace v0.3.0 (/home/sprime01/projects/sxr/sxr-cli)
+    Finished `test` profile [unoptimized] target(s) in 41.48s
+     Running unittests src/lib.rs (target/debug/deps/realitytrace-f4810b99ea6bf28e)
+
+running 1 test
+test determinism::tests::seam_behaviors_sequence ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/realitytrace-2076139c060b65fe)
+
+running 1 test
+test determinism::tests::seam_behaviors_sequence ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/e2e.rs (target/debug/deps/e2e-6ad7ce413031b552)
+
+running 5 tests
+test sxr_binary_is_present ... ok
+test doctor_returns_valid_json ... ok
+test repo_list_after_enroll ... ok
+test contract_import_rejects_non_work_request ... ok
+test evidence_create_custom_evidence_type ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+     Running tests/slice3.rs (target/debug/deps/slice3-bcc2c065ba65cd1d)
+
+running 7 tests
+test cas_carried_snapshot_projects_decl_nodes_and_edges ... ok
+test g_declared_nodes_and_reference_edges_are_populated ... ok
+test fts_recall_on_seeded_corpus ... ok
+test decl_key_scoping_by_repo_and_hash_ac_identity_002 ... ok
+test g_declared_edge_count_matches_resolved_references ... ok
+test cas_carried_snapshot_missing_object_fails_loudly ... ok
+test rebuild_drops_and_recreates_identically ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/slice4.rs (target/debug/deps/slice4-300354e009cfb924)
+
+running 7 tests
+test co_reference_produces_no_observed_edge_ac_graph_001 ... ok
+test contradictions_surface_in_delta ... ok
+test contradictory_residual_when_supports_and_contradicts ... ok
+test observed_undeclared_surfaces_model_gap ... ok
+test g_observed_nodes_from_qualified_history ... ok
+test declared_unobserved_is_never_failure ... ok
+test g_observed_rebuild_deterministic ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/slice5.rs (target/debug/deps/slice5-55830f2bba0aaa7f)
+
+running 8 tests
+test residual_starts_undiagnosed ... ok
+test exclusion_requires_qualifying_evidence_not_silence ... ok
+test settlement_check_enforces_all_four_conditions ... ok
+test settled_with_debt_records_debt_and_is_queryable ... ok
+test enumerated_hypotheses_cover_all_loci_with_alternatives ... ok
+test model_locus_proposal_gated_by_cheap_locus_exclusions ... ok
+test settlement_updates_residual_attribution ... ok
+test diagnostic_tables_rebuild_deterministic ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/slice6.rs (target/debug/deps/slice6-cb637dd3d5575da4)
+
+running 10 tests
+test ingest_extensions_survive_spool_drain ... ok
+test async_falls_back_to_direct_commit_without_daemon ... ok
+test ingest_extensions_rejects_invalid_input ... ok
+test record_request_shape_and_validation_roundtrip ... ok
+test record_request_validation_rejects_bad_requests ... ok
+test ingest_extensions_round_trip_and_duplicate_delivery ... ok
+test second_daemon_on_same_socket_is_rejected ... ok
+test ingest_extensions_survive_daemon_queue ... ok
+test kill_after_receipt_then_queue_recover_commits_once ... ok
+test corrupt_segment_is_frozen_and_actionable ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s
+
+     Running unittests src/lib.rs (target/debug/deps/sxr_core-4a158bfc386a00a0)
+
+running 22 tests
+test canonical_json::tests::array_order_is_preserved ... ok
+test canonical_json::tests::no_whitespace ... ok
+test canonical_json::tests::objects_sort_keys_recursively ... ok
+test canonical_json::tests::sha256_is_stable_and_prefixed ... ok
+test canonical_json::tests::sha256_hex_known_vector ... ok
+test chain::tests::entry_hash_excludes_payload_and_is_stable ... ok
+test chain::tests::verify_names_ledger_id_and_ordinal_on_divergence ... ok
+test chain::tests::payload_hash_is_sha256_prefixed_hex ... ok
+test chain::tests::verify_rejects_broken_linkage ... ok
+test chain::tests::verify_accepts_a_clean_chain ... ok
+test evidence_emit::tests::unit_emitted_envelope_is_deterministic_and_complete ... ok
+test embedded_schema::tests::pinned_schema_digest_matches_source ... ok
+test evidence_emit::tests::unit_placeholder_identity_and_parents_refuse ... ok
+test evidence_emit::tests::unit_difference_is_derived_not_claimed ... ok
+test record_kinds::tests::csv_transcription_is_complete_and_unique ... ok
+test evidence_emit::tests::unit_world_ref_is_stamped_and_must_match_the_comparison ... ok
+test evidence_emit::tests::unit_unresolved_observation_refuses_emission ... ok
+test world_ref::tests::accepts_pinned_refs_only ... ok
+test record_kinds::tests::every_kind_maps_to_a_known_cep_envelope_kind ... ok
+test record_kinds::tests::every_row_defines_subject_prefixes_and_predecessors ... ok
+test evidence_emit::tests::unit_field_differences_name_each_diverging_pointer ... ok
+test record_kinds::tests::unregistered_kinds_are_rejected ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ac_core_001.rs (target/debug/deps/ac_core_001-85235fd6ab2c4567)
+
+running 3 tests
+test core_has_no_forbidden_dependencies ... ok
+test no_domainforge_core_anywhere_in_workspace_dependency_graph ... ok
+test core_source_has_no_io_primitives ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/convergence_t07_proof_ingestion.rs (target/debug/deps/convergence_t07_proof_ingestion-4881f6c43b95a325)
+
+running 16 tests
+test a_delivery_from_another_world_is_refused_as_drift ... ok
+test a_delivery_without_a_pinned_world_is_refused ... ok
+test t07_bound_security_acceptance_producer_is_exclusive_for_its_cycles ... ok
+test t07_duplicate_recognition_survives_a_restart_of_the_gate_state ... ok
+test t07_expected_outcome_is_preserved_verbatim_for_the_later_comparison ... ok
+test t07_golden_fixture_from_the_real_swe_seed_emitter_is_ingested ... ok
+test t07_placeholder_and_drifted_model_identities_fail_closed ... ok
+test t07_identical_redelivery_of_a_settled_cycle_is_consequence_free ... ok
+test t07_namespace_and_schema_tampering_is_refused ... ok
+test t07_without_the_delivered_settlement_the_gate_binds_to_locally_known_identity_only ... ok
+test t07_wrong_producers_are_refused_in_both_directions ... ok
+test t07_tooth1_a_passing_proof_cannot_ride_a_forged_or_missing_settlement_reference ... ok
+test world_ref_is_carried_into_the_comparison_inputs ... ok
+test t07_every_required_field_is_validated_with_the_complete_battery ... ok
+test t07_tooth1_settlement_correlation_must_match_the_proof_cycle ... ok
+test t07_tooth2_altered_claims_are_detected_and_the_first_fact_stands ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/convergence_t08_evidence_emission.rs (target/debug/deps/convergence_t08_evidence_emission-bb721e94e1d216c8)
+
+running 7 tests
+test t08_emission_from_real_ingested_comparison_carries_all_nine_frozen_fields ... ok
+test t08_emission_is_deterministic_under_fixed_inputs ... ok
+test t08_identity_placeholders_and_malformed_refs_refuse_before_any_envelope_exists ... ok
+test t08_inconsistent_resolution_inputs_refuse_even_when_individually_well_formed ... ok
+test t08_tooth1_no_emission_exists_when_the_observed_consequence_never_resolved ... ok
+test t08_tooth1_missing_or_null_expected_binding_refuses_emission ... ok
+test t08_regenerates_the_cross_repo_golden_fixture_for_the_python_gate ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/e2e_world_loop.rs (target/debug/deps/e2e_world_loop-0f3bb4219c209443)
+
+running 1 test
+test hop_5_evidence_from_the_real_e7_and_e6 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/envelope_build_tests.rs (target/debug/deps/envelope_build_tests-ab17789896dc5793)
+
+running 9 tests
+test envelope_without_entity_sections_is_rejected ... ok
+test unknown_boundary_key_is_rejected ... ok
+test extensions_section_is_an_object_per_schema ... ok
+test envelope_id_and_created_at_vary_but_shape_is_stable ... ok
+test omission_status_follows_declared_known_omissions ... ok
+test every_record_kind_builds_a_conformant_schema_valid_envelope ... ok
+test missing_required_subject_ref_is_rejected ... ok
+test validation_status_is_always_validated ... ok
+test wrong_envelope_kind_pairing_is_rejected ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.78s
+
+     Running tests/evidence_record_tests.rs (target/debug/deps/evidence_record_tests-da28e2c9df34374d)
+
+running 5 tests
+test malformed_e8_is_refused_before_any_envelope ... ok
+test mapping_is_deterministic_for_a_fixed_context ... ok
+test compared_values_never_enter_the_envelope ... ok
+test direction_follows_the_verdict_mechanically ... ok
+test emitted_e8_persists_as_a_conformant_evidence_packet ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/snapshot_and_threshold_tests.rs (target/debug/deps/snapshot_and_threshold_tests-991e43b00c055ff9)
+
+running 8 tests
+test invalid_model_cannot_settle_positively ... ok
+test snapshot_row_closed_sum_accepts_exactly_two_shapes ... ok
+test v1_legacy_model_with_valid_status_fails_authorize_settlement ... ok
+test snapshot_id_never_mixes_shapes ... ok
+test threshold_evaluation_is_deterministic ... ok
+test snapshot_id_failed_is_deterministic_and_distinct ... ok
+test every_kind_conformance_error_names_the_kind ... ok
+test snapshot_id_resolved_is_deterministic ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/sxr_df-dbe29a0e4fd95a2a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/fixture_tests.rs (target/debug/deps/fixture_tests-0841558338be9e40)
+
+running 17 tests
+test cas_carried_expired_content_fails_loudly ... ok
+test cas_carried_materializes_from_producer_d ... ok
+test cas_carried_hash_mismatch_fails_loudly ... ok
+test cas_carried_corrupt_cas_object_fails_loudly ... ok
+test cas_carried_content_ref_mismatches_content_hash_fails_loudly ... ok
+test cas_carried_missing_cas_object_fails_loudly ... ok
+test malformed_json_is_rejected ... ok
+test invalid_model_without_d_maps_to_validation_failed ... ok
+test cas_carried_persists_into_cas_store_and_reuses_it ... ok
+test cas_carried_wrong_content_ref_scheme_fails_loudly ... ok
+test cas_carried_without_producer_d_or_cas_fails_loudly ... ok
+test invalid_model_with_d_maps_to_resolved_with_diagnostics ... ok
+test neither_shape_is_rejected ... ok
+test resolved_shape_maps_to_resolved_context ... ok
+test tampered_declared_hash_fails_verification ... ok
+test schema_violation_is_rejected_not_misclassified ... ok
+test tampered_inline_content_fails_hash_verification ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/process_tests.rs (target/debug/deps/process_tests-40fac827795dda17)
+
+running 10 tests
+test missing_binary_is_reported ... ok
+test exit_one_with_failure_envelope_maps_to_validation_failed ... ok
+test required_version_match_resolves ... ok
+test argv_construction_and_resolved_passthrough ... ok
+test exit_one_with_d_constructed_still_resolves ... ok
+test empty_stdout_is_malformed_even_on_exit_one ... ok
+test unparseable_version_output_fails_closed ... ok
+test unexpected_exit_code_is_an_error ... ok
+test schema_violation_through_the_process_boundary ... ok
+test required_version_mismatch_fails_closed_before_envelope_runs ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/real_binary_tests.rs (target/debug/deps/real_binary_tests-9c7ed7c6d5cd1db4)
+
+running 3 tests
+test real_binary_composition_and_settlement_authorization ... ignored, requires SXR_TEST_DOMAINFORGE_BIN pointing at a domainforge binary
+test real_domainforge_materializes_large_cas_carried_representation ... ignored, requires SXR_TEST_DOMAINFORGE_BIN + a .sea entry whose D exceeds 64 KiB
+test real_domainforge_resolves_the_dogfood_entry ... ignored, requires SXR_TEST_DOMAINFORGE_BIN pointing at a domainforge binary
+
+test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/sxr_git-297ff94221bdea34)
+
+running 14 tests
+test discovery::tests::empty_repo_yields_insufficient_evidence_not_error ... ok
+test identity::tests::minted_ids_are_ulids_not_git_derived ... ok
+test identity::tests::minted_ids_are_unique ... ok
+test identity::tests::plain_worktree_is_its_own_checkout ... ok
+test matcher::tests::empty_repo_is_unknown_not_different ... ok
+test matcher::tests::explicit_lineage_token_is_same_repository ... ok
+test matcher::tests::forks_of_one_upstream_never_merge ... ok
+test matcher::tests::no_overlap_is_different_repository ... ok
+test matcher::tests::single_overlap_is_probable_match_asking ... ok
+test discovery::tests::discovery_uses_the_mandated_sequence_in_order ... ok
+test discovery::tests::bare_repository_is_refused ... ok
+test discovery::tests::git_unavailable_is_reported ... ok
+test discovery::tests::relative_git_dir_is_normalized_against_cwd ... ok
+test identity::tests::linked_worktree_mints_new_checkout_same_repo ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ac_identity.rs (target/debug/deps/ac_identity-a006ac05af05a44c)
+
+running 4 tests
+test empty_git_dir_is_not_a_repository ... ok
+test empty_repo_is_enrollable_with_insufficient_evidence ... ok
+test linked_worktree_shares_repo_but_gets_own_checkout ... ok
+test fork_similarity_never_merges ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running unittests src/lib.rs (target/debug/deps/sxr_ledger-4e26a46de0c94fcb)
+
+running 35 tests
+test capability::tests::failed_probe_is_named ... ok
+test capability::tests::degraded_classifies_when_rename_ok_but_shm_fails ... ok
+test cas::tests::put_is_idempotent_and_does_not_rewrite ... ok
+test generation::tests::destructive_root_marks_broken ... ok
+test capability::tests::tempdir_classifies_safe ... ok
+test cas::tests::put_get_roundtrip_and_content_addressing ... ok
+test cas::tests::requirement_manifest_roundtrip ... ok
+test cas::tests::torn_object_is_detected_on_read ... ok
+test generation::tests::root_has_no_predecessor_and_mints_ulid ... ok
+test capability::tests::probe_cache_roundtrip ... ok
+test generation::tests::successor_anchors_exact_old_head ... ok
+test history::tests::catalog_is_append_only_and_rejects_duplicates ... ok
+test generation::tests::roundtrip_via_generation_json ... ok
+test history::tests::roundtrip_via_catalog_file ... ok
+test ledger::tests::pragmas_are_applied ... ok
+test ledger::tests::dense_ordinals_and_head ... ok
+test ledger::tests::idempotent_append_returns_existing_position ... ok
+test ledger::tests::wrong_generation_id_is_refused ... ok
+test ledger::tests::schema_version_is_set_and_guard_refuses_higher ... ok
+test quarantine::tests::quarantine_moves_readonly_and_writes_report_first ... ok
+test quarantine::tests::quarantine_refuses_overwrite_of_immutable_evidence ... ok
+test quarantine::tests::sha256_known_vector ... ok
+test outbox::tests::drain_advances_watermark_and_outbox_is_empty_after ... ok
+test ledger::tests::append_chain_verifies_and_tamper_is_named ... ok
+test outbox::tests::watermark_is_absent_before_first_drain ... ok
+test ledger::tests::outbox_rows_commit_in_same_txn ... ok
+test queue::tests::enqueue_scan_roundtrip_and_verify ... ok
+test queue::tests::recover_deletes_only_after_committed ... ok
+test schema::tests::schema_version_is_1 ... ok
+test queue::tests::trailing_garbage_after_request_is_corrupt ... ok
+test queue::tests::request_hash_mismatch_is_corrupt_and_frozen ... ok
+test schema::tests::ddl_contains_the_frozen_shape ... ok
+test queue::tests::tmp_leftovers_are_ignored ... ok
+test writer_lock::tests::lock_releases_on_drop_and_blocks_until_free ... ok
+test writer_lock::tests::lock_is_exclusive ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
+
+     Running tests/ac_ledger_001.rs (target/debug/deps/ac_ledger_001-ff0e603453f397cc)
+
+running 3 tests
+test root_ordinal_1_is_generation_started_with_null_predecessor ... ok
+test flipped_payload_byte_is_named_with_ledger_id_and_ordinal ... ok
+test intact_generations_still_verify ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ac_ledger_002.rs (target/debug/deps/ac_ledger_002-cbf1ae4e60935c9d)
+
+running 2 tests
+test destructive_recovery_marks_continuity_broken ... ok
+test quarantine_then_anchored_successor_preserves_old_hashes ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/sxr_verify-bc9d3d0990a2e235)
+
+running 14 tests
+test cargo_json::tests::legacy_reason_field_is_accepted ... ok
+test cargo_json::tests::garbage_is_none ... ok
+test port::tests::direction_rule_maps_exit_codes ... ok
+test port::tests::allowlist_passes_only_named_vars ... ok
+test cargo_json::tests::parses_stable_summary_lines ... ok
+test cargo_json::tests::no_terminal_events_is_none ... ok
+test cargo_json::tests::parses_nightly_json_events ... ok
+test verifier::tests::not_a_repo_is_rejected ... ok
+test verifier::tests::wrong_verifier_id_is_rejected ... ok
+test verifier::tests::env_allowlist_blocks_ambient_vars ... ok
+test verifier::tests::large_stdout_is_drained_without_deadlock ... ok
+test verifier::tests::failing_project_returns_contradicts ... ok
+test verifier::tests::passing_project_returns_supports ... ok
+test verifier::tests::timeout_kills_and_marks_crashed ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+

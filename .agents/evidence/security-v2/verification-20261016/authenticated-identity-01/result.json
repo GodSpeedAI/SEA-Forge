@@ -1,0 +1,20 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "-p",
+    "sea-forge-server",
+    "--test",
+    "conformance_identity",
+    "--test",
+    "sfwp_delegated_identity",
+    "--",
+    "--nocapture"
+  ],
+  "started_at": "2026-10-16T19:35:30.379458+00:00",
+  "finished_at": "2026-10-16T19:36:08.940170+00:00",
+  "exit_code": 0,
+  "log_sha256": "956c8522464611d79e02017463fc9bf533bb51d8aa452a9d899009cb31d59d99",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

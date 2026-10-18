@@ -1,0 +1,30 @@
+[package]
+name = "sea-forge-realitytrace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+description = "Ledger-derived SEA Forge security evidence for RealityTrace and independent auditors."
+publish = false
+
+# Evidence consumer only: no execution crate depends on this one.
+[dependencies]
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.1.0" }
+sxr-core = { version = "0.3.0", git = "https://github.com/GodSpeedAI/RealityTrace", rev = "42879a82115bcc3586a81a58c614ec5073656f6f" }
+serde_json.workspace = true
+hex.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.1.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
+sea-forge-server = { path = "../sea-forge-server", version = "0.1.0" }
+tempfile.workspace = true
+# Same version and features sxr-core already resolves; no new crates.
+jsonschema = "0.18.3"
+
+[lints]
+workspace = true

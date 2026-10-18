@@ -1,0 +1,117 @@
+status check passed
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+    Finished `dev` profile [unoptimized] target(s) in 2.32s
+[main c8e2a57] test(security): authenticate legacy multi-actor workflows
+ 42 files changed, 8855 insertions(+), 114 deletions(-)
+ create mode 100644 .agents/evidence/security-v1/implementation-continuation-20261016/all/results.json
+ create mode 100644 .agents/evidence/security-v1/implementation-continuation-20261016/all/rust-A.log
+ create mode 100644 .agents/evidence/security-v1/implementation-continuation-20261016/all/rust-B.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/broker-build-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/broker-build-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/check-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/check-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/evidence-scan-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/evidence-scan-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/frozen-integrity-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/frozen-integrity-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/full-test-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/full-test-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/graft-build-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/graft-build-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight-outside/README.md
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight-outside/observations.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight-outside/runtime-audit.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight/README.md
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight/observations.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/host-preflight/scope-caveat.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/idempotency-scan-analysis.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/migration-review.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/migrations-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/migrations-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/no-async-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/no-async-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/proof-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/proof-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/staged-scan-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/staged-scan-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/status-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/status-01/result.json
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/v1-evidence-scan-01/command.log
+ create mode 100644 .agents/evidence/security-v2/continuation-20261016/v1-evidence-scan-01/result.json
+ create mode 100644 crates/sea-forge-server/tests/support/authenticated.rs
+ create mode 100644 tests/security-v2/migrations/README.md
+ create mode 100644 tests/security-v2/migrations/manifest.json

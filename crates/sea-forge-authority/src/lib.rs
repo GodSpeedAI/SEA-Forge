@@ -102,9 +102,20 @@ pub struct ActionGrant {
     _resolved_executable: Option<PathBuf>,
     /// Canonical hash of the granted action (the decision's bound payload hash).
     action_hash: String,
+    committed_decision: CommittedRecordRef,
 }
 
 impl ActionGrant {
+    /// Durable decision that was verified when this grant was minted.
+    pub fn committed_decision(&self) -> &CommittedRecordRef {
+        &self.committed_decision
+    }
+
+    /// Expiry carried by the issued grant, for an adapter's independent lease.
+    pub fn expires_at(&self) -> chrono::DateTime<Utc> {
+        self.expires_at
+    }
+
     pub fn sandbox_class(&self) -> &str {
         &self.sandbox_class
     }
@@ -1273,6 +1284,8 @@ impl AuthorityPolicyBundle {
                     | "cognate_action"
                     | "cognate_capability"
                     | "world_transition"
+                    | "mcp_tool_call"
+                    | "database_session"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -1292,6 +1305,48 @@ impl AuthorityPolicyBundle {
                     ));
                 }
             }
+            if rule.operation_kind == "mcp_tool_call"
+                && ["mcp_server", "mcp_tool"].iter().any(|dimension| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| {
+                            values.is_empty() || values.iter().any(String::is_empty)
+                        })
+                })
+            {
+                return Err(schema(
+                    "mcp_tool_call requires explicit server and tool boundaries".into(),
+                ));
+            }
+            if rule.operation_kind != "mcp_tool_call"
+                && ["mcp_server", "mcp_tool"]
+                    .iter()
+                    .any(|dimension| rule.boundary_constraints.contains_key(*dimension))
+            {
+                return Err(schema("MCP boundaries apply only to mcp_tool_call".into()));
+            }
+            if rule.operation_kind == "database_session"
+                && ["db_resource", "db_scope"].iter().any(|dimension| {
+                    rule.boundary_constraints
+                        .get(*dimension)
+                        .is_none_or(|values| {
+                            values.is_empty() || values.iter().any(String::is_empty)
+                        })
+                })
+            {
+                return Err(schema(
+                    "database_session requires explicit resource and scope boundaries".into(),
+                ));
+            }
+            if rule.operation_kind != "database_session"
+                && ["db_resource", "db_scope"]
+                    .iter()
+                    .any(|dimension| rule.boundary_constraints.contains_key(*dimension))
+            {
+                return Err(schema(
+                    "database boundaries apply only to database_session".into(),
+                ));
+            }
             if rule.operation_kind == "execute_command"
                 && rule.verdict == Verdict::Allow
                 && rule.sandbox_class.as_deref().unwrap_or("local") == "local"
@@ -1301,11 +1356,12 @@ impl AuthorityPolicyBundle {
                     "local allow execute_command requires trusted argv0 sea-forge".into(),
                 ));
             }
-            if rule
-                .sandbox_class
-                .as_deref()
-                .is_some_and(|class| !matches!(class, "local" | "jail" | "microvm" | "openshell"))
-            {
+            if rule.sandbox_class.as_deref().is_some_and(|class| {
+                !matches!(
+                    class,
+                    "local" | "jail" | "isolated" | "microvm" | "openshell"
+                )
+            }) {
                 return Err(schema("unknown sandbox class".into()));
             }
             // OpenShell is reachable only through the typed sandbox-command
@@ -1388,6 +1444,11 @@ impl AuthorityPolicyBundle {
                         | "sandbox_image"
                         | "repository"
                         | "reference"
+                        | "mcp_server"
+                        | "mcp_tool"
+                        | "db_resource"
+                        | "db_scope"
+                        | "permitted_exposure"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
@@ -1844,7 +1905,7 @@ impl PolicyAuthorityEngine {
         if Utc::now() > validated.expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
-        Ok(self.mint_grant(decision, action, assurance, validated))
+        Ok(self.mint_grant(decision, committed_decision, action, assurance, validated))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1867,7 +1928,7 @@ impl PolicyAuthorityEngine {
             sandbox_class,
             approval_expiry,
         )?;
-        Ok(self.mint_grant(decision, action, assurance, validated))
+        Ok(self.mint_grant(decision, committed, action, assurance, validated))
     }
 
     /// Every check that can make `grant_exact` fail. Apart from the one-time
@@ -2009,12 +2070,14 @@ impl PolicyAuthorityEngine {
     fn mint_grant(
         &self,
         decision: &AuthorityDecision,
+        committed: &CommittedRecordRef,
         action: &AuthorityAction,
         assurance: Option<&PreActionAssurance>,
         validated: ValidatedGrant,
     ) -> ActionGrant {
         ActionGrant {
             action: action.clone(),
+            committed_decision: committed.clone(),
             run_id: decision.run_id.clone(),
             plan_item_id: decision.plan_item_id.clone(),
             workspace_root: validated.workspace_root,
@@ -2898,11 +2961,52 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
         }
         AuthorityAction::Reserved {
             resource_type,
+            resource_id,
             parameters,
-            ..
         } => {
             rule.operation_kind == *resource_type
+                && exposure_permitted(rule, parameters)
                 && match resource_type.as_str() {
+                    "mcp_tool_call" => {
+                        let server = parameter_str(parameters, "server");
+                        let tool = parameter_str(parameters, "tool");
+                        match (server, tool) {
+                            (Some(server), Some(tool)) => {
+                                serde_json::from_str::<[String; 2]>(resource_id).is_ok_and(
+                                    |resource| resource[0] == server && resource[1] == tool,
+                                ) && [("mcp_server", server), ("mcp_tool", tool)].iter().all(
+                                    |(dimension, value)| {
+                                        rule.boundary_constraints.get(*dimension).is_some_and(
+                                            |values| values.iter().any(|allowed| allowed == value),
+                                        )
+                                    },
+                                ) && parameter_str(parameters, "request_sha256").is_some()
+                            }
+                            _ => false,
+                        }
+                    }
+                    "database_session" => {
+                        match (
+                            parameter_str(parameters, "resource"),
+                            parameter_str(parameters, "scope"),
+                        ) {
+                            (Some(resource), Some(scope)) => {
+                                serde_json::from_str::<[String; 2]>(resource_id)
+                                    .is_ok_and(|id| id[0] == resource && id[1] == scope)
+                                    && [("db_resource", resource), ("db_scope", scope)].iter().all(
+                                        |(dimension, value)| {
+                                            rule.boundary_constraints.get(*dimension).is_some_and(
+                                                |values| {
+                                                    values.iter().any(|allowed| allowed == value)
+                                                },
+                                            )
+                                        },
+                                    )
+                                    && parameters.get("workload_uid").is_some_and(Value::is_u64)
+                            }
+                            _ => false,
+                        }
+                    }
                     "transition_artifact_stage" => matches_transition_parameters(rule, parameters),
                     "attest_artifact_identity" => {
                         matches_attestation_parameters(rule, parameters, actor)
@@ -2954,6 +3058,25 @@ fn matches_approval_resolution_parameters(parameters: &Value, actor: &Actor) -> 
         && required_roles.is_some_and(|roles| {
             roles.is_empty() || role.as_deref().is_some_and(|role| roles.contains(&role))
         })
+}
+
+/// SEC-09/SEC-11: an action taken from an execution context that has
+/// received sensitive plaintext carries that context's exposure labels. A
+/// rule matches it only when it explicitly permits every label, so exposed
+/// contexts fall to default deny for any destination not authorized for the
+/// data they hold. Malformed labels never match.
+fn exposure_permitted(rule: &PolicyRule, parameters: &Value) -> bool {
+    match parameters.get("exposure") {
+        None => true,
+        Some(Value::Array(labels)) => labels.iter().all(|label| {
+            label.as_str().is_some_and(|label| {
+                rule.boundary_constraints
+                    .get("permitted_exposure")
+                    .is_some_and(|allowed| allowed.iter().any(|a| a == label))
+            })
+        }),
+        Some(_) => false,
+    }
 }
 
 fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {
@@ -3324,10 +3447,15 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "cognate_action",
                 "cognate_capability",
                 "world_transition",
+                "mcp_tool_call",
+                "database_session",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()
                 || !parameters.is_object()
+                || (resource_type == "mcp_tool_call"
+                    && !parameter_str(parameters, "request_sha256")
+                        .is_some_and(|digest| is_lower_hex(digest, 64)))
         }
         _ => false,
     }

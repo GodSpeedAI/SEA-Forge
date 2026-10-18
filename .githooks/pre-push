@@ -16,12 +16,6 @@ while read -r _local _remote _sha_local _sha_remote; do
     fi
 done
 
-if command -v devbox >/dev/null 2>&1; then
-    devbox run -- just pre-push
-else
-    if ! command -v just >/dev/null 2>&1; then
-        echo "pre-push: neither devbox nor just found on PATH; install devbox and run 'just setup'" >&2
-        exit 1
-    fi
-    just pre-push
-fi
+# Toolchain choice (pinned devbox when it starts, host otherwise, or forced
+# with SEA_FORGE_HOOK_TOOLCHAIN) lives in run-recipe, shared by both hooks.
+exec "$(git rev-parse --show-toplevel)/.githooks/run-recipe" pre-push pre-push

@@ -1,0 +1,7 @@
+== check: just check
+scripts/check-agent-context.sh
+context_error: project files changed without corresponding CURRENT_STATUS.yaml and CURRENT_STATUS.md updates
+next move: update .agents/CURRENT_STATUS.yaml and .agents/CURRENT_STATUS.md, then rerun scripts/check-agent-context.sh
+error: recipe `status-check` failed on line 144 with exit code 1
+error: recipe `check` failed with exit code 1
+exit=1

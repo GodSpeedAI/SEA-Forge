@@ -1,0 +1,16 @@
+running 2 tests
+exposure_transition_revokes_issued_session_before_gate_returns --- FAILED
+supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher --- FAILED
+failures:
+---- exposure_transition_revokes_issued_session_before_gate_returns stdout ----
+thread 'exposure_transition_revokes_issued_session_before_gate_returns' (1009209) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:90:9:
+timed out waiting for done
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+---- supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher stdout ----
+thread 'supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher' (1009210) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:90:9:
+timed out waiting for done
+failures:
+    exposure_transition_revokes_issued_session_before_gate_returns
+    supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 46.22s
+error: test failed, to rerun pass `-p sea-forge-server --test postgres_lifecycle`

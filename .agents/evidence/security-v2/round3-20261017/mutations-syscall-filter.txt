@@ -1,0 +1,14 @@
+M12 x32 aliases not refused: KILLED
+    thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (1807232) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:238:27:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+M13 clone3 left open: KILLED
+    thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (1807461) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:231:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+M14 helper skips the filter: KILLED
+    thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (1807532) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:231:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+M15 user-namespace flag unchecked: KILLED
+    thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (1807709) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:231:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+fc184de5281a3a01a73d7e5e65adea4ab9376c2c383e91a35314207e33fb8aa9  crates/sea-forge-sandbox/src/syscall_filter.rs
+3092a8033c8075d61d05212ba58a4b81bb5a8422c444f4c8499a3bec5d94b95f  crates/sea-forge-sandbox/src/bin/sea-forge-workload-exec.rs

@@ -5,15 +5,26 @@ use std::{
 };
 
 pub mod environment;
+#[cfg(target_os = "linux")]
+pub mod isolated;
 pub mod jail;
 pub mod local;
+mod observation;
 pub mod openshell;
+#[cfg(target_os = "linux")]
+pub mod syscall_filter;
+#[cfg(target_os = "linux")]
+pub mod workload;
+
+pub use observation::{open_observation_file, open_observation_root};
 
 pub use environment::{
     demo_environment, load_pinned_environment, materialize_base, parse_env_ref,
     parse_evaluator_score, store_builtin_environment, BaseFile, EnvironmentSpec, Evaluator,
     Provides, ScoreFrom,
 };
+#[cfg(target_os = "linux")]
+pub use isolated::IsolatedSandbox;
 pub use jail::JailSandbox;
 pub use local::LocalSandbox;
 pub use openshell::{
@@ -25,6 +36,8 @@ pub use openshell::{
 pub enum SandboxClass {
     Local,
     Jail,
+    /// One exclusive subordinate host identity per execution (SEC-01).
+    Isolated,
     Microvm,
     OpenShell,
 }
@@ -34,6 +47,7 @@ impl fmt::Display for SandboxClass {
         match self {
             SandboxClass::Local => write!(f, "local"),
             SandboxClass::Jail => write!(f, "jail"),
+            SandboxClass::Isolated => write!(f, "isolated"),
             SandboxClass::Microvm => write!(f, "microvm"),
             SandboxClass::OpenShell => write!(f, "openshell"),
         }
@@ -46,6 +60,7 @@ impl std::str::FromStr for SandboxClass {
         match s {
             "local" => Ok(SandboxClass::Local),
             "jail" => Ok(SandboxClass::Jail),
+            "isolated" => Ok(SandboxClass::Isolated),
             "microvm" => Ok(SandboxClass::Microvm),
             "openshell" => Ok(SandboxClass::OpenShell),
             other => Err(ForgeError::Input(format!("unknown sandbox class: {other}"))),
@@ -170,6 +185,13 @@ pub fn select_sandbox(class: SandboxClass) -> Result<Box<dyn ExecutionSandbox>, 
     match class {
         SandboxClass::Local => Ok(Box::new(LocalSandbox)),
         SandboxClass::Jail => Ok(Box::new(JailSandbox::new()?)),
+        #[cfg(target_os = "linux")]
+        SandboxClass::Isolated => Ok(Box::new(IsolatedSandbox::new(Vec::new())?)),
+        #[cfg(not(target_os = "linux"))]
+        SandboxClass::Isolated => Err(SandboxError::new(
+            "workload_isolation_unavailable",
+            "isolated workloads require Linux",
+        )),
         SandboxClass::Microvm => Err(SandboxError::new(
             "unsupported_sandbox_class_error",
             "microvm backend is not available",

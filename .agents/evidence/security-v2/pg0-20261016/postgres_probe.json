@@ -1,0 +1,103 @@
+{
+  "case_id": "SEC-05.postgres_native",
+  "attempted": true,
+  "trusted_identity": "privileged fixture owner",
+  "claimed_identity": "sf_reader_9c98f226d4a44d7f8a4a6746ce498735",
+  "action_id": "native-database-mutation",
+  "decision": "PostgreSQL native privileges",
+  "positive_control": true,
+  "cleanup": "generated schemas/roles removed; local cluster stopped if provisioned",
+  "observations": [
+    {
+      "sql": "DELETE FROM sf_security_4f4a5de000714cf09761a070e1a2209f.audit_data;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170290"
+    },
+    {
+      "sql": "TRUNCATE sf_security_4f4a5de000714cf09761a070e1a2209f.audit_data;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170292"
+    },
+    {
+      "sql": "DROP TABLE sf_security_4f4a5de000714cf09761a070e1a2209f.audit_data CASCADE;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170294"
+    },
+    {
+      "sql": "SET ROLE \"sf_owner\";",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170296"
+    },
+    {
+      "sql": "GRANT \"sf_owner\" TO sf_reader_9c98f226d4a44d7f8a4a6746ce498735;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170298"
+    },
+    {
+      "sql": "SET default_transaction_read_only=off; DELETE FROM sf_security_4f4a5de000714cf09761a070e1a2209f.audit_data;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170300"
+    },
+    {
+      "sql": "DELETE FROM sf_security_4f4a5de000714cf09761a070e1a2209f.audit_alias;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170302"
+    },
+    {
+      "sql": "SET search_path=sf_security_4f4a5de000714cf09761a070e1a2209f; DELETE FROM audit_alias;",
+      "attempted": true,
+      "exit_code": 3,
+      "sqlstate": "42501",
+      "native_refusal": true,
+      "same_session_control": true,
+      "backend_pid": "170304"
+    }
+  ],
+  "provider": "local-initdb",
+  "credential_separation": true,
+  "before": {
+    "exists": true,
+    "rows": 2,
+    "sha256": "3d74f767a718a7e53cfcc44cb95c5d5a889d8ac8c9874c6e0848ade47caca20d"
+  },
+  "server_version": "18.1",
+  "effective_role": "sf_reader_9c98f226d4a44d7f8a4a6746ce498735",
+  "role_attributes": "f|f|f|f|f",
+  "native_select_control": "2",
+  "catalog_control": "1",
+  "after": {
+    "exists": true,
+    "rows": 2,
+    "sha256": "3d74f767a718a7e53cfcc44cb95c5d5a889d8ac8c9874c6e0848ade47caca20d"
+  },
+  "classification": "PASS",
+  "scope_limit": "native role/resource boundary only; SEA Forge identity issuance and network isolation are separate obligations"
+}

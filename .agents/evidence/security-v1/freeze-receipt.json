@@ -1,0 +1,93 @@
+{
+  "suite": "SEA-Forge-security-v1",
+  "recorded_at": "2026-10-16T16:13:49Z",
+  "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+  "frozen_commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+  "manifest_path": "tests/security-v1/manifest.json",
+  "manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+  "protected_file_count": 44,
+  "remote": {
+    "repository": "GodSpeedAI/SEA-Forge",
+    "published": true,
+    "ref": "refs/tags/sea-forge-security-v1-2026-10-16",
+    "annotated_tag_object": "d4f8ee63da9d0d8984231663a0f9419237484eb9",
+    "verified_tag_commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+    "url": "https://github.com/GodSpeedAI/SEA-Forge/tree/sea-forge-security-v1-2026-10-16",
+    "protection": {
+      "bypass_actors": [],
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/tags/sea-forge-security-v1-2026-10-16"
+          ]
+        }
+      },
+      "enforcement": "active",
+      "id": 25250801,
+      "rules": [
+        {
+          "type": "update"
+        },
+        {
+          "type": "deletion"
+        }
+      ],
+      "target": "tag"
+    },
+    "protection_actually_configured": true,
+    "post_publication_api_readback": true,
+    "cryptographic_tag_signature": {
+      "reason": "unsigned",
+      "verified": false
+    }
+  },
+  "integrity_verification": {
+    "exit_code": 0,
+    "command": "set -o pipefail\ngit --no-replace-objects show af41ea2465e38c87dfe86471c33c6b54ea8564e1:tests/security-v1/verify.py | python3 - --commit af41ea2465e38c87dfe86471c33c6b54ea8564e1"
+  },
+  "observed_results": {
+    "PASS": 1,
+    "SECURITY_RED": 2,
+    "INFRASTRUCTURE_BLOCKED": 3,
+    "NOT_YET_EXECUTABLE": 10,
+    "all_gates_green": false,
+    "scope": "PASS is the environment-inheritance/bounded-shell subcase only"
+  },
+  "verification": {
+    "just_check": "PASS",
+    "just_test": {
+      "passed": 1460,
+      "failed": 2,
+      "ignored": 23,
+      "failures": "exactly SEC-01 and SEC-12 frozen acceptance assertions"
+    },
+    "just_proof": "PASS",
+    "just_build": "PASS",
+    "no_async_kernel": "PASS: 20 synchronous kernel crates",
+    "harness_self_checks": 7,
+    "staged_secret_scan": "PASS",
+    "post_commit_history_secret_scan": "PASS: 467 commits, no leaks found",
+    "graft_build": {
+      "exit_code": 0,
+      "nodes": 9602,
+      "edges": 19107,
+      "cards": 792
+    }
+  },
+  "hook_handling": {
+    "pre_commit": "Devbox provisioning timed out on cache.nixos.org. Used the checked-in plain-just fallback by omitting Devbox from this command's PATH; status/format/locked workspace typecheck all ran and passed. Hook and Git configuration unchanged.",
+    "pre_push_local_hook_skipped": true,
+    "push_command": "git push --no-verify origin refs/tags/sea-forge-security-v1-2026-10-16:refs/tags/sea-forge-security-v1-2026-10-16",
+    "reason": "The operator requested an independently frozen RED acceptance baseline. CONTRIBUTING documents --no-verify; local pre-push otherwise unconditionally reruns CI and rejects the two deliberately RED assertions. Actual test failures remain recorded; no green CI claim is made. Only this tag was published."
+  },
+  "limits": [
+    "Protected tags rely on repository administrators retaining the ruleset; keep the full frozen commit independently outside implementation write access.",
+    "Tag is annotated and unsigned; protection and the externally retained full commit are the integrity anchors.",
+    "PostgreSQL unavailable and no production MCP ingress provisioned; full credential/revocation/exposure/delegation and observer/workload binding gaps remain explicit.",
+    "Final CURRENT_STATUS append/mirror remains uncommitted so status coupling remains valid for the preserved pre-existing workspace file edit and untracked Explore.md."
+  ],
+  "production_security_mechanisms_implemented": false,
+  "production_source_or_dependency_changes": false,
+  "handoff": "tests/security-v1/HANDOFF.md"
+}

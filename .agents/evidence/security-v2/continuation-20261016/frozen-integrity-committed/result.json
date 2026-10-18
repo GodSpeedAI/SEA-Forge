@@ -1,0 +1,12 @@
+{
+  "command": [
+    "bash",
+    "-c",
+    "set -o pipefail; git --no-replace-objects show af41ea2465e38c87dfe86471c33c6b54ea8564e1:tests/security-v1/verify.py | python3 - --commit af41ea2465e38c87dfe86471c33c6b54ea8564e1"
+  ],
+  "started_at": "2026-10-17T02:00:26.424473+00:00",
+  "finished_at": "2026-10-17T02:00:27.219003+00:00",
+  "exit_code": 0,
+  "log_sha256": "a5cf82dd77725cfc2b0ff1c0f8cf7361f4326e7dfc24cefa512cec39474e4926",
+  "source_head": "c8e2a57915a67889bb9cbd0d32ea2b85eda41631"
+}

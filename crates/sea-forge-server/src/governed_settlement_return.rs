@@ -21,7 +21,7 @@
 //! (I6), and nothing on this surface reaches developmental settlement or
 //! capability state (I7) — those facts are not representable here.
 //!
-//! Pure functions over decoded envelope JSON plus real kernel types —
+//! Functions over decoded envelope JSON plus resource observations and real kernel types —
 //! transport-free by design, mirroring the T04/T05 boundary precedents.
 
 use sea_forge_core::types::SettlementStatus;
@@ -253,6 +253,27 @@ pub struct SettlementEvaluation {
     pub unsatisfied_criteria: Vec<String>,
 }
 
+fn rejected_file_observation(effects: &Value) -> Option<&str> {
+    if effects.get("kind").and_then(Value::as_str) == Some("file_write")
+        && effects
+            .pointer("/resource_observation/status")
+            .and_then(Value::as_str)
+            != Some("verified")
+    {
+        return Some(
+            effects
+                .pointer("/resource_observation/reason")
+                .and_then(Value::as_str)
+                .unwrap_or("independent_file_observation_missing"),
+        );
+    }
+    match effects {
+        Value::Array(items) => items.iter().find_map(rejected_file_observation),
+        Value::Object(object) => object.values().find_map(rejected_file_observation),
+        _ => None,
+    }
+}
+
 /// Evaluate one ledger-settled execution observation against the settlement
 /// criteria DECLARED on the governed request chain (E4
 /// `settlement_criteria`). Composition, not reimplementation: per-criterion
@@ -312,6 +333,18 @@ pub fn evaluate_operational_settlement(
     }
 
     let effects_text = canonical_payload_json(observed_effects);
+    if let Some(reason) = rejected_file_observation(observed_effects) {
+        basis.push(format!("resource_observation_rejected:{reason}"));
+        return Ok(SettlementEvaluation {
+            status: SettlementStatus::Rejected,
+            basis,
+            satisfied_criteria: Vec::new(),
+            unsatisfied_criteria: declared_criteria
+                .iter()
+                .map(|c| c.trim().to_string())
+                .collect(),
+        });
+    }
     let mut satisfied = Vec::new();
     let mut unsatisfied = Vec::new();
     for criterion in declared_criteria {
@@ -750,6 +783,11 @@ pub fn emit_operational_settlement(
     }
     if let Some(failure_reason) = optionals.failure_reason {
         payload.insert("failure_reason".into(), failure_reason.clone());
+    } else if evaluation.status == SettlementStatus::Rejected {
+        payload.insert(
+            "failure_reason".into(),
+            serde_json::json!({"basis": evaluation.basis}),
+        );
     }
     let payload = Value::Object(payload);
 

@@ -1,0 +1,40 @@
+M1 supervisor sweep disabled: KILLED
+    thread 'supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher' (1711406) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:91:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 15.76s
+M2 scope_admits always true: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1712796) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:344:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.35s
+M3 transition marks revoked without revoking: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1713453) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:344:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.88s
+M8 lineage ignored (exact context only): KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1713968) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:346:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.22s
+M9 episode guard does not revoke: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1714603) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:358:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.83s
+M4 files not chmodded: KILLED
+    thread 'hardened_tree_denies_another_workload_by_dac_alone' (1715018) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:122:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+M5 symlinks followed: KILLED
+    thread 'hardening_never_follows_or_changes_symlinks' (1715249) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:204:5:
+    test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+M6 traversal chain readable (0755): KILLED
+    thread 'hardened_tree_denies_another_workload_by_dac_alone' (1715538) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:119:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+M7 exposure gate error ignored: KILLED
+    thread 'classified_responses_wait_for_the_exposure_gate' (1716050) panicked at crates/sea-forge-server/tests/exposure_flow.rs:363:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.10s
+M10 own label not admitted: COMPILE-ERROR
+    error[E0308]: mismatched types
+    error[E0308]: mismatched types
+M11 owning any label admits every label: KILLED
+    thread 'postgres::tests::scope_admits_only_its_own_label_and_explicit_permissions' (1716776) panicked at crates/sea-forge-server/src/postgres.rs:750:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 138 filtered out; finished in 0.00s
+exit=0
+afd423771849508fd9276eff7b719b92080546c46dac35fc28f13c38a3abe99f  crates/sea-forge-server/src/postgres.rs
+8045000435797521cd9b7524ae595dfe0af4ebcb5e6e52e47900d978bbc7e207  crates/sea-forge-server/src/mcp.rs
+e653ea8c7711514f849c8b5cc5ce1147cb5127f2a7f542e830f3073ff2fb4b9a  crates/sea-forge-sandbox/src/workload.rs
+M10 own label not admitted: KILLED
+    thread 't16_4d_isolated_agent_gets_workload_bound_database_session' (1718464) panicked at crates/sea-forge-server/tests/conformance_m16.rs:1015:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.92s

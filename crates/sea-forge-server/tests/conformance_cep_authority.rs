@@ -14,6 +14,9 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{unix::OwnedReadHalf, unix::OwnedWriteHalf, UnixStream};
 
+#[path = "support/authenticated.rs"]
+mod authenticated;
+
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: allow-actions\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n  - name: gate-capabilities\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    requires_approval: true\n";
 
@@ -71,7 +74,7 @@ async fn boot(enabled: bool) -> (tempfile::TempDir, PathBuf) {
     boot_with(enabled, POLICY).await
 }
 
-async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) {
+fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("worlds")).unwrap();
     std::fs::write(root.path().join("worlds/demo.sea"), SRC).unwrap();
@@ -97,8 +100,8 @@ async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) 
                     actor_id: "cognate-service".into(),
                     roles: vec![ActorRole::Service],
                 },
-                // A second identity on the same uid: what a test can present is one uid, and what keeps
-                // the requester from approving their own request is the actor, not the uid.
+                // Migrated multi-actor controls establish these identities
+                // with separate authority-issued private capabilities.
                 IdentityBinding {
                     uid,
                     actor_id: "op-alice".into(),
@@ -134,6 +137,12 @@ async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) 
         },
         ..ServerConfig::default()
     };
+    (root, config)
+}
+
+async fn boot_with(enabled: bool, policy: &str) -> (tempfile::TempDir, PathBuf) {
+    let (root, config) = fixture(enabled, policy);
+    let socket = config.socket_path.clone();
     tokio::spawn(async move {
         let _ = run(config).await;
     });
@@ -317,16 +326,17 @@ fn as_actor(mut verb: Value, actor_id: &str, role: &str) -> Value {
 
 #[tokio::test]
 async fn an_escalation_is_approved_by_someone_else_and_used_once_over_the_socket() {
-    let (_root, socket) = boot_with(true, GATED_POLICY).await;
+    let (root, config) = fixture(true, GATED_POLICY);
+    let mut cell = authenticated::Cell::start(config).await;
+    let socket = cell.socket.clone();
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let operator = authenticated::principal("op-alice", ActorRole::Operator);
     let mut c = Client::connect(&socket).await;
     let world = world_ref();
 
-    let escalated = c
-        .call(verb(
-            request(&world, "op-e1", "action", "run.start"),
-            "op-e1",
-        ))
-        .await;
+    let initial = verb(request(&world, "op-e1", "action", "run.start"), "op-e1");
+    let mut requester = cell.connect_for(&service, &initial).await;
+    let escalated = requester.call(initial).await;
     assert_eq!(decision(&escalated), "escalate", "{escalated}");
     let approval = escalated["envelope"]["extensions"]["godspeed.authority_decision"]
         ["approval_id"]
@@ -346,12 +356,12 @@ async fn an_escalation_is_approved_by_someone_else_and_used_once_over_the_socket
     };
 
     // Not approved yet.
-    let early = c.call(revalidation("op-e2")).await;
+    let early = cell.call_for(&service, revalidation("op-e2")).await;
     assert_eq!(early["error_class"], "cep_approval_refused", "{early}");
 
     // The requester's own service identity may not resolve it.
-    let self_approve = c
-        .call(as_actor(
+    let self_approve = cell
+        .call_for(&service, as_actor(
             json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-self"}),
             "cognate-service",
             "service",
@@ -368,40 +378,83 @@ async fn an_escalation_is_approved_by_someone_else_and_used_once_over_the_socket
         "op-alice",
         "operator",
     );
-    let resolved = c.call(resolve.clone()).await;
+    let journal_path = root.path().join("ledgers/cognate-authority/entries.jsonl");
+    let journal_before = std::fs::read(&journal_path).unwrap();
+    let switched = requester.call(resolve.clone()).await;
+    assert_eq!(switched["error_class"], "identity_authentication_refused");
+    let mut forged = Client::connect(&socket).await;
+    let impersonated = forged.call(resolve.clone()).await;
+    assert_eq!(
+        impersonated["error_class"],
+        "identity_authentication_refused"
+    );
+    assert_eq!(std::fs::read(&journal_path).unwrap(), journal_before);
+    let pending = c.call(json!({"verb":"authority_approvals"})).await;
+    assert_eq!(pending["approvals"][0]["state"], "pending");
+    let resolved = cell.call_for(&operator, resolve.clone()).await;
     assert_eq!(resolved["ok"], true, "{resolved}");
     assert_eq!(resolved["resolved_by"], "op-alice");
+    let approved_journal = std::fs::read(&journal_path).unwrap();
     // The same resolution request id replays rather than resolving twice.
-    assert_eq!(c.call(resolve).await, resolved);
+    assert_eq!(cell.call_for(&operator, resolve).await, resolved);
+    assert_eq!(std::fs::read(&journal_path).unwrap(), approved_journal);
 
-    let allowed = c.call(revalidation("op-e3")).await;
+    let allowed = cell.call_for(&service, revalidation("op-e3")).await;
     assert_eq!(decision(&allowed), "allow", "{allowed}");
     assert_eq!(
         allowed["envelope"]["extensions"]["godspeed.authority_decision"]["approval_used"],
         true
     );
 
-    let again = c.call(revalidation("op-e4")).await;
+    let again = cell.call_for(&service, revalidation("op-e4")).await;
     assert_eq!(again["error_class"], "cep_approval_refused", "{again}");
     assert!(again["error"].as_str().unwrap().contains("used"));
+    sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test-observer")
+        .unwrap()
+        .verify()
+        .unwrap();
+    cell.verify_authentication();
+    println!(
+        "MIGRATED_CEP_APPROVAL {}",
+        json!({"resolved_by":resolved["resolved_by"],"same_connection_switch":switched["error_class"],"public_impersonation":impersonated["error_class"],"journal_verified":true,"replay_journal_unchanged":true})
+    );
+    cell.shutdown().await;
 }
 
 #[tokio::test]
 async fn resolution_needs_a_verified_actor_and_a_valid_resolution() {
-    let (_root, socket) = boot_with(true, GATED_POLICY).await;
-    let mut c = Client::connect(&socket).await;
-    let no_actor = c
-        .call(json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "approved", "request_id": "r1"}))
-        .await;
+    let (root, config) = fixture(true, GATED_POLICY);
+    let mut cell = authenticated::Cell::start(config).await;
+    let operator = authenticated::principal("op-alice", ActorRole::Operator);
+    let journal = root.path().join("ledgers/cognate-authority/entries.jsonl");
+    assert_eq!(
+        std::fs::read(&journal).unwrap_err().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    let no_actor_request = json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "approved", "request_id": "r1"});
+    let no_actor = cell.call_for(&operator, no_actor_request.clone()).await;
     assert_eq!(no_actor["error_class"], "identity_required", "{no_actor}");
-    let bad = c
-        .call(as_actor(
-            json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "maybe", "request_id": "r2"}),
-            "op-alice",
-            "operator",
-        ))
-        .await;
+    let mut public = Client::connect(&cell.socket).await;
+    let unauthenticated = public.call(no_actor_request).await;
+    assert_eq!(
+        unauthenticated["error_class"],
+        "identity_authentication_refused"
+    );
+    let bad_request = as_actor(
+        json!({"verb": "authority_approval", "approval_id": "apr-x", "resolution": "maybe", "request_id": "r2"}),
+        "op-alice",
+        "operator",
+    );
+    let forged = public.call(bad_request.clone()).await;
+    assert_eq!(forged["error_class"], "identity_authentication_refused");
+    assert_eq!(
+        std::fs::read(&journal).unwrap_err().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    let bad = cell.call_for(&operator, bad_request).await;
     assert_eq!(bad["error_class"], "cep_request_invalid", "{bad}");
+    cell.verify_authentication();
+    cell.shutdown().await;
 }
 
 const EVIDENCE_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: a\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n  - name: e\n    verdict: allow\n    actor_role: service\n    operation_kind: evidence_mutation\n  - name: s\n    verdict: allow\n    actor_role: service\n    operation_kind: settlement_declaration\n";
@@ -525,7 +578,11 @@ fn transition(source: &str, target: &str, op: &str, kind: &str) -> Value {
 
 #[tokio::test]
 async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_socket() {
-    let (_root, socket) = boot_with(true, TRANSITION_POLICY).await;
+    let (root, config) = fixture(true, TRANSITION_POLICY);
+    let mut cell = authenticated::Cell::start(config).await;
+    let socket = cell.socket.clone();
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let operator = authenticated::principal("op-alice", ActorRole::Operator);
     let mut c = Client::connect(&socket).await;
     let (base, edited, changed) = (world_ref(), world_ref_of(EDITED), world_ref_of(CHANGED));
 
@@ -534,20 +591,23 @@ async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_sock
     assert_eq!(none["transitions"], json!([]), "{none}");
 
     // A meaning-preserving move follows policy.
-    let moved = c
-        .call(verb(
-            transition(&base, &edited, "op-t1", "source_edit_only"),
-            "op-t1",
-        ))
-        .await;
+    let first_request = verb(
+        transition(&base, &edited, "op-t1", "source_edit_only"),
+        "op-t1",
+    );
+    let mut requester = cell.connect_for(&service, &first_request).await;
+    let moved = requester.call(first_request).await;
     assert_eq!(decision(&moved), "allow", "{moved}");
 
     // A move across a semantic change is floored to an escalation although policy says allow.
-    let esc = c
-        .call(verb(
-            transition(&base, &changed, "op-t2", "semantic_change"),
-            "op-t2",
-        ))
+    let esc = cell
+        .call_for(
+            &service,
+            verb(
+                transition(&base, &changed, "op-t2", "semantic_change"),
+                "op-t2",
+            ),
+        )
         .await;
     assert_eq!(decision(&esc), "escalate", "{esc}");
     let approval = esc["envelope"]["extensions"]["godspeed.authority_decision"]["approval_id"]
@@ -564,26 +624,36 @@ async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_sock
     );
 
     // The requester cannot approve; an operator can; the revalidated request is allowed.
-    let denied = c
-        .call(as_actor(
+    let denied = cell
+        .call_for(&service, as_actor(
             json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-self"}),
             "cognate-service",
             "service",
         ))
         .await;
     assert!(denied["error_class"].is_string(), "{denied}");
-    let resolved = c
-        .call(as_actor(
-            json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-ok"}),
-            "op-alice",
-            "operator",
-        ))
-        .await;
+    let resolution = as_actor(
+        json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "r-ok"}),
+        "op-alice",
+        "operator",
+    );
+    let journal_path = root.path().join("ledgers/cognate-authority/entries.jsonl");
+    let before = std::fs::read(&journal_path).unwrap();
+    let switched = requester.call(resolution.clone()).await;
+    assert_eq!(switched["error_class"], "identity_authentication_refused");
+    let mut forged = Client::connect(&socket).await;
+    let impersonated = forged.call(resolution.clone()).await;
+    assert_eq!(
+        impersonated["error_class"],
+        "identity_authentication_refused"
+    );
+    assert_eq!(std::fs::read(&journal_path).unwrap(), before);
+    let resolved = cell.call_for(&operator, resolution).await;
     assert_eq!(resolved["state"], "approved", "{resolved}");
     let mut again = transition(&base, &changed, "op-t2b", "semantic_change");
     again["extensions"]["godspeed.authority_request"]["approval_id"] = json!(approval);
     again["lineage_refs"] = json!(["env-authority_request-op-t2"]);
-    let allowed = c.call(verb(again, "op-t2b")).await;
+    let allowed = cell.call_for(&service, verb(again, "op-t2b")).await;
     assert_eq!(decision(&allowed), "allow", "{allowed}");
 
     let listed = c.call(json!({"verb": "authority_transitions"})).await;
@@ -597,11 +667,21 @@ async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_sock
 
     // A world SEA-Forge never registered fails closed with a stable class.
     let unknown = format!("world:demo@sha256:{}", "e".repeat(64));
-    let r = c
-        .call(verb(
-            transition(&base, &unknown, "op-t3", "migration"),
-            "op-t3",
-        ))
+    let r = cell
+        .call_for(
+            &service,
+            verb(transition(&base, &unknown, "op-t3", "migration"), "op-t3"),
+        )
         .await;
     assert_eq!(r["error_class"], "cep_transition_refused", "{r}");
+    sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test-observer")
+        .unwrap()
+        .verify()
+        .unwrap();
+    cell.verify_authentication();
+    println!(
+        "MIGRATED_CEP_TRANSITION {}",
+        json!({"approved_state":resolved["state"],"source_only_allowed":decision(&moved),"semantic_change_allowed":decision(&allowed),"transitions":all.len(),"public_impersonation":impersonated["error_class"],"journal_verified":true})
+    );
+    cell.shutdown().await;
 }

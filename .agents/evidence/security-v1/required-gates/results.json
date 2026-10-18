@@ -1,0 +1,23 @@
+{
+  "recorded_at": "2026-10-16T15:55:20.100681+00:00",
+  "commands": [
+    {
+      "command": [
+        "just",
+        "test"
+      ],
+      "exit_code": 101,
+      "log": "00-regression.log",
+      "sha256": "384ea90a8eab6b569a536225d444268cc7eecc7b0b7326c7473e0a63893b06d4"
+    },
+    {
+      "command": [
+        "just",
+        "proof"
+      ],
+      "exit_code": 0,
+      "log": "01-regression.log",
+      "sha256": "124f6ed0bc16c5cc8606efaf05343e8120d2c9d5913b17ae4eb7fe6ccaf900d4"
+    }
+  ]
+}

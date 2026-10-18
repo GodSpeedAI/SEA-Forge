@@ -1,0 +1,135 @@
+
+cargo build --workspace --all-targets --locked
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+   Compiling serde v1.0.229
+   Compiling anstyle v1.0.14
+   Compiling annotate-snippets v0.12.16
+   Compiling chrono v0.4.45
+   Compiling serde-saphyr v1.3.0
+   Compiling sea-forge-core v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-core)
+   Compiling ed25519 v2.2.3
+   Compiling ed25519-dalek v2.2.0
+   Compiling sea-forge-ledger v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-ledger)
+   Compiling toml_datetime v0.6.11
+   Compiling serde_spanned v0.6.9
+   Compiling toml_edit v0.22.27
+   Compiling rust_decimal v1.42.1
+   Compiling toml v0.8.23
+   Compiling domainforge-core v0.21.0
+   Compiling sea-forge-domainforge v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-domainforge)
+   Compiling sea-forge-authority v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-authority)
+   Compiling thiserror v2.0.19
+   Compiling landlock v0.4.7
+   Compiling sea-forge-sandbox v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-sandbox)
+   Compiling sea-forge-settlement v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-settlement)
+   Compiling sea-forge-evidence v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-evidence)
+   Compiling sea-forge-domain v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-domain)
+   Compiling sea-forge-planner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-planner)
+   Compiling sea-forge-capability v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-capability)
+   Compiling sea-forge-runtime v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-runtime)
+   Compiling sea-forge-spec-pipeline v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-spec-pipeline)
+   Compiling sea-forge-changeset v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-changeset)
+   Compiling sea-forge-self-model v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-self-model)
+   Compiling sea-forge-case-runner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-case-runner)
+   Compiling sea-forge-thoth v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-thoth)
+   Compiling tracing-serde v0.2.0
+   Compiling sea-forge-extension v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-extension)
+   Compiling tracing-subscriber v0.3.23
+   Compiling sea-forge-trace v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-trace)
+   Compiling serde_urlencoded v0.7.1
+   Compiling reqwest v0.12.28
+   Compiling ref-cast v1.0.26
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling schemars v1.2.3
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+   Compiling xattr v1.6.1
+   Compiling filetime v0.2.29
+   Compiling tar v0.4.46
+   Compiling utf8parse v0.2.2
+   Compiling anstyle-parse v1.0.0
+   Compiling sea-forge-cell v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cell)
+   Compiling anstyle-query v1.1.5
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling anstream v1.0.0
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.0
+   Compiling clap_builder v4.6.7
+   Compiling sea-forge-artifact-ip v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-artifact-ip)
+   Compiling clap v4.6.7
+   Compiling sea-forge-cli v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-cli)
+    Finished `dev` profile [unoptimized] target(s) in 4m 33s

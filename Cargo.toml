@@ -24,6 +24,7 @@ members = [
     "crates/sea-forge-self-model",
     "crates/sea-forge-thoth",
     "crates/sea-forge-agent",
+    "crates/sea-forge-realitytrace",
 ]
 
 [workspace.package]

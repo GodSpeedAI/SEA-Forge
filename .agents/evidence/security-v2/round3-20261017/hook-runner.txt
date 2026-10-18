@@ -1,0 +1,31 @@
+== auto (devbox present, cache unreachable)
+pre-commit: devbox could not start its environment within 8s (offline or package cache unreachable); running 'just status' on the host toolchain (same checks, u
+{"revision": 112, "recorded_at": "2026-10-18T16:45:00Z", "stage": "security-round3-integrating", "summary": "Round 3 closes live authorization gaps and hardens 
+exit=0
+== devbox required
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/_wt/sec-gaps
+{"revision": 112, "recorded_at": "2026-10-18T16:45:00Z", "stage": "security-round3-integrating", "summary": "Round 3 closes live authorization gaps and hardens 
+exit=0
+== host
+pre-commit: SEA_FORGE_HOOK_TOOLCHAIN=host; running 'just status' on the host toolchain (same checks, unpinned versions)
+{"revision": 112, "recorded_at": "2026-10-18T16:45:00Z", "stage": "security-round3-integrating", "summary": "Round 3 closes live authorization gaps and hardens 
+exit=0
+== bad mode
+pre-commit: SEA_FORGE_HOOK_TOOLCHAIN must be auto, devbox or host (got 'nope')
+exit=1
+== no devbox, no just on PATH
+pre-commit: devbox is not installed, and just is not on PATH; install devbox and run 'just setup'
+exit=1
+== devbox required, probe forced to fail (1s)
+Info: New devbox available: 0.17.5 -> v0.18.4. Please run `devbox version update`.
+Info: Running script "just" on /home/sprime01/projects/_wt/sec-gaps
+{"revision": 112, "recorded_at": "2026-10-18T16:45:00Z", "stage": "security-round3-integrating", "summary": "Round 3 closes live authorization gaps and hardens isolation at the implementation level: a
+exit=0
+== devbox required, devbox cannot start (stand-in exits 1)
+pre-commit: pinned devbox toolchain required but unavailable: devbox could not start its environment within 20s (offline or package cache unreachable)
+exit=1
+== auto, devbox cannot start
+pre-commit: devbox could not start its environment within 20s (offline or package cache unreachable); running 'just stat
+{"revision": 112, "recorded_at": "2026-10-18T16:45:00Z", "stage": "security-round3-integrating", "summary": "Round 3 clo
+exit=0

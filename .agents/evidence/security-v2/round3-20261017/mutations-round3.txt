@@ -1,0 +1,50 @@
+M1 supervisor sweep disabled: KILLED
+    thread 'supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher' (1020823) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:90:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 15.77s
+M2 scope_admits always true: KILLED
+    thread 'exposure_transition_revokes_issued_session_before_gate_returns' (1022221) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:319:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.90s
+M3 enforce marks revoked without revoking: KILLED
+    thread 'exposure_transition_revokes_issued_session_before_gate_returns' (1023222) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:319:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.73s
+M4 files not chmodded: KILLED
+    thread 'hardened_tree_denies_another_workload_by_dac_alone' (1024012) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:122:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+M5 symlinks followed: KILLED
+    thread 'hardening_never_follows_or_changes_symlinks' (1024616) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:204:5:
+    test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+M6 traversal chain readable (0755): KILLED
+    thread 'hardened_tree_denies_another_workload_by_dac_alone' (1025243) panicked at crates/sea-forge-sandbox/tests/state_tree.rs:119:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+M7 exposure gate error ignored: KILLED
+    thread 'classified_responses_wait_for_the_exposure_gate' (1029959) panicked at crates/sea-forge-server/tests/exposure_flow.rs:360:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.07s
+--- rerun after shared-directory rewrite ---
+M1 supervisor sweep disabled: KILLED
+    thread 'supervisor_ends_resisting_connections_at_expiry_without_issuance_or_launcher' (1041313) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:91:9:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 15.89s
+M2 scope_admits always true: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1042979) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:344:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 2.88s
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-sprime01-projects-sea-rs/06852847-9c57-4f3b-91db-ded1bf1b8e43/scratchpad/mutate3.py", line 60, in <module>
+    src=open(path).read(); assert old in src, name
+                                  ^^^^^^^^^^
+AssertionError: M3 transition marks revoked without revoking
+M3 transition marks revoked without revoking: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1045586) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:344:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.00s
+M8 lineage ignored (exact context only): KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1046411) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:346:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.33s
+M9 episode guard does not revoke: KILLED
+    thread 'exposure_transition_revokes_issued_sessions_across_episodes_before_gate_returns' (1047272) panicked at crates/sea-forge-server/tests/postgres_lifecycle.rs:358:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.72s
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-sprime01-projects-sea-rs/06852847-9c57-4f3b-91db-ded1bf1b8e43/scratchpad/mutate3.py", line 65, in <module>
+    src=open(path).read(); assert old in src, name
+                                  ^^^^^^^^^^
+AssertionError: M7 exposure gate error ignored
+M7 exposure gate error ignored: KILLED
+    thread 'classified_responses_wait_for_the_exposure_gate' (1048379) panicked at crates/sea-forge-server/tests/exposure_flow.rs:363:5:
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.06s

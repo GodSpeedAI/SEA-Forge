@@ -1,0 +1,7 @@
+Mutation: remove recover_interrupted_appends(&config)? from ServerState::new
+Control: crates/sea-forge-server/tests/crash_recovery_startup.rs
+Date: 2026-10-18
+test startup_quarantines_a_torn_tail_and_keeps_the_valid_entries ... FAILED
+test startup_repairs_a_ledger_killed_between_entry_and_mmr ... FAILED
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+Verdict: KILLED

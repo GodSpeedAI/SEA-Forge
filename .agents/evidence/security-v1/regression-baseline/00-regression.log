@@ -1,0 +1,346 @@
+
+running 43 tests
+test resolver_tests::deny_blocks_every_other_candidate ... ok
+test resolver_tests::degraded_requires_permission_and_accumulates_controls ... ok
+test resolver_tests::allow_is_identity_and_candidate_order_is_irrelevant ... ok
+test resolver_tests::escalation_blocks_while_retaining_boundaries ... ok
+test resolver_tests::incompatible_boundaries_deny ... ok
+test resolver_tests::legacy_non_transition_sod_omits_transition_kind_in_serialization ... ok
+test resolver_tests::missing_required_evidence_denies ... ok
+test tests::approval_required_rule_escalates_without_resolution ... ok
+test tests::allowlisted_api_host_reaches_unsupported_surface_escalation ... ok
+test resolver_tests::capitalize_sod_escalates_only_capitalize_with_role_and_decision_markers ... ok
+test tests::automated_agent_requires_sponsor ... ok
+test resolver_tests::sod_transition_kind_validation_is_fail_closed ... ok
+test tests::boundary_and_degraded_requirements_survive_into_grants ... ok
+test tests::approved_resolved_after_expiry_is_denied ... ok
+test tests::approved_before_expiry_remains_valid_after_wall_clock_ttl ... ok
+test tests::configured_service_identity_can_authorize ... ok
+test resolver_tests::sod_requester_role_must_match_actor ... ok
+test tests::configured_sod_approver_role_propagates_to_decision ... ok
+test tests::engine_constructor_rejects_unvalidated_allow_any_command_bundle ... ok
+test tests::caller_supplied_approval_refs_do_not_change_escalation ... ok
+test tests::configured_engine_must_fail_closed_and_unavailability_blocks ... ok
+test resolver_tests::capitalize_sod_post_approval_grant_and_exact_action_binding ... ok
+test tests::execution_grant_rejects_timeout_or_artifact_substitution ... ok
+test tests::expired_decision_cannot_receive_grant ... ok
+test tests::domainforge_candidate_is_composed_with_local_authority ... ok
+test tests::forged_identity_and_substitute_executable_cannot_use_allow_rules ... ok
+test tests::denied_or_substituted_action_cannot_receive_grant ... ok
+test tests::grant_is_bound_to_exact_action_and_context ... ok
+test tests::f25h_grant_binds_the_decision_time_executable_identity ... ok
+test tests::exact_ledgered_approval_yields_one_exact_grant ... ok
+test tests::malformed_executable_actions_are_unclassified ... ok
+test tests::generated_zone_boundary_precedes_allow_rule ... ok
+test tests::opaque_constraint_preempts_repeated_ambiguous_action ... ok
+test tests::policy_bundle_hash_is_independent_of_source_base_path ... ok
+test tests::reserved_transition_grant_rejects_a_substituted_action ... ok
+test tests::m8_attestation_parameter_mismatches_deny_before_grant ... ok
+test tests::same_canonical_request_has_stable_decision_and_hashes ... ok
+test tests::non_canonical_spellings_cannot_bypass_hard_boundaries ... ok
+test tests::v02_identity_map_resolves_and_unknown_identity_escalates ... ok
+test tests::rule_disposition_cannot_override_rbac_or_sod ... ok
+test tests::unclassified_and_reserved_surfaces_fail_closed ... ok
+test tests::m8_transition_parameter_mismatches_deny_before_grant ... ok
+test tests::wrong_self_expired_rejected_or_tampered_approval_is_denied ... ok
+
+test result: ok. 43 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+
+running 7 tests
+test mismatched_action_does_not_consume_the_approval ... ok
+test decision_not_matching_its_committed_record_does_not_consume ... ok
+test missing_required_assurance_does_not_consume_the_approval ... ok
+test concurrent_strict_grants_yield_exactly_one ... ok
+test failed_approval_checks_do_not_consume ... ok
+test valid_grant_consumes_exactly_once ... ok
+test mismatched_then_correct_concurrently ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+
+running 14 tests
+test an_escalation_issues_an_approval_that_starts_pending ... ok
+test an_escalation_that_approval_cannot_fix_issues_no_approval ... ok
+test an_approval_is_resolved_once ... ok
+test an_unacted_escalation_expires_and_cannot_be_approved ... ok
+test cep_validators_accept_the_escalation_and_the_approved_allow ... ok
+test a_rejected_approval_never_authorizes ... ok
+test an_approval_never_overrides_a_deny ... ok
+test an_approval_cannot_be_used_for_a_different_operation_subject_or_requester ... ok
+test approve_then_revalidate_allows_once_with_full_lineage ... ok
+test only_an_actor_policy_allows_can_resolve ... ok
+test the_requester_cannot_approve_their_own_request ... ok
+test unknown_and_forged_approvals_are_refused ... ok
+test when_policy_now_allows_outright_the_approval_is_not_spent ... ok
+test an_approval_lapses_with_its_window_even_after_being_granted ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.34s
+
+
+running 14 tests
+test a_boundary_policy_without_constraints_cannot_even_be_loaded ... ok
+test a_role_without_a_rule_is_denied ... ok
+test an_operation_surface_without_a_rule_is_denied ... ok
+test allow_is_committed_and_lineage_and_world_are_preserved ... ok
+test boundary_disposition_keeps_constraints_and_policy_basis ... ok
+test cep_validators_accept_every_emitted_decision_and_the_request ... ok
+test rules_without_subjects_serialize_exactly_as_before ... ok
+test subjects_is_rejected_where_it_has_no_meaning ... ok
+test a_subject_rule_can_precede_a_broader_one ... ok
+test unknown_world_is_refused_and_nothing_is_committed ... ok
+test the_envelope_subject_cannot_choose_the_evaluated_role ... ok
+test a_subject_scoped_rule_allows_only_its_subjects ... ok
+test approval_required_policy_escalates ... ok
+test malformed_requests_fail_closed ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 12 tests
+test cep_validators_accept_the_evidence_packet_and_every_settlement_status ... ok
+test criteria_are_validated ... ok
+test evidence_hangs_only_from_a_committed_allow ... ok
+test evidence_submission_is_idempotent_by_envelope_id ... ok
+test policy_must_grant_evidence_and_settlement_and_a_refusal_is_recorded ... ok
+test contradicting_evidence_rejects_and_later_support_cannot_undo_it ... ok
+test a_broken_chain_is_refused ... ok
+test settlement_without_any_evidence_is_refused_not_invented ... ok
+test an_execution_with_only_unknown_evidence_is_not_settled_and_can_be_settled_later ... ok
+test settlement_is_judged_only_against_the_criteria_bound_at_allow_time ... ok
+test supporting_evidence_settles_once_and_the_packet_names_its_basis ... ok
+test reliability_below_the_minimum_does_not_count_and_the_count_is_honored ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+
+running 17 tests
+test a_meaning_preserving_move_follows_policy_and_is_recorded ... ok
+test a_replayed_allow_is_one_transition ... ok
+test a_lineage_inside_one_world_needs_no_transition_and_unknown_ids_are_not_judged ... ok
+test a_transition_must_move_between_two_registered_different_worlds ... ok
+test a_move_across_a_semantic_change_is_floored_to_an_escalation_even_if_policy_allows ... ok
+test claims_that_contradict_the_registered_worlds_are_refused ... ok
+test an_allowed_transition_licenses_exactly_the_crossing_it_records ... ok
+test the_record_validates_against_cep_when_the_checkout_is_present ... ok
+test a_policy_deny_stays_a_deny_and_records_nothing ... ok
+test the_fixture_worlds_are_what_the_tests_assume ... ok
+test the_request_must_bind_its_approval_to_the_target ... ok
+test the_requester_cannot_approve_their_own_move ... ok
+test work_cannot_reach_across_worlds_without_a_transition ... ok
+test without_a_rule_a_transition_is_not_allowed ... ok
+test an_approval_for_one_target_cannot_be_spent_on_another ... ok
+test an_approved_move_is_allowed_once_and_names_its_approval ... ok
+test compatibility_is_provable_only_when_the_closures_are_equal ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+
+running 19 tests
+test complete_pairwise_matrix_is_commutative ... ok
+test m8_attestation_rule_missing_role_constraints_is_schema_error ... ok
+test m8_capitalization_schema_requires_approval_promote_and_value_evidence ... ok
+test m8_transition_rule_missing_required_contract_is_schema_error ... ok
+test m13_agent_task_requires_exact_endpoint_policy_and_grant_binding ... ok
+test m12_agent_probe_requires_exact_endpoint_policy_and_grant_binding ... ok
+test memory_scope_entity_allows_named_entity ... ok
+test memory_scope_any_allows_all ... ok
+test memory_scope_own_allows_same_entity ... ok
+test memory_scope_own_denies_cross_entity ... ok
+test memory_scope_hash_changes_with_target ... ok
+test memory_scope_grant_carries_boundary ... ok
+test misspelled_top_level_bundle_key_is_rejected ... ok
+test resolution_is_idempotent_and_group_order_independent ... ok
+test memory_scope_missing_denies ... ok
+test memory_scope_entity_denies_other_entity ... ok
+test reserved_mutator_into_generated_zone_denies_even_under_allow_all_policy ... ok
+test settlement_authority_descriptor_selects_one_strong_adapter_and_local_cannot_be_strong ... ok
+test domainforge_authority_is_model_semantic ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+
+running 29 tests
+test edited_provenance_is_source_hash_mismatch ... ok
+test opa_not_configured_or_unavailable_never_allows ... ok
+test real_opa_allow_cannot_override_local_deny ... ignored, requires opa 1.21.1 on PATH
+test real_opa_allow_fixture_allows_through_engine ... ignored, requires opa 1.21.1 on PATH
+test real_opa_allows_a_satisfied_policy ... ignored, requires opa 1.21.1 on PATH
+test real_opa_denies_a_violated_policy ... ignored, requires opa 1.21.1 on PATH
+test real_opa_deny_fixture_denies_through_engine ... ignored, requires opa 1.21.1 on PATH
+test real_opa_escalates_an_unknown ... ignored, requires opa 1.21.1 on PATH
+test real_opa_matches_each_fixture_outcome ... ignored, requires opa 1.21.1 on PATH
+test edited_rego_is_tampered ... ok
+test deleted_data_json_is_tampered ... ok
+test extra_file_under_bundle_is_tampered ... ok
+test configuration_errors_are_errors_not_candidates ... ok
+test stub_allow_with_input_errors_fails_closed ... ok
+test candidate_from_another_bundle_is_denied ... ok
+test stub_allow_with_unknown_result_fails_closed ... ok
+test stub_bad_outcome_fails_closed ... ok
+test stub_missing_binary_fails_closed ... ok
+test stub_nonzero_exit_fails_closed ... ok
+test stub_escalate_reaches_escalate ... ok
+test stub_garbage_stdout_fails_closed ... ok
+test stub_valid_allow_reaches_allow ... ok
+test stub_non_object_input_is_refused_before_spawn ... ok
+test symlink_under_bundle_is_tampered ... ok
+test stub_empty_result_set_fails_closed ... ok
+test stub_wrong_version_fails_closed ... ok
+test stub_wrong_model_hash_fails_closed ... ok
+test stub_wrong_contract_fails_closed ... ok
+test stub_timeout_fails_closed ... ok
+
+test result: ok. 22 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+
+running 21 tests
+test duplicate_rule_verdict_is_rejected ... ok
+test aliases_cannot_duplicate_or_widen_rules ... ok
+test duplicate_default_key_is_rejected ... ok
+test merge_key_from_allow_rule_is_rejected_and_adds_no_rule ... ok
+test duplicate_boundary_constraint_is_rejected ... ok
+test canonical_bool_fields_in_nested_structs_load ... ok
+test merge_key_cannot_override_policy ... ok
+test noncanonical_settlement_timeout_is_rejected ... ok
+test second_yaml_document_is_rejected ... ok
+test syntax_error_is_parse_error_with_line_and_column ... ok
+test noncanonical_integers_are_rejected ... ok
+test tagged_verdict_is_rejected ... ok
+test unknown_top_level_field_is_schema_error ... ok
+test unmodified_bundle_loads ... ok
+test quoted_boolean_is_rejected ... ok
+test yaml_1_1_boolean_words_for_requires_approval_are_rejected ... ok
+test unsupported_tags_are_rejected ... ok
+test unknown_field_in_rule_is_schema_error ... ok
+test missing_required_approvers_is_rejected_or_never_allows ... ok
+test null_deny_list_is_rejected ... ok
+test malformed_input_never_turns_deny_or_escalate_into_allow ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+
+running 12 tests
+test an_allow_rule_without_requires_approval_does_not_load ... ok
+test an_untrusted_execute_command_is_still_denied_as_untrusted ... ok
+test a_well_formed_promotion_escalates_through_the_rule_and_never_allows ... ok
+test git_commit_still_escalates_as_unsupported_and_is_not_grantable ... ok
+test promote_rules_match_only_promote_actions_and_git_rules_never_match_promotions ... ok
+test engine_grant_cannot_mint_a_promotion_without_approval ... ok
+test with_no_matching_rule_the_promotion_is_not_allowed ... ok
+test an_approval_by_another_security_officer_grants_exactly_once ... ok
+test the_requester_cannot_approve_their_own_promotion ... ok
+test an_approval_is_bound_to_the_exact_changeset_base_tree_and_reference ... ok
+test rejected_and_pending_approvals_never_grant ... ok
+test malformed_promotions_are_denied_and_never_grantable ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+
+
+running 7 tests
+test matching_sandbox_command_is_allowed_for_openshell_only ... ok
+test malformed_sandbox_command_is_denied ... ok
+test host_command_never_matches_a_sandbox_rule ... ok
+test sandbox_class_on_a_host_command_rule_does_not_load ... ok
+test host_command_restriction_is_unchanged ... ok
+test mismatched_sandbox_command_is_denied ... ok
+test sandbox_command_rule_requires_every_binding ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 1 test
+test yaml_corpus_bundle_proof ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.61s
+
+
+cargo test -p "sea-forge-authority" --locked ""
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 0.59s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_authority-6234a11ff2bb507d)
+     Running tests/approval_consumption.rs (target/debug/deps/approval_consumption-027b7568e2dea57f)
+     Running tests/cep_approvals.rs (target/debug/deps/cep_approvals-f62e4327b5654c8d)
+     Running tests/cep_authority.rs (target/debug/deps/cep_authority-36599a8b84955a08)
+     Running tests/cep_settlement.rs (target/debug/deps/cep_settlement-5da659baac984716)
+     Running tests/cep_transition.rs (target/debug/deps/cep_transition-2dc0005832bc4e8f)
+     Running tests/conformance_m0_authority.rs (target/debug/deps/conformance_m0_authority-2486b3b006af5d88)
+     Running tests/opa_candidate.rs (target/debug/deps/opa_candidate-3349735498c47cff)
+     Running tests/policy_yaml_strictness.rs (target/debug/deps/policy_yaml_strictness-0a0a0a7245dfe72e)
+     Running tests/promote_changeset.rs (target/debug/deps/promote_changeset-4932f79110677c0f)
+     Running tests/sandbox_command.rs (target/debug/deps/sandbox_command-d340e38124ad1bd6)
+     Running tests/yaml_corpus.rs (target/debug/deps/yaml_corpus-c37a289e9041d91d)

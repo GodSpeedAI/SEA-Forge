@@ -1,0 +1,16 @@
+{
+  "command": [
+    "gitleaks",
+    "dir",
+    "--config",
+    ".gitleaks.toml",
+    "--redact",
+    "--no-banner",
+    ".agents/evidence/security-v2/continuation-20261016"
+  ],
+  "started_at": "2026-10-17T01:48:47.556690+00:00",
+  "finished_at": "2026-10-17T01:48:48.382786+00:00",
+  "exit_code": 0,
+  "log_sha256": "92e7edf2b01c65780323ae1b91d3d62eed216fe97e260c2737576f592ba89f81",
+  "source_head": "dd494c1ae865487fa928647703be275087a943b0"
+}

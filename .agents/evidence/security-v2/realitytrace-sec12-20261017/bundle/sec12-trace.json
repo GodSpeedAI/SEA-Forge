@@ -1,0 +1,746 @@
+{
+  "evidence_recorded": {
+    "event_id": "0000000b-0000-4000-8000-0000000c0012",
+    "event_type": "EvidenceRecorded",
+    "idempotency_key": "a40d34cf3bf1d343368c94ed75ddf8450cd5c2399300738c35a4133f6752f9e9",
+    "occurred_at": "2026-10-17T12:01:00+00:00",
+    "payload": {
+      "affordance_id": "sec12-protected-write",
+      "difference": {
+        "expected_sha256": "48758f83694bbdcf7fe67eeaca92cc388848252996e2a1cd5e8af9c2dc16a32d",
+        "observed_sha256": "f277cca0a4165eda0a62403d5315e54defd7aeb8ba15e77a4dd8c23006ff2f81",
+        "verdict": "divergent"
+      },
+      "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+      "domain_model_ref": {
+        "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+        "namespace": "agentic_capability_loop"
+      },
+      "expected_outcome": [
+        {
+          "effect": "protected marker exists with authorized-synthetic-effect",
+          "kind": "file_write",
+          "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+          "resource_observation": {
+            "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+            "status": "verified"
+          },
+          "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+        }
+      ],
+      "namespace": "agentic_capability_loop",
+      "observed_outcome": [
+        {
+          "effect": "protected marker exists with authorized-synthetic-effect",
+          "kind": "file_write",
+          "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+          "resource_observation": {
+            "reason": "file_digest_mismatch",
+            "sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+            "status": "rejected"
+          },
+          "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+        }
+      ],
+      "operational_settlement_ref": "sha256:8f9e7d68373579ad7efa74d6ac392fec16d444b38818ece4dbd1b524abe29a7e",
+      "proof_result_ref": "sha256:2350a3d42dad831899a99842b8163559bd4ea4ecc31b1859c02d63337f0c3f62",
+      "work_request_id": "case-sec12-rejection",
+      "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "provenance": {
+      "chain": [
+        "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+        "caused_by:9d9414ae-7134-48d2-a24a-bab13c68bb0a",
+        "caused_by:0000000a-0000-4000-8000-0000000c0012"
+      ],
+      "origin": "realitytrace"
+    },
+    "schema_version": "v1",
+    "source_agent": "realitytrace"
+  },
+  "proof_completed": {
+    "event_id": "0000000a-0000-4000-8000-0000000c0012",
+    "event_type": "ProofCompleted",
+    "idempotency_key": "sha256:4103b428fe0aa7290865c6d69ba6df0181d284f9886c365158f45105c3c948df",
+    "occurred_at": "2026-10-17T12:01:00+00:00",
+    "payload": {
+      "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+      "domain_model_ref": {
+        "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+        "namespace": "agentic_capability_loop"
+      },
+      "expected_outcome": [
+        {
+          "effect": "protected marker exists with authorized-synthetic-effect",
+          "kind": "file_write",
+          "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+          "resource_observation": {
+            "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+            "status": "verified"
+          },
+          "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+        }
+      ],
+      "namespace": "agentic_capability_loop",
+      "operational_settlement_ref": "sha256:8f9e7d68373579ad7efa74d6ac392fec16d444b38818ece4dbd1b524abe29a7e",
+      "proof_contract": {
+        "case_id": "false_settlement",
+        "contract_id": "SEC-12",
+        "criterion": "SEC-12:false_settlement",
+        "expectation_ledger_ref": {
+          "append_ordinal": 0,
+          "authority_refs": [],
+          "entry_hash": "sha256:43fee4fc23aca32b37ad913f6048d5fc4d0846e38554cf69deeb2ffda8f5d1e4",
+          "entry_ulid": "01M555VXZ13AD2GKRRHF4PHHTJ",
+          "ledger_id": "case-sec12-rejection",
+          "payload_hash": "sha256:6395eea5ed95413f79f47df6b06d0e1ef741cacc01396b82ea96bd32d879fa33",
+          "record_kind": "security_frozen_expectation",
+          "writer_identity_ref": "security-observer"
+        },
+        "producer": "sea-forge-security-acceptance",
+        "proof_type": "frozen_security_acceptance",
+        "suite": {
+          "commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+          "manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+          "tag": "sea-forge-security-v1-2026-10-16"
+        }
+      },
+      "proof_result_id": "proof-sec12",
+      "proof_status": "failed",
+      "work_request_id": "case-sec12-rejection",
+      "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "provenance": {
+      "chain": [
+        "caused_by:9d9414ae-7134-48d2-a24a-bab13c68bb0a"
+      ],
+      "origin": "sea-forge-security-acceptance"
+    },
+    "schema_version": "v1",
+    "source_agent": "swe-seed"
+  },
+  "sea_forge_ledger": [
+    {
+      "append_ordinal": 0,
+      "authority_refs": [],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.721100777+00:00",
+      "entry_hash": "sha256:43fee4fc23aca32b37ad913f6048d5fc4d0846e38554cf69deeb2ffda8f5d1e4",
+      "entry_ulid": "01M555VXZ13AD2GKRRHF4PHHTJ",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 0,
+      "payload": {
+        "case_id": "false_settlement",
+        "contract_id": "SEC-12",
+        "expected_outcome": [
+          {
+            "effect": "protected marker exists with authorized-synthetic-effect",
+            "kind": "file_write",
+            "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+            "resource_observation": {
+              "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+              "status": "verified"
+            },
+            "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+          }
+        ],
+        "expected_outcome_sha256": "sha256:48758f83694bbdcf7fe67eeaca92cc388848252996e2a1cd5e8af9c2dc16a32d",
+        "schema": "sea-forge.security-trace/v1",
+        "suite": {
+          "commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+          "manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+          "tag": "sea-forge-security-v1-2026-10-16"
+        },
+        "work_request_id": "case-sec12-rejection"
+      },
+      "payload_hash": "sha256:6395eea5ed95413f79f47df6b06d0e1ef741cacc01396b82ea96bd32d879fa33",
+      "previous_entry_hash": null,
+      "record_kind": "security_frozen_expectation",
+      "record_ulid": "01M555VXZ13AD2GKRRHF4PHHTJ",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 1,
+      "authority_refs": [
+        "01M555VXZ13AD2GKRRHF4PHHTJ"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.723802484+00:00",
+      "entry_hash": "sha256:c8886a81ff369b2cbe7d1286cd5609d63216c10568be0794185c7378af1bd07c",
+      "entry_ulid": "01M555VXZ39HYSDTQMNERJQRF9",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 1,
+      "payload": {
+        "action_id": "act_31cbcb",
+        "action_request": {
+          "action": {
+            "operation": "execute_command",
+            "parameters": {
+              "argv": [
+                "/tmp/.tmpFIDh13/sea-forge",
+                "--exact",
+                "sec12_trace_helper"
+              ],
+              "cwd": "."
+            },
+            "resource_id": "/tmp/.tmpFIDh13/sea-forge",
+            "resource_type": "shell_cmd",
+            "tool_name": "sea-forge-cli"
+          },
+          "action_id": "act_31cbcb",
+          "actor": {
+            "actor_id": "operator_local",
+            "actor_type": "human",
+            "principal": "operator_local"
+          },
+          "context": {
+            "artifacts_root": "/tmp/.tmpFIDh13/artifacts",
+            "branch": null,
+            "channel": "cli",
+            "domain_model_ref": null,
+            "env_keys": [
+              "HOME",
+              "PATH",
+              "SEC12_TRACE_HELPER"
+            ],
+            "environment": "local-slice",
+            "plan_item_id": "security-item",
+            "repo": null,
+            "run_id": "case-sec12-rejection",
+            "source_platform": "cli",
+            "timeout_secs": 10,
+            "workspace_root": "/tmp/.tmpFIDh13/workspace"
+          },
+          "correlation_id": "case-sec12-rejection",
+          "evidence": {
+            "identity_binding_source": "local-slice-default",
+            "payload_hash": "sha256:781cae3a397777bafd4d76988b0c53531adf06f9b3ab6b24c97f128a43fd6f09",
+            "tool_trace_ref": null
+          },
+          "schema_version": "cam.v1",
+          "timestamp_utc": "2026-10-17T14:57:14.722404228+00:00"
+        },
+        "approval_request_id": null,
+        "audit_record": {
+          "action_request_hash": "sha256:e669f27af35ccc87216a37284edec16231b65a7d0d5a2408fb11010fc0aa97d0",
+          "case_id": "case-sec12-rejection",
+          "decision_id": "auth_01",
+          "disposition": "allow",
+          "engine": "sea-forge-authority",
+          "evidence_refs": [],
+          "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+          "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2",
+          "reason": "policy_allow",
+          "recorded_at": "2026-10-17T14:57:14.722404228+00:00",
+          "run_id": "case-sec12-rejection",
+          "subject": "shell_cmd:/tmp/.tmpFIDh13/sea-forge"
+        },
+        "boundary_constraints": {},
+        "candidate_verdicts": [
+          {
+            "boundary_constraints": {},
+            "compensating_controls": [],
+            "disposition": "allow",
+            "engine": "local",
+            "evidence_refs": [
+              "local-policy:bounded-helper"
+            ],
+            "reason": "policy_allow",
+            "recorded_at": "2026-10-17T14:57:14.722404228+00:00",
+            "subject": "/tmp/.tmpFIDh13/sea-forge"
+          }
+        ],
+        "compensating_controls": [],
+        "correlation_id": "case-sec12-rejection",
+        "decided_at": "2026-10-17T14:57:14.722404228+00:00",
+        "decision_id": "auth_01",
+        "determinism": {
+          "action_request_hash": "sha256:e669f27af35ccc87216a37284edec16231b65a7d0d5a2408fb11010fc0aa97d0",
+          "identity_binding_hash": "sha256:7a5dfc20a4c068921952e494338483f72a36f5588024b76c5052b5c436bfd49d",
+          "policy_bundle_hash": "sha256:10ff19379d2ae3c9cf29897019ffaeaa914891c9f69eac13cdb9073209401fc2"
+        },
+        "identity_binding": {
+          "actor_type": "human",
+          "binding_resolution": "local-default",
+          "expires_at": null,
+          "identity_binding_hash": "0822d401e4a47a80924adefe50bbc9917347369c06f7f373b6c693cc46c4685e",
+          "identity_binding_source": "local-slice-default",
+          "identity_id": "identity:operator_local",
+          "issued_at": null,
+          "principal": "operator_local",
+          "roles": [
+            "operator"
+          ],
+          "source": "local-slice-default",
+          "sponsor": null
+        },
+        "matched_rule": "bounded-helper",
+        "normalized_disposition": "allow",
+        "opaque_constraint_id": null,
+        "operation": {
+          "argv": [
+            "/tmp/.tmpFIDh13/sea-forge",
+            "--exact",
+            "sec12_trace_helper"
+          ],
+          "cwd": ".",
+          "kind": "execute_command"
+        },
+        "outcome": "allow",
+        "plan_item_id": "security-item",
+        "policy_refs": [
+          "local-policy:bounded-helper"
+        ],
+        "precedence_reason": "typed deterministic candidate resolution",
+        "reason": "policy_allow",
+        "reason_codes": [
+          "policy_allow"
+        ],
+        "required_next_steps": [],
+        "run_id": "case-sec12-rejection",
+        "sandbox_class_granted": "local",
+        "verdict": "allow",
+        "version": "0.2",
+        "winning_source": "local"
+      },
+      "payload_hash": "sha256:35d5c08b389626b7d3593c7c7c10008877e6b9b9b37f3402b45c0f62dbb7aa05",
+      "previous_entry_hash": "sha256:43fee4fc23aca32b37ad913f6048d5fc4d0846e38554cf69deeb2ffda8f5d1e4",
+      "record_kind": "authority_decision",
+      "record_ulid": "01M555VXZ39HYSDTQMNERJQRF9",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 2,
+      "authority_refs": [
+        "01M555VXZ39HYSDTQMNERJQRF9"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.725680172+00:00",
+      "entry_hash": "sha256:5d0e4116e50315507915e904cef726e4ff5e350f944b1f6bb08529042115d13e",
+      "entry_ulid": "01M555VXZ5FT67V5K00FJENGC8",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 2,
+      "payload": {
+        "event_id": "5ae8f8e4-21ef-4347-9b28-70b799c00481",
+        "event_type": "AuthorizedInvocation",
+        "idempotency_key": "cf635f82893e9c3195c4a6020a703008d19a42208111b5740f9b1db2a63b1e55",
+        "occurred_at": "2026-10-17T14:57:14+00:00",
+        "payload": {
+          "authority_decision_id": "auth_01",
+          "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+          "execution_constraints": {
+            "sandbox_class": "local",
+            "timeout_secs": 10,
+            "workspace_root": "/tmp/.tmpFIDh13/workspace"
+          },
+          "invocation_id": "inv_3abe2706ff378db2",
+          "namespace": "agentic_capability_loop",
+          "operation": "execute_command",
+          "resource": "/tmp/.tmpFIDh13/sea-forge",
+          "work_request_id": "case-sec12-rejection",
+          "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "provenance": {
+          "chain": [
+            "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+            "caused_by:12345678-1234-4234-8234-123456789abc"
+          ],
+          "origin": "sea-forge"
+        },
+        "schema_version": "v1",
+        "source_agent": "sea-forge"
+      },
+      "payload_hash": "sha256:c3b2268fdc43e10f6345e12adc378f1746b2b208c97161053522d309a9605c99",
+      "previous_entry_hash": "sha256:c8886a81ff369b2cbe7d1286cd5609d63216c10568be0794185c7378af1bd07c",
+      "record_kind": "security_authorized_invocation",
+      "record_ulid": "01M555VXZ5FT67V5K00FJENGC8",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 3,
+      "authority_refs": [
+        "01M555VXZ5FT67V5K00FJENGC8"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.731559653+00:00",
+      "entry_hash": "sha256:fb809032c32720e6ccc9b3078af8b69048f518cf7b96692d83693d46c3c4cd27",
+      "entry_ulid": "01M555VXZBW9PCA5VHYTY6YFWG",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 3,
+      "payload": {
+        "attempted": true,
+        "os_error": 13,
+        "succeeded": false
+      },
+      "payload_hash": "sha256:0dfd200376a502e3820867172d37e52ecc18dbd5d8fabf00edd323316e928462",
+      "previous_entry_hash": "sha256:5d0e4116e50315507915e904cef726e4ff5e350f944b1f6bb08529042115d13e",
+      "record_kind": "security_workload_report",
+      "record_ulid": "01M555VXZBW9PCA5VHYTY6YFWG",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 4,
+      "authority_refs": [
+        "01M555VXZBW9PCA5VHYTY6YFWG"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.732095458+00:00",
+      "entry_hash": "sha256:f343b50397548303913638caedd418474b9f336eade8fe28ceeae8027e8a9196",
+      "entry_ulid": "01M555VXZC2EBYGHTJJ9NE4FTK",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 4,
+      "payload": {
+        "after_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+        "before_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+        "changed": false,
+        "resource": "/tmp/.tmpFIDh13/workspace/protected-marker"
+      },
+      "payload_hash": "sha256:07bb4be4a7688b9ff766a533ee694d9306156a22693fd223fd6fdafedd994913",
+      "previous_entry_hash": "sha256:fb809032c32720e6ccc9b3078af8b69048f518cf7b96692d83693d46c3c4cd27",
+      "record_kind": "security_resource_observation",
+      "record_ulid": "01M555VXZC2EBYGHTJJ9NE4FTK",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 5,
+      "authority_refs": [
+        "01M555VXZC2EBYGHTJJ9NE4FTK"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.732625514+00:00",
+      "entry_hash": "sha256:687b8e40a27f68794799ca9587b164d68444e0664288fc69979a41011786cd6b",
+      "entry_ulid": "01M555VXZC2EBYGHTJJ9NE4FTM",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 5,
+      "payload": {
+        "event_id": "99999999-8888-4777-8666-555555555555",
+        "event_type": "ExecutionObservation",
+        "idempotency_key": "483ced183ad98a4025a331887b4487ec5a5d7e0b0e8ec35a60efd92925741032",
+        "occurred_at": "2026-10-17T12:00:00+00:00",
+        "payload": {
+          "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+          "execution_status": "completed",
+          "exit_code": 0,
+          "invocation_id": "inv_3abe2706ff378db2",
+          "namespace": "agentic_capability_loop",
+          "observed_effects": [
+            {
+              "effect": "protected marker exists with authorized-synthetic-effect",
+              "kind": "file_write",
+              "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+              "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+            }
+          ],
+          "work_request_id": "case-sec12-rejection"
+        },
+        "provenance": {
+          "chain": [
+            "caused_by:5ae8f8e4-21ef-4347-9b28-70b799c00481"
+          ],
+          "origin": "execution-environment"
+        },
+        "schema_version": "v1",
+        "source_agent": "execution-environment"
+      },
+      "payload_hash": "sha256:d6250761c18880676a810f19a68fd4e354192615b637fb42671da3474d51c1c7",
+      "previous_entry_hash": "sha256:f343b50397548303913638caedd418474b9f336eade8fe28ceeae8027e8a9196",
+      "record_kind": "security_submitted_observation",
+      "record_ulid": "01M555VXZC2EBYGHTJJ9NE4FTM",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    },
+    {
+      "append_ordinal": 6,
+      "authority_refs": [
+        "01M555VXZC2EBYGHTJJ9NE4FTM"
+      ],
+      "canonicalization": "jcs-nfc-v1",
+      "committed_at": "2026-10-17T14:57:14.733823400+00:00",
+      "entry_hash": "sha256:754abed7a6fea2482df7df53c7936b4121c5042cc90cda4c0f7f993c20e4f829",
+      "entry_ulid": "01M555VXZDN0E98JZBH7FZZGFK",
+      "hash_algorithm": "sha256-v1",
+      "ledger_id": "case-sec12-rejection",
+      "mmr_leaf_index": 6,
+      "payload": {
+        "event_id": "9d9414ae-7134-48d2-a24a-bab13c68bb0a",
+        "event_type": "OperationalSettlement",
+        "idempotency_key": "1b322c8467625eaa323065d4dddc4bb057c3cc452e3871355c30881b17897205",
+        "occurred_at": "2026-10-17T14:57:14+00:00",
+        "payload": {
+          "authority_decision_id": "auth_01",
+          "domain_model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+          "domain_model_ref": {
+            "model_hash": "f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+            "namespace": "agentic_capability_loop"
+          },
+          "evidence_refs": [
+            "sha256:f277cca0a4165eda0a62403d5315e54defd7aeb8ba15e77a4dd8c23006ff2f81",
+            "authorized_invocation:5ae8f8e4-21ef-4347-9b28-70b799c00481",
+            "execution_observation:99999999-8888-4777-8666-555555555555"
+          ],
+          "execution_status": "completed",
+          "failure_reason": {
+            "basis": [
+              "resource_observation_rejected:file_digest_mismatch"
+            ]
+          },
+          "invocation_id": "inv_3abe2706ff378db2",
+          "namespace": "agentic_capability_loop",
+          "observed_effects": [
+            {
+              "effect": "protected marker exists with authorized-synthetic-effect",
+              "kind": "file_write",
+              "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+              "resource_observation": {
+                "reason": "file_digest_mismatch",
+                "sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+                "status": "rejected"
+              },
+              "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+            }
+          ],
+          "operational_settlement_status": "rejected",
+          "work_request_id": "case-sec12-rejection",
+          "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "provenance": {
+          "chain": [
+            "domain_model_hash:f0aa61005b14ad0e9121fe9fdc9bea0dda1c8b05047eefb400dbb06cc539dbf1",
+            "caused_by:5ae8f8e4-21ef-4347-9b28-70b799c00481",
+            "caused_by:99999999-8888-4777-8666-555555555555"
+          ],
+          "origin": "sea-forge"
+        },
+        "schema_version": "v1",
+        "source_agent": "sea-forge"
+      },
+      "payload_hash": "sha256:06dccdfe29c0952252aa8ed321de6303c51b6e62d3b445c5e5104edb129cd24b",
+      "previous_entry_hash": "sha256:687b8e40a27f68794799ca9587b164d68444e0664288fc69979a41011786cd6b",
+      "record_kind": "security_returned_settlement",
+      "record_ulid": "01M555VXZDN0E98JZBH7FZZGFK",
+      "subject_refs": [
+        "case-sec12-rejection"
+      ],
+      "version": "0.2",
+      "writer_identity_ref": "security-observer"
+    }
+  ],
+  "trace": {
+    "authority": {
+      "ledger": {
+        "append_ordinal": 1,
+        "authority_refs": [
+          "01M555VXZ13AD2GKRRHF4PHHTJ"
+        ],
+        "entry_hash": "sha256:c8886a81ff369b2cbe7d1286cd5609d63216c10568be0794185c7378af1bd07c",
+        "entry_ulid": "01M555VXZ39HYSDTQMNERJQRF9",
+        "ledger_id": "case-sec12-rejection",
+        "payload_hash": "sha256:35d5c08b389626b7d3593c7c7c10008877e6b9b9b37f3402b45c0f62dbb7aa05",
+        "record_kind": "authority_decision",
+        "writer_identity_ref": "security-observer"
+      },
+      "record": {
+        "action_hash": null,
+        "actor": null,
+        "decision_id": "auth_01",
+        "policy_hash": null,
+        "verdict": "allow"
+      }
+    },
+    "claims": [
+      {
+        "ledger": {
+          "append_ordinal": 5,
+          "authority_refs": [
+            "01M555VXZC2EBYGHTJJ9NE4FTK"
+          ],
+          "entry_hash": "sha256:687b8e40a27f68794799ca9587b164d68444e0664288fc69979a41011786cd6b",
+          "entry_ulid": "01M555VXZC2EBYGHTJJ9NE4FTM",
+          "ledger_id": "case-sec12-rejection",
+          "payload_hash": "sha256:d6250761c18880676a810f19a68fd4e354192615b637fb42671da3474d51c1c7",
+          "record_kind": "security_submitted_observation",
+          "writer_identity_ref": "security-observer"
+        },
+        "record": {
+          "claimant": "execution-environment",
+          "claimed_effects": [
+            {
+              "effect": "protected marker exists with authorized-synthetic-effect",
+              "kind": "file_write",
+              "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+              "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+            }
+          ],
+          "event_id": "99999999-8888-4777-8666-555555555555"
+        }
+      },
+      {
+        "ledger": {
+          "append_ordinal": 3,
+          "authority_refs": [
+            "01M555VXZ5FT67V5K00FJENGC8"
+          ],
+          "entry_hash": "sha256:fb809032c32720e6ccc9b3078af8b69048f518cf7b96692d83693d46c3c4cd27",
+          "entry_ulid": "01M555VXZBW9PCA5VHYTY6YFWG",
+          "ledger_id": "case-sec12-rejection",
+          "payload_hash": "sha256:0dfd200376a502e3820867172d37e52ecc18dbd5d8fabf00edd323316e928462",
+          "record_kind": "security_workload_report",
+          "writer_identity_ref": "security-observer"
+        },
+        "record": {
+          "claimant": "workload",
+          "report": {
+            "attempted": true,
+            "os_error": 13,
+            "succeeded": false
+          }
+        }
+      }
+    ],
+    "expectation": {
+      "ledger": {
+        "append_ordinal": 0,
+        "authority_refs": [],
+        "entry_hash": "sha256:43fee4fc23aca32b37ad913f6048d5fc4d0846e38554cf69deeb2ffda8f5d1e4",
+        "entry_ulid": "01M555VXZ13AD2GKRRHF4PHHTJ",
+        "ledger_id": "case-sec12-rejection",
+        "payload_hash": "sha256:6395eea5ed95413f79f47df6b06d0e1ef741cacc01396b82ea96bd32d879fa33",
+        "record_kind": "security_frozen_expectation",
+        "writer_identity_ref": "security-observer"
+      },
+      "record": {
+        "case_id": "false_settlement",
+        "contract_id": "SEC-12",
+        "expected_outcome": [
+          {
+            "effect": "protected marker exists with authorized-synthetic-effect",
+            "kind": "file_write",
+            "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+            "resource_observation": {
+              "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26",
+              "status": "verified"
+            },
+            "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+          }
+        ],
+        "expected_outcome_sha256": "sha256:48758f83694bbdcf7fe67eeaca92cc388848252996e2a1cd5e8af9c2dc16a32d",
+        "schema": "sea-forge.security-trace/v1",
+        "suite": {
+          "commit": "af41ea2465e38c87dfe86471c33c6b54ea8564e1",
+          "manifest_sha256": "986454070b7e7f3acfbfe89f4b747fa4e22477cfe300653cd337c50bd70a1e66",
+          "tag": "sea-forge-security-v1-2026-10-16"
+        },
+        "work_request_id": "case-sec12-rejection"
+      }
+    },
+    "invocation": {
+      "ledger": {
+        "append_ordinal": 2,
+        "authority_refs": [
+          "01M555VXZ39HYSDTQMNERJQRF9"
+        ],
+        "entry_hash": "sha256:5d0e4116e50315507915e904cef726e4ff5e350f944b1f6bb08529042115d13e",
+        "entry_ulid": "01M555VXZ5FT67V5K00FJENGC8",
+        "ledger_id": "case-sec12-rejection",
+        "payload_hash": "sha256:c3b2268fdc43e10f6345e12adc378f1746b2b208c97161053522d309a9605c99",
+        "record_kind": "security_authorized_invocation",
+        "writer_identity_ref": "security-observer"
+      },
+      "record": {
+        "authority_decision_id": "auth_01",
+        "event_id": "5ae8f8e4-21ef-4347-9b28-70b799c00481",
+        "invocation_id": "inv_3abe2706ff378db2",
+        "world_ref": "world:sf@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    "observations": [
+      {
+        "ledger": {
+          "append_ordinal": 4,
+          "authority_refs": [
+            "01M555VXZBW9PCA5VHYTY6YFWG"
+          ],
+          "entry_hash": "sha256:f343b50397548303913638caedd418474b9f336eade8fe28ceeae8027e8a9196",
+          "entry_ulid": "01M555VXZC2EBYGHTJJ9NE4FTK",
+          "ledger_id": "case-sec12-rejection",
+          "payload_hash": "sha256:07bb4be4a7688b9ff766a533ee694d9306156a22693fd223fd6fdafedd994913",
+          "record_kind": "security_resource_observation",
+          "writer_identity_ref": "security-observer"
+        },
+        "record": {
+          "observation": {
+            "after_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+            "before_sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+            "changed": false,
+            "resource": "/tmp/.tmpFIDh13/workspace/protected-marker"
+          },
+          "observer": "security-observer"
+        }
+      }
+    ],
+    "schema": "sea-forge.security-trace/v1",
+    "settlement": {
+      "ledger": {
+        "append_ordinal": 6,
+        "authority_refs": [
+          "01M555VXZC2EBYGHTJJ9NE4FTM"
+        ],
+        "entry_hash": "sha256:754abed7a6fea2482df7df53c7936b4121c5042cc90cda4c0f7f993c20e4f829",
+        "entry_ulid": "01M555VXZDN0E98JZBH7FZZGFK",
+        "ledger_id": "case-sec12-rejection",
+        "payload_hash": "sha256:06dccdfe29c0952252aa8ed321de6303c51b6e62d3b445c5e5104edb129cd24b",
+        "record_kind": "security_returned_settlement",
+        "writer_identity_ref": "security-observer"
+      },
+      "record": {
+        "envelope_sha256": "sha256:8f9e7d68373579ad7efa74d6ac392fec16d444b38818ece4dbd1b524abe29a7e",
+        "event_id": "9d9414ae-7134-48d2-a24a-bab13c68bb0a",
+        "observed_effects": [
+          {
+            "effect": "protected marker exists with authorized-synthetic-effect",
+            "kind": "file_write",
+            "ref": "/tmp/.tmpFIDh13/workspace/protected-marker",
+            "resource_observation": {
+              "reason": "file_digest_mismatch",
+              "sha256": "06ebb27e5df9512149363c4be7accb7b424d746db456dbe9987601129712e146",
+              "status": "rejected"
+            },
+            "sha256": "29229c6162f8edabc1db0aeaca7fc7b924b2b83278818a7c62620b365054df26"
+          }
+        ],
+        "status": "rejected"
+      }
+    },
+    "unresolved": [],
+    "work_request_id": "case-sec12-rejection"
+  }
+}

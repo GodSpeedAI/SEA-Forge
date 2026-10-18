@@ -91,7 +91,8 @@ check-package package:
 
 # Supply-chain + secret scan: cargo-deny then gitleaks.
 # `cargo deny check advisories` fetches the RustSec database; the other
-# categories are offline. gitleaks scans staged + committed history.
+# categories are offline. `security` scans committed history and runs the
+# staged-scan canaries; `pre-commit` scans the index (`secrets-staged`).
 [group('quality')]
 deny:
     cargo deny check
@@ -102,6 +103,12 @@ security:
     {{set}}
     just deny
     gitleaks detect --no-banner --redact
+    scripts/security/staged-secret-canaries.sh
+
+# Scan exactly what the next commit would contain (the index), redacted.
+[group('quality')]
+secrets-staged:
+    gitleaks git --staged --no-banner --redact .
 
 # Apply only safe automatic fixes (rustfmt). Clippy fixes are intentionally
 # excluded: `-A clippy::all --fix` mutates behavior and should be reviewed.
@@ -912,6 +919,7 @@ pre-commit:
     #!/usr/bin/env bash
     {{set}}
     just check-fast
+    just secrets-staged
 
 # Broad local verification invoked by .githooks/pre-push. Adds clippy,
 # supply-chain, secret scan, tests, and a debug build on top of pre-commit.

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "graft",
+    "build"
+  ],
+  "started_at": "2026-10-17T01:43:39.134996+00:00",
+  "finished_at": "2026-10-17T01:43:46.528164+00:00",
+  "exit_code": 0,
+  "log_sha256": "8bff882bca07e14a6d375cb55e94100ef14679c67457f65b6382d2e7aaabb514",
+  "source_head": "dd494c1ae865487fa928647703be275087a943b0"
+}

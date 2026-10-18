@@ -1,0 +1,10 @@
+{
+  "record_type": "historical_preflight_scope_caveat",
+  "recorded_at": "2026-10-16",
+  "applies_to": "./observations.json and ./README.md in this directory",
+  "raw_observations_modified": false,
+  "scope": "The original preflight was captured inside the tool sandbox, not from the outer WSL host. Its PID 1 (codex), one-entry current UID/GID maps, NoNewPrivs=1, CapBnd=0, and read-only cgroup mount describe that sandbox context only.",
+  "corroborating_outside_probe": "../host-preflight-outside/observations.json",
+  "outside_observations": "The separate outside-sandbox record observed PID 1 systemd, NoNewPrivs=0, current UID/GID maps spanning 0..4294967294, and a cgroup2 mount that is rw at mount level but not writable by the current UID at the observed paths.",
+  "interpretation": "Do not generalize the original sandbox-only restrictions as host prerequisites. Preserve the original files as historical raw evidence; use the separately captured outside-sandbox record for WSL host observations."
+}

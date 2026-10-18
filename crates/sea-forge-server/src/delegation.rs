@@ -445,6 +445,10 @@ pub async fn execute_with_permission_broker(
             criteria.clone(),
             criteria_ref.clone(),
             &sandbox_class,
+            &config.mcp_servers,
+            &config.postgres,
+            &config.workload_read_paths,
+            &actor,
         )
         .await?;
         continuation_key = cont;
@@ -1204,6 +1208,10 @@ async fn run_acp_episode(
     criteria: sea_forge_core::types::SettlementCriteriaRecord,
     criteria_ref: sea_forge_ledger::CommittedRecordRef,
     sandbox_class: &str,
+    mcp_servers: &[crate::mcp::McpServerConfig],
+    postgres: &[crate::postgres::PostgresResourceConfig],
+    workload_read_paths: &[std::path::PathBuf],
+    actor: &Actor,
 ) -> Result<
     (
         sea_forge_agent::DelegationOutcome,
@@ -1240,6 +1248,49 @@ async fn run_acp_episode(
             .max_request_bytes
             .saturating_add(snapshot.max_response_bytes),
     };
+    // Brokered MCP needs a kernel-distinct workload identity to bind the
+    // broker socket to; shared-UID classes would let the agent reach the
+    // upstream's resources directly.
+    if (!mcp_servers.is_empty() || !postgres.is_empty()) && sandbox_class != "isolated" {
+        return Err(ForgeError::Config {
+            class: "mcp_requires_isolated_workload",
+            path: root.join("server.yaml"),
+            message: format!(
+                "MCP servers are offered only to isolated agents, not '{sandbox_class}'"
+            ),
+        });
+    }
+    // Holds the exclusive subordinate identity until the session ends.
+    #[cfg(target_os = "linux")]
+    let mut workload_identity = None;
+    // The isolated workload's pid namespace lives exactly as long as this.
+    #[cfg(target_os = "linux")]
+    let mut workload_lifeline = None;
+    #[cfg(target_os = "linux")]
+    let mut mcp_listeners: Vec<crate::mcp::McpListenerGuard> = Vec::new();
+    // Shared with every episode's MCP exposure gate: an exposure transition
+    // revokes already-issued sessions, in any episode whose context receives
+    // the label, whose scope does not admit it.
+    #[cfg(target_os = "linux")]
+    let db_sessions = crate::postgres::LiveSessions::shared();
+    #[cfg(target_os = "linux")]
+    let db_episode = db_sessions.episode(run);
+    #[cfg(target_os = "linux")]
+    let db_owner = db_episode.owner().to_string();
+    // Database session issuance/revocation evidence, only when configured.
+    let control_ledger = if postgres.is_empty() {
+        None
+    } else {
+        Some(LedgerStream::open(
+            root,
+            format!("dbsessions-{run}"),
+            "sea-forge-control-plane",
+        )?)
+    };
+    // Isolated workloads (read posture, database sessions) are Linux-only;
+    // elsewhere these inputs feed nothing.
+    #[cfg(not(target_os = "linux"))]
+    let _ = (&control_ledger, workload_read_paths, actor);
     let session = match sandbox_class {
         "local" => AcpSession::spawn(spawn)
             .map(|(session, _)| session)
@@ -1285,6 +1336,215 @@ async fn run_acp_episode(
                     .saturating_add(snapshot.max_response_bytes),
             )
             .map_err(ForgeError::Internal)?
+        }
+        // SEC-01/SEC-06: a dedicated subordinate host identity per agent. Any
+        // missing prerequisite fails closed; there is no shared-UID fallback.
+        #[cfg(target_os = "linux")]
+        "isolated" => {
+            use sea_forge_sandbox::workload;
+            let isolation_error = |error: sea_forge_sandbox::SandboxError| ForgeError::Config {
+                class: "workload_isolation_unavailable",
+                path: root.join("server.yaml"),
+                message: error.to_string(),
+            };
+            let artifacts = root.join("runs").join(run).join("artifacts");
+            std::fs::create_dir_all(&artifacts)
+                .map_err(|error| ForgeError::io("create ACP artifacts", error))?;
+            let pool = workload::WorkloadIdentityPool::from_host().map_err(isolation_error)?;
+            let identity = pool.acquire().map_err(isolation_error)?;
+            // Traverse-only path to this run's trees; every other
+            // control-plane entry stays owner-only (no Landlock reliance).
+            workload::prepare_traversal(&[
+                root.to_path_buf(),
+                root.join("runs"),
+                root.join("runs").join(run),
+            ])
+            .map_err(isolation_error)?;
+            workload::grant_exclusive_access(&workspace, &identity).map_err(isolation_error)?;
+            workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
+            let helper = workload::sibling_helper().map_err(isolation_error)?;
+            let mut offered = Vec::new();
+            if !mcp_servers.is_empty() {
+                let mcp_dir = root.join("runs").join(run).join("mcp");
+                std::fs::create_dir_all(&mcp_dir)
+                    .map_err(|error| ForgeError::io("create MCP socket dir", error))?;
+                workload::grant_exclusive_access(&mcp_dir, &identity).map_err(isolation_error)?;
+                let connector =
+                    workload::sibling_binary("sea-forge-mcp-connect").map_err(isolation_error)?;
+                for server in mcp_servers {
+                    if server.name.is_empty()
+                        || !server
+                            .name
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+                    {
+                        return Err(ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: "invalid MCP server name".into(),
+                        });
+                    }
+                    let socket = mcp_dir.join(format!("{}.sock", server.name));
+                    let listener = std::os::unix::net::UnixListener::bind(&socket)
+                        .map_err(|error| ForgeError::io("bind MCP broker socket", error))?;
+                    workload::grant_exclusive_access(&socket, &identity)
+                        .map_err(isolation_error)?;
+                    let gate = db_sessions.gate(root.to_path_buf());
+                    mcp_listeners.push(
+                        crate::mcp::serve_workload_gated(
+                            listener,
+                            identity.host_uid,
+                            root.to_path_buf(),
+                            workspace.clone(),
+                            bundle.clone(),
+                            actor.clone(),
+                            server.clone(),
+                            // Exposure follows the case across items and
+                            // resumed runs (over-restricts rather than leaks).
+                            Some(format!("case:{case}")),
+                            Some(gate),
+                        )
+                        .map_err(|error| ForgeError::io("start MCP broker", error))?,
+                    );
+                    offered.push(json!({
+                        "name": server.name,
+                        "command": connector,
+                        "args": [socket],
+                        "env": [],
+                    }));
+                }
+            }
+            let confinement = workload::WorkloadConfinement {
+                workspace_root: workspace.clone(),
+                artifacts_root: artifacts,
+                read_paths: workload::validate_read_paths(workload_read_paths, &[root]).map_err(
+                    |error| ForgeError::Config {
+                        class: "schema_error",
+                        path: root.join("server.yaml"),
+                        message: error.to_string(),
+                    },
+                )?,
+                network: sea_forge_sandbox::NetworkPosture::Denied,
+            };
+            let mut workload_env = spawn.env.clone();
+            if let Some(control_ledger) = control_ledger.as_ref() {
+                let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+                let registry =
+                    crate::exposure::ExposureRegistry::open(root, "sea-forge-control-plane")?;
+                let context = format!("case:{case}");
+                let labels_now = || -> Result<std::collections::BTreeSet<String>, ForgeError> {
+                    Ok(registry
+                        .labels(&context)
+                        .map_err(|error| ForgeError::Internal(error.to_string()))?
+                        .into_iter()
+                        .collect())
+                };
+                for resource in postgres {
+                    let broker = crate::postgres::PostgresBroker::new(resource.clone()).map_err(
+                        |error| ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: error.to_string(),
+                        },
+                    )?;
+                    for scope in broker.offered_scopes().to_vec() {
+                        // A context already holding labels this scope may
+                        // not receive is never issued a session for it.
+                        if !broker.scope_admits(&scope, &labels_now()?) {
+                            control_ledger.commit_typed(
+                                "database_session_refused",
+                                vec![run.to_string()],
+                                &json!({"resource": broker.name(), "scope": scope,
+                                    "workload_uid": identity.host_uid,
+                                    "reason": "exposure_not_permitted",
+                                    "labels": labels_now()?}),
+                                vec![],
+                            )?;
+                            continue;
+                        }
+                        let issued = broker
+                            .issue(
+                                &engine,
+                                bundle,
+                                actor,
+                                control_ledger,
+                                run,
+                                &workspace,
+                                &scope,
+                                identity.host_uid,
+                            )
+                            .map_err(|error| ForgeError::Config {
+                                class: "database_session_error",
+                                path: root.join("server.yaml"),
+                                message: error.to_string(),
+                            })?;
+                        if let Some(session) = issued {
+                            workload_env.push((broker.env_key(&scope), session.conninfo()));
+                            // Live access ends at expiry even mid-episode.
+                            let reaper = broker.expiry_reaper(
+                                &session,
+                                root.to_path_buf(),
+                                format!("dbsessions-{run}"),
+                                run.to_string(),
+                            );
+                            let decision_id = session.decision_id.clone();
+                            db_sessions
+                                .push(
+                                    &db_owner,
+                                    &context,
+                                    root.to_path_buf(),
+                                    format!("dbsessions-{run}"),
+                                    crate::postgres::PostgresBroker::new(resource.clone())
+                                        .map_err(|error| ForgeError::Internal(error.to_string()))?,
+                                    session,
+                                    reaper,
+                                )
+                                .map_err(ForgeError::Internal)?;
+                            // Direct database access exposes whatever the
+                            // scope can read: label the case at grant time,
+                            // after revoking every live session (this one
+                            // included) the label is not permitted to reach.
+                            if let Some(label) = broker.scope_exposure(&scope) {
+                                db_sessions
+                                    .transition(&registry, &context, label)
+                                    .map_err(ForgeError::Internal)?;
+                                registry
+                                    .record(
+                                        &context,
+                                        label,
+                                        &format!("postgres:{}/{scope}", broker.name()),
+                                        &decision_id,
+                                    )
+                                    .map_err(|error| ForgeError::Internal(error.to_string()))?;
+                            }
+                        }
+                    }
+                }
+            }
+            let child = workload::spawn_interactive(
+                &identity,
+                &helper,
+                &confinement,
+                &spawn.argv,
+                &workspace,
+                &workload_env,
+            )
+            .map_err(isolation_error)?;
+            workload_identity = Some(identity);
+            workload_lifeline = child.lifeline;
+            AcpSession::from_std_child(
+                child.child,
+                child.stdin,
+                child.stdout,
+                child.stderr,
+                workspace.clone(),
+                snapshot.max_response_bytes,
+                snapshot
+                    .max_request_bytes
+                    .saturating_add(snapshot.max_response_bytes),
+            )
+            .map_err(ForgeError::Internal)?
+            .with_mcp_servers(offered)
         }
         other => {
             return Err(ForgeError::Config {
@@ -1338,7 +1598,15 @@ async fn run_acp_episode(
         )
         .await;
     let continuation_key = acp_outcome.continuation_key.clone();
-    let mut outcome = acp_outcome_to_delegation(acp_outcome);
+    // Credentials this episode issued to the workload are redacted from the
+    // transcript like the HTTP path's endpoint credential: an agent that
+    // echoes its connection string must not persist it in evidence.
+    #[cfg(target_os = "linux")]
+    let issued: Vec<String> = db_sessions.secrets(&db_owner);
+    #[cfg(not(target_os = "linux"))]
+    let issued: Vec<String> = Vec::new();
+    let issued: Vec<&str> = issued.iter().map(String::as_str).collect();
+    let mut outcome = acp_outcome_to_delegation(acp_outcome, &issued);
     // F-24: the SWE_SEED harvest runs git subprocesses and walks the
     // workspace tree — keep that off the async worker.
     let harvest_snapshot = snapshot.clone();
@@ -1356,6 +1624,36 @@ async fn run_acp_episode(
             Vec::new()
         }
     };
+    // Stop the brokers (killing their upstreams), revoke database sessions
+    // (ending live backends), then release the slot.
+    #[cfg(target_os = "linux")]
+    drop(mcp_listeners);
+    #[cfg(target_os = "linux")]
+    if db_sessions.revoke_all(&db_owner, "episode_ended").is_err() {
+        outcome.termination = DelegationTermination::EndpointError;
+        outcome.error_subcode = Some("database_revocation_failed".into());
+    }
+    #[cfg(target_os = "linux")]
+    drop(db_episode);
+    // End the workload's namespace (any process the agent left behind), then
+    // withdraw the slot UID's reach into this run's trees before the lock is
+    // released and the UID can be issued again.
+    #[cfg(target_os = "linux")]
+    drop(workload_lifeline);
+    #[cfg(target_os = "linux")]
+    if workload_identity.is_some() {
+        let run_dir = root.join("runs").join(run);
+        for tree in ["workspace", "artifacts", "mcp"] {
+            let path = run_dir.join(tree);
+            if path.exists() && sea_forge_sandbox::workload::revoke_exclusive_access(&path).is_err()
+            {
+                outcome.termination = DelegationTermination::EndpointError;
+                outcome.error_subcode = Some("workload_revocation_failed".into());
+            }
+        }
+    }
+    #[cfg(target_os = "linux")]
+    drop(workload_identity);
     Ok((outcome, continuation_key, harvested))
 }
 
@@ -1398,7 +1696,8 @@ fn harvest_swe_seed(
     }
 
     let harness = workspace.join(".agent-harness");
-    if !harness.is_dir() {
+    // The workspace is workload-written: never follow a planted symlink.
+    if !std::fs::symlink_metadata(&harness).is_ok_and(|meta| meta.file_type().is_dir()) {
         return Err(ForgeError::Input(
             "configured SWE_SEED run produced no .agent-harness evidence".into(),
         ));
@@ -1444,7 +1743,27 @@ fn harvest_swe_seed(
                 "SWE_SEED evidence escaped .agent-harness".into(),
             ));
         }
-        let bytes = std::fs::read(&canonical)
+        // Bound the read by the opened file itself (no symlink, regular
+        // file, apparent size) so a sparse or swapped file cannot make the
+        // launcher allocate more than the limit.
+        let file = {
+            use std::os::unix::fs::OpenOptionsExt;
+            std::fs::OpenOptions::new()
+                .read(true)
+                .custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32)
+                .open(&canonical)
+                .map_err(|error| ForgeError::io("open SWE_SEED evidence", error))?
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|error| ForgeError::io("stat SWE_SEED evidence", error))?;
+        if !metadata.is_file() || metadata.len() > 1_048_576 {
+            return Err(ForgeError::Input(
+                "SWE_SEED evidence file exceeds 1 MiB".into(),
+            ));
+        }
+        let mut bytes = Vec::new();
+        std::io::Read::read_to_end(&mut std::io::Read::take(file, 1_048_577), &mut bytes)
             .map_err(|error| ForgeError::io("read SWE_SEED evidence", error))?;
         if bytes.len() > 1_048_576 {
             return Err(ForgeError::Input(
@@ -1503,6 +1822,7 @@ fn latest_disconnected_continuation(
 /// common evidence/settlement postamble treats HTTP and ACP uniformly.
 fn acp_outcome_to_delegation(
     outcome: sea_forge_agent::AcpOutcome,
+    known_secrets: &[&str],
 ) -> sea_forge_agent::DelegationOutcome {
     let raw_entries: Vec<sea_forge_agent::TranscriptEntry> = outcome
         .transcript
@@ -1516,7 +1836,7 @@ fn acp_outcome_to_delegation(
     // sentinel corpus, canonicalize, and hash the exact canonical bytes BEFORE
     // any summary or artifact is derived. Previously ACP transcripts reached
     // hashing/storage with no redaction at all.
-    let produced = sea_forge_agent::produce_transcript(&raw_entries, &[]);
+    let produced = sea_forge_agent::produce_transcript(&raw_entries, known_secrets);
     let entries = produced.entries;
     let sha = produced.sha256;
     let tool_calls = entries.iter().filter(|e| e.role == "tool").count() as u32;

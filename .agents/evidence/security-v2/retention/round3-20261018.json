@@ -1,0 +1,1596 @@
+{
+  "archive": "owner-only store outside Git; location is per host",
+  "archived_at": "2026-10-18T15:37:05.412074+00:00",
+  "files": [
+    {
+      "path": ".agents/evidence/security-v1/round2-20261017/results.json",
+      "sha256": "01baa55001990673817a3b1fd4a7b45223ea3e8834c46510372b2e40208be144",
+      "size": 78971
+    },
+    {
+      "path": ".agents/evidence/security-v1/round2-20261017/rust-A.log",
+      "sha256": "356fdcba64eee543309591a3c0ef120e0a925efbf4689f1d9432c2248c3547b6",
+      "size": 41098
+    },
+    {
+      "path": ".agents/evidence/security-v1/round2-20261017/rust-B.log",
+      "sha256": "11f2cce6fc69121e92ce24c9c624a36b100026f3356ae7e42c7a90dc70aaaf9f",
+      "size": 8220
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run1-shared-target/all/results.json",
+      "sha256": "9166dedd9954a5174e59cbbdd14b42ee4341352c3b9ca2fef8f68a1df71062b8",
+      "size": 65994
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run1-shared-target/all/rust-A.log",
+      "sha256": "154a889a2790fca7660ff74ea0282e4ddebbc395e9db41c3fbd363521801d764",
+      "size": 40941
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run1-shared-target/all/rust-B.log",
+      "sha256": "43ca013e1724c1841917753f01b9b8e6edae5919b27e1bbf619d130d7a68ae7c",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run2/all/results.json",
+      "sha256": "3a0940c34dcdf63810baca9f92bcb0d04af7e81104f828190c6e6e6cd409e327",
+      "size": 65994
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run2/all/rust-A.log",
+      "sha256": "557edec95bd592ecb2eb55f94ca3a84d870b34fa82d30759866b649933ad131c",
+      "size": 40940
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run2/all/rust-B.log",
+      "sha256": "7f10694e50679ca7b524db569cd2ab82bf39afee18b412f639561239feec13fa",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run3/all/results.json",
+      "sha256": "8a71bccbe6504806493a57bddc479083275bdbf036c54165311a4de4ecf7bade",
+      "size": 78979
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run3/all/rust-A.log",
+      "sha256": "4d686f1878dc3e95a127f46823800c47cd5fe2b29a279fe4eb355457c6aa650f",
+      "size": 40678
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run3/all/rust-B.log",
+      "sha256": "26f300d731a77f025a6d6ffcbfe49853bb14ed36c579343c09935c36a7d64ad7",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run4/all/results.json",
+      "sha256": "70573d505530ae63ce0b106cd27778ad041febb02b67e470720e3aa4a89174a8",
+      "size": 78976
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run4/all/rust-A.log",
+      "sha256": "7ca5d5972ababc283cc642ff8277c41f870be265dd5aa404b3de37998c824537",
+      "size": 40937
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run4/all/rust-B.log",
+      "sha256": "de691f83fd022e050e6efcf25952051a40212b151a4d84eea13aa09442ed4126",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run5/all/results.json",
+      "sha256": "14de1ed0362a85c36a6452fe6f8e608145c141fc45bc439caaa1be7b0bde0bed",
+      "size": 78979
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run5/all/rust-A.log",
+      "sha256": "3648cff9162cce88ba8549f9a9d4f4f78f7f4417c08223b95f97a10a85d9b2e1",
+      "size": 40940
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run5/all/rust-B.log",
+      "sha256": "de691f83fd022e050e6efcf25952051a40212b151a4d84eea13aa09442ed4126",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run6/all/results.json",
+      "sha256": "b24f859567cf3c91abbc32e19a2514299efc6d9b50b69318a1ec0617b893bd66",
+      "size": 78979
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run6/all/rust-A.log",
+      "sha256": "1c8305c7673716d901a8320333c326545c73c2fba97935d0f21403c6fe7c0644",
+      "size": 40941
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run6/all/rust-B.log",
+      "sha256": "ebb5d6e7514dbee06599991f44ca4b0faaebaba8b4990af7a054063216286692",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run7/all/results.json",
+      "sha256": "08dec7eaac6ac9f1ea4b80fd8ff8b8675e2fc71a2cb5ef011551fa263e242e18",
+      "size": 78979
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run7/all/rust-A.log",
+      "sha256": "8c48356ae4259f492bbeb804cbcebf71a2e65ba007ab8602c9adf8f47013e75b",
+      "size": 40940
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run7/all/rust-B.log",
+      "sha256": "c70ddc4cef97329f075d31d2c5e47321199f17ae5fef37c7fec539a2c72ab8b7",
+      "size": 8189
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/README.md",
+      "sha256": "19e3dec98997e08416e8d2f401621788079db454b469ac3cc451c7a95800707d",
+      "size": 8059
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/check-after-option1.log",
+      "sha256": "6c80ed0cb5d820d56be487285a322b4d5ae01c28b415c9b5142452519119e951",
+      "size": 203352
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/check.log",
+      "sha256": "efa02a35d2e70b67228b6c5d6e9577a4d2e869e5b241b2f6f31fe2003e671062",
+      "size": 198957
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/fmt-check.log",
+      "sha256": "c1992314b67c95ec77919f72ffe81ba36f778367b0abc18f7fe83994fc8536a6",
+      "size": 63
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/lint.log",
+      "sha256": "035cadac7d93e4a64ba12cc0da7d4698dec672ee220238bb7993b8fb7604fcce",
+      "size": 7370
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/security.log",
+      "sha256": "fd99715f6000df7f729325f2e7c65e1302be8cbd0e1c631ba8d7b70b9e8e9de5",
+      "size": 183233
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/summary.txt",
+      "sha256": "8a97acba2570f60ae412c64e91f577ef015adb5e8314024544e128fe14f60f76",
+      "size": 2922
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-agent.log",
+      "sha256": "ef99b2c6f3241633d83b446c9add2967beab95292fe283af616065e00fd34c24",
+      "size": 11457
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-artifact-ip.log",
+      "sha256": "e71b6e94e509ec76e436e7e49fd148092ff520820a544356d2c409022b7be6b6",
+      "size": 11254
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-authority.log",
+      "sha256": "9cb66930599f816275589a8168fa1869393ccb827251941535b048db289fe7c2",
+      "size": 22615
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-capability.log",
+      "sha256": "94e4fee396f2cae2258e25b2f73c5606c39c979c30b1d9de04b577085660fe11",
+      "size": 10489
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-case-runner.log",
+      "sha256": "ffdf31f6dc24ecb890fd7c6dea42b27873f7d91d0e07fcf006c7c4cb0d817ded",
+      "size": 12136
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-cell.log",
+      "sha256": "57f4e63a770c2e38c392e220777e813ef2886cbcd76068137a93f99df09acd00",
+      "size": 9608
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-changeset.log",
+      "sha256": "2380f2d77cb02c70e30535ceb18b78df0e490b4e3cda083d5c845d8ab3c356e4",
+      "size": 8730
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-cli.log",
+      "sha256": "e98daebee78c8d95f0408298f917bc53550da5a336d6c307e0bd1936220ec140",
+      "size": 17177
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-core.log",
+      "sha256": "d23e1f92cdfe14107a57c38600be08c9cc8cb3d1fe8d2a0b0259cf6c9fe14bec",
+      "size": 13658
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-domain.log",
+      "sha256": "30a7a80bc9f1619e37dc3daaa02300b989840956e5434bb23df6b40081091a38",
+      "size": 7719
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-domainforge.log",
+      "sha256": "18ca449550227043518382f67f83932637cbe8526cfd18812b808804882a26ad",
+      "size": 10404
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-evidence.log",
+      "sha256": "79928d8c8aee393bd4a5afe56aa37a90377596d1e679e76e7365c7aeee3751ab",
+      "size": 7727
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-extension.log",
+      "sha256": "ad2640297f9bb0a328510d7630e54539c27371091ae7f6b775b41853dd9e5209",
+      "size": 10360
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-ledger.log",
+      "sha256": "8cfc440f518b77e73f7eecc34fd71f36be45b1e5e34d25c3ee7610cdebde5a2e",
+      "size": 12592
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-planner.log",
+      "sha256": "ca127373bf2f60a18a6cfd9c2b1d49799166fcc3f92da87e47500dce0baa751a",
+      "size": 13504
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-realitytrace.log",
+      "sha256": "c06b0ebe9bc86952f4e9f25e58117c842718017ffdf0d02d92d68a9e0d52f4d7",
+      "size": 9585
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-runtime.log",
+      "sha256": "90f84191067bc6c0d45726f7362116aa36cf144272d5ad6d90f501e4a37a2bc5",
+      "size": 8651
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-sandbox.log",
+      "sha256": "92a4bd2cea8dacf41d273034423125404e62a61215cb8206e33011b694955e97",
+      "size": 14755
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-self-model.log",
+      "sha256": "9c087abbb62a05352071b5f94bc0b8fc7e72530987fbef613ecb95681ef9f75e",
+      "size": 9025
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-server.log",
+      "sha256": "44121c0cc7f4b68edec156ef97e38652ba320ebeb77d4e0b19ff24b62601b90b",
+      "size": 54333
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-settlement.log",
+      "sha256": "3f2cf91096743679d753dfc892ac577e227bb1028b19cdc3f8b57f0bb341b8a2",
+      "size": 9734
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-spec-pipeline.log",
+      "sha256": "8594fa2f51f9f2c6c5bd10c6ca03c8f8720c8b318d1f507ea38b03501e249acc",
+      "size": 9555
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-thoth.log",
+      "sha256": "e9e173caef1538e2a739a3b0626d277848df5121a26fb662e60bae38c125a769",
+      "size": 11230
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/test-sea-forge-trace.log",
+      "sha256": "f737328346ba06ecffab4ae07bd4d606c32831b4e9e5370dfdc9896c7bef86e2",
+      "size": 8426
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/typecheck.log",
+      "sha256": "1776c7f0222da5570688d9e4b79c295e24e0492beacc233dbb540a64015d2c9d",
+      "size": 7349
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates/v1-baseline.log",
+      "sha256": "ddf3af7ce29cdbdec58850f8594675ce584e94b0f7ffed89ecc27df35472a1dd",
+      "size": 670
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/check.log",
+      "sha256": "1d647695acce70825cbdcd5d12fd181806a8ef7f913c5ff7cbbea964d4aeddad",
+      "size": 398
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/summary.txt",
+      "sha256": "a9f599acb9404e7713bf4b1ddaf5d5ac37fb624846a0065e16d4de47f67d4b9c",
+      "size": 1438
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-agent.log",
+      "sha256": "a6c7ae802bebea0e2a5b90a8cd542d16a498bf996693d8ca2b64453b4748d5fb",
+      "size": 11996
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-artifact-ip.log",
+      "sha256": "142e39cd6a03aceec0635383893418b0bb5f4788f994d6e73f48b847c77f7a16",
+      "size": 12199
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-authority.log",
+      "sha256": "0721781d5895a6b07854aa5874297e314fef2ed4d1b4545177c302fb96ad2008",
+      "size": 23375
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-capability.log",
+      "sha256": "0a10a296fa602152c355b2793d2fdfee4107ae9e7e35882e352cdf8c5926eb02",
+      "size": 10597
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-case-runner.log",
+      "sha256": "1f00eee577e41680c1957b760ce3332e0bb3c9211f12cbfcdcce0b0e4ee4bd60",
+      "size": 12770
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-cell.log",
+      "sha256": "8429b8ef2ab0f96ab4de60062c2536af2c89b5c63284e9682fc9871b328b5ca3",
+      "size": 9704
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-changeset.log",
+      "sha256": "bfce0828ef1e0864bfe2b3901875d38b56013c5ac67a3b50b45bafafbea1dd4a",
+      "size": 9017
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-cli.log",
+      "sha256": "b1188fdf4c2727f10f0e01f6221e037911c8bbe340ae0ef3020f9b93e585f1c6",
+      "size": 17725
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-core.log",
+      "sha256": "a1541dbf4be3daa5f35b96310150a2f03f5ee005bf104f256c3485598ae7b60c",
+      "size": 14212
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-domain.log",
+      "sha256": "da61e50de49fa44fdec331811bd9a203a8d37f29210a26b1b9f82adfbf96a8be",
+      "size": 7819
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-domainforge.log",
+      "sha256": "ab34d06b01f6c47aa46ae12f1bc9f11fdd0cd238a602dba4abb3e431b7623fa1",
+      "size": 11148
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-evidence.log",
+      "sha256": "6d3496f7079bcfbb80efab48cdb6a8ab5bee7c83a30e3cf89ed15a9665b5c0f9",
+      "size": 7831
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-extension.log",
+      "sha256": "c43b408361a4a6cb563082c11a9b37534ccd944bb0229c02ab5beada90c3c8a7",
+      "size": 10466
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-ledger.log",
+      "sha256": "ad4337dc6a99e7434dafd015cc099a90bdbea726966d995880146d361da7d71c",
+      "size": 12943
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-planner.log",
+      "sha256": "b641a26ea37a63f38cc802a90f3291a0e324f300aef9fda913bbba14591ce73f",
+      "size": 13706
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-realitytrace.log",
+      "sha256": "b31e19d7ab5803cde510e3da4be34c6c0ad49cb10c8269041126a67018bd456e",
+      "size": 10972
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-runtime.log",
+      "sha256": "7f2d0841bd32808e8093c65031724d7183b926127272c31f9073fea8556acf05",
+      "size": 8753
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-sandbox.log",
+      "sha256": "f798f777255e9a1c37b6337462334879c06aa43d36592ad23872c169c8007940",
+      "size": 14230
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-self-model.log",
+      "sha256": "2f65d57c4034e714a7bbd3c31c67125982e6a488aadc2618d22e8d1eeff07422",
+      "size": 9133
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-server.log",
+      "sha256": "ac1c1779341aba97a977c92dcd6372897eded63b18296a051a13672258d69a5e",
+      "size": 57571
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-settlement.log",
+      "sha256": "57a85e97a85458b27330607e031402bc111baf29e7e3cb923051c8aa3520ab54",
+      "size": 9842
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-spec-pipeline.log",
+      "sha256": "2fc416ee45cea45c9e16d16aaa3339ddd823e04f570f9a453e0611698b96453f",
+      "size": 9669
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-thoth.log",
+      "sha256": "96691cd03b2e9b03289d2ecf2c4237fe0a13a5cdbbde4a90d9f8e4bb5e55d983",
+      "size": 11436
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/test-sea-forge-trace.log",
+      "sha256": "af9a5fddfbc181e7dc6ff2d84376fcee703c22ca5feea208912372e719bbbada",
+      "size": 8524
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run1-shared-target/v1-baseline.log",
+      "sha256": "f0a7d5f01b38de44d8dd4bcaeeb51c64f4c226951e8ae003701517b96a30e295",
+      "size": 701
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/check.log",
+      "sha256": "1d647695acce70825cbdcd5d12fd181806a8ef7f913c5ff7cbbea964d4aeddad",
+      "size": 398
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/fmt-check.log",
+      "sha256": "c1992314b67c95ec77919f72ffe81ba36f778367b0abc18f7fe83994fc8536a6",
+      "size": 63
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/lint-after-fix.log",
+      "sha256": "6d4e893f1ca94046785398a078e1d5408da622b0b7c0ff0a0981eb0302b14984",
+      "size": 8967
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/lint.log",
+      "sha256": "76e7d7306098ede5726287c6ac13b81d8ca2e595c106b47f5f3eba048eed5421",
+      "size": 18422
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/security.log",
+      "sha256": "b00fab5b2e3ab831cc189e80391f2308e156ad197efbec3d7db2c993eb754d30",
+      "size": 181819
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/summary.txt",
+      "sha256": "b5cf6f3e3110ee859ee733ec302357ab02cdf601c1280d07acb9f7cd26d36d75",
+      "size": 1564
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-agent.log",
+      "sha256": "f21ca28dd0b6ce03e4c444ebda7287206067897bee46a5b30445ea6463333fa1",
+      "size": 11996
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-artifact-ip.log",
+      "sha256": "1bf2b388853a56899d6c805706b4152c46372ab1058fc8327d1272997e1fa57e",
+      "size": 13190
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-authority.log",
+      "sha256": "52f317821c16ae2f8f45bfe80bc2ad9d7151362766071f8d9300ab63c1fafef2",
+      "size": 23434
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-capability.log",
+      "sha256": "7b6dbb9d40c80c92c64151ba7b9d4ac863f566fc4fc3784c500de45ed3cdca12",
+      "size": 10597
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-case-runner.log",
+      "sha256": "6c474100cde01f8bf691da3fe6ea8114ce484a22fcde00df75fffd545085bd88",
+      "size": 12770
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-cell.log",
+      "sha256": "c65d9d46e68b8ae1fba5c26774431c64685c148f7fd2102731c89b0980abd077",
+      "size": 9704
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-changeset.log",
+      "sha256": "757d58e7e927076aa54d707b72f1fe7da4a9be4f09d894d54b647804c0878244",
+      "size": 9017
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-cli.log",
+      "sha256": "8f822338af9e806306600e4ab895f368b89589bb753801bca175a746e7866392",
+      "size": 17032
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-core.log",
+      "sha256": "5cbad47e6a4e831b96b71bf0e91d0170d106ef170cbd15f60f713832988e6f0e",
+      "size": 14310
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-domain.log",
+      "sha256": "d1c42457f5f96cd5860196fe23bd75dba97828e56af8cdd86784ac314c12a6ce",
+      "size": 7819
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-domainforge.log",
+      "sha256": "113a58eb1a3a2eedb38a98f67637e96828ce1eacccddb7426e50d8f9218666eb",
+      "size": 11148
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-evidence.log",
+      "sha256": "aee579e5a2418929306cd7d4aff497191af2ef1be7f9bcee523484d00a9a9fc3",
+      "size": 7831
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-extension.log",
+      "sha256": "f2d17f490b76a77e6e78da2702cbf2c21ab8723c08602b18e77f28b230682371",
+      "size": 10466
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-ledger.log",
+      "sha256": "cb39b50a7f2a5ce60e1ddc7ea568f75116ec0ae2fbd8bb0e8810d327661049f1",
+      "size": 12943
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-planner.log",
+      "sha256": "a7dfc9ad0e7c2dc33ca9e74026088de4a8df48a8ab8bc7ecf78bbcbdc8700999",
+      "size": 13706
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-realitytrace.log",
+      "sha256": "d965cf827d8d01e8aea511cd23d7cb8f6a381fb94cc54b76ea42bc8178c79905",
+      "size": 12448
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-runtime.log",
+      "sha256": "8a91c882b0005ecdf470bc2455a1ae4b180fbb4915851ae8af3533a3d30e0283",
+      "size": 8753
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-sandbox.log",
+      "sha256": "eeffc5ba7ba804001cf622447d04e21887c634d0a5eed8e13eeee5ca904e1f25",
+      "size": 14230
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-self-model.log",
+      "sha256": "da40f27009a0ea4ae15327e29b925df1dfe2aaf70a9370d0504e356c5b1779c1",
+      "size": 9133
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-server-after-fix.log",
+      "sha256": "a5c929629624cea71ec0aa45ec1f5a905847983c6b440e793b1bed27aa1d04b8",
+      "size": 55677
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-server.log",
+      "sha256": "eff9e7640270256ab8a0bc22ceaa84e638325f5e4121de8b533b34d23cc9597e",
+      "size": 59245
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-settlement.log",
+      "sha256": "663d1de8908c60af99e754c170c516d1b1951484cf6bbbb96e33bde31e3401c0",
+      "size": 9842
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-spec-pipeline.log",
+      "sha256": "6cb9f894c2b5347854bac276e0fbd49f6f2f22a23a63e7ea10519e42dc904d4f",
+      "size": 9669
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-thoth.log",
+      "sha256": "86602133851476a6075ced9add9005e5a002b07b55e8ae7b770f2d50af6d3c11",
+      "size": 11436
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/test-sea-forge-trace.log",
+      "sha256": "18a1a6a168c4787954ebf91daad21a3ae47b6375d16da0e9977c51468c22ee48",
+      "size": 8524
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/typecheck.log",
+      "sha256": "fd9ec22684f71da4e3ea2d42348da5667c56c19c8f8679288cc9e0b2d0f2e4af",
+      "size": 9838
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/v1-baseline-mcp.log",
+      "sha256": "ef4616a946c66cbc0c641857e893e29504c976cbb20a9e988cdce5af377103b5",
+      "size": 869
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run2-before-filter/v1-baseline.log",
+      "sha256": "f8b5fa79415915d5224b0021dfcc9ba06ce4f6b4d294bee18e2fe081034c313a",
+      "size": 706
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/check.log",
+      "sha256": "1d647695acce70825cbdcd5d12fd181806a8ef7f913c5ff7cbbea964d4aeddad",
+      "size": 398
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/fmt-check.log",
+      "sha256": "c1992314b67c95ec77919f72ffe81ba36f778367b0abc18f7fe83994fc8536a6",
+      "size": 63
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/lint.log",
+      "sha256": "2857f1a5bdee3dc743586dba9aa9cb07c34dc8e5e6ffd9b402fc01ae05390c2e",
+      "size": 9390
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/security.log",
+      "sha256": "e06d0992e13a47fe7f8c24c85d5ef22755180da5d9547997dbd73500a2314c15",
+      "size": 181819
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/summary.txt",
+      "sha256": "ce4d1f9e3f1a24bd6058525a74b7d7b9cb7cb41041308bbd257d7057d1d0b531",
+      "size": 1985
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-agent.log",
+      "sha256": "f95ab99bb87f46c250daf38b53471fe1f5dd969826f041fd47e0a4847e51093b",
+      "size": 11456
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-artifact-ip.log",
+      "sha256": "37893d04740259fdf0f72780cf768bb79bc2dc01b43bc0107555bf0eddd77ae1",
+      "size": 11364
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-authority.log",
+      "sha256": "a774ba6e9c4a1ddb7d6191ca4e7d5de7c365006371ee63b2f0162a08a0b7471b",
+      "size": 22615
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-capability.log",
+      "sha256": "6898ca2a6fbfab2ccd17f7080a87e3ffd8855d2307809650878064f7e8ada271",
+      "size": 10597
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-case-runner.log",
+      "sha256": "8d308cb762f94ccb86e1059afefb030a45e44235430311f5df09759aac4f8467",
+      "size": 12348
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-cell.log",
+      "sha256": "0fbc8a51730331f46bd21ebf011d45ee9e8f332b2bc6c3fb54e82e3a0987ed82",
+      "size": 9704
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-changeset.log",
+      "sha256": "fb1b4d7e940f89304a2a3cc3533d541469fde1feea14298391be512317e3abc1",
+      "size": 8730
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-cli.log",
+      "sha256": "876ff14cef90bd46807f9cffc9192a981d801333f069f43ed1ee9951506b675f",
+      "size": 17001
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-core.log",
+      "sha256": "26bda7d890027121685ff3bea661b153988fa4491b3d6a2a47e9fc8681e57ff8",
+      "size": 13658
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-domain.log",
+      "sha256": "232b25612bf97fc242d9f77576c31eb1d43da8d0db2ee06da34619a554d30cf1",
+      "size": 7719
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-domainforge.log",
+      "sha256": "c14d3a45fad8b832f1f5658a6ed23c0bfa8e8d625a6b37029bf6c2f7a91ae715",
+      "size": 10404
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-evidence.log",
+      "sha256": "6609fbceba7822ff59f8513607505bb89c3f023b678adef757a996ae20d5b661",
+      "size": 7831
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-extension.log",
+      "sha256": "a71c9c5aa145d2acfb2e3942d16b25e4f8d078236563f67edc65e7a0c70fd821",
+      "size": 10360
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-ledger.log",
+      "sha256": "fec8dd22992668443106aa225fe423e78e11f6cbfaffe74509deb3ea78c1b54b",
+      "size": 12591
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-planner.log",
+      "sha256": "bdee1b359e0d423f55965f32eb1caef0dc162ce9c21e5da242f9719608bce729",
+      "size": 13504
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-realitytrace.log",
+      "sha256": "8a5695ea9ea087f5f3656c7535ee023571919345313146de2a368b52062090c2",
+      "size": 9620
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-runtime.log",
+      "sha256": "19147f161e1376dccf26d55882b785fd201eecbd985e140e83b3bc5ed524c377",
+      "size": 8753
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-sandbox.log",
+      "sha256": "676f31dd0ccbafceb4f2b4cf8be0bf9b01eed74838b0b1fa844dd4864522465d",
+      "size": 16640
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-self-model.log",
+      "sha256": "87891d2cb9ce92cf3beb610764c7282259719881317dba2de0a878b74b92d0d4",
+      "size": 9025
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-server.log",
+      "sha256": "cfdd71518f05174974dd8ccd3b781de0c0f90edb1cee2b1ce1bc13d29de29414",
+      "size": 54859
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-settlement.log",
+      "sha256": "475361c8a032443b7c9657e25dfcc9ff47c3196bda317cd9b591c7453cb47dbe",
+      "size": 9842
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-spec-pipeline.log",
+      "sha256": "f951657bb6c17a6d71ef3a83f105702d8de77cf6dc255abd9684342803b79795",
+      "size": 9555
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-thoth.log",
+      "sha256": "30ed82ee2b16f603f092594f4d0505b04f0ebff3fa1f1331402e1649d31c08db",
+      "size": 11230
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/test-sea-forge-trace.log",
+      "sha256": "cc2d8be46dfb6e6b9e5992249bbf3d865730f8ccfb710123d892b88d29bfd85b",
+      "size": 8426
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/typecheck.log",
+      "sha256": "54d7ecde5f6019b76cd76a8a7a34f6222f2ee8d704537ee4623311ab09e8fc80",
+      "size": 9009
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run4-stale-mutant/v1-baseline.log",
+      "sha256": "169476c94e63e0259f4c3fcd89d57e6d794991f33bbeaa74dee6c670912104a3",
+      "size": 670
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/check.log",
+      "sha256": "1d647695acce70825cbdcd5d12fd181806a8ef7f913c5ff7cbbea964d4aeddad",
+      "size": 398
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/fmt-check.log",
+      "sha256": "c1992314b67c95ec77919f72ffe81ba36f778367b0abc18f7fe83994fc8536a6",
+      "size": 63
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/lint.log",
+      "sha256": "2ebcbdd289875b42881d6a919111fcb3699bd340998ac939b8d686fa2ab56bca",
+      "size": 8966
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/security.log",
+      "sha256": "c58542fb4f4ead91063706cfb1217f6d92808b4bf55b5ccd68b1dddc554e3255",
+      "size": 181819
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/summary.txt",
+      "sha256": "f64a7401d1385fc88e655342bce1f4a656cbef11184e65fa6a574f2db243e60a",
+      "size": 2035
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-agent.log",
+      "sha256": "a49c3a9d51347fc53928cb4dfe79cbcbc511d30f25e9595c8c6a32a814fb5977",
+      "size": 11456
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-artifact-ip.log",
+      "sha256": "135853357619bb340ba86d0108675e76da1ed1dde9e575eb8cc4c392bdeb855e",
+      "size": 11678
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-authority.log",
+      "sha256": "0f4353809b2233bb6fd6318afb7aaea5e73e3e924c81cf7e276c581e3556576e",
+      "size": 22615
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-capability.log",
+      "sha256": "d0ca9bcf62211bdafca19add28b60b6e8ddb1976555b03ad1258e4c90b32c8c1",
+      "size": 10597
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-case-runner.log",
+      "sha256": "64fcf611d61e3cea231d5abdb7ec8402da74f178af38c403bcdd5038cde23d65",
+      "size": 12348
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-cell.log",
+      "sha256": "273304c96136fe3228e15e1a00d3e53ea36efbd769d278c090702b59aeaee5b5",
+      "size": 9704
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-changeset.log",
+      "sha256": "96e0b9fdd878b3dbff5a4a150c6e645c7134955de9ad5f363db56ef316c3289b",
+      "size": 8730
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-cli.log",
+      "sha256": "486a0fa2da36e9f0b6e993b64d925e0c078e1b7b2e83f64a18c4387121fc758c",
+      "size": 17001
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-core.log",
+      "sha256": "e89b06a917ea00362257bf9cf5603df40026876ef12d29f9da64b14c5e47d560",
+      "size": 13658
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-domain.log",
+      "sha256": "7910884db568bc9a4c1376ec38ccbe3f85acd556874fb0ddd31e3543c5ed807f",
+      "size": 7719
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-domainforge.log",
+      "sha256": "a78a31f2e3a075e46df44a37c2c0e0a67e44cf6c6b94268b9fc9bd2ed6f594b6",
+      "size": 10404
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-evidence.log",
+      "sha256": "d9cd39ee8a9ff38589bbc3345f4a304d46a20bc03fa3fa293b9eca45f1bcfa1a",
+      "size": 7831
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-extension.log",
+      "sha256": "1a0acec846508987e0f5020982579021ddd4dc93dde1d173a54fcaf5f5fd1d6e",
+      "size": 10360
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-ledger.log",
+      "sha256": "40a3c536fddeb55c7e2e5084e331a101c1151d49457a08fd60da1881a728f6be",
+      "size": 12591
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-planner.log",
+      "sha256": "1066d427c9c3270d7a60c6bc12a436d72608ee621e032ff768df1a7cdeb72b5d",
+      "size": 13504
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-realitytrace.log",
+      "sha256": "a53c2ba41dfb0e605de5d7eb4c1a8b1f44891d634ddbe9cb3bf615bd27bfa4e2",
+      "size": 9619
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-runtime.log",
+      "sha256": "5ebfe532061c7cbe0309c2f36f5bf20e57ad9c48dc912e37af6e6af15e9af20e",
+      "size": 8753
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-sandbox.log",
+      "sha256": "16cc2bc2a7794b83da6a526dfa0889131d1721aa6a8f5e70f4bd1fd154e83f31",
+      "size": 14505
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-self-model.log",
+      "sha256": "2a8830527298602b058e038e2b4d3a654ca8280be49aac39cc154901c2dfa0c1",
+      "size": 9025
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-server.log",
+      "sha256": "5db788cb00c18274b2e96662a207098dc783481a0b268ac9c7dba03311e7eabc",
+      "size": 54859
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-settlement.log",
+      "sha256": "cb0eea39f5aec58b911043ff2b174d6a09c805be3c92f152586b531e3a75b4fb",
+      "size": 9842
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-spec-pipeline.log",
+      "sha256": "19bc3dbf2422a0c4666a10b81a07dcb44ccfd9dd68e5578a2b50b5f8a34b0394",
+      "size": 9555
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-thoth.log",
+      "sha256": "195a2b33c418b958479ecc1e6097a0ddee023904eaff1bafa8f906472f16df90",
+      "size": 11230
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/test-sea-forge-trace.log",
+      "sha256": "d1dfb54525c8e3fe3bcad24a1a9a392a443b231761967bb397ffcea47b93a1e7",
+      "size": 8426
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/typecheck.log",
+      "sha256": "4c3dc57be0367bfed4b731b487c9b4d071e47e54a849c74a443a44126100a4d6",
+      "size": 8594
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run5-before-final/v1-baseline.log",
+      "sha256": "e84b21439d72208d751c2c2e3ab8134bdfb06c251b7a8626f0e82cc562d223f9",
+      "size": 670
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/check.log",
+      "sha256": "29d1a4c88bdf6ad5ed40d08697a8a72f9d5852d01b7003604b714c83eb8cd080",
+      "size": 202168
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/fmt-check.log",
+      "sha256": "c1992314b67c95ec77919f72ffe81ba36f778367b0abc18f7fe83994fc8536a6",
+      "size": 63
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/lint.log",
+      "sha256": "b1d0273d404cd360de65f2f286e046eddb24fda42c19b895c43b3e1062bc7e7e",
+      "size": 7370
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/no-async-kernel.log",
+      "sha256": "cd04381fe689cb462260c27ac90fab44ac6c20af9af7586df33796394c97c7d1",
+      "size": 104
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/proof.log",
+      "sha256": "48eec25f8e168c21f6c4278d03fadbbcf5a97f9f57bc67e5c1f6eab324ca737b",
+      "size": 93
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/security.log",
+      "sha256": "76b8e7687337dfecfb23088459d473369ee8dce5e1b18231a632fe5bae890959",
+      "size": 183233
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/summary.txt",
+      "sha256": "63feaad7cc3ca3cb9482290accdbd8da38a0ade854c1addfb670af7cb48778fd",
+      "size": 2769
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-agent.log",
+      "sha256": "d18c62da960be4b89ef4f031090cda1ba731ada296cb13a5e6e20eaf2968e0ff",
+      "size": 11557
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-artifact-ip.log",
+      "sha256": "917b684e606a7b09565a31cc438ce2730f50d249d936c13d940683f5419153ab",
+      "size": 11473
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-authority.log",
+      "sha256": "d222183a3ae300203fb9eeae02ebf3b502305683f21c449b258461bfe1bab2b8",
+      "size": 22822
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-capability.log",
+      "sha256": "3216ad37efc3a87adde13ae41eb9f4e4d46dc7fb36beb0274d8e1324ba061fc5",
+      "size": 10597
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-case-runner.log",
+      "sha256": "b37ac8ddf1356baea484f0010c3f3d7e6262aa9d73f139e1aaab0018e9a2f695",
+      "size": 12564
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-cell.log",
+      "sha256": "0aee82a2a2178a06c0f6932324311d12663e2761865f4cc929115c7dfa07e621",
+      "size": 9704
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-changeset.log",
+      "sha256": "09bcce8d4f29e5689275dfdf736cbc5639dd3c93e31e0e7fb9dc27eb3fa328bf",
+      "size": 8730
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-cli.log",
+      "sha256": "fc2a1488c66a66ce9580f3f539198d49076939c4784ced75fe505ee8ceeed6b1",
+      "size": 17272
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-core.log",
+      "sha256": "84ea85e55807fe108d39f45b4cb724533486625553ace1e167c67563503f0d34",
+      "size": 13658
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-domain.log",
+      "sha256": "8f9d2efc14bcdbd5d94d429cfd4b7ec52d57cda0ce84f94037babf9876023ed2",
+      "size": 7719
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-domainforge.log",
+      "sha256": "53152ca419a955194c04e32a087a9caece432b55a1fcd025436afb28267e7685",
+      "size": 10404
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-evidence.log",
+      "sha256": "297df2ae0ae85e9da938157cf145472e6fc47efc4a9e5984d2fc74956c7e34f8",
+      "size": 7831
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-extension.log",
+      "sha256": "f98ac7af6898be3b5c8590b5698850d6094454f8714da428dbfe6cb9539848fc",
+      "size": 10466
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-ledger.log",
+      "sha256": "ea212cdd420cc7e54a9f136c1c4edbfb1c45062e152436cf31f56fa998caa842",
+      "size": 12692
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-planner.log",
+      "sha256": "eed73f1ba356c10025aca7a9d6f2707f09a696dd305d82f805c38401845aa690",
+      "size": 13606
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-realitytrace.log",
+      "sha256": "12b58f2cdcaf646319a5ec52162ef895c7ada9f56a1e54a51097635a93ec4cd0",
+      "size": 13155
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-runtime.log",
+      "sha256": "62b3db5fae9232fcebd9c32e66f4b68331d4daf47add321836b159b364a06b40",
+      "size": 8753
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-sandbox.log",
+      "sha256": "346b9734b474035c57a6fdba714ed83588eaef613b613418f0f6cf4f3ae068f1",
+      "size": 14857
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-self-model.log",
+      "sha256": "a68d0912b0cc48946fd1128a3aa28baf44d049b979f453124b250a6c414faaef",
+      "size": 9133
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-server.log",
+      "sha256": "fbe469781b5fa3d1d7672094fabd3be82846518ac581846d105018c7c8e9135e",
+      "size": 55799
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-settlement.log",
+      "sha256": "25eda29ffcbbb3233bb36d4fafafb997d41d55009c1a85dc433c64ee2fa7920c",
+      "size": 9842
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-spec-pipeline.log",
+      "sha256": "0c682b83818a96335a7c790f776a96320a3d507f71f7fc6195580ba50d407a8b",
+      "size": 9669
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-thoth.log",
+      "sha256": "e09cf945ed82161d67f058f61aeb6fa0fb73194ae762b6296da4b6bb300e22fb",
+      "size": 11436
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/test-sea-forge-trace.log",
+      "sha256": "1dfc78463f8cfdeb03843a36abcb97a3c7f655376480fde8fcd903cd67fe0e6a",
+      "size": 8426
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/typecheck.log",
+      "sha256": "8b336a03f2a540949b65984179b929b4b383e033910fd5b79f4f07d077971503",
+      "size": 7349
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gates-run6-interim/v1-baseline.log",
+      "sha256": "3548d9d2b0198dd9728a2ab61d65939a9aaf43822f9d389308c708d095e9db0a",
+      "size": 670
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/gitleaks-history-after.log",
+      "sha256": "29efb0bbc034ce36393611706731fb594721ae64b4a35e9872916cebd34c319a",
+      "size": 193
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/lifecycle-after-removal.txt",
+      "sha256": "f21a074dd2801062cf6dfb55cc1a42449fd0fa0f94805df9dccda3e52032fbca",
+      "size": 113
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/lifecycle-with-indb-timeouts.txt",
+      "sha256": "e57fcd06e3148e93ae151ff89e89e905efc4c69917070acd8a4376207784cc1d",
+      "size": 1151
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/mutation-evidence-recorded-schema.txt",
+      "sha256": "43fede19eae65df30fbad67d76a250ce8da1f07e3e514df6261232336f901113",
+      "size": 231
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/mutation-proof-producer.txt",
+      "sha256": "b9bd68b4ad912299d1059bdfe2cea826958ee292ae4762e1bff951455c5ae6f4",
+      "size": 192
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/mutations-round3-run2.txt",
+      "sha256": "ae0b35b3de999522073790558a49ef430a711fc91ce7143f9a65336d441c224b",
+      "size": 3715
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/mutations-round3.txt",
+      "sha256": "d7657f5ebab99622b3b238aad9028acea679413c0ecfc4260f415a9141dfbbd5",
+      "size": 4568
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/mutations-syscall-filter.txt",
+      "sha256": "39da11004c49a2de4c38cf73a158d27c3ec7e6c95b17a52f71011742c6c6d9ce",
+      "size": 1403
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/sea-forge-against-local-sxr.log",
+      "sha256": "0eda76b7b906ca7257adba164800bd3f317f64b516c8e4627b73bf90f941be66",
+      "size": 9135
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/secrets-staged-clean-index.log",
+      "sha256": "315c6016dd8c019955917ab93e5655ba280902eec5222b6ff50c956fbc6e44f0",
+      "size": 223
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/security-after-allowlist-fix.log",
+      "sha256": "442130517b9f5af0cc2048be4fac7218c00656061fc10ada0c0279601451c8d4",
+      "size": 182675
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/adjacent_to_allowlist.staged.json",
+      "sha256": "e18a38a745b649dc36cfe3134ed98d1592f65938f61e424ce68a4f27823c6208",
+      "size": 537
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/adjacent_to_allowlist.staged.log",
+      "sha256": "31848221466884c5afa5dacec32017a542e118f75de04d8cb1d6691256a63c2d",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/allowlisted_numbered_transcript.staged.json",
+      "sha256": "9e86a6396dd166bc786e30ef6818b632342ef3d75642c0de9be3134ffc91f6ce",
+      "size": 536
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/allowlisted_numbered_transcript.staged.log",
+      "sha256": "c6982fe5fbb44031324eaa2711e4dcdd8dba90358aee2958fea861ecb134296b",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/allowlisted_unanchored_entire.staged.json",
+      "sha256": "1afc0c692045a17ccbe463851b17f5ca1cae0e72e4857c02ed29a9fca3433cef",
+      "size": 562
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/allowlisted_unanchored_entire.staged.log",
+      "sha256": "b9bb1167b5278364b6414d0a5d837700de0e8c43c990baefa08d46ebc6ee6321",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/casework_path_new_pat.staged.json",
+      "sha256": "486dd5184feab7212dfc6088404da4775bec0bbbe9b46e54bac39bd501fa3d1e",
+      "size": 607
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/casework_path_new_pat.staged.log",
+      "sha256": "e1c0d7680bca2d786d1cacc33bf3959e22a122c5e3af3f50170594520429692e",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/clean_negative_control.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/clean_negative_control.staged.log",
+      "sha256": "1ce14eddf49466b87cb926dbeccd74e775befa0aa787be741506d32c9e4318f9",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/commit_scoped_path_new_secret.staged.json",
+      "sha256": "23140baa24fa1dcca700882f84ead08df5f0b8603785c8a1e815230ba35898c4",
+      "size": 588
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/commit_scoped_path_new_secret.staged.log",
+      "sha256": "3aa6981beac03d21e11cf917e1670d24168fb053c0679fc91380ef4408baf9b5",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/committed.history.json",
+      "sha256": "d378e271978c2008f0554dc3a6d5e15ba87798cf0fe7baafc13147109aa96786",
+      "size": 652
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/committed.history.log",
+      "sha256": "921ea089031861f9201d698d465012b79a66a6a39df37ffc9e45e747dd96dd37",
+      "size": 189
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/committed.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/committed.staged.log",
+      "sha256": "9dd45cb5db06897195bb5e2e39654064dfa1df91ff57cf5d2b527da7f5f08a63",
+      "size": 178
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_modification.staged.json",
+      "sha256": "9ed935bc8481f61542bee07281d858bad8563c53c33a14bd2d7e2cd7867ba370",
+      "size": 521
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_modification.staged.log",
+      "sha256": "d72ffd88db859c088b95652d013b940a0e422a915b4be71b867e224b7ad6bee3",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_new_file.staged.json",
+      "sha256": "893b57b57443c2e7604c71db57c41d165abe86560daad8ab4261633fb32dcfd6",
+      "size": 522
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_new_file.staged.log",
+      "sha256": "5a8a612d05f7ea518c5d33ad50539b8bf2b89cdf3e3b4692b6cf930a53ae0980",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_then_worktree_reverted.staged.json",
+      "sha256": "4c667281f8fbe8d3bb0e7a2a9214083d6a02eeff92832e6a9456b6be55b8ce6d",
+      "size": 528
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/staged_then_worktree_reverted.staged.log",
+      "sha256": "1865158ce4a05c98f4042c3684c1761b9051f8832789b645c3a8c0cd6193405e",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/unstaged_only.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/unstaged_only.staged.log",
+      "sha256": "06887d4d6ee723f78d73775bdd2f2ddf68b8849840dd79b1906c14ad98646884",
+      "size": 178
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/value_scoped_path_new_value.staged.json",
+      "sha256": "e7b0dfc4064fc53101aa1327ac27ca8b3f87852130499327a8b42e56c6129f30",
+      "size": 642
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries/value_scoped_path_new_value.staged.log",
+      "sha256": "5cf7ee93b32c0e11683d66a8b726640461db4860e8225ab222c85521680e4029",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/adjacent_to_allowlist.staged.json",
+      "sha256": "fd2dcadeb2307daaf0619e0a3e31f06af7287230c93b11cc0b4d88467a9df973",
+      "size": 537
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/adjacent_to_allowlist.staged.log",
+      "sha256": "1a7636ef894a9a781aa16ff039c850d4cc659466b513181a6e61dd12549fa580",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/allowlisted_numbered_transcript.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/allowlisted_numbered_transcript.staged.log",
+      "sha256": "6309b8005cb8e634ed8d0b87fbc4a069aa4595f211ecdeafaed0240dec4059e0",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/allowlisted_unanchored_entire.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/allowlisted_unanchored_entire.staged.log",
+      "sha256": "2f5a185aa559a9d04ca71c336afcfccf2d1fbb66a2a14b08b00250e8204cb959",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/casework_path_new_pat.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/casework_path_new_pat.staged.log",
+      "sha256": "66ff46e68e28d14f35a74651e320da0d62924ef1117be6df3a6745ee3786e868",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/clean_negative_control.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/clean_negative_control.staged.log",
+      "sha256": "4dfece33852100a54d2d777751b4fc9b3da14216795a968436cbffa73c599ad2",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/commit_scoped_path_new_secret.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/commit_scoped_path_new_secret.staged.log",
+      "sha256": "2580ca7cb1fcbd3ee00d616a81d4d42dfc3056150e6169129eba518ddde06b55",
+      "size": 184
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/committed.history.json",
+      "sha256": "03adaaf3ccf89c50cdfa4ffb0cc921f0aafff13b3ea863792d4f76d7b372a128",
+      "size": 653
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/committed.history.log",
+      "sha256": "40dc599367c0590dd6071cdfdad7cf983f0e15a6f4de32fa204d9fcb98a35021",
+      "size": 186
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/committed.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/committed.staged.log",
+      "sha256": "ad00e2c90d6197212ebd4550e89083ffffd52738979007d5085475cf2e57da39",
+      "size": 175
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_modification.staged.json",
+      "sha256": "2839ce5c77d7af228bccd2bcb2d22f41fa8f798b011fd74e01307194df0143f7",
+      "size": 520
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_modification.staged.log",
+      "sha256": "075bc11112be56164e66b7943afc54f81a8ac1e26e486452f682451b9f7f0c2f",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_new_file.staged.json",
+      "sha256": "5b9e102605215c1211b8a5483c3201a4abb0057c42c494d52c27c3e8021b3b59",
+      "size": 522
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_new_file.staged.log",
+      "sha256": "cf63589cc5a94b9a6d6679449669c7da93eb2aeee0493d5fbe293da14fbe529a",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_then_worktree_reverted.staged.json",
+      "sha256": "8522b62b2a3235dd683c676e5d19aecb1d84617b7a5d99e98e758538bc7fe994",
+      "size": 529
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/staged_then_worktree_reverted.staged.log",
+      "sha256": "5a5d1db0b953051766307c6e6832cecb9b4c5d1504342f2689abf0bd74734456",
+      "size": 183
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/unstaged_only.staged.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "size": 3
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/staged-canaries-before/unstaged_only.staged.log",
+      "sha256": "ad00e2c90d6197212ebd4550e89083ffffd52738979007d5085475cf2e57da39",
+      "size": 175
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/sxr-gates/clippy.log",
+      "sha256": "3145c59456449a5a7023699d5d2a2f70bb73366a4ccc5651c5fd46f42855ec04",
+      "size": 402
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/sxr-gates/fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/sxr-gates/scripts.log",
+      "sha256": "0723ac322e02cb986a0749cdea52d79f0e6500ad7953eb89ae60ec7a1aa6de8e",
+      "size": 1169
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/sxr-gates/test.log",
+      "sha256": "bf349c044a5b18925f1965fc5e3844deb7a687631090984788a9b22559a6e8f3",
+      "size": 19247
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/syscall-after-filter.txt",
+      "sha256": "2f77c03d58327b640fbaad594a243cadce955e51962e5012329d67f9a85b5bcf",
+      "size": 1095
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/syscall-before-filter.txt",
+      "sha256": "ed6d2d448aa8142e23ee942c4b82c1d6a1765aee1cf2f31957ee7eee9f866974",
+      "size": 1820
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017/unix-socket-reach-before.txt",
+      "sha256": "fb64f63f3ed8757748e3b5844f1156daf3426e7b0236a800388b2933e5ef0c73",
+      "size": 767
+    }
+  ],
+  "provenance": {
+    "branch": "security/enforcement-gaps-20261017",
+    "dirty": true,
+    "head": "64d4a16ba518dd1dc5f87e4133ad169d56a148ca",
+    "head_tree": "d7308c4975f66f9772884d4e4180901ab2ff2d31",
+    "worktree_diff_sha256": "e43a95815361e67eab5655af57a355ba312820dd0b52f6446cc48db5cea72123",
+    "worktree_status_sha256": "78f4b93839a9c3c97fbd3a74aef46e2e6cf707667493646b317ff3bfaf1c153d"
+  },
+  "schema": "sea-forge.evidence-retention/v1",
+  "sources": [
+    {
+      "path": ".agents/evidence/security-v1/round2-20261017",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "356fdcba64eee543309591a3c0ef120e0a925efbf4689f1d9432c2248c3547b6",
+            "11f2cce6fc69121e92ce24c9c624a36b100026f3356ae7e42c7a90dc70aaaf9f"
+          ],
+          "observer_run_id": "28fc35e1-a7ee-47c6-b645-01f50202ec97",
+          "recorded_at": "2026-10-17T20:33:03.677939+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round2-20261017/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run1-shared-target",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "154a889a2790fca7660ff74ea0282e4ddebbc395e9db41c3fbd363521801d764",
+            "43ca013e1724c1841917753f01b9b8e6edae5919b27e1bbf619d130d7a68ae7c"
+          ],
+          "observer_run_id": "a92b088f-2b06-429d-b7ed-69cb9542d753",
+          "recorded_at": "2026-10-18T12:27:06.366465+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run1-shared-target/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run2",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "557edec95bd592ecb2eb55f94ca3a84d870b34fa82d30759866b649933ad131c",
+            "7f10694e50679ca7b524db569cd2ab82bf39afee18b412f639561239feec13fa"
+          ],
+          "observer_run_id": "09608c03-9dd5-40e4-97f8-bfdb81d906dc",
+          "recorded_at": "2026-10-18T12:53:35.059808+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run2/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run3",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "4d686f1878dc3e95a127f46823800c47cd5fe2b29a279fe4eb355457c6aa650f",
+            "26f300d731a77f025a6d6ffcbfe49853bb14ed36c579343c09935c36a7d64ad7"
+          ],
+          "observer_run_id": "f1ea40fa-dd20-4608-9748-234b99845b1a",
+          "recorded_at": "2026-10-18T12:54:47.327574+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run3/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run4",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "7ca5d5972ababc283cc642ff8277c41f870be265dd5aa404b3de37998c824537",
+            "de691f83fd022e050e6efcf25952051a40212b151a4d84eea13aa09442ed4126"
+          ],
+          "observer_run_id": "653f04a3-1537-4ce9-bc69-d8ffe238d02e",
+          "recorded_at": "2026-10-18T13:47:08.108235+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run4/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run5",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "3648cff9162cce88ba8549f9a9d4f4f78f7f4417c08223b95f97a10a85d9b2e1",
+            "de691f83fd022e050e6efcf25952051a40212b151a4d84eea13aa09442ed4126"
+          ],
+          "observer_run_id": "17b3183a-89c2-4b4a-9e8e-38781e5752a0",
+          "recorded_at": "2026-10-18T13:54:04.690489+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run5/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run6",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "1c8305c7673716d901a8320333c326545c73c2fba97935d0f21403c6fe7c0644",
+            "ebb5d6e7514dbee06599991f44ca4b0faaebaba8b4990af7a054063216286692"
+          ],
+          "observer_run_id": "30e72420-d768-48be-9dbd-1ae38766b0c0",
+          "recorded_at": "2026-10-18T15:03:46.447224+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run6/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v1/round3-20261018-run7",
+      "runs": [
+        {
+          "baseline_commit": "5664912f085f5abbc82895570de8dca19b598a6f",
+          "command_log_sha256": [
+            "8c48356ae4259f492bbeb804cbcebf71a2e65ba007ab8602c9adf8f47013e75b",
+            "c70ddc4cef97329f075d31d2c5e47321199f17ae5fef37c7fec539a2c72ab8b7"
+          ],
+          "observer_run_id": "174c3ca8-4516-464a-b1a5-0b094ae812b6",
+          "recorded_at": "2026-10-18T15:30:57.501939+00:00",
+          "results": "/home/sprime01/projects/_wt/sec-gaps/.agents/evidence/security-v1/round3-20261018-run7/all/results.json"
+        }
+      ]
+    },
+    {
+      "path": ".agents/evidence/security-v2/round3-20261017",
+      "runs": []
+    }
+  ]
+}

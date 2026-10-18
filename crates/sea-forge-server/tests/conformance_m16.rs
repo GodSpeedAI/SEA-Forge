@@ -47,6 +47,135 @@ fn finish_prompt(prompt_id: u64, session_id: &str, output: &str) {
     }));
 }
 
+/// Inside the isolated ACP child: use the offered brokered MCP server the way
+/// an agent would, then try to go around it. Results land in the workspace
+/// for the parent to check against the upstream's own observations.
+fn exercise_brokered_mcp(servers: &Value) {
+    use std::io::{BufReader, Read};
+    use std::process::{Command, Stdio};
+    let server = &servers[0];
+    let mut results = serde_json::Map::new();
+    results.insert("offered".into(), servers.clone());
+    let frames = [
+        json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"fixture","version":"1"}}}),
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
+        json!({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"metadata.read","arguments":{"k":"v"}}}),
+        json!({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"audit.delete","arguments":{}}}),
+    ];
+    let script: String = frames.iter().map(|f| format!("{f}\n")).collect();
+    let mut child = Command::new(server["command"].as_str().unwrap())
+        .args(
+            server["args"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap()),
+        )
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(script.as_bytes())
+        .unwrap();
+    let mut out = String::new();
+    child
+        .stdout
+        .take()
+        .unwrap()
+        .read_to_string(&mut out)
+        .unwrap();
+    child.wait().unwrap();
+    let responses: Vec<Value> = out
+        .lines()
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+    results.insert("via_connector".into(), json!(responses));
+    // Bypass 1: skip the connector and speak to the socket directly.
+    let socket = server["args"][0].as_str().unwrap();
+    let mut stream = std::os::unix::net::UnixStream::connect(socket).unwrap();
+    stream.write_all(script.as_bytes()).unwrap();
+    stream.shutdown(std::net::Shutdown::Write).unwrap();
+    let direct: Vec<Value> = BufReader::new(stream)
+        .lines()
+        .map_while(Result::ok)
+        .filter_map(|l| serde_json::from_str(&l).ok())
+        .collect();
+    results.insert("direct_socket".into(), json!(direct));
+    // Bypass 2: run the upstream itself against the trusted observer state.
+    let upstream = std::env::var("FIXTURE_UPSTREAM").unwrap();
+    let observer = std::env::var("FIXTURE_OBSERVER_DIR").unwrap();
+    let mut rogue = Command::new("/usr/bin/python3")
+        .arg(&upstream)
+        .env("SEA_FORGE_SECURITY_OBSERVER_DIR", &observer)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    rogue
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(format!("{}\n", frames[4]).as_bytes())
+        .unwrap();
+    let mut rogue_out = String::new();
+    rogue
+        .stdout
+        .take()
+        .unwrap()
+        .read_to_string(&mut rogue_out)
+        .unwrap();
+    results.insert(
+        "rogue_upstream_success".into(),
+        json!(rogue.wait().unwrap().success() && rogue_out.contains("deleted")),
+    );
+    std::fs::write(
+        "mcp-results.json",
+        serde_json::to_vec(&Value::Object(results)).unwrap(),
+    )
+    .unwrap();
+}
+
+/// Inside the isolated ACP child: use the issued workload-bound database
+/// session, then attempt a destructive statement. PostgreSQL decides.
+fn exercise_database_session() {
+    let conninfo = std::env::var("SEA_FORGE_PG_APP_DB_AUDIT_READ").unwrap();
+    let psql = |sql: &str| {
+        let out = std::process::Command::new("psql")
+            .args([
+                conninfo.as_str(),
+                "-w",
+                "-X",
+                "-At",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-v",
+                "VERBOSITY=sqlstate",
+                "-c",
+                sql,
+            ])
+            .output()
+            .unwrap();
+        format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout).trim(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        )
+    };
+    let results = json!({
+        "read": psql("SELECT count(*) FROM audit_log"),
+        "delete": psql("DELETE FROM audit_log"),
+        "whoami": psql("SELECT current_user"),
+        "write_scope_offered": std::env::var_os("SEA_FORGE_PG_APP_DB_AUDIT_WRITE").is_some(),
+    });
+    std::fs::write("pg-results.json", serde_json::to_vec(&results).unwrap()).unwrap();
+}
+
 /// Scripted ACP child used by the portable M16 tests. The parent process
 /// launches this same test binary with `--exact acp_fixture_child --nocapture`.
 #[test]
@@ -86,6 +215,12 @@ fn acp_fixture_child() {
                 let declared = message["params"]["cwd"].as_str().unwrap_or_default();
                 assert!(declared.ends_with("workspace"), "session/new cwd drifted");
                 assert!(message["params"]["mcpServers"].is_array());
+                if mode.contains("mcp") {
+                    exercise_brokered_mcp(&message["params"]["mcpServers"]);
+                }
+                if mode.contains("pg") {
+                    exercise_database_session();
+                }
                 write_rpc(json!({
                     "jsonrpc": "2.0",
                     "id": id,
@@ -106,6 +241,19 @@ fn acp_fixture_child() {
             Some("session/prompt") => {
                 prompt_id = id;
                 assert!(message["params"]["prompt"].is_array());
+                if mode.contains("isolated") {
+                    // SEC-01: a dedicated subordinate host identity, never the
+                    // launcher's own UID, and no reach into launcher secrets.
+                    let map = std::fs::read_to_string("/proc/self/uid_map").unwrap();
+                    let fields: Vec<&str> = map.split_whitespace().collect();
+                    assert_eq!(fields.len(), 3, "single-ID mapping expected: {map}");
+                    assert_ne!(fields[1], "1000", "workload runs as launcher UID");
+                    let secret = std::env::var("FIXTURE_LAUNCHER_SECRET").unwrap();
+                    assert!(
+                        std::fs::read(&secret).is_err(),
+                        "isolated ACP child read a launcher-private file"
+                    );
+                }
                 if mode.contains("jail") {
                     let escaped = std::env::temp_dir()
                         .join(format!("sea-forge-acp-escape-{}", std::process::id()));
@@ -187,7 +335,18 @@ fn acp_fixture_child() {
                         )
                         .unwrap();
                     }
-                    finish_prompt(prompt_id.unwrap(), session_id, "done");
+                    if mode.contains("pg") {
+                        // An agent echoing its own connection string.
+                        let conninfo = std::env::var("SEA_FORGE_PG_APP_DB_AUDIT_READ").unwrap();
+                        std::fs::write("conninfo.txt", &conninfo).unwrap();
+                        finish_prompt(
+                            prompt_id.unwrap(),
+                            session_id,
+                            &format!("connected with {conninfo}"),
+                        );
+                    } else {
+                        finish_prompt(prompt_id.unwrap(), session_id, "done");
+                    }
                 }
             }
             None if id == Some(901) => {
@@ -306,6 +465,15 @@ fn server_config(root: &Path, tool_kind: &str, mode: &str) -> ServerConfig {
     ServerConfig {
         root: root.to_path_buf(),
         agent,
+        // Isolated fixture agents are this test binary and its sibling
+        // connector; that build directory is their only runtime tree.
+        workload_read_paths: vec![std::env::current_exe()
+            .unwrap()
+            .parent()
+            .and_then(Path::parent)
+            .unwrap()
+            .canonicalize()
+            .unwrap()],
         ..ServerConfig::default()
     }
 }
@@ -629,6 +797,329 @@ async fn t16_4_minimal_env_workspace_cwd_and_escalation_refused() {
     assert!(entries(root.path(), &case)
         .iter()
         .any(|e| e.record_kind == "permission_request"));
+}
+
+/// SEC-01/SEC-06 on the production ACP launch path: the `isolated` class runs
+/// the agent under its own subordinate host identity with the jail posture.
+#[tokio::test]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
+async fn t16_4b_isolated_agent_runs_under_dedicated_host_identity() {
+    if sea_forge_sandbox::workload::sibling_helper().is_err()
+        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host().is_err()
+    {
+        assert!(
+            std::env::var_os("SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION").is_none(),
+            "workload isolation required but unavailable"
+        );
+        eprintln!("NOT-EXECUTABLE: workload isolation prerequisites absent");
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nrules:\n  - name: allow-isolated-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n    sandbox_class: isolated\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n",
+    )
+    .unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    // Traverse-only root so the workload reaches its run workspace by name.
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o711)).unwrap();
+    let secret = root.path().join("launcher.secret");
+    std::fs::write(&secret, "SECRET-LAUNCHER").unwrap();
+    std::fs::set_permissions(&secret, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let mut config = server_config(root.path(), "read", "escalate_isolated_jail");
+    config.agent.endpoints[0]
+        .env
+        .push(format!("FIXTURE_LAUNCHER_SECRET={}", secret.display()));
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    // Trusted observation: the launcher still reads what the workload wrote.
+    let proof = root
+        .path()
+        .join("runs")
+        .join(&run)
+        .join("workspace/jail-proof.txt");
+    assert_eq!(std::fs::read_to_string(proof).unwrap(), "inside-workspace");
+}
+
+/// SEC-03/SEC-06 on the production ACP path: an isolated agent reaches MCP
+/// only through the per-workload broker. The upstream's own invocation log is
+/// the observation: the denied tool never arrives, the permitted one does,
+/// and both bypasses (raw socket, running the upstream directly) fail.
+#[tokio::test]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
+async fn t16_4c_isolated_agent_mcp_is_brokered_and_denials_never_reach_upstream() {
+    use std::os::unix::fs::PermissionsExt;
+    if sea_forge_sandbox::workload::sibling_binary("sea-forge-mcp-connect").is_err()
+        || sea_forge_sandbox::workload::sibling_helper().is_err()
+        || sea_forge_sandbox::workload::WorkloadIdentityPool::from_host().is_err()
+    {
+        assert!(
+            std::env::var_os("SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION").is_none(),
+            "workload isolation required but unavailable"
+        );
+        eprintln!("NOT-EXECUTABLE: workload isolation prerequisites absent");
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o711)).unwrap();
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nrules:\n  - name: allow-isolated-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n    sandbox_class: isolated\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n  - name: metadata-only-mcp\n    verdict: allow\n    actor_role: operator\n    operation_kind: mcp_tool_call\n    boundary_constraints:\n      mcp_server: [security-upstream]\n      mcp_tool: [metadata.read]\n",
+    )
+    .unwrap();
+    let observer = root.path().join("observer");
+    std::fs::create_dir(&observer).unwrap();
+    std::fs::set_permissions(&observer, std::fs::Permissions::from_mode(0o700)).unwrap();
+    std::fs::write(observer.join("audit.json"), "[{\"event\":\"protected\"}]\n").unwrap();
+    let upstream = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/security-v1/mcp_upstream.py")
+        .canonicalize()
+        .unwrap();
+    let mut config = server_config(root.path(), "read", "isolated_mcp");
+    config.agent.endpoints[0].env.extend([
+        format!("FIXTURE_UPSTREAM={}", upstream.display()),
+        format!("FIXTURE_OBSERVER_DIR={}", observer.display()),
+        format!(
+            "FIXTURE_LAUNCHER_SECRET={}",
+            observer.join("audit.json").display()
+        ),
+    ]);
+    config.mcp_servers = vec![sea_forge_server::mcp::McpServerConfig {
+        name: "security-upstream".into(),
+        argv: vec!["/usr/bin/python3".into(), upstream.display().to_string()],
+        env: [(
+            "SEA_FORGE_SECURITY_OBSERVER_DIR".to_string(),
+            observer.display().to_string(),
+        )]
+        .into(),
+        classify: Default::default(),
+    }];
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    let results: Value = serde_json::from_slice(
+        &std::fs::read(
+            root.path()
+                .join("runs")
+                .join(&run)
+                .join("workspace/mcp-results.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    for route in ["via_connector", "direct_socket"] {
+        let responses = results[route].as_array().unwrap();
+        let by_id = |id: u64| {
+            responses
+                .iter()
+                .find(|r| r["id"] == id)
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+        let listed = by_id(2);
+        let tools: Vec<&str> = listed["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(tools, ["metadata.read"], "{route}: discovery not filtered");
+        assert!(
+            by_id(3)["result"]["content"].is_array(),
+            "{route}: authorized call failed"
+        );
+        assert_eq!(by_id(4)["error"]["code"], -32001, "{route}: denial missing");
+    }
+    assert_eq!(
+        results["rogue_upstream_success"], false,
+        "direct upstream bypass succeeded"
+    );
+    // Independent upstream observation: only the permitted tool ever arrived.
+    let log = std::fs::read_to_string(observer.join("invocations.jsonl")).unwrap();
+    let tools: Vec<String> = log
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["tool"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+    assert_eq!(tools, ["metadata.read", "metadata.read"]);
+    assert_eq!(
+        std::fs::read_to_string(observer.join("audit.json")).unwrap(),
+        "[{\"event\":\"protected\"}]\n"
+    );
+    // Upstream processes do not outlive the episode.
+    assert!(results["offered"][0]["command"]
+        .as_str()
+        .unwrap()
+        .ends_with("sea-forge-mcp-connect"));
+}
+
+#[cfg(target_os = "linux")]
+#[path = "support/pg_cluster.rs"]
+mod pg_cluster;
+
+/// SEC-05/SEC-08 on the production ACP path: an isolated agent receives only
+/// the database scope authority allows, as its own native role; PostgreSQL
+/// refuses the destructive statement; the role is revoked when the episode
+/// ends.
+#[tokio::test]
+// Workload isolation is Linux-only; elsewhere this does not compile.
+#[cfg(target_os = "linux")]
+async fn t16_4d_isolated_agent_gets_workload_bound_database_session() {
+    use std::os::unix::fs::PermissionsExt;
+    let Some((install, _pool, _helper, _state)) = pg_cluster::prerequisites() else {
+        return;
+    };
+    let cluster = pg_cluster::start_cluster(&install);
+    let broker = sea_forge_server::postgres::PostgresBroker::new(cluster.config.clone()).unwrap();
+    let before = pg_cluster::digest(&broker);
+    let root = tempfile::tempdir().unwrap();
+    std::fs::set_permissions(root.path(), std::fs::Permissions::from_mode(0o711)).unwrap();
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [argv]\nrules:\n  - name: allow-isolated-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n    sandbox_class: isolated\n  - name: allow-acp-permission\n    verdict: allow\n    actor_role: operator\n    operation_kind: sandbox_execution\n  - name: audit-reader-session\n    verdict: allow\n    actor_role: operator\n    operation_kind: database_session\n    boundary_constraints:\n      db_resource: [app-db]\n      db_scope: [audit-read]\n",
+    )
+    .unwrap();
+    let secret = root.path().join("launcher.secret");
+    std::fs::write(&secret, "SECRET-LAUNCHER").unwrap();
+    std::fs::set_permissions(&secret, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let mut config = server_config(root.path(), "read", "isolated_pg");
+    // psql is the agent's runtime: declare its installation readable.
+    config
+        .workload_read_paths
+        .push(install.canonicalize().unwrap());
+    config.agent.endpoints[0].env.extend([
+        format!("FIXTURE_LAUNCHER_SECRET={}", secret.display()),
+        format!("PATH={}:/usr/bin:/bin", install.join("bin").display()),
+        format!("LD_LIBRARY_PATH={}", install.join("lib").display()),
+    ]);
+    let mut resource = cluster.config.clone();
+    resource.offer = vec!["audit-read".into(), "audit-write".into()];
+    resource.exposure = [("audit-read".to_string(), "confidential".to_string())].into();
+    config.postgres = vec![resource];
+    let case = case_id().unwrap();
+    let (run, result) = execute_fixture(&config, &case).await;
+    assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
+    let results: Value = serde_json::from_slice(
+        &std::fs::read(
+            root.path()
+                .join("runs")
+                .join(&run)
+                .join("workspace/pg-results.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    if results["read"] != "3" {
+        // Diagnose an early revocation: the session lifecycle as recorded
+        // (kinds and reasons only; issued credentials are never recorded).
+        let lifecycle: Vec<(String, Value, String)> = LedgerStream::open(
+            root.path(),
+            format!("dbsessions-{run}"),
+            "sea-forge-control-plane",
+        )
+        .and_then(|ledger| ledger.read_entries())
+        .map(|entries| {
+            entries
+                .into_iter()
+                .map(|e| (e.record_kind, e.payload["reason"].clone(), e.committed_at))
+                .collect()
+        })
+        .unwrap_or_default();
+        panic!("read failed: {results}; session lifecycle: {lifecycle:?}");
+    }
+    assert!(
+        results["delete"].as_str().unwrap().contains("42501"),
+        "{results}"
+    );
+    assert!(
+        results["whoami"].as_str().unwrap().starts_with("sfw_"),
+        "{results}"
+    );
+    assert_eq!(
+        results["write_scope_offered"], false,
+        "unauthorized scope issued"
+    );
+    assert_eq!(pg_cluster::digest(&broker), before);
+    // The issued credential never reaches persisted evidence: the agent
+    // echoed it, the stored transcript and every record outside the
+    // workload's own workspace carry only the redaction marker.
+    let echoed = std::fs::read_to_string(
+        root.path()
+            .join("runs")
+            .join(&run)
+            .join("workspace/conninfo.txt"),
+    )
+    .unwrap();
+    let password = echoed
+        .split_whitespace()
+        .find_map(|field| field.strip_prefix("password="))
+        .unwrap()
+        .to_string();
+    assert_eq!(password.len(), 64, "{echoed}");
+    let workspace = root.path().join("runs").join(&run).join("workspace");
+    let mut pending = vec![root.path().to_path_buf()];
+    let mut transcript_seen = false;
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.starts_with(&workspace) || !entry.file_type().unwrap().is_file() {
+                if entry.file_type().unwrap().is_dir() && !path.starts_with(&workspace) {
+                    pending.push(path);
+                }
+                continue;
+            }
+            let bytes = std::fs::read(&path).unwrap_or_default();
+            let text = String::from_utf8_lossy(&bytes);
+            assert!(
+                !text.contains(&password),
+                "credential persisted in {}",
+                path.display()
+            );
+            transcript_seen |= text.contains("connected with") && text.contains("[REDACTED]");
+        }
+    }
+    assert!(transcript_seen, "redacted transcript not persisted");
+    assert!(!format!("{result:?}").contains(&password));
+    // Revoked at episode end: no workload role survives.
+    assert_eq!(
+        broker
+            .admin_sql("SELECT count(*) FROM pg_roles WHERE rolname LIKE 'sfw_%'")
+            .unwrap(),
+        "0"
+    );
+    let ledger = LedgerStream::open(
+        root.path(),
+        format!("dbsessions-{run}"),
+        "sea-forge-control-plane",
+    )
+    .unwrap();
+    let kinds: Vec<String> = ledger
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .map(|e| e.record_kind)
+        .collect();
+    // The case context is now exposed to what the issued scope can read.
+    let registry =
+        sea_forge_server::exposure::ExposureRegistry::open(root.path(), "auditor").unwrap();
+    assert_eq!(
+        registry.labels(&format!("case:{case}")).unwrap(),
+        ["confidential"]
+    );
+    for kind in [
+        "database_session_issued",
+        "database_session_refused",
+        "database_session_revoked",
+    ] {
+        assert!(kinds.iter().any(|k| k == kind), "missing {kind}: {kinds:?}");
+    }
 }
 
 /// Sentinel-aware transcript redaction on the ACP path: plaintext secrets in

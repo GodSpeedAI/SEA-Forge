@@ -1,0 +1,17 @@
+SEC-01.same_uid_approval: PASS
+SEC-01.workload_binding: NOT-YET-EXECUTABLE
+SEC-03.mcp: PASS
+SEC-04.mcp_canonical: PASS
+SEC-05.postgres_native: PASS
+SEC-05.workload_access: NOT-YET-EXECUTABLE
+SEC-12.false_settlement: PASS
+SEC-12.end_to_end_attribution: NOT-YET-EXECUTABLE
+SEC-02.credential_lifecycle: NOT-YET-EXECUTABLE
+SEC-06.child_environment: PASS
+SEC-06.alternate_paths: NOT-YET-EXECUTABLE
+SEC-07.scoped_elevation: NOT-YET-EXECUTABLE
+SEC-08.active_revocation: NOT-YET-EXECUTABLE
+SEC-09.exposure: NOT-YET-EXECUTABLE
+SEC-10.injection: NOT-YET-EXECUTABLE
+SEC-11.delegation: NOT-YET-EXECUTABLE
+Evidence: .agents/evidence/security-v1/round3-20261018-run7/all/results.json

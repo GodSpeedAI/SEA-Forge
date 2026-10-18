@@ -1,0 +1,16 @@
+{
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "-p",
+    "sea-forge-server",
+    "--bin",
+    "sea-forge-mcp"
+  ],
+  "started_at": "2026-10-16T19:58:12.421020+00:00",
+  "finished_at": "2026-10-16T19:58:29.680832+00:00",
+  "exit_code": 0,
+  "log_sha256": "b75fa49c0139de128de346203d2af96ba0f9db9a6013cb05d7fcfcf469170f2d",
+  "source_head": "2898f475091516546b28f506565855c26b3e2933"
+}

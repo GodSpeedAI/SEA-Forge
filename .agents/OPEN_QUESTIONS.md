@@ -50,3 +50,26 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
   depends on the answer (adr-identity-delegation.md, "Gateway principal: which role").
 - Related: revocation timing is commit/restart-bounded until `reload_config()` gains more call
   sites (ADR Revocation section, corrected 2026-09-24 per critic F-7).
+
+## Open: Linux workload UID-mapper prerequisite (2026-10-16)
+
+- Current report: `.agents/reports/security-continuation-20261016.md`;
+  historical checkpoint: `.agents/reports/security-implementation-20261016.md`.
+- The operator selected Linux-first isolation and authorized all four
+  additional legacy migrations. Those controls now pass with independently
+  authority-issued private connections, preserving positive work and adding
+  old-path impersonation attempts. Fresh review accepted the regression scope.
+- Operator provisioning needed: the actual WSL host lacks `newuidmap` and
+  `newgidmap`. Subordinate UID/GID ranges exist and user/PID/network namespaces
+  work outside the tool sandbox; `unshare --map-auto` fails because the trusted
+  helpers are missing. Recommend the distribution's `uidmap` package or an
+  equivalent operator-provided runner. No service or global kernel-setting
+  change is requested; no privileged installation has been attempted.
+- Precision: earlier NoNewPrivs=1, PID1=codex and read-only cgroup observations
+  describe the tool sandbox. Actual host NoNewPrivs=0 and bwrap namespace probes
+  pass. Both records and a scope caveat are retained; neither proves distinct
+  host UIDs or credential isolation.
+- Impact: Stage A launcher/credential/PostgreSQL session integration remains
+  unfinished and cannot qualify until actual isolated resource execution is
+  demonstrated. Stage B/C must wait for Stage A. Frozen v1 and its gap inventory
+  remain untouched; passing regressions do not close those gaps.

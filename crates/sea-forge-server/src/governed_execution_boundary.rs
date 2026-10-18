@@ -522,6 +522,9 @@ pub fn emit_authorized_invocation(
     // Execution constraints project ONLY authority-side facts the decision
     // itself carries — never anything an executor could have chosen.
     let mut constraints = Map::new();
+    if let Some(root) = decision.action_request.context.get("workspace_root") {
+        constraints.insert("workspace_root".into(), root.clone());
+    }
     if let Some(class) = decision.sandbox_class_granted.as_deref() {
         constraints.insert("sandbox_class".into(), Value::String(class.to_string()));
     }
@@ -605,7 +608,7 @@ pub fn emit_authorized_invocation(
 // ---------------------------------------------------------------------------
 
 /// One admitted generation of an invocation slot.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 struct IssuedInvocation {
     generation: u64,
     event_id: String,
@@ -615,6 +618,8 @@ struct IssuedInvocation {
     operation: String,
     resource: String,
     world_ref: String,
+    workspace_root: Option<std::path::PathBuf>,
+    workspace: Option<std::sync::Arc<std::fs::File>>,
 }
 
 #[derive(Debug, Default)]
@@ -668,6 +673,100 @@ pub struct InvocationLedger {
 
 fn slot_key(work_request_id: &str, operation: &str, resource: &str) -> String {
     format!("{work_request_id}\u{1f}{operation}\u{1f}{resource}")
+}
+
+/// Observe a claimed file effect from the authority-bound workspace, outside
+/// the workload. An unavailable observer is a rejected witness, never a
+/// successful effect. The pinned root survives pathname replacement.
+fn observe_file_effect(effect: &Value, issued: &IssuedInvocation) -> Value {
+    use std::io::Read;
+    use std::path::Path;
+
+    if effect.get("kind").and_then(Value::as_str) != Some("file_write") {
+        return effect.clone();
+    }
+    let observed = (|| -> Result<String, &'static str> {
+        let root = issued
+            .workspace_root
+            .as_deref()
+            .ok_or("workspace_observer_unavailable")?;
+        let directory = issued
+            .workspace
+            .as_deref()
+            .ok_or("workspace_observer_unavailable")?;
+        let reference = effect
+            .get("ref")
+            .and_then(Value::as_str)
+            .ok_or("file_reference_missing")?;
+        let path = Path::new(reference);
+        let relative = if path.is_absolute() {
+            path.strip_prefix(root)
+                .map_err(|_| "file_reference_outside_workspace")?
+        } else {
+            path
+        };
+        match issued.operation.as_str() {
+            "write_file" if relative != Path::new(&issued.resource) => {
+                return Err("file_effect_does_not_match_authorized_resource");
+            }
+            "write_file" | "execute_command" | "execute_sandbox_command" => {}
+            _ => return Err("file_effect_not_authorized"),
+        }
+        let relative = relative.to_str().ok_or("file_reference_invalid")?;
+        let mut file = sea_forge_sandbox::open_observation_file(directory, relative)
+            .map_err(|_| "file_observation_refused")?;
+        let mut digest = Sha256::new();
+        let mut buffer = [0_u8; 8192];
+        // Settlement must remain bounded even if a workload keeps growing a
+        // file while it is being observed. Larger effects need a different
+        // trusted observer; they cannot settle through this local witness.
+        const MAX_OBSERVATION_BYTES: u64 = 64 * 1024 * 1024;
+        let mut total = 0_u64;
+        loop {
+            let count = file
+                .read(&mut buffer)
+                .map_err(|_| "file_observation_failed")?;
+            if count == 0 {
+                break;
+            }
+            total += count as u64;
+            if total > MAX_OBSERVATION_BYTES {
+                return Err("file_observation_limit_exceeded");
+            }
+            digest.update(&buffer[..count]);
+        }
+        Ok(hex::encode(digest.finalize()))
+    })();
+    let witness = match observed {
+        Ok(digest) => match effect.get("sha256") {
+            Some(expected) if expected.as_str() != Some(digest.as_str()) => serde_json::json!({
+                "status":"rejected", "reason":"file_digest_mismatch", "sha256":digest,
+            }),
+            _ => serde_json::json!({"status":"verified", "sha256":digest}),
+        },
+        Err(reason) => serde_json::json!({"status":"rejected", "reason":reason}),
+    };
+    let mut result = effect.clone();
+    result["resource_observation"] = witness;
+    result
+}
+
+fn observe_file_effects(effects: &Value, issued: &IssuedInvocation) -> Value {
+    match observe_file_effect(effects, issued) {
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|item| observe_file_effects(item, issued))
+                .collect(),
+        ),
+        Value::Object(mut object) => {
+            for value in object.values_mut() {
+                *value = observe_file_effects(value, issued);
+            }
+            Value::Object(object)
+        }
+        other => other,
+    }
 }
 
 impl InvocationLedger {
@@ -780,6 +879,15 @@ impl InvocationLedger {
             resource.as_deref().unwrap_or_default(),
         );
         let generation;
+        let workspace_root = payload
+            .get("execution_constraints")
+            .and_then(|c| c.get("workspace_root"))
+            .and_then(Value::as_str)
+            .map(std::path::PathBuf::from);
+        let workspace = workspace_root
+            .as_ref()
+            .and_then(|root| sea_forge_sandbox::open_observation_root(root).ok())
+            .map(std::sync::Arc::new);
         {
             let state = self.slots.entry(key.clone()).or_default();
             state.current_generation += 1;
@@ -793,6 +901,8 @@ impl InvocationLedger {
                 operation: operation.unwrap_or_default(),
                 resource: resource.unwrap_or_default(),
                 world_ref,
+                workspace_root,
+                workspace,
             });
         }
         self.by_invocation_id.insert(invocation_id, key);
@@ -1012,6 +1122,8 @@ impl InvocationLedger {
                 });
             }
         }
+
+        let observed_effects = observe_file_effects(&observed_effects, issued);
 
         // Settle — once per observation identity.
         self.settled_event_ids.insert(event_id);

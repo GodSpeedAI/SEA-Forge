@@ -1,26 +1,21 @@
 # Gitleaks configuration for SEA Forge.
 #
-# Extends the default gitleaks ruleset. The only addition is a path
-# allowlist for `.entire/metadata/` — these are rebuildable session
-# artifacts (gitignored, not tracked) that exist only in prior git
-# history and contain simulated/fake tokens used to exercise the
-# redaction pipeline. They are not real credentials and are documented
-# as benign in `.agents/CURRENT_STATUS.md`. Source-tree test fixtures
-# carry inline `// gitleaks:allow` comments instead.
+# Extends the default gitleaks ruleset with allowlists for reviewed false
+# positives. Each is scoped as narrowly as the scan mode allows: by commit
+# AND path for history, by rule AND path AND exact value where a shallow CI
+# checkout rescans the same bytes under a new commit. A path-only allowlist
+# admits any new secret staged at that path, which
+# scripts/security/staged-secret-canaries.sh checks. Source-tree test
+# fixtures carry inline `// gitleaks:allow` comments instead.
 title = "SEA Forge"
 
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "rebuildable session artifacts and historical redaction-session transcripts (simulated tokens)"
-paths = [
-  '''\.entire/metadata/.*''',
-  # Entire CLI checkpoint transcript artifacts at the repo root (numbered
-  # session dirs). Gitignored now but remain in prior history; contain
-  # simulated/fake tokens from redaction-pipeline test sessions.
-  '''^[0-9]+/(full|transcript)\.jsonl$''',
-]
+# The former path-only allowlist for `.entire/metadata/` and numbered
+# transcript directories was removed in round 3 (2026-10-18): a history scan
+# without it reports no finding at those paths, and it silently admitted any
+# NEW secret staged there (staged-secret-canaries.sh).
 
 # T17 gate-remediation additions (2026-09-18): commits that predate the
 # request-admission/redaction hardening contain simulated credentials in test
@@ -30,9 +25,17 @@ paths = [
 # redacted against a canonical fake-key corpus). Verified not real during the
 # bounded-judgment T17 gate remediation; commit-scoped so any NEW occurrence
 # in these paths still fails.
+#
+# Round 3 (2026-10-18): without `condition = "AND"` gitleaks matched commit OR
+# path, so any new secret in these files passed. It is now AND-scoped. The
+# casework merge bd661c9 re-introduced four of the same fixture values and is
+# listed for that reason; current-tree identifiers are covered below by value.
 [[allowlists]]
 description = "test fixtures and redaction sentinels with simulated credentials"
+condition = "AND"
+targetRules = ["generic-api-key", "private-key"]
 commits = [
+  "bd661c909d579e80e2ed7ee3cc18012535f50b4a",
   "c371fc1733d9b27f24331fd9ba83128c42b6c15c",
   "4bda7946fc7bdf5e93aa89fe0594ddde154380a6",
   "87e475b22fc6921fd7b39d791277d9401ef59b1a",
@@ -45,6 +48,25 @@ paths = [
   '''crates/sea-forge-server/tests/conformance_m16\.rs''',
   '''crates/sea-forge-ledger/src/types\.rs''',
   '''crates/sea-forge-ledger/tests/conformance_m0_ledger\.rs''',
+]
+
+# Idempotency identifiers in current test fixtures (not credentials). Scoped
+# by value so a shallow CI checkout, which scans them under a new commit,
+# still passes while any other value in these files fails.
+[[allowlists]]
+description = "idempotency identifiers in convergence and T04 fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^crates/sea-forge-server/tests/fixtures/t04_governed_work_request\.json$''',
+  '''^crates/sea-forge-server/tests/convergence_t11_whole_loop\.rs$''',
+  '''^crates/sea-forge-server/tests/convergence_t12_variation\.rs$''',
+]
+regexes = [
+  '''^late-for-inv1-key$''',
+  '''^late-for-inv1$''',
+  '''^d4f6ee099ca7183729e183407f39484496384c83b6a2525a5f38a21adf80e8fb$''',
+  '''^8483dcae69d6668a6164801fe06a904538f62ef524d509247c799e32347feec6$''',
 ]
 
 # --- casework-environment plan, T00 remediation (operator-approved 2026-09-19) --------------
@@ -82,8 +104,11 @@ paths = [
 # Verified by inspection: matches are `idempotency_key` values in throwaway harness-cell ledgers and
 # UI snapshot field names (frame_token, embedding_token, navigation_token, navigation_api_key)
 # captured in trace zips. HARs carry no cookie or authorization headers. No real credentials.
+# Round 3: every finding these paths cover is generic-api-key (75 in
+# history), so other rules (tokens, private keys) are no longer suppressed.
 [[allowlists]]
 description = "casework live-ladder run evidence (harness cells, trace zips)"
+targetRules = ["generic-api-key"]
 paths = [
   '''^\.agents/evidence/casework-live-wiring/T10/.*''',
   # T09 resume records that discuss gitleaks false positives. Matches are prose ("Unauthenticated, ..."),
@@ -102,4 +127,251 @@ description = "benchmark and gate evidence under godspeed-bounded-judgment (veri
 targetRules = ["generic-api-key"]
 paths = [
   '''^\.agents/evidence/godspeed-bounded-judgment/''',
+]
+
+# Security acceptance v1: verified public idempotency digests, not credentials.
+# See .agents/evidence/security-v1/idempotency-scan-analysis.json. Exact values
+# AND exact evidence paths AND one rule; future/new values still fail scanning.
+[[allowlists]]
+description = "security v1 frozen evidence: exact public SHA-256 idempotency identifiers"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = [
+  '''^\.agents/evidence/security-v1/final-candidate/results\.json$''',
+  '''^\.agents/evidence/security-v1/final-candidate/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/freeze-baseline/results\.json$''',
+  '''^\.agents/evidence/security-v1/freeze-baseline/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/initial-executable/results\.json$''',
+  '''^\.agents/evidence/security-v1/initial-executable/rust-A\.log$''',
+  '''^\.agents/evidence/security-v1/required-gates/00-regression\.log$''',
+]
+regexes = [
+  '''^02d610a83bda0a398d92554caa89be1a7ba39b13b6229c3db64de0b43d93bf35$''',
+  '''^2404772a6095fb91cf981764a57544cc8faac23df276432c93f354b5fd98c86c$''',
+  '''^309130860bcd21854fff251b02b9f65056c39f759d6e4a1eb8e11cb1648f819c$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^6f6ce3160b7098c559fbfe2b8f2a2709b1854ae728cbfc8404484382f89817ed$''',
+  '''^72c56963e904f99b9ec5e181f8b365ff42bdb1f47535c1a806151e5927f16a25$''',
+  '''^7e1bd522651046653eb693ef050cdc27125911d23d66c8b14b588e00f57c97c6$''',
+  '''^8bd88073ff11a52d6bbb121bbe26b1b658b40e237bd557729fb38b9656db88d6$''',
+  '''^8be9ac2c833bc79057defcb39964f81fb29cffbd993b93bc49e817c7201ce2fd$''',
+  '''^b8b51299e23ddc25fbbaca7489521994895987849831aaccf4e860a26e6c6187$''',
+  '''^bc38124cb7753c9bf704e3c774dcb56fac71b3083390a66b0e6da1d3acc01de6$''',
+  '''^bd78f09371bdc1ebe0c5a9d52fb540e4def2779fde8c2fe3f668f9f869312fa8$''',
+  '''^d9f3c473f2315f975ff9202060617f2dbf40a6dd1c181735e9956f21711466b7$''',
+  '''^e24b5facaedaefe9dede5e38e4c8299a170d4b3ecb9e77511a5f3517cdb9b256$''',
+  '''^eb04a8ab6c4677094f0369d2f149484eb885bb59cbc1f9bda4c1e7220d2ecad9$''',
+  '''^f6fc80ca47d28212810914ac1f6a8bacf962af1936568b023f4ccb48d58ca2a8$''',
+  '''^f7cec6e4eb47af30a3bac36a308c334fcdf329979633dc87355e6a3d362e49a9$''',
+]
+
+# Implementation evidence: reviewed synthetic public idempotency digests.
+# Each tuple is constrained to one file, one scanner rule and exact values.
+# See .agents/evidence/security-v2/idempotency-scan-analysis.json.
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-prechange-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-prechange-20261016/all/results\.json$''']
+regexes = [
+  '''^0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061$''',
+  '''^3b32cbc8cd424358601f33a4e72085d2e38cbbae5518d8f4b3a04706f336632d$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^e45006e145317696713a4d77303529a76b37e12756fe677805a207d564fd921d$''',
+  '''^f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-prechange-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-prechange-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^0e9af3a6bca8441cd6e36648f36d4264a0645dc3cd0e235984e523a998bfe061$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^f2ce30635f9d7bc524f12396af5c7423f0a5c17024b3154a61e3d38233ae8d67$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-20261016/all/results\.json$''']
+regexes = [
+  '''^2ce93c455ae333115fb7602e1c36684e4f2c5a17f12160d47c5e82b9a0387509$''',
+  '''^410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f$''',
+  '''^ea6566ab950df40d86fef62d8bb166ea77f9f84dd7988a5cb5280855739eb71a$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^410cffdf587b2d9872c79997245e5d23addffe0e98c71c06dee859d2abddaee5$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cec0645597eab40830d46b3a355f6c10ae713eda4673af5d0770c9f5172f8c7f$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-fixed-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/results\.json$''']
+regexes = [
+  '''^24cb2bf4b4746b0fa672be72b78c1581bf856772e14f0df2ee893a5b73ec45b2$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a$''',
+  '''^d7cb299a6f9f0c2b80fb175c46c752d503d2d327a7fcbe4dc523644454b7aadb$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-stage-a-fixed-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-stage-a-fixed-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^4a9b87cda0a8874afae95a60df8b4a12471d18feb94250d487292d6d0fb1ea31$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^cfe3c40cb921b343eb07c8bbad176f96aa353875b0ba91eea82d0b810976053a$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-checkpoint-20261016/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-checkpoint-20261016/all/results\.json$''']
+regexes = [
+  '''^3c0dde816f8499c78da12902e16184c341f9764354018d166f24b45400d1e311$''',
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7$''',
+  '''^d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa$''',
+  '''^ffb39997fa02d93f9a9a7dfaf053bf3ac09c62e8541d7691865a1aa1792e44cc$''',
+]
+
+[[allowlists]]
+description = "Reviewed synthetic idempotency identifiers: implementation-checkpoint-20261016/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-checkpoint-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^93494608940e6c99d0a500ebb2dec11e52bcc11f3b7e8598af48a5ff865982a7$''',
+  '''^d3ef65b98681e9c33ea8afd301f0be57e16d5a790304f9d9ba1fe6b3ed15e0aa$''',
+]
+
+# Continuation evidence: independently classified public integrity identifiers.
+# Exact file/value/rule conjunctions; see the continuation scan analysis.
+[[allowlists]]
+description = "public synthetic idempotency digest: all/results.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-continuation-20261016/all/results\.json$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^91c51f76fd0df47177698796a536b0e52228f772179f7af168a11d371c532980$''',
+  '''^e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2$''',
+  '''^f0d6c0f0dea649df46d8642120e7ca927a863058c7cf881fe1a636d8a620eb05$''',
+]
+
+[[allowlists]]
+description = "public synthetic idempotency digest: all/rust-A.log"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/implementation-continuation-20261016/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^471ab4d00de92a06196a4cb9817c6d913406d67785f330488a0e24da80f1d99c$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^e1ff1e82883a7f31f56e6e3cbd88f506b266759a3bb8122296aa707b924983f2$''',
+]
+
+[[allowlists]]
+description = "reviewed source integrity SHA256; recomputed against source: continuation-20261016/migration-review.json"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v2/continuation-20261016/migration-review\.json$''']
+regexes = [
+  '''^ef51962a89490c2ad1f44633550db621124e5e3ecbb6bb22f24d7719e960b396$''',
+]
+
+# Security continuation evidence (2026-10-17): `idempotency_key` fields holding
+# content-derived SHA-256 digests (sha256("|event_type|canonical payload") or
+# sha256(case id)), every value recomputed from its public preimage; no
+# credential material. Provisionally retained by the operator 2026-10-17, conditional on
+# canary-verified exact scoping: one commit AND one file AND one rule AND exact values.
+# Analysis and canary results: .agents/evidence/security-v2/gitleaks-control-20261017/.
+
+[[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
+description = "continuation 2026-10-17 recomputed idempotency digests: sec12-trace.json @ 7cdee13"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''']
+regexes = [
+  '''^1b322c8467625eaa323065d4dddc4bb057c3cc452e3871355c30881b17897205$''',
+  '''^483ced183ad98a4025a331887b4487ec5a5d7e0b0e8ec35a60efd92925741032$''',
+  '''^a40d34cf3bf1d343368c94ed75ddf8450cd5c2399300738c35a4133f6752f9e9$''',
+  '''^cf635f82893e9c3195c4a6020a703008d19a42208111b5740f9b1db2a63b1e55$''',
+]
+
+[[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
+description = "continuation 2026-10-17 recomputed idempotency digests: results.json @ c112482"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/results\.json$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
+  '''^dc81f0712a185286079d08854f23a70bf81fea8b31ad9dd765272502861cf22d$''',
+  '''^f4b4057f37b53f7fa2e7e0a3b2895b8ea70f639be285d624131b954fbdd98755$''',
+]
+
+[[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
+description = "continuation 2026-10-17 recomputed idempotency digests: rust-A.log @ c112482"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
 ]

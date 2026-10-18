@@ -58,6 +58,7 @@ fn real_sandbox_classes_available() -> Vec<String> {
     [
         SandboxClass::Local,
         SandboxClass::Jail,
+        SandboxClass::Isolated,
         SandboxClass::Microvm,
     ]
     .into_iter()

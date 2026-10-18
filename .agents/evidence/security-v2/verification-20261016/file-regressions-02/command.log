@@ -1,0 +1,147 @@
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+   Compiling ring v0.17.14
+   Compiling rustls v0.23.46
+   Compiling rustls-webpki v0.103.15
+   Compiling sea-forge-sandbox v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-sandbox)
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.12.28
+   Compiling sea-forge-evidence v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-evidence)
+   Compiling sea-forge-settlement v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-settlement)
+   Compiling sea-forge-runtime v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-runtime)
+   Compiling sea-forge-case-runner v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-case-runner)
+   Compiling sea-forge-agent v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-agent)
+   Compiling sea-forge-server v0.1.0 (/home/sprime01/projects/sea-rs/crates/sea-forge-server)
+    Finished `test` profile [unoptimized] target(s) in 30.17s
+     Running tests/convergence_t05_authorized_execution.rs (target/debug/deps/convergence_t05_authorized_execution-0694fa85a230ee96)
+
+running 10 tests
+test t05_allow_decision_emits_the_frozen_authorized_invocation ... ok
+test t05_emitted_envelope_matches_the_canonical_wire_family ... ok
+test t05_emission_refuses_placeholder_and_drifted_model_identity ... ok
+test t05_emission_requires_meaningful_correlation_and_causality ... ok
+test t05_side_effect_helper ... ok
+test t05_denied_authority_produces_no_invocation_and_no_side_effect ... ok
+test t05_both_allow_conjuncts_are_load_bearing_on_real_decisions ... ok
+test t05_escalated_authority_produces_no_invocation_and_no_side_effect ... ok
+test t05_forged_authorized_invocation_stamps_are_refused_at_admission ... ok
+test t05_governed_side_effect_runs_only_after_authorization_and_emission ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/convergence_t06_operational_settlement.rs (target/debug/deps/convergence_t06_operational_settlement-6341af9e7cb273b3)
+
+running 14 tests
+test t06_criteria_come_from_the_declared_governed_request_chain ... ok
+test t06_emission_refuses_placeholder_and_drifted_model_identity ... ok
+test t06_empty_or_blank_declared_criteria_are_refused ... ok
+test t06_evaluation_requires_a_ledger_settled_observation ... ok
+test e6_full_governed_chain_settles_operationally_and_emits_the_frozen_envelope ... ok
+test t06_emitted_envelope_matches_the_canonical_wire_family ... ok
+test t06_every_projected_field_is_validated_on_the_wire ... ok
+test t06_writes_golden_fixture_for_swe_seed_adjudication ... ok
+test t06_emission_requires_the_actual_invocation_chain_as_causality ... ok
+test t06_exit_zero_alone_cannot_produce_acceptance_even_with_status_completed ... ok
+test t06_tooth1_exit_zero_with_violated_criteria_records_failure ... ok
+test t06_partial_attestation_is_rejection_not_success ... ok
+test t06_wrong_producer_stamps_are_refused_at_wire_validation ... ok
+test t06_non_completed_statuses_never_settle_accepted_regardless_of_effects ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/file_effect_observation.rs (target/debug/deps/file_effect_observation-8438a97ef4010f77)
+
+running 1 test
+test file_claims_require_scoped_resource_evidence_even_with_forged_witnesses ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sfwp_delegated_identity.rs (target/debug/deps/sfwp_delegated_identity-39a583ba9e1d847a)
+
+running 9 tests
+test a_non_gateway_uid_cannot_send_on_behalf_of ... ok
+test delegation_may_not_widen_the_end_users_roles ... ok
+test an_operator_bound_uid_cannot_send_on_behalf_of ... ok
+test identity_get_reports_the_effective_actor ... ok
+test an_ungoverned_cell_refuses_every_delegation ... ok
+test the_gateway_cannot_speak_for_a_non_allowlisted_actor ... ok
+test two_end_users_behind_one_gateway_are_attributed_distinctly ... ok
+test separation_of_duty_holds_between_end_users_behind_one_gateway ... ok
+test user_b_may_approve_user_as_delegated_proposal_with_both_principals_ledgered ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+

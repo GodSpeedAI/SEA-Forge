@@ -1,0 +1,29 @@
+{
+  "recorded_at": "2026-10-16T15:45:09.155574+00:00",
+  "commands": [
+    {
+      "command": [
+        "just",
+        "build"
+      ],
+      "exit_code": 0,
+      "log": "00-regression.log",
+      "sha256": "e3845f0d9bcde56a11c3ff0aa77209e18d9732a9118a97344ac4bb177157b1f9"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "sea-forge-server",
+        "--locked",
+        "--",
+        "--skip",
+        "security_v1"
+      ],
+      "exit_code": 1,
+      "log": "01-regression.log",
+      "sha256": "0df64107f574ae7a3e9ec9fb3b7e6b03a382590e8504fa9acf5a49baf4fd3bac"
+    }
+  ]
+}

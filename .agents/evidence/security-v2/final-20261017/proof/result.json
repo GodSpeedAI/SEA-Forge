@@ -1,0 +1,11 @@
+{
+  "command": [
+    "just",
+    "proof"
+  ],
+  "started_at": "2026-10-17T15:53:30.997603+00:00",
+  "finished_at": "2026-10-17T15:53:41.289772+00:00",
+  "exit_code": 0,
+  "log_sha256": "bdf67092f776f3bce169d1212cd53a9ebdac80956bdbe4b2a56601be51e3fe54",
+  "source_head": "2115b5d8b666be4d68e22f7408e713419606780d"
+}

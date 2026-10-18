@@ -1,0 +1,25 @@
+==> Syntax of scripts/publish-crates.sh
+ok: shellcheck clean
+==> Extracting helpers from the shipped script
+==> Classification
+ok: the observed 429 is classified as rate limited
+ok: the existing-crate update limit is classified as rate limited
+ok: a 403 auth failure is not a rate limit
+ok: an index-propagation error is not a rate limit
+ok: an already-published error is not a rate limit
+==> Wait computation
+ok: a retry instant in the past clamps to the 1s floor
+==> Retry instant extraction
+ok: the advertised instant is extracted from the real 429 text
+ok: a duplicated GMT token yields exactly one instant
+ok: a 429 without an instant yields an empty hint
+ok: a locale-shaped dotted instant yields an empty hint
+ok: a retry instant 120s out is honoured plus margin
+ok: a retry instant past the cap clamps to RATE_LIMIT_MAX_WAIT_SECONDS
+ok: a duplicated GMT token does not swallow the advertised wait
+ok: a 429 without a retry instant falls back to RATE_LIMIT_FALLBACK_SECONDS
+ok: an unparseable retry instant falls back instead of hanging
+ok: a locale-shaped dotted retry instant fails closed to the fallback
+==> Ambient locale: LANG=C.UTF-8
+
+ALL 16 CHECKS PASSED
