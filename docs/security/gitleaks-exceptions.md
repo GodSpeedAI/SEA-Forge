@@ -1,5 +1,18 @@
 # Gitleaks exceptions
 
+## Policy (2026-10-18)
+
+`main` accepts only squash merges, and CI scans a depth-1 checkout, so a
+commit ID recorded on a branch never reaches the scan that gates it. New
+exceptions are therefore commit-independent and as narrow as the finding:
+`condition = "AND"` over the one rule, the exact path and the exact matched
+value, in `.gitleaks.toml`. Commit-pinned fingerprints in `.gitleaksignore`
+and commit-scoped allowlists cover history only; they must not be the only
+cover for bytes that exist in the current tree. A path-only exception admits
+any new secret at that path and is not used.
+`scripts/security/staged-secret-canaries.sh` (run by `just security`) checks
+that new values at excepted paths are still caught.
+
 ## Test private key fixture
 
 - Fingerprint: `b4464a91de97f7a12ac86a86afaf4bf9e691344a:crates/sea-forge-ledger/src/types.rs:private-key:377`

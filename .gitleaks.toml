@@ -1,26 +1,21 @@
 # Gitleaks configuration for SEA Forge.
 #
-# Extends the default gitleaks ruleset. The only addition is a path
-# allowlist for `.entire/metadata/` — these are rebuildable session
-# artifacts (gitignored, not tracked) that exist only in prior git
-# history and contain simulated/fake tokens used to exercise the
-# redaction pipeline. They are not real credentials and are documented
-# as benign in `.agents/CURRENT_STATUS.md`. Source-tree test fixtures
-# carry inline `// gitleaks:allow` comments instead.
+# Extends the default gitleaks ruleset with allowlists for reviewed false
+# positives. Each is scoped as narrowly as the scan mode allows: by commit
+# AND path for history, by rule AND path AND exact value where a shallow CI
+# checkout rescans the same bytes under a new commit. A path-only allowlist
+# admits any new secret staged at that path, which
+# scripts/security/staged-secret-canaries.sh checks. Source-tree test
+# fixtures carry inline `// gitleaks:allow` comments instead.
 title = "SEA Forge"
 
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "rebuildable session artifacts and historical redaction-session transcripts (simulated tokens)"
-paths = [
-  '''\.entire/metadata/.*''',
-  # Entire CLI checkpoint transcript artifacts at the repo root (numbered
-  # session dirs). Gitignored now but remain in prior history; contain
-  # simulated/fake tokens from redaction-pipeline test sessions.
-  '''^[0-9]+/(full|transcript)\.jsonl$''',
-]
+# The former path-only allowlist for `.entire/metadata/` and numbered
+# transcript directories was removed in round 3 (2026-10-18): a history scan
+# without it reports no finding at those paths, and it silently admitted any
+# NEW secret staged there (staged-secret-canaries.sh).
 
 # T17 gate-remediation additions (2026-09-18): commits that predate the
 # request-admission/redaction hardening contain simulated credentials in test
@@ -30,9 +25,17 @@ paths = [
 # redacted against a canonical fake-key corpus). Verified not real during the
 # bounded-judgment T17 gate remediation; commit-scoped so any NEW occurrence
 # in these paths still fails.
+#
+# Round 3 (2026-10-18): without `condition = "AND"` gitleaks matched commit OR
+# path, so any new secret in these files passed. It is now AND-scoped. The
+# casework merge bd661c9 re-introduced four of the same fixture values and is
+# listed for that reason; current-tree identifiers are covered below by value.
 [[allowlists]]
 description = "test fixtures and redaction sentinels with simulated credentials"
+condition = "AND"
+targetRules = ["generic-api-key", "private-key"]
 commits = [
+  "bd661c909d579e80e2ed7ee3cc18012535f50b4a",
   "c371fc1733d9b27f24331fd9ba83128c42b6c15c",
   "4bda7946fc7bdf5e93aa89fe0594ddde154380a6",
   "87e475b22fc6921fd7b39d791277d9401ef59b1a",
@@ -45,6 +48,25 @@ paths = [
   '''crates/sea-forge-server/tests/conformance_m16\.rs''',
   '''crates/sea-forge-ledger/src/types\.rs''',
   '''crates/sea-forge-ledger/tests/conformance_m0_ledger\.rs''',
+]
+
+# Idempotency identifiers in current test fixtures (not credentials). Scoped
+# by value so a shallow CI checkout, which scans them under a new commit,
+# still passes while any other value in these files fails.
+[[allowlists]]
+description = "idempotency identifiers in convergence and T04 fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^crates/sea-forge-server/tests/fixtures/t04_governed_work_request\.json$''',
+  '''^crates/sea-forge-server/tests/convergence_t11_whole_loop\.rs$''',
+  '''^crates/sea-forge-server/tests/convergence_t12_variation\.rs$''',
+]
+regexes = [
+  '''^late-for-inv1-key$''',
+  '''^late-for-inv1$''',
+  '''^d4f6ee099ca7183729e183407f39484496384c83b6a2525a5f38a21adf80e8fb$''',
+  '''^8483dcae69d6668a6164801fe06a904538f62ef524d509247c799e32347feec6$''',
 ]
 
 # --- casework-environment plan, T00 remediation (operator-approved 2026-09-19) --------------
@@ -82,8 +104,11 @@ paths = [
 # Verified by inspection: matches are `idempotency_key` values in throwaway harness-cell ledgers and
 # UI snapshot field names (frame_token, embedding_token, navigation_token, navigation_api_key)
 # captured in trace zips. HARs carry no cookie or authorization headers. No real credentials.
+# Round 3: every finding these paths cover is generic-api-key (75 in
+# history), so other rules (tokens, private keys) are no longer suppressed.
 [[allowlists]]
 description = "casework live-ladder run evidence (harness cells, trace zips)"
+targetRules = ["generic-api-key"]
 paths = [
   '''^\.agents/evidence/casework-live-wiring/T10/.*''',
   # T09 resume records that discuss gitleaks false positives. Matches are prose ("Unauthenticated, ..."),
@@ -305,9 +330,10 @@ regexes = [
 # Analysis and canary results: .agents/evidence/security-v2/gitleaks-control-20261017/.
 
 [[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
 description = "continuation 2026-10-17 recomputed idempotency digests: sec12-trace.json @ 7cdee13"
 condition = "AND"
-commits = ["7cdee134b2804defbf5a131b4434fa662f2da376"]
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''']
@@ -319,9 +345,10 @@ regexes = [
 ]
 
 [[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
 description = "continuation 2026-10-17 recomputed idempotency digests: results.json @ c112482"
 condition = "AND"
-commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676"]
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/results\.json$''']
@@ -335,9 +362,10 @@ regexes = [
 ]
 
 [[allowlists]]
+# Commit-independent (2026-10-18): rule AND path AND exact value, so a
+# squash merge or a depth-1 CI checkout rescanning these bytes still matches.
 description = "continuation 2026-10-17 recomputed idempotency digests: rust-A.log @ c112482"
 condition = "AND"
-commits = ["c1124826beb3b55e7354c4e2e301c0a4949d6676"]
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/rust-A\.log$''']
