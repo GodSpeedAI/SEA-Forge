@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 114
+**Status revision:** 115
 
-**Stage:** security-round4-federation-export
+**Stage:** security-round4-gitleaks-value-scoping
 
-**Summary:** export_bundle joins the evaluable reserved surfaces under the operator-approved destination-authority rule: a rule matches only when its permitted_exposure covers every label of the exported runs' exposure union (round-3 already states that union in the authority request); the empty union exports under any allowing rule, labeled unions need explicit admission, import/adopt stay denied as unclassified. export_exposure pins both directions plus the noplan/traversal never-reach-authority cases.
+**Summary:** Operator decisions of 2026-10-18 executed: the round-1/2 evidence matches (continuation-20261017 results/rust-A, realitytrace sec12-trace) and the casework T10/T09-resume paths move from path-scoped generic-api-key admission to exact identifier values covering tree and history, so a new value under these paths fails closed instead of being auto-admitted.
 
 **Verified:**
 
