@@ -1,0 +1,364 @@
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.4
+   Compiling serde_core v1.0.229
+   Compiling libc v0.2.190
+   Compiling syn v3.0.3
+   Compiling memchr v2.8.3
+   Compiling typenum v1.20.1
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling syn v2.0.119
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling rustversion v1.0.23
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling encoding_rs v0.8.42
+   Compiling zmij v1.0.23
+   Compiling crossbeam-utils v0.8.22
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling hybrid-array v0.4.13
+   Compiling aho-corasick v1.1.4
+   Compiling scopeguard v1.2.0
+   Compiling regex-syntax v0.8.11
+   Compiling multiversion_no_op v1.0.0
+   Compiling simdutf8 v0.1.5
+   Compiling crossbeam-epoch v0.9.20
+   Compiling core_detect v1.0.0
+   Compiling regex-automata v0.4.16
+   Compiling digest v0.10.7
+   Compiling getrandom v0.4.3
+   Compiling zerocopy v0.8.55
+   Compiling smallvec v1.15.2
+   Compiling ucd-trie v0.1.7
+   Compiling arraydeque v0.5.1
+   Compiling serde_json v1.0.151
+   Compiling cpufeatures v0.2.17
+   Compiling crossbeam-deque v0.8.7
+   Compiling unicode-width v0.2.2
+   Compiling tinyvec_macros v0.1.1
+   Compiling anstyle v1.0.14
+   Compiling semver v1.0.28
+   Compiling rustc_version v0.4.1
+   Compiling annotate-snippets v0.12.16
+   Compiling tinyvec v1.12.0
+   Compiling granit-parser v1.3.0
+   Compiling pest v2.8.8
+   Compiling encoding_rs_io v0.1.8
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling getrandom v0.2.17
+   Compiling bstr v1.13.0
+   Compiling nohash-hasher v0.2.0
+   Compiling getrandom v0.3.4
+   Compiling itoa v1.0.18
+   Compiling iana-time-zone v0.1.65
+   Compiling base64 v0.22.1
+   Compiling same-file v1.0.6
+   Compiling bitflags v2.13.1
+   Compiling const-oid v0.10.2
+   Compiling hashbrown v0.17.1
+   Compiling log v0.4.33
+   Compiling equivalent v1.0.2
+   Compiling indexmap v2.14.0
+   Compiling globset v0.4.19
+   Compiling digest v0.11.3
+   Compiling walkdir v2.5.0
+   Compiling serde-saphyr v1.3.0
+   Compiling chrono v0.4.45
+   Compiling rand_core v0.6.4
+   Compiling pest_meta v2.8.8
+   Compiling unicode-normalization v0.1.25
+   Compiling curve25519-dalek v4.1.3
+   Compiling sha2 v0.10.9
+   Compiling serde_spanned v0.6.9
+   Compiling toml_datetime v0.6.11
+   Compiling cpufeatures v0.3.0
+   Compiling toml_write v0.1.2
+   Compiling rust_decimal v1.42.1
+   Compiling napi-build v2.3.2
+   Compiling thiserror v1.0.69
+   Compiling anyhow v1.0.104
+   Compiling winnow v0.7.15
+   Compiling toml_edit v0.22.27
+   Compiling domainforge-core v0.21.0
+   Compiling sha2 v0.11.1
+   Compiling pest_generator v2.8.8
+   Compiling ppv-lite86 v0.2.21
+   Compiling ignore v0.4.31
+   Compiling thiserror-impl v1.0.69
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling wait-timeout v0.2.1
+   Compiling sha1_smol v1.0.1
+   Compiling zeroize v1.9.1
+   Compiling arrayvec v0.7.8
+   Compiling once_cell v1.21.4
+   Compiling hex v0.4.3
+   Compiling subtle v2.6.1
+   Compiling signature v2.2.0
+   Compiling ed25519 v2.2.3
+   Compiling sea-forge-core v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-core)
+   Compiling uuid v1.19.0
+   Compiling globwalk v0.9.1
+   Compiling rand_chacha v0.3.1
+   Compiling pest_derive v2.8.8
+   Compiling toml v0.8.23
+   Compiling regex v1.13.1
+   Compiling roxmltree v0.21.1
+   Compiling percent-encoding v2.3.2
+   Compiling xxhash-rust v0.8.18
+   Compiling rustix v1.1.4
+   Compiling rustc-hash v2.1.3
+   Compiling thiserror v2.0.19
+   Compiling rand v0.8.7
+   Compiling ed25519-dalek v2.2.0
+   Compiling enumflags2_derive v0.7.12
+   Compiling thiserror-impl v2.0.19
+   Compiling linux-raw-sys v0.12.1
+   Compiling enumflags2 v0.7.12
+   Compiling sea-forge-ledger v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-ledger)
+   Compiling sea-forge-domainforge v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-domainforge)
+   Compiling sea-forge-authority v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-authority)
+   Compiling landlock v0.4.7
+   Compiling seccompiler v0.5.0
+   Compiling sea-forge-sandbox v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-sandbox)
+   Compiling fastrand v2.5.0
+   Compiling tempfile v3.27.0
+   Compiling sea-forge-evidence v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-evidence)
+   Compiling sea-forge-settlement v0.1.0 (/home/runner/work/SEA-Forge/SEA-Forge/crates/sea-forge-settlement)
+    Finished `test` profile [unoptimized] target(s) in 52.42s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_sandbox-ae6c27dd3e3661ce)
+
+running 10 tests
+test socket_policy::tests::connect_without_address_is_none ... ok
+test socket_policy::tests::abstract_and_foreign_families_pass_through ... ok
+test socket_policy::tests::peer_verification_requires_an_absolute_path_under_a_grant ... ok
+test socket_policy::tests::filter_traps_exactly_the_monitored_syscalls_both_abi_aliases ... ok
+test socket_policy::tests::unresolvable_pathname_refuses ... ok
+test tests::ambiguous_spellings_are_rejected ... ok
+test socket_policy::tests::decodes_unix_pathname_and_grants_by_prefix ... ok
+test tests::lexical_escape_is_rejected ... ok
+test workload::tests::acl_encoding_is_sorted_and_denies_group_and_other ... ok
+test tests::symlink_parent_escape_is_rejected ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/sea-forge-mcp-connect.rs (target/debug/deps/sea_forge_mcp_connect-f3eb9a944f1008b3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/sea-forge-workload-exec.rs (target/debug/deps/sea_forge_workload_exec-1a97d7ec0b02cb22)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/conformance_m1.rs (target/debug/deps/conformance_m1-b2a6c88996eead16)
+
+running 18 tests
+test jail_class_is_jail ... ok
+test collect_artifacts_refuses_instead_of_returning_empty ... ok
+test destination_swapped_to_symlink_between_check_and_write_is_refused ... ok
+test jail_network_allows_bind_listen_under_explicit_grant ... ok
+test jail_blocks_write_outside_workspace ... ok
+test jail_network_on_non_linux_is_skip_not_pass ... ok
+test jail_network_denies_bind_listen_by_default ... ok
+test jail_network_denies_outbound_connect_by_default ... ok
+test jail_network_setup_fails_closed_never_local ... ok
+test jail_stderr_heuristic_flags_permission_denied_within_cap ... ok
+test jail_stderr_heuristic_never_asserts_a_definite_violation ... ok
+test jail_unavailable_on_unsupported_platform_returns_error ... ok
+test local_class_is_local ... ok
+test net_probe_helper ... ok
+test jail_stderr_heuristic_survives_non_utf8_prefix ... ok
+test jail_network_allows_outbound_connect_under_explicit_grant ... ok
+test untrusted_argv0_on_local_is_schema_error ... ok
+test jail_stderr_heuristic_ignores_permission_denied_past_cap ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/conformance_m7.rs (target/debug/deps/conformance_m7-a7bd6bc6064dafcc)
+
+running 10 tests
+test environment_batch_three_failures_rejected ... ok
+test environment_batch_two_failures_accepted ... ok
+test environment_evaluator_score_recorded_in_basis ... ok
+test environment_demo_environment_round_trips ... ok
+test environment_materialize_base_writes_files ... ok
+test environment_demo_env_fixture_loads ... ok
+test environment_three_axis_independence ... ok
+test environment_parse_evaluator_score_exit_and_stdout ... ok
+test environment_tampered_file_blocks_execution ... ok
+test environment_hash_pin_immutability ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/observation_file.rs (target/debug/deps/observation_file-51f8273976f1ba43)
+
+running 3 tests
+test host_configured_symlinks_resolve_in_the_root_prefix ... ok
+test observation_root_refuses_symlinks_in_every_component ... ok
+test observation_uses_the_opened_workspace_and_refuses_links_and_escape ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/openshell_stub.rs (target/debug/deps/openshell_stub-d5f0625ca7ad3ffa)
+
+running 21 tests
+test create_failure_is_reported_and_cleaned_up ... ok
+test gateway_name_is_passed_through ... ok
+test denied_access_with_failure_is_a_sandbox_violation ... ok
+test destroy_is_idempotent ... ok
+test missing_cli_is_an_explicit_failure ... ok
+test host_command_operation_is_refused_by_the_openshell_backend ... ok
+test incomplete_prover_coverage_is_refused ... ok
+test policy_outside_prover_coverage_is_refused ... ok
+test projection_with_an_unexpected_extra_file_is_refused ... ok
+test host_environment_is_not_forwarded ... ok
+test projection_with_missing_mapping_report_is_refused ... ok
+test select_sandbox_never_downgrades_openshell ... ok
+test tampered_mapping_report_is_refused ... ok
+test tampered_policy_is_refused_before_anything_runs ... ok
+test nonzero_exit_without_denials_is_completed ... ok
+test unavailable_gateway_is_an_explicit_failure ... ok
+test unspecified_image_is_refused ... ok
+test provider_expanded_effective_policy_is_refused_and_cleaned_up ... ok
+test prepare_execute_download_destroy_happy_path ... ok
+test version_mismatch_is_refused ... ok
+test timeout_exit_code_maps_to_timed_out ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/sandbox_command_host_refusal.rs (target/debug/deps/sandbox_command_host_refusal-ba68358b70cee821)
+
+running 2 tests
+test jail_backend_refuses_sandbox_commands ... ok
+test local_backend_refuses_sandbox_commands ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/state_tree.rs (target/debug/deps/state_tree-9e238204f7a76a76)
+
+running 6 tests
+
+running 1 test
+test creation_mask_makes_new_state_owner_only ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+test creation_mask_makes_new_state_owner_only ... ok
+test symlinked_state_root_is_refused ... ok
+test hardening_never_follows_or_changes_symlinks ... ok
+test unhardened_tree_is_readable_by_another_workload_mutation_control ... ok
+test hardened_tree_denies_another_workload_by_dac_alone ... ok
+test granted_workload_reaches_only_its_own_tree ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/syscall_filter.rs (target/debug/deps/syscall_filter-9873566e7955331d)
+
+running 1 test
+test isolated_workloads_cannot_reach_io_uring_or_create_namespaces ... FAILED
+
+failures:
+
+---- isolated_workloads_cannot_reach_io_uring_or_create_namespaces stdout ----
+unfiltered: {"clone3_newuser":"ok","clone_newuser":"ok","fork":"ok","io_uring_enter":"EBADF","io_uring_register":"EINVAL","io_uring_setup":"ok","nested_mount":"ok","setns":"EBADF","subprocess":"ok","thread":"ok","unshare_user":"ok","unshare_user_mount":"ok","unshare_user_net":"ok","write":"ok","x32_io_uring_setup":"ENOSYS","x32_unshare_user":"ENOSYS"}
+
+thread 'isolated_workloads_cannot_reach_io_uring_or_create_namespaces' (5996) panicked at crates/sea-forge-sandbox/tests/syscall_filter.rs:134:5:
+probe failed: unshare: failed to execute /home/runner/work/SEA-Forge/SEA-Forge/target/debug/sea-forge-workload-exec: Permission denied
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    isolated_workloads_cannot_reach_io_uring_or_create_namespaces
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p sea-forge-sandbox --test syscall_filter`

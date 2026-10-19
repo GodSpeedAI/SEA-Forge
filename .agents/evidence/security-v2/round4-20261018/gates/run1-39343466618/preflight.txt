@@ -1,0 +1,38 @@
+== commit under test ==
+0a950fa4ef519284378256f5cf49768089a6e1b4
+== kernel and architecture ==
+Linux runnervm8k3b6 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+Linux version 6.17.0-1022-azure (buildd@lcy02-amd64-020) (x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026
+== inherited seccomp state ==
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+   (0=off 1=strict 2=filter; a filter count alone does not
+    prove a second listener is impossible — probed below)
+== Landlock ABI via kernel API ==
+landlock ABI = 7
+== user namespace availability ==
+unprivileged user namespace: REFUSED: unshare: write failed /proc/self/uid_map: Operation not permitted
+== relaxing the Ubuntu 24.04 AppArmor userns restriction (disposable VM) ==
+kernel.apparmor_restrict_unprivileged_userns = 1
+kernel.apparmor_restrict_unprivileged_userns = 0
+unprivileged user namespace: AVAILABLE after sysctl
+== workload identity prerequisites (subuid delegation + setuid mappers) ==
+/etc/subuid:packer:100000:65536
+/etc/subuid:runner:165536:65536
+/etc/subgid:packer:100000:65536
+/etc/subgid:runner:165536:65536
+/usr/bin/newuidmap
+/usr/bin/newgidmap
+/etc/subuid:packer:100000:65536
+/etc/subuid:runner:165536:65536
+/etc/subgid:packer:100000:65536
+/etc/subgid:runner:165536:65536
+-rwsr-xr-x 1 root root 41864 May 30  2024 /usr/bin/newgidmap
+-rwsr-xr-x 1 root root 41864 May 30  2024 /usr/bin/newuidmap
+== seccomp user-notify install probe (disposable child) ==
+user-notify listener install: AVAILABLE (fd 3)
+== runtime prerequisites ==
+Python 3.12.3
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+psql (PostgreSQL) 16.15 (Ubuntu 16.15-1.pgdg24.04+2)

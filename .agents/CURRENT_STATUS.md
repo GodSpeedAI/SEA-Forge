@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 119
+**Status revision:** 120
 
-**Stage:** security-round4-clippy-repair
+**Stage:** security-round4-helper-reachability
 
-**Summary:** Clippy repair of the brokered supervisor: identity map_err removed, a nested unsafe block dropped, an obfuscated if-else spelled out. No behavior change; lint green.
+**Summary:** Kernel-security run 1 diagnosed: the preflight proved the user-notify mechanism installable on GitHub runners (fd 3 in a disposable child) and the sysctl userns relaxation effective, but the helper binary failed execve inside the mapped namespace because a restrictive-umask build leaves only owner bits and the namespace maps no owner for the workload process. New ensure_helper_reachable: verify other-rx before launch, repair when launcher-owned, fail closed otherwise; regression test included (11 sandbox unit tests pass).
 
 **Verified:**
 

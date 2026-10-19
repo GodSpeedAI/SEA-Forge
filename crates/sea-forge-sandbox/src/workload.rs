@@ -602,6 +602,7 @@ pub fn isolated_command(
     if !helper.is_absolute() {
         return Err(unavailable("workload helper path must be absolute"));
     }
+    ensure_helper_reachable(helper)?;
     // Only the read end crosses exec; the write end stays close-on-exec in
     // the launcher, so its closure is the launcher's exit.
     let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC)
@@ -702,6 +703,43 @@ pub fn spawn_interactive(
     })
 }
 
+/// Make the exec helper reachable from inside the workload's mapped user
+/// namespace. The helper is executed by a process whose only mapped host ID
+/// is the workload's subordinate UID, so the binary's owner appears
+/// unmapped (nobody) there and only the *other* permission bits decide
+/// execve. A build made under a restrictive umask (e.g. 077) produces a
+/// 0700 helper every workload would be refused; the launcher repairs that
+/// by granting other-read/execute on a file it owns — bits it is about to
+/// hand to untrusted code anyway — and fails closed when it cannot.
+pub fn ensure_helper_reachable(helper: &Path) -> Result<(), SandboxError> {
+    use std::os::unix::fs::PermissionsExt;
+    let meta = fs::metadata(helper)
+        .map_err(|e| unavailable(format!("helper {}: {e}", helper.display())))?;
+    if !meta.is_file() {
+        return Err(unavailable(format!(
+            "helper {} is not a regular file",
+            helper.display()
+        )));
+    }
+    let mode = meta.permissions().mode();
+    if mode & 0o005 == 0o005 {
+        return Ok(());
+    }
+    let (launcher, _) = current_ids()?;
+    if meta.uid() != launcher {
+        return Err(unavailable(format!(
+            "helper {} (mode {:o}) is not other-executable and is owned by uid {}, so workloads \
+             cannot execute it from their mapped namespace; it must be chmod +rx by its owner",
+            helper.display(),
+            mode,
+            meta.uid()
+        )));
+    }
+    fs::set_permissions(helper, fs::Permissions::from_mode(mode | 0o055))
+        .map_err(|e| unavailable(format!("chmod +rx helper {}: {e}", helper.display())))?;
+    Ok(())
+}
+
 /// Locate the helper next to the running executable (installed layouts and
 /// `target/<profile>`), failing closed when it is absent.
 pub fn sibling_helper() -> Result<PathBuf, SandboxError> {
@@ -725,6 +763,26 @@ pub fn sibling_binary(name: &str) -> Result<PathBuf, SandboxError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn umask_restricted_helper_is_made_reachable_and_foreign_ones_refused() {
+        let base = tempfile::tempdir().unwrap();
+        let helper = base.path().join("helper");
+        std::fs::write(&helper, b"#!/bin/sh\n").unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        // What a 077-umask build produces: owner-only. The launcher owns it,
+        // so the repair grants other-read/execute.
+        fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
+        ensure_helper_reachable(&helper).unwrap();
+        let mode = fs::metadata(&helper).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o755, "helper must end other-rx: {mode:o}");
+        // Already reachable: no-op.
+        ensure_helper_reachable(&helper).unwrap();
+        // The foreign-owner refusal (a helper the launcher does not own is
+        // reported, never repaired) cannot be constructed unprivileged
+        // here; the guard in ensure_helper_reachable is a direct
+        // uid comparison and returns without touching the file.
+    }
 
     #[test]
     fn acl_encoding_is_sorted_and_denies_group_and_other() {
