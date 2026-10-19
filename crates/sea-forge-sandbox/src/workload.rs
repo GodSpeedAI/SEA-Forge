@@ -145,6 +145,24 @@ impl WorkloadIdentityPool {
         let (uid_base, uid_count) = delegation("/etc/subuid", &user, uid)?;
         let (gid_base, gid_count) = delegation("/etc/subgid", &user, uid)?;
         probe_mapped_namespace(uid_base, gid_base)?;
+        // SEC-06 (ADR-014): pathname-socket containment must be enforceable
+        // before any isolated workload launches. With kernel Landlock ABI 9+
+        // the kernel-enforced ruleset needs nothing extra; below that, the
+        // seccomp supervisor requires an installable user-notify filter —
+        // refused (fail closed) when this process chain already inherited a
+        // listener, e.g. inside an outer supervision sandbox.
+        if crate::socket_policy::landlock_abi_version() < 9 {
+            #[cfg(target_arch = "x86_64")]
+            crate::socket_policy::supervisor_installable().map_err(unavailable)?;
+            #[cfg(not(target_arch = "x86_64"))]
+            {
+                return Err(unavailable(
+                    "kernel Landlock ABI < 9 and no Unix-socket supervisor exists for this \
+                     architecture; isolated workloads would launch without pathname-socket \
+                     containment",
+                ));
+            }
+        }
         let slots = host_slot_dir(uid, &home);
         fs::create_dir_all(&slots).map_err(|e| unavailable(e.to_string()))?;
         for dir in [slots.parent().unwrap_or(&slots), slots.as_path()] {
@@ -473,7 +491,51 @@ pub struct WorkloadConfinement {
     /// prefix) readable in addition to the system set; see
     /// [`validate_read_paths`].
     pub read_paths: Vec<PathBuf>,
+    /// Trees whose pathname Unix sockets the workload may resolve and
+    /// connect to (SEC-06, ADR-014) — e.g. a granted PostgreSQL socket
+    /// directory or the run's MCP broker sockets. Readability alone does
+    /// not grant socket reach; see [`validate_socket_grants`].
+    pub socket_paths: Vec<PathBuf>,
     pub network: NetworkPosture,
+}
+
+/// Check operator-declared socket grants: each must be absolute, existing
+/// and canonical, and neither `/` nor a tree containing a protected path
+/// (the control-plane root, launcher state). Socket reach and file
+/// readability are independent dimensions — a socket grant conveys no read
+/// right, and a declared read path conveys no socket right (SEC-06).
+pub fn validate_socket_grants(
+    paths: &[PathBuf],
+    protected: &[&Path],
+) -> Result<Vec<PathBuf>, SandboxError> {
+    let refuse = |path: &Path, why: &str| {
+        Err(SandboxError::new(
+            "schema_error",
+            format!("workload socket grant {}: {why}", path.display()),
+        ))
+    };
+    for path in paths {
+        if !path.is_absolute() {
+            return refuse(path, "must be absolute");
+        }
+        if path.parent().is_none() {
+            return refuse(path, "must not be the filesystem root");
+        }
+        match path.canonicalize() {
+            Ok(canonical) if canonical == *path => {}
+            Ok(_) => return refuse(path, "must be canonical (no symlinks or dot segments)"),
+            Err(error) => return refuse(path, &error.to_string()),
+        }
+        for guarded in protected {
+            let guarded = guarded
+                .canonicalize()
+                .unwrap_or_else(|_| guarded.to_path_buf());
+            if guarded.starts_with(path) {
+                return refuse(path, "contains a protected control-plane path");
+            }
+        }
+    }
+    Ok(paths.to_vec())
 }
 
 /// Check operator-declared workload read paths: each must be absolute,
@@ -585,6 +647,9 @@ pub fn isolated_command(
         .arg(&confinement.artifacts_root);
     for path in &confinement.read_paths {
         command.arg("--read").arg(path);
+    }
+    for path in &confinement.socket_paths {
+        command.arg("--socket-grant").arg(path);
     }
     for port in confinement.network.granted_ports() {
         command.arg("--tcp-port").arg(port.to_string());

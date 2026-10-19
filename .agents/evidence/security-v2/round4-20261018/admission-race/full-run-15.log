@@ -1,0 +1,25 @@
+
+running 19 tests
+test durable_mutation_without_request_id_fails_closed_before_admission ... ok
+test a_retried_request_replays_its_outcome_instead_of_mutating_twice ... ok
+test oversized_precondition_records_fail_with_typed_error_before_any_side_effect ... ok
+test a_reused_request_id_with_a_changed_payload_is_refused_with_no_mutation ... ok
+test precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint ... ok
+test live_subscriber_receives_pushed_event ... ok
+test readiness_get_is_listed_as_inspect ... ok
+wrote 64 SFWP schema files to /tmp/.tmpkdCcs9
+test generated_schemas_are_committed_and_current ... ok
+test a_terminal_outcome_and_its_dedupe_key_survive_a_restart ... ok
+test stale_precondition_on_approve_is_rejected_with_no_side_effect ... ok
+test system_describe_lists_classes ... ok
+test system_hello_returns_protocol_version_and_implemented_methods ... ok
+test unknown_events_cursor_errors_instead_of_replaying_from_start ... ok
+test unknown_verb_still_rejected_cleanly ... ok
+test end_to_end_correlation_reconnect_and_gap_recovery ... ok
+test readiness_get_endpoint_configuration_is_not_readiness_evidence ... ok
+test readiness_get_no_committed_sources_is_unknown ... ok
+test readiness_get_intended_operation_foregrounds_relevant_capability ... ok
+test request_admission_refuses_overflow_and_cancels_waiters_without_effects ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.49s
+

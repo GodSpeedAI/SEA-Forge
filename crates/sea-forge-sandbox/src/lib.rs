@@ -12,6 +12,8 @@ pub mod local;
 mod observation;
 pub mod openshell;
 #[cfg(target_os = "linux")]
+pub mod socket_policy;
+#[cfg(target_os = "linux")]
 pub mod syscall_filter;
 #[cfg(target_os = "linux")]
 pub mod workload;

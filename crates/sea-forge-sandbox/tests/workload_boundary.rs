@@ -50,6 +50,7 @@ fn confinement(
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
         read_paths: reads,
+        socket_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();
@@ -409,6 +410,7 @@ fn isolated_network_layers_hold_independently() {
     // A TCP grant drops the network namespace, so only Landlock separates
     // the granted port (positive control) from every other destination.
     let landlock_only = WorkloadConfinement {
+        socket_paths: Vec::new(),
         network: NetworkPosture::from_granted_ports(vec![gp]),
         ..dirs.clone()
     };

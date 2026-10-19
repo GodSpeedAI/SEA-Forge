@@ -1424,6 +1424,24 @@ async fn run_acp_episode(
                         message: error.to_string(),
                     },
                 )?,
+                // SEC-06: pathname-socket reach is an explicit grant. The
+                // workload reaches exactly the run's brokered MCP sockets
+                // and the configured PostgreSQL socket directories — no
+                // other pathname socket on the host.
+                socket_paths: {
+                    let mut granted = Vec::new();
+                    if !mcp_servers.is_empty() {
+                        granted.push(root.join("runs").join(run).join("mcp"));
+                    }
+                    granted.extend(postgres.iter().map(|resource| resource.socket_dir.clone()));
+                    workload::validate_socket_grants(&granted, &[root]).map_err(|error| {
+                        ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: error.to_string(),
+                        }
+                    })?
+                },
                 network: sea_forge_sandbox::NetworkPosture::Denied,
             };
             let mut workload_env = spawn.env.clone();
