@@ -24,7 +24,7 @@ sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.1.0" }
 sea-forge-server = { path = "../sea-forge-server", version = "0.1.0" }
 tempfile.workspace = true
 # Same version and features sxr-core already resolves; no new crates.
-jsonschema = "0.18.3"
+jsonschema = "0.58.6"
 
 [lints]
 workspace = true
