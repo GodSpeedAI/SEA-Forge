@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 118
+**Status revision:** 119
 
-**Stage:** security-round4-kernel-ci
+**Stage:** security-round4-clippy-repair
 
-**Summary:** Dedicated GitHub Actions kernel-security job (ubuntu-24.04 VM, no container) records a capability preflight - kernel, inherited seccomp mode, an actual disposable-child user-notify install probe, Landlock ABI, user-namespace availability (relaxing the Ubuntu 24.04 AppArmor restriction via sysctl when refused, recorded before/after), subuid delegation and uidmap prerequisites - then runs scripts/security/round4-socket-gates.sh against the exact tested commit including the M-S2/M-S4 mutation controls. The gates script now distinguishes PASS/FAIL from NOT-YET-EXECUTABLE: without mapped user namespaces the suites self-report unavailable and mutations are recorded NOT-EXECUTABLE rather than false-KILLED. The job is intentionally not a required gate and writes a mechanism-status summary separating native Landlock (NOT-YET-EXECUTABLE on runner ABI < 9) from the secured fallback.
+**Summary:** Clippy repair of the brokered supervisor: identity map_err removed, a nested unsafe block dropped, an obfuscated if-else spelled out. No behavior change; lint green.
 
 **Verified:**
 

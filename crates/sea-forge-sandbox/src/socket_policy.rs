@@ -699,11 +699,9 @@ fn broker_send(
     workload_pid: libc::pid_t,
     sendmsg: bool,
 ) -> Result<i64, i32> {
-    let payload = broker_payload(notif, sendmsg).map_err(|error| {
-        // Unreadable or oversize: the frozen workload is killed by the
-        // caller's refuse path; surface a uniform denial.
-        error
-    })?;
+    // Unreadable or oversize payloads deny (and the caller's refuse path
+    // kills the frozen workload); nothing is sent.
+    let payload = broker_payload(notif, sendmsg)?;
     unsafe {
         let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
         let result = (|| {
@@ -730,7 +728,7 @@ fn broker_send(
                 return Err(libc::EACCES);
             }
             // Best-effort dissolution; a refused dissolve is harmless.
-            let mut unspec: libc::sockaddr_un = unsafe { std::mem::zeroed() };
+            let mut unspec: libc::sockaddr_un = std::mem::zeroed();
             unspec.sun_family = libc::AF_UNSPEC as u16;
             libc::connect(fd, &unspec as *const _ as *const libc::sockaddr, 2);
             Ok(sent as i64)
@@ -779,7 +777,11 @@ pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t)
             Target::Pathname(None) => Err(libc::EACCES),
             Target::Pathname(Some(path)) => {
                 let under_grant = granted.iter().any(|tree| path.starts_with(tree));
-                let socket = under_grant.then(|| socket_inode(path)).unwrap_or(None);
+                let socket = if under_grant {
+                    socket_inode(path)
+                } else {
+                    None
+                };
                 if socket.is_none() {
                     Err(libc::EACCES)
                 } else if notif.nr == 42 {
