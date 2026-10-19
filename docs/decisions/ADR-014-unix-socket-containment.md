@@ -1,6 +1,7 @@
 # ADR-014: Containing pathname Unix-socket reachability for isolated workloads
 
-- Status: proposed — awaiting operator selection (round 4, SEC-06 open limit)
+- Status: accepted (mechanism C chosen by operator 2026-10-18); amended
+  2026-10-19 after the `seccomp_unotify(2)` TOCTOU review (§7)
 - Date: 2026-10-18
 - Decides: how `connect(2)` / `sendto(2)` / `sendmsg(2)` to **pathname** AF_UNIX
   sockets are confined to an isolated workload's declared trees
@@ -218,3 +219,58 @@ existing net-namespace + abstract-scope posture.
 Probes and citations: `.agents/evidence/security-v2/round4-20261018/
 kernel-probes-20261018.txt`; docs.kernel.org `userspace-api/landlock.html`
 (ABI table, RESOLVE_UNIX, scope semantics); landlock(7).
+
+## 7. Amendment 2026-10-19: the unotify authority model
+
+`seccomp_unotify(2)` warns against userspace policy verdicts followed by
+`SECCOMP_USER_NOTIF_FLAG_CONTINUE`: under CONTINUE the kernel re-fetches the
+syscall arguments from workload memory and executes the workload's syscall,
+so a workload that rewrites its buffer between the supervisor's check and
+the kernel's fetch changes what was approved. A post-allow kill cannot undo
+an irreversible consequence (a datagram delivered, a connection used), so a
+check-then-continue design proves detection, not prevention.
+
+Reviewing the round-4 supervisor against that warning found two defects in
+the shipped draft: the allow reply (`error=0, flags=0`) synthesized fake
+success without any connection ever existing, and the planned allow path
+(CONTINUE) would have been exactly the warned pattern with a userspace
+pathname check in front. The amendment replaces the authority model — the
+notification mechanism stays as the interception point (nothing else exists
+on ABI < 9), but it is no longer the security authority over a raceable
+syscall:
+
+1. **Kernel-authoritative targets CONTINUE.** A non-UNIX family falls to the
+   Landlock network rights and an abstract AF_UNIX target to the Landlock
+   abstract-socket scope; in both cases the kernel enforces its policy
+   against the bytes *it* fetches. Whatever the workload races its address
+   into, the kernel grants or refuses what actually arrives. This is the
+   sanctioned CONTINUE use: the decision is kernel-made, not ours.
+2. **Pathname targets and address-less sends are brokered, never
+   continued.** The supervisor duplicates the workload's descriptor with
+   `pidfd_getfd` (kernel-verified identity: the helper is the parent in the
+   same user namespace), performs the operation itself from memory it read
+   once (`process_vm_readv` — no kernel re-fetch of workload bytes), pins
+   the peer with `connect`, and requires the *kernel-recorded* peer name
+   (`getpeername(2)`) to sit under a granted tree before any byte moves.
+   The workload is frozen inside the intercepted syscall the whole time.
+3. **The residual race is bounded to an empty connection.** A rename raced
+   into the check-to-connect window can make the broker reach the wrong
+   socket; `getpeername` then disagrees with the validated path, and the
+   supervisor kills the workload *before* replying — the workload dies
+   without executing anything past the refused call, so no payload can
+   follow. The outside peer receives an empty connection, never data; a
+   datagram is sent only after the pin verifies. This is prevention for
+   data movement, with the honest residual that a raced connection itself
+   (zero bytes) is observable to the wrong peer before the kill lands.
+4. **Fail closed everywhere.** Oversize or unreadable send payloads refuse
+   and kill (1 MiB broker cap); a connect that neither completes nor fails
+   within 5 s denies; supervisor death closes the listener and the kernel
+   answers `ENOSYS`; the identity pool refuses to launch when no listener
+   can be installed (inherited-listener EBUSY).
+
+With this model the answer to "is the fallback secure despite unotify's
+warning" is: the warning's failure mode (raced re-fetch changing the
+approved operation) no longer applies to the decided targets, because the
+kernel never re-fetches — there is no continuation of workload syscalls
+carrying userspace verdicts. On ABI ≥ 9 hosts the pure-Landlock path has no
+notification at all and remains the preferred enforcement.

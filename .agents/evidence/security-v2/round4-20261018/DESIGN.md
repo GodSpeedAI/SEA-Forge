@@ -77,3 +77,19 @@ B: not reproduced in 140 isolated runs (idle+load); suite-loop artifact was
 missing CLI binary (now built); continue loop during gates; fix only on
 reproduction. D: context-isolated re-attack agent after A/B/C land. Gates
 then status revision 113 + commit; ask operator before push.
+
+## Amendment 2026-10-19: brokered allow path (ADR-014 §7)
+
+Operator directed a review of the supervisor against seccomp_unotify(2)'s
+TOCTOU warning. Findings: the draft allow reply synthesized fake success,
+and the planned CONTINUE path would be the warned raceable pattern. Redesign
+shipped: kernel-authoritative targets (non-UNIX families under Landlock net
+rights, abstract AF_UNIX under the scope) use CONTINUE — the kernel enforces
+its policy on its own fetch; pathname targets and address-less sends are
+BROKERED — pidfd_getfd duplicate, single-fetch process_vm_readv payload,
+connect-pin + getpeername kernel-recorded peer verification under the
+granted trees, kill-before-reply on mismatch (workload frozen in the
+intercepted syscall; raced swap costs an empty connection, never data).
+Fail closed: 1 MiB payload cap, 5 s connect poll, EBUSY launch refusal.
+Unit tests: 10 (new: peer_under_grant prefix semantics; BPF trap set;
+sockaddr decode).

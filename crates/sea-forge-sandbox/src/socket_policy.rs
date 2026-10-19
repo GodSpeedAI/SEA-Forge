@@ -456,16 +456,302 @@ fn socket_inode(path: &Path) -> Option<(u64, u64)> {
     }
 }
 
+/// Who decides a monitored syscall, per `seccomp_unotify(2)`'s warning that
+/// a userspace verdict followed by `SECCOMP_USER_NOTIF_FLAG_CONTINUE` is a
+/// TOCTOU race: under CONTINUE the kernel re-fetches the arguments and
+/// executes the syscall, so a workload can rewrite its buffer between the
+/// supervisor's check and the kernel's fetch. The rule implemented by
+/// [`supervise`]:
+///
+/// - CONTINUE only when the *kernel itself* is the security authority for
+///   the target on its own fetch: non-UNIX families fall to the Landlock
+///   network rights, and abstract AF_UNIX falls to the Landlock
+///   abstract-socket scope. Whatever the workload races its address into,
+///   the kernel enforces the policy against the bytes it actually fetched;
+///   the supervisor delegates rather than decides.
+/// - Brokered — pathname AF_UNIX and address-less sends: the kernel never
+///   executes the workload's syscall at all. The supervisor performs the
+///   equivalent operation itself from memory it read once, verifies the
+///   outcome from kernel state, and only then replies to the frozen
+///   workload.
+/// - Refuse — everything a grant does not admit.
+#[cfg(target_arch = "x86_64")]
+fn broker_refuse(listener: i32, notif: &Notif, workload_pid: libc::pid_t, error: i32) {
+    // Kill before replying: the workload is frozen inside the intercepted
+    // syscall, so it cannot run between the kill and the reply, and dies
+    // before executing anything past the refused call.
+    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+    let resp = NotifResp {
+        id: notif.id,
+        val: 0,
+        error,
+        flags: 0,
+    };
+    unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
+}
+
+/// Duplicate one of the workload's descriptors into the supervisor by
+/// `pidfd_open` + `pidfd_getfd` (kernel-verified identity; the helper is
+/// the workload's parent inside the same user namespace).
+#[cfg(target_arch = "x86_64")]
+unsafe fn dup_workload_fd(pid: libc::pid_t, fd: i32) -> Result<i32, std::io::Error> {
+    let pidfd = libc::syscall(libc::SYS_pidfd_open, pid, 0u32);
+    if pidfd < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    let pidfd = pidfd as i32;
+    let duplicated = libc::syscall(libc::SYS_pidfd_getfd, pidfd, fd, 0u32);
+    let error = std::io::Error::last_os_error();
+    libc::close(pidfd);
+    if duplicated < 0 {
+        return Err(error);
+    }
+    Ok(duplicated as i32)
+}
+
+/// The bound name of `fd`'s peer, as the kernel recorded it when the peer
+/// bound (pathname sockets only; abstract/unbound peers give `None`).
+#[cfg(target_arch = "x86_64")]
+fn peer_bound_path(fd: i32) -> Option<PathBuf> {
+    let mut storage: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+    let mut length = std::mem::size_of::<libc::sockaddr_storage>() as libc::socklen_t;
+    if unsafe {
+        libc::getpeername(
+            fd,
+            &mut storage as *mut _ as *mut libc::sockaddr,
+            &mut length,
+        )
+    } != 0
+    {
+        return None;
+    }
+    if storage.ss_family != libc::AF_UNIX as u16 {
+        return None;
+    }
+    let unix = unsafe { &*(std::ptr::addr_of!(storage) as *const libc::sockaddr_un) };
+    let bytes: &[u8] = unsafe {
+        std::slice::from_raw_parts(unix.sun_path.as_ptr() as *const u8, length as usize - 2)
+    };
+    if bytes.first() == Some(&0) || bytes.is_empty() {
+        return None; // abstract or unnamed peer: not a pathname decision
+    }
+    let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
+    Some(PathBuf::from(std::ffi::OsString::from_vec(
+        bytes[..end].to_vec(),
+    )))
+}
+
+fn peer_under_grant(peer: Option<PathBuf>, granted: &[PathBuf]) -> bool {
+    peer.is_some_and(|peer| granted.iter().any(|tree| peer.starts_with(tree)))
+}
+
+/// Pin `fd` to `path` (connect), require the kernel-recorded peer to sit
+/// under a granted tree, and return the descriptor still pinned. Any
+/// mismatch is the swap race detected — the caller kills the workload.
+#[cfg(target_arch = "x86_64")]
+fn pin_and_verify(fd: i32, path: &Path, granted: &[PathBuf]) -> Result<(), std::io::Error> {
+    let mut address: libc::sockaddr_un = unsafe { std::mem::zeroed() };
+    address.sun_family = libc::AF_UNIX as u16;
+    let raw = path.as_os_str().as_bytes();
+    if raw.len() >= address.sun_path.len() {
+        return Err(std::io::Error::from_raw_os_error(libc::ENAMETOOLONG));
+    }
+    let sun_path: &mut [i8] = &mut address.sun_path;
+    let destination: &mut [u8] =
+        unsafe { std::slice::from_raw_parts_mut(sun_path.as_mut_ptr() as *mut u8, sun_path.len()) };
+    destination[..raw.len()].copy_from_slice(raw);
+    let length = 2 + raw.len();
+    // Non-blocking + bounded poll: a full accept queue must not freeze the
+    // supervisor; the workload stays frozen either way until the reply.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL, 0) };
+    let _ = unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) };
+    let connected = unsafe {
+        libc::connect(
+            fd,
+            &address as *const _ as *const libc::sockaddr,
+            length as libc::socklen_t,
+        )
+    };
+    let connected = if connected == 0 {
+        Ok(())
+    } else {
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() != Some(libc::EINPROGRESS) {
+            Err(error)
+        } else {
+            let mut poll = [libc::pollfd {
+                fd,
+                events: libc::POLLOUT,
+                revents: 0,
+            }];
+            let ready = unsafe { libc::poll(poll.as_mut_ptr(), 1, 5_000) };
+            if ready <= 0 {
+                Err(std::io::Error::from_raw_os_error(libc::ETIMEDOUT))
+            } else {
+                let mut code = 0i32;
+                let mut size = std::mem::size_of::<i32>() as libc::socklen_t;
+                unsafe {
+                    libc::getsockopt(
+                        fd,
+                        libc::SOL_SOCKET,
+                        libc::SO_ERROR,
+                        &mut code as *mut _ as *mut libc::c_void,
+                        &mut size,
+                    )
+                };
+                if code == 0 {
+                    Ok(())
+                } else {
+                    Err(std::io::Error::from_raw_os_error(code))
+                }
+            }
+        }
+    };
+    let _ = unsafe { libc::fcntl(fd, libc::F_SETFL, flags) };
+    connected?;
+    if !peer_under_grant(peer_bound_path(fd), granted) {
+        // The kernel's own record disagrees with the validated path: the
+        // name was swapped inside the check-to-connect window.
+        return Err(std::io::Error::from_raw_os_error(libc::EACCES));
+    }
+    Ok(())
+}
+
+/// Perform a brokered `connect` for the workload's frozen syscall.
+#[cfg(target_arch = "x86_64")]
+fn broker_connect(
+    notif: &Notif,
+    path: &Path,
+    granted: &[PathBuf],
+    workload_pid: libc::pid_t,
+) -> Result<(), i32> {
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let result = pin_and_verify(fd, path, granted);
+        // Drop our reference; the workload's own descriptor keeps any
+        // established connection alive.
+        libc::close(fd);
+        result.map_err(|_| libc::EACCES)
+    }
+}
+
+/// Cap on payload bytes a brokered send may move, read through
+/// `process_vm_readv` before anything is sent. A larger request is not
+/// truncated — it refuses and kills, fail closed.
+#[cfg(target_arch = "x86_64")]
+const BROKER_MAX_PAYLOAD: usize = 1 << 20;
+
+/// Read the payload a frozen send would move (iovec walk through
+/// `process_vm_readv`), or kill-and-refuse on any unreadable or oversize
+/// request. Single fetch: the supervisor sends these bytes, not the kernel
+/// re-reading workload memory.
+#[cfg(target_arch = "x86_64")]
+fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
+    let pid = notif.pid as libc::pid_t;
+    let (base, length): (u64, u64) = if !sendmsg {
+        (notif.args[1], notif.args[2])
+    } else {
+        // struct msghdr: msg_iov (ptr), msg_iovlen (size_t) at offsets 16/24.
+        let header = read_remote(pid, notif.args[1], 40).ok_or(libc::EACCES)?;
+        let iov = u64::from_le_bytes(header[16..24].try_into().unwrap());
+        let iovlen = u64::from_le_bytes(header[24..32].try_into().unwrap());
+        if iov == 0 || iovlen == 0 || iovlen > 1024 {
+            return Ok(Vec::new());
+        }
+        let mut total = 0u64;
+        let mut payload = Vec::new();
+        for index in 0..iovlen as usize {
+            let entry = read_remote(pid, iov + (index as u64) * 16, 16).ok_or(libc::EACCES)?;
+            let pointer = u64::from_le_bytes(entry[0..8].try_into().unwrap());
+            let span = u64::from_le_bytes(entry[8..16].try_into().unwrap());
+            if span > 0 {
+                total += span;
+                if total > BROKER_MAX_PAYLOAD as u64 {
+                    return Err(libc::EACCES);
+                }
+                payload.extend_from_slice(
+                    &read_remote(pid, pointer, span as usize).ok_or(libc::EACCES)?,
+                );
+            }
+        }
+        return Ok(payload);
+    };
+    if base == 0 || length == 0 {
+        return Ok(Vec::new());
+    }
+    if length > BROKER_MAX_PAYLOAD as u64 {
+        return Err(libc::EACCES);
+    }
+    read_remote(pid, base, length as usize).ok_or(libc::EACCES)
+}
+
+/// Perform a brokered send on behalf of the frozen workload: pin the
+/// workload's own datagram socket to the validated path, require the
+/// kernel-recorded peer to sit under a granted tree, send the copied
+/// payload, and best-effort dissolve the pin so later unaddressed sends
+/// keep the socket's prior semantics (a surviving pin can only point at a
+/// grant-verified peer).
+#[cfg(target_arch = "x86_64")]
+fn broker_send(
+    notif: &Notif,
+    path: &Path,
+    granted: &[PathBuf],
+    workload_pid: libc::pid_t,
+    sendmsg: bool,
+) -> Result<i64, i32> {
+    let payload = broker_payload(notif, sendmsg).map_err(|error| {
+        // Unreadable or oversize: the frozen workload is killed by the
+        // caller's refuse path; surface a uniform denial.
+        error
+    })?;
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let result = (|| {
+            pin_and_verify(fd, path, granted).map_err(|_| libc::EACCES)?;
+            let sent = if !sendmsg {
+                libc::send(
+                    fd,
+                    payload.as_ptr() as *const libc::c_void,
+                    payload.len(),
+                    notif.args[3] as i32,
+                )
+            } else {
+                // Connected send of the copied payload: the association
+                // pinned above carries the destination.
+                let mut header: libc::msghdr = std::mem::zeroed();
+                header.msg_iov = &mut libc::iovec {
+                    iov_base: payload.as_ptr() as *mut libc::c_void,
+                    iov_len: payload.len(),
+                } as *mut _;
+                header.msg_iovlen = 1;
+                libc::sendmsg(fd, &header, notif.args[2] as i32)
+            };
+            if sent < 0 {
+                return Err(libc::EACCES);
+            }
+            // Best-effort dissolution; a refused dissolve is harmless.
+            let mut unspec: libc::sockaddr_un = unsafe { std::mem::zeroed() };
+            unspec.sun_family = libc::AF_UNSPEC as u16;
+            libc::connect(fd, &unspec as *const _ as *const libc::sockaddr, 2);
+            Ok(sent as i64)
+        })();
+        libc::close(fd);
+        result
+    }
+}
+
 /// Serve pathname-socket policy on `listener` until process exit. Blocks
 /// the calling thread; intended for a dedicated trusted thread in the
 /// helper, with `workload_pid` its direct child.
 ///
-/// A pathname target is continued only when its resolved path lies under a
-/// granted tree and is a socket inode; otherwise the syscall receives
-/// `EACCES`. After continuing, the validated inode is re-resolved once; a
-/// changed or vanished inode means the allow was raced in the window no
-/// supervisor can close, so the workload is killed (documented compensating
-/// control, ADR-014 §4 C).
+/// Per target class (see [`Decision`]): kernel-authoritative targets
+/// continue; pathname targets and address-less sends are performed by this
+/// thread on a `pidfd_getfd` duplicate of the workload's descriptor, with
+/// the kernel-recorded peer name required to sit under a granted tree
+/// before any byte moves. A mismatch (the rename/swap race) kills the
+/// workload before the reply lands — it is frozen inside the intercepted
+/// syscall and can execute nothing past it, so a raced swap costs it its
+/// life and costs the outside peer an empty connection, never data.
 #[cfg(target_arch = "x86_64")]
 pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t) {
     let granted: Vec<PathBuf> = grants
@@ -482,33 +768,89 @@ pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t)
             continue;
         }
         let target = target_of(&notif);
-        let mut allowed_inode: Option<(u64, u64)> = None;
-        let error = match &target {
-            Target::None | Target::Passthrough => None,
-            Target::Pathname(None) => Some(libc::EACCES), // unresolvable: refuse
+        let outcome: Result<Option<i64>, i32> = match &target {
+            Target::Passthrough => Ok(None), // CONTINUE; kernel is the authority
+            Target::None => {
+                // An address-less send on an already-connected socket: the
+                // connection was brokered at connect time, so the send is
+                // performed from copied payload bytes on the dup.
+                broker_connected_send(&notif, workload_pid, notif.nr == 46).map(Some)
+            }
+            Target::Pathname(None) => Err(libc::EACCES),
             Target::Pathname(Some(path)) => {
                 let under_grant = granted.iter().any(|tree| path.starts_with(tree));
-                match under_grant.then(|| socket_inode(path)) {
-                    Some(Some(inode)) => {
-                        allowed_inode = Some(inode);
-                        None
-                    }
-                    _ => Some(libc::EACCES),
+                let socket = under_grant.then(|| socket_inode(path)).unwrap_or(None);
+                if socket.is_none() {
+                    Err(libc::EACCES)
+                } else if notif.nr == 42 {
+                    broker_connect(&notif, path, &granted, workload_pid).map(|_| None)
+                } else {
+                    broker_send(&notif, path, &granted, workload_pid, notif.nr == 46).map(Some)
                 }
             }
         };
-        let resp = NotifResp {
-            id: notif.id,
-            val: 0,
-            error: error.unwrap_or(0),
-            flags: 0,
-        };
-        unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
-        // Compensating re-check for the double-fetch / rename windows.
-        if let (Some((dev, ino)), Target::Pathname(Some(path))) = (allowed_inode, &target) {
-            if socket_inode(path) != Some((dev, ino)) {
-                unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+        match outcome {
+            Ok(None) => {
+                // Kernel-authoritative target: continue into the kernel,
+                // which enforces its own policy on its own fetch.
+                let resp = NotifResp {
+                    id: notif.id,
+                    val: 0,
+                    error: 0,
+                    flags: 1, // SECCOMP_USER_NOTIF_FLAG_CONTINUE
+                };
+                unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
             }
+            Ok(Some(value)) => {
+                // Brokered completion: the operation already happened,
+                // performed by this thread on verified state.
+                let resp = NotifResp {
+                    id: notif.id,
+                    val: value,
+                    error: 0,
+                    flags: 0,
+                };
+                unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
+            }
+            Err(error) => broker_refuse(listener, &notif, workload_pid, error),
+        }
+    }
+}
+
+/// Address-less send (Target::None): perform the send on a duplicate of the
+/// workload's already-connected socket from copied payload bytes. The
+/// destination was fixed by an earlier brokered connect and cannot change.
+#[cfg(target_arch = "x86_64")]
+fn broker_connected_send(
+    notif: &Notif,
+    workload_pid: libc::pid_t,
+    sendmsg: bool,
+) -> Result<i64, i32> {
+    let payload = broker_payload(notif, sendmsg)?;
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let sent = if !sendmsg {
+            libc::send(
+                fd,
+                payload.as_ptr() as *const libc::c_void,
+                payload.len(),
+                notif.args[3] as i32,
+            )
+        } else {
+            let mut header: libc::msghdr = std::mem::zeroed();
+            let mut iov = libc::iovec {
+                iov_base: payload.as_ptr() as *mut libc::c_void,
+                iov_len: payload.len(),
+            };
+            header.msg_iov = &mut iov;
+            header.msg_iovlen = 1;
+            libc::sendmsg(fd, &header, notif.args[2] as i32)
+        };
+        libc::close(fd);
+        if sent < 0 {
+            Err(libc::EACCES)
+        } else {
+            Ok(sent as i64)
         }
     }
 }
@@ -632,6 +974,30 @@ mod tests {
     fn connect_without_address_is_none() {
         let notif = notif(42, [3, 0, 0, 0, 0, 0]);
         assert_eq!(target_of(&notif), Target::None);
+    }
+
+    #[test]
+    fn peer_verification_requires_an_absolute_path_under_a_grant() {
+        let grant = PathBuf::from("/run/postgresql");
+        let granted = vec![grant.clone()];
+        assert!(peer_under_grant(
+            Some(PathBuf::from("/run/postgresql/.s.PGSQL.5432")),
+            &granted
+        ));
+        // A sibling prefix is not a grant ("/run/postgresql-evil" is not
+        // under "/run/postgresql").
+        assert!(!peer_under_grant(
+            Some(PathBuf::from("/run/postgresql-evil/s")),
+            &granted
+        ));
+        // Abstract/unnamed peers (None) and outside trees are refused.
+        assert!(!peer_under_grant(None, &granted));
+        assert!(!peer_under_grant(
+            Some(PathBuf::from("/tmp/canary")),
+            &granted
+        ));
+        // With no grants, no peer is acceptable.
+        assert!(!peer_under_grant(Some(grant), &[]));
     }
 
     #[test]
