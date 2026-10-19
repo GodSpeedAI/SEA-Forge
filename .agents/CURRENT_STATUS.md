@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 115
+**Status revision:** 116
 
-**Stage:** security-round4-gitleaks-value-scoping
+**Stage:** security-round4-e8-proposal
 
-**Summary:** Operator decisions of 2026-10-18 executed: the round-1/2 evidence matches (continuation-20261017 results/rust-A, realitytrace sec12-trace) and the casework T10/T09-resume paths move from path-scoped generic-api-key admission to exact identifier values covering tree and history, so a new value under these paths fails closed instead of being auto-admitted.
+**Summary:** RealityTrace E8 completeness and observer attribution path proposed (docs/security/realitytrace-e8-attribution-proposal.md): refuse-on-bound for the 256-entry difference truncation is implementable SEA-side now; differences_digest plus a complete flag is a pinned sxr-core change; observer attribution as a signature needs its own key lifecycle and is a follow-up.
 
 **Verified:**
 
