@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 117
+**Status revision:** 118
 
-**Stage:** security-round4-unotify-brokered-authority
+**Stage:** security-round4-kernel-ci
 
-**Summary:** ADR-014 amendment: the seccomp supervisor no longer continues workload syscalls under a userspace verdict. Kernel-authoritative targets (non-UNIX families under Landlock net rights, abstract AF_UNIX under the scope) use CONTINUE; pathname targets and address-less sends are brokered - pidfd_getfd duplicate of the workload descriptor, single-fetch process_vm_readv payload, connect-pin with getpeername kernel-recorded peer verification under the granted trees, and kill-before-reply on any mismatch, so a rename raced into the check-to-connect window costs the workload its life and the outside peer an empty connection, never data. Fail closed: 1 MiB payload cap, 5s connect poll, launch refusal when no listener is installable. The draft's fake-success allow reply and planned check-then-continue are removed.
+**Summary:** Dedicated GitHub Actions kernel-security job (ubuntu-24.04 VM, no container) records a capability preflight - kernel, inherited seccomp mode, an actual disposable-child user-notify install probe, Landlock ABI, user-namespace availability (relaxing the Ubuntu 24.04 AppArmor restriction via sysctl when refused, recorded before/after), subuid delegation and uidmap prerequisites - then runs scripts/security/round4-socket-gates.sh against the exact tested commit including the M-S2/M-S4 mutation controls. The gates script now distinguishes PASS/FAIL from NOT-YET-EXECUTABLE: without mapped user namespaces the suites self-report unavailable and mutations are recorded NOT-EXECUTABLE rather than false-KILLED. The job is intentionally not a required gate and writes a mechanism-status summary separating native Landlock (NOT-YET-EXECUTABLE on runner ABI < 9) from the secured fallback.
 
 **Verified:**
 
