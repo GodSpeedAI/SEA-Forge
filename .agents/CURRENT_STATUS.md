@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 137
+**Status revision:** 138
 
-**Stage:** security-round4-audit-arch-fix
+**Stage:** security-round4-broker-refusal-audit
 
-**Summary:** Root cause of the 24.04 bypass: AUDIT_ARCH_X86_64 was 0x4000_0003 (the i386 value; x86_64 is 0xc000_003e), so the supervisor filter's arch check never matched a native process and every syscall fell through to ALLOW. The unit test fed the same wrong constant to its own interpreter and passed. The constant is corrected and the test now also pins the literal kernel values.
+**Summary:** With the arch constant fixed the 24.04 supervisor now traps: outside and declared sockets are refused and only the granted one connects (helper self-probe errno 13). Two socket tests still failed only because the diagnostic prelude in the connect workload broke their exact-match assertions, so the original connect script is restored. postgres-lifecycle now fails, since its workloads' connects to the granted Postgres socket are refused (EACCES) where the no-op filter used to let them through; the brokered path now logs which check refuses.
 
 **Verified:**
 
-- run 39479954703: helper self-probe connect returned ENOENT (untrapped) on 24.04; the standalone probe with the correct arch value trapped on the same kernel
-- the 22.04 job is vacuous for the socket gates (Landlock ABI 4, workload isolation UNAVAILABLE, NOT-EXECUTABLE); only 24.04 executes them
+- run 39482520444 on 24.04 (kernel 7.0, Landlock ABI 8): outside and declared refused, granted connected, self-probe 13
+- same run: postgres-lifecycle fails with 'timed out waiting for three backends' while the supervisor logs Err(13) for the granted /tmp/.tmp*/sock/.s.PGSQL.* path
 
 **Limits:**
 
-- The fix is unverified until the 24.04 kernel-security run for this commit passes; revision 113 lists the other round-4 open limits.
+- The reason the granted Postgres socket is refused is not yet established; the 24.04 gate stays red until it is. See revision 113 for the other round-4 open limits.
 
-**Next move:** Kernel-security 24.04 run for this commit; then tighten the datagram test, which passes on file permissions alone.
+**Next move:** Read the pathname/dup/pin_and_verify debug lines from the next 24.04 postgres-lifecycle log.
 
 **Evidence:**
 

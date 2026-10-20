@@ -681,12 +681,23 @@ fn broker_connect(
     workload_pid: libc::pid_t,
 ) -> Result<(), i32> {
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let debug = std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some();
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|error| {
+            if debug {
+                eprintln!("[socket-supervisor] dup of workload fd failed: {error}");
+            }
+            libc::EACCES
+        })?;
         let result = pin_and_verify(fd, path, granted, workload_pid);
         // Drop our reference; the workload's own descriptor keeps any
         // established connection alive.
         libc::close(fd);
-        result.map_err(|_| libc::EACCES)
+        result.map_err(|error| {
+            if debug {
+                eprintln!("[socket-supervisor] pin_and_verify refused: {error}");
+            }
+            libc::EACCES
+        })
     }
 }
 
@@ -906,6 +917,12 @@ pub fn supervise(
                     } else {
                         None
                     };
+                    if debug {
+                        eprintln!(
+                            "[socket-supervisor] pathname under_grant={under_grant} socket={} granted={granted:?}",
+                            socket.is_some()
+                        );
+                    }
                     if socket.is_none() {
                         Err(libc::EACCES)
                     } else if notif.nr == 42 {
