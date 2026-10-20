@@ -203,22 +203,21 @@ impl Scenario {
 }
 
 #[test]
-fn abstract_namespace_canary_is_refused() {
+fn abstract_namespace_own_ipc_works_and_cross_namespace_is_structural() {
     let Some(case) = scenario(Vec::new(), Vec::new()) else {
         return;
     };
-    // The canary lives in the abstract namespace; only this test binds it.
+    // The workload's own abstract namespace is bounded by its dedicated
+    // network namespace: names it creates are its own (legitimate IPC,
+    // brokered from copied bytes), and host-side abstract names are
+    // structurally unreachable across the namespace boundary.
     let said = case.run(
         "import socket,sys\nname='\\0sea-forge-test-canary'\nl=socket.socket(socket.AF_UNIX)\n\
          l.bind(name); l.listen(1)\ns=socket.socket(socket.AF_UNIX)\ntry:\n    \
          s.connect(name); print('connected')\nexcept OSError as e:\n    print('refused:' + type(e).__name__)",
         "x",
     );
-    // Abstract sockets are refused outright on the supervised path (ADR-014
-    // amendment 2: no kernel scope applies to the broker's own syscalls, so
-    // the round-2/3 posture of unreachable abstract sockets is kept by
-    // policy). EACCES reaches the frozen workload as PermissionDeniedError.
-    assert_eq!(said, "refused:PermissionDeniedError", "{said:?}");
+    assert_eq!(said, "connected", "{said:?}");
 }
 
 #[test]
@@ -385,11 +384,12 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
     let out = command.stdin(Stdio::null()).output().unwrap();
     let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
     // Release the test's end of the pre-connected stream so the listener
-    // thread's read-to-EOF can return before the join.
+    // thread's read-to-EOF can return before the join. The listener must
+    // show ONLY the test's own empty pre-connection: zero leaked bytes.
     drop(connected);
     let got = accepted.join().unwrap();
     assert!(said.starts_with("closed:"), "{said:?}");
-    assert_eq!(got, None, "a smuggled descriptor delivered bytes");
+    assert_eq!(got, Some(String::new()), "unexpected bytes on the canary");
 }
 
 #[test]

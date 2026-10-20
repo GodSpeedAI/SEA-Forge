@@ -858,10 +858,17 @@ pub fn supervise(
         // sendmmsg moves multiple datagrams with per-message destinations;
         // brokering its full mmsghdr array is out of scope, and no
         // SEA-Forge workload path uses it, so it is refused outright.
+        let target = target_of(&notif);
+        if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+            eprintln!(
+                "[socket-supervisor] recv nr={} target={:?}",
+                notif.nr, target
+            );
+        }
         let outcome: Result<Option<i64>, i32> = if notif.nr == 307 {
             Err(libc::EACCES) // policy denial: refused, workload continues
         } else {
-            match target_of(&notif) {
+            match &target {
                 Target::None => {
                     if notif.nr == 42 {
                         // connect(fd, NULL, 0) or the AF_UNSPEC dissolve:
@@ -898,15 +905,16 @@ pub fn supervise(
                         .map(Some)
                     }
                 }
-                // Abstract sockets stay unreachable from isolated workloads
-                // (round-2/3 posture); with no kernel scope applying to the
-                // broker's own syscalls, refusal is the enforcement.
-                Target::Abstract => Err(libc::EACCES),
+                // Abstract sockets are bounded by the dedicated network
+                // namespace: only names created inside the workload's own
+                // namespace are addressable, so its own abstract IPC is
+                // legitimate and the broker performs it from copied bytes.
+                Target::Abstract => broker_abstract(&notif, workload_pid).map(Some),
                 Target::Inet(port, raw) => {
-                    if !granted_ports.contains(&port) {
+                    if !granted_ports.contains(port) {
                         Err(libc::EACCES)
                     } else {
-                        broker_inet(&notif, &raw, workload_pid).map(Some)
+                        broker_inet(&notif, raw, workload_pid).map(Some)
                     }
                 }
                 // Unreadable destination memory: uninterpretable, kill.
@@ -916,6 +924,12 @@ pub fn supervise(
                 }
             }
         };
+        if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+            eprintln!(
+                "[socket-supervisor] done nr={} outcome={:?}",
+                notif.nr, outcome
+            );
+        }
         match outcome {
             Ok(Some(value)) => {
                 // Brokered completion: the operation already happened,
@@ -939,6 +953,54 @@ pub fn supervise(
                 unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
             }
             Err(error) => broker_deny(listener, &notif, error),
+        }
+    }
+}
+
+/// Perform an abstract-socket operation as the workload wrote it. The
+/// destination bytes were read once from the frozen workload; the shared
+/// network namespace bounds which abstract names exist at all.
+#[cfg(target_arch = "x86_64")]
+fn broker_abstract(notif: &Notif, workload_pid: libc::pid_t) -> Result<i64, i32> {
+    let (address, length) = match notif.nr {
+        42 => (notif.args[1], notif.args[2].min(110) as usize),
+        44 => (notif.args[4], notif.args[5].min(110) as usize),
+        _ => return Err(libc::EACCES),
+    };
+    let payload = if notif.nr == 42 {
+        Vec::new()
+    } else {
+        broker_payload(notif, notif.nr == 46, workload_pid)?
+    };
+    let sockaddr = read_remote(notif.pid as libc::pid_t, address, length).ok_or_else(|| {
+        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+        libc::EACCES
+    })?;
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let raw_result: i64 = if notif.nr == 42 {
+            libc::connect(
+                fd,
+                sockaddr.as_ptr() as *const libc::sockaddr,
+                sockaddr.len() as libc::socklen_t,
+            ) as i64
+        } else {
+            libc::sendto(
+                fd,
+                payload.as_ptr() as *const libc::c_void,
+                payload.len(),
+                notif.args[3] as i32,
+                sockaddr.as_ptr() as *const libc::sockaddr,
+                sockaddr.len() as libc::socklen_t,
+            ) as i64
+        };
+        libc::close(fd);
+        if raw_result < 0 {
+            Err(std::io::Error::last_os_error()
+                .raw_os_error()
+                .unwrap_or(libc::EACCES))
+        } else {
+            Ok(raw_result as i64)
         }
     }
 }

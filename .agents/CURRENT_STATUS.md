@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 125
+**Status revision:** 126
 
-**Stage:** security-round4-deny-versus-kill
+**Stage:** security-round4-abstract-broker-and-audit
 
-**Summary:** End-to-end execution of the charter battery on the 24.04 runner isolated the last defects, all fixed: policy denials (outside grants, abstract sockets, ungranted ports) now reply EACCES to the frozen workload instead of killing it, so refusals are observable and the workload continues preventively; kill-before-reply is reserved for race-class and uninterpretable cases (getpeername mismatch after the pin, unreadable or oversize payloads), threaded with the workload pid. The inherited-descriptor test deadlocked on its own listener thread reading a stream the test held (dropped before the join); the availability guard exited the whole test binary silently on an unavailable host and now returns per test. Abstract refusal expectation follows the EACCES spelling. Gates gained 20-minute suite and 10-minute mutation watchdogs. First live results: rename-swap race, datagram sendto and own-tree IPC PASSED on a real kernel.
+**Summary:** Live 24.04 execution refined the design further: abstract AF_UNIX targets are brokered from copied bytes (the dedicated network namespace bounds their reach; the workload's own abstract IPC is legitimate and was wrongly expected refused), every supervisor decision can emit an audit line under SEA_FORGE_SOCKET_SUPERVISOR_DEBUG (enabled by the gates script) to pinpoint the live pathname-connect bypass on outside canaries, the inherited-fd test asserts the correct empty pre-connection, and the suite gained watchdogs. This commit is the audit run for the bypass.
 
 **Verified:**
 
