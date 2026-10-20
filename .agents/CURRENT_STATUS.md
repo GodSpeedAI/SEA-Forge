@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 129
+**Status revision:** 130
 
-**Stage:** security-round4-audit-surfacing
+**Stage:** security-round4-thread-audit
 
-**Summary:** The launch audit lines were being swallowed: the tests capture the whole launch chain's stderr with .output() and printed only the workload stdout. The socket tests now surface any supervisor or helper audit lines into the suite log, so the next run shows the applied mechanism, the seccomp filter count across installation, and every notification decision for the failing pathname and symlink connects.
+**Summary:** The install audit proved the supervisor branch fires and the listener exists (seccomp_filters 0 -> 1, listener Some(4)) while the supervisor served zero notifications; the thread lifecycle audit (parked / serving / handoff sent) now splits a dead handoff from unserved kernel notifications.
 
 **Verified:**
 

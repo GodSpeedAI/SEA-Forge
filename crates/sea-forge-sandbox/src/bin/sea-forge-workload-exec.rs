@@ -100,7 +100,13 @@ fn main() {
         std::sync::mpsc::channel::<(i32, Vec<PathBuf>, Vec<u16>, i32)>();
     #[cfg(target_arch = "x86_64")]
     std::thread::spawn(move || {
+        if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+            eprintln!("[workload-exec] supervisor thread parked");
+        }
         if let Ok((listener, grants, granted_ports, pid)) = supervisor_rx.recv() {
+            if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+                eprintln!("[workload-exec] supervisor serving listener={listener} pid={pid}");
+            }
             sea_forge_sandbox::socket_policy::supervise(listener, grants, granted_ports, pid);
         }
     });
@@ -158,7 +164,16 @@ fn main() {
         .spawn()
         .unwrap_or_else(|e| fail(&format!("spawn failed: {e}")));
     if let Some((tx, listener)) = supervisor {
-        let _ = tx.send((listener, socket_reach, ports, child.id() as i32));
+        if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+            eprintln!(
+                "[workload-exec] sending listener={listener} pid={} to supervisor",
+                child.id()
+            );
+        }
+        let sent = tx.send((listener, socket_reach, ports, child.id() as i32));
+        if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+            eprintln!("[workload-exec] supervisor handoff sent={:?}", sent.is_ok());
+        }
     }
     // EOF (or any error) on the lifeline means the launcher is gone.
     std::thread::spawn(move || {
