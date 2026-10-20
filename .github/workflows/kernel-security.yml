@@ -56,6 +56,19 @@ jobs:
           {
             echo "== commit under test =="
             git rev-parse HEAD
+            echo "== checkout traversal (the workload child maps one UID, so"
+            echo "    every host identity is unmapped and only 'other' bits"
+            echo "    decide traverse and exec; repaired and recorded if short)"
+            for dir in / /home /home/runner /home/runner/work "$(pwd)"; do
+              ls -ld "$dir"
+            done
+            for dir in /home/runner/work "$(pwd)"; do
+              if [ "$(stat -c '%A' "$dir" | cut -c8)" != x ]; then
+                echo "   '$dir' lacks other-x for the mapped workload child; granting (disposable VM, recorded)"
+                sudo chmod o+rx "$dir"
+                ls -ld "$dir"
+              fi
+            done
             echo "== kernel and architecture =="
             uname -a
             cat /proc/version

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 122
+**Status revision:** 123
 
-**Stage:** security-round4-ci-diagnostics
+**Stage:** security-round4-helper-traversal-repair
 
-**Summary:** The gates script probed a hardcoded subordinate range belonging to a different account on GitHub runners (the pool reads the real delegation and worked, the probe did not), so legs that could execute the battery recorded NOT-EXECUTABLE; the probe now derives base+1 from the current user's subuid line. The preflight matrix adds runner-owned-binary rows under the real delegation mapping and a full namei traversal record for the helper path, isolating the remaining 24.04 exec denial between mapping content, file ownership, and path traversal.
+**Summary:** ensure_helper_reachable now walks the entire helper path: inside the mapped namespace every host identity is unmapped, so directory components lacking other-traverse block execve before the file is reached (the working unfiltered probe execs a system path, which is why only the isolated launch failed). The launcher repairs launcher-owned directories along the path by granting other-read/execute - never write bits - and fails closed naming the first component it cannot repair; the regression test covers the 0750-parent shape, and the CI preflight records and repairs a non-traversable checkout path on the disposable VM.
 
 **Verified:**
 

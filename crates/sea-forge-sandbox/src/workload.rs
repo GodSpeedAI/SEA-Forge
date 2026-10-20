@@ -705,38 +705,65 @@ pub fn spawn_interactive(
 
 /// Make the exec helper reachable from inside the workload's mapped user
 /// namespace. The helper is executed by a process whose only mapped host ID
-/// is the workload's subordinate UID, so the binary's owner appears
-/// unmapped (nobody) there and only the *other* permission bits decide
-/// execve. A build made under a restrictive umask (e.g. 077) produces a
-/// 0700 helper every workload would be refused; the launcher repairs that
-/// by granting other-read/execute on a file it owns — bits it is about to
-/// hand to untrusted code anyway — and fails closed when it cannot.
+/// is the workload's subordinate UID, so every host identity along the path
+/// — file owner included — appears unmapped (nobody) there, and only the
+/// *other* permission bits decide traverse and execve. A build made under a
+/// restrictive umask (e.g. 077) produces a 0700 helper, and a checkout
+/// under a non-traversable parent blocks execve before the file is even
+/// reached. The launcher walks the whole path, repairs what it owns by
+/// granting other-read/execute — bits it hands to untrusted code anyway,
+/// never write bits — and fails closed naming the first component it
+/// cannot repair.
 pub fn ensure_helper_reachable(helper: &Path) -> Result<(), SandboxError> {
     use std::os::unix::fs::PermissionsExt;
-    let meta = fs::metadata(helper)
-        .map_err(|e| unavailable(format!("helper {}: {e}", helper.display())))?;
-    if !meta.is_file() {
-        return Err(unavailable(format!(
-            "helper {} is not a regular file",
-            helper.display()
-        )));
+    let mut walked = PathBuf::new();
+    if helper.is_absolute() {
+        walked.push("/");
     }
-    let mode = meta.permissions().mode();
-    if mode & 0o005 == 0o005 {
-        return Ok(());
+    for part in helper.components() {
+        walked.push(part.as_os_str());
+        let meta = match fs::metadata(&walked) {
+            Ok(meta) => meta,
+            Err(e) => {
+                return Err(unavailable(format!(
+                    "helper {}: {e} at {}",
+                    helper.display(),
+                    walked.display()
+                )))
+            }
+        };
+        if !meta.is_file() && !meta.is_dir() {
+            return Err(unavailable(format!(
+                "helper path component {} is not a file or directory",
+                walked.display()
+            )));
+        }
+        // A directory needs other-traverse (plus other-read for full
+        // resolution); the final file needs other-read and other-execute.
+        let need = if meta.is_dir() { 0o0045 } else { 0o0055 };
+        let mode = meta.permissions().mode();
+        if mode & need == need {
+            continue;
+        }
+        let (launcher, _) = current_ids()?;
+        if meta.uid() != launcher {
+            return Err(unavailable(format!(
+                "helper {} cannot be reached by a mapped workload ({} is mode {:o}, owner \
+                 uid {}): every host identity is unmapped inside the namespace, so the \
+                 'other' bits decide; chmod o+rx along the path by the owner",
+                helper.display(),
+                walked.display(),
+                mode,
+                meta.uid()
+            )));
+        }
+        fs::set_permissions(&walked, fs::Permissions::from_mode(mode | 0o0055)).map_err(|e| {
+            unavailable(format!(
+                "chmod o+rx {} for helper reach: {e}",
+                walked.display()
+            ))
+        })?;
     }
-    let (launcher, _) = current_ids()?;
-    if meta.uid() != launcher {
-        return Err(unavailable(format!(
-            "helper {} (mode {:o}) is not other-executable and is owned by uid {}, so workloads \
-             cannot execute it from their mapped namespace; it must be chmod +rx by its owner",
-            helper.display(),
-            mode,
-            meta.uid()
-        )));
-    }
-    fs::set_permissions(helper, fs::Permissions::from_mode(mode | 0o055))
-        .map_err(|e| unavailable(format!("chmod +rx helper {}: {e}", helper.display())))?;
     Ok(())
 }
 
@@ -778,6 +805,30 @@ mod tests {
         assert_eq!(mode & 0o777, 0o755, "helper must end other-rx: {mode:o}");
         // Already reachable: no-op.
         ensure_helper_reachable(&helper).unwrap();
+        // A non-traversable parent blocks execve before the file is reached;
+        // the walk repairs launcher-owned directories along the path too.
+        let nested = base.path().join("inner");
+        fs::create_dir_all(nested.join("deep")).unwrap();
+        let deep_helper = nested.join("deep").join("helper");
+        fs::write(&deep_helper, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o750)).unwrap();
+        fs::set_permissions(nested.join("deep"), fs::Permissions::from_mode(0o750)).unwrap();
+        fs::set_permissions(&deep_helper, fs::Permissions::from_mode(0o700)).unwrap();
+        ensure_helper_reachable(&deep_helper).unwrap();
+        for dir in [&nested, &nested.join("deep")] {
+            let mode = fs::metadata(dir).unwrap().permissions().mode();
+            assert!(
+                mode & 0o0045 == 0o0045,
+                "{} must end other-rx for traverse: {mode:o}",
+                dir.display()
+            );
+        }
+        let mode = fs::metadata(&deep_helper).unwrap().permissions().mode();
+        assert_eq!(
+            mode & 0o777,
+            0o755,
+            "deep helper must end other-rx: {mode:o}"
+        );
         // The foreign-owner refusal (a helper the launcher does not own is
         // reported, never repaired) cannot be constructed unprivileged
         // here; the guard in ensure_helper_reachable is a direct
