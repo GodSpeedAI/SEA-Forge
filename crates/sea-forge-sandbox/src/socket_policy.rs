@@ -202,7 +202,10 @@ fn apply_resolve_unix(grants: &[PathBuf]) -> Result<(), SandboxError> {
 const SECCOMP_RET_USER_NOTIF: u32 = 0x7fc0_0000;
 const SECCOMP_RET_ALLOW: u32 = 0x7fff_0000;
 const SECCOMP_FILTER_FLAG_NEW_LISTENER: u32 = 1 << 3;
-const AUDIT_ARCH_X86_64: u32 = 0x4000_0003;
+// EM_X86_64 (62) | __AUDIT_ARCH_64BIT | __AUDIT_ARCH_LE. 0x4000_0003 is
+// AUDIT_ARCH_I386; with that value the arch check never matched a native
+// process and the whole filter fell through to ALLOW.
+const AUDIT_ARCH_X86_64: u32 = 0xc000_003e;
 const X32: u64 = 0x4000_0000;
 // connect(2), sendto(2), sendmsg(2), sendmmsg(2); `send(2)` is sendto with
 // no address. sendmmsg is trapped and refused (found untrapped by the
@@ -1186,6 +1189,10 @@ mod tests {
         }
         // Foreign audit architectures are not trapped by this filter.
         assert_eq!(run(&program, 0x40000028, 42), SECCOMP_RET_ALLOW);
+        // The literal kernel values, independent of the constant under
+        // test: a native x86_64 connect traps, an i386 one is foreign.
+        assert_eq!(run(&program, 0xc000_003e, 42), SECCOMP_RET_USER_NOTIF);
+        assert_eq!(run(&program, 0x4000_0003, 42), SECCOMP_RET_ALLOW);
     }
 
     fn notif(nr: i32, args: [u64; 6]) -> Notif {

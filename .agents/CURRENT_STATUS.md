@@ -1,20 +1,21 @@
 # Current status
 
-**Status revision:** 136
+**Status revision:** 137
 
-**Stage:** security-round4-helper-self-probe
+**Stage:** security-round4-audit-arch-fix
 
-**Summary:** The standalone trap probe shows kernel 6.17 does trap connect (bare and namespaced), so the 24.04 bypass is in the launch chain, not the kernel. In debug mode the helper now connects from a thread that inherits the workload's filter chain, splitting a broken chain before exec from a broken delivery after it.
+**Summary:** Root cause of the 24.04 bypass: AUDIT_ARCH_X86_64 was 0x4000_0003 (the i386 value; x86_64 is 0xc000_003e), so the supervisor filter's arch check never matched a native process and every syscall fell through to ALLOW. The unit test fed the same wrong constant to its own interpreter and passed. The constant is corrected and the test now also pins the literal kernel values.
 
 **Verified:**
 
-- run 39476189517: trap probe reports RECV ok and EACCES on both 22.04 and 24.04; the 24.04 sandbox suite still fails the same two connect tests
+- run 39479954703: helper self-probe connect returned ENOENT (untrapped) on 24.04; the standalone probe with the correct arch value trapped on the same kernel
+- the 22.04 job is vacuous for the socket gates (Landlock ABI 4, workload isolation UNAVAILABLE, NOT-EXECUTABLE); only 24.04 executes them
 
 **Limits:**
 
-- Cause of the untrapped connect in the launched workload on 24.04 is not yet established; the containment claim does not hold on 24.04 until it is. See revision 113 for the round-4 open limits.
+- The fix is unverified until the 24.04 kernel-security run for this commit passes; revision 113 lists the other round-4 open limits.
 
-**Next move:** Read the helper self-probe errno from the next 24.04 sandbox-suite log.
+**Next move:** Kernel-security 24.04 run for this commit; then tighten the datagram test, which passes on file permissions alone.
 
 **Evidence:**
 
