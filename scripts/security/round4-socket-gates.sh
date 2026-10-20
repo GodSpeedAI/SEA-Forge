@@ -62,6 +62,20 @@ run() {
 }
 
 if [ "$ISOLATION" = AVAILABLE ]; then
+  # One-time operator step: the launcher repairs only the helper and its
+  # build directory, never ancestors above it (a home directory, say), so
+  # grant other-traverse along the target path here, visibly. No group bits
+  # and no read on directories: traverse is all a mapped workload needs.
+  TARGET_DIR=$(cargo metadata --format-version 1 --no-deps \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')
+  mkdir -p "$TARGET_DIR"
+  d=$TARGET_DIR
+  while [ "$d" != / ]; do
+    if [ -O "$d" ] && [ "$(( 0$(stat -c %a "$d") & 1 ))" = 0 ]; then
+      chmod o+x "$d" && echo "granted o+x on $d for helper reach" | log
+    fi
+    d=$(dirname "$d")
+  done
   # Supervisor decision audit: every notification's verdict lands in the
   # suite log (stderr), making the live enforcement trail reviewable.
   # Exported explicitly: a VAR=x prefix on a function call is not exported

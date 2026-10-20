@@ -714,15 +714,19 @@ pub fn spawn_interactive(
 /// namespace. The helper is executed by a process whose only mapped host ID
 /// is the workload's subordinate UID, so every host identity along the path
 /// — file owner included — appears unmapped (nobody) there, and only the
-/// *other* permission bits decide traverse and execve. A build made under a
-/// restrictive umask (e.g. 077) produces a 0700 helper, and a checkout
-/// under a non-traversable parent blocks execve before the file is even
-/// reached. The launcher walks the whole path, repairs what it owns by
-/// granting other-read/execute — bits it hands to untrusted code anyway,
-/// never write bits — and fails closed naming the first component it
-/// cannot repair.
+/// *other* permission bits decide traverse and execve. Directories need
+/// other-execute (traverse) and the helper needs other-read/execute; no
+/// group bit is needed or granted.
+///
+/// A build made under a restrictive umask (e.g. 077) produces a 0700 helper
+/// in a 0700 build directory, so the launcher repairs exactly those two when
+/// it owns them. It never changes an ancestor above the build directory
+/// (a home directory, say): that would widen host access on every launch,
+/// so it fails closed naming the component and the one-time `chmod o+x`
+/// the owner must run.
 pub fn ensure_helper_reachable(helper: &Path) -> Result<(), SandboxError> {
     use std::os::unix::fs::PermissionsExt;
+    let build_dir = helper.parent();
     let mut walked = PathBuf::new();
     if helper.is_absolute() {
         walked.push("/");
@@ -745,28 +749,30 @@ pub fn ensure_helper_reachable(helper: &Path) -> Result<(), SandboxError> {
                 walked.display()
             )));
         }
-        // A directory needs other-traverse (plus other-read for full
-        // resolution); the final file needs other-read and other-execute.
-        let need = if meta.is_dir() { 0o0045 } else { 0o0055 };
+        let need = if meta.is_dir() { 0o001 } else { 0o005 };
         let mode = meta.permissions().mode();
         if mode & need == need {
             continue;
         }
+        let repairable = walked.as_path() == helper || Some(walked.as_path()) == build_dir;
         let (launcher, _) = current_ids()?;
-        if meta.uid() != launcher {
+        if !repairable || meta.uid() != launcher {
             return Err(unavailable(format!(
                 "helper {} cannot be reached by a mapped workload ({} is mode {:o}, owner \
                  uid {}): every host identity is unmapped inside the namespace, so the \
-                 'other' bits decide; chmod o+rx along the path by the owner",
+                 'other' bits decide; the owner must grant it once (chmod o+{} {})",
                 helper.display(),
                 walked.display(),
                 mode,
-                meta.uid()
+                meta.uid(),
+                if meta.is_dir() { "x" } else { "rx" },
+                walked.display()
             )));
         }
-        fs::set_permissions(&walked, fs::Permissions::from_mode(mode | 0o0055)).map_err(|e| {
+        fs::set_permissions(&walked, fs::Permissions::from_mode(mode | need)).map_err(|e| {
             unavailable(format!(
-                "chmod o+rx {} for helper reach: {e}",
+                "chmod o+{} {} for helper reach: {e}",
+                if meta.is_dir() { "x" } else { "rx" },
                 walked.display()
             ))
         })?;
@@ -800,46 +806,47 @@ mod tests {
 
     #[test]
     fn umask_restricted_helper_is_made_reachable_and_foreign_ones_refused() {
-        let base = tempfile::tempdir().unwrap();
-        let helper = base.path().join("helper");
-        std::fs::write(&helper, b"#!/bin/sh\n").unwrap();
         use std::os::unix::fs::PermissionsExt;
-        // What a 077-umask build produces: owner-only. The launcher owns it,
-        // so the repair grants other-read/execute.
+        let mode_of = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let base = tempfile::tempdir().unwrap();
+        // tempdir() is 0700; the operator's one-time traverse grant.
+        fs::set_permissions(base.path(), fs::Permissions::from_mode(0o701)).unwrap();
+        // What a 077-umask build produces: an owner-only helper in an
+        // owner-only build directory. Both are repaired with the minimum
+        // other bits and no group bits.
+        let build = base.path().join("build");
+        fs::create_dir(&build).unwrap();
+        let helper = build.join("helper");
+        fs::write(&helper, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&build, fs::Permissions::from_mode(0o700)).unwrap();
         fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
         ensure_helper_reachable(&helper).unwrap();
-        let mode = fs::metadata(&helper).unwrap().permissions().mode();
-        assert_eq!(mode & 0o777, 0o755, "helper must end other-rx: {mode:o}");
+        assert_eq!(mode_of(&build), 0o701);
+        assert_eq!(mode_of(&helper), 0o705);
         // Already reachable: no-op.
         ensure_helper_reachable(&helper).unwrap();
-        // A non-traversable parent blocks execve before the file is reached;
-        // the walk repairs launcher-owned directories along the path too.
-        let nested = base.path().join("inner");
-        fs::create_dir_all(nested.join("deep")).unwrap();
-        let deep_helper = nested.join("deep").join("helper");
+        assert_eq!(mode_of(&helper), 0o705);
+        // An ancestor above the build directory is never changed: the walk
+        // refuses, naming it, and leaves its mode alone.
+        let outer = base.path().join("outer");
+        let deep_build = outer.join("build");
+        fs::create_dir_all(&deep_build).unwrap();
+        let deep_helper = deep_build.join("helper");
         fs::write(&deep_helper, b"#!/bin/sh\n").unwrap();
-        fs::set_permissions(&nested, fs::Permissions::from_mode(0o750)).unwrap();
-        fs::set_permissions(nested.join("deep"), fs::Permissions::from_mode(0o750)).unwrap();
-        fs::set_permissions(&deep_helper, fs::Permissions::from_mode(0o700)).unwrap();
+        fs::set_permissions(&outer, fs::Permissions::from_mode(0o700)).unwrap();
+        let refused = ensure_helper_reachable(&deep_helper)
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("chmod o+x"), "{refused}");
+        assert!(refused.contains(&outer.display().to_string()), "{refused}");
+        assert_eq!(mode_of(&outer), 0o700, "an ancestor must not be widened");
+        // Once the owner grants traverse, the launch proceeds.
+        fs::set_permissions(&outer, fs::Permissions::from_mode(0o701)).unwrap();
         ensure_helper_reachable(&deep_helper).unwrap();
-        for dir in [&nested, &nested.join("deep")] {
-            let mode = fs::metadata(dir).unwrap().permissions().mode();
-            assert!(
-                mode & 0o0045 == 0o0045,
-                "{} must end other-rx for traverse: {mode:o}",
-                dir.display()
-            );
-        }
-        let mode = fs::metadata(&deep_helper).unwrap().permissions().mode();
-        assert_eq!(
-            mode & 0o777,
-            0o755,
-            "deep helper must end other-rx: {mode:o}"
-        );
         // The foreign-owner refusal (a helper the launcher does not own is
         // reported, never repaired) cannot be constructed unprivileged
-        // here; the guard in ensure_helper_reachable is a direct
-        // uid comparison and returns without touching the file.
+        // here; the guard is a direct uid comparison and returns without
+        // touching the file.
     }
 
     #[test]

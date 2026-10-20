@@ -22,11 +22,15 @@
 //!   supervisor's read and the kernel's re-fetch), every trapped syscall is
 //!   either BROKERED — performed by the supervisor from bytes it read once,
 //!   with connect outcomes verified against the kernel-recorded
-//!   `getpeername` peer — or REFUSED with the workload killed before the
-//!   reply. Abstract AF_UNIX is refused (the round-2/3 posture of
-//!   unreachable abstract sockets, kept by policy where no kernel scope
-//!   applies to the broker); INET/INET6 is allowed only to ports the
-//!   network posture grants; sendmmsg is refused outright.
+//!   `getpeername` peer — or REFUSED with `EACCES` (race-class and
+//!   uninterpretable requests also kill the trapped process before the
+//!   reply). Every action targets the process that trapped, pinned by
+//!   pidfd. Abstract AF_UNIX is brokered only when the workload has its own
+//!   network namespace (no TCP grant), where the only reachable names are
+//!   its own; with a TCP grant it shares the host namespace and abstract
+//!   targets are refused, since no Landlock scope applies to the broker.
+//!   INET/INET6 is allowed only to ports the network posture grants;
+//!   sendmmsg is refused outright.
 //!
 //! Failure is fail-closed: listener closure (helper exit) makes the kernel
 //! answer the workload's monitored syscalls with `ENOSYS`, and any setup
@@ -868,11 +872,14 @@ fn broker_send(
             } else {
                 // Connected send of the copied payload: the association
                 // pinned above carries the destination.
+                // A named local: a temporary's address would dangle by the
+                // time sendmsg reads it.
                 let mut header: libc::msghdr = std::mem::zeroed();
-                header.msg_iov = &mut libc::iovec {
+                let mut iov = libc::iovec {
                     iov_base: payload.as_ptr() as *mut libc::c_void,
                     iov_len: payload.len(),
-                } as *mut _;
+                };
+                header.msg_iov = &mut iov;
                 header.msg_iovlen = 1;
                 libc::sendmsg(fd, &header, notif.args[2] as i32)
             };
