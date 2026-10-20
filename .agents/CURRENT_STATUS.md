@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 131
+**Status revision:** 132
 
-**Stage:** security-round4-workload-self-inspection
+**Stage:** security-round4-trap-probe
 
-**Summary:** The connect workload now reports its own seccomp mode, filter count and a NEW_LISTENER self-probe (EBUSY proves a listener is in its own chain) alongside the connect attempt, making the next run self-describing about whether the user-notify filter is present and why its notification is not delivered.
+**Summary:** The failing connect workload now attempts a nonexistent-path connect first and prints its errno: ENOENT means the user-notify filter never traps the syscall (untrapped, kernel ENOENT); EACCES means the filter traps and the broker refuses - splitting filter-matching from reply delivery for the bypass.
 
 **Verified:**
 
