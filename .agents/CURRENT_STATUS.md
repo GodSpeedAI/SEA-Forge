@@ -1,19 +1,18 @@
 # Current status
 
-**Status revision:** 138
+**Status revision:** 139
 
-**Stage:** security-round4-broker-refusal-audit
+**Stage:** security-round4-webpki-advisories
 
-**Summary:** With the arch constant fixed the 24.04 supervisor now traps: outside and declared sockets are refused and only the granted one connects (helper self-probe errno 13). Two socket tests still failed only because the diagnostic prelude in the connect workload broke their exact-match assertions, so the original connect script is restored. postgres-lifecycle now fails, since its workloads' connects to the granted Postgres socket are refused (EACCES) where the no-op filter used to let them through; the brokered path now logs which check refuses.
+**Summary:** cargo-deny began failing on two advisories published after the previous push: RUSTSEC-2026-0382 (rustls-webpki 0.103.15 may accept distrusted emSign intermediates) and RUSTSEC-2026-0381 (webpki-roots 1.0.9 bundles the distrusted emSign ECC Root CA - G3). Both are bumped in Cargo.lock to the fixed releases; no advisory is ignored.
 
 **Verified:**
 
-- run 39482520444 on 24.04 (kernel 7.0, Landlock ABI 8): outside and declared refused, granted connected, self-probe 13
-- same run: postgres-lifecycle fails with 'timed out waiting for three backends' while the supervisor logs Err(13) for the granted /tmp/.tmp*/sock/.s.PGSQL.* path
+- cargo update -p rustls-webpki -p webpki-roots; cargo deny check advisories via the pre-push hook
 
 **Limits:**
 
-- The reason the granted Postgres socket is refused is not yet established; the 24.04 gate stays red until it is. See revision 113 for the other round-4 open limits.
+- The 24.04 postgres-lifecycle refusal from revision 138 is still open; see revision 113 for the other round-4 open limits.
 
 **Next move:** Read the pathname/dup/pin_and_verify debug lines from the next 24.04 postgres-lifecycle log.
 
