@@ -59,11 +59,18 @@ run() {
 if [ "$ISOLATION" = AVAILABLE ]; then
   run sandbox-suite cargo test -p sea-forge-sandbox -j 1
   run postgres-broker cargo test -p sea-forge-server --test postgres_broker -j 1
-  if [ -d /usr/lib/postgresql ] || command -v initdb >/dev/null; then
+  # The lifecycle battery requires a qualified PostgreSQL install root
+  # (SEA_FORGE_SECURITY_PG_INSTALL); use an externally provided one, else
+  # the newest distro layout, else record the skip honestly.
+  if [ -z "${SEA_FORGE_SECURITY_PG_INSTALL:-}" ]; then
+    PG_ROOT=$(ls -d /usr/lib/postgresql/* 2>/dev/null | sort -V | tail -1)
+    [ -n "$PG_ROOT" ] && [ -x "$PG_ROOT/bin/initdb" ] && export SEA_FORGE_SECURITY_PG_INSTALL="$PG_ROOT"
+  fi
+  if [ -n "${SEA_FORGE_SECURITY_PG_INSTALL:-}" ]; then
     SEA_FORGE_REQUIRE_POSTGRES=1 run postgres-lifecycle \
       cargo test -p sea-forge-server --test postgres_lifecycle -j 1
   else
-    echo "SKIP postgres-lifecycle (no local PostgreSQL fixture)" | log
+    echo "SKIP postgres-lifecycle (no qualified PostgreSQL install root)" | log
   fi
 else
   # NOT-YET-EXECUTABLE, honestly recorded: the host refuses mapped user

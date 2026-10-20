@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 123
+**Status revision:** 124
 
-**Stage:** security-round4-helper-traversal-repair
+**Stage:** security-round4-pg-provisioning
 
-**Summary:** ensure_helper_reachable now walks the entire helper path: inside the mapped namespace every host identity is unmapped, so directory components lacking other-traverse block execve before the file is reached (the working unfiltered probe execs a system path, which is why only the isolated launch failed). The launcher repairs launcher-owned directories along the path by granting other-read/execute - never write bits - and fails closed naming the first component it cannot repair; the regression test covers the 0750-parent shape, and the CI preflight records and repairs a non-traversable checkout path on the disposable VM.
+**Summary:** The gates script now provisions the lifecycle battery from the distro PostgreSQL layout (/usr/lib/postgresql/<v>) when SEA_FORGE_SECURITY_PG_INSTALL is unset, so CI runs the full qualified battery instead of failing on the test's own honest gate; it skips with a recorded reason only when no install root exists. Also recorded: 22.04's util-linux 2.37 predates unshare --map-users, so its identity pool honestly reports unavailable there (portability follow-up: a newuidmap-direct fallback in the pool).
 
 **Verified:**
 
