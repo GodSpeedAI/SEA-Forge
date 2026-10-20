@@ -1,18 +1,18 @@
 # Current status
 
-**Status revision:** 133
+**Status revision:** 134
 
-**Stage:** security-round4-recv-audit
+**Stage:** security-round4-probe-import-fix
 
-**Summary:** The trap-probe froze on its first monitored syscall: the filter traps but the supervisor's RECV never returns the notification. The RECV loop now logs its entry and its failures (bounded) so the run shows whether the ioctl itself is failing.
+**Summary:** The connect workload probe used socket without importing it, so on the 24.04 runner every case died with NameError before any connect and reported the probe text instead of connected/refused. The import is fixed so the next run shows the real trap and RECV behaviour.
 
 **Verified:**
 
-- just lint clean; sandbox unit tests 11 pass; see revision 113 for the round-4 verification record
+- python snippet parses; root cause read from the 24.04 sandbox-suite log (NameError at probe line 18)
 
 **Limits:**
 
-- See revision 113 for the round-4 open limits; this entry records a per-commit increment only.
+- See revision 113 for the round-4 open limits; the kernel-security run for this commit decides whether the supervisor RECV stall from revision 133 is real.
 
 **Next move:** Kernel-security run for this commit; see revision 113.
 
