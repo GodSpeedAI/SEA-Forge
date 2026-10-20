@@ -88,7 +88,24 @@ fn main() {
     if argv.is_empty() {
         fail("empty workload argv");
     }
-    let network = sea_forge_sandbox::NetworkPosture::from_granted_ports(ports);
+    let network = sea_forge_sandbox::NetworkPosture::from_granted_ports(ports.clone());
+    // The supervisor thread is created BEFORE any restriction is applied, so
+    // it inherits neither the seccomp filters nor the Landlock domain: its
+    // own brokered connect/send calls must not trap on the listener it
+    // serves (a filtered supervisor deadlocks on the first granted
+    // connect), and its canonicalization must see granted trees the
+    // workload cannot read. It parks until the listener and the workload
+    // pid arrive; with no supervisor variant it never wakes.
+    let (supervisor_tx, supervisor_rx) =
+        std::sync::mpsc::channel::<(i32, Vec<PathBuf>, Vec<u16>, i32)>();
+    #[cfg(target_arch = "x86_64")]
+    std::thread::spawn(move || {
+        if let Ok((listener, grants, granted_ports, pid)) = supervisor_rx.recv() {
+            sea_forge_sandbox::socket_policy::supervise(listener, grants, granted_ports, pid);
+        }
+    });
+    #[cfg(not(target_arch = "x86_64"))]
+    drop(supervisor_rx);
     if let Err(error) =
         sea_forge_sandbox::jail::restrict_current_thread(&workspace, &artifacts, &reads, &network)
     {
@@ -120,25 +137,14 @@ fn main() {
         let error = command.exec();
         fail(&format!("exec failed: {error}"));
     };
-    // The supervisor thread is trusted: it only serves socket policy, and
-    // every syscall it needs is allowed by the inherited filters. The
-    // workload pid arrives after spawn; until then it parks.
-    let supervisor = socket_listener.map(|listener| {
-        let (tx, rx) = std::sync::mpsc::channel::<i32>();
-        std::thread::spawn(move || {
-            if let Ok(pid) = rx.recv() {
-                sea_forge_sandbox::socket_policy::supervise(listener, socket_reach, pid);
-            }
-        });
-        tx
-    });
+    let supervisor = socket_listener.map(|listener| (supervisor_tx, listener));
     // Reaped below by `wait(-1)` as the namespace's init, with every orphan.
     #[allow(clippy::zombie_processes)]
     let child = command
         .spawn()
         .unwrap_or_else(|e| fail(&format!("spawn failed: {e}")));
-    if let Some(tx) = supervisor.as_ref() {
-        let _ = tx.send(child.id() as i32);
+    if let Some((tx, listener)) = supervisor {
+        let _ = tx.send((listener, socket_reach, ports, child.id() as i32));
     }
     // EOF (or any error) on the lifeline means the launcher is gone.
     std::thread::spawn(move || {

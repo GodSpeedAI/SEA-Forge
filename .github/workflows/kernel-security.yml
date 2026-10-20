@@ -28,12 +28,19 @@ concurrency:
 
 jobs:
   socket-gates:
-    name: socket gates (ubuntu-24.04 VM)
+    name: socket gates (${{ matrix.image }} VM)
     # Standard VM, directly on the host: the workload isolation and seccomp
     # user-notify mechanisms under test need real kernel namespaces and
     # filters. Containers and slim images add their own confinement and
-    # would falsify the preflight record.
-    runs-on: ubuntu-24.04
+    # would falsify the preflight record. 22.04 runs alongside 24.04
+    # because its pre-AppArmor-restriction user namespaces let the full
+    # battery execute while the 24.04 AppArmor question is being settled
+    # (the exec-in-namespace matrix isolates it per run).
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.image }}
     timeout-minutes: 45
     steps:
       - name: Checkout the exact commit under test
@@ -92,7 +99,7 @@ jobs:
               echo 'runner:100000:65536' | sudo tee -a /etc/subgid
             grep . /etc/subuid /etc/subgid
             ls -l /usr/bin/newuidmap /usr/bin/newgidmap
-            echo "== seccomp user-notify install probe (disposable child) =="
+            echo "== user-notify install probe (disposable child) =="
             cat > /tmp/unotify-probe.c <<'EOF'
           #include <errno.h>
           #include <stdio.h>
@@ -121,6 +128,20 @@ jobs:
           }
           EOF
             gcc -o /tmp/unotify-probe /tmp/unotify-probe.c && /tmp/unotify-probe || true
+            echo "== exec-in-namespace diagnostic matrix =="
+            echo "   isolates which namespace combination breaks execve (the"
+            echo "   launch uses user+pid+mount+proc+ipc+net; the mount step is"
+            echo "   the suspect under AppArmor on 24.04)"
+            HELPER_MARK="exec-mark"
+            for flags in "" "--user --map-root-user" "--mount" "--user --map-root-user --mount" \
+                         "--user --map-root-user --mount --mount-proc --pid --fork --ipc --net"; do
+              # shellcheck disable=SC2086
+              if timeout 10 unshare $flags -- /bin/true 2>/tmp/execmatrix.err; then
+                echo "  exec ok:        unshare ${flags:-<none>}"
+              else
+                echo "  exec REFUSED:   unshare ${flags:-<none>}: $(cat /tmp/execmatrix.err | head -1)"
+              fi
+            done
             echo "== runtime prerequisites =="
             python3 --version
             gcc --version | head -1

@@ -12,18 +12,21 @@
 //!   enforced and race-free; sockets created inside the workload's own
 //!   Landlock domain stay reachable, which is exactly the legitimate-IPC
 //!   allowance.
-//! - ABI < 9 (x86_64 only): a seccomp user-notification filter on the three
-//!   syscalls, served by a supervisor thread in the trusted
-//!   `sea-forge-workload-exec` helper. Every pathname target is resolved and
-//!   checked against the granted trees before the syscall continues; the
-//!   syscall fails with `EACCES` otherwise. Two TOCTOU residuals (pathname
-//!   double-fetch; rename between check and continue) cannot be closed by
-//!   any supervisor; the compensating control is an immediate post-allow
-//!   re-resolution that kills the workload when the validated socket inode
-//!   is no longer what was allowed. Abstract sockets are continued untouched
-//!   — the Landlock abstract-socket scope and the dedicated network
-//!   namespace already govern them — and non-UNIX families pass through to
-//!   the main ruleset's TCP/UDP rights.
+//! - ABI < 9 (x86_64 only): a seccomp user-notification filter on
+//!   connect/sendto/sendmsg/sendmmsg, served by a supervisor thread that the
+//!   helper creates BEFORE any restriction is applied, so it inherits
+//!   neither the filters nor the Landlock domain. Nothing a workload writes
+//!   is ever continued: per `seccomp_unotify(2)`'s TOCTOU warning (and the
+//!   independent adversarial review's family-flip attack, where another
+//!   workload thread rewrites a blocked syscall's address between the
+//!   supervisor's read and the kernel's re-fetch), every trapped syscall is
+//!   either BROKERED — performed by the supervisor from bytes it read once,
+//!   with connect outcomes verified against the kernel-recorded
+//!   `getpeername` peer — or REFUSED with the workload killed before the
+//!   reply. Abstract AF_UNIX is refused (the round-2/3 posture of
+//!   unreachable abstract sockets, kept by policy where no kernel scope
+//!   applies to the broker); INET/INET6 is allowed only to ports the
+//!   network posture grants; sendmmsg is refused outright.
 //!
 //! Failure is fail-closed: listener closure (helper exit) makes the kernel
 //! answer the workload's monitored syscalls with `ENOSYS`, and any setup
@@ -201,9 +204,12 @@ const SECCOMP_RET_ALLOW: u32 = 0x7fff_0000;
 const SECCOMP_FILTER_FLAG_NEW_LISTENER: u32 = 1 << 3;
 const AUDIT_ARCH_X86_64: u32 = 0x4000_0003;
 const X32: u64 = 0x4000_0000;
-// connect(2), sendto(2), sendmsg(2); libc send(2) is sendto with no address.
+// connect(2), sendto(2), sendmsg(2), sendmmsg(2); `send(2)` is sendto with
+// no address. sendmmsg is trapped and refused (found untrapped by the
+// independent adversarial review: a race-free datagram path to any
+// DAC-admissible pathname socket).
 #[cfg(target_arch = "x86_64")]
-const MONITORED: [i64; 3] = [42, 44, 46];
+const MONITORED: [i64; 4] = [42, 44, 46, 307];
 
 // Listener ioctls per include/uapi/linux/seccomp.h ('!' magic):
 // RECV = _IOWR('!', 0, seccomp_notif[80]), SEND = _IOWR('!', 1, resp[24]).
@@ -355,17 +361,32 @@ pub fn supervisor_installable() -> Result<(), String> {
     }
 }
 
-/// The destination a monitored syscall targets.
+/// The destination a monitored syscall targets. Everything the supervisor
+/// decides is BROKERED or REFUSED — under `seccomp_unotify(2)`'s TOCTOU
+/// warning no trapped syscall is ever continued: the independent adversarial
+/// review showed a CONTINUE classified from supervisor-read bytes is racy
+/// (a blocked syscall's address buffer can be rewritten by another workload
+/// thread between the supervisor's read and the kernel's re-fetch, flipping
+/// AF_INET to AF_UNIX), so there is no continuation and no re-fetch at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Target {
-    /// No explicit address (send on an already-connected socket): the
-    /// connection that carried it was itself gated at connect time.
+    /// No explicit address (send on an already-connected socket, or a
+    /// `connect(fd, NULL, 0)` dissolve): the connection was itself gated.
     None,
-    /// AF_UNIX with a pathname, in resolved absolute form (empty when the
+    /// AF_UNIX with a pathname, in resolved absolute form (`None` when the
     /// path did not resolve — refused).
     Pathname(Option<PathBuf>),
-    /// Abstract AF_UNIX or another family: not this policy's decision.
-    Passthrough,
+    /// Abstract AF_UNIX: refused on the supervised path (no kernel scope
+    /// applies to the broker's own syscalls, so the round-2/3 posture of
+    /// unreachable abstract sockets is kept by refusing).
+    Abstract,
+    /// INET/INET6 connect or datagram send: the granted port plus the raw
+    /// sockaddr bytes as first read (the broker sends exactly these bytes,
+    /// never a kernel re-fetch of workload memory).
+    Inet(u16, Vec<u8>),
+    /// Unreadable destination memory: fail closed (refuse and kill) rather
+    /// than continue past an unread classification.
+    Refuse,
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -400,7 +421,7 @@ fn target_of(notif: &Notif) -> Target {
         46 => {
             // sendmsg: struct msghdr { void *msg_name; socklen_t msg_namelen; ... }
             let Some(header) = read_remote(pid, notif.args[1], 16) else {
-                return Target::Passthrough;
+                return Target::Refuse;
             };
             let pointer = u64::from_le_bytes(header[0..8].try_into().unwrap());
             let name_len = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
@@ -412,17 +433,34 @@ fn target_of(notif: &Notif) -> Target {
         _ => return Target::None,
     };
     if address == 0 || length < 3 {
+        // connect(fd, NULL, 0) (the dissolve form) and address-less sends.
         return Target::None;
     }
     let Some(sockaddr) = read_remote(pid, address, length) else {
-        return Target::Passthrough;
+        return Target::Refuse;
     };
     let family = u16::from_le_bytes([sockaddr[0], sockaddr[1]]);
-    if family != libc::AF_UNIX as u16 {
-        return Target::Passthrough;
-    }
-    if sockaddr[2] == 0 {
-        return Target::Passthrough; // abstract: Landlock scope + netns govern
+    match family {
+        x if x == libc::AF_UNIX as u16 => {
+            if sockaddr[2] == 0 {
+                return Target::Abstract;
+            }
+        }
+        x if x == libc::AF_INET as u16 => {
+            if sockaddr.len() < 6 {
+                return Target::Refuse;
+            }
+            let port = u16::from_be_bytes([sockaddr[2], sockaddr[3]]);
+            return Target::Inet(port, sockaddr);
+        }
+        x if x == libc::AF_INET6 as u16 => {
+            if sockaddr.len() < 6 {
+                return Target::Refuse;
+            }
+            let port = u16::from_be_bytes([sockaddr[2], sockaddr[3]]);
+            return Target::Inet(port, sockaddr);
+        }
+        _ => return Target::Refuse,
     }
     let bytes = &sockaddr[2..];
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
@@ -536,9 +574,12 @@ fn peer_bound_path(fd: i32) -> Option<PathBuf> {
         return None; // abstract or unnamed peer: not a pathname decision
     }
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    Some(PathBuf::from(std::ffi::OsString::from_vec(
-        bytes[..end].to_vec(),
-    )))
+    let bound = PathBuf::from(std::ffi::OsString::from_vec(bytes[..end].to_vec()));
+    // A peer that bound a relative or symlinked name yields non-canonical
+    // text; resolve it in the (shared) mount view so the grant comparison
+    // sees the same form the grants were canonicalized to. An unresolvable
+    // peer name is refused.
+    Some(bound.canonicalize().unwrap_or(bound))
 }
 
 fn peer_under_grant(peer: Option<PathBuf>, granted: &[PathBuf]) -> bool {
@@ -660,6 +701,10 @@ fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
         }
         let mut total = 0u64;
         let mut payload = Vec::new();
+        if iovlen > 1024 {
+            // Not silently empty: an unreadable iovec array refuses.
+            return Err(libc::EACCES);
+        }
         for index in 0..iovlen as usize {
             let entry = read_remote(pid, iov + (index as u64) * 16, 16).ok_or(libc::EACCES)?;
             let pointer = u64::from_le_bytes(entry[0..8].try_into().unwrap());
@@ -738,20 +783,29 @@ fn broker_send(
     }
 }
 
-/// Serve pathname-socket policy on `listener` until process exit. Blocks
-/// the calling thread; intended for a dedicated trusted thread in the
-/// helper, with `workload_pid` its direct child.
+/// Serve socket policy on `listener` until process exit. Blocks the calling
+/// thread; intended for a dedicated trusted thread in the helper created
+/// BEFORE any restriction is applied (so neither the seccomp filters nor the
+/// Landlock domain apply to it — its own brokered syscalls must not trap on
+/// the listener it serves, and its canonicalization must see granted trees
+/// the workload cannot read), with `workload_pid` its direct child and
+/// `granted_ports` the TCP ports `NetworkPosture` allows.
 ///
-/// Per target class (see [`Decision`]): kernel-authoritative targets
-/// continue; pathname targets and address-less sends are performed by this
-/// thread on a `pidfd_getfd` duplicate of the workload's descriptor, with
-/// the kernel-recorded peer name required to sit under a granted tree
-/// before any byte moves. A mismatch (the rename/swap race) kills the
-/// workload before the reply lands — it is frozen inside the intercepted
-/// syscall and can execute nothing past it, so a raced swap costs it its
-/// life and costs the outside peer an empty connection, never data.
+/// Every trapped syscall is brokered or refused; nothing is continued
+/// (see [`Target`]). A pathname target is performed only when its resolved
+/// path lies under a granted tree and is a socket inode, with the
+/// kernel-recorded peer name (`getpeername`) re-verified against the grants
+/// after the pin; a mismatch (the rename/swap race) kills the workload
+/// before the reply lands — it is frozen inside the intercepted syscall and
+/// can execute nothing past it, so a raced swap costs it its life and costs
+/// the outside peer an empty connection, never data.
 #[cfg(target_arch = "x86_64")]
-pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t) {
+pub fn supervise(
+    listener: i32,
+    grants: Vec<PathBuf>,
+    granted_ports: Vec<u16>,
+    workload_pid: libc::pid_t,
+) {
     let granted: Vec<PathBuf> = grants
         .iter()
         .filter_map(|tree| tree.canonicalize().ok())
@@ -765,44 +819,64 @@ pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t)
             }
             continue;
         }
-        let target = target_of(&notif);
-        let outcome: Result<Option<i64>, i32> = match &target {
-            Target::Passthrough => Ok(None), // CONTINUE; kernel is the authority
-            Target::None => {
-                // An address-less send on an already-connected socket: the
-                // connection was brokered at connect time, so the send is
-                // performed from copied payload bytes on the dup.
-                broker_connected_send(&notif, workload_pid, notif.nr == 46).map(Some)
-            }
-            Target::Pathname(None) => Err(libc::EACCES),
-            Target::Pathname(Some(path)) => {
-                let under_grant = granted.iter().any(|tree| path.starts_with(tree));
-                let socket = if under_grant {
-                    socket_inode(path)
-                } else {
-                    None
-                };
-                if socket.is_none() {
-                    Err(libc::EACCES)
-                } else if notif.nr == 42 {
-                    broker_connect(&notif, path, &granted, workload_pid).map(|_| None)
-                } else {
-                    broker_send(&notif, path, &granted, workload_pid, notif.nr == 46).map(Some)
+        // sendmmsg moves multiple datagrams with per-message destinations;
+        // brokering its full mmsghdr array is out of scope, and no
+        // SEA-Forge workload path uses it, so it is refused outright.
+        let outcome: Result<Option<i64>, i32> = if notif.nr == 307 {
+            Err(libc::EACCES)
+        } else {
+            match target_of(&notif) {
+                Target::None => {
+                    if notif.nr == 42 {
+                        // connect(fd, NULL, 0) or the AF_UNSPEC dissolve:
+                        // performed as written on the duplicate.
+                        broker_dissolve(&notif, workload_pid).map(|_| None)
+                    } else {
+                        // An address-less send on an already-connected
+                        // socket: the connection was brokered at connect
+                        // time, so the send is performed from copied
+                        // payload bytes on the duplicate.
+                        broker_connected_send(&notif, workload_pid, notif.nr == 46).map(Some)
+                    }
                 }
+                Target::Pathname(None) => Err(libc::EACCES),
+                Target::Pathname(Some(path)) => {
+                    let under_grant = granted.iter().any(|tree| path.starts_with(tree));
+                    let socket = if under_grant {
+                        socket_inode(path.as_path())
+                    } else {
+                        None
+                    };
+                    if socket.is_none() {
+                        Err(libc::EACCES)
+                    } else if notif.nr == 42 {
+                        broker_connect(&notif, path.as_path(), &granted, workload_pid).map(|_| None)
+                    } else {
+                        broker_send(
+                            &notif,
+                            path.as_path(),
+                            &granted,
+                            workload_pid,
+                            notif.nr == 46,
+                        )
+                        .map(Some)
+                    }
+                }
+                // Abstract sockets stay unreachable from isolated workloads
+                // (round-2/3 posture); with no kernel scope applying to the
+                // broker's own syscalls, refusal is the enforcement.
+                Target::Abstract => Err(libc::EACCES),
+                Target::Inet(port, raw) => {
+                    if !granted_ports.contains(&port) {
+                        Err(libc::EACCES)
+                    } else {
+                        broker_inet(&notif, &raw, workload_pid).map(Some)
+                    }
+                }
+                Target::Refuse => Err(libc::EACCES),
             }
         };
         match outcome {
-            Ok(None) => {
-                // Kernel-authoritative target: continue into the kernel,
-                // which enforces its own policy on its own fetch.
-                let resp = NotifResp {
-                    id: notif.id,
-                    val: 0,
-                    error: 0,
-                    flags: 1, // SECCOMP_USER_NOTIF_FLAG_CONTINUE
-                };
-                unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
-            }
             Ok(Some(value)) => {
                 // Brokered completion: the operation already happened,
                 // performed by this thread on verified state.
@@ -814,8 +888,92 @@ pub fn supervise(listener: i32, grants: Vec<PathBuf>, workload_pid: libc::pid_t)
                 };
                 unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
             }
+            Ok(None) => {
+                // Brokered completion with a void result (connect, dissolve).
+                let resp = NotifResp {
+                    id: notif.id,
+                    val: 0,
+                    error: 0,
+                    flags: 0,
+                };
+                unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
+            }
             Err(error) => broker_refuse(listener, &notif, workload_pid, error),
         }
+    }
+}
+
+/// Perform `connect` as the workload wrote it (the dissolve forms: NULL or
+/// a zero-length address), from the supervisor's unrestricted context.
+#[cfg(target_arch = "x86_64")]
+fn broker_dissolve(notif: &Notif, workload_pid: libc::pid_t) -> Result<(), i32> {
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let result = libc::connect(fd, std::ptr::null(), 0);
+        let error = std::io::Error::last_os_error();
+        libc::close(fd);
+        if result == 0 {
+            Ok(())
+        } else {
+            Err(error.raw_os_error().unwrap_or(libc::EACCES))
+        }
+    }
+}
+
+/// Perform an INET/INET6 operation as the workload wrote it, from the raw
+/// sockaddr bytes the supervisor read once: port already checked against
+/// the grant, payload already copied, so the kernel never re-reads workload
+/// memory and no double-fetch exists. A `connect` pins the destination; a
+/// datagram send goes to exactly these bytes.
+#[cfg(target_arch = "x86_64")]
+fn broker_inet(notif: &Notif, raw: &[u8], workload_pid: libc::pid_t) -> Result<i64, i32> {
+    let payload = broker_payload(notif, notif.nr == 46)?;
+    unsafe {
+        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let result = (|| {
+            if notif.nr == 42 {
+                let rc = libc::connect(
+                    fd,
+                    raw.as_ptr() as *const libc::sockaddr,
+                    raw.len() as libc::socklen_t,
+                );
+                if rc != 0 {
+                    return Err(std::io::Error::last_os_error()
+                        .raw_os_error()
+                        .unwrap_or(libc::EACCES));
+                }
+                return Ok(0i64);
+            }
+            let sent = if notif.nr != 46 {
+                libc::sendto(
+                    fd,
+                    payload.as_ptr() as *const libc::c_void,
+                    payload.len(),
+                    notif.args[3] as i32,
+                    raw.as_ptr() as *const libc::sockaddr,
+                    raw.len() as libc::socklen_t,
+                )
+            } else {
+                let mut header: libc::msghdr = std::mem::zeroed();
+                let mut iov = libc::iovec {
+                    iov_base: payload.as_ptr() as *mut libc::c_void,
+                    iov_len: payload.len(),
+                };
+                header.msg_iov = &mut iov;
+                header.msg_iovlen = 1;
+                header.msg_name = raw.as_ptr() as *mut libc::c_void;
+                header.msg_namelen = raw.len() as libc::socklen_t;
+                libc::sendmsg(fd, &header, notif.args[2] as i32)
+            };
+            if sent < 0 {
+                return Err(std::io::Error::last_os_error()
+                    .raw_os_error()
+                    .unwrap_or(libc::EACCES));
+            }
+            Ok(sent as i64)
+        })();
+        libc::close(fd);
+        result
     }
 }
 
@@ -949,26 +1107,31 @@ mod tests {
     }
 
     #[test]
-    fn abstract_and_foreign_families_pass_through() {
-        // Abstract: AF_UNIX, sun_path[0] == 0.
+    fn abstract_is_refused_and_inet_carries_its_port() {
+        // Abstract: AF_UNIX, sun_path[0] == 0 -> refused (no continuation).
         let abstract_sock: Vec<u8> = [
             (libc::AF_UNIX as u16).to_le_bytes().as_slice(),
             &[0u8, 0, 0, 0],
         ]
         .concat();
-        // AF_INET loopback: another family entirely.
+        let address = abstract_sock.as_ptr() as u64;
+        let mut args = [0u64; 6];
+        args[1] = address;
+        args[2] = abstract_sock.len() as u64;
+        assert_eq!(target_of(&notif(42, args)), Target::Abstract);
+        // AF_INET carries the port in network byte order for the grant check.
         let inet: Vec<u8> = [
             (libc::AF_INET as u16).to_le_bytes().as_slice(),
-            &[7, 0, 0x1f, 0x90, 127, 0, 0, 1],
+            &[0x1f, 0x90, 127, 0, 0, 1],
         ]
         .concat();
-        for bytes in [&abstract_sock[..], &inet[..]] {
-            let address = bytes.as_ptr() as u64;
-            let mut args = [0u64; 6];
-            args[1] = address;
-            args[2] = bytes.len() as u64;
-            let notif = notif(42, args);
-            assert_eq!(target_of(&notif), Target::Passthrough);
+        let address = inet.as_ptr() as u64;
+        let mut args = [0u64; 6];
+        args[1] = address;
+        args[2] = inet.len() as u64;
+        match target_of(&notif(42, args)) {
+            Target::Inet(8080, raw) => assert_eq!(raw, inet),
+            other => panic!("expected inet, got {other:?}"),
         }
     }
 

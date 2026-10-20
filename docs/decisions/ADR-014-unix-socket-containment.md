@@ -274,3 +274,37 @@ approved operation) no longer applies to the decided targets, because the
 kernel never re-fetches — there is no continuation of workload syscalls
 carrying userspace verdicts. On ABI ≥ 9 hosts the pure-Landlock path has no
 notification at all and remains the preferred enforcement.
+
+### Amendment 2 (2026-10-19, after the independent adversarial review)
+
+The review found the §7 model still raced and broken in three ways, and
+this amendment supersedes it:
+
+1. **The CONTINUE delegation was itself racy.** Classification read the
+   destination from workload memory; a second workload thread can rewrite a
+   blocked syscall's address between that read and the kernel's post-
+   CONTINUE fetch, flipping AF_INET to AF_UNIX and landing an unmediated
+   pathname connect. "The kernel is the authority on its own fetch" holds
+   only if the kernel fetches what was classified — which no longer holds
+   under a family flip. **There is now no continuation at all**: every
+   trapped syscall is brokered from single-fetch bytes or refused.
+2. **The supervisor thread was created after the filters and inherited
+   them**, deadlocking on its own brokered connect (the first granted
+   connect would hang the workload). The helper now creates the thread
+   before any restriction; it also inherits no Landlock domain, which the
+   broker requires to canonicalize granted trees the workload cannot read.
+3. **`sendmmsg(2)` was untrapped** — a race-free datagram path to any
+   DAC-admissible pathname socket. It is now trapped and refused outright.
+
+Additional hardening from the same review: INET/INET6 targets are brokered
+with an explicit granted-port check (the supervisor inherits no Landlock
+net rights, so the posture is enforced in the broker); peer names from
+`getpeername` are canonicalized before the grant comparison (relative or
+symlinked binds previously killed legitimate workloads);
+`connect(fd, NULL, 0)` dissolves are brokered as written instead of being
+misread as zero-byte sends; an unreadable destination or an iovec array
+over the payload cap refuses instead of pretending success. Residual,
+disclosed: along the brokered path a rename raced into the
+validate-to-pin window costs the workload its life and the outside peer an
+empty connection — no data moves; `sendmmsg` users lose the syscall (no
+SEA-Forge workload path uses it).

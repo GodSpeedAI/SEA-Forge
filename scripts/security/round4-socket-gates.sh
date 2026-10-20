@@ -18,7 +18,7 @@ FAIL=0
 # would conflate "host cannot exercise the mechanism" with "mechanism
 # broken". Probe first; when the host refuses mapped user namespaces, run
 # without the flag (tests self-report unavailable) and record NYE.
-if unshare --user --map-users=1000:100000:1 --map-groups=1000:100000:1 \
+if /usr/bin/unshare --user --map-users=1000:100000:1 --map-groups=1000:100000:1 \
      --setuid=1000 --setgid=1000 -- true 2>/dev/null; then
   export SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1
   ISOLATION=AVAILABLE

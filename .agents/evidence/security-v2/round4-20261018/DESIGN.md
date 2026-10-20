@@ -93,3 +93,25 @@ intercepted syscall; raced swap costs an empty connection, never data).
 Fail closed: 1 MiB payload cap, 5 s connect poll, EBUSY launch refusal.
 Unit tests: 10 (new: peer_under_grant prefix semantics; BPF trap set;
 sockaddr decode).
+
+## Amendment 2 (2026-10-19): adversarial review findings and redesign v3
+
+The independent context-isolated review (FINDINGS in
+agents/evidence/security-v2/adversarial-round4-20261019/FINDINGS.md) found
+three bypass-class defects in the v2 brokered design, all fixed here:
+(1) the supervisor thread inherited the filters (spawned after install) and
+would deadlock on its own brokered connect — thread now created before any
+restriction; (2) CONTINUE on non-UNIX targets was raceable via a
+family-flip (AF_INET->AF_UNIX) between the supervisor's read and the
+kernel's re-fetch — there is now NO continuation: every trapped syscall is
+brokered from single-fetch bytes or refused, INET included, with an
+explicit granted-port check in the broker; (3) sendmmsg(307, +x32) was
+untrapped — now trapped and refused outright. Softer fixes: peer names
+canonicalized before the grant check (relative/symlinked binds no longer
+kill legitimate workloads), connect(fd,NULL,0) dissolved as written, and
+an over-cap iovec array refuses instead of "sending" empty. Unit tests 11.
+Held verdicts from the review: rename/symlink swap (getpeername pin +
+kill-before-reply), fd hygiene, BPF arithmetic (incl. the seccompiler
+arch-kill stacking argument, verified in vendored source), grant
+construction. The brokered path itself was judged sound: no data-delivery
+bypass; the residual race is bounded to an empty connection.
