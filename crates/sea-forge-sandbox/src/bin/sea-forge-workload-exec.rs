@@ -119,6 +119,7 @@ fn main() {
     let mut socket_reach = socket_grants;
     socket_reach.push(workspace.clone());
     socket_reach.push(artifacts.clone());
+    let seccomp_filters_before = seccomp_filter_count();
     let socket_listener = match sea_forge_sandbox::socket_policy::apply(&socket_reach) {
         Ok(sea_forge_sandbox::socket_policy::Applied::LandlockResolveUnix) => None,
         #[cfg(target_arch = "x86_64")]
@@ -127,6 +128,19 @@ fn main() {
         }
         Err(error) => fail(&error.to_string()),
     };
+    if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+        eprintln!(
+            "[workload-exec] mechanism={:?} listener={:?} seccomp_filters {} -> {}",
+            if socket_listener.is_some() {
+                "supervisor"
+            } else {
+                "landlock"
+            },
+            socket_listener,
+            seccomp_filters_before,
+            seccomp_filter_count()
+        );
+    }
     // After Landlock (which sets no_new_privs), before any workload code.
     if let Err(error) = sea_forge_sandbox::syscall_filter::restrict_current_thread() {
         fail(&error.to_string());
@@ -168,6 +182,22 @@ fn main() {
             Err(_) => std::process::exit(126),
         }
     }
+}
+
+/// The process's attached seccomp filter count (/proc/self/status), for
+/// the launch audit: the user-notify filter must increment it before the
+/// workload is spawned.
+#[cfg(target_os = "linux")]
+fn seccomp_filter_count() -> u32 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status
+                .lines()
+                .find(|line| line.starts_with("Seccomp_filters:"))
+                .and_then(|line| line.split_whitespace().last()?.parse().ok())
+        })
+        .unwrap_or(u32::MAX)
 }
 
 #[cfg(not(target_os = "linux"))]

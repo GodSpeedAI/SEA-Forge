@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 127
+**Status revision:** 128
 
-**Stage:** security-round4-reply-sign-fix
+**Stage:** security-round4-install-audit
 
-**Summary:** The live bypass is identified as a reply-protocol defect: seccomp_notif_resp.error must carry the NEGATED errno, and the broker was replying positive EACCES - a value the kernel does not treat as a denial, so denied connects completed as fake successes (return value 13) exactly matching the observed outside-canary connections. All denials now reply -errno. The launcher forwards SEA_FORGE_SOCKET_SUPERVISOR_DEBUG explicitly through the cleared environment (the audit printed zero lines because env_clear stripped it), and mutation controls are skipped unless the baseline suite passes, since a failing baseline cannot kill a mutant (the earlier KILLED verdicts on 24.04 are retracted as noise).
+**Summary:** The supervisor audit still printed zero lines because the gates script's VAR=value function prefix is not exported to children; it is now exported explicitly. The helper logs the applied containment mechanism, listener fd and the /proc/self/status seccomp filter count before and after installation, so the next run splits install failure from inheritance failure for the workload-side non-trapping that the battery evidence indicates (every observed refusal is reproducible by DAC alone; every bypass is an untrapped syscall).
 
 **Verified:**
 

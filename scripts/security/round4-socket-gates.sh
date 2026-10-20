@@ -64,7 +64,10 @@ run() {
 if [ "$ISOLATION" = AVAILABLE ]; then
   # Supervisor decision audit: every notification's verdict lands in the
   # suite log (stderr), making the live enforcement trail reviewable.
-  SEA_FORGE_SOCKET_SUPERVISOR_DEBUG=1 run sandbox-suite cargo test -p sea-forge-sandbox -j 1
+  # Exported explicitly: a VAR=x prefix on a function call is not exported
+  # to the function's children.
+  export SEA_FORGE_SOCKET_SUPERVISOR_DEBUG=1
+  run sandbox-suite cargo test -p sea-forge-sandbox -j 1
   run postgres-broker cargo test -p sea-forge-server --test postgres_broker -j 1
   # The lifecycle battery requires a qualified PostgreSQL install root
   # (SEA_FORGE_SECURITY_PG_INSTALL); use an externally provided one, else
