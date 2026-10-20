@@ -2,7 +2,7 @@
 
 Same BPF shape as socket_policy.rs. Prints one verdict line; used by the
 kernel-security preflight to separate kernel behavior from SEA-Forge code."""
-import ctypes, os, socket, struct, sys, threading, time
+import ctypes, os, socket, struct, sys, threading
 
 libc = ctypes.CDLL(None, use_errno=True)
 libc.syscall.restype = ctypes.c_long
