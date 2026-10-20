@@ -207,6 +207,37 @@ impl Scenario {
 }
 
 #[test]
+fn granted_connect_from_a_child_process_and_a_thread_is_brokered() {
+    // The trapped caller is not always the helper's direct child: a shell
+    // workload's psql child, or a worker thread, makes the connect. The
+    // broker must copy the descriptor from the process that trapped.
+    let base = tempfile::tempdir().unwrap();
+    fs::set_permissions(base.path(), fs::Permissions::from_mode(0o755)).unwrap();
+    let granted = open_dir(&base.path().join("granted"));
+    let from_child = listener(&granted.join("child.sock"));
+    let from_thread = listener(&granted.join("thread.sock"));
+    let Some(case) = scenario(Vec::new(), vec![granted.clone()]) else {
+        return;
+    };
+    let program = format!(
+        "import subprocess,sys,threading\nconnect={CONNECT:?}\n\
+         child=subprocess.run([sys.executable,'-I','-c',connect,sys.argv[1]+'/child.sock'],\
+         capture_output=True,text=True).stdout.strip()\n\
+         def worker():\n    sys.argv=['x',sys.argv[1]+'/thread.sock']\n    exec(connect)\n\
+         t=threading.Thread(target=worker); t.start(); t.join()\nprint('child:'+child)"
+    );
+    let said = case.run(&program, &granted.display().to_string());
+    let (child, thread) = (from_child.join().unwrap(), from_thread.join().unwrap());
+    assert_eq!(said, "connected\nchild:connected", "{said:?}");
+    assert_eq!(child.as_deref(), Some("reached"), "child connect: {said:?}");
+    assert_eq!(
+        thread.as_deref(),
+        Some("reached"),
+        "thread connect: {said:?}"
+    );
+}
+
+#[test]
 fn abstract_namespace_own_ipc_works_and_cross_namespace_is_structural() {
     let Some(case) = scenario(Vec::new(), Vec::new()) else {
         return;

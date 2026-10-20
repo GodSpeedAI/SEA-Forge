@@ -534,23 +534,76 @@ fn broker_deny(listener: i32, notif: &Notif, error: i32) {
     unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
 }
 
-/// Duplicate one of the workload's descriptors into the supervisor by
-/// `pidfd_open` + `pidfd_getfd` (kernel-verified identity; the helper is
-/// the workload's parent inside the same user namespace).
+/// `SECCOMP_IOCTL_NOTIF_ID_VALID`: `_IOW('!', 2, __u64)`.
 #[cfg(target_arch = "x86_64")]
-unsafe fn dup_workload_fd(pid: libc::pid_t, fd: i32) -> Result<i32, std::io::Error> {
-    let pidfd = libc::syscall(libc::SYS_pidfd_open, pid, 0u32);
-    if pidfd < 0 {
-        return Err(std::io::Error::last_os_error());
+const IOCTL_NOTIF_ID_VALID: libc::c_ulong = 0x4008_2102;
+
+/// The process that made a trapped syscall, held by pidfd. Descriptors are
+/// copied from it (not from the helper's direct child: a shell workload's
+/// `psql` grandchild is the one that connects) and race-class kills land on
+/// it, never on a recycled pid.
+#[cfg(target_arch = "x86_64")]
+struct Caller {
+    pidfd: i32,
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Caller {
+    /// Resolve `notif`'s trapped thread to its thread group and pin it.
+    fn resolve(listener: i32, notif: &Notif) -> Option<Caller> {
+        // notif.pid is the trapped thread; pidfd_open wants its thread group.
+        let status = std::fs::read_to_string(format!("/proc/{}/status", notif.pid)).ok()?;
+        let tgid: libc::pid_t = status
+            .lines()
+            .find_map(|line| line.strip_prefix("Tgid:"))?
+            .trim()
+            .parse()
+            .ok()?;
+        let pidfd = unsafe { libc::syscall(libc::SYS_pidfd_open, tgid, 0u32) };
+        if pidfd < 0 {
+            return None;
+        }
+        let caller = Caller {
+            pidfd: pidfd as i32,
+        };
+        // Checked only once the pidfd is held: a still-live notification
+        // proves the trapped thread never exited, so neither its tid nor its
+        // thread group was recycled and the pidfd names the caller.
+        if unsafe { libc::ioctl(listener, IOCTL_NOTIF_ID_VALID as _, &notif.id) } != 0 {
+            return None;
+        }
+        Some(caller)
     }
-    let pidfd = pidfd as i32;
-    let duplicated = libc::syscall(libc::SYS_pidfd_getfd, pidfd, fd, 0u32);
-    let error = std::io::Error::last_os_error();
-    libc::close(pidfd);
-    if duplicated < 0 {
-        return Err(error);
+
+    /// Duplicate the caller's descriptor `fd` into the supervisor
+    /// (`pidfd_getfd`; same user namespace, the helper is an ancestor).
+    fn getfd(&self, fd: i32) -> Result<i32, std::io::Error> {
+        let duplicated = unsafe { libc::syscall(libc::SYS_pidfd_getfd, self.pidfd, fd, 0u32) };
+        if duplicated < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        Ok(duplicated as i32)
     }
-    Ok(duplicated as i32)
+
+    /// SIGKILL the caller while it is still frozen in the trapped syscall.
+    fn kill(&self) {
+        unsafe {
+            libc::syscall(
+                libc::SYS_pidfd_send_signal,
+                self.pidfd,
+                libc::SIGKILL,
+                std::ptr::null::<libc::siginfo_t>(),
+                0u32,
+            )
+        };
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Drop for Caller {
+    fn drop(&mut self) {
+        unsafe { libc::close(self.pidfd) };
+    }
 }
 
 /// The bound name of `fd`'s peer, as the kernel recorded it when the peer
@@ -600,7 +653,7 @@ fn pin_and_verify(
     fd: i32,
     path: &Path,
     granted: &[PathBuf],
-    workload_pid: libc::pid_t,
+    caller: &Caller,
 ) -> Result<(), std::io::Error> {
     let mut address: libc::sockaddr_un = unsafe { std::mem::zeroed() };
     address.sun_family = libc::AF_UNIX as u16;
@@ -666,7 +719,7 @@ fn pin_and_verify(
         // name was swapped inside the check-to-connect window. This is the
         // one refusal where a reply alone cannot be trusted — the workload
         // is killed before it is ever resumed.
-        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+        caller.kill();
         return Err(std::io::Error::from_raw_os_error(libc::EACCES));
     }
     Ok(())
@@ -678,17 +731,17 @@ fn broker_connect(
     notif: &Notif,
     path: &Path,
     granted: &[PathBuf],
-    workload_pid: libc::pid_t,
+    caller: &Caller,
 ) -> Result<(), i32> {
     unsafe {
         let debug = std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some();
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|error| {
+        let fd = caller.getfd(notif.args[0] as i32).map_err(|error| {
             if debug {
                 eprintln!("[socket-supervisor] dup of workload fd failed: {error}");
             }
             libc::EACCES
         })?;
-        let result = pin_and_verify(fd, path, granted, workload_pid);
+        let result = pin_and_verify(fd, path, granted, caller);
         // Drop our reference; the workload's own descriptor keeps any
         // established connection alive.
         libc::close(fd);
@@ -712,7 +765,7 @@ const BROKER_MAX_PAYLOAD: usize = 1 << 20;
 /// request. Single fetch: the supervisor sends these bytes, not the kernel
 /// re-reading workload memory.
 #[cfg(target_arch = "x86_64")]
-fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Result<Vec<u8>, i32> {
+fn broker_payload(notif: &Notif, sendmsg: bool, caller: &Caller) -> Result<Vec<u8>, i32> {
     let pid = notif.pid as libc::pid_t;
     let (base, length): (u64, u64) = if !sendmsg {
         (notif.args[1], notif.args[2])
@@ -721,7 +774,7 @@ fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Re
         let header = match read_remote(pid, notif.args[1], 40) {
             Some(header) => header,
             None => {
-                unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                caller.kill();
                 return Err(libc::EACCES);
             }
         };
@@ -736,14 +789,14 @@ fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Re
             // Not silently empty: an unreadable iovec array refuses, and
             // the workload is killed (it cannot be trusted to interpret
             // the denial).
-            unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+            caller.kill();
             return Err(libc::EACCES);
         }
         for index in 0..iovlen as usize {
             let entry = match read_remote(pid, iov + (index as u64) * 16, 16) {
                 Some(entry) => entry,
                 None => {
-                    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                    caller.kill();
                     return Err(libc::EACCES);
                 }
             };
@@ -757,7 +810,7 @@ fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Re
                 let chunk = match read_remote(pid, pointer, span as usize) {
                     Some(chunk) => chunk,
                     None => {
-                        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                        caller.kill();
                         return Err(libc::EACCES);
                     }
                 };
@@ -770,13 +823,13 @@ fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Re
         return Ok(Vec::new());
     }
     if length > BROKER_MAX_PAYLOAD as u64 {
-        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+        caller.kill();
         return Err(libc::EACCES);
     }
     match read_remote(pid, base, length as usize) {
         Some(bytes) => Ok(bytes),
         None => {
-            unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+            caller.kill();
             Err(libc::EACCES)
         }
     }
@@ -793,16 +846,18 @@ fn broker_send(
     notif: &Notif,
     path: &Path,
     granted: &[PathBuf],
-    workload_pid: libc::pid_t,
+    caller: &Caller,
     sendmsg: bool,
 ) -> Result<i64, i32> {
     // Unreadable or oversize payloads deny (and the caller's refuse path
     // kills the frozen workload); nothing is sent.
-    let payload = broker_payload(notif, sendmsg, workload_pid)?;
+    let payload = broker_payload(notif, sendmsg, caller)?;
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let fd = caller
+            .getfd(notif.args[0] as i32)
+            .map_err(|_| libc::EACCES)?;
         let result = (|| {
-            pin_and_verify(fd, path, granted, workload_pid).map_err(|_| libc::EACCES)?;
+            pin_and_verify(fd, path, granted, caller).map_err(|_| libc::EACCES)?;
             let sent = if !sendmsg {
                 libc::send(
                     fd,
@@ -840,8 +895,9 @@ fn broker_send(
 /// BEFORE any restriction is applied (so neither the seccomp filters nor the
 /// Landlock domain apply to it — its own brokered syscalls must not trap on
 /// the listener it serves, and its canonicalization must see granted trees
-/// the workload cannot read), with `workload_pid` its direct child and
-/// `granted_ports` the TCP ports `NetworkPosture` allows.
+/// the workload cannot read), with `granted_ports` the TCP ports
+/// `NetworkPosture` allows. Each notification is decided for the process
+/// that trapped (the workload or any descendant), pinned per [`Caller`].
 ///
 /// Every trapped syscall is brokered or refused; nothing is continued
 /// (see [`Target`]). A pathname target is performed only when its resolved
@@ -852,12 +908,7 @@ fn broker_send(
 /// can execute nothing past it, so a raced swap costs it its life and costs
 /// the outside peer an empty connection, never data.
 #[cfg(target_arch = "x86_64")]
-pub fn supervise(
-    listener: i32,
-    grants: Vec<PathBuf>,
-    granted_ports: Vec<u16>,
-    workload_pid: libc::pid_t,
-) {
+pub fn supervise(listener: i32, grants: Vec<PathBuf>, granted_ports: Vec<u16>) {
     let granted: Vec<PathBuf> = grants
         .iter()
         .filter_map(|tree| tree.canonicalize().ok())
@@ -892,21 +943,25 @@ pub fn supervise(
                 notif.nr, target
             );
         }
+        let caller = Caller::resolve(listener, &notif);
+        if debug && caller.is_none() {
+            eprintln!("[socket-supervisor] caller of pid={} unresolved", notif.pid);
+        }
         let outcome: Result<Option<i64>, i32> = if notif.nr == 307 {
             Err(libc::EACCES) // policy denial: refused, workload continues
-        } else {
+        } else if let Some(caller) = caller.as_ref() {
             match &target {
                 Target::None => {
                     if notif.nr == 42 {
                         // connect(fd, NULL, 0) or the AF_UNSPEC dissolve:
                         // performed as written on the duplicate.
-                        broker_dissolve(&notif, workload_pid).map(|_| None)
+                        broker_dissolve(&notif, caller).map(|_| None)
                     } else {
                         // An address-less send on an already-connected
                         // socket: the connection was brokered at connect
                         // time, so the send is performed from copied
                         // payload bytes on the duplicate.
-                        broker_connected_send(&notif, workload_pid, notif.nr == 46).map(Some)
+                        broker_connected_send(&notif, caller, notif.nr == 46).map(Some)
                     }
                 }
                 Target::Pathname(None) => Err(libc::EACCES),
@@ -926,36 +981,34 @@ pub fn supervise(
                     if socket.is_none() {
                         Err(libc::EACCES)
                     } else if notif.nr == 42 {
-                        broker_connect(&notif, path.as_path(), &granted, workload_pid).map(|_| None)
+                        broker_connect(&notif, path.as_path(), &granted, caller).map(|_| None)
                     } else {
-                        broker_send(
-                            &notif,
-                            path.as_path(),
-                            &granted,
-                            workload_pid,
-                            notif.nr == 46,
-                        )
-                        .map(Some)
+                        broker_send(&notif, path.as_path(), &granted, caller, notif.nr == 46)
+                            .map(Some)
                     }
                 }
                 // Abstract sockets are bounded by the dedicated network
                 // namespace: only names created inside the workload's own
                 // namespace are addressable, so its own abstract IPC is
                 // legitimate and the broker performs it from copied bytes.
-                Target::Abstract => broker_abstract(&notif, workload_pid).map(Some),
+                Target::Abstract => broker_abstract(&notif, caller).map(Some),
                 Target::Inet(port, raw) => {
                     if !granted_ports.contains(port) {
                         Err(libc::EACCES)
                     } else {
-                        broker_inet(&notif, raw, workload_pid).map(Some)
+                        broker_inet(&notif, raw, caller).map(Some)
                     }
                 }
                 // Unreadable destination memory: uninterpretable, kill.
                 Target::Refuse => {
-                    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                    caller.kill();
                     Err(libc::EACCES)
                 }
             }
+        } else {
+            // The trapped task is gone (its notification is no longer live)
+            // or cannot be pinned: nothing is performed on its behalf.
+            Err(libc::EACCES)
         };
         if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
             eprintln!(
@@ -994,7 +1047,7 @@ pub fn supervise(
 /// destination bytes were read once from the frozen workload; the shared
 /// network namespace bounds which abstract names exist at all.
 #[cfg(target_arch = "x86_64")]
-fn broker_abstract(notif: &Notif, workload_pid: libc::pid_t) -> Result<i64, i32> {
+fn broker_abstract(notif: &Notif, caller: &Caller) -> Result<i64, i32> {
     let (address, length) = match notif.nr {
         42 => (notif.args[1], notif.args[2].min(110) as usize),
         44 => (notif.args[4], notif.args[5].min(110) as usize),
@@ -1003,14 +1056,16 @@ fn broker_abstract(notif: &Notif, workload_pid: libc::pid_t) -> Result<i64, i32>
     let payload = if notif.nr == 42 {
         Vec::new()
     } else {
-        broker_payload(notif, notif.nr == 46, workload_pid)?
+        broker_payload(notif, notif.nr == 46, caller)?
     };
     let sockaddr = read_remote(notif.pid as libc::pid_t, address, length).ok_or_else(|| {
-        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+        caller.kill();
         libc::EACCES
     })?;
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let fd = caller
+            .getfd(notif.args[0] as i32)
+            .map_err(|_| libc::EACCES)?;
         let raw_result: i64 = if notif.nr == 42 {
             libc::connect(
                 fd,
@@ -1041,9 +1096,11 @@ fn broker_abstract(notif: &Notif, workload_pid: libc::pid_t) -> Result<i64, i32>
 /// Perform `connect` as the workload wrote it (the dissolve forms: NULL or
 /// a zero-length address), from the supervisor's unrestricted context.
 #[cfg(target_arch = "x86_64")]
-fn broker_dissolve(notif: &Notif, workload_pid: libc::pid_t) -> Result<(), i32> {
+fn broker_dissolve(notif: &Notif, caller: &Caller) -> Result<(), i32> {
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let fd = caller
+            .getfd(notif.args[0] as i32)
+            .map_err(|_| libc::EACCES)?;
         let result = libc::connect(fd, std::ptr::null(), 0);
         let error = std::io::Error::last_os_error();
         libc::close(fd);
@@ -1061,10 +1118,12 @@ fn broker_dissolve(notif: &Notif, workload_pid: libc::pid_t) -> Result<(), i32> 
 /// memory and no double-fetch exists. A `connect` pins the destination; a
 /// datagram send goes to exactly these bytes.
 #[cfg(target_arch = "x86_64")]
-fn broker_inet(notif: &Notif, raw: &[u8], workload_pid: libc::pid_t) -> Result<i64, i32> {
-    let payload = broker_payload(notif, notif.nr == 46, workload_pid)?;
+fn broker_inet(notif: &Notif, raw: &[u8], caller: &Caller) -> Result<i64, i32> {
+    let payload = broker_payload(notif, notif.nr == 46, caller)?;
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let fd = caller
+            .getfd(notif.args[0] as i32)
+            .map_err(|_| libc::EACCES)?;
         let result = (|| {
             if notif.nr == 42 {
                 let rc = libc::connect(
@@ -1116,14 +1175,12 @@ fn broker_inet(notif: &Notif, raw: &[u8], workload_pid: libc::pid_t) -> Result<i
 /// workload's already-connected socket from copied payload bytes. The
 /// destination was fixed by an earlier brokered connect and cannot change.
 #[cfg(target_arch = "x86_64")]
-fn broker_connected_send(
-    notif: &Notif,
-    workload_pid: libc::pid_t,
-    sendmsg: bool,
-) -> Result<i64, i32> {
-    let payload = broker_payload(notif, sendmsg, workload_pid)?;
+fn broker_connected_send(notif: &Notif, caller: &Caller, sendmsg: bool) -> Result<i64, i32> {
+    let payload = broker_payload(notif, sendmsg, caller)?;
     unsafe {
-        let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
+        let fd = caller
+            .getfd(notif.args[0] as i32)
+            .map_err(|_| libc::EACCES)?;
         let sent = if !sendmsg {
             libc::send(
                 fd,

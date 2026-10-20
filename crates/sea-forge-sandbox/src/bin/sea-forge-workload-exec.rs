@@ -107,7 +107,7 @@ fn main() {
             if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
                 eprintln!("[workload-exec] supervisor serving listener={listener} pid={pid}");
             }
-            sea_forge_sandbox::socket_policy::supervise(listener, grants, granted_ports, pid);
+            sea_forge_sandbox::socket_policy::supervise(listener, grants, granted_ports);
         }
     });
     #[cfg(not(target_arch = "x86_64"))]
