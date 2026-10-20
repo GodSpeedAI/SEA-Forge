@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 130
+**Status revision:** 131
 
-**Stage:** security-round4-thread-audit
+**Stage:** security-round4-workload-self-inspection
 
-**Summary:** The install audit proved the supervisor branch fires and the listener exists (seccomp_filters 0 -> 1, listener Some(4)) while the supervisor served zero notifications; the thread lifecycle audit (parked / serving / handoff sent) now splits a dead handoff from unserved kernel notifications.
+**Summary:** The connect workload now reports its own seccomp mode, filter count and a NEW_LISTENER self-probe (EBUSY proves a listener is in its own chain) alongside the connect attempt, making the next run self-describing about whether the user-notify filter is present and why its notification is not delivered.
 
 **Verified:**
 

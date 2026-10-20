@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 
 const HELPER: &str = env!("CARGO_BIN_EXE_sea-forge-workload-exec");
 const PYTHON: &str = "/usr/bin/python3";
-const CONNECT: &str = "import socket,sys\ns=socket.socket(socket.AF_UNIX)\ntry:\n    s.connect(sys.argv[1]); s.sendall(b'reached'); print('connected')\nexcept OSError as e:\n    print('refused:' + type(e).__name__)\n";
+const CONNECT: &str = "import ctypes,sys\n\nstatus = dict(\n    line.split(':', 1) for line in open('/proc/self/status') if ':' in line\n)\nprint('selfseccomp=' + status.get('Seccomp', '?').strip() + \n      ' filters=' + status.get('Seccomp_filters', '?').strip())\nlibc = ctypes.CDLL(None, use_errno=True)\nlibc.syscall.restype = ctypes.c_long\nbpf = (ctypes.c_ushort * 1)(0x06)\nprog = ctypes.create_string_buffer(bytes(bpf))\nclass FProg(ctypes.Structure):\n    _fields_ = [('len', ctypes.c_ushort), ('filter', ctypes.c_void_p)]\nf = FProg(1, ctypes.cast(prog, ctypes.c_void_p).value)\nr = libc.syscall(317, 1, 8, ctypes.byref(f))\nprint('selflistener=' + ('ok-fd%d' % r if r >= 0 else 'errno%d' % ctypes.get_errno()))\n\ns=socket.socket(socket.AF_UNIX)\ntry:\n    s.connect(sys.argv[1]); s.sendall(b'reached'); print('connected')\nexcept OSError as e:\n    print('refused:' + type(e).__name__)\n";
 
 /// A listener that records whether anything connected and what it sent.
 fn listener(path: &Path) -> std::thread::JoinHandle<Option<String>> {
