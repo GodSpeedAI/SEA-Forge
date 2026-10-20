@@ -1,25 +1,24 @@
 # Current status
 
-**Status revision:** 124
+**Status revision:** 125
 
-**Stage:** security-round4-pg-provisioning
+**Stage:** security-round4-deny-versus-kill
 
-**Summary:** The gates script now provisions the lifecycle battery from the distro PostgreSQL layout (/usr/lib/postgresql/<v>) when SEA_FORGE_SECURITY_PG_INSTALL is unset, so CI runs the full qualified battery instead of failing on the test's own honest gate; it skips with a recorded reason only when no install root exists. Also recorded: 22.04's util-linux 2.37 predates unshare --map-users, so its identity pool honestly reports unavailable there (portability follow-up: a newuidmap-direct fallback in the pool).
+**Summary:** End-to-end execution of the charter battery on the 24.04 runner isolated the last defects, all fixed: policy denials (outside grants, abstract sockets, ungranted ports) now reply EACCES to the frozen workload instead of killing it, so refusals are observable and the workload continues preventively; kill-before-reply is reserved for race-class and uninterpretable cases (getpeername mismatch after the pin, unreadable or oversize payloads), threaded with the workload pid. The inherited-descriptor test deadlocked on its own listener thread reading a stream the test held (dropped before the join); the availability guard exited the whole test binary silently on an unavailable host and now returns per test. Abstract refusal expectation follows the EACCES spelling. Gates gained 20-minute suite and 10-minute mutation watchdogs. First live results: rename-swap race, datagram sendto and own-tree IPC PASSED on a real kernel.
 
 **Verified:**
 
-- just check all gates green on this tree; sandbox unit tests 10 pass; see revision 113 for the round-4 verification record
+- just lint clean; sandbox unit tests 11 pass; see revision 113 for the round-4 verification record
 
 **Limits:**
 
 - See revision 113 for the round-4 open limits; this entry records a per-commit increment only.
 
-**Next move:** Kernel-security CI job, independent adversarial review, then operator-directed push; see revision 113.
+**Next move:** Kernel-security run for this commit; see revision 113.
 
 **Evidence:**
 
 - .agents/evidence/security-v2/round4-20261018/DESIGN.md
-- docs/decisions/ADR-014-unix-socket-containment.md
 
 **Spec:** .agents/specs/security-implementation-v2.spec.md
 

@@ -512,13 +512,14 @@ fn socket_inode(path: &Path) -> Option<(u64, u64)> {
 ///   equivalent operation itself from memory it read once, verifies the
 ///   outcome from kernel state, and only then replies to the frozen
 ///   workload.
-/// - Refuse — everything a grant does not admit.
+/// - Refuse — everything a grant does not admit. Policy denials are
+///   preventive on their own (the kernel never performs the syscall), so
+///   [`broker_deny`] replies and lets the frozen workload observe a plain
+///   `EACCES`; only race-class and uninterpretable requests kill.
+///
+/// Deny a monitored syscall with `error`.
 #[cfg(target_arch = "x86_64")]
-fn broker_refuse(listener: i32, notif: &Notif, workload_pid: libc::pid_t, error: i32) {
-    // Kill before replying: the workload is frozen inside the intercepted
-    // syscall, so it cannot run between the kill and the reply, and dies
-    // before executing anything past the refused call.
-    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+fn broker_deny(listener: i32, notif: &Notif, error: i32) {
     let resp = NotifResp {
         id: notif.id,
         val: 0,
@@ -590,7 +591,12 @@ fn peer_under_grant(peer: Option<PathBuf>, granted: &[PathBuf]) -> bool {
 /// under a granted tree, and return the descriptor still pinned. Any
 /// mismatch is the swap race detected — the caller kills the workload.
 #[cfg(target_arch = "x86_64")]
-fn pin_and_verify(fd: i32, path: &Path, granted: &[PathBuf]) -> Result<(), std::io::Error> {
+fn pin_and_verify(
+    fd: i32,
+    path: &Path,
+    granted: &[PathBuf],
+    workload_pid: libc::pid_t,
+) -> Result<(), std::io::Error> {
     let mut address: libc::sockaddr_un = unsafe { std::mem::zeroed() };
     address.sun_family = libc::AF_UNIX as u16;
     let raw = path.as_os_str().as_bytes();
@@ -652,7 +658,10 @@ fn pin_and_verify(fd: i32, path: &Path, granted: &[PathBuf]) -> Result<(), std::
     connected?;
     if !peer_under_grant(peer_bound_path(fd), granted) {
         // The kernel's own record disagrees with the validated path: the
-        // name was swapped inside the check-to-connect window.
+        // name was swapped inside the check-to-connect window. This is the
+        // one refusal where a reply alone cannot be trusted — the workload
+        // is killed before it is ever resumed.
+        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
         return Err(std::io::Error::from_raw_os_error(libc::EACCES));
     }
     Ok(())
@@ -668,7 +677,7 @@ fn broker_connect(
 ) -> Result<(), i32> {
     unsafe {
         let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
-        let result = pin_and_verify(fd, path, granted);
+        let result = pin_and_verify(fd, path, granted, workload_pid);
         // Drop our reference; the workload's own descriptor keeps any
         // established connection alive.
         libc::close(fd);
@@ -687,13 +696,19 @@ const BROKER_MAX_PAYLOAD: usize = 1 << 20;
 /// request. Single fetch: the supervisor sends these bytes, not the kernel
 /// re-reading workload memory.
 #[cfg(target_arch = "x86_64")]
-fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
+fn broker_payload(notif: &Notif, sendmsg: bool, workload_pid: libc::pid_t) -> Result<Vec<u8>, i32> {
     let pid = notif.pid as libc::pid_t;
     let (base, length): (u64, u64) = if !sendmsg {
         (notif.args[1], notif.args[2])
     } else {
         // struct msghdr: msg_iov (ptr), msg_iovlen (size_t) at offsets 16/24.
-        let header = read_remote(pid, notif.args[1], 40).ok_or(libc::EACCES)?;
+        let header = match read_remote(pid, notif.args[1], 40) {
+            Some(header) => header,
+            None => {
+                unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                return Err(libc::EACCES);
+            }
+        };
         let iov = u64::from_le_bytes(header[16..24].try_into().unwrap());
         let iovlen = u64::from_le_bytes(header[24..32].try_into().unwrap());
         if iov == 0 || iovlen == 0 || iovlen > 1024 {
@@ -702,11 +717,20 @@ fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
         let mut total = 0u64;
         let mut payload = Vec::new();
         if iovlen > 1024 {
-            // Not silently empty: an unreadable iovec array refuses.
+            // Not silently empty: an unreadable iovec array refuses, and
+            // the workload is killed (it cannot be trusted to interpret
+            // the denial).
+            unsafe { libc::kill(workload_pid, libc::SIGKILL) };
             return Err(libc::EACCES);
         }
         for index in 0..iovlen as usize {
-            let entry = read_remote(pid, iov + (index as u64) * 16, 16).ok_or(libc::EACCES)?;
+            let entry = match read_remote(pid, iov + (index as u64) * 16, 16) {
+                Some(entry) => entry,
+                None => {
+                    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                    return Err(libc::EACCES);
+                }
+            };
             let pointer = u64::from_le_bytes(entry[0..8].try_into().unwrap());
             let span = u64::from_le_bytes(entry[8..16].try_into().unwrap());
             if span > 0 {
@@ -714,9 +738,14 @@ fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
                 if total > BROKER_MAX_PAYLOAD as u64 {
                     return Err(libc::EACCES);
                 }
-                payload.extend_from_slice(
-                    &read_remote(pid, pointer, span as usize).ok_or(libc::EACCES)?,
-                );
+                let chunk = match read_remote(pid, pointer, span as usize) {
+                    Some(chunk) => chunk,
+                    None => {
+                        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                        return Err(libc::EACCES);
+                    }
+                };
+                payload.extend_from_slice(&chunk);
             }
         }
         return Ok(payload);
@@ -725,9 +754,16 @@ fn broker_payload(notif: &Notif, sendmsg: bool) -> Result<Vec<u8>, i32> {
         return Ok(Vec::new());
     }
     if length > BROKER_MAX_PAYLOAD as u64 {
+        unsafe { libc::kill(workload_pid, libc::SIGKILL) };
         return Err(libc::EACCES);
     }
-    read_remote(pid, base, length as usize).ok_or(libc::EACCES)
+    match read_remote(pid, base, length as usize) {
+        Some(bytes) => Ok(bytes),
+        None => {
+            unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+            Err(libc::EACCES)
+        }
+    }
 }
 
 /// Perform a brokered send on behalf of the frozen workload: pin the
@@ -746,11 +782,11 @@ fn broker_send(
 ) -> Result<i64, i32> {
     // Unreadable or oversize payloads deny (and the caller's refuse path
     // kills the frozen workload); nothing is sent.
-    let payload = broker_payload(notif, sendmsg)?;
+    let payload = broker_payload(notif, sendmsg, workload_pid)?;
     unsafe {
         let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
         let result = (|| {
-            pin_and_verify(fd, path, granted).map_err(|_| libc::EACCES)?;
+            pin_and_verify(fd, path, granted, workload_pid).map_err(|_| libc::EACCES)?;
             let sent = if !sendmsg {
                 libc::send(
                     fd,
@@ -823,7 +859,7 @@ pub fn supervise(
         // brokering its full mmsghdr array is out of scope, and no
         // SEA-Forge workload path uses it, so it is refused outright.
         let outcome: Result<Option<i64>, i32> = if notif.nr == 307 {
-            Err(libc::EACCES)
+            Err(libc::EACCES) // policy denial: refused, workload continues
         } else {
             match target_of(&notif) {
                 Target::None => {
@@ -873,7 +909,11 @@ pub fn supervise(
                         broker_inet(&notif, &raw, workload_pid).map(Some)
                     }
                 }
-                Target::Refuse => Err(libc::EACCES),
+                // Unreadable destination memory: uninterpretable, kill.
+                Target::Refuse => {
+                    unsafe { libc::kill(workload_pid, libc::SIGKILL) };
+                    Err(libc::EACCES)
+                }
             }
         };
         match outcome {
@@ -898,7 +938,7 @@ pub fn supervise(
                 };
                 unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
             }
-            Err(error) => broker_refuse(listener, &notif, workload_pid, error),
+            Err(error) => broker_deny(listener, &notif, error),
         }
     }
 }
@@ -927,7 +967,7 @@ fn broker_dissolve(notif: &Notif, workload_pid: libc::pid_t) -> Result<(), i32> 
 /// datagram send goes to exactly these bytes.
 #[cfg(target_arch = "x86_64")]
 fn broker_inet(notif: &Notif, raw: &[u8], workload_pid: libc::pid_t) -> Result<i64, i32> {
-    let payload = broker_payload(notif, notif.nr == 46)?;
+    let payload = broker_payload(notif, notif.nr == 46, workload_pid)?;
     unsafe {
         let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
         let result = (|| {
@@ -986,7 +1026,7 @@ fn broker_connected_send(
     workload_pid: libc::pid_t,
     sendmsg: bool,
 ) -> Result<i64, i32> {
-    let payload = broker_payload(notif, sendmsg)?;
+    let payload = broker_payload(notif, sendmsg, workload_pid)?;
     unsafe {
         let fd = dup_workload_fd(workload_pid, notif.args[0] as i32).map_err(|_| libc::EACCES)?;
         let sent = if !sendmsg {

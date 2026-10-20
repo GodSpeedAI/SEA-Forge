@@ -139,7 +139,7 @@ struct Scenario {
     identity: sea_forge_sandbox::workload::WorkloadIdentity,
 }
 
-fn scenario(read: Vec<PathBuf>, grants: Vec<PathBuf>) -> Scenario {
+fn scenario(read: Vec<PathBuf>, grants: Vec<PathBuf>) -> Option<Scenario> {
     let pool = match WorkloadIdentityPool::from_host() {
         Ok(pool) if Path::new(PYTHON).exists() => pool,
         other => {
@@ -148,7 +148,11 @@ fn scenario(read: Vec<PathBuf>, grants: Vec<PathBuf>) -> Scenario {
                 "workload isolation required but unavailable: {:?}",
                 other.err()
             );
-            std::process::exit(0);
+            eprintln!(
+                "NOT-EXECUTABLE: workload isolation unavailable: {:?}",
+                other.err()
+            );
+            return None;
         }
     };
     let base = tempfile::tempdir().unwrap();
@@ -167,11 +171,11 @@ fn scenario(read: Vec<PathBuf>, grants: Vec<PathBuf>) -> Scenario {
     let identity = pool.acquire().unwrap();
     grant_exclusive_access(&confinement.workspace_root, &identity).unwrap();
     grant_exclusive_access(&confinement.artifacts_root, &identity).unwrap();
-    Scenario {
+    Some(Scenario {
         base,
         confinement,
         identity,
-    }
+    })
 }
 
 impl Scenario {
@@ -200,7 +204,9 @@ impl Scenario {
 
 #[test]
 fn abstract_namespace_canary_is_refused() {
-    let case = scenario(Vec::new(), Vec::new());
+    let Some(case) = scenario(Vec::new(), Vec::new()) else {
+        return;
+    };
     // The canary lives in the abstract namespace; only this test binds it.
     let said = case.run(
         "import socket,sys\nname='\\0sea-forge-test-canary'\nl=socket.socket(socket.AF_UNIX)\n\
@@ -208,10 +214,11 @@ fn abstract_namespace_canary_is_refused() {
          s.connect(name); print('connected')\nexcept OSError as e:\n    print('refused:' + type(e).__name__)",
         "x",
     );
-    // Abstract sockets are governed by the Landlock scope and the dedicated
-    // network namespace, not the pathname gate; the connect must not succeed
-    // even to a canary the same workload just created (scoped domain).
-    assert_eq!(said, "refused:ConnectionRefusedError", "{said:?}");
+    // Abstract sockets are refused outright on the supervised path (ADR-014
+    // amendment 2: no kernel scope applies to the broker's own syscalls, so
+    // the round-2/3 posture of unreachable abstract sockets is kept by
+    // policy). EACCES reaches the frozen workload as PermissionDeniedError.
+    assert_eq!(said, "refused:PermissionDeniedError", "{said:?}");
 }
 
 #[test]
@@ -221,7 +228,9 @@ fn symlink_alias_to_outside_canary_is_refused() {
     let outside = open_dir(&base.path().join("outside"));
     let canary = outside.join("real.sock");
     let accepted = listener(&canary);
-    let case = scenario(Vec::new(), Vec::new());
+    let Some(case) = scenario(Vec::new(), Vec::new()) else {
+        return;
+    };
     let alias = case.confinement.workspace_root.join("alias.sock");
     std::os::unix::fs::symlink(&canary, &alias).unwrap();
     let said = case.run(CONNECT, &alias.display().to_string());
@@ -262,7 +271,9 @@ fn rename_swap_race_does_not_reach_the_outside_canary() {
     let granted = open_dir(&base.path().join("granted"));
     let legit = granted.join("legit.sock");
     let legit_listener = listener(&legit);
-    let case = scenario(Vec::new(), vec![granted]);
+    let Some(case) = scenario(Vec::new(), vec![granted]) else {
+        return;
+    };
     let program = "import socket,sys,time\np=sys.argv[1]\nend=time.time()+3\nn=0\n\
         while time.time()<end:\n    s=socket.socket(socket.AF_UNIX)\n    try:\n        \
         s.connect(p); s.sendall(b'payload'); n+=1\n    except OSError:\n        pass\n\
@@ -318,7 +329,9 @@ fn datagram_sendto_to_outside_canary_is_refused() {
             *flag.lock().unwrap() = true;
         }
     });
-    let case = scenario(Vec::new(), Vec::new());
+    let Some(case) = scenario(Vec::new(), Vec::new()) else {
+        return;
+    };
     let said = case.run(
         "import socket,sys\ns=socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)\ntry:\n    \
          s.sendto(b'reached', sys.argv[1]); print('sent')\nexcept OSError as e:\n    \
@@ -341,7 +354,9 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
     // workload on a non-close-on-exec descriptor.
     let connected = std::os::unix::net::UnixStream::connect(&canary).unwrap();
     let raw = connected.as_raw_fd();
-    let case = scenario(Vec::new(), Vec::new());
+    let Some(case) = scenario(Vec::new(), Vec::new()) else {
+        return;
+    };
     let (mut command, _lifeline) = isolated_command(
         &case.identity,
         Path::new(HELPER),
@@ -369,6 +384,9 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
     command.env("PATH", "/usr/bin:/bin");
     let out = command.stdin(Stdio::null()).output().unwrap();
     let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    // Release the test's end of the pre-connected stream so the listener
+    // thread's read-to-EOF can return before the join.
+    drop(connected);
     let got = accepted.join().unwrap();
     assert!(said.starts_with("closed:"), "{said:?}");
     assert_eq!(got, None, "a smuggled descriptor delivered bytes");
@@ -376,7 +394,9 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
 
 #[test]
 fn workload_socket_in_own_tree_stays_usable() {
-    let case = scenario(Vec::new(), Vec::new());
+    let Some(case) = scenario(Vec::new(), Vec::new()) else {
+        return;
+    };
     let socket_path = case.confinement.workspace_root.join("own.sock");
     // The workload binds and connects to its own socket: legitimate IPC.
     let said = case.run(

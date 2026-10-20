@@ -48,8 +48,13 @@ gcc -o /tmp/llabi-gate /tmp/llabi-gate.c && /tmp/llabi-gate | log
 run() {
   local name="$1"; shift
   echo "== $name ==" | log
-  if "$@" > "$EV/$name.log" 2>&1; then
+  # Watchdog: a hung test must fail this gate with its log preserved, not
+  # silently eat the whole job budget.
+  if timeout 1200 "$@" > "$EV/$name.log" 2>&1; then
     echo "PASS $name" | log
+  elif [ $? -eq 124 ]; then
+    echo "FAIL $name: timed out after 20m (see $EV/$name.log)" | log
+    FAIL=1
   else
     echo "FAIL $name (see $EV/$name.log)" | log
     FAIL=1
@@ -93,7 +98,7 @@ text = open(path).read()
 assert frm in text, "mutation anchor not found"
 open(path, "w").write(text.replace(frm, to, 1))
 EOF
-  if cargo test -p sea-forge-sandbox --test unix_socket_reach -j 1 "$test" \
+  if timeout 600 cargo test -p sea-forge-sandbox --test unix_socket_reach -j 1 "$test" \
       > "$EV/mutation-$name.log" 2>&1; then
     echo "FAIL mutation $name: test still passed" | log
     FAIL=1
@@ -102,7 +107,7 @@ EOF
   fi
   git -C . checkout -- "$file"
   touch "$file"
-  cargo test -p sea-forge-sandbox --test unix_socket_reach -j 1 "$test" \
+  timeout 600 cargo test -p sea-forge-sandbox --test unix_socket_reach -j 1 "$test" \
     > "$EV/mutation-$name-restored.log" 2>&1 \
     && echo "restored PASS $name" | log \
     || { echo "FAIL restored $name" | log; FAIL=1; }
