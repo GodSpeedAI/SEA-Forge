@@ -117,10 +117,10 @@ EOF
 
 # M-S2: supervisor allows every pathname target under any tree.
 # M-S4: helper stops passing socket grants (grant plumbing broken).
-# Mutations only mean something when the targeted test actually executes:
-# a skipped test "fails" under any mutant, so without isolation they are
-# recorded NOT-EXECUTABLE rather than run.
-if [ "$ISOLATION" = AVAILABLE ]; then
+# Mutations only mean something when the targeted test actually executes
+# AND the baseline passes: with a failing baseline the mutant changes
+# nothing and any verdict would be noise, so they are skipped.
+if [ "$ISOLATION" = AVAILABLE ] && grep -q "^PASS sandbox-suite" "$EV/summary.txt"; then
   mutation M-S2-supervisor-allows-all \
     "crates/sea-forge-sandbox/src/socket_policy.rs" \
     'let under_grant = granted.iter().any(|tree| path.starts_with(tree));' \
@@ -133,7 +133,7 @@ if [ "$ISOLATION" = AVAILABLE ]; then
     'let mut socket_reach = Vec::new(); // MUTANT' \
     pathname_sockets_outside_declared_trees_are_unreachable
 else
-  echo "NOT-EXECUTABLE mutations (workload isolation unavailable; a skipped test cannot kill a mutant)" | log
+  echo "NOT-EXECUTABLE mutations (isolation unavailable or baseline suite failing; a skipped or failing baseline cannot kill a mutant)" | log
 fi
 
 echo "== summary ==" | log

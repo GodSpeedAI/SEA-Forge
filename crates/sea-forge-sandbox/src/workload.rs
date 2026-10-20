@@ -617,6 +617,13 @@ pub fn isolated_command(
     let mut command = Command::new(UNSHARE);
     command
         .env_clear()
+        // The supervisor's decision audit is launcher-controlled and
+        // carries no secrets; forward it explicitly through the cleared
+        // environment so the helper's audit reaches the captured output.
+        .env(
+            "SEA_FORGE_SOCKET_SUPERVISOR_DEBUG",
+            std::env::var("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").unwrap_or_default(),
+        )
         .arg("--user")
         .arg(format!(
             "--map-users={WORKLOAD_INNER_ID}:{}:1",

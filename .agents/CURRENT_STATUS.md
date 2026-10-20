@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 126
+**Status revision:** 127
 
-**Stage:** security-round4-abstract-broker-and-audit
+**Stage:** security-round4-reply-sign-fix
 
-**Summary:** Live 24.04 execution refined the design further: abstract AF_UNIX targets are brokered from copied bytes (the dedicated network namespace bounds their reach; the workload's own abstract IPC is legitimate and was wrongly expected refused), every supervisor decision can emit an audit line under SEA_FORGE_SOCKET_SUPERVISOR_DEBUG (enabled by the gates script) to pinpoint the live pathname-connect bypass on outside canaries, the inherited-fd test asserts the correct empty pre-connection, and the suite gained watchdogs. This commit is the audit run for the bypass.
+**Summary:** The live bypass is identified as a reply-protocol defect: seccomp_notif_resp.error must carry the NEGATED errno, and the broker was replying positive EACCES - a value the kernel does not treat as a denial, so denied connects completed as fake successes (return value 13) exactly matching the observed outside-canary connections. All denials now reply -errno. The launcher forwards SEA_FORGE_SOCKET_SUPERVISOR_DEBUG explicitly through the cleared environment (the audit printed zero lines because env_clear stripped it), and mutation controls are skipped unless the baseline suite passes, since a failing baseline cannot kill a mutant (the earlier KILLED verdicts on 24.04 are retracted as noise).
 
 **Verified:**
 

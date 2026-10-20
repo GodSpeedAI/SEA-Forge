@@ -523,7 +523,9 @@ fn broker_deny(listener: i32, notif: &Notif, error: i32) {
     let resp = NotifResp {
         id: notif.id,
         val: 0,
-        error,
+        // seccomp_notif_resp.error carries the NEGATED errno: a positive
+        // value is not a denial (the review cycle's live bypass).
+        error: -error,
         flags: 0,
     };
     unsafe { libc::ioctl(listener, IOCTL_NOTIF_SEND as _, &resp) };
