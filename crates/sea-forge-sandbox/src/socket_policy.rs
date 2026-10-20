@@ -848,12 +848,23 @@ pub fn supervise(
         .iter()
         .filter_map(|tree| tree.canonicalize().ok())
         .collect();
+    let debug = std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some();
+    let mut recv_errors = 0u32;
+    if debug {
+        eprintln!("[socket-supervisor] recv loop entered on listener={listener}");
+    }
     loop {
         let mut notif = Notif::default();
         if unsafe { libc::ioctl(listener, IOCTL_NOTIF_RECV as _, &mut notif) } < 0 {
             let error = std::io::Error::last_os_error();
             if matches!(error.raw_os_error(), Some(libc::ENOSYS) | Some(libc::EBADF)) {
                 return; // listener retired: helper is shutting down
+            }
+            // A RECV failure while a workload may be frozen on a monitored
+            // syscall must not spin silently: log it (bounded).
+            if debug && recv_errors < 10 {
+                recv_errors += 1;
+                eprintln!("[socket-supervisor] recv error {recv_errors}/10: {error}");
             }
             continue;
         }

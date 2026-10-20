@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 132
+**Status revision:** 133
 
-**Stage:** security-round4-trap-probe
+**Stage:** security-round4-recv-audit
 
-**Summary:** The failing connect workload now attempts a nonexistent-path connect first and prints its errno: ENOENT means the user-notify filter never traps the syscall (untrapped, kernel ENOENT); EACCES means the filter traps and the broker refuses - splitting filter-matching from reply delivery for the bypass.
+**Summary:** The trap-probe froze on its first monitored syscall: the filter traps but the supervisor's RECV never returns the notification. The RECV loop now logs its entry and its failures (bounded) so the run shows whether the ioctl itself is failing.
 
 **Verified:**
 
