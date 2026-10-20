@@ -16,9 +16,14 @@ FAIL=0
 # Isolation availability decides PASS/FAIL vs NOT-YET-EXECUTABLE: with the
 # require flag set, an unavailable pool panics the tests (a FAIL), which
 # would conflate "host cannot exercise the mechanism" with "mechanism
-# broken". Probe first; when the host refuses mapped user namespaces, run
-# without the flag (tests self-report unavailable) and record NYE.
-if /usr/bin/unshare --user --map-users=1000:100000:1 --map-groups=1000:100000:1 \
+# broken". Probe first — with the CURRENT USER's real delegation (the pool
+# skips slot 0, so base+1), not a hardcoded range newuidmap will rightly
+# refuse — and when the host refuses mapped user namespaces, run without
+# the flag (tests self-report unavailable) and record NYE.
+SUBUID_BASE=$(grep "^$(id -un):" /etc/subuid 2>/dev/null | head -1 | cut -d: -f2)
+if [ -n "$SUBUID_BASE" ] && /usr/bin/unshare --user \
+     --map-users=1000:$((SUBUID_BASE + 1)):1 \
+     --map-groups=1000:$((SUBUID_BASE + 1)):1 \
      --setuid=1000 --setgid=1000 -- true 2>/dev/null; then
   export SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1
   ISOLATION=AVAILABLE

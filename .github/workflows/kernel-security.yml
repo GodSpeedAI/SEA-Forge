@@ -129,19 +129,41 @@ jobs:
           EOF
             gcc -o /tmp/unotify-probe /tmp/unotify-probe.c && /tmp/unotify-probe || true
             echo "== exec-in-namespace diagnostic matrix =="
-            echo "   isolates which namespace combination breaks execve (the"
-            echo "   launch uses user+pid+mount+proc+ipc+net; the mount step is"
-            echo "   the suspect under AppArmor on 24.04)"
-            HELPER_MARK="exec-mark"
+            echo "   isolates which namespace combination breaks execve; the"
+            echo "   last rows use the runner's real delegation and a"
+            echo "   runner-owned binary (the shape the workload launch uses)"
             for flags in "" "--user --map-root-user" "--mount" "--user --map-root-user --mount" \
                          "--user --map-root-user --mount --mount-proc --pid --fork --ipc --net"; do
               # shellcheck disable=SC2086
               if timeout 10 unshare $flags -- /bin/true 2>/tmp/execmatrix.err; then
-                echo "  exec ok:        unshare ${flags:-<none>}"
+                echo "  exec ok:        unshare ${flags:-<none>} /bin/true"
               else
-                echo "  exec REFUSED:   unshare ${flags:-<none>}: $(cat /tmp/execmatrix.err | head -1)"
+                echo "  exec REFUSED:   unshare ${flags:-<none>} /bin/true: $(head -1 /tmp/execmatrix.err)"
               fi
             done
+            BASE=$(grep "^$(id -un):" /etc/subuid | head -1 | cut -d: -f2)
+            cp /bin/true ./target-true 2>/dev/null || cp /bin/true /tmp/target-true
+            RUNNER_BIN=${RUNNER_BIN:-$PWD/target-true}
+            [ -f "$RUNNER_BIN" ] || RUNNER_BIN=/tmp/target-true
+            chmod 755 "$RUNNER_BIN"
+            ls -l "$RUNNER_BIN"
+            for flags in "--user --map-users=1000:$((BASE + 1)):1 --map-groups=1000:$((BASE + 1)):1 --setuid=1000 --setgid=1000" \
+                         "--user --map-users=1000:$((BASE + 1)):1 --map-groups=1000:$((BASE + 1)):1 --setuid=1000 --setgid=1000 --mount --mount-proc --pid --fork --ipc --net"; do
+              # shellcheck disable=SC2086
+              if timeout 10 unshare $flags -- "$RUNNER_BIN" 2>/tmp/execmatrix2.err; then
+                echo "  exec ok:        unshare $flags <runner-owned binary>"
+              else
+                echo "  exec REFUSED:   unshare $flags <runner-owned binary>: $(head -1 /tmp/execmatrix2.err)"
+              fi
+            done
+            rm -f "$RUNNER_BIN"
+            echo "== path traversal to the helper (every component needs other-x) =="
+            HELPER_PATH=target/debug/sea-forge-workload-exec
+            if command -v namei >/dev/null; then
+              namei -l "$HELPER_PATH" || true
+            else
+              ls -ld / /home /home/runner /home/runner/work "$(pwd)" target target/debug "$HELPER_PATH"
+            fi
             echo "== runtime prerequisites =="
             python3 --version
             gcc --version | head -1

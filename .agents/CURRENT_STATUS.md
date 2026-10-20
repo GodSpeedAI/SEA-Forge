@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 121
+**Status revision:** 122
 
-**Stage:** security-round4-adversarial-hardening
+**Stage:** security-round4-ci-diagnostics
 
-**Summary:** Independent adversarial review verdicts implemented: the supervisor thread is created before any restriction (it inherited the filters and would deadlock on its own brokered connect); there is no continuation of any trapped syscall - the CONTINUE family-flip race (AF_INET rewritten to AF_UNIX between the supervisor's read and the kernel's re-fetch) is eliminated by brokering INET/INET6 with an explicit granted-port check and refusing abstract AF_UNIX outright; sendmmsg(307, +x32) is trapped and refused as a race-free datagram exfil path; getpeername peer names are canonicalized before the grant comparison; connect(fd,NULL,0) dissolves are brokered as written; over-cap iovec arrays refuse. ADR-014 amendment 2 records the supersession of the CONTINUE delegation model.
+**Summary:** The gates script probed a hardcoded subordinate range belonging to a different account on GitHub runners (the pool reads the real delegation and worked, the probe did not), so legs that could execute the battery recorded NOT-EXECUTABLE; the probe now derives base+1 from the current user's subuid line. The preflight matrix adds runner-owned-binary rows under the real delegation mapping and a full namei traversal record for the helper path, isolating the remaining 24.04 exec denial between mapping content, file ownership, and path traversal.
 
 **Verified:**
 
