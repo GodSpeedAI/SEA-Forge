@@ -141,6 +141,12 @@ jobs:
           }
           EOF
             gcc -o /tmp/unotify-probe /tmp/unotify-probe.c && /tmp/unotify-probe || true
+            echo "== user-notify trap probe (does the kernel trap connect(2)?) =="
+            echo "   bare process, then inside the workload's namespace set"
+            timeout 20 python3 -I scripts/security/notif_trap_probe.py 2>&1 || echo "   (probe exit $?)"
+            echo "   -- in user+mount+pid+ipc+net namespaces --"
+            timeout 20 unshare --user --map-root-user --mount --mount-proc --pid --fork --ipc --net \
+              python3 -I scripts/security/notif_trap_probe.py 2>&1 || echo "   (probe exit $?)"
             echo "== exec-in-namespace diagnostic matrix =="
             echo "   isolates which namespace combination breaks execve; the"
             echo "   last rows use the runner's real delegation and a"

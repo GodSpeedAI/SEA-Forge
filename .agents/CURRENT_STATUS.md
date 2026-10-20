@@ -1,20 +1,20 @@
 # Current status
 
-**Status revision:** 134
+**Status revision:** 135
 
-**Stage:** security-round4-probe-import-fix
+**Stage:** security-round4-trap-probe-preflight
 
-**Summary:** The connect workload probe used socket without importing it, so on the 24.04 runner every case died with NameError before any connect and reported the probe text instead of connected/refused. The import is fixed so the next run shows the real trap and RECV behaviour.
+**Summary:** The 24.04 run now exposes the real failure: connect(2) to an outside socket succeeds and the supervisor logs no notification (probe errno 2 = untrapped), while 22.04 passes with identical code. The preflight now runs a standalone USER_NOTIF trap probe, bare and inside the workload namespaces, to say whether kernel 6.17 traps connect at all before any SEA-Forge code is touched.
 
 **Verified:**
 
-- python snippet parses; root cause read from the 24.04 sandbox-suite log (NameError at probe line 18)
+- 24.04 sandbox-suite log: 2 of 7 unix_socket_reach tests fail on real connects; datagram test passes only because file permissions refuse it (not evidence the supervisor traps)
 
 **Limits:**
 
-- See revision 113 for the round-4 open limits; the kernel-security run for this commit decides whether the supervisor RECV stall from revision 133 is real.
+- Root cause on kernel 6.17 is not yet established; the containment claim does not hold on 24.04 until it is. See revision 113 for the round-4 open limits.
 
-**Next move:** Kernel-security run for this commit; see revision 113.
+**Next move:** Read the preflight trap-probe verdict from the next kernel-security run and act on it.
 
 **Evidence:**
 
