@@ -173,6 +173,19 @@ fn main() {
         let sent = tx.send((listener, socket_reach, ports, child.id() as i32));
         if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
             eprintln!("[workload-exec] supervisor handoff sent={:?}", sent.is_ok());
+            // Diagnostic: a thread born here inherits the same filter chain
+            // as the workload. EACCES (13) means the supervisor trapped and
+            // refused the connect; ENOENT (2) means the kernel never
+            // delivered it, which would put the fault in the launch chain
+            // rather than the filter.
+            std::thread::spawn(|| {
+                let result =
+                    std::os::unix::net::UnixStream::connect("/nonexistent-ux-probe/s.sock");
+                eprintln!(
+                    "[workload-exec] self-probe connect errno={:?}",
+                    result.err().and_then(|e| e.raw_os_error())
+                );
+            });
         }
     }
     // EOF (or any error) on the lifeline means the launcher is gone.
