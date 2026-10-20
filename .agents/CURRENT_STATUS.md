@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 128
+**Status revision:** 129
 
-**Stage:** security-round4-install-audit
+**Stage:** security-round4-audit-surfacing
 
-**Summary:** The supervisor audit still printed zero lines because the gates script's VAR=value function prefix is not exported to children; it is now exported explicitly. The helper logs the applied containment mechanism, listener fd and the /proc/self/status seccomp filter count before and after installation, so the next run splits install failure from inheritance failure for the workload-side non-trapping that the battery evidence indicates (every observed refusal is reproducible by DAC alone; every bypass is an untrapped syscall).
+**Summary:** The launch audit lines were being swallowed: the tests capture the whole launch chain's stderr with .output() and printed only the workload stdout. The socket tests now surface any supervisor or helper audit lines into the suite log, so the next run shows the applied mechanism, the seccomp filter count across installation, and every notification decision for the failing pathname and symlink connects.
 
 **Verified:**
 

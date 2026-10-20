@@ -115,6 +115,10 @@ fn pathname_sockets_outside_declared_trees_are_unreachable() {
             .stdin(Stdio::null())
             .output()
             .unwrap();
+        let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+        if stderr.contains("socket-supervisor") || stderr.contains("workload-exec") {
+            eprintln!("[launch audit {name}] {}", stderr.trim());
+        }
         let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
         let got = accepted.join().unwrap();
         eprintln!("{name}: workload={said} listener={got:?}");
