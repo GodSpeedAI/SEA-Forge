@@ -987,11 +987,18 @@ pub fn supervise(listener: i32, grants: Vec<PathBuf>, granted_ports: Vec<u16>) {
                             .map(Some)
                     }
                 }
-                // Abstract sockets are bounded by the dedicated network
-                // namespace: only names created inside the workload's own
-                // namespace are addressable, so its own abstract IPC is
-                // legitimate and the broker performs it from copied bytes.
-                Target::Abstract => broker_abstract(&notif, caller).map(Some),
+                // Abstract names are per network namespace. With no TCP
+                // grant the launcher gives the workload its own namespace
+                // (`--net`, from the same `NetworkPosture::from_granted_ports`
+                // normalization), so only names it created are addressable
+                // and the broker performs its own IPC from copied bytes. With
+                // a TCP grant it shares the host namespace, and the broker's
+                // unrestricted thread would bypass the Landlock abstract
+                // scope that holds for the workload: refuse.
+                Target::Abstract if granted_ports.is_empty() => {
+                    broker_abstract(&notif, caller).map(Some)
+                }
+                Target::Abstract => Err(libc::EACCES),
                 Target::Inet(port, raw) => {
                     if !granted_ports.contains(port) {
                         Err(libc::EACCES)
