@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 146
+**Status revision:** 147
 
-**Stage:** branch-reconciliation-verified
+**Stage:** branch-reconciliation-pr-required
 
-**Summary:** Reconciled useful topic work into local main and verified deliberate replacements. Integrated rusqlite, serde_json/rustix, rand, serde-saphyr and jsonschema upgrades with API adaptations; retained exact DomainForge 0.21.0 and retired Tauri/legacy frontend/YAML code. Four obsolete local branches and three extra worktrees removed with verified private full-history bundle retention. Full local CI passed (1534 tests, zero failures), P1-P4b passed, and independent Luna frontend/dependency/MSRV audits found no missing useful code or violated replacements. Atomic publication and six GitHub branch deletions are next; original workspace edit and handoff prompt remain untouched.
+**Summary:** Reconciled useful topic work into local main and verified deliberate replacements. Integrated rusqlite, serde_json/rustix, rand, serde-saphyr and jsonschema upgrades with API adaptations; retained exact DomainForge 0.21.0 and retired Tauri/legacy frontend/YAML code. Four obsolete local branches and three extra worktrees removed with verified private full-history bundle retention. Full local CI passed (1534 tests, zero failures), P1-P4b passed, and independent Luna frontend/dependency/MSRV audits found no missing useful code or violated replacements. The normal pre-push gates passed again, but GitHub rejected direct main publication because a PR and two status checks are required; atomicity kept every remote ref intact. A temporary reconciliation PR is next; original workspace edit and handoff prompt remain untouched.
 
 **Verified:**
 
@@ -32,8 +32,9 @@
 - Federation import/adopt remain denied as unclassified pending an ingest-classification design
 - conformance_sfwp admission overflow not reproduced in 140 targeted runs; conformance_m12 t12 flake not investigated; the casework live ladder's L-RECOV journey intermittently times out on 'panel closed', on main as well as this branch (not a required check)
 - The E8 refuse-on-bound policy and observer signing are proposals only (docs/security/realitytrace-e8-attribution-proposal.md), not implemented
+- GitHub branch protection requires a PR and status checks; direct push was rejected without mutations. macOS verification runs in GitHub CI, not on this Linux host.
 
-**Next move:** Commit the reviewed integration; atomically push main and remove six unchanged GitHub topic refs using exact leases, then verify refs and record completion.
+**Next move:** Publish a temporary reconciliation branch, open the required PR, await required checks and merge normally; then remove unchanged obsolete topic branches and align main after verifying squash equivalence.
 
 **Evidence:**
 

@@ -92,4 +92,10 @@ all recorded topic tips and main at `14a5f97`; deletion still uses exact leases.
 
 `RUSTC_WRAPPER='' just proof` passed P1–P4b. The versioned verification summary
 is in `../evidence/branch-reconciliation-20261021/verification.json`; raw logs
-are retained beside the private bundle. Atomic publication/cleanup is next.
+are retained beside the private bundle.
+
+The normal pre-push CI also passed. GitHub then rejected the atomic main update
+because main requires a pull request and two status checks. Atomicity preserved
+all remote refs. Integration will use a temporary reconciliation PR followed by
+normal protected merging and exact-tip topic cleanup; no protection is changed.
+macOS tests are not run locally on this Linux host; GitHub supplies platform CI.
