@@ -116,7 +116,7 @@ pub const MAX_AST_NODES: usize = 10_000;
 pub const MAX_NESTING_DEPTH: usize = 256;
 
 /// The pinned DomainForge version this adapter expects.
-pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.21.0";
+pub const EXPECTED_DOMAINFORGE_VERSION: &str = "0.21.1";
 
 /// Return the SHA-256 digest of `bytes` as 64 lowercase hexadecimal characters.
 fn sha256_hex(bytes: &[u8]) -> String {
