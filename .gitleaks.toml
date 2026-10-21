@@ -104,18 +104,13 @@ paths = [
 # Verified by inspection: matches are `idempotency_key` values in throwaway harness-cell ledgers and
 # UI snapshot field names (frame_token, embedding_token, navigation_token, navigation_api_key)
 # captured in trace zips. HARs carry no cookie or authorization headers. No real credentials.
-# Round 3: every finding these paths cover is generic-api-key (75 in
-# history), so other rules (tokens, private keys) are no longer suppressed.
-[[allowlists]]
-description = "casework live-ladder run evidence (harness cells, trace zips)"
-targetRules = ["generic-api-key"]
-paths = [
-  '''^\.agents/evidence/casework-live-wiring/T10/.*''',
-  # T09 resume records that discuss gitleaks false positives. Matches are prose ("Unauthenticated, ..."),
-  # source file names and a test file name; the commit-pinned .gitleaksignore fingerprints for them
-  # cannot match in a shallow single-commit CI checkout.
-  '''^\.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/.*''',
-]
+# Round 4 (operator decision 2026-10-18): the path-only rule that admitted ANY
+# generic-api-key match under these paths is replaced below by exact-value
+# allowlists (tree and history values), so a new value in these paths fails
+# closed instead of being auto-admitted.
+# T09 resume records that discuss gitleaks false positives are covered the
+# same way; their commit-pinned .gitleaksignore fingerprints could never match
+# in a shallow single-commit CI checkout, the exact values can.
 
 # Historical evidence from the godspeed-bounded-judgment gauntlet (immutable by repository rule, so the
 # files cannot be edited). Inspected 2026-10-04 and again 2026-10-05: the generic-api-key hits are test-fixture
@@ -374,4 +369,99 @@ regexes = [
   '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
   '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
   '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
+]
+# [[round-4 value-scoping]] exact synthetic identifier values; anything else in these paths fails.
+[[allowlists]]
+description = "casework T10 live-ladder evidence: exact identifier-class values (round-4 operator decision 2026-10-18)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/casework-live-wiring/T10/''']
+regexes = [
+  '''^01M4KJDAZTYQ0SJN43T31WHYG6$''',
+  '''^0677EC4FD49A1D9C0C807545C4BBDB95$''',
+  '''^53a53f54-317f-4b90-b0b6-afdc7ba5f4e6$''',
+  '''^64026E626D6A5BBC89308AAD37373EF3$''',
+  '''^659E0B8DAF1EE7E06D5C9EE22F6F11F1$''',
+  '''^67483A58F874B2178CE8C9A33348606B$''',
+  '''^7122D4E18926FC87F285B51102F2A90E$''',
+  '''^9F1EDEEAACA91326A0AA2B9CF2248589$''',
+  '''^C5EFD31A496780E0F12C1748CD83AC39$''',
+  '''^bdb66c40-f45b-4dbf-94c0-1e738f5d55b1$''',
+  '''^d244c317-288a-478c-9f7e-bd3a3d7c51c4$''',
+  '''^smsnap_20261010T164303Z_eed64e$''',
+  '''^smsnap_20261010T164349Z_60fa70$''',
+  '''^smsnap_20261010T164915Z_a5bfa3$''',
+  '''^smsnap_20261010T165148Z_38c138$''',
+  '''^smsnap_20261010T165424Z_3fac09$''',
+  '''^smsnap_20261010T170021Z_635610$''',
+  '''^smsnap_20261010T170828Z_74d785$''',
+  '''^smsnap_20261010T172651Z_aafb61$''',
+  '''^smsnap_20261010T174217Z_5ca997$''',
+  '''^smsnap_20261010T175635Z_004a75$''',
+  '''^smsnap_20261010T181249Z_fd72b0$''',
+  '''^smsnap_20261010T182905Z_e20790$''',
+  '''^smsnap_20261010T184322Z_78739f$''',
+  '''^smsnap_20261010T191040Z_d2859f$''',
+  '''^smsnap_20261010T193020Z_75c05e$''',
+  '''^smsnap_20261010T195719Z_55c57a$''',
+  '''^smsnap_20261010T211807Z_fc75cd$''',
+  '''^smsnap_20261010T224200Z_c074d9$''',
+]
+
+# [[round-4 value-scoping]] exact synthetic identifier values; anything else in these paths fails.
+[[allowlists]]
+description = "casework T09 resume records: exact identifier-class values (round-4 operator decision 2026-10-18)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/casework-live-wiring/T09/resume-2026-09-30/''']
+regexes = [
+  '''^8440ad6de638bc6735492bb49f98fdf5c24871805517474bbd498b43f8637f62$''',
+  '''^a6f0114d73aefdf816d35df7fd0b18d708924c3d673f78472e79c283bef3557b$''',
+  '''^missing/duplicate/empty$''',
+]
+
+# [[round-4 value-scoping]] exact synthetic identifier values; anything else in these paths fails.
+[[allowlists]]
+description = "security v1 continuation-20261017/all/results.json: exact identifier-class values (round-4 operator decision 2026-10-18)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/results\.json$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
+  '''^dc81f0712a185286079d08854f23a70bf81fea8b31ad9dd765272502861cf22d$''',
+  '''^f4b4057f37b53f7fa2e7e0a3b2895b8ea70f639be285d624131b954fbdd98755$''',
+]
+
+# [[round-4 value-scoping]] exact synthetic identifier values; anything else in these paths fails.
+[[allowlists]]
+description = "security v1 continuation-20261017/all/rust-A.log: exact identifier-class values (round-4 operator decision 2026-10-18)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v1/continuation-20261017/all/rust-A\.log$''']
+regexes = [
+  '''^4173289d47b8bad46696e94d908cc91f7029904813173904839630c87afecebd$''',
+  '''^60a3bf37943edeef0fa781ce19f6d062cb60e5c8420e64fbfb9599f4d8cf6ba9$''',
+  '''^845d0079ee6df06022173ff6766f45cf7ecfa2d9de8fd2b78249c429747a8e13$''',
+  '''^8b975f32e974564396d6a2eff99dd180ae794c08b083ddc938d84e98f3fb57a2$''',
+]
+
+# [[round-4 value-scoping]] exact synthetic identifier values; anything else in these paths fails.
+[[allowlists]]
+description = "security v2 realitytrace sec12 bundle: exact identifier-class values (round-4 operator decision 2026-10-18)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^\.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace\.json$''']
+regexes = [
+  '''^1b322c8467625eaa323065d4dddc4bb057c3cc452e3871355c30881b17897205$''',
+  '''^483ced183ad98a4025a331887b4487ec5a5d7e0b0e8ec35a60efd92925741032$''',
+  '''^a40d34cf3bf1d343368c94ed75ddf8450cd5c2399300738c35a4133f6752f9e9$''',
+  '''^cf635f82893e9c3195c4a6020a703008d19a42208111b5740f9b1db2a63b1e55$''',
 ]

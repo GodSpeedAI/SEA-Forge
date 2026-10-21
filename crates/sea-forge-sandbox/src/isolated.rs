@@ -89,6 +89,8 @@ impl ExecutionSandbox for IsolatedSandbox {
             workspace_root: h.spec.workspace_root.clone(),
             artifacts_root: h.spec.artifacts_root.clone(),
             read_paths: self.read_paths.clone(),
+            // No pathname-socket grants on this path: default-deny (SEC-06).
+            socket_paths: Vec::new(),
             network: h.spec.network.clone(),
         };
         let (mut command, lifeline) =

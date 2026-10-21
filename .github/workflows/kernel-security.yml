@@ -1,0 +1,243 @@
+name: Kernel security verification
+
+# Round-4 SEC-06 pathname-socket gates (ADR-014) on a GitHub-hosted VM,
+# because the WSL development host runs inside an inherited seccomp
+# user-notify filter and structurally cannot install a second listener.
+#
+# This job is deliberately NOT a required gate: its capabilities and
+# reliability are being established (see the mechanism-status summary it
+# produces). Promotion into the required gate is a separate, explicit
+# decision once the preflight record shows stable PASS behavior.
+
+on:
+  pull_request:
+    paths:
+      - "crates/sea-forge-sandbox/**"
+      - "crates/sea-forge-server/src/delegation.rs"
+      - "crates/sea-forge-server/tests/postgres_*.rs"
+      - "scripts/security/round4-socket-gates.sh"
+      - ".github/workflows/kernel-security.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kernel-security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  socket-gates:
+    name: socket gates (${{ matrix.image }} VM)
+    # Standard VM, directly on the host: the workload isolation and seccomp
+    # user-notify mechanisms under test need real kernel namespaces and
+    # filters. Containers and slim images add their own confinement and
+    # would falsify the preflight record. 22.04 runs alongside 24.04
+    # because its pre-AppArmor-restriction user namespaces let the full
+    # battery execute while the 24.04 AppArmor question is being settled
+    # (the exec-in-namespace matrix isolates it per run).
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 45
+    steps:
+      - name: Checkout the exact commit under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Capability preflight
+        run: |
+          set -euo pipefail
+          mkdir -p .agents/evidence/security-v2/round4-20261018/gates
+          EV=.agents/evidence/security-v2/round4-20261018/gates/preflight.txt
+          {
+            echo "== commit under test =="
+            git rev-parse HEAD
+            echo "== checkout traversal (the workload child maps one UID, so"
+            echo "    every host identity is unmapped and only 'other' bits"
+            echo "    decide traverse and exec; repaired and recorded if short)"
+            for dir in / /home /home/runner /home/runner/work "$(pwd)"; do
+              ls -ld "$dir"
+            done
+            for dir in /home/runner/work "$(pwd)"; do
+              if [ "$(stat -c '%A' "$dir" | cut -c8)" != x ]; then
+                echo "   '$dir' lacks other-x for the mapped workload child; granting (disposable VM, recorded)"
+                sudo chmod o+rx "$dir"
+                ls -ld "$dir"
+              fi
+            done
+            echo "== kernel and architecture =="
+            uname -a
+            cat /proc/version
+            echo "== inherited seccomp state =="
+            grep -E "^Seccomp|^NoNewPrivs|^Seccomp_filters" /proc/self/status
+            echo "   (0=off 1=strict 2=filter; a filter count alone does not"
+            echo "    prove a second listener is impossible — probed below)"
+            echo "== Landlock ABI via kernel API =="
+            cat > /tmp/llabi.c <<'EOF'
+          #include <stdio.h>
+          #include <sys/syscall.h>
+          int main(void) {
+              printf("landlock ABI = %ld\n", syscall(444, 0, 0, 1));
+              return 0;
+          }
+          EOF
+            gcc -o /tmp/llabi /tmp/llabi.c && /tmp/llabi
+            echo "== user namespace availability =="
+            if unshare --user --map-root-user true 2>/tmp/unshare.err; then
+              echo "unprivileged user namespace: AVAILABLE"
+            else
+              echo "unprivileged user namespace: REFUSED: $(cat /tmp/unshare.err)"
+              echo "== relaxing the Ubuntu 24.04 AppArmor userns restriction (disposable VM) =="
+              sysctl kernel.apparmor_restrict_unprivileged_userns || true
+              sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+              if unshare --user --map-root-user true 2>/tmp/unshare2.err; then
+                echo "unprivileged user namespace: AVAILABLE after sysctl"
+              else
+                echo "unprivileged user namespace: STILL REFUSED: $(cat /tmp/unshare2.err)"
+                echo "   the socket gates will report NOT-EXECUTABLE; no security claim is made"
+              fi
+            fi
+            echo "== workload identity prerequisites (subuid delegation + setuid mappers) =="
+            grep . /etc/subuid /etc/subgid 2>/dev/null || echo "(none yet)"
+            command -v newuidmap newgidmap || sudo apt-get install -y uidmap
+            # The pool requires a delegation for the launching user; the
+            # runner user has none by default. Synthetic, runner-local IDs.
+            grep -q '^runner:' /etc/subuid 2>/dev/null || \
+              echo 'runner:100000:65536' | sudo tee -a /etc/subuid
+            grep -q '^runner:' /etc/subgid 2>/dev/null || \
+              echo 'runner:100000:65536' | sudo tee -a /etc/subgid
+            grep . /etc/subuid /etc/subgid
+            ls -l /usr/bin/newuidmap /usr/bin/newgidmap
+            echo "== user-notify install probe (disposable child) =="
+            cat > /tmp/unotify-probe.c <<'EOF'
+          #include <errno.h>
+          #include <stdio.h>
+          #include <string.h>
+          #include <sys/prctl.h>
+          #include <linux/filter.h>
+          #include <linux/seccomp.h>
+          #include <sys/syscall.h>
+          int main(void) {
+              struct sock_filter code[] = {
+                  { 0x06, 0, 0, 0x7fff0000 }, /* ret ALLOW */
+              };
+              struct sock_fprog prog = { .len = 1, .filter = code };
+              prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+              errno = 0;
+              long r = syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER,
+                               SECCOMP_FILTER_FLAG_NEW_LISTENER, &prog);
+              int e = errno;
+              if (r >= 0) {
+                  printf("user-notify listener install: AVAILABLE (fd %ld)\n", r);
+                  return 0;
+              }
+              printf("user-notify listener install: UNAVAILABLE errno=%d (%s)\n",
+                     e, strerror(e));
+              return 1;
+          }
+          EOF
+            gcc -o /tmp/unotify-probe /tmp/unotify-probe.c && /tmp/unotify-probe || true
+            echo "== user-notify trap probe (does the kernel trap connect(2)?) =="
+            echo "   bare process, then inside the workload's namespace set"
+            timeout 20 python3 -I scripts/security/notif_trap_probe.py 2>&1 || echo "   (probe exit $?)"
+            echo "   -- in user+mount+pid+ipc+net namespaces --"
+            timeout 20 unshare --user --map-root-user --mount --mount-proc --pid --fork --ipc --net \
+              python3 -I scripts/security/notif_trap_probe.py 2>&1 || echo "   (probe exit $?)"
+            echo "== exec-in-namespace diagnostic matrix =="
+            echo "   isolates which namespace combination breaks execve; the"
+            echo "   last rows use the runner's real delegation and a"
+            echo "   runner-owned binary (the shape the workload launch uses)"
+            for flags in "" "--user --map-root-user" "--mount" "--user --map-root-user --mount" \
+                         "--user --map-root-user --mount --mount-proc --pid --fork --ipc --net"; do
+              # shellcheck disable=SC2086
+              if timeout 10 unshare $flags -- /bin/true 2>/tmp/execmatrix.err; then
+                echo "  exec ok:        unshare ${flags:-<none>} /bin/true"
+              else
+                echo "  exec REFUSED:   unshare ${flags:-<none>} /bin/true: $(head -1 /tmp/execmatrix.err)"
+              fi
+            done
+            BASE=$(grep "^$(id -un):" /etc/subuid | head -1 | cut -d: -f2)
+            cp /bin/true ./target-true 2>/dev/null || cp /bin/true /tmp/target-true
+            RUNNER_BIN=${RUNNER_BIN:-$PWD/target-true}
+            [ -f "$RUNNER_BIN" ] || RUNNER_BIN=/tmp/target-true
+            chmod 755 "$RUNNER_BIN"
+            ls -l "$RUNNER_BIN"
+            for flags in "--user --map-users=1000:$((BASE + 1)):1 --map-groups=1000:$((BASE + 1)):1 --setuid=1000 --setgid=1000" \
+                         "--user --map-users=1000:$((BASE + 1)):1 --map-groups=1000:$((BASE + 1)):1 --setuid=1000 --setgid=1000 --mount --mount-proc --pid --fork --ipc --net"; do
+              # shellcheck disable=SC2086
+              if timeout 10 unshare $flags -- "$RUNNER_BIN" 2>/tmp/execmatrix2.err; then
+                echo "  exec ok:        unshare $flags <runner-owned binary>"
+              else
+                echo "  exec REFUSED:   unshare $flags <runner-owned binary>: $(head -1 /tmp/execmatrix2.err)"
+              fi
+            done
+            rm -f "$RUNNER_BIN"
+            echo "== path traversal to the helper (every component needs other-x) =="
+            HELPER_PATH=target/debug/sea-forge-workload-exec
+            if command -v namei >/dev/null; then
+              namei -l "$HELPER_PATH" || true
+            else
+              ls -ld / /home /home/runner /home/runner/work "$(pwd)" target target/debug "$HELPER_PATH"
+            fi
+            echo "== runtime prerequisites =="
+            python3 --version
+            gcc --version | head -1
+            psql --version || echo "psql absent (postgres-lifecycle will be skipped by the gates script)"
+          } | tee "$EV"
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Run the round-4 socket gates (charter battery + mutations)
+        run: devbox run -- bash scripts/security/round4-socket-gates.sh
+
+      - name: Mechanism-status summary
+        if: always()
+        run: |
+          set -euo pipefail
+          EV=.agents/evidence/security-v2/round4-20261018/gates
+          {
+            echo "## Kernel-security mechanism status"
+            echo
+            ABI=$(/tmp/llabi | grep -o '[0-9]*$')
+            echo "- Landlock ABI on this runner: $ABI"
+            if [ "$ABI" -ge 9 ]; then
+              echo "- Native Landlock RESOLVE_UNIX path: exercised by the gates (ABI >= 9)"
+            else
+              echo "- Native Landlock RESOLVE_UNIX path: NOT-YET-EXECUTABLE here (ABI $ABI < 9); the ABI-9 ruleset code is compiled but unreachable, and this run exercises only the secured fallback"
+            fi
+            if grep -q "user-notify listener install: AVAILABLE" "$EV/preflight.txt"; then
+              echo "- seccomp user-notify fallback: installable on this runner; gate verdicts below are executable"
+            else
+              echo "- seccomp user-notify fallback: NOT installable on this runner; socket-gate verdicts are NOT-YET-EXECUTABLE and prove nothing"
+            fi
+            echo
+            echo "### Gate verdicts"
+            echo '```'
+            grep -E "^(PASS|FAIL|KILLED|SKIP|restored)" "$EV/summary.txt" || echo "(no summary written)"
+            echo '```'
+          } | tee "$EV/mechanism-status.md" >> "$GITHUB_STEP_SUMMARY"
+          # A hard gate failure must fail the job; a NOT-YET-EXECUTABLE
+          # fallback or a skipped postgres fixture must not.
+          if grep -q "^FAIL" "$EV/summary.txt"; then
+            echo "gate failures present" >&2
+            exit 1
+          fi
+
+      - name: Upload redacted gate evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kernel-security-gates-${{ github.sha }}
+          path: .agents/evidence/security-v2/round4-20261018/gates/
+          retention-days: 14
+          if-no-files-found: error

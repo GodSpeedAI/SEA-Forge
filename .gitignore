@@ -53,3 +53,7 @@
 
 # Jolli memory tool runtime state (churns on every session)
 .jolli/
+
+# Python bytecode
+__pycache__/
+*.pyc

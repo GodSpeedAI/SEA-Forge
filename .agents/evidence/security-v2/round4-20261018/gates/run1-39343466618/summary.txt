@@ -1,0 +1,18 @@
+== environment ==
+Linux runnervm8k3b6 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 GNU/Linux
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+workload isolation: UNAVAILABLE
+landlock ABI = 7
+== sandbox-suite-no-require ==
+FAIL sandbox-suite-no-require (see .agents/evidence/security-v2/round4-20261018/gates/sandbox-suite-no-require.log)
+== postgres-broker-no-require ==
+PASS postgres-broker-no-require
+NOT-EXECUTABLE socket gates (workload isolation unavailable on this host)
+NOT-EXECUTABLE mutations (workload isolation unavailable; a skipped test cannot kill a mutant)
+== summary ==
+FAIL sandbox-suite-no-require (see .agents/evidence/security-v2/round4-20261018/gates/sandbox-suite-no-require.log)
+PASS postgres-broker-no-require
+NOT-EXECUTABLE socket gates (workload isolation unavailable on this host)
+NOT-EXECUTABLE mutations (workload isolation unavailable; a skipped test cannot kill a mutant)

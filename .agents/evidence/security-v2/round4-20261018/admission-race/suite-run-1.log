@@ -1,0 +1,222 @@
+warning: crates/sea-forge-sandbox/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-sandbox` (manifest) generated 1 warning
+warning: crates/sea-forge-planner/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-planner` (manifest) generated 1 warning
+warning: crates/sea-forge-changeset/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-changeset` (manifest) generated 1 warning
+warning: crates/sea-forge-capability/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-capability` (manifest) generated 1 warning
+warning: crates/sea-forge-core/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-core` (manifest) generated 1 warning
+warning: crates/sea-forge-extension/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-extension` (manifest) generated 1 warning
+warning: crates/sea-forge-cli/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-cli` (manifest) generated 1 warning
+warning: crates/sea-forge-authority/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-authority` (manifest) generated 1 warning
+warning: crates/sea-forge-ledger/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-ledger` (manifest) generated 1 warning
+warning: crates/sea-forge-domainforge/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domainforge` (manifest) generated 1 warning
+warning: crates/sea-forge-runtime/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-runtime` (manifest) generated 1 warning
+warning: crates/sea-forge-settlement/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-settlement` (manifest) generated 1 warning
+warning: crates/sea-forge-domain/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-domain` (manifest) generated 1 warning
+warning: crates/sea-forge-trace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-trace` (manifest) generated 1 warning
+warning: crates/sea-forge-realitytrace/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-realitytrace` (manifest) generated 1 warning
+warning: crates/sea-forge-evidence/Cargo.toml: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+warning: `sea-forge-evidence` (manifest) generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 1.54s
+     Running unittests src/lib.rs (target/debug/deps/sea_forge_server-e399242fa6fa0c5a)
+
+running 139 tests
+test config::tests::absolute_socket_path_is_honored_verbatim ... ok
+test config::tests::an_absent_gateway_section_parses_to_none_fail_closed ... ok
+test config::tests::an_absent_supervisor_section_parses_to_disabled_bounded_defaults ... ok
+test config::tests::an_explicit_supervisor_section_parses_field_by_field ... ok
+test config::tests::default_layout_matches_the_conventional_cell ... ok
+test config::tests::an_unknown_gateway_field_is_rejected ... ok
+test config::tests::an_unknown_supervisor_field_is_rejected ... ok
+test config::tests::a_gateway_actor_defaults_to_gateway ... ok
+test config::tests::an_explicit_gateway_section_parses_field_by_field ... ok
+test config::tests::load_rejects_a_gateway_uid_with_no_binding ... ok
+test config::tests::load_rejects_a_delegable_actor_with_no_binding ... ok
+test config::tests::load_rejects_invalid_gateway_settings ... ok
+test config::tests::load_rejects_invalid_agent_endpoint_with_asserted_status ... ok
+test config::tests::load_rejects_unbounded_startup_limits ... ok
+test config::tests::load_rejects_out_of_range_supervisor_settings ... ok
+test config::tests::load_rejects_non_loopback_http_endpoint_without_test_flag ... ok
+test config::tests::load_accepts_valid_agent_config ... ok
+test config::tests::relative_socket_path_composes_under_root ... ok
+test config::tests::load_rejects_unknown_top_level_field_before_startup ... ok
+test config::tests::resolved_socket_path_is_always_absolute ... ok
+test continuation_key_tests::entropy_failure_after_partial_fill_fails_before_durable_work ... ok
+test continuation_key_tests::invalid_configuration_fails_before_requesting_entropy ... ok
+test config::tests::load_accepts_explicit_loopback_test_endpoint ... ok
+test identity::tests::a_claim_for_another_uids_actor_is_refused ... ok
+test identity::tests::a_binding_with_no_roles_authorizes_nothing ... ok
+test identity::tests::a_bound_actor_on_its_own_uid_resolves ... ok
+test identity::tests::a_direct_resolution_carries_no_delegation ... ok
+test identity::tests::a_gateway_role_it_does_not_hold_is_refused ... ok
+test identity::tests::a_missing_claim_is_refused_before_anything_else ... ok
+test identity::tests::a_non_gateway_uid_sending_on_behalf_of_is_refused ... ok
+test identity::tests::a_role_the_actor_does_not_hold_is_refused ... ok
+test identity::tests::an_actor_block_is_read_off_the_raw_line ... ok
+test identity::tests::a_role_the_end_user_does_not_hold_is_refused ... ok
+test identity::tests::a_malformed_actor_block_reads_as_absent ... ok
+test identity::tests::an_actor_outside_the_allowlist_is_refused ... ok
+test identity::tests::an_allowlisted_actor_with_no_binding_is_refused ... ok
+test identity::tests::an_on_behalf_of_block_is_read_off_the_raw_line ... ok
+test identity::tests::an_unconfigured_cell_refuses_every_protected_verb ... ok
+test identity::tests::an_unconfigured_gateway_refuses_every_delegation ... ok
+test identity::tests::an_unverifiable_peer_is_refused_even_with_a_valid_claim ... ok
+test identity::tests::the_end_users_binding_uid_is_not_the_connection_uid ... ok
+test identity::tests::describe_delegated_reports_the_effective_actor_and_refusals ... ok
+test identity::tests::the_gateway_may_not_act_as_itself ... ok
+test identity::tests::the_gateway_claim_must_be_the_configured_gateway_actor ... ok
+test identity::tests::the_gateway_may_act_for_an_allowlisted_end_user ... ok
+test lifecycle_contract_tests::a_missing_notify_command_blocks_startup_with_the_fix_named ... ok
+test lifecycle_contract_tests::a_notify_command_on_path_preflights_clean ... ok
+test lifecycle_contract_tests::a_panicking_handler_is_reported_not_propagated ... ok
+test continuation_key_tests::key_is_derived_from_the_entropy_seed ... ok
+test continuation_key_tests::distinct_seeds_yield_distinct_signatures ... ok
+test lifecycle_contract_tests::an_unset_notify_command_preflights_clean ... ok
+test mcp::tests::network_mcp_transports_are_not_configurable ... ok
+test lifecycle_contract_tests::a_timeout_names_the_request_to_recover_with ... ok
+test mcp_protocol::tests::duplicate_equivalent_keys_and_conflicting_envelopes_are_refused ... ok
+test lifecycle_contract_tests::a_timeout_without_a_request_id_is_still_typed ... ok
+test notify_tests::fire_notify_chatty_hook_does_not_deadlock ... ok
+test postgres::tests::approval_window_bounds_and_then_refuses_elevated_sessions ... ok
+test sfwp::approvals::tests::a_cell_with_no_journal_lists_nothing_without_claiming_a_read_failure ... ok
+test cancellation_tests::cancellation_is_authorized_and_durably_recorded_before_signalling ... ok
+test sfwp::approvals::tests::an_unparseable_journal_is_reported_rather_than_read_as_an_empty_queue ... ok
+test sfwp::assets::tests::empty_cell_lists_nothing_rather_than_a_builtin_catalog ... ok
+test sfwp::assets::tests::endpoint_standing_words_match_the_kernels_own_vocabulary ... ok
+test sfwp::assets::tests::standing_and_blocking_are_independent ... ok
+test sfwp::approvals::tests::one_cases_resolved_approval_does_not_empty_another_cases_inbox ... ok
+test postgres::tests::scope_admits_only_its_own_label_and_explicit_permissions ... ok
+test sfwp::case_mutations::tests::a_malformed_digest_is_refused_without_touching_disk ... ok
+test sfwp::case_mutations::tests::an_unknown_digest_is_a_typed_not_found ... ok
+test sfwp::case_views::tests::a_case_id_cannot_traverse_out_of_the_cases_directory ... ok
+test sfwp::case_views::tests::a_missing_case_is_not_found_rather_than_unreadable ... ok
+test sfwp::case_views::tests::listing_a_cell_with_no_cases_directory_is_an_empty_list_not_an_error ... ok
+test sfwp::continuation_codec::tests::acknowledged_and_pinned_positions_obey_frontier_semantics ... ok
+test sfwp::continuation_codec::tests::canonical_unsigned_decimal_parser_covers_zero_max_and_overflow ... ok
+test sfwp::case_mutations::tests::base64_matches_known_vectors ... ok
+test sfwp::continuation_codec::tests::digest_and_checksum_encoding_is_lowercase_fixed_width_hex ... ok
+test sfwp::continuation_codec::tests::domain_digest_vectors_distinguish_fields_absence_and_exact_utf8 ... ok
+test lifecycle_contract_tests::a_bare_name_is_preflighted_against_path_not_the_cwd ... ok
+test sfwp::continuation_codec::tests::resolved_filter_presence_and_ordinal_bounds_are_validated ... ok
+test sfwp::continuation_codec::tests::multibyte_boundary_is_rejected_without_slicing_panic ... ok
+test sfwp::continuation_codec::tests::signature_suffix_shape_and_decoded_length_are_checked ... ok
+test sfwp::continuation_codec::tests::round_trip_uses_fixed_signature_and_payload_periods ... ok
+test sfwp::continuation_codec::tests::signature_tampering_and_wrong_key_are_rejected ... ok
+test sfwp::continuation_codec::tests::outer_and_payload_caps_classify_admission_stages ... ok
+test sfwp::continuation_codec::tests::decoded_stream_and_filter_digests_bind_to_expected_context ... ok
+test sfwp::continuation_codec::tests::signature_verification_precedes_json_parsing ... ok
+test sfwp::continuation_codec::tests::signed_decode_checks_filter_resolution_presence_and_bounds ... ok
+test sfwp::continuation_codec::tests::signed_noncompact_reordered_json_is_verified_as_received ... ok
+test sfwp::continuation_codec::tests::signed_to_filter_binds_present_unresolved_and_zero_resolution ... ok
+test sfwp::correlation::tests::a_later_outcome_cannot_replace_the_one_already_published ... ok
+test sfwp::correlation::tests::a_pending_record_refuses_concurrent_retry_without_erasing_its_locator ... ok
+test sfwp::correlation::tests::a_pending_request_still_dedupes_after_the_store_is_reopened ... ok
+test sfwp::correlation::tests::a_record_written_before_sf_006_proceeds_rather_than_being_refused ... ok
+test sfwp::correlation::tests::a_second_pending_write_cannot_reopen_a_settled_record ... ok
+test sfwp::correlation::tests::a_terminal_record_replays_its_own_payload_and_refuses_a_different_one ... ok
+test sfwp::correlation::tests::an_unwritable_store_reports_the_failure_rather_than_swallowing_it ... ok
+test sfwp::correlation::tests::payload_hash_is_stable_under_key_reordering ... ok
+test sfwp::correlation::tests::restart_reconciles_a_located_commit_whose_ledger_landed ... ok
+test sfwp::correlation::tests::restart_settlement_prevents_a_hashless_pending_record_from_reexecuting ... ok
+test sfwp::correlation::tests::restart_settles_a_pending_record_as_interrupted_without_reexecuting_it ... ok
+test sfwp::correlation::tests::restart_still_interrupts_a_located_commit_whose_ledger_never_landed ... ok
+test sfwp::correlation::tests::the_locator_is_never_rewritten_and_survives_the_restart_settlement ... ok
+test sfwp::delegation_preview::tests::model_provenance_separates_requested_endpoint_and_built_in ... ok
+test lifecycle_contract_tests::a_timed_out_request_keeps_running ... ok
+test sfwp::delegation_preview::tests::retention_provenance_tracks_the_level_that_declared_it ... ok
+test sfwp::delegation_preview::tests::required_authority_is_read_off_the_action_serde_writes ... ok
+test sfwp::delegations::tests::enum_words_match_the_records_they_report ... ok
+test sfwp::delegation_preview::tests::retention_words_match_the_modes_the_plan_item_records ... ok
+test sfwp::delegations::tests::standing_separates_forgotten_runs_from_cancelled_and_settled_ones ... ok
+test sfwp::continuation_codec::tests::signed_decode_rejects_version_number_digest_and_checksum_mutations ... ok
+test sfwp::continuation_codec::tests::signed_unknown_payload_and_position_fields_are_rejected ... ok
+test sfwp::run_views::tests::a_criterion_is_decided_by_the_settlements_own_basis_token ... ok
+test sfwp::run_views::tests::a_criterion_with_no_settlement_is_unavailable_not_satisfied ... ok
+test sfwp::run_views::tests::a_missing_run_is_not_found_rather_than_unreadable ... ok
+test sfwp::run_views::tests::a_run_id_cannot_traverse_out_of_the_runs_directory ... ok
+test sfwp::run_views::tests::an_evaluator_score_is_recorded_never_satisfied ... ok
+test sfwp::run_views::tests::listing_a_cell_with_no_runs_directory_is_an_empty_list_not_an_error ... ok
+test sfwp::continuation_codec::tests::signed_decode_rejects_invalid_frontier_offsets_and_overlap ... ok
+test socket_contract_tests::a_bindable_socket_path_is_accepted ... ok
+test sfwp::thoth::tests::a_denied_answer_keeps_its_omitted_classes_and_notice ... ok
+test socket_contract_tests::an_overlong_socket_path_is_rejected_with_the_fix_named ... ok
+test socket_contract_tests::the_budget_leaves_room_for_the_binding_suffix ... ok
+test swe_seed_reconciliation::tests::declaration_before_evidence_correlates_once_evidence_lands ... ok
+test status_rebuild_tests::status_resolves_a_pre_restart_case_from_disk ... ok
+test swe_seed_reconciliation::tests::mismatched_run_never_correlates ... ok
+test swe_seed_reconciliation::tests::mismatched_hash_never_correlates ... ok
+test swe_seed_reconciliation::tests::mismatched_verifier_never_correlates ... ok
+test swe_seed_reconciliation::tests::repeated_reconcile_is_idempotent_no_duplicate_entries ... ok
+test transcript_seal::tests::ciphertext_never_contains_the_plaintext_marker ... ok
+test transcript_seal::tests::crypto_shred_makes_ciphertext_permanently_unrecoverable ... ok
+test swe_seed_reconciliation::tests::two_runs_in_one_case_correlate_independently ... ok
+test transcript_seal::tests::missing_ciphertext_fails_verification ... ok
+test transcript_seal::tests::missing_key_fails_verification ... ok
+test transcript_seal::tests::restart_reads_durable_state_from_disk_not_memory ... ok
+test transcript_seal::tests::round_trip_verifies ... ok
+test transcript_seal::tests::wrong_key_fails_verification ... ok
+test transcript_seal::tests::tampered_ciphertext_fails_verification ... ok
+test sfwp::readiness::tests::an_uninitialized_cell_is_unknown_without_a_synthetic_source_citation ... ok
+test sfwp::readiness::tests::a_stale_snapshot_never_reports_readiness_as_success ... ok
+test sfwp::readiness::tests::a_verified_snapshot_is_projected_as_a_committed_digest_not_a_code_location ... ok

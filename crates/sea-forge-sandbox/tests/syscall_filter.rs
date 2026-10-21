@@ -118,6 +118,7 @@ fn confinement(base: &Path, identity: &WorkloadIdentity) -> WorkloadConfinement 
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
         read_paths: vec![],
+        socket_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();

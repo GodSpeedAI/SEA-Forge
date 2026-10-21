@@ -1364,10 +1364,17 @@ async fn run_acp_episode(
             workload::grant_exclusive_access(&artifacts, &identity).map_err(isolation_error)?;
             let helper = workload::sibling_helper().map_err(isolation_error)?;
             let mut offered = Vec::new();
+            let mut granted_socket_paths = Vec::new();
             if !mcp_servers.is_empty() {
                 let mcp_dir = root.join("runs").join(run).join("mcp");
                 std::fs::create_dir_all(&mcp_dir)
                     .map_err(|error| ForgeError::io("create MCP socket dir", error))?;
+                // Socket grants must be canonical; a symlinked root would
+                // otherwise refuse every MCP-enabled launch.
+                let mcp_dir = mcp_dir
+                    .canonicalize()
+                    .map_err(|error| ForgeError::io("canonicalize MCP socket dir", error))?;
+                granted_socket_paths.push(mcp_dir.clone());
                 workload::grant_exclusive_access(&mcp_dir, &identity).map_err(isolation_error)?;
                 let connector =
                     workload::sibling_binary("sea-forge-mcp-connect").map_err(isolation_error)?;
@@ -1424,6 +1431,21 @@ async fn run_acp_episode(
                         message: error.to_string(),
                     },
                 )?,
+                // SEC-06: pathname-socket reach is an explicit grant. The
+                // workload reaches exactly the run's brokered MCP sockets
+                // and the configured PostgreSQL socket directories — no
+                // other pathname socket on the host.
+                socket_paths: {
+                    let mut granted = granted_socket_paths;
+                    granted.extend(postgres.iter().map(|resource| resource.socket_dir.clone()));
+                    workload::validate_socket_grants(&granted, &[root]).map_err(|error| {
+                        ForgeError::Config {
+                            class: "schema_error",
+                            path: root.join("server.yaml"),
+                            message: error.to_string(),
+                        }
+                    })?
+                },
                 network: sea_forge_sandbox::NetworkPosture::Denied,
             };
             let mut workload_env = spawn.env.clone();

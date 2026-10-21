@@ -145,6 +145,24 @@ impl WorkloadIdentityPool {
         let (uid_base, uid_count) = delegation("/etc/subuid", &user, uid)?;
         let (gid_base, gid_count) = delegation("/etc/subgid", &user, uid)?;
         probe_mapped_namespace(uid_base, gid_base)?;
+        // SEC-06 (ADR-014): pathname-socket containment must be enforceable
+        // before any isolated workload launches. With kernel Landlock ABI 9+
+        // the kernel-enforced ruleset needs nothing extra; below that, the
+        // seccomp supervisor requires an installable user-notify filter —
+        // refused (fail closed) when this process chain already inherited a
+        // listener, e.g. inside an outer supervision sandbox.
+        if crate::socket_policy::landlock_abi_version() < 9 {
+            #[cfg(target_arch = "x86_64")]
+            crate::socket_policy::supervisor_installable().map_err(unavailable)?;
+            #[cfg(not(target_arch = "x86_64"))]
+            {
+                return Err(unavailable(
+                    "kernel Landlock ABI < 9 and no Unix-socket supervisor exists for this \
+                     architecture; isolated workloads would launch without pathname-socket \
+                     containment",
+                ));
+            }
+        }
         let slots = host_slot_dir(uid, &home);
         fs::create_dir_all(&slots).map_err(|e| unavailable(e.to_string()))?;
         for dir in [slots.parent().unwrap_or(&slots), slots.as_path()] {
@@ -473,7 +491,51 @@ pub struct WorkloadConfinement {
     /// prefix) readable in addition to the system set; see
     /// [`validate_read_paths`].
     pub read_paths: Vec<PathBuf>,
+    /// Trees whose pathname Unix sockets the workload may resolve and
+    /// connect to (SEC-06, ADR-014) — e.g. a granted PostgreSQL socket
+    /// directory or the run's MCP broker sockets. Readability alone does
+    /// not grant socket reach; see [`validate_socket_grants`].
+    pub socket_paths: Vec<PathBuf>,
     pub network: NetworkPosture,
+}
+
+/// Check operator-declared socket grants: each must be absolute, existing
+/// and canonical, and neither `/` nor a tree containing a protected path
+/// (the control-plane root, launcher state). Socket reach and file
+/// readability are independent dimensions — a socket grant conveys no read
+/// right, and a declared read path conveys no socket right (SEC-06).
+pub fn validate_socket_grants(
+    paths: &[PathBuf],
+    protected: &[&Path],
+) -> Result<Vec<PathBuf>, SandboxError> {
+    let refuse = |path: &Path, why: &str| {
+        Err(SandboxError::new(
+            "schema_error",
+            format!("workload socket grant {}: {why}", path.display()),
+        ))
+    };
+    for path in paths {
+        if !path.is_absolute() {
+            return refuse(path, "must be absolute");
+        }
+        if path.parent().is_none() {
+            return refuse(path, "must not be the filesystem root");
+        }
+        match path.canonicalize() {
+            Ok(canonical) if canonical == *path => {}
+            Ok(_) => return refuse(path, "must be canonical (no symlinks or dot segments)"),
+            Err(error) => return refuse(path, &error.to_string()),
+        }
+        for guarded in protected {
+            let guarded = guarded
+                .canonicalize()
+                .unwrap_or_else(|_| guarded.to_path_buf());
+            if guarded.starts_with(path) {
+                return refuse(path, "contains a protected control-plane path");
+            }
+        }
+    }
+    Ok(paths.to_vec())
 }
 
 /// Check operator-declared workload read paths: each must be absolute,
@@ -540,6 +602,7 @@ pub fn isolated_command(
     if !helper.is_absolute() {
         return Err(unavailable("workload helper path must be absolute"));
     }
+    ensure_helper_reachable(helper)?;
     // Only the read end crosses exec; the write end stays close-on-exec in
     // the launcher, so its closure is the launcher's exit.
     let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC)
@@ -554,6 +617,13 @@ pub fn isolated_command(
     let mut command = Command::new(UNSHARE);
     command
         .env_clear()
+        // The supervisor's decision audit is launcher-controlled and
+        // carries no secrets; forward it explicitly through the cleared
+        // environment so the helper's audit reaches the captured output.
+        .env(
+            "SEA_FORGE_SOCKET_SUPERVISOR_DEBUG",
+            std::env::var("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").unwrap_or_default(),
+        )
         .arg("--user")
         .arg(format!(
             "--map-users={WORKLOAD_INNER_ID}:{}:1",
@@ -585,6 +655,9 @@ pub fn isolated_command(
         .arg(&confinement.artifacts_root);
     for path in &confinement.read_paths {
         command.arg("--read").arg(path);
+    }
+    for path in &confinement.socket_paths {
+        command.arg("--socket-grant").arg(path);
     }
     for port in confinement.network.granted_ports() {
         command.arg("--tcp-port").arg(port.to_string());
@@ -637,6 +710,76 @@ pub fn spawn_interactive(
     })
 }
 
+/// Make the exec helper reachable from inside the workload's mapped user
+/// namespace. The helper is executed by a process whose only mapped host ID
+/// is the workload's subordinate UID, so every host identity along the path
+/// — file owner included — appears unmapped (nobody) there, and only the
+/// *other* permission bits decide traverse and execve. Directories need
+/// other-execute (traverse) and the helper needs other-read/execute; no
+/// group bit is needed or granted.
+///
+/// A build made under a restrictive umask (e.g. 077) produces a 0700 helper
+/// in a 0700 build directory, so the launcher repairs exactly those two when
+/// it owns them. It never changes an ancestor above the build directory
+/// (a home directory, say): that would widen host access on every launch,
+/// so it fails closed naming the component and the one-time `chmod o+x`
+/// the owner must run.
+pub fn ensure_helper_reachable(helper: &Path) -> Result<(), SandboxError> {
+    use std::os::unix::fs::PermissionsExt;
+    let build_dir = helper.parent();
+    let mut walked = PathBuf::new();
+    if helper.is_absolute() {
+        walked.push("/");
+    }
+    for part in helper.components() {
+        walked.push(part.as_os_str());
+        let meta = match fs::metadata(&walked) {
+            Ok(meta) => meta,
+            Err(e) => {
+                return Err(unavailable(format!(
+                    "helper {}: {e} at {}",
+                    helper.display(),
+                    walked.display()
+                )))
+            }
+        };
+        if !meta.is_file() && !meta.is_dir() {
+            return Err(unavailable(format!(
+                "helper path component {} is not a file or directory",
+                walked.display()
+            )));
+        }
+        let need = if meta.is_dir() { 0o001 } else { 0o005 };
+        let mode = meta.permissions().mode();
+        if mode & need == need {
+            continue;
+        }
+        let repairable = walked.as_path() == helper || Some(walked.as_path()) == build_dir;
+        let (launcher, _) = current_ids()?;
+        if !repairable || meta.uid() != launcher {
+            return Err(unavailable(format!(
+                "helper {} cannot be reached by a mapped workload ({} is mode {:o}, owner \
+                 uid {}): every host identity is unmapped inside the namespace, so the \
+                 'other' bits decide; the owner must grant it once (chmod o+{} {})",
+                helper.display(),
+                walked.display(),
+                mode,
+                meta.uid(),
+                if meta.is_dir() { "x" } else { "rx" },
+                walked.display()
+            )));
+        }
+        fs::set_permissions(&walked, fs::Permissions::from_mode(mode | need)).map_err(|e| {
+            unavailable(format!(
+                "chmod o+{} {} for helper reach: {e}",
+                if meta.is_dir() { "x" } else { "rx" },
+                walked.display()
+            ))
+        })?;
+    }
+    Ok(())
+}
+
 /// Locate the helper next to the running executable (installed layouts and
 /// `target/<profile>`), failing closed when it is absent.
 pub fn sibling_helper() -> Result<PathBuf, SandboxError> {
@@ -660,6 +803,51 @@ pub fn sibling_binary(name: &str) -> Result<PathBuf, SandboxError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn umask_restricted_helper_is_made_reachable_and_foreign_ones_refused() {
+        use std::os::unix::fs::PermissionsExt;
+        let mode_of = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        let base = tempfile::tempdir().unwrap();
+        // tempdir() is 0700; the operator's one-time traverse grant.
+        fs::set_permissions(base.path(), fs::Permissions::from_mode(0o701)).unwrap();
+        // What a 077-umask build produces: an owner-only helper in an
+        // owner-only build directory. Both are repaired with the minimum
+        // other bits and no group bits.
+        let build = base.path().join("build");
+        fs::create_dir(&build).unwrap();
+        let helper = build.join("helper");
+        fs::write(&helper, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&build, fs::Permissions::from_mode(0o700)).unwrap();
+        fs::set_permissions(&helper, fs::Permissions::from_mode(0o700)).unwrap();
+        ensure_helper_reachable(&helper).unwrap();
+        assert_eq!(mode_of(&build), 0o701);
+        assert_eq!(mode_of(&helper), 0o705);
+        // Already reachable: no-op.
+        ensure_helper_reachable(&helper).unwrap();
+        assert_eq!(mode_of(&helper), 0o705);
+        // An ancestor above the build directory is never changed: the walk
+        // refuses, naming it, and leaves its mode alone.
+        let outer = base.path().join("outer");
+        let deep_build = outer.join("build");
+        fs::create_dir_all(&deep_build).unwrap();
+        let deep_helper = deep_build.join("helper");
+        fs::write(&deep_helper, b"#!/bin/sh\n").unwrap();
+        fs::set_permissions(&outer, fs::Permissions::from_mode(0o700)).unwrap();
+        let refused = ensure_helper_reachable(&deep_helper)
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("chmod o+x"), "{refused}");
+        assert!(refused.contains(&outer.display().to_string()), "{refused}");
+        assert_eq!(mode_of(&outer), 0o700, "an ancestor must not be widened");
+        // Once the owner grants traverse, the launch proceeds.
+        fs::set_permissions(&outer, fs::Permissions::from_mode(0o701)).unwrap();
+        ensure_helper_reachable(&deep_helper).unwrap();
+        // The foreign-owner refusal (a helper the launcher does not own is
+        // reported, never repaired) cannot be constructed unprivileged
+        // here; the guard is a direct uid comparison and returns without
+        // touching the file.
+    }
 
     #[test]
     fn acl_encoding_is_sorted_and_denies_group_and_other() {

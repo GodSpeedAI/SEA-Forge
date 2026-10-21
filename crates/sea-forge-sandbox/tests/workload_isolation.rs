@@ -58,6 +58,7 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
         read_paths: Vec::new(),
+        socket_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();

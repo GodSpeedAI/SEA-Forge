@@ -1,12 +1,11 @@
-//! SEC-09 export boundary: a federation bundle carries each run's
+//! SEC-09/SEC-11 export boundary: a federation bundle carries each run's
 //! `artifacts/`, which an isolated workload writes after receiving classified
 //! plaintext. The export's authority request states the union of its runs'
-//! exposure labels, so once `export_bundle` is an evaluable reserved surface
-//! a rule must permit every label (`exposure_permitted`).
-//!
-//! Today the engine does not list `export_bundle` among its reserved
-//! surfaces, so every export is denied as unclassified whatever the policy
-//! says: the channel is closed. This test pins both facts.
+//! exposure labels (round 3); since round 4 `export_bundle` is an evaluable
+//! reserved surface, so a rule matches only when its `permitted_exposure`
+//! covers every label of that union — the destination-authority rule. A
+//! rule that does not admit a label falls to default deny, and import/adopt
+//! remain denied as unclassified.
 
 use sea_forge_ledger::exposure::ExposureRegistry;
 use serde_json::Value;
@@ -14,7 +13,8 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const POLICY: &str = "version: \"0.1\"\nrules:\n  - name: allow-confidential-export\n    verdict: allow\n    actor_role: operator\n    operation_kind: export_bundle\n    boundary_constraints:\n      permitted_exposure: [confidential]\n";
+const POLICY_ADMITS_CONFIDENTIAL: &str = "version: \"0.1\"\nrules:\n  - name: allow-confidential-export\n    verdict: allow\n    actor_role: operator\n    operation_kind: export_bundle\n    boundary_constraints:\n      permitted_exposure: [confidential]\n";
+const POLICY_ADMITS_NOTHING: &str = "version: \"0.1\"\nrules:\n  - name: allow-bare-export\n    verdict: allow\n    actor_role: operator\n    operation_kind: export_bundle\n";
 
 fn run(root: &Path, run_id: &str, case_id: &str) {
     let dir = root.join("runs").join(run_id);
@@ -32,9 +32,9 @@ fn run(root: &Path, run_id: &str, case_id: &str) {
     fs::write(dir.join("artifacts/out.txt"), format!("{case_id} data")).unwrap();
 }
 
-fn export(root: &Path, run_ids: &[&str], out: &Path) -> bool {
+fn export(root: &Path, policy_text: &str, run_ids: &[&str], out: &Path) -> bool {
     let policy = root.join("policy.yaml");
-    fs::write(&policy, POLICY).unwrap();
+    fs::write(&policy, policy_text).unwrap();
     Command::new(env!("CARGO_BIN_EXE_sea-forge"))
         .arg("export")
         .arg("--root")
@@ -70,7 +70,7 @@ fn requested_exposure(root: &Path) -> Vec<Value> {
 }
 
 #[test]
-fn exports_state_their_exposure_and_the_channel_is_closed() {
+fn export_requires_a_rule_admitting_the_exposure_union() {
     let base = tempfile::tempdir().unwrap();
     let root = base.path().join("cell");
     run(&root, "r-clean", "c-clean");
@@ -82,21 +82,21 @@ fn exports_state_their_exposure_and_the_channel_is_closed() {
         .unwrap();
     registry.derive("case:c-conf", "case:c-child").unwrap();
 
+    // Destination authority admitting `confidential`: every union — empty,
+    // direct, mixed and inherited through a delegated child — exports.
     for (name, runs) in [
         ("clean.bundle", &["r-clean"][..]),
         ("conf.bundle", &["r-conf"][..]),
         ("mixed.bundle", &["r-clean", "r-conf"][..]),
+        ("child.bundle", &["r-child"][..]),
     ] {
         let out = base.path().join(name);
-        assert!(!export(&root, runs, &out), "{name} exported");
-        assert!(!out.exists(), "{name} written despite refusal");
+        assert!(
+            export(&root, POLICY_ADMITS_CONFIDENTIAL, runs, &out),
+            "{name} refused under an admitting rule"
+        );
+        assert!(out.exists(), "{name} not written");
     }
-    // A delegated child's run carries its ancestor's label.
-    assert!(!export(
-        &root,
-        &["r-child"],
-        &base.path().join("child.bundle")
-    ));
     assert_eq!(
         requested_exposure(&root),
         [
@@ -107,6 +107,26 @@ fn exports_state_their_exposure_and_the_channel_is_closed() {
         ]
     );
 
+    // A rule that admits no label still serves the empty union (nothing
+    // classified ever leaves) but must refuse every labeled one.
+    assert!(export(
+        &root,
+        POLICY_ADMITS_NOTHING,
+        &["r-clean"],
+        &base.path().join("bare-clean.bundle")
+    ));
+    for (name, runs) in [
+        ("bare-conf.bundle", &["r-conf"][..]),
+        ("bare-child.bundle", &["r-child"][..]),
+    ] {
+        let out = base.path().join(name);
+        assert!(
+            !export(&root, POLICY_ADMITS_NOTHING, runs, &out),
+            "{name} exported without admitting its labels"
+        );
+        assert!(!out.exists(), "{name} written despite refusal");
+    }
+
     // A run whose case cannot be established never reaches authority.
     fs::create_dir_all(root.join("runs/r-noplan/artifacts")).unwrap();
     let before = requested_exposure(&root).len();
@@ -115,7 +135,10 @@ fn exports_state_their_exposure_and_the_channel_is_closed() {
         ("traversal.bundle", &["../cell/runs/r-conf"][..]),
     ] {
         let out = base.path().join(name);
-        assert!(!export(&root, runs, &out), "{name} exported");
+        assert!(
+            !export(&root, POLICY_ADMITS_CONFIDENTIAL, runs, &out),
+            "{name} exported"
+        );
         assert!(!out.exists());
     }
     assert_eq!(requested_exposure(&root).len(), before);

@@ -3449,6 +3449,14 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "world_transition",
                 "mcp_tool_call",
                 "database_session",
+                // SEC-11 (round 4): federation export is an evaluable reserved
+                // surface. A rule matches only when its permitted_exposure
+                // covers every label of the exported runs' union (carried in
+                // the action's parameters) — the operator-approved
+                // destination-authority rule; anything less falls to default
+                // deny. Import/adopt stay denied as unclassified pending an
+                // ingest-classification design.
+                "export_bundle",
             ];
             !RESERVED.contains(&resource_type.as_str())
                 || resource_id.is_empty()

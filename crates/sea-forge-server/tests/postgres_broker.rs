@@ -24,7 +24,7 @@ use pg_cluster::{digest, prerequisites, start_cluster};
 use std::collections::BTreeMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::time::{Duration, Instant};
 
@@ -36,6 +36,7 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
         workspace_root: root.join("workspace"),
         artifacts_root: root.join("artifacts"),
         read_paths: Vec::new(),
+        socket_paths: Vec::new(),
         network: NetworkPosture::Denied,
     };
     fs::create_dir_all(&confinement.workspace_root).unwrap();
@@ -78,8 +79,17 @@ fn spawn_workload(
     script: &str,
 ) -> Child {
     // The client installation is the only runtime tree it may read.
+    // SEC-06: the workload may connect to the PostgreSQL socket directory
+    // its conninfo names, and to no other pathname socket.
+    let socket_dir = conninfo
+        .split_whitespace()
+        .find_map(|pair| pair.strip_prefix("host="))
+        .filter(|host| host.starts_with('/'))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/nonexistent-socket-dir"));
     let dirs = WorkloadConfinement {
         read_paths: vec![install.canonicalize().unwrap()],
+        socket_paths: vec![socket_dir],
         ..dirs.clone()
     };
     let (mut command, lifeline) = isolated_command(

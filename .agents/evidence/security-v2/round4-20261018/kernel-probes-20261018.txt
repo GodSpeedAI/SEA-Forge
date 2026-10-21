@@ -1,0 +1,4 @@
+landlock_create_ruleset(VERSION) = 7 errno=0
+# connect(2) on a read-only bind mount (probe, 2026-10-18)
+# setup: AF_UNIX listener in /tmp/rosock/a, ro bind-mount a->b inside a mapped user+mount ns
+result: CONNECTED on ro mount  # connect(2) is NOT refused by MS_RDONLY
