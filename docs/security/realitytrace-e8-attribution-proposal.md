@@ -53,12 +53,16 @@ versioned rule, not a silent exception:
 
 - Signed records carry a new record version (v2); the v1 shape is
   unchanged.
-- The registry records a cutover ledger position per observer. v1 records
-  before the cutover keep verifying under the frozen v1 rules and are
-  reported as `unattributed (pre-signature)`; they never satisfy
-  obligation 4.
-- Any v1 record at or after the cutover is refused, so a ledger writer
-  cannot sidestep signing by emitting the old shape.
+- The registry records one immutable, ledger-wide cutover position. It is
+  never selected from anything an unsigned record carries: v1 has no
+  signature, so a writer could name any `observer_id`, and a per-observer
+  cutover would let a post-cutover record claim an observer whose cutover
+  is later. v1 records before the cutover keep verifying under the frozen
+  v1 rules and are reported as `unattributed (pre-signature)`; they never
+  satisfy obligation 4.
+- Any v1 record at or after the cutover is refused, whatever observer it
+  names, so a ledger writer cannot sidestep signing by emitting the old
+  shape.
 
 Rollout is its own task: key lifecycle, rotation semantics, the registry and
 the ingestion-side verification each need their own tests and mutation

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 143
+**Status revision:** 144
 
-**Stage:** security-round4-review-threads-cleanup
+**Stage:** security-round4-review-followups
 
-**Summary:** Complete snapshot of round 4 after the 24.04 kernel-security gates went green and the PR #38 review threads were addressed. Round 4 implements pathname Unix-socket containment (SEC-06, ADR-014): probe-gated between a Landlock RESOLVE_UNIX ruleset (ABI >= 9) and, below ABI 9 on x86_64, a seccomp user-notification supervisor that brokers or refuses every trapped connect/sendto/sendmsg (sendmmsg refused) for the process that trapped, pinned by pidfd and validated with NOTIF_ID_VALID. Socket reach is an explicit WorkloadConfinement grant (Postgres socket dirs, the run's canonical MCP dir, the workload's own trees). Abstract AF_UNIX is brokered only in the workload's own network namespace and refused under a TCP grant. Federation export_bundle is on the reserved surface under the destination-authority rule; import/adopt stay denied. This revision also fixes review findings: a dangling iovec temporary on the brokered pathname sendmsg path (undefined behaviour), ensure_helper_reachable widening host directories (it now requests only other-x on directories and other-rx on the helper, repairs only the helper and its build directory, and refuses ancestors with the exact chmod the owner must run; the gates script performs that one-time grant visibly), and a non-canonical MCP socket grant that refused launches under a symlinked root. The E8/attribution proposal now refuses (never flags) bounded v1 comparisons, binds observer keys through a registry the ledger writer cannot alter, and defines a versioned cutover for pre-signature v1 records. Revision 143 removes a Python bytecode file committed by mistake with revision 142 and ignores __pycache__/ and *.pyc repository-wide.
+**Summary:** Complete snapshot of round 4 after the 24.04 kernel-security gates went green and the PR #38 review threads were addressed. Round 4 implements pathname Unix-socket containment (SEC-06, ADR-014): probe-gated between a Landlock RESOLVE_UNIX ruleset (ABI >= 9) and, below ABI 9 on x86_64, a seccomp user-notification supervisor that brokers or refuses every trapped connect/sendto/sendmsg (sendmmsg refused) for the process that trapped, pinned by pidfd and validated with NOTIF_ID_VALID. Socket reach is an explicit WorkloadConfinement grant (Postgres socket dirs, the run's canonical MCP dir, the workload's own trees). Abstract AF_UNIX is brokered only in the workload's own network namespace and refused under a TCP grant. Federation export_bundle is on the reserved surface under the destination-authority rule; import/adopt stay denied. This revision also fixes review findings: a dangling iovec temporary on the brokered pathname sendmsg path (undefined behaviour), ensure_helper_reachable widening host directories (it now requests only other-x on directories and other-rx on the helper, repairs only the helper and its build directory, and refuses ancestors with the exact chmod the owner must run; the gates script performs that one-time grant visibly), and a non-canonical MCP socket grant that refused launches under a symlinked root. The E8/attribution proposal now refuses (never flags) bounded v1 comparisons, binds observer keys through a registry the ledger writer cannot alter, and defines a versioned cutover for pre-signature v1 records. Revision 143 removes a Python bytecode file committed by mistake with revision 142 and ignores __pycache__/ and *.pyc repository-wide. Revision 144 answers the follow-up review: the gates script restores every directory mode it widened when it exits (failure included), and the attribution proposal uses one immutable ledger-wide cutover for unsigned v1 records rather than a per-observer one an unsigned record could select.
 
 **Verified:**
 
@@ -14,6 +14,9 @@
 - root causes found on CI and fixed in this round: wrong AUDIT_ARCH_X86_64 (i386 value) left the filter a no-op; positive errno in replies; descriptors taken from the root workload instead of the trapping process
 - rustls-webpki and webpki-roots bumped for RUSTSEC-2026-0382/0381; cargo deny advisories pass
 - sea-forge-sandbox unit tests 11 pass locally; this host cannot run the isolation tests (inherited user-notify listener), so they pass vacuously here and the 24.04 job is the authority
+- run 39515574297 on 24.04 for 6fc3997/9f00a38: PASS sandbox-suite, postgres-broker, postgres-lifecycle; M-S2 and M-S4 KILLED; the gates script logged its explicit o+x grant on /home/runner
+- the casework L-RECOV 'Timed out waiting for panel closed' failure also occurs on main's own scheduled run 39389771329 (257b622), so it predates this PR
+- gates-script mode grant and restore exercised locally on a scratch tree: 700 -> 701 during the run, 700 again after a failing exit
 
 **Limits:**
 
@@ -25,7 +28,7 @@
 - Operators whose checkout sits under a non-traversable directory must grant o+x once; the launcher no longer does it for them
 - Debug-only diagnostics remain behind SEA_FORGE_SOCKET_SUPERVISOR_DEBUG (helper self-probe thread, supervisor audit lines) plus the preflight notif_trap_probe; removal is an operator decision
 - Federation import/adopt remain denied as unclassified pending an ingest-classification design
-- conformance_sfwp admission overflow not reproduced in 140 targeted runs; conformance_m12 t12 flake not investigated; the casework live ladder has an intermittent UI-timeout flake
+- conformance_sfwp admission overflow not reproduced in 140 targeted runs; conformance_m12 t12 flake not investigated; the casework live ladder's L-RECOV journey intermittently times out on 'panel closed', on main as well as this branch (not a required check)
 - The E8 refuse-on-bound policy and observer signing are proposals only (docs/security/realitytrace-e8-attribution-proposal.md), not implemented
 
 **Next move:** Kernel-security and CI run for this commit; resolve the PR #38 review threads; merge on the operator's standing approval if every check is green. Then the independent re-attack (item D) and the datagram test tightening.

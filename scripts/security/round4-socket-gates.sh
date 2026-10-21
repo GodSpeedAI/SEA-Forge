@@ -68,11 +68,23 @@ if [ "$ISOLATION" = AVAILABLE ]; then
   # and no read on directories: traverse is all a mapped workload needs.
   TARGET_DIR=$(cargo metadata --format-version 1 --no-deps \
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')
+  # Every mode changed here is restored when the script exits, failure
+  # included, so no private ancestor stays traversable afterwards.
   mkdir -p "$TARGET_DIR"
+  RESTORE_MODES=()
+  restore_modes() {
+    local entry
+    for entry in "${RESTORE_MODES[@]}"; do
+      chmod "${entry%%:*}" "${entry#*:}" && echo "restored mode ${entry%%:*} on ${entry#*:}" | log
+    done
+  }
+  trap restore_modes EXIT
   d=$TARGET_DIR
   while [ "$d" != / ]; do
-    if [ -O "$d" ] && [ "$(( 0$(stat -c %a "$d") & 1 ))" = 0 ]; then
-      chmod o+x "$d" && echo "granted o+x on $d for helper reach" | log
+    mode=$(stat -c %a "$d")
+    if [ -O "$d" ] && [ "$(( 0$mode & 1 ))" = 0 ]; then
+      chmod o+x "$d" && RESTORE_MODES+=("$mode:$d") \
+        && echo "granted o+x on $d for helper reach (restored on exit)" | log
     fi
     d=$(dirname "$d")
   done
