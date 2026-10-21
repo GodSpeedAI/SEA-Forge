@@ -371,7 +371,7 @@ fn m0_checkpoint_signature_verifies_under_public_key() {
         .create_checkpoint(&signing_key, "integrity_01")
         .unwrap();
 
-    let wrong_key = SigningKey::generate(&mut rand::thread_rng());
+    let wrong_key = SigningKey::from_bytes(&rand::random());
     let result = stream.verify_checkpoints(&wrong_key.verifying_key());
     assert!(
         result.is_err(),

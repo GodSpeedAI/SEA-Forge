@@ -15,7 +15,7 @@ pub fn load_or_create_signing_key(key_dir: &Path, key_id: &str) -> Result<Signin
             .map_err(|_| ForgeError::Internal(format!("signing key {key_id} is not 32 bytes")))?;
         Ok(SigningKey::from_bytes(&key_bytes))
     } else {
-        let signing_key = SigningKey::generate(&mut rand::thread_rng());
+        let signing_key = SigningKey::from_bytes(&rand::random());
         fs::create_dir_all(key_dir).map_err(|e| ForgeError::io("create key directory", e))?;
         // Create the private key file with mode 0600 from the start (F-22): no
         // world-readable window between `write` and a later `chmod`.

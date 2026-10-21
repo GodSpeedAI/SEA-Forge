@@ -4,7 +4,7 @@
 //! `contracts/evidence-recorded.record-kind.psv`, and emitted E8 must satisfy
 //! the schema and the invariants below.
 
-use jsonschema::JSONSchema;
+use jsonschema::Validator;
 use serde_json::{json, Value};
 use std::str::FromStr;
 use sxr_core::canonical_json::canonical_json;
@@ -17,8 +17,8 @@ const BUNDLE: &str = include_str!(
     "../../../.agents/evidence/security-v2/realitytrace-sec12-20261017/bundle/sec12-trace.json"
 );
 
-fn schema() -> JSONSchema {
-    JSONSchema::compile(&serde_json::from_str(SCHEMA).unwrap()).unwrap()
+fn schema() -> Validator {
+    jsonschema::validator_for(&serde_json::from_str(SCHEMA).unwrap()).unwrap()
 }
 
 fn emitted() -> Value {
@@ -127,8 +127,8 @@ fn proposed_row_matches_the_pinned_registry_format() {
 fn emitted_evidence_conforms() {
     let e8 = emitted();
     let schema = schema();
-    if let Err(errors) = schema.validate(&e8) {
-        panic!("{:?}", errors.map(|e| e.to_string()).collect::<Vec<_>>());
+    if let Err(error) = schema.validate(&e8) {
+        panic!("{error}");
     }
     invariants(&e8).unwrap();
 }
