@@ -16,7 +16,7 @@ serde_json.workspace = true
 chrono.workspace = true
 sha2 = "0.11"
 hex.workspace = true
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 [dev-dependencies]
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.1.0" }

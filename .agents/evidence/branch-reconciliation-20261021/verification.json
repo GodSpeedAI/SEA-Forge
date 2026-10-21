@@ -1,0 +1,32 @@
+{
+  "baseline": "14a5f9722fbc78fadb7530077960846329438b1a",
+  "recorded_at": "2026-10-21T15:23:57Z",
+  "ci": {
+    "command": "RUSTC_WRAPPER='' just ci",
+    "exit_code": 0,
+    "suites": 174,
+    "passed": 1534,
+    "failed": 0,
+    "ignored": 23
+  },
+  "proof": {
+    "command": "RUSTC_WRAPPER='' just proof",
+    "exit_code": 0,
+    "result": "P1-P4b passed"
+  },
+  "other_checks": [
+    "just secrets-staged",
+    "git diff --check",
+    "graft build"
+  ],
+  "reviews": [
+    "Independent Luna frontend supersession audit",
+    "Independent Luna dependency/pin/replacement audit",
+    "Luna MSRV check: no new package above 1.92.0"
+  ],
+  "limits": [
+    "Existing platform/native-isolation limits remain unchanged",
+    "No new security settlement or independent re-attack claimed"
+  ],
+  "raw_logs": "Retained privately in the common Git directory under reconciliation-20261021."
+}

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 144
+**Status revision:** 147
 
-**Stage:** security-round4-review-followups
+**Stage:** branch-reconciliation-pr-required
 
-**Summary:** Complete snapshot of round 4 after the 24.04 kernel-security gates went green and the PR #38 review threads were addressed. Round 4 implements pathname Unix-socket containment (SEC-06, ADR-014): probe-gated between a Landlock RESOLVE_UNIX ruleset (ABI >= 9) and, below ABI 9 on x86_64, a seccomp user-notification supervisor that brokers or refuses every trapped connect/sendto/sendmsg (sendmmsg refused) for the process that trapped, pinned by pidfd and validated with NOTIF_ID_VALID. Socket reach is an explicit WorkloadConfinement grant (Postgres socket dirs, the run's canonical MCP dir, the workload's own trees). Abstract AF_UNIX is brokered only in the workload's own network namespace and refused under a TCP grant. Federation export_bundle is on the reserved surface under the destination-authority rule; import/adopt stay denied. This revision also fixes review findings: a dangling iovec temporary on the brokered pathname sendmsg path (undefined behaviour), ensure_helper_reachable widening host directories (it now requests only other-x on directories and other-rx on the helper, repairs only the helper and its build directory, and refuses ancestors with the exact chmod the owner must run; the gates script performs that one-time grant visibly), and a non-canonical MCP socket grant that refused launches under a symlinked root. The E8/attribution proposal now refuses (never flags) bounded v1 comparisons, binds observer keys through a registry the ledger writer cannot alter, and defines a versioned cutover for pre-signature v1 records. Revision 143 removes a Python bytecode file committed by mistake with revision 142 and ignores __pycache__/ and *.pyc repository-wide. Revision 144 answers the follow-up review: the gates script restores every directory mode it widened when it exits (failure included), and the attribution proposal uses one immutable ledger-wide cutover for unsigned v1 records rather than a per-observer one an unsigned record could select.
+**Summary:** Reconciled useful topic work into local main and verified deliberate replacements. Integrated rusqlite, serde_json/rustix, rand, serde-saphyr and jsonschema upgrades with API adaptations; retained exact DomainForge 0.21.0 and retired Tauri/legacy frontend/YAML code. Four obsolete local branches and three extra worktrees removed with verified private full-history bundle retention. Full local CI passed (1534 tests, zero failures), P1-P4b passed, and independent Luna frontend/dependency/MSRV audits found no missing useful code or violated replacements. The normal pre-push gates passed again, but GitHub rejected direct main publication because a PR and two status checks are required; atomicity kept every remote ref intact. A temporary reconciliation PR is next; original workspace edit and handoff prompt remain untouched.
 
 **Verified:**
 
@@ -17,6 +17,8 @@
 - run 39515574297 on 24.04 for 6fc3997/9f00a38: PASS sandbox-suite, postgres-broker, postgres-lifecycle; M-S2 and M-S4 KILLED; the gates script logged its explicit o+x grant on /home/runner
 - the casework L-RECOV 'Timed out waiting for panel closed' failure also occurs on main's own scheduled run 39389771329 (257b622), so it predates this PR
 - gates-script mode grant and restore exercised locally on a scratch tree: 700 -> 701 during the run, 700 again after a failing exit
+- Branch audit: round-3 and round-4 trees match their squashes; CodeRabbit patch equivalent; archive ancestor of round 3. Frontend has 104 equivalent patches in PR #11 source history and seven superseded implementation/docs/license commits. Full-history Git bundle verified; one local branch and one registered worktree remain.
+- RUSTC_WRAPPER='' just ci: all gates green; 174 suites, 1534 passed, 0 failed, 23 explicitly ignored. just proof: P1-P4b passed. just secrets-staged, git diff --check and graft build passed. Luna audit found no new MSRV >1.92.0 dependency.
 
 **Limits:**
 
@@ -30,8 +32,9 @@
 - Federation import/adopt remain denied as unclassified pending an ingest-classification design
 - conformance_sfwp admission overflow not reproduced in 140 targeted runs; conformance_m12 t12 flake not investigated; the casework live ladder's L-RECOV journey intermittently times out on 'panel closed', on main as well as this branch (not a required check)
 - The E8 refuse-on-bound policy and observer signing are proposals only (docs/security/realitytrace-e8-attribution-proposal.md), not implemented
+- GitHub branch protection requires a PR and status checks; direct push was rejected without mutations. macOS verification runs in GitHub CI, not on this Linux host.
 
-**Next move:** Kernel-security and CI run for this commit; resolve the PR #38 review threads; merge on the operator's standing approval if every check is green. Then the independent re-attack (item D) and the datagram test tightening.
+**Next move:** Publish a temporary reconciliation branch, open the required PR, await required checks and merge normally; then remove unchanged obsolete topic branches and align main after verifying squash equivalence.
 
 **Evidence:**
 
@@ -40,6 +43,8 @@
 - docs/security/realitytrace-e8-attribution-proposal.md
 - scripts/security/round4-socket-gates.sh
 - .agents/evidence/security-v2/round4-20261018/admission-race/INVESTIGATION.md
+- .agents/reports/branch-reconciliation-20261021.md
+- .agents/evidence/branch-reconciliation-20261021/verification.json
 
 **Spec:** .agents/specs/security-implementation-v2.spec.md
 

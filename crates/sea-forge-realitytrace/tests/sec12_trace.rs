@@ -433,7 +433,7 @@ fn auditor_reconstructs_denied_write_and_authorized_control_from_traces() {
     let (proof, evidence) = trace(&control);
     // Live emissions, divergent and equivalent, against the proposed
     // evidence.recorded contract (contracts/evidence-recorded.v1.schema.json).
-    let contract = jsonschema::JSONSchema::compile(
+    let contract = jsonschema::validator_for(
         &serde_json::from_str(include_str!(
             "../contracts/evidence-recorded.v1.schema.json"
         ))

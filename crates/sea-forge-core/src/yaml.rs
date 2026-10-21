@@ -44,7 +44,7 @@
 //!
 //! # Effective resource limits
 //!
-//! Every limit below is the serde-saphyr 1.3.0 `Budget` / `AliasLimits` field
+//! Every limit below is the serde-saphyr 2.0.0 `Budget` / `AliasLimits` field
 //! value set in [`budget`] and [`options`]. Exceeding a budget is a parse error.
 //!
 //! | limit | value | meaning |
@@ -144,7 +144,7 @@ fn options() -> Options {
     options.reject_unsupported_tags = true;
     options.legacy_octal_numbers = false;
     options.angle_conversions = false;
-    options.reject_non_finite_typeless_float = true;
+    options.non_finite_float_policy = serde_saphyr::NonFiniteFloatPolicy::Reject;
     // `!!binary aGk=` into a String stays the literal text instead of decoding.
     options.ignore_binary_tag_for_string = true;
     // The `include` and `properties` crate features are not enabled, so there is
