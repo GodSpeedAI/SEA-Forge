@@ -12,7 +12,7 @@ use domainforge_core::application::resolve_semantic_envelope;
 use domainforge_core::application::world::{WorldCatalog, WorldName, WorldRef, WorldRefError};
 use sea_forge_core::errors::ForgeError;
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// Why a world could not be bound. Every variant is a refusal.
@@ -34,6 +34,8 @@ pub enum WorldBindingError {
     ModelRefUnbound,
     /// The model could not be resolved by DomainForge.
     Unresolvable(String),
+    /// A current world was registered as prior, or a prior identity equals a current world.
+    IdentityRole(String),
 }
 
 impl fmt::Display for WorldBindingError {
@@ -51,11 +53,31 @@ impl fmt::Display for WorldBindingError {
             }
             Self::ModelRefUnbound => write!(f, "model ref carries no world_ref"),
             Self::Unresolvable(m) => write!(f, "model does not resolve: {m}"),
+            Self::IdentityRole(m) => write!(f, "identity role refused: {m}"),
         }
     }
 }
 
 impl std::error::Error for WorldBindingError {}
+
+/// Parse a `DomainModelIdentity` JSON document. Unknown keys are refused, so a
+/// document cannot smuggle fields the digest does not cover. Absent optional
+/// hashes are accepted, as serde accepts them everywhere else.
+pub fn parse_identity_json(json: &str) -> Result<DomainModelIdentity, WorldBindingError> {
+    let malformed = |e: &dyn fmt::Display| {
+        WorldBindingError::from(WorldRefError::MalformedIdentity(e.to_string()))
+    };
+    let value: Value = serde_json::from_str(json).map_err(|e| malformed(&e))?;
+    let identity: DomainModelIdentity =
+        serde_json::from_value(value.clone()).map_err(|e| malformed(&e))?;
+    let known = serde_json::to_value(&identity).map_err(|e| malformed(&e))?;
+    if let (Some(given), Some(known)) = (value.as_object(), known.as_object()) {
+        if let Some(unknown) = given.keys().find(|k| !known.contains_key(*k)) {
+            return Err(malformed(&format!("unknown identity field {unknown:?}")));
+        }
+    }
+    Ok(identity)
+}
 
 impl From<WorldRefError> for WorldBindingError {
     fn from(e: WorldRefError) -> Self {
@@ -71,10 +93,16 @@ impl From<WorldBindingError> for ForgeError {
 
 /// Verified worlds, cached by canonical `world_ref` text. Append-only: a
 /// registered world is never replaced or removed.
+///
+/// Two roles exist. A *current* world is compiled in-process by the pinned
+/// DomainForge (or registered as an identity the host trusts to be current). A
+/// *prior* identity is a superseded identity the host configured so an operator
+/// can move work *out of* it through a transition. It is never a place to act.
 #[derive(Debug, Default, Clone)]
 pub struct WorldRegistry {
     catalog: WorldCatalog,
     by_ref: BTreeMap<String, WorldRef>,
+    prior: BTreeSet<String>,
 }
 
 impl WorldRegistry {
@@ -109,8 +137,70 @@ impl WorldRegistry {
         self.register_identity(name, DomainModelIdentity::from_document(&doc, None))
     }
 
-    /// Register a world from an identity (recomputes the digest).
+    /// Register a current world from an identity (recomputes the digest). A
+    /// canonical ref already registered as prior is refused: a world has one role.
     pub fn register_identity(
+        &mut self,
+        name: &str,
+        identity: DomainModelIdentity,
+    ) -> Result<WorldRef, WorldBindingError> {
+        let canonical = WorldRef::from_identity(name.parse()?, &identity)?.to_string();
+        if self.prior.contains(&canonical) {
+            return Err(WorldBindingError::IdentityRole(format!(
+                "{canonical} is registered as a prior identity"
+            )));
+        }
+        self.insert(name, identity)
+    }
+
+    /// Register a prior (superseded) identity under its world's name. Its digest is
+    /// recomputed, so the ref matches the document. A prior identity must differ
+    /// from every current world; registering the same prior twice is idempotent.
+    ///
+    /// Trust basis: prior identities are host-owned configuration, the same trust
+    /// as the world sources. The digest check proves only that the document and
+    /// its ref agree. It does not prove the document is authentic.
+    pub fn register_prior_identity(
+        &mut self,
+        name: &str,
+        identity: DomainModelIdentity,
+    ) -> Result<WorldRef, WorldBindingError> {
+        let canonical = WorldRef::from_identity(name.parse()?, &identity)?.to_string();
+        if self.by_ref.contains_key(&canonical) && !self.prior.contains(&canonical) {
+            return Err(WorldBindingError::IdentityRole(format!(
+                "{canonical} is already a current world; a prior identity must differ from every current world"
+            )));
+        }
+        let world = self.insert(name, identity)?;
+        self.prior.insert(world.to_string());
+        Ok(world)
+    }
+
+    /// Register a current world from a `DomainModelIdentity` JSON document (the
+    /// shape DomainForge's `envelope --emit cep` carries). See `parse_identity_json`.
+    pub fn register_identity_json(
+        &mut self,
+        name: &str,
+        json: &str,
+    ) -> Result<WorldRef, WorldBindingError> {
+        self.register_identity(name, parse_identity_json(json)?)
+    }
+
+    /// Register a prior identity from a `DomainModelIdentity` JSON document.
+    pub fn register_prior_identity_json(
+        &mut self,
+        name: &str,
+        json: &str,
+    ) -> Result<WorldRef, WorldBindingError> {
+        self.register_prior_identity(name, parse_identity_json(json)?)
+    }
+
+    /// True when `world_ref` (canonical text) is a registered prior identity.
+    pub fn is_prior(&self, world_ref: &str) -> bool {
+        self.prior.contains(world_ref)
+    }
+
+    fn insert(
         &mut self,
         name: &str,
         identity: DomainModelIdentity,

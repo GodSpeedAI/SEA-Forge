@@ -118,18 +118,21 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
                     base: "worlds".into(),
                     entry: "demo.sea".into(),
                     files: vec!["demo.sea".into()],
+                    prior_identities: Vec::new(),
                 },
                 CepWorldConfig {
                     name: "demo".into(),
                     base: "worlds-edited".into(),
                     entry: "demo.sea".into(),
                     files: vec!["demo.sea".into()],
+                    prior_identities: Vec::new(),
                 },
                 CepWorldConfig {
                     name: "demo".into(),
                     base: "worlds-changed".into(),
                     entry: "demo.sea".into(),
                     files: vec!["demo.sea".into()],
+                    prior_identities: Vec::new(),
                 },
             ],
             approval_ttl_hours: 24,
@@ -684,4 +687,87 @@ async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_sock
         json!({"approved_state":resolved["state"],"source_only_allowed":decision(&moved),"semantic_change_allowed":decision(&allowed),"transitions":all.len(),"public_impersonation":impersonated["error_class"],"journal_verified":true})
     );
     cell.shutdown().await;
+}
+
+// --- compiler_upgrade lineage: a prior identity is host config, a transition source, never an action site ----
+
+/// The real DomainForge 0.21.0 identity for `SRC` (the authority crate's fixture), as a prior identity.
+const PRIOR_0_21_0: &str = include_str!(
+    "../../sea-forge-authority/tests/fixtures/identities/demo-tank.domainforge-0.21.0.json"
+);
+const PRIOR_PATH: &str = "identities/demo.domainforge-0.21.0.json";
+const OLD_REF: &str =
+    "world:demo@sha256:c2d3978a06cad4f44b8f50ef4a9e570c4800f1ba6b7e4ac76a0128337e0f3439";
+const NEW_REF: &str =
+    "world:demo@sha256:a71ff6d4d9941a937a2a2b7fd5ed1c1eabb2242b4e6919440927ca1772cbb6ca";
+
+/// The cell with one current world (`SRC`, DomainForge 0.21.1) and `prior_doc` written as its prior identity.
+fn upgrade_fixture(prior_doc: &str) -> (tempfile::TempDir, ServerConfig) {
+    let (root, mut config) = fixture(true, TRANSITION_POLICY);
+    std::fs::create_dir_all(root.path().join("identities")).unwrap();
+    std::fs::write(root.path().join(PRIOR_PATH), prior_doc).unwrap();
+    config.cep_authority.worlds.truncate(1);
+    config.cep_authority.worlds[0].prior_identities = vec![PRIOR_PATH.into()];
+    (root, config)
+}
+
+#[tokio::test]
+async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and_listed_over_the_socket(
+) {
+    let (_root, config) = upgrade_fixture(PRIOR_0_21_0);
+    let mut cell = authenticated::Cell::start(config).await;
+    let socket = cell.socket.clone();
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let mut c = Client::connect(&socket).await;
+    assert_eq!(
+        world_ref(),
+        NEW_REF,
+        "the current world is the 0.21.1 build"
+    );
+
+    // The prior ref resolves: it is the source of the transition.
+    let up = verb(
+        transition(OLD_REF, NEW_REF, "op-up", "compiler_upgrade"),
+        "op-up",
+    );
+    let mut requester = cell.connect_for(&service, &up).await;
+    let moved = requester.call(up).await;
+    assert_eq!(decision(&moved), "allow", "{moved}");
+
+    let listed = c.call(json!({"verb": "authority_transitions"})).await;
+    let transitions = listed["transitions"].as_array().expect("transitions");
+    assert_eq!(transitions.len(), 1, "{listed}");
+    assert!(listed.to_string().contains("compiler_upgrade"), "{listed}");
+    assert!(listed.to_string().contains(OLD_REF), "{listed}");
+}
+
+#[tokio::test]
+async fn a_governed_action_in_a_prior_identity_is_refused_over_the_socket() {
+    let (_root, config) = upgrade_fixture(PRIOR_0_21_0);
+    let mut cell = authenticated::Cell::start(config).await;
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let act = verb(request(OLD_REF, "op-act", "action", "author"), "op-act");
+    let refused = cell.call_for(&service, act).await;
+    assert_eq!(refused["error_class"], "cep_world_refused", "{refused}");
+    assert!(
+        refused["error"]
+            .as_str()
+            .unwrap_or("")
+            .contains("prior identity"),
+        "{refused}"
+    );
+}
+
+#[tokio::test]
+async fn a_malformed_prior_identity_fails_closed_with_a_clear_error() {
+    let (_root, config) = upgrade_fixture("{\"producer\": \"domainforge-core\", \"surprise\": 1}");
+    let socket = config.socket_path.clone();
+    let cell = authenticated::Cell::start(config).await;
+    let mut c = Client::connect(&socket).await;
+    let refused = c.call(json!({"verb": "authority_transitions"})).await;
+    assert_eq!(refused["error_class"], "cep_world_config", "{refused}");
+    let message = refused["error"].as_str().unwrap_or("");
+    assert!(message.contains("prior identity"), "{refused}");
+    assert!(message.contains(PRIOR_PATH), "{refused}");
+    drop(cell);
 }
