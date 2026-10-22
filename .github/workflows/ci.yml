@@ -221,7 +221,10 @@ jobs:
           echo "${OPA_SHA256}  opa_linux_amd64_static" | sha256sum -c -
           install -m 0755 opa_linux_amd64_static "$bin_dir/opa"
           echo "$bin_dir" >> "$GITHUB_PATH"
-          "$bin_dir/opa" version | grep -qx "Version: ${OPA_VERSION}"
+          # Capture first: `opa version | grep -q` under pipefail fails with SIGPIPE (141) whenever grep
+          # exits on its match before opa has written its remaining lines.
+          opa_version="$("$bin_dir/opa" version)"
+          grep -qx "Version: ${OPA_VERSION}" <<<"$opa_version"
 
       - name: OPA candidate tests (real opa, stubs, tamper cases)
         run: devbox run -- cargo test -p sea-forge-authority --test opa_candidate -- --include-ignored

@@ -136,6 +136,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
                 },
             ],
             approval_ttl_hours: 24,
+            realitytrace: None,
             settlement: Default::default(),
         },
         ..ServerConfig::default()

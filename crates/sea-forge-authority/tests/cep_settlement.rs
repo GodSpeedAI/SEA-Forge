@@ -652,3 +652,244 @@ fn cep_validators_accept_the_evidence_packet_and_every_settlement_status() {
         );
     }
 }
+
+// ── Corroboration: evidence is checked against what the evidence source recorded ───────────────────────
+
+/// Stands in for RealityTrace's ledger: the items it recorded, by evidence id.
+struct Recorded(Vec<Value>);
+
+impl sea_forge_authority::cep::EvidenceSource for Recorded {
+    fn name(&self) -> &'static str {
+        "realitytrace"
+    }
+    fn recorded_item(&self, item: &Value) -> Result<Value, String> {
+        self.0
+            .iter()
+            .find(|r| r["evidence_id"] == item["evidence_id"])
+            .cloned()
+            .ok_or_else(|| "not in the ledger".to_string())
+    }
+}
+
+fn sourced(id: &str, direction: &str, reliability: &str) -> Value {
+    let mut i = item(id, direction, reliability);
+    i["source"] = json!("realitytrace");
+    i
+}
+
+fn submit_checked(
+    c: &Cell,
+    p: &Value,
+    recorded: &Recorded,
+    required: bool,
+) -> Result<sea_forge_authority::cep::EvidenceAck, CepAuthorityError> {
+    with(c, &full_policy(), SettlementCriteria::default(), |s| {
+        s.submit_evidence_with(
+            p,
+            &svc(),
+            &sea_forge_authority::cep::Corroboration::Source {
+                source: recorded,
+                required,
+            },
+        )
+    })
+}
+
+fn settle_corroborated(
+    c: &Cell,
+    op: &str,
+) -> Result<sea_forge_authority::cep::SettlementOutcome, CepAuthorityError> {
+    with(c, &full_policy(), SettlementCriteria::default(), |s| {
+        s.settle_with(op, &svc(), Some("realitytrace"))
+    })
+}
+
+#[test]
+fn corroborated_evidence_settles_and_says_what_it_was_checked_against() {
+    let c = cell();
+    allow(&c, "op-c1");
+    let recorded = Recorded(vec![item("ev-c1", "supports", "medium")]);
+    let ack = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c1",
+            "env-evidence_packet-c1",
+            vec![sourced("ev-c1", "supports", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap();
+    assert_eq!(ack.corroborated_by, Some("realitytrace"));
+    assert_eq!(settle_corroborated(&c, "op-c1").unwrap().status, "settled");
+}
+
+#[test]
+fn a_packet_that_flips_the_recorded_direction_is_refused_and_settles_nothing() {
+    let c = cell();
+    allow(&c, "op-c2");
+    // RealityTrace recorded a failing verifier; the requester claims support.
+    let recorded = Recorded(vec![item("ev-c2", "contradicts", "medium")]);
+    let err = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c2",
+            "env-evidence_packet-c2",
+            vec![sourced("ev-c2", "supports", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("direction differs"), "{err}");
+    // Nothing was committed: there is no corroborated evidence to settle on.
+    let refused = settle_corroborated(&c, "op-c2").unwrap_err();
+    assert!(
+        refused.to_string().contains("no corroborated evidence"),
+        "{refused}"
+    );
+}
+
+#[test]
+fn an_upgraded_reliability_or_an_unrecorded_item_is_refused() {
+    let c = cell();
+    allow(&c, "op-c3");
+    let recorded = Recorded(vec![item("ev-c3", "supports", "low")]);
+    let upgraded = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c3",
+            "env-evidence_packet-c3a",
+            vec![sourced("ev-c3", "supports", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap_err();
+    assert!(
+        upgraded.to_string().contains("reliability differs"),
+        "{upgraded}"
+    );
+    let invented = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c3",
+            "env-evidence_packet-c3b",
+            vec![sourced("ev-invented", "supports", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap_err();
+    assert!(
+        invented.to_string().contains("cannot be corroborated"),
+        "{invented}"
+    );
+}
+
+#[test]
+fn when_corroboration_is_required_unsourced_items_are_refused_and_old_packets_do_not_count() {
+    let c = cell();
+    allow(&c, "op-c4");
+    let recorded = Recorded(vec![item("ev-c4", "supports", "medium")]);
+    // An item that names no evidence source.
+    let unsourced = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c4",
+            "env-evidence_packet-c4a",
+            vec![item("ev-x", "supports", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap_err();
+    assert!(
+        unsourced.to_string().contains("is not from realitytrace"),
+        "{unsourced}"
+    );
+    // A packet accepted as stated (before corroboration was required) never decides a corroborated settlement.
+    submit(
+        &c,
+        &packet(
+            &c.world,
+            "op-c4",
+            "env-evidence_packet-c4b",
+            vec![item("ev-old", "supports", "high")],
+        ),
+    )
+    .unwrap();
+    assert!(settle_corroborated(&c, "op-c4")
+        .unwrap_err()
+        .to_string()
+        .contains("no corroborated evidence"));
+    // Without the requirement, unsourced items pass through and sourced ones are still checked, but a
+    // packet with any unchecked item is not marked corroborated, so it never counts once the
+    // requirement is turned on.
+    let flipped = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c4",
+            "env-evidence_packet-c4d",
+            vec![
+                item("ev-z", "supports", "medium"),
+                sourced("ev-c4", "contradicts", "medium"),
+            ],
+        ),
+        &recorded,
+        false,
+    )
+    .unwrap_err();
+    assert!(
+        flipped.to_string().contains("direction differs"),
+        "{flipped}"
+    );
+    let lenient = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c4",
+            "env-evidence_packet-c4c",
+            vec![
+                item("ev-y", "supports", "medium"),
+                sourced("ev-c4", "supports", "medium"),
+            ],
+        ),
+        &recorded,
+        false,
+    )
+    .unwrap();
+    assert_eq!(lenient.corroborated_by, None);
+    assert!(settle_corroborated(&c, "op-c4")
+        .unwrap_err()
+        .to_string()
+        .contains("no corroborated evidence"));
+}
+
+#[test]
+fn a_recorded_item_without_a_direction_cannot_be_corroborated() {
+    let c = cell();
+    allow(&c, "op-c5");
+    let recorded = Recorded(vec![
+        json!({"evidence_id": "ev-c5", "reliability": "medium"}),
+    ]);
+    let err = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c5",
+            "env-evidence_packet-c5",
+            vec![sourced("ev-c5", "unknown", "medium")],
+        ),
+        &recorded,
+        true,
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("has no direction"), "{err}");
+}

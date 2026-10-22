@@ -137,6 +137,28 @@ pub struct CepAuthorityConfig {
     /// How long an escalation stays approvable, in hours. 1..=720.
     #[serde(default = "default_cep_approval_ttl_hours")]
     pub approval_ttl_hours: u64,
+    /// RealityTrace, read to corroborate evidence. Absent: evidence packets are taken as stated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub realitytrace: Option<CepRealityTraceConfig>,
+}
+
+/// Where SEA-Forge reads RealityTrace's ledger, read-only, to check evidence packets against it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CepRealityTraceConfig {
+    /// Absolute path of the `realitytrace` binary.
+    pub bin: String,
+    /// RealityTrace's data home (its `XDG_DATA_HOME`), absolute.
+    pub data_home: String,
+    /// RealityTrace's state home (its `XDG_STATE_HOME`), absolute.
+    pub state_home: String,
+    /// Refuse evidence not from RealityTrace, and settle only on corroborated packets. Default true.
+    #[serde(default = "default_true")]
+    pub require_corroboration: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_cep_approval_ttl_hours() -> u64 {
@@ -184,6 +206,7 @@ impl Default for CepAuthorityConfig {
             worlds: Vec::new(),
             approval_ttl_hours: default_cep_approval_ttl_hours(),
             settlement: CepSettlementConfig::default(),
+            realitytrace: None,
         }
     }
 }
@@ -385,6 +408,19 @@ impl ServerConfig {
 
     pub fn validate(&self) -> Result<(), String> {
         self.validate_cep_worlds()?;
+        if let Some(rt) = &self.cep_authority.realitytrace {
+            for (name, path) in [
+                ("bin", &rt.bin),
+                ("data_home", &rt.data_home),
+                ("state_home", &rt.state_home),
+            ] {
+                if !std::path::Path::new(path).is_absolute() {
+                    return Err(format!(
+                        "cep_authority.realitytrace.{name} must be an absolute path"
+                    ));
+                }
+            }
+        }
         if self.max_concurrent_runs == 0 || self.max_concurrent_runs > MAX_CONCURRENT_RUNS {
             return Err(format!(
                 "max_concurrent_runs must be between 1 and {MAX_CONCURRENT_RUNS}"

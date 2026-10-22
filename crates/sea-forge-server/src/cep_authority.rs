@@ -235,12 +235,26 @@ pub fn submit_evidence(
     caller: &Actor,
 ) -> Value {
     with_service(config, root, |service| {
-        match service.submit_evidence(packet, caller) {
+        let source = config.cep_authority.realitytrace.clone().map(|rt| {
+            (
+                rt.require_corroboration,
+                crate::realitytrace_source::RealityTraceSource::new(rt),
+            )
+        });
+        let corroboration = match &source {
+            Some((required, source)) => sea_forge_authority::cep::Corroboration::Source {
+                source,
+                required: *required,
+            },
+            None => sea_forge_authority::cep::Corroboration::None,
+        };
+        match service.submit_evidence_with(packet, caller, &corroboration) {
             Ok(ack) => json!({
                 "ok": true,
                 "operation_id": ack.operation_id,
                 "envelope_id": ack.envelope_id,
                 "items": ack.items,
+                "corroboration": ack.corroborated_by.unwrap_or("none"),
                 "ledger_entry": ack.committed.entry_ulid(),
             }),
             Err(e) => refusal(e.class(), e),
@@ -251,7 +265,13 @@ pub fn submit_evidence(
 /// Settle an operation from its committed evidence (`authority_settle` verb).
 pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &Actor) -> Value {
     with_service(config, root, |service| {
-        match service.settle(operation_id, caller) {
+        let required = config
+            .cep_authority
+            .realitytrace
+            .as_ref()
+            .filter(|rt| rt.require_corroboration)
+            .map(|_| "realitytrace");
+        match service.settle_with(operation_id, caller, required) {
             Ok(done) => json!({
                 "ok": true,
                 "status": done.status,
