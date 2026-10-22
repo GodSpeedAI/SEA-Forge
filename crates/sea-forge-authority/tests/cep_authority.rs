@@ -383,6 +383,76 @@ fn rules_without_subjects_serialize_exactly_as_before() {
     assert!(!serde_json::to_string(&b).unwrap().contains("subjects"));
 }
 
+#[test]
+fn a_resource_scoped_escalation_precedes_a_broad_allow() {
+    // Named consequential capabilities escalate; every other capability is allowed.
+    let rules = format!(
+        "{}{}",
+        rule(
+            "consequential-escalates",
+            "cognate_capability",
+            "    resources: [\"tool.bash\", \"process.exec\"]\n    requires_approval: true\n"
+        ),
+        rule("everything-else", "cognate_capability", "")
+    );
+    let f = fixture(&rules);
+    let mut req = request(&f.world, "op-res-1", "capability", "invoke", "tool.bash");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "escalate"
+    );
+    req["extensions"]["godspeed.authority_request"]["operation_id"] = json!("op-res-2");
+    req["envelope_id"] = json!("env-authority_request-op-res-2");
+    req["extensions"]["godspeed.authority_request"]["resource_id"] = json!("tool.read");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "allow"
+    );
+}
+
+#[test]
+fn a_resource_scoped_rule_matches_only_its_resources() {
+    let f = fixture(&rule(
+        "read-only",
+        "cognate_capability",
+        "    resources: [\"tool.read\"]\n",
+    ));
+    let mut req = request(&f.world, "op-res-3", "capability", "invoke", "tool.read");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "allow"
+    );
+    req["extensions"]["godspeed.authority_request"]["operation_id"] = json!("op-res-4");
+    req["envelope_id"] = json!("env-authority_request-op-res-4");
+    req["extensions"]["godspeed.authority_request"]["resource_id"] = json!("tool.bash");
+    assert_eq!(
+        decision_of(&f.service().decide(&req, &caller()).unwrap()),
+        "deny"
+    );
+}
+
+#[test]
+fn resources_is_rejected_where_it_has_no_meaning() {
+    for (kind, extra) in [
+        ("write_file", "    resources: [\"tool.bash\"]\n"),
+        ("cognate_capability", "    resources: []\n"),
+        ("cognate_capability", "    resources: [\"\"]\n"),
+    ] {
+        let yaml = format!("version: \"0.1\"\nrules:\n{}", rule("r", kind, extra));
+        let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(&yaml).unwrap();
+        assert!(
+            PolicyAuthorityEngine::new(bundle).is_err(),
+            "{kind} {extra}"
+        );
+    }
+}
+
+#[test]
+fn rules_without_resources_serialize_exactly_as_before() {
+    let b = bundle(&rule("r", "cognate_capability", ""));
+    assert!(!serde_json::to_string(&b).unwrap().contains("resources"));
+}
+
 // ---- profile conformance, validated by the CEP repository's own validator ----
 //
 // Gated on `CEP_REPO` (path to a canonical-evaluation-protocol checkout) like the

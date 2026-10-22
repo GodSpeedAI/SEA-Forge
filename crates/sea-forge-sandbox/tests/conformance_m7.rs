@@ -151,6 +151,7 @@ fn rule(verdict: Verdict, argv0: Option<&str>, env: Option<&str>) -> PolicyRule 
         approver_roles: None,
         degraded_mode: None,
         subjects: None,
+        resources: None,
     }
 }
 

@@ -1,31 +1,28 @@
 # Current status
 
-**Status revision:** 149
+**Status revision:** 150
 
-**Stage:** domainforge-0.21.1-lockstep
+**Stage:** policy-resources-filter
 
-**Summary:** DomainForge moves to 0.21.1 coherently (library pin, EXPECTED_DOMAINFORGE_VERSION, devbox CLI, fixture provenance and READMEs), reversing the deliberate 0.21.0 hold kept by PR #39. Reason: DomainForge's v2-full-preimage world identity includes producer_version, so SEA-Forge on 0.21.0 derived world:demo@sha256:c2d397... for the same source the 0.21.1 CLI, Cognate and Horizon name world:demo@sha256:a71ff6...; Cognate's live CEP suite was refused as unknown world in 15 of 35 tests. On 0.21.1 both sides derive a71ff6....
+**Summary:** Authority policy rules on cognate_action / cognate_capability can name the exact resources they cover (PolicyRule.resources). Workbench as an external-authority client (godspeed-readiness P02) needs this: consequential agent capabilities (tool.edit, tool.bash, ...) require approval while ordinary UI capabilities are allowed, which operation_kind alone cannot express.
 
 **Verified:**
 
-- probe test (removed before commit) printed SEA-Forge world_ref c2d397... on 0.21.0 and a71ff6... on 0.21.1; the released 0.21.1 CLI prints a71ff6... for the same source
-- identity diff 0.21.0 vs 0.21.1: semantic_closure_hash, source_set_hash and semantic_pack_set_hash equal; producer_version and content_hash differ
-- fixtures regenerated with the released 0.21.1 CLI (cargo install domainforge-core 0.21.1 --features cli --locked): byte-identical apart from provenance generator; OpenShell lock unchanged
-- cargo test -p sea-forge-domainforge -p sea-forge-authority -p sea-forge-case-runner -p sea-forge-changeset and sea-forge-server --test conformance_cep_authority: 21 test binaries, 0 failed
-- Cargo.lock changes beyond domainforge-core (toml 1.x, serde_spanned, toml_datetime, toml_writer, uuid 1.23.4, winnow removed) come with domainforge-core 0.21.1; no SEA-Forge crate depends on toml directly
+- cargo test -p sea-forge-authority --test cep_authority: 18 passed, 0 failed, including 4 new tests (exact match, non-match falls through, invalid on other operation kinds, empty list rejected)
+- mutation check: removing the resources match makes the new match test fail
+- Workbench J-SEA-FORGE-AUTHORITY passes against this server binary with the fixed Cognate runtime (Cognate PR #60)
 
 **Limits:**
 
-- Cognate live suite (just sea-forge-live) not yet re-run against this branch's server binary
-- full just ci not run on this branch
-- the stack-level question of whether world_ref should change on every DomainForge release is open with DomainForge (godspeed-readiness P01); until then all products must pin the same release
+- resources match exactly; no prefixes or globs
+- full just ci runs in pre-push
 
-**Next move:** Re-run Cognate's live CEP suite against this branch (godspeed-readiness L01), then just ci; open a PR only on operator go.
+**Next move:** Merge, then open the Workbench P02 PR once a Cognate SDK release includes PR #60.
 
 **Evidence:**
 
-- ~/projects/godspeed-readiness/evidence/runs (L01, C01)
-- ~/projects/godspeed-readiness/docs/proposals/P01-world-identity-and-producer-version.md
+- crates/sea-forge-authority/tests/cep_authority.rs
+- ~/projects/godspeed-readiness/docs/proposals/P02-workbench-external-authority.md
 
 **Spec:** .agents/specs/security-implementation-v2.spec.md
 

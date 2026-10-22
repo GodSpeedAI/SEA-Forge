@@ -876,6 +876,12 @@ pub struct PolicyRule {
     /// absent so existing bundle hashes do not change.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subjects: Option<Vec<String>>,
+    /// Restrict a `cognate_action` / `cognate_capability` rule to these resources, matched exactly
+    /// against the request's `resource_id` (a capability id, or an action's resource). Lets a policy
+    /// escalate named consequential capabilities ahead of a broader allow. Omitted from the
+    /// serialized form when absent so existing bundle hashes do not change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resources: Option<Vec<String>>,
 }
 
 impl AuthorityPolicyBundle {
@@ -1413,6 +1419,18 @@ impl AuthorityPolicyBundle {
                 {
                     return Err(schema(
                         "subjects applies only to cognate_action / cognate_capability and must be non-empty".into(),
+                    ));
+                }
+            }
+            if let Some(resources) = &rule.resources {
+                if !matches!(
+                    rule.operation_kind.as_str(),
+                    "cognate_action" | "cognate_capability"
+                ) || resources.is_empty()
+                    || resources.iter().any(|r| r.is_empty())
+                {
+                    return Err(schema(
+                        "resources applies only to cognate_action / cognate_capability and must be non-empty".into(),
                     ));
                 }
             }
@@ -3019,7 +3037,10 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                         rule.subjects.as_ref().is_none_or(|allowed| {
                             parameter_str(parameters, "subject_actor_ref")
                                 .is_some_and(|subject| allowed.iter().any(|a| a == subject))
-                        })
+                        }) && rule
+                            .resources
+                            .as_ref()
+                            .is_none_or(|allowed| allowed.iter().any(|r| r == resource_id))
                     }
                     _ => true,
                 }
