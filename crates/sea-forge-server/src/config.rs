@@ -395,6 +395,11 @@ impl ServerConfig {
                 self.supervisor.actor
             ));
         }
+        // Identity bindings (SF-005, one uid maps to one actor). A cell that
+        // binds two actors to one operating-system user would load and then
+        // silently refuse every binding after the first, so it is refused here,
+        // before startup creates cell records or binds the socket.
+        self.identity.validate()?;
         // Gateway delegation bounds (T02, D-2). Validated even with an empty
         // allowlist: a section an operator wrote must be coherent before the
         // first delegated side effect, and duplicates are refused (not
@@ -442,12 +447,9 @@ impl ServerConfig {
             // standing. Refused at load, where the operator can fix the file,
             // rather than discovered as a runtime refusal at the first
             // delegated request in production.
-            if !self
-                .identity
-                .bindings
-                .iter()
-                .any(|binding| binding.uid == gateway.uid && binding.actor_id == gateway.actor)
-            {
+            if !self.identity.bindings.iter().any(|binding| {
+                binding.uid == Some(gateway.uid) && binding.actor_id == gateway.actor
+            }) {
                 return Err(format!(
                     "gateway.uid {} must be bound to the gateway actor {:?} in `identity.bindings` \
                      (expected `- uid: {}, actor_id: {}, roles: [...]`), or the gateway can never \
@@ -714,6 +716,66 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
+    // Identity bindings: one uid, one actor (SF-005 follow-up).
+    // -----------------------------------------------------------------------
+
+    fn load_yaml(yaml: &str) -> Result<ServerConfig, String> {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(&path, yaml).unwrap();
+        ServerConfig::load(&path)
+    }
+
+    #[test]
+    fn two_actors_on_one_uid_fail_to_load() {
+        // The regression guard: this config used to load, and every binding
+        // after the first could never act directly.
+        let error = load_yaml(
+            "identity:\n  bindings:\n    - uid: 1000\n      actor_id: op-alice\n      roles: [\"operator\"]\n    - uid: 1000\n      actor_id: op-bob\n      roles: [\"operator\"]\n",
+        )
+        .unwrap_err();
+        assert!(error.contains("uid 1000"), "{error}");
+        assert!(
+            error.contains("op-alice") && error.contains("op-bob"),
+            "{error}"
+        );
+        assert!(
+            error.contains("one operating-system user maps to exactly one actor"),
+            "{error}"
+        );
+        assert!(error.contains("on_behalf_of"), "{error}");
+    }
+
+    #[test]
+    fn the_same_actor_bound_twice_fails_to_load() {
+        let error = load_yaml(
+            "identity:\n  bindings:\n    - uid: 1000\n      actor_id: op-alice\n      roles: [\"operator\"]\n    - uid: 1001\n      actor_id: op-alice\n      roles: [\"operator\"]\n",
+        )
+        .unwrap_err();
+        assert!(error.contains("op-alice"), "{error}");
+        assert!(error.contains("more than once"), "{error}");
+    }
+
+    #[test]
+    fn many_uid_less_actors_and_one_direct_principal_load() {
+        let config = load_yaml(
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: cell_gateway\n      roles: [\"service\"]\n    - actor_id: op-alice\n      roles: [\"operator\"]\n    - actor_id: op-bob\n      roles: [\"operator\"]\n",
+        )
+        .expect("uid-less actors are valid");
+        assert_eq!(config.identity.bindings[1].uid, None);
+        assert_eq!(config.identity.bindings[2].uid, None);
+    }
+
+    #[test]
+    fn a_binding_without_a_uid_parses_as_none() {
+        let config = load_yaml(
+            "identity:\n  bindings:\n    - actor_id: op-alice\n      roles: [\"operator\"]\n",
+        )
+        .unwrap();
+        assert_eq!(config.identity.bindings[0].uid, None);
+    }
+
+    // -----------------------------------------------------------------------
     // The gateway delegation section (T02, decision D-2).
     // -----------------------------------------------------------------------
 
@@ -736,7 +798,7 @@ mod tests {
         let path = dir.path().join("server.yaml");
         std::fs::write(
             &path,
-            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: cell_gateway\n      roles: [\"service\"]\n    - uid: 3101\n      actor_id: operator_a\n      roles: [\"operator\"]\n    - uid: 3102\n      actor_id: operator_b\n      roles: [\"operator\"]\ngateway:\n  uid: 2000\n  actor: cell_gateway\n  delegable_actors: [operator_a, operator_b]\n",
+            "identity:\n  bindings:\n    - uid: 2000\n      actor_id: cell_gateway\n      roles: [\"service\"]\n    - actor_id: operator_a\n      roles: [\"operator\"]\n    - actor_id: operator_b\n      roles: [\"operator\"]\ngateway:\n  uid: 2000\n  actor: cell_gateway\n  delegable_actors: [operator_a, operator_b]\n",
         )
         .unwrap();
 

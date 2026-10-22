@@ -1,6 +1,9 @@
 """Live identity + separation-of-duty journey against a real server.
 
-Run against a booted cell whose `server.yaml` binds two actors to this uid:
+Run against a booted cell whose `server.yaml` binds one uid to one actor
+(`operator_a`, which is also the gateway principal for this uid) and binds
+`operator_b` without a uid, reachable only through the gateway's `on_behalf_of`
+(one uid maps to exactly one actor):
 
     python3 drive_identity.py <cell-root> <socket-path>
 
@@ -49,8 +52,8 @@ me = c.call(verb="identity_get")
 show("view", me)
 expect(me.get("configured") is True, "the cell reports itself configured")
 expect(
-    {a["actor_id"] for a in me.get("available", [])} == {"operator_a", "operator_b"},
-    "both bound actors are claimable on this connection",
+    {a["actor_id"] for a in me.get("available", [])} == {"operator_a"},
+    "only this uid's own actor is claimable directly; operator_b has no uid",
 )
 expect(isinstance(me.get("uid"), int), "the peer uid was read from the socket")
 
@@ -207,9 +210,10 @@ if approvals:
         "the refused approval remains in the inbox",
     )
 
-    print("== operator_b resolves it ==")
+    print("== operator_b resolves it, through the gateway's on_behalf_of ==")
     theirs = c.call(verb="approval_decide",
-                    actor={"actor_id": "operator_b", "role": "operator"},
+                    actor={"actor_id": "operator_a", "role": "service"},
+                    on_behalf_of={"actor_id": "operator_b", "role": "operator"},
                     case_id=case_id, approval_id=approval_id, decision="approve")
     show("response", theirs)
     expect(

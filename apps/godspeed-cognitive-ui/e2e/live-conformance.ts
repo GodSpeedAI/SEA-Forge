@@ -48,11 +48,9 @@ writeFileSync(
     - uid: ${uid}
       actor_id: gateway
       roles: ["service"]
-    - uid: ${uid}
-      actor_id: operator_local
+    - actor_id: operator_local
       roles: ["operator"]
-    - uid: ${uid}
-      actor_id: rso_local
+    - actor_id: rso_local
       roles: ["R-SO"]
 gateway:
   uid: ${uid}

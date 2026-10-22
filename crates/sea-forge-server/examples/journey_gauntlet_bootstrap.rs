@@ -96,19 +96,21 @@ fn main() {
     };
 
     let identity = IdentityBindings {
-        bindings: [OPERATOR_ACTOR_ID, APPROVER_ACTOR_ID]
-            .into_iter()
-            .filter_map(|actor_id| {
-                sea_forge_server::identity::current_uid().map(|uid| IdentityBinding {
-                    uid,
-                    actor_id: actor_id.into(),
-                    roles: vec![if actor_id == OPERATOR_ACTOR_ID {
-                        ActorRole::Operator
-                    } else {
-                        ActorRole::SecurityOfficer
-                    }],
-                })
+        // One uid, one actor: the operator is this uid's direct principal; the
+        // approver has no OS principal and is reached through the gateway or an
+        // authenticated workload claim.
+        bindings: sea_forge_server::identity::current_uid()
+            .map(|uid| IdentityBinding {
+                uid: Some(uid),
+                actor_id: OPERATOR_ACTOR_ID.into(),
+                roles: vec![ActorRole::Operator],
             })
+            .into_iter()
+            .chain(std::iter::once(IdentityBinding {
+                uid: None,
+                actor_id: APPROVER_ACTOR_ID.into(),
+                roles: vec![ActorRole::SecurityOfficer],
+            }))
             .collect(),
     };
 

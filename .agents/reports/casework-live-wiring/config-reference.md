@@ -58,10 +58,10 @@ unchanged). Do not widen the socket's mode by hand.
 ```yaml
 identity:                 # who may connect: uid -> actor, roles
   bindings:
-    - {uid: 995, actor_id: gateway,             roles: ["service"]}
-    - {uid: 995, actor_id: operator_local,      roles: ["operator"]}
-    - {uid: 995, actor_id: security_officer,    roles: ["R-SO"]}
-    - {uid: 995, actor_id: lifecycle_custodian, roles: ["R-LC"]}
+    - {uid: 995, actor_id: gateway,             roles: ["service"]}   # the one OS principal
+    - {actor_id: operator_local,                roles: ["operator"]}  # no uid: via on_behalf_of only
+    - {actor_id: security_officer,              roles: ["R-SO"]}      # no uid: via on_behalf_of only
+    - {actor_id: lifecycle_custodian,           roles: ["R-LC"]}      # no uid: via on_behalf_of only
 gateway:                  # absent => every on_behalf_of is refused (fail closed, no uid default)
   uid: 995                # SO_PEERCRED uid of the gateway process = the service user's uid
   actor: gateway          # default "gateway"

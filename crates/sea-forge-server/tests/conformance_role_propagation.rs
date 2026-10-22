@@ -117,7 +117,7 @@ fn submit_request(root: &Path, plan_path: &Path, policy_path: &Path) -> Request 
 fn resolved_security_officer() -> sea_forge_server::identity::ResolvedActor {
     let bindings = IdentityBindings {
         bindings: vec![sea_forge_server::identity::IdentityBinding {
-            uid: PEER_UID,
+            uid: Some(PEER_UID),
             actor_id: ACTOR.into(),
             roles: vec![ActorRole::SecurityOfficer],
         }],

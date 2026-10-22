@@ -71,14 +71,22 @@ async fn security_v1_a_sec01_same_uid_cannot_claim_another_approver() {
         socket_path: socket.clone(),
         root: root.path().to_path_buf(),
         identity: IdentityBindings {
-            bindings: ["operator_a", "operator_b"]
-                .into_iter()
-                .map(|actor_id| IdentityBinding {
-                    uid,
-                    actor_id: actor_id.into(),
+            // One uid, one actor (SF-005 follow-up): the same OS user may act
+            // directly only as operator_a. operator_b has no OS principal and is
+            // reachable only through the gateway, so a connection from this uid
+            // claiming operator_b must be refused as not bound.
+            bindings: vec![
+                IdentityBinding {
+                    uid: Some(uid),
+                    actor_id: "operator_a".into(),
                     roles: vec![ActorRole::Operator],
-                })
-                .collect(),
+                },
+                IdentityBinding {
+                    uid: None,
+                    actor_id: "operator_b".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
         },
         ..ServerConfig::default()
     };

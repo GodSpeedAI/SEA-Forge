@@ -49,8 +49,9 @@ fi
 mkdir -p "$CELL"
 : >"$STAMP"
 
-# Two actors on this uid, so separation of duty is visible: one operator raises
-# work, a different one clears it.
+# One uid maps to exactly one actor. operator_a is this user's direct principal;
+# operator_b has no OS principal (uid omitted) and is reachable only through the
+# gateway's on_behalf_of or an authenticated workload claim.
 uid="$(id -u)"
 cat >"$CELL/server.yaml" <<YAML
 identity:
@@ -58,8 +59,7 @@ identity:
     - uid: $uid
       actor_id: operator_a
       roles: [operator]
-    - uid: $uid
-      actor_id: operator_b
+    - actor_id: operator_b
       roles: [operator]
 YAML
 

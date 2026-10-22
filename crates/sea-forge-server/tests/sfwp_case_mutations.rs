@@ -70,15 +70,21 @@ fn local_operator() -> IdentityBindings {
 /// each with an independent private capability; shared UID is not identity.
 fn two_actors() -> IdentityBindings {
     let uid = sea_forge_server::identity::current_uid().expect("uid must be readable");
+    // One uid, one actor: operator_a is the uid's direct principal; operator_b
+    // has no OS principal and authenticates with its own workload capability.
     IdentityBindings {
-        bindings: ["operator_a", "operator_b"]
-            .into_iter()
-            .map(|actor_id| IdentityBinding {
-                uid,
-                actor_id: actor_id.into(),
+        bindings: vec![
+            IdentityBinding {
+                uid: Some(uid),
+                actor_id: "operator_a".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
-            })
-            .collect(),
+            },
+            IdentityBinding {
+                uid: None,
+                actor_id: "operator_b".into(),
+                roles: vec![sea_forge_core::types::ActorRole::Operator],
+            },
+        ],
     }
 }
 

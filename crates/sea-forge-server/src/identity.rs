@@ -333,11 +333,24 @@ impl IdentityRefusal {
     }
 }
 
-/// One uid, and the actor and roles it may claim.
+/// One actor, and the roles it may claim, and the operating-system user (if
+/// any) it may act as directly.
+///
+/// `uid: None` (omitted in YAML) means the actor has **no direct OS principal**:
+/// it is reachable only through the configured gateway's delegation
+/// (`on_behalf_of`) or an authenticated workload claim, never through a
+/// connection of its own.
+///
+/// `uid: Some(n)` means the operating-system user `n` acts as this actor
+/// directly. One uid maps to exactly one actor: a second binding for the same
+/// uid is refused at config load (see [`IdentityBindings::validate`]). Separation
+/// of duty between actors that share a uid is fictional, because any process of
+/// that user can open the socket.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityBinding {
-    pub uid: u32,
+    #[serde(default)]
+    pub uid: Option<u32>,
     pub actor_id: String,
     /// Every role this actor may claim. A binding with an empty list can hold
     /// no role and therefore authorizes nothing — which is a usable way to
@@ -360,6 +373,42 @@ pub struct IdentityBindings {
 }
 
 impl IdentityBindings {
+    /// Refuse a binding set that cannot be enforced as written.
+    ///
+    /// Two rules, both checked at config load so a misconfigured cell fails to
+    /// start rather than loading and silently refusing later:
+    ///
+    /// - one operating-system user maps to exactly one actor, so two bindings
+    ///   may not carry the same `Some(uid)`;
+    /// - one actor has one binding, so an `actor_id` may not appear twice.
+    pub fn validate(&self) -> Result<(), String> {
+        for (index, binding) in self.bindings.iter().enumerate() {
+            if let Some(uid) = binding.uid {
+                if let Some(earlier) = self.bindings[..index]
+                    .iter()
+                    .find(|other| other.uid == Some(uid))
+                {
+                    return Err(format!(
+                        "identity.bindings maps uid {uid} to both actor {:?} and actor {:?}: \
+                         one operating-system user maps to exactly one actor; bind the other \
+                         actors without a uid and reach them through the gateway (`on_behalf_of`)",
+                        earlier.actor_id, binding.actor_id
+                    ));
+                }
+            }
+            if self.bindings[..index]
+                .iter()
+                .any(|other| other.actor_id == binding.actor_id)
+            {
+                return Err(format!(
+                    "identity.bindings binds actor {:?} more than once; each actor has exactly one binding",
+                    binding.actor_id
+                ));
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn resolve_authenticated_claim(
         &self,
         claim: &ActorClaim,
@@ -405,7 +454,7 @@ impl IdentityBindings {
         Self {
             bindings: current_uid()
                 .map(|uid| IdentityBinding {
-                    uid,
+                    uid: Some(uid),
                     actor_id: actor_id.into(),
                     roles: vec![ActorRole::Operator],
                 })
@@ -454,7 +503,7 @@ impl IdentityBindings {
         let available: Vec<AvailableActor> = self
             .bindings
             .iter()
-            .filter(|binding| binding.uid == peer.uid)
+            .filter(|binding| binding.uid == Some(peer.uid))
             .map(|binding| AvailableActor {
                 actor_id: binding.actor_id.clone(),
                 roles: binding.roles.iter().map(role_wire_name).collect(),
@@ -596,7 +645,7 @@ impl IdentityBindings {
         let Some(gateway_binding) = self
             .bindings
             .iter()
-            .find(|binding| binding.uid == gateway.uid && binding.actor_id == gateway.actor)
+            .find(|binding| binding.uid == Some(gateway.uid) && binding.actor_id == gateway.actor)
         else {
             return Err(delegation_refused(format!(
                 "the configured gateway principal `{}` has no binding for uid {}",
@@ -670,7 +719,7 @@ impl IdentityBindings {
         let bound = self
             .bindings
             .iter()
-            .find(|binding| binding.uid == peer.uid)
+            .find(|binding| binding.uid == Some(peer.uid))
             .filter(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
@@ -912,12 +961,12 @@ mod tests {
         IdentityBindings {
             bindings: vec![
                 IdentityBinding {
-                    uid: 1000,
+                    uid: Some(1000),
                     actor_id: "operator_local".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
-                    uid: 1001,
+                    uid: Some(1001),
                     actor_id: "reviewer_local".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1037,22 +1086,22 @@ mod tests {
         let bindings = IdentityBindings {
             bindings: vec![
                 IdentityBinding {
-                    uid: 2000,
+                    uid: Some(2000),
                     actor_id: "gateway".into(),
                     roles: vec![ActorRole::Service],
                 },
                 IdentityBinding {
-                    uid: 4242,
+                    uid: None,
                     actor_id: "operator_a".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
-                    uid: 4243,
+                    uid: None,
                     actor_id: "operator_b".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
-                    uid: 4244,
+                    uid: Some(4244),
                     actor_id: "security_officer".into(),
                     roles: vec![ActorRole::SecurityOfficer],
                 },
@@ -1093,7 +1142,7 @@ mod tests {
     }
 
     /// The end user's binding is consulted for standing, not for the socket it
-    /// owns: this connection is uid 2000 and the binding says 4242.
+    /// owns: this connection is uid 2000, and the end user has no uid at all.
     #[test]
     fn the_end_users_binding_uid_is_not_the_connection_uid() {
         let (bindings, gateway) = gateway_cell();
@@ -1254,7 +1303,7 @@ mod tests {
     fn a_binding_with_no_roles_authorizes_nothing() {
         let suspended = IdentityBindings {
             bindings: vec![IdentityBinding {
-                uid: 1000,
+                uid: Some(1000),
                 actor_id: "operator_local".into(),
                 roles: vec![],
             }],
@@ -1342,5 +1391,145 @@ mod tests {
         );
         assert!(plain.effective_actor.is_none());
         assert_eq!(plain.available.len(), 1);
+    }
+
+    #[test]
+    fn validate_refuses_two_actors_on_one_uid_and_names_both() {
+        let bindings = IdentityBindings {
+            bindings: vec![
+                IdentityBinding {
+                    uid: Some(1000),
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: Some(1000),
+                    actor_id: "op-bob".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
+        };
+        let message = bindings.validate().expect_err("one uid, two actors");
+        assert!(message.contains("uid 1000"), "{message}");
+        assert!(
+            message.contains("\"op-alice\"") && message.contains("\"op-bob\""),
+            "{message}"
+        );
+        assert!(
+            message.contains("one operating-system user maps to exactly one actor"),
+            "{message}"
+        );
+        assert!(message.contains("on_behalf_of"), "{message}");
+    }
+
+    #[test]
+    fn validate_refuses_the_same_actor_bound_twice() {
+        let bindings = IdentityBindings {
+            bindings: vec![
+                IdentityBinding {
+                    uid: Some(1000),
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: Some(1001),
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
+        };
+        let message = bindings.validate().expect_err("one actor, two bindings");
+        assert!(
+            message.contains("\"op-alice\"") && message.contains("more than once"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn validate_accepts_many_uid_less_actors() {
+        let bindings = IdentityBindings {
+            bindings: vec![
+                IdentityBinding {
+                    uid: Some(2000),
+                    actor_id: "gateway".into(),
+                    roles: vec![ActorRole::Service],
+                },
+                IdentityBinding {
+                    uid: None,
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: None,
+                    actor_id: "op-bob".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
+        };
+        bindings.validate().expect("uid-less actors do not collide");
+    }
+
+    #[test]
+    fn a_uid_less_actor_is_refused_directly_and_reached_through_the_gateway() {
+        let (mut bindings, gateway) = gateway_cell();
+        bindings.bindings.push(IdentityBinding {
+            uid: None,
+            actor_id: "op_carol".into(),
+            roles: vec![ActorRole::Operator],
+        });
+        let gateway = GatewayConfig {
+            delegable_actors: vec!["operator_a".into(), "op_carol".into()],
+            ..gateway
+        };
+        // No OS principal: a direct claim from any uid, including the gateway's,
+        // is NotBound.
+        let direct = bindings.resolve(
+            Some(&claim("op_carol", ActorRole::Operator)),
+            Some(PeerIdentity { uid: 4242 }),
+        );
+        assert!(matches!(direct, Err(IdentityRefusal::NotBound { .. })));
+        // Reached through the gateway's delegation, the same actor resolves.
+        let delegated = bindings
+            .resolve_delegated(
+                Some(&gateway_claim()),
+                Some(&claim("op_carol", ActorRole::Operator)),
+                Some(&gateway),
+                Some(PeerIdentity { uid: 2000 }),
+            )
+            .expect("a uid-less delegable actor resolves through the gateway");
+        assert_eq!(delegated.actor_id(), "op_carol");
+    }
+
+    #[test]
+    fn a_direct_claim_by_the_uids_single_actor_resolves_beside_uid_less_actors() {
+        let bindings = IdentityBindings {
+            bindings: vec![
+                IdentityBinding {
+                    uid: Some(1000),
+                    actor_id: "op-alice".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+                IdentityBinding {
+                    uid: None,
+                    actor_id: "op-bob".into(),
+                    roles: vec![ActorRole::Operator],
+                },
+            ],
+        };
+        let resolved = bindings
+            .resolve(
+                Some(&claim("op-alice", ActorRole::Operator)),
+                Some(PeerIdentity { uid: 1000 }),
+            )
+            .expect("the uid's single actor resolves directly");
+        assert_eq!(resolved.actor_id(), "op-alice");
+        // The uid-less actor cannot be claimed from that same uid.
+        assert!(matches!(
+            bindings.resolve(
+                Some(&claim("op-bob", ActorRole::Operator)),
+                Some(PeerIdentity { uid: 1000 }),
+            ),
+            Err(IdentityRefusal::NotBound { .. })
+        ));
     }
 }
