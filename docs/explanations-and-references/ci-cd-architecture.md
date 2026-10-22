@@ -59,7 +59,7 @@ remember is small.
 | `just sync` | after `git pull` that touched dependency files | re-pin toolchain + refetch deps |
 | `just doctor` | when something feels off; emits JSONL evidence to `target/bootstrap-evidence/` | `scripts/doctor.sh` |
 | `just hooks-install` | first checkout, or after a hook file changes | sets `core.hooksPath=.githooks` |
-| `just check-fast` | before each commit (also run by `pre-commit` hook) | status-check + fmt-check + typecheck |
+| `just check-fast` | quick manual inner loop | status-check + fmt-check + typecheck |
 | `just fmt` / `just fmt-check` | apply / verify rustfmt | `cargo fmt --all` |
 | `just fix` | apply only safe automatic fixes | `cargo fmt --all` (clippy fixes are reviewed manually) |
 | `just lint` | clippy | `cargo clippy ... -D warnings` |
@@ -69,10 +69,11 @@ remember is small.
 | `just build` | full build | `cargo build --workspace --all-targets --locked` |
 | `just check` | developer quality sweep | status-check + fmt-check + lint + typecheck + security |
 | `just ci` | canonical CI verification (union of required CI job *commands* on this platform) | check + test + build |
-| `just pre-commit` | invoked by `.githooks/pre-commit` | `just check-fast` |
-| `just pre-push` | invoked by `.githooks/pre-push` | `just ci` |
+| `just pre-commit` | invoked by `.githooks/pre-commit` | status-check + fmt-check + secrets-staged |
+| `just pre-push` | invoked by `.githooks/pre-push` | status-check + fmt-check |
+| `just ci-job <job>` | reproduce one red GitHub job locally | exactly that job's recipes |
 | `just pr-check` | alias of `just ci` (what the gate sees) | `just ci` |
-| `just pr` | verify + push + open a PR via gh | see recipe body; refuses from `main`, never auto-merges |
+| `just pr` | light check (`just pre-push`) + push + open a PR via gh | see recipe body; refuses from `main`, never auto-merges |
 | `just release-check [tag]` | verify version synchronization across manifests | reads `workspace.package.version`, `sea-forge-core`, `sea-forge-cli`, optional tag; fails on any mismatch |
 | `just publish-bootstrap <crate>` | one-time manual crates.io publish (F-010) | uses `$CARGO_REGISTRY_TOKEN`; refuses without it |
 | `just status` / `just status-check` | show latest snapshot (`status`) / validate handoff structure & coupling (`status-check`) | `tail -n 1 .agents/CURRENT_STATUS.yaml` / `scripts/check-agent-context.sh` |
@@ -97,8 +98,13 @@ to a `just` recipe, so the contract is the recipe, not the hook.
 
 | Hook | Runs | Time budget | Bypass |
 | --- | --- | --- | --- |
-| `pre-commit` | `just pre-commit` → `just check-fast` (context + fmt + typecheck) | <10s warm | `git commit --no-verify` |
-| `pre-push` | `just pre-push` → `just ci` (full sweep) | ~10–30s warm | `git push --no-verify` |
+| `pre-commit` | `just pre-commit` (context + fmt + staged secrets; no compile) | seconds | `git commit --no-verify` |
+| `pre-push` | `just pre-push` (context + fmt; no compile) | seconds | `git push --no-verify` |
+
+Compilation, clippy, supply-chain checks and tests run on GitHub, where every pull request is gated by
+`CI / gate`. Each CI step is a `just` recipe, so a red job reproduces locally: `just ci-job <job>` runs
+exactly what that job runs (`lint`, `test`, `msrv`, `workbench`, `macos`, `authority-opa`), and `just ci`
+runs the full sweep.
 | `post-checkout` | advisory drift hint only; never mutates the tree | <1s | none needed |
 
 Hooks are developer feedback, not enforcement. `--no-verify` skips local

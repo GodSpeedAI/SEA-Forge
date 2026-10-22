@@ -40,14 +40,15 @@ git switch -c feat/short-description
 # make changes; update .agents/CURRENT_STATUS.yaml and .agents/CURRENT_STATUS.md if you changed
 # tracked project files (scripts/check-agent-context.sh enforces this)
 
-just check-fast        # context + fmt + typecheck — what pre-commit runs
+just check-fast        # context + fmt + typecheck — quick inner loop
 git add ...
-git commit             # the pre-commit hook runs `just pre-commit`
+git commit             # the pre-commit hook runs `just pre-commit` (context + fmt + staged secrets)
 
-just pre-push          # `just ci` — what pre-push runs (≈7s warm; longer cold)
-git push -u origin HEAD
+git push -u origin HEAD   # the pre-push hook runs `just pre-push` (context + fmt); GitHub runs the full CI
+just ci                # optional: the full sweep locally
+just ci-job lint       # reproduce one red GitHub job locally (lint, test, msrv, workbench, macos, authority-opa)
 
-just pr                # verify + push + open a PR via gh; refuses from main
+just pr                # light check + push + open a PR via gh; refuses from main
 ```
 
 That's the whole loop. `just pr` opens the PR; merging is a manual step.
@@ -86,8 +87,8 @@ updates) so they pass the title check.
 
 | When | What runs |
 | --- | --- |
-| `git commit` | `.githooks/pre-commit` → `just pre-commit` → `just check-fast` |
-| `git push` | `.githooks/pre-push` → `just pre-push` → `just ci` |
+| `git commit` | `.githooks/pre-commit` → `just pre-commit` (status-check + fmt-check + staged secrets) |
+| `git push` | `.githooks/pre-push` → `just pre-push` (status-check + fmt-check); the full sweep is GitHub's `CI / gate`, reproducible with `just ci` / `just ci-job <job>` |
 | `git checkout` / `git merge` | `.githooks/post-checkout` prints drift hint if `Cargo.lock` / `rust-toolchain.toml` / `devbox.*` / `.githooks` / `.gitignore` changed |
 | pull request opened | `CI / gate` (lint + test + build + macos + stable gate), `PR title / conventional-commit`, `Security / dependency-review` (advisory) |
 | push to `main` after a normal PR merge | `release-please.yml` updates the standing release PR; **no tag, no release** |

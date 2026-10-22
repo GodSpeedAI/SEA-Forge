@@ -116,8 +116,7 @@ secrets-staged:
 fix:
     cargo fmt --all
 
-# Quick high-signal local verification (context + fmt + typecheck).
-# Target runtime well under 10s — this is what pre-commit runs.
+# Quick inner-loop check: context + fmt + workspace typecheck (manual)
 [group('quality')]
 check-fast:
     #!/usr/bin/env bash
@@ -912,22 +911,45 @@ hooks-install:
     chmod +x .githooks/pre-commit .githooks/pre-push .githooks/post-checkout
     echo "[hooks] core.hooksPath = .githooks (run 'git config --unset core.hooksPath' to disable)"
 
-# Fast staged check invoked by .githooks/pre-commit. Kept to checks that are
-# reliably under ~10s and require no network: context, fmt, typecheck.
+# Compilation, clippy and tests run on GitHub (`CI / gate`); reproduce a
+# failed job with `just ci-job <job>`.
+# Hook pre-commit: context + fmt + staged secrets (seconds, no compile)
 [group('hooks')]
 pre-commit:
     #!/usr/bin/env bash
     {{set}}
-    just check-fast
+    just status-check
+    just fmt-check
     just secrets-staged
 
-# Broad local verification invoked by .githooks/pre-push. Adds clippy,
-# supply-chain, secret scan, tests, and a debug build on top of pre-commit.
+# The full sweep runs on GitHub (`CI / gate`), which gates every pull request.
+# Run it locally with `just ci`, or one GitHub job with `just ci-job <job>`.
+# Hook pre-push: context + fmt (seconds, no compile)
 [group('hooks')]
 pre-push:
     #!/usr/bin/env bash
     {{set}}
-    just ci
+    just status-check
+    just fmt-check
+
+# Jobs: lint, test, msrv, workbench, macos (= `just ci`), authority-opa
+# (needs `opa` on PATH). Example: just ci-job lint
+# Run locally exactly what one GitHub CI job runs (troubleshoot a red check)
+[group('hooks')]
+ci-job job:
+    #!/usr/bin/env bash
+    {{set}}
+    case "{{job}}" in
+        lint) just status-check; just fmt-check; just lint; just typecheck; just security ;;
+        test) just test; just build ;;
+        msrv) RUSTUP_TOOLCHAIN=1.92.0 cargo check --workspace --all-targets --locked ;;
+        workbench) just workbench-check ;;
+        macos|ci) just ci ;;
+        authority-opa)
+            cargo test -p sea-forge-authority --test opa_candidate -- --include-ignored
+            cargo test -p sea-forge-case-runner --test cell_episode -- --include-ignored ;;
+        *) echo "unknown job '{{job}}'; one of: lint test msrv workbench macos authority-opa" >&2; exit 2 ;;
+    esac
 
 # Same recipe the PR-title workflow + gate rely on; alias of `just ci` so a
 # maintainer can ask "what does CI see?" with one command.
@@ -937,8 +959,9 @@ pr-check:
 
 # --- pull-request helper (Phase 9) -------------------------------------
 
-# Verify, push the current branch, and open a PR via gh. Refuses to operate
-# from main, requires a clean tree, and never merges automatically.
+# Refuses to operate from main, requires a clean tree, and never merges
+# automatically. GitHub's `CI / gate` runs the full sweep on the PR.
+# Light check, push the current branch, and open a PR via gh
 [group('hooks')]
 pr:
     #!/usr/bin/env bash
@@ -959,7 +982,7 @@ pr:
         echo "next move: git fetch origin && git rebase origin/main" >&2
         exit 1
     fi
-    just pr-check
+    just pre-push
     git push -u origin HEAD
     gh pr create --base main --fill
     echo "[pr] opened; review at the URL above. Merging is a manual step."

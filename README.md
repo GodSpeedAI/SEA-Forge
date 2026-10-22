@@ -1097,8 +1097,7 @@ just check-fast
 git add ...
 git commit
 
-just pre-push
-git push -u origin HEAD
+git push -u origin HEAD   # GitHub runs the full CI; `just ci-job <job>` reproduces one job
 
 just pr
 ```

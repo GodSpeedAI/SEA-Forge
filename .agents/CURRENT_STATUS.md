@@ -1,28 +1,28 @@
 # Current status
 
-**Status revision:** 150
+**Status revision:** 152
 
-**Stage:** policy-resources-filter
+**Stage:** light-local-hooks
 
-**Summary:** Authority policy rules on cognate_action / cognate_capability can name the exact resources they cover (PolicyRule.resources). Workbench as an external-authority client (godspeed-readiness P02) needs this: consequential agent capabilities (tool.edit, tool.bash, ...) require approval while ordinary UI capabilities are allowed, which operation_kind alone cannot express.
+**Summary:** Local git hooks no longer compile: pre-commit runs status-check, fmt-check and the staged secret scan; pre-push runs status-check and fmt-check; `just pr` uses the same light check. The full sweep runs on GitHub (CI / gate), which gates every pull request. `just ci-job <job>` runs locally exactly what one GitHub job runs, so a red check reproduces with one command; `just ci` still runs the full sweep. Also the e2e helper's 'panel closed' wait gets the same 30s budget as the disk wait before it: L-RECOV (c) on a loaded CI runner measured ~16s (4s commit, then two ~6s client-side gaps) against a 15s budget.
 
 **Verified:**
 
-- cargo test -p sea-forge-authority --test cep_authority: 18 passed, 0 failed, including 4 new tests (exact match, non-match falls through, invalid on other operation kinds, empty list rejected)
-- mutation check: removing the resources match makes the new match test fail
-- Workbench J-SEA-FORGE-AUTHORITY passes against this server binary with the fixed Cognate runtime (Cognate PR #60)
+- hook steps time ~2s locally (fmt-check + secrets-staged), previously minutes (workspace cargo check / just ci)
+- `just ci-job` with an unknown job exits 2 and lists the jobs
+- L-RECOV failure on PR #43 run 39821463499: gateway log timestamps show the commit returned 200 and the history load succeeded; the panel closed after the 15s window; the rerun passed 11/11
 
 **Limits:**
 
-- resources match exactly; no prefixes or globs
-- full just ci runs in pre-push
+- the ~6s client-side gaps after a commit under CI load are not explained yet (performance, not correctness)
+- ci-job mirrors .github/workflows/ci.yml by hand; keep them in step when jobs change
 
-**Next move:** Merge, then open the Workbench P02 PR once a Cognate SDK release includes PR #60.
+**Next move:** Merge after CI; watch whether L-RECOV stays green over the next ladder runs.
 
 **Evidence:**
 
-- crates/sea-forge-authority/tests/cep_authority.rs
-- ~/projects/godspeed-readiness/docs/proposals/P02-workbench-external-authority.md
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/39821463499
+- docs/explanations-and-references/ci-cd-architecture.md
 
 **Spec:** .agents/specs/security-implementation-v2.spec.md
 

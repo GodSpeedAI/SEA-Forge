@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Pre-push hook. Delegates to `just pre-push`, which currently aliases
-# `just ci` (context + fmt + clippy + typecheck + deny + gitleaks + tests +
-# build). This is the broadest reliable local verification before a push.
+# Pre-push hook. Delegates to `just pre-push` (context + fmt; seconds). The
+# full sweep runs on GitHub (`CI / gate`); reproduce it locally with `just ci`
+# or one job with `just ci-job <job>`.
 #
 # Bypass: `git push --no-verify`. GitHub's required `CI / gate` check still
 # applies to the pull request.
