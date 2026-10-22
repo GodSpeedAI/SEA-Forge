@@ -14,17 +14,17 @@
 - cargo clippy -p sea-forge-authority -p sea-forge-server --all-targets -- -D warnings: clean
 - domainforge-core 0.21.1 CLI (installed to a scratch root, not the PATH binary) emits extensions["domainforge.identity"].domain_model_identity under --emit cep --world-name; its scope.world_ref is world:demo@sha256:a71ff6...; against the 0.21.0 fixture only producer_version and content_hash differ
 - a compiler_upgrade record with the new evidence_refs validates against cep world-transition.v1 (validate_world_transition returned no errors)
+- governed-work ingress (verify_world) now refuses a prior identity, as the CEP path does; convergence_t11 covers it and fails without the guard (review finding on PR #42)
 
 **Limits:**
 
-- not pushed; committed locally on feat/compiler-upgrade-transition only
 - a malformed or unreadable prior identity is a per-request refusal (cep_world_config), following how bad world sources are reported; startup does not read world files
 - identity_scheme_version mutations never register (DomainForge supports one scheme); the check is defensive and covered at registration
 - content_hash is not compared by compiler_upgrade: it is a digest of the document, which carries producer_version
 - source_edit_only is refused on any producer or producer_version change, so an edit and an upgrade cannot be declared as one move
-- full just ci and the Cognate live suite not run on this branch
+- PR #42: GitHub CI green (gate, lint, test, MSRV, workbench, macOS, authority-opa, live ladder); L01 35/35 and C01 PASS in the readiness workspace
 
-**Next move:** Merge (authorized 2026-10-22); then export the 0.21.0 identities per docs/how-to/upgrade-domainforge-producer.md before the next DomainForge upgrade.
+**Next move:** Merge PR #42 once review threads are resolved; export the 0.21.0 identities per docs/how-to/upgrade-domainforge-producer.md before the next DomainForge upgrade.
 
 **Evidence:**
 

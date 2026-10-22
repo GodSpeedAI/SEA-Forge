@@ -894,6 +894,27 @@ fn stage9_intent_world_is_verified_against_the_registry_not_trusted() {
         accept_governed_work_request(&e4_governed_request(), &e3_context_packet(), DOMAIN_HASH)
             .unwrap();
     assert!(intent.verify_world(&worlds).is_err());
+
+    // A prior (superseded) identity of the same world resolves, as a transition source, but is not
+    // a world governed work may be done in.
+    let prior = worlds
+        .register_prior_identity_json(
+            "demo",
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../sea-forge-authority/tests/fixtures/identities/demo-tank.domainforge-0.21.0.json"
+            )),
+        )
+        .unwrap()
+        .to_string();
+    assert!(worlds.require(&prior).is_ok());
+    let mut e4 = e4_governed_request();
+    let mut e3 = e3_context_packet();
+    e4["payload"]["world_ref"] = json!(prior);
+    e3["payload"]["world_ref"] = json!(prior);
+    let intent = accept_governed_work_request(&e4, &e3, DOMAIN_HASH).unwrap();
+    let refused = intent.verify_world(&worlds).unwrap_err();
+    assert!(refused.to_string().contains("prior identity"), "{refused}");
 }
 
 #[test]
