@@ -201,7 +201,15 @@ impl GovernedWorkIntent {
         &self,
         worlds: &sea_forge_domainforge::WorldRegistry,
     ) -> Result<(), sea_forge_domainforge::WorldBindingError> {
-        worlds.require(&self.world_ref).map(|_| ())
+        let (world, _) = worlds.require(&self.world_ref)?;
+        // A prior (superseded) identity is only a transition source; governed work needs the current
+        // world, as on the CEP authority path.
+        if worlds.is_prior(&self.world_ref) {
+            return Err(sea_forge_domainforge::WorldBindingError::IdentityRole(
+                format!("{world} is a prior identity; governed work requires a current world"),
+            ));
+        }
+        Ok(())
     }
 }
 

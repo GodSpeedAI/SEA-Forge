@@ -22,6 +22,9 @@ const CACHE_LIMIT: usize = 8;
 
 type RegistryCache = Mutex<HashMap<String, Arc<WorldRegistry>>>;
 
+/// Largest prior-identity document read. A `DomainModelIdentity` is a few hundred bytes.
+const MAX_PRIOR_IDENTITY_BYTES: u64 = 64 * 1024;
+
 fn cache() -> &'static RegistryCache {
     static CACHE: OnceLock<RegistryCache> = OnceLock::new();
     CACHE.get_or_init(Default::default)
@@ -30,10 +33,15 @@ fn cache() -> &'static RegistryCache {
 /// Build (or reuse) the registry for the configured worlds. The cache key covers the
 /// configuration *and* every file's bytes, so an edited file can never reuse a stale
 /// registry: changed content is a different key and mints a different `world_ref`.
+///
+/// Prior identities are registered after every current world, so a prior that
+/// equals a current identity is refused rather than silently changing its role.
+/// Their bytes are part of the key like source bytes are.
 fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>, String> {
     let mut key = Sha256::new();
     key.update(serde_json::to_vec(&config.cep_authority.worlds).map_err(|e| e.to_string())?);
     let mut sets = Vec::new();
+    let mut priors: Vec<(String, String, String)> = Vec::new();
     for world in &config.cep_authority.worlds {
         sea_forge_core::path::validate_relative_path(&world.base).map_err(|e| e.to_string())?;
         sea_forge_core::path::validate_relative_path(&world.entry).map_err(|e| e.to_string())?;
@@ -58,6 +66,11 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
                 content,
             });
         }
+        for relative in &world.prior_identities {
+            let content = read_prior_identity(root, relative)?;
+            key.update(Sha256::digest(content.as_bytes()));
+            priors.push((world.name.clone(), relative.clone(), content));
+        }
         sets.push((world.name.clone(), world.entry.clone(), files));
     }
     let key = hex::encode(key.finalize());
@@ -80,6 +93,11 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
             )
             .map_err(|e| format!("world {name}: {e}"))?;
     }
+    for (name, relative, content) in priors {
+        registry
+            .register_prior_identity_json(&name, &content)
+            .map_err(|e| format!("world {name} prior identity {relative}: {e}"))?;
+    }
     let registry = Arc::new(registry);
     let mut guard = cache()
         .lock()
@@ -89,6 +107,22 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
     }
     guard.insert(key, Arc::clone(&registry));
     Ok(registry)
+}
+
+/// Read one prior-identity document under the cell root, size-bounded. Fails closed on a bad path or an
+/// unreadable or oversized file; the document is parsed and digest-checked by the registry.
+fn read_prior_identity(root: &Path, relative: &str) -> Result<String, String> {
+    sea_forge_core::path::validate_relative_path(relative).map_err(|e| e.to_string())?;
+    let path = root.join(relative);
+    let len = std::fs::metadata(&path)
+        .map_err(|e| format!("prior identity {relative}: {e}"))?
+        .len();
+    if len > MAX_PRIOR_IDENTITY_BYTES {
+        return Err(format!(
+            "prior identity {relative} exceeds {MAX_PRIOR_IDENTITY_BYTES} bytes"
+        ));
+    }
+    std::fs::read_to_string(&path).map_err(|e| format!("prior identity {relative}: {e}"))
 }
 
 fn criteria(config: &ServerConfig) -> sea_forge_authority::cep::SettlementCriteria {

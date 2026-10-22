@@ -108,7 +108,16 @@ pub struct CepWorldConfig {
     pub base: String,
     pub entry: String,
     pub files: Vec<String>,
+    /// Superseded identities of this world: `DomainModelIdentity` JSON files, relative to the cell root (not to
+    /// `base`). Each is registered under this world's name as a *prior* identity, so work can be transitioned
+    /// out of it (`compiler_upgrade`) but never acted in. At most `MAX_PRIOR_IDENTITIES_PER_WORLD`. Host-owned
+    /// configuration, trusted like the world sources: the digest proves document/ref consistency, not authenticity.
+    #[serde(default)]
+    pub prior_identities: Vec<String>,
 }
+
+/// Most prior identities one world may name.
+pub const MAX_PRIOR_IDENTITIES_PER_WORLD: usize = 16;
 
 /// The CEP authority loop (`authority_request` verb). Fail-closed off: absent
 /// means disabled, and a disabled cell refuses every request.
@@ -353,7 +362,29 @@ impl ServerConfig {
 
     /// Validate every operator-controlled value before startup creates cell
     /// records or binds a socket.
+    fn validate_cep_worlds(&self) -> Result<(), String> {
+        for world in &self.cep_authority.worlds {
+            if world.prior_identities.len() > MAX_PRIOR_IDENTITIES_PER_WORLD {
+                return Err(format!(
+                    "cep_authority.worlds {}: prior_identities must hold at most {MAX_PRIOR_IDENTITIES_PER_WORLD} paths (got {})",
+                    world.name,
+                    world.prior_identities.len()
+                ));
+            }
+            for path in &world.prior_identities {
+                sea_forge_core::path::validate_relative_path(path).map_err(|e| {
+                    format!(
+                        "cep_authority.worlds {}: prior_identities path {path:?} must be a relative path under the cell root: {e}",
+                        world.name
+                    )
+                })?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn validate(&self) -> Result<(), String> {
+        self.validate_cep_worlds()?;
         if self.max_concurrent_runs == 0 || self.max_concurrent_runs > MAX_CONCURRENT_RUNS {
             return Err(format!(
                 "max_concurrent_runs must be between 1 and {MAX_CONCURRENT_RUNS}"
@@ -941,5 +972,82 @@ mod tests {
         .unwrap();
         let error = ServerConfig::load(&path).unwrap_err();
         assert!(error.contains("supervisor actor"), "{error}");
+    }
+}
+
+#[cfg(test)]
+mod cep_prior_identity_config_tests {
+    use super::*;
+
+    fn load_with_priors(priors: &[&str]) -> Result<ServerConfig, String> {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        let list = priors
+            .iter()
+            .map(|p| format!("\"{p}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
+        std::fs::write(
+            &path,
+            format!(
+                "cep_authority:\n  enabled: true\n  worlds:\n    - name: demo\n      base: worlds\n      entry: demo.sea\n      files: [demo.sea]\n      prior_identities: [{list}]\n"
+            ),
+        )
+        .unwrap();
+        ServerConfig::load(&path)
+    }
+
+    #[test]
+    fn relative_prior_identity_paths_load() {
+        let config = load_with_priors(&["identities/demo.domainforge-0.21.0.json"]).unwrap();
+        assert_eq!(
+            config.cep_authority.worlds[0].prior_identities,
+            vec!["identities/demo.domainforge-0.21.0.json".to_string()]
+        );
+    }
+
+    #[test]
+    fn prior_identities_default_to_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("server.yaml");
+        std::fs::write(
+            &path,
+            "cep_authority:\n  enabled: true\n  worlds:\n    - name: demo\n      base: worlds\n      entry: demo.sea\n      files: [demo.sea]\n",
+        )
+        .unwrap();
+        let config = ServerConfig::load(&path).unwrap();
+        assert!(config.cep_authority.worlds[0].prior_identities.is_empty());
+    }
+
+    #[test]
+    fn an_absolute_prior_identity_path_is_refused() {
+        let error = load_with_priors(&["/etc/demo.json"]).unwrap_err();
+        assert!(error.contains("prior_identities"), "{error}");
+        assert!(error.contains("relative"), "{error}");
+    }
+
+    #[test]
+    fn a_traversing_prior_identity_path_is_refused() {
+        let error = load_with_priors(&["../outside/demo.json"]).unwrap_err();
+        assert!(error.contains("prior_identities"), "{error}");
+    }
+
+    #[test]
+    fn too_many_prior_identities_are_refused() {
+        let many: Vec<String> = (0..=MAX_PRIOR_IDENTITIES_PER_WORLD)
+            .map(|i| format!("identities/{i}.json"))
+            .collect();
+        let refs: Vec<&str> = many.iter().map(String::as_str).collect();
+        let error = load_with_priors(&refs).unwrap_err();
+        assert!(error.contains("at most 16"), "{error}");
+    }
+
+    #[test]
+    fn the_maximum_number_of_prior_identities_is_accepted() {
+        let many: Vec<String> = (0..MAX_PRIOR_IDENTITIES_PER_WORLD)
+            .map(|i| format!("identities/{i}.json"))
+            .collect();
+        let refs: Vec<&str> = many.iter().map(String::as_str).collect();
+        assert!(load_with_priors(&refs).is_ok());
     }
 }

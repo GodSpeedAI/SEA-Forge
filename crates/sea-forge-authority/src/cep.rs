@@ -278,6 +278,11 @@ fn verify_transition(
             "source and target are the same world; a transition must move somewhere".into(),
         ));
     }
+    if worlds.is_prior(&target_world.to_string()) {
+        return Err(CepAuthorityError::Transition(format!(
+            "target world {target_world} is a prior identity; work moves only into a current world"
+        )));
+    }
     let closure_equal =
         source_identity.semantic_closure_hash == target_identity.semantic_closure_hash;
     match envelope.pointer(&format!("{TRANSITION_NS}/semantic_closure_equal")) {
@@ -298,6 +303,74 @@ fn verify_transition(
         return Err(CepAuthorityError::Malformed(
             "world_transition.transition_kind is not a known kind",
         ));
+    }
+    // A source_edit_only never changes the producer: a producer change is an upgrade, and must say so.
+    if kind == "source_edit_only"
+        && (source_identity.producer != target_identity.producer
+            || source_identity.producer_version != target_identity.producer_version)
+    {
+        return Err(CepAuthorityError::Transition(format!(
+            "transition_kind source_edit_only is misdeclared: the producer changed ({} {} to {} {}); a producer change is a compiler_upgrade",
+            source_identity.producer,
+            source_identity.producer_version,
+            target_identity.producer,
+            target_identity.producer_version
+        )));
+    }
+    // A compiler_upgrade keeps every meaning-bearing identity field equal and changes only the producer version.
+    // The first differing field is named, so the refusal says exactly what moved.
+    if kind == "compiler_upgrade" {
+        let equal = [
+            (
+                "semantic_closure_hash",
+                source_identity.semantic_closure_hash == target_identity.semantic_closure_hash,
+            ),
+            (
+                "source_set_hash",
+                source_identity.source_set_hash == target_identity.source_set_hash,
+            ),
+            (
+                "semantic_pack_set_hash",
+                source_identity.semantic_pack_set_hash == target_identity.semantic_pack_set_hash,
+            ),
+            (
+                "registry_content_hash",
+                source_identity.registry_content_hash == target_identity.registry_content_hash,
+            ),
+            (
+                "identity_scheme_version",
+                source_identity.identity_scheme_version == target_identity.identity_scheme_version,
+            ),
+            (
+                "language_schema_version",
+                source_identity.language_schema_version == target_identity.language_schema_version,
+            ),
+            (
+                "compiler_interpretation_version",
+                source_identity.compiler_interpretation_version
+                    == target_identity.compiler_interpretation_version,
+            ),
+            (
+                "canonicalization_version",
+                source_identity.canonicalization_version
+                    == target_identity.canonicalization_version,
+            ),
+            (
+                "producer",
+                source_identity.producer == target_identity.producer,
+            ),
+        ];
+        if let Some((field, _)) = equal.iter().find(|(_, same)| !same) {
+            return Err(CepAuthorityError::Transition(format!(
+                "transition_kind compiler_upgrade is misdeclared: {field} differs between the registered worlds; a compiler_upgrade may change only producer_version"
+            )));
+        }
+        if source_identity.producer_version == target_identity.producer_version {
+            return Err(CepAuthorityError::Transition(format!(
+                "transition_kind compiler_upgrade is misdeclared: producer_version is {} on both sides, so this is not an upgrade",
+                source_identity.producer_version
+            )));
+        }
     }
     let misdeclared = match kind {
         "source_edit_only" | "compiler_upgrade" => !closure_equal,
@@ -327,7 +400,7 @@ fn verify_transition(
     } else {
         claimed.unwrap_or_else(|| "unknown".into())
     };
-    let evidence_refs = match envelope.pointer(&format!("{TRANSITION_NS}/evidence_refs")) {
+    let mut evidence_refs = match envelope.pointer(&format!("{TRANSITION_NS}/evidence_refs")) {
         None | Some(Value::Null) => Vec::new(),
         Some(Value::Array(items)) if items.len() <= 32 => items
             .iter()
@@ -346,6 +419,17 @@ fn verify_transition(
             ))
         }
     };
+    if kind == "compiler_upgrade" {
+        // SEA-Forge's own recomputed facts, recorded where the CEP record allows free strings.
+        evidence_refs.push(format!(
+            "domainforge.producer_version.source:{}",
+            source_identity.producer_version
+        ));
+        evidence_refs.push(format!(
+            "domainforge.producer_version.target:{}",
+            target_identity.producer_version
+        ));
+    }
     Ok(VerifiedTransition {
         source_world_ref: source_world.to_string(),
         target_world_ref: target_world.to_string(),
@@ -433,6 +517,12 @@ pub fn parse_request(
             ))
         }
     };
+    // A prior identity is a place to move work out of, never to act in: only a world_transition may name it.
+    if operation_kind != OperationKind::WorldTransition && worlds.is_prior(&world.to_string()) {
+        return Err(CepAuthorityError::World(format!(
+            "{world} is a prior identity; governed actions run only in a current world, so move the work out with an allowed world_transition first"
+        )));
+    }
     let transition = if operation_kind == OperationKind::WorldTransition {
         let t = verify_transition(envelope, &world.to_string(), worlds)?;
         // An approval is bound to resource_id, so for a transition it must be the target world: an
