@@ -19,6 +19,8 @@ pub struct RealityTraceSource {
     exports: RefCell<HashMap<String, Vec<Value>>>,
     /// Repos whose chain verified in this request.
     verified: RefCell<Vec<String>>,
+    /// The enrolled repos, listed once per request.
+    repos: RefCell<Option<Vec<String>>>,
 }
 
 impl RealityTraceSource {
@@ -27,6 +29,7 @@ impl RealityTraceSource {
             config,
             exports: RefCell::default(),
             verified: RefCell::default(),
+            repos: RefCell::default(),
         }
     }
 
@@ -73,8 +76,11 @@ impl RealityTraceSource {
     }
 
     fn repos(&self) -> Result<Vec<String>, String> {
+        if let Some(repos) = self.repos.borrow().as_ref() {
+            return Ok(repos.clone());
+        }
         let list = self.run(&["repo", "list", "--json"])?;
-        Ok(list
+        let repos: Vec<String> = list
             .get("repos")
             .and_then(Value::as_array)
             .map(|a| {
@@ -82,7 +88,9 @@ impl RealityTraceSource {
                     .filter_map(|r| r.get("repo_id").and_then(Value::as_str).map(str::to_string))
                     .collect()
             })
-            .unwrap_or_default())
+            .unwrap_or_default();
+        *self.repos.borrow_mut() = Some(repos.clone());
+        Ok(repos)
     }
 
     fn export(&self, repo: &str) -> Result<Vec<Value>, String> {

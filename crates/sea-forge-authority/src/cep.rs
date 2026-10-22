@@ -1202,7 +1202,7 @@ pub struct EvidenceAck {
     pub envelope_id: String,
     pub items: usize,
     pub committed: CommittedRecordRef,
-    /// The evidence source every item was checked against, or `None` when the packet was taken as stated.
+    /// The evidence source every item was checked against, or `None` when any item was taken as stated.
     pub corroborated_by: Option<&'static str>,
 }
 
@@ -1247,6 +1247,9 @@ fn corroborate(
     let Corroboration::Source { source, required } = how else {
         return Ok(None);
     };
+    // The packet is marked corroborated only when every item was checked; a packet with any item taken
+    // as stated must never count later as corroborated evidence.
+    let mut every_item_checked = true;
     for item in items {
         let from = item.raw.get("source").and_then(Value::as_str).unwrap_or("");
         if from != source.name() {
@@ -1257,6 +1260,7 @@ fn corroborate(
                     source.name()
                 )));
             }
+            every_item_checked = false;
             continue;
         }
         let recorded = source.recorded_item(&item.raw).map_err(|why| {
@@ -1287,7 +1291,7 @@ fn corroborate(
             }
         }
     }
-    Ok(Some(source.name()))
+    Ok(every_item_checked.then(|| source.name()))
 }
 
 /// A settlement, with the packet that expresses it.

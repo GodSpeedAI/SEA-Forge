@@ -34,9 +34,14 @@ For each packet item whose `source` is `realitytrace`:
 5. The item's `evidence_id`, `evidence_type`, `question_ref`, `representation_ref`, `relevance`,
    `reliability` and `direction` equal the recorded values.
 
-Any failure refuses the packet with `cep_evidence_refused` and commits nothing. An accepted packet is
-committed with the subject ref `corroborated:realitytrace`, and the response says
-`"corroboration": "realitytrace"`. Without the block, it says `"corroboration": "none"`.
+Any failure refuses the packet with `cep_evidence_refused` and commits no `evidence_packet`. The
+`evidence_mutation` policy decision taken before the check stays in the ledger, as for any governed
+request.
+
+An accepted packet is committed with the subject ref `corroborated:realitytrace` only when every item
+was checked, and the response then says `"corroboration": "realitytrace"`. A packet with any item taken
+as stated (possible only without `require_corroboration`) says `"corroboration": "none"` and never
+counts as corroborated, even if the requirement is turned on later.
 
 With `require_corroboration: true`:
 

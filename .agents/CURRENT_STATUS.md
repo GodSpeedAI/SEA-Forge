@@ -11,6 +11,8 @@
 - cargo test -p sea-forge-authority --test cep_settlement: 17 passed, including 5 corroboration tests (flipped direction refused and nothing settles; upgraded reliability and invented items refused; unsourced items refused when required; packets committed before the requirement never decide a corroborated settlement; recorded item without direction refused)
 - sea-forge-server realitytrace_source unit tests: 3 passed against a stand-in realitytrace binary (recorded item returned by ledger position, broken chain / wrong record kind / unknown position refused, missing binary is an error)
 
+- review fixes (PR #45): a packet is marked corroborated only when every item was checked, so a lenient packet with an unsourced item never counts once corroboration is required (test fails without the fix); the RealityTrace repo list is read once per submission; docs say a refusal commits no evidence_packet while the policy decision stays recorded
+
 **Limits:**
 
 - RealityTrace's ledger is tamper-evident, not tamper-proof; on a single-user host the anchor is containment (gate S02)

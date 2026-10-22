@@ -828,7 +828,28 @@ fn when_corroboration_is_required_unsourced_items_are_refused_and_old_packets_do
         .unwrap_err()
         .to_string()
         .contains("no corroborated evidence"));
-    // Without the requirement, unsourced items pass through and sourced ones are still checked.
+    // Without the requirement, unsourced items pass through and sourced ones are still checked, but a
+    // packet with any unchecked item is not marked corroborated, so it never counts once the
+    // requirement is turned on.
+    let flipped = submit_checked(
+        &c,
+        &packet(
+            &c.world,
+            "op-c4",
+            "env-evidence_packet-c4d",
+            vec![
+                item("ev-z", "supports", "medium"),
+                sourced("ev-c4", "contradicts", "medium"),
+            ],
+        ),
+        &recorded,
+        false,
+    )
+    .unwrap_err();
+    assert!(
+        flipped.to_string().contains("direction differs"),
+        "{flipped}"
+    );
     let lenient = submit_checked(
         &c,
         &packet(
@@ -844,7 +865,11 @@ fn when_corroboration_is_required_unsourced_items_are_refused_and_old_packets_do
         false,
     )
     .unwrap();
-    assert_eq!(lenient.corroborated_by, Some("realitytrace"));
+    assert_eq!(lenient.corroborated_by, None);
+    assert!(settle_corroborated(&c, "op-c4")
+        .unwrap_err()
+        .to_string()
+        .contains("no corroborated evidence"));
 }
 
 #[test]
