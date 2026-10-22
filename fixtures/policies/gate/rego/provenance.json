@@ -15,7 +15,7 @@
     "fixtures/model.json": "sha256:5ee98d2b09e3c8d08157d627900694411aa5a90fa1707f8c56a6ab1328036bb6",
     "tests/decision_test.rego": "sha256:6fa84083aebaee311243380990d5c6e594266f878c9b8a1b633e1dffd6b23580"
   },
-  "generator": "domainforge-core 0.21.0",
+  "generator": "domainforge-core 0.21.1",
   "model": {
     "hash": "sha256:e61ecd1c669c7d04d29e6140e7b4362c3b1456c9f41d708f9318b17b0c1a609f",
     "projection": "domainforge-rego/v1"
