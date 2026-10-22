@@ -1202,6 +1202,92 @@ pub struct EvidenceAck {
     pub envelope_id: String,
     pub items: usize,
     pub committed: CommittedRecordRef,
+    /// The evidence source every item was checked against, or `None` when the packet was taken as stated.
+    pub corroborated_by: Option<&'static str>,
+}
+
+/// Where an evidence item's original record can be read back, so a packet is checked against what the
+/// evidence source itself recorded rather than believed as submitted.
+pub trait EvidenceSource {
+    /// The source's name, recorded with the evidence (`realitytrace`).
+    fn name(&self) -> &'static str;
+    /// The item exactly as the source recorded it, after checking that the source's own record is intact.
+    /// `Err` says why the item cannot be corroborated.
+    fn recorded_item(&self, item: &Value) -> Result<Value, String>;
+}
+
+/// How `authority_evidence` treats a packet's items.
+pub enum Corroboration<'a> {
+    /// Items are taken as stated (no evidence source configured).
+    None,
+    /// Every item whose `source` is the configured source's name must match its recorded original; with
+    /// `required`, an item from any other source is refused.
+    Source {
+        source: &'a dyn EvidenceSource,
+        required: bool,
+    },
+}
+
+/// Fields a packet item must carry exactly as the evidence source recorded them. Direction and reliability
+/// decide settlement, so they must be present in the original.
+const CORROBORATED_FIELDS: [&str; 7] = [
+    "evidence_id",
+    "evidence_type",
+    "question_ref",
+    "representation_ref",
+    "relevance",
+    "reliability",
+    "direction",
+];
+
+fn corroborate(
+    items: &[EvidenceItem],
+    how: &Corroboration<'_>,
+) -> Result<Option<&'static str>, CepAuthorityError> {
+    let Corroboration::Source { source, required } = how else {
+        return Ok(None);
+    };
+    for item in items {
+        let from = item.raw.get("source").and_then(Value::as_str).unwrap_or("");
+        if from != source.name() {
+            if *required {
+                return Err(CepAuthorityError::Evidence(format!(
+                    "evidence {} is not from {}; this cell settles only on corroborated evidence",
+                    item.id,
+                    source.name()
+                )));
+            }
+            continue;
+        }
+        let recorded = source.recorded_item(&item.raw).map_err(|why| {
+            CepAuthorityError::Evidence(format!(
+                "evidence {} cannot be corroborated against {}: {why}",
+                item.id,
+                source.name()
+            ))
+        })?;
+        for field in ["direction", "reliability"] {
+            if recorded.get(field).and_then(Value::as_str).is_none() {
+                return Err(CepAuthorityError::Evidence(format!(
+                    "{}'s record of evidence {} has no {field}",
+                    source.name(),
+                    item.id
+                )));
+            }
+        }
+        for field in CORROBORATED_FIELDS {
+            if let Some(original) = recorded.get(field) {
+                if item.raw.get(field) != Some(original) {
+                    return Err(CepAuthorityError::Evidence(format!(
+                        "evidence {}: {field} differs from what {} recorded",
+                        item.id,
+                        source.name()
+                    )));
+                }
+            }
+        }
+    }
+    Ok(Some(source.name()))
 }
 
 /// A settlement, with the packet that expresses it.
@@ -1365,6 +1451,17 @@ impl CepAuthorityService<'_> {
         packet: &Value,
         caller: &Actor,
     ) -> Result<EvidenceAck, CepAuthorityError> {
+        self.submit_evidence_with(packet, caller, &Corroboration::None)
+    }
+
+    /// `submit_evidence`, checking each item against its evidence source first. A mismatch or an item that
+    /// cannot be found commits nothing.
+    pub fn submit_evidence_with(
+        &self,
+        packet: &Value,
+        caller: &Actor,
+        corroboration: &Corroboration<'_>,
+    ) -> Result<EvidenceAck, CepAuthorityError> {
         let size = serde_json::to_vec(packet)
             .map(|v| v.len())
             .unwrap_or(usize::MAX);
@@ -1446,10 +1543,15 @@ impl CepAuthorityService<'_> {
             ));
         }
         self.gate(&ledger, "evidence_mutation", &operation_id, caller)?;
+        let corroborated_by = corroborate(&items, corroboration)?;
+        let mut subjects = vec!["cognate".to_string(), operation_id.clone()];
+        if let Some(by) = corroborated_by {
+            subjects.push(format!("corroborated:{by}"));
+        }
         let committed = ledger.commit_typed_once(
             "evidence_packet",
             format!("cep-evidence:{envelope_id}"),
-            vec!["cognate".into(), operation_id.clone()],
+            subjects,
             packet,
             vec![],
         )?;
@@ -1458,6 +1560,7 @@ impl CepAuthorityService<'_> {
             envelope_id,
             items: items.len(),
             committed,
+            corroborated_by,
         })
     }
 
@@ -1468,6 +1571,18 @@ impl CepAuthorityService<'_> {
         operation_id: &str,
         caller: &Actor,
     ) -> Result<SettlementOutcome, CepAuthorityError> {
+        self.settle_with(operation_id, caller, None)
+    }
+
+    /// `settle`, counting only evidence packets corroborated against `required_source` when it is set, so a
+    /// packet committed before corroboration was required never decides a settlement.
+    pub fn settle_with(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        required_source: Option<&str>,
+    ) -> Result<SettlementOutcome, CepAuthorityError> {
+        let corroborated = required_source.map(|s| format!("corroborated:{s}"));
         let ledger = self.ledger()?;
         let entries = ledger.read_entries()?;
         let allowed = allowed_operation(&entries, operation_id).ok_or_else(|| {
@@ -1500,11 +1615,19 @@ impl CepAuthorityService<'_> {
             .filter(|e| {
                 e.record_kind == "evidence_packet"
                     && e.subject_refs.iter().any(|s| s == operation_id)
+                    && corroborated
+                        .as_ref()
+                        .is_none_or(|c| e.subject_refs.iter().any(|s| s == c))
             })
             .collect();
         if packets.is_empty() {
+            let what = if corroborated.is_some() {
+                "corroborated evidence"
+            } else {
+                "evidence"
+            };
             return Err(CepAuthorityError::Evidence(format!(
-                "no evidence has been submitted for {operation_id}; an execution alone cannot be settled"
+                "no {what} has been submitted for {operation_id}; an execution alone cannot be settled"
             )));
         }
         self.gate(&ledger, "settlement_declaration", operation_id, caller)?;

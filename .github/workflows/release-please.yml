@@ -109,7 +109,7 @@ jobs:
           # Idempotency: cargo publish refuses to republish an existing version.
           # Treat that specific case as success so a re-run after a partial
           # failure completes only the missing crate.
-          if printf '%s' "$out" | grep -qiE 'already (exists|uploaded|published)|destination already exists'; then
+          if grep -qiE 'already (exists|uploaded|published)|destination already exists' <<<"$out"; then
             echo "::notice::sea-forge-core ${{ needs.release-please.outputs.version }} already published — skipping"
             exit 0
           fi
@@ -125,7 +125,7 @@ jobs:
           rc=$?
           printf '%s\n' "$out"
           if [ "$rc" = "0" ]; then exit 0; fi
-          if printf '%s' "$out" | grep -qiE 'already (exists|uploaded|published)|destination already exists'; then
+          if grep -qiE 'already (exists|uploaded|published)|destination already exists' <<<"$out"; then
             echo "::notice::sea-forge-cli ${{ needs.release-please.outputs.version }} already published — skipping"
             exit 0
           fi

@@ -54,6 +54,7 @@ pub mod identity;
 pub mod mcp;
 mod mcp_protocol;
 pub mod postgres;
+mod realitytrace_source;
 pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
