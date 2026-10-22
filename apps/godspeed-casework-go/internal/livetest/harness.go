@@ -202,18 +202,17 @@ func (c *Cell) seed() {
 
 	uid := os.Getuid()
 	serverYAML := fmt.Sprintf(
-		"# T06 live gateway cell: the invoking uid (%d) is the gateway principal; the two\n"+
-			"# delegable end users mirror the L5 journey posture (operator executes, R-SO approves).\n"+
+		"# T06 live gateway cell: the invoking uid (%d) is the gateway principal, the only\n"+
+			"# OS principal (one uid, one actor). The two delegable end users have no uid and\n"+
+			"# are reached only through on_behalf_of (operator executes, R-SO approves).\n"+
 			"identity:\n"+
 			"  bindings:\n"+
 			"    - uid: %d\n"+
 			"      actor_id: gateway\n"+
 			"      roles: [\"service\"]\n"+
-			"    - uid: 3101\n"+
-			"      actor_id: operator_local\n"+
+			"    - actor_id: operator_local\n"+
 			"      roles: [\"operator\"]\n"+
-			"    - uid: 3102\n"+
-			"      actor_id: rso_local\n"+
+			"    - actor_id: rso_local\n"+
 			"      roles: [\"R-SO\"]\n"+
 			"gateway:\n"+
 			"  uid: %d\n"+

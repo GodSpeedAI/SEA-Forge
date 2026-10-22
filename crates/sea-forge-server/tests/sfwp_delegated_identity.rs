@@ -62,17 +62,17 @@ fn other_uid() -> u32 {
 // ---------------------------------------------------------------------------
 
 /// A cell whose gateway is *this* process (so delegation is reachable), with
-/// two end-user actors bound at a uid no connection presents. `operator_c`
+/// end-user actors bound without a uid: one uid maps to exactly one actor, and
+/// the end users have no OS principal of their own. `operator_c`
 /// is bound — it holds a role — but is deliberately outside the
 /// `delegable_actors` allowlist: being bound establishes an actor's
 /// standing; only the allowlist lets the gateway speak for them.
 fn seed_gateway_cell(root: &Path) {
     let uid = test_uid();
-    let users = other_uid();
     fs::write(
         root.join("server.yaml"),
         format!(
-            "# T02 delegated-identity cell: the gateway principal is uid {uid};\n# the end users are bound at uid {users}, which no connection presents.\nidentity:\n  bindings:\n    - uid: {uid}\n      actor_id: gateway\n      roles: [\"service\"]\n    - uid: {users}\n      actor_id: operator_a\n      roles: [\"operator\"]\n    - uid: {users}\n      actor_id: operator_b\n      roles: [\"operator\"]\n    - uid: {users}\n      actor_id: operator_c\n      roles: [\"operator\"]\n    - uid: {users}\n      actor_id: security_officer\n      roles: [\"R-SO\"]\ngateway:\n  uid: {uid}\n  actor: gateway\n  delegable_actors: [operator_a, operator_b, security_officer]\n"
+            "# T02 delegated-identity cell: the gateway principal is uid {uid}, the only OS principal;\n# the end users have no uid and are reached only through on_behalf_of.\nidentity:\n  bindings:\n    - uid: {uid}\n      actor_id: gateway\n      roles: [\"service\"]\n    - actor_id: operator_a\n      roles: [\"operator\"]\n    - actor_id: operator_b\n      roles: [\"operator\"]\n    - actor_id: operator_c\n      roles: [\"operator\"]\n    - actor_id: security_officer\n      roles: [\"R-SO\"]\ngateway:\n  uid: {uid}\n  actor: gateway\n  delegable_actors: [operator_a, operator_b, security_officer]\n"
         ),
     )
     .expect("write server.yaml");
@@ -87,7 +87,7 @@ fn seed_operator_bound_cell(root: &Path) {
     fs::write(
         root.join("server.yaml"),
         format!(
-            "identity:\n  bindings:\n    - uid: {uid}\n      actor_id: operator_local\n      roles: [\"operator\"]\n    - uid: {gateway_uid}\n      actor_id: gateway\n      roles: [\"service\"]\n    - uid: {gateway_uid}\n      actor_id: operator_b\n      roles: [\"operator\"]\ngateway:\n  uid: {gateway_uid}\n  actor: gateway\n  delegable_actors: [operator_b]\n"
+            "identity:\n  bindings:\n    - uid: {uid}\n      actor_id: operator_local\n      roles: [\"operator\"]\n    - uid: {gateway_uid}\n      actor_id: gateway\n      roles: [\"service\"]\n    - actor_id: operator_b\n      roles: [\"operator\"]\ngateway:\n  uid: {gateway_uid}\n  actor: gateway\n  delegable_actors: [operator_b]\n"
         ),
     )
     .expect("write server.yaml");

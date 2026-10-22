@@ -22,24 +22,28 @@ fn actor() -> Value {
     json!({"actor_id": "operator_local", "role": "operator"})
 }
 
-/// Two actors on this machine's uid.
+/// Two actors, one of them with a direct OS principal.
 ///
-/// Both bind to the same uid because a test can only ever present one — the
-/// kernel fills in `SO_PEERCRED` and nothing here can forge a second. That is
-/// exactly the configuration separation of duty has to survive: two identities
-/// one human can legitimately hold, where the *actor*, not the uid, is what
-/// keeps a submitter from approving their own work.
+/// One uid maps to exactly one actor (SF-005 follow-up), so `operator_a` is
+/// this machine's uid and `operator_b` has no uid: it can act only through an
+/// authenticated workload capability or the gateway, never over this test's
+/// own socket. Separation of duty between the two is therefore enforced by the
+/// actor, with each side proving its identity through its own channel.
 fn two_actors() -> IdentityBindings {
     let uid = sea_forge_server::identity::current_uid().expect("uid must be readable");
     IdentityBindings {
-        bindings: ["operator_a", "operator_b"]
-            .into_iter()
-            .map(|actor_id| IdentityBinding {
-                uid,
-                actor_id: actor_id.into(),
+        bindings: vec![
+            IdentityBinding {
+                uid: Some(uid),
+                actor_id: "operator_a".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
-            })
-            .collect(),
+            },
+            IdentityBinding {
+                uid: None,
+                actor_id: "operator_b".into(),
+                roles: vec![sea_forge_core::types::ActorRole::Operator],
+            },
+        ],
     }
 }
 
@@ -363,12 +367,16 @@ async fn a_submitter_cannot_approve_their_own_work_but_another_actor_can() {
     );
     assert_eq!(by_submitter["no_side_effect"], true);
 
+    // Premise changed: operator_b has no OS principal, so a direct claim for it
+    // over this uid's socket is refused as not bound. That is the invariant now
+    // (one uid, one actor); the positive case, operator_b approving through its
+    // own authenticated connection, is proven by the authenticated test below.
     let by_other = client.call(decide("operator_b")).await;
-    let class = by_other["error_class"].as_str().unwrap_or_default();
-    assert_ne!(
-        class, "separation_of_duty",
-        "a second actor must be able to approve: {by_other}"
+    assert_eq!(
+        by_other["error_class"], "identity_not_bound",
+        "a uid-less actor must not act directly over another uid's socket: {by_other}"
     );
+    assert_eq!(by_other["no_side_effect"], true);
 
     // Getting past separation of duty is not the same as the approval being
     // resolvable, and live driving found that it was not: the escalation

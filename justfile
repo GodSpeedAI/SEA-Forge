@@ -1365,25 +1365,22 @@ casework-cell-init:
     uid="$(id -u)"
     cat > "$cell/server.yaml" <<YAML
     # Live-stack cell (plan casework-live-wiring-production T00/T03/T02).
-    # The invoking OS user (uid $uid) is bound to the operator actor; the
-    # gateway section (T02, decision D-2) makes that same uid the gateway
-    # principal and allowlists the end-user actors it may speak for with
-    # `on_behalf_of`. One uid carries every binding here because the whole
-    # local stack runs as one OS user; the allowlist is what bounds it.
+    # One uid maps to exactly one actor (SF-005 follow-up). The invoking OS
+    # user (uid $uid) is the gateway principal (T02, decision D-2); the end-user
+    # actors have no OS principal of their own, so they are bound without a uid
+    # and reached only through the gateway's `on_behalf_of`, bounded by the
+    # allowlist below.
     identity:
       bindings:
         - uid: $uid
-          actor_id: operator_local
-          roles: ["operator"]
-        - uid: $uid
-          actor_id: security_officer
-          roles: ["R-SO"]
-        - uid: $uid
-          actor_id: lifecycle_custodian
-          roles: ["R-LC"]
-        - uid: $uid
           actor_id: gateway
           roles: ["service"]
+        - actor_id: operator_local
+          roles: ["operator"]
+        - actor_id: security_officer
+          roles: ["R-SO"]
+        - actor_id: lifecycle_custodian
+          roles: ["R-LC"]
     gateway:
       uid: $uid
       actor: gateway
@@ -1392,7 +1389,7 @@ casework-cell-init:
     mkdir -p "$cell/templates" "$cell/authority"
     cp "$fixtures"/templates/*.yaml "$cell/templates/"
     cp "$fixtures/policy.yaml" "$cell/authority/active-policy.json"
-    echo "casework-cell-init: wrote $cell/server.yaml (operator + security-officer + lifecycle-custodian bound to uid $uid; uid $uid is the T02 gateway principal)"
+    echo "casework-cell-init: wrote $cell/server.yaml (uid $uid is the T02 gateway principal; operator + security-officer + lifecycle-custodian are uid-less, reached via on_behalf_of)"
     echo "casework-cell-init: delegable actors: operator_local, security_officer, lifecycle_custodian"
     echo "casework-cell-init: installed templates: $(ls "$cell/templates"/*.yaml | xargs -n1 basename | tr '\n' ' ')"
     echo "casework-cell-init: wrote $cell/authority/active-policy.json (E2E policy: write_file + approval_resolution for operator)"

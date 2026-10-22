@@ -451,7 +451,9 @@ CELL2=/tmp/sf-id-cell && rm -rf "$CELL2" && mkdir -p "$CELL2"
 # argv0 must be named `sea-forge` AND canonicalize to the process that runs it,
 # which for an in-process submit is the server, not the CLI.
 ln -sf "$PWD/target/debug/sea-forge-server" "$CELL2/sea-forge"
-printf 'identity:\n  bindings:\n    - uid: %s\n      actor_id: operator_a\n      roles: [operator]\n    - uid: %s\n      actor_id: operator_b\n      roles: [operator]\n' \
+# One uid, one actor: operator_a is this uid's gateway principal (service + operator);
+# operator_b has no uid and is delegable through on_behalf_of.
+printf 'identity:\n  bindings:\n    - uid: %s\n      actor_id: operator_a\n      roles: [service, operator]\n    - actor_id: operator_b\n      roles: [operator]\ngateway:\n  uid: %s\n  actor: operator_a\n  delegable_actors: [operator_b]\n' \
   "$(id -u)" "$(id -u)" > "$CELL2/server.yaml"
 SEA_FORGE_ROOT="$CELL2" SEA_FORGE_SOCKET=/tmp/sf-id.sock \
   ./target/debug/sea-forge-server &

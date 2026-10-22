@@ -96,14 +96,14 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
         identity: IdentityBindings {
             bindings: vec![
                 IdentityBinding {
-                    uid,
+                    uid: Some(uid),
                     actor_id: "cognate-service".into(),
                     roles: vec![ActorRole::Service],
                 },
                 // Migrated multi-actor controls establish these identities
                 // with separate authority-issued private capabilities.
                 IdentityBinding {
-                    uid,
+                    uid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },

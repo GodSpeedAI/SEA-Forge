@@ -1,10 +1,8 @@
 identity:
   bindings:
-    - uid: 1000
-      actor_id: operator_local
+    - actor_id: operator_local
       roles: ["operator"]
-    - uid: 1000
-      actor_id: rso_local
+    - actor_id: rso_local
       roles: ["R-SO"]
     - uid: 1000
       actor_id: gateway
