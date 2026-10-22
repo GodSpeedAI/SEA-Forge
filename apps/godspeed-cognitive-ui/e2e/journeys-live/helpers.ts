@@ -178,7 +178,10 @@ export async function designCaseViaUi(
   const digest = await b.eval<string>(`document.querySelector('[data-testid="proposal-digest"]').innerText`);
   await b.click('[data-testid="proposal-submit"]');
   const found = await waitForNewCase(cell, before, ["case_created", "item_enabled"], { timeoutMs: 30000 });
-  await b.waitFor(`!document.querySelector('[data-testid="proposal-panel"]')`, 15000, "panel closed");
+  // The panel closes only after the commit response and the new case's history load. The clock starts when
+  // the case reaches disk, which is before the commit responds, so this gets the same budget as the disk wait.
+  // L-RECOV (c) on a loaded CI runner measured ~16s: 4s commit, then two ~6s client-side gaps.
+  await b.waitFor(`!document.querySelector('[data-testid="proposal-panel"]')`, 30000, "panel closed");
   await b.waitFor(`window.__gs.worldView().snap.caseId === ${JSON.stringify(found.caseId)}`, 15000, "world shows the new case");
   return { caseId: found.caseId, digest, trace: found.trace };
 }
