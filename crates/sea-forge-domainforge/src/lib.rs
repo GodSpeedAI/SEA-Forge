@@ -654,15 +654,16 @@ pub fn evaluate_authority(
             "DomainForge authority evaluation requires validation evidence".into(),
         ));
     }
-    // Only a plain relative path inside the workspace can name a model target. An absolute
-    // path, a `..` or `.` component, or a backslash (a Windows separator that Unix reads as one
-    // name) is rejected before the name match, so `../elsewhere/Sample.sh` never matches `Sample`.
+    // Only a plain relative path inside the workspace can name a model target. The raw `/`
+    // segments are checked, not `Path::components()`, which silently drops an interior `.` and
+    // empty segments: an absolute path, an empty, `.` or `..` segment, or a backslash (a Windows
+    // separator that Unix reads as one name) is rejected before the name match, so
+    // `../elsewhere/Sample.sh` or `models/./Sample.sea` never matches `Sample`.
     let path = std::path::Path::new(resource_id);
-    let workspace_relative = !resource_id.is_empty()
-        && !resource_id.contains('\\')
-        && path
-            .components()
-            .all(|component| matches!(component, std::path::Component::Normal(_)));
+    let workspace_relative = !resource_id.contains('\\')
+        && resource_id
+            .split('/')
+            .all(|segment| !segment.is_empty() && segment != "." && segment != "..");
     let semantic_target = workspace_relative
         && path
             .file_stem()

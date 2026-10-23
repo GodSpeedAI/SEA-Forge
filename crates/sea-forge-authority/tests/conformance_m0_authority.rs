@@ -473,6 +473,9 @@ fn domainforge_authority_is_model_semantic() {
         "./Sample.sea",
         "dir/../Sample.sea",
         "..\\Sample.sea",
+        "models/./Sample.sea",
+        "models//Sample.sea",
+        "models/Sample.sea/",
         "",
     ] {
         let trace = sea_forge_domainforge::evaluate_authority(

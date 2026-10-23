@@ -1,16 +1,17 @@
 # Current status
 
-**Status revision:** 155
+**Status revision:** 156
 
 **Stage:** domainforge-authority-path
 
-**Summary:** The DomainForge write-authority approximation (evaluate_authority) now matches a model name only for a plain workspace-relative path: an absolute path, a `.` or `..` component, a backslash or an empty path is rejected before the stem match, so `../elsewhere/Sample.sea` no longer matches the `Sample` entity. Every remaining allow was already allowed, so this only narrows. Candidate resolution is deny-wins, so the DomainForge candidate never widened what local policy allows; the heuristic stays an approximation (SUP-09h) until domainforge-core's authority evaluator is wired, and no shipped policy bundle enables the engine.
+**Summary:** The DomainForge write-authority approximation (evaluate_authority) now matches a model name only for a plain workspace-relative path: an absolute path, an empty, `.` or `..` segment, a backslash or an empty path is rejected before the stem match, so `../elsewhere/Sample.sea` no longer matches the `Sample` entity. Every remaining allow was already allowed, so this only narrows. Candidate resolution is deny-wins, so the DomainForge candidate never widened what local policy allows; the heuristic stays an approximation (SUP-09h) until domainforge-core's authority evaluator is wired, and no shipped policy bundle enables the engine. Review fix (PR #46): the raw `/` segments are checked, because Path::components() silently drops an interior `.` and empty segments, so `models/./Sample.sea` had still matched.
 
 **Verified:**
 
-- cargo test -p sea-forge-authority --test conformance_m0_authority domainforge: escaping paths (../, absolute, ./, dir/../, backslash, empty) are denied and models/Sample.sea is still allowed; the test fails with the guard disabled (mutation-checked)
+- cargo test -p sea-forge-authority --test conformance_m0_authority domainforge: escaping paths (../, absolute, ./, dir/../, backslash, models/./, models//, trailing /, empty) are denied and models/Sample.sea is still allowed; the test fails with the guard disabled (mutation-checked)
 - cargo test -p sea-forge-authority (all targets), -p sea-forge-domainforge, -p sea-forge-cli --test lifecycle: all pass
 - cargo clippy -p sea-forge-domainforge -p sea-forge-authority --all-targets -D warnings: clean
+- review fix mutation-checked: with Path::components() restored, models/./Sample.sea is allowed and the test fails
 
 **Limits:**
 
