@@ -3,7 +3,7 @@
 //! writes to RealityTrace and never takes a packet's direction or reliability on the requester's word.
 
 use crate::config::CepRealityTraceConfig;
-use sea_forge_authority::cep::EvidenceSource;
+use sea_forge_authority::cep::{EvidenceSource, ObligationSource, SourceRow};
 use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -179,6 +179,35 @@ impl EvidenceSource for RealityTraceSource {
         }
         Err(format!(
             "no RealityTrace ledger holds {ledger_id}:{ordinal}"
+        ))
+    }
+}
+
+impl ObligationSource for RealityTraceSource {
+    /// The rows of one RealityTrace ledger, from the repository that holds it, after its chain verified.
+    fn ledger_rows(&self, ledger_id: &str) -> Result<Vec<SourceRow>, String> {
+        for repo in self.repos()? {
+            let rows: Vec<SourceRow> = self
+                .export(&repo)?
+                .iter()
+                .filter(|r| r.get("ledger_id").and_then(Value::as_str) == Some(ledger_id))
+                .filter_map(|r| {
+                    Some(SourceRow {
+                        ledger_id: ledger_id.to_string(),
+                        ordinal: r.get("append_ordinal")?.as_u64()?,
+                        record_kind: r.get("record_kind")?.as_str()?.to_string(),
+                        payload: r.get("payload").cloned().unwrap_or(Value::Null),
+                    })
+                })
+                .collect();
+            if rows.is_empty() {
+                continue;
+            }
+            self.verify_chain(&repo)?;
+            return Ok(rows);
+        }
+        Err(format!(
+            "no enrolled RealityTrace repository holds ledger {ledger_id}"
         ))
     }
 }

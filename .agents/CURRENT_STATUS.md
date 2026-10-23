@@ -1,23 +1,26 @@
 # Current status
 
-**Status revision:** 158
+**Status revision:** 159
 
-**Stage:** deps-ctutils-advisory + workspace
+**Stage:** obligation-settlement (Horizon HORIZON-001 1.1.0 IS7)
 
-**Summary:** cargo deny failed on main: ctutils 0.4.2 (via chacha20poly1305 in sea-forge-server) is affected by a RustCrypto constant-time advisory, fixed in >=0.4.4. Cargo.lock now pins ctutils 0.4.5. Lockfile-only change. Also adds ../Horizon to godspeedai-stack.code-workspace (the only content of local commit 6e92969 not already on main).
+**Summary:** SEA-Forge records an authority request's claims with its decision and settles an obligation from RealityTrace's own ledger: the new authority_closure verb reads RealityTrace's head (C) itself and stamps the closure with SEA-Forge's clock; settle routes an operation whose decision asserted a modality to settle_obligation, which checks the threshold against RealityTrace's record, admits runs in (B, C] started after the first execution evidence, and applies the supported/contradicted/inconsistent/unresolved table.
 
 **Verified:**
 
-- cargo deny check: advisories ok, bans ok, licenses ok, sources ok
+- cargo test -p sea-forge-authority: all suites pass, including 18 new cep_obligation tests
+- dropping the C bound from admissibility fails c_is_read_at_closure_so_a_run_appended_later_is_excluded
+- cargo clippy -p sea-forge-authority -p sea-forge-server --tests -D warnings: clean; cargo fmt applied
 
 **Limits:**
 
-- No source change; the full test suite runs in CI
-- The DomainForge write-authority engine is still a filename-stem approximation, not model-semantic authority (SUP-09h); readiness B-08 records it as a documented limitation
+- Only the obligation modality settles; prohibition and permission are refused as unsupported
+- The live end-to-end check (Horizon J02 revision 2 with a real RealityTrace) runs from Horizon after Cognate #65 lands
+- sea-forge-server test binaries were not run locally (RAM); CI runs them
 
-**Next:** Merge after CI passes. Replace the approximation with domainforge-core's authority evaluator when it exists; until then, do not enable engine: domainforge for production policy.
+**Next:** Merge after CI passes; then Horizon stage C3 drives question/threshold declare, claims, discrimination, verification, closure and settlement against a live cell.
 
-**Evidence:** `Cargo.lock`, `godspeedai-stack.code-workspace`
+**Evidence:** `crates/sea-forge-authority/src/cep/obligation.rs`, `crates/sea-forge-authority/tests/cep_obligation.rs`
 
 **Spec:** `.agents/specs/security-implementation-v2.spec.md`
 
