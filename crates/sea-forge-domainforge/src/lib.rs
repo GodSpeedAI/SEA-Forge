@@ -654,21 +654,31 @@ pub fn evaluate_authority(
             "DomainForge authority evaluation requires validation evidence".into(),
         ));
     }
-    let semantic_target = std::path::Path::new(resource_id)
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .is_some_and(|target| {
-            model
-                .graph
-                .all_entities()
-                .iter()
-                .any(|entity| entity.name().eq_ignore_ascii_case(target))
-                || model
+    // Only a plain relative path inside the workspace can name a model target. An absolute
+    // path, a `..` or `.` component, or a backslash (a Windows separator that Unix reads as one
+    // name) is rejected before the name match, so `../elsewhere/Sample.sh` never matches `Sample`.
+    let path = std::path::Path::new(resource_id);
+    let workspace_relative = !resource_id.is_empty()
+        && !resource_id.contains('\\')
+        && path
+            .components()
+            .all(|component| matches!(component, std::path::Component::Normal(_)));
+    let semantic_target = workspace_relative
+        && path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .is_some_and(|target| {
+                model
                     .graph
-                    .all_resources()
+                    .all_entities()
                     .iter()
-                    .any(|resource| resource.name().eq_ignore_ascii_case(target))
-        });
+                    .any(|entity| entity.name().eq_ignore_ascii_case(target))
+                    || model
+                        .graph
+                        .all_resources()
+                        .iter()
+                        .any(|resource| resource.name().eq_ignore_ascii_case(target))
+            });
     let raw_decision = match (operation_kind, semantic_target) {
         ("write_file", true) => "Allow",
         ("write_file", false) => "Reject",
@@ -685,8 +695,9 @@ pub fn evaluate_authority(
         // durable record never asserts "evaluated validated model against
         // canonical action" until that evaluator is wired.
         reason: "DomainForge stem-heuristic authority approximation: write_file allowed iff \
-                 the resource_id file stem ASCII-case-insensitively matches a declared \
-                 entity/resource name; full policy evaluation not yet wired"
+                 the resource_id is a plain workspace-relative path whose file stem \
+                 ASCII-case-insensitively matches a declared entity/resource name; full policy \
+                 evaluation not yet wired"
             .into(),
         evidence_refs,
     })

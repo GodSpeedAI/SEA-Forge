@@ -466,6 +466,39 @@ fn domainforge_authority_is_model_semantic() {
         unrelated.normalized_disposition,
         sea_forge_domainforge::CandidateDisposition::Deny
     );
+    // B-08: a matching stem outside a plain workspace-relative path is never a model target.
+    for escaping in [
+        "../elsewhere/Sample.sea",
+        "/etc/Sample.sea",
+        "./Sample.sea",
+        "dir/../Sample.sea",
+        "..\\Sample.sea",
+        "",
+    ] {
+        let trace = sea_forge_domainforge::evaluate_authority(
+            &model,
+            "write_file",
+            escaping,
+            vec!["evi_model".into()],
+        )
+        .unwrap();
+        assert_eq!(
+            trace.normalized_disposition,
+            sea_forge_domainforge::CandidateDisposition::Deny,
+            "{escaping:?} must not match a model target"
+        );
+    }
+    let nested = sea_forge_domainforge::evaluate_authority(
+        &model,
+        "write_file",
+        "models/Sample.sea",
+        vec!["evi_model".into()],
+    )
+    .unwrap();
+    assert_eq!(
+        nested.normalized_disposition,
+        sea_forge_domainforge::CandidateDisposition::Allow
+    );
 }
 
 // ── Task 6: memory_scope authority binding (M4b) ──
