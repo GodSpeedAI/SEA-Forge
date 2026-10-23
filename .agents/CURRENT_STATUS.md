@@ -13,8 +13,9 @@
 **Limits:**
 
 - No source change; the full test suite runs in CI
+- The DomainForge write-authority engine is still a filename-stem approximation, not model-semantic authority (SUP-09h); readiness B-08 records it as a documented limitation
 
-**Next:** Merge after CI passes.
+**Next:** Merge after CI passes. Replace the approximation with domainforge-core's authority evaluator when it exists; until then, do not enable engine: domainforge for production policy.
 
 **Evidence:** `Cargo.lock`, `godspeedai-stack.code-workspace`
 
