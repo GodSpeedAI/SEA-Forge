@@ -271,7 +271,23 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             .as_ref()
             .filter(|rt| rt.require_corroboration)
             .map(|_| "realitytrace");
-        match service.settle_with(operation_id, caller, required) {
+        let source = config
+            .cep_authority
+            .realitytrace
+            .clone()
+            .map(crate::realitytrace_source::RealityTraceSource::new);
+        // An operation whose allow decision asserted a modality is settled from RealityTrace's ledger.
+        let outcome = match service.asserts_obligation(operation_id) {
+            Ok(true) => match &source {
+                Some(source) => service.settle_obligation(operation_id, caller, source),
+                None => Err(sea_forge_authority::cep::CepAuthorityError::Evidence(
+                    "obligation settlement needs RealityTrace configured (cep_authority.realitytrace)".into(),
+                )),
+            },
+            Ok(false) => service.settle_with(operation_id, caller, required),
+            Err(e) => Err(e),
+        };
+        match outcome {
             Ok(done) => json!({
                 "ok": true,
                 "status": done.status,
@@ -279,6 +295,46 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
                 "replayed": done.replayed,
                 "envelope": done.envelope,
                 "ledger_entry": done.committed.entry_ulid(),
+            }),
+            Err(e) => refusal(e.class(), e),
+        }
+    })
+}
+
+/// Record the closure of an obligation's window (`authority_closure` verb). SEA-Forge reads RealityTrace's
+/// ledger head itself and stamps the closure with its own clock.
+pub fn closure(
+    config: &ServerConfig,
+    root: &Path,
+    operation_id: &str,
+    discrimination_observation_id: &str,
+    verification_observation_ids: &[String],
+    caller: &Actor,
+) -> Value {
+    with_service(config, root, |service| {
+        let Some(rt) = config.cep_authority.realitytrace.clone() else {
+            return json!({
+                "error": "obligation closure needs RealityTrace configured (cep_authority.realitytrace)",
+                "error_class": "cep_evidence_refused",
+            });
+        };
+        let source = crate::realitytrace_source::RealityTraceSource::new(rt);
+        match service.record_closure(
+            operation_id,
+            discrimination_observation_id,
+            verification_observation_ids,
+            caller,
+            &source,
+        ) {
+            Ok(ack) => json!({
+                "ok": true,
+                "operation_id": operation_id,
+                "b": ack.b,
+                "c": ack.c,
+                "committed_at": ack.committed_at,
+                "on_time": ack.on_time,
+                "replayed": ack.replayed,
+                "ledger_entry": ack.entry_ulid,
             }),
             Err(e) => refusal(e.class(), e),
         }

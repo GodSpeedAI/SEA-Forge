@@ -910,6 +910,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::AuthorityApproval { .. }
         | Request::AuthorityEvidence { .. }
         | Request::AuthoritySettle { .. }
+        | Request::AuthorityClosure { .. }
         | Request::CaseCommit { .. }
         | Request::ApprovalDecide { .. }
         | Request::CaseAddItem { .. }

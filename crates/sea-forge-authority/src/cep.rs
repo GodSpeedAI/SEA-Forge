@@ -11,6 +11,12 @@
 //! The evaluated actor is the *verified caller* supplied by the server's
 //! identity gate. The envelope's subject is recorded, never trusted for role.
 
+mod obligation;
+pub use obligation::{
+    argv_digest, judge, obligation_of, ClosureAck, Obligation, ObligationSource, RunResult,
+    SourceRow, CLOSURE_KIND, DEFAULT_CLOSE_GRACE_S,
+};
+
 use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use chrono::{DateTime, Duration, Utc};
 use sea_forge_core::errors::ForgeError;
@@ -98,6 +104,8 @@ pub enum CepAuthorityError {
     /// A world transition whose facts do not hold: unregistered or identical worlds, or claims that
     /// contradict what SEA-Forge recomputes from the registered identities.
     Transition(String),
+    /// The request's `claims` are not a bounded, flat map of plain keys to strings or numbers.
+    Claims(String),
     Internal(String),
 }
 
@@ -118,6 +126,7 @@ impl fmt::Display for CepAuthorityError {
             Self::Approval(m) => write!(f, "approval refused: {m}"),
             Self::Evidence(m) => write!(f, "evidence or settlement refused: {m}"),
             Self::Transition(m) => write!(f, "world transition refused: {m}"),
+            Self::Claims(m) => write!(f, "malformed authority request: claims {m}"),
             Self::Internal(m) => write!(f, "{m}"),
         }
     }
@@ -135,7 +144,7 @@ impl CepAuthorityError {
     pub fn class(&self) -> &'static str {
         match self {
             Self::Oversize(_) => "cep_request_oversize",
-            Self::Malformed(_) | Self::WrongKind(_) | Self::WrongProfile(_) => {
+            Self::Malformed(_) | Self::WrongKind(_) | Self::WrongProfile(_) | Self::Claims(_) => {
                 "cep_request_invalid"
             }
             Self::World(_) => "cep_world_refused",
@@ -184,6 +193,50 @@ pub struct ParsedRequest {
     pub transition_ref: Option<String>,
     /// Set for `OperationKind::WorldTransition`: the facts SEA-Forge recomputed, not the sender's claims.
     pub transition: Option<VerifiedTransition>,
+    /// The requester's assertions about this operation (`claims` in the request profile), recorded verbatim
+    /// with the decision. Never an input to the verdict.
+    pub claims: Option<serde_json::Map<String, Value>>,
+}
+
+/// Most claims one request may carry, and the longest claim string (mirrors Cognate's bounds).
+pub const MAX_CLAIMS: usize = 16;
+pub const MAX_CLAIM_LENGTH: usize = 512;
+
+fn parse_claims(
+    envelope: &Value,
+    ns: &str,
+) -> Result<Option<serde_json::Map<String, Value>>, CepAuthorityError> {
+    let Some(raw) = envelope.pointer(&format!("{ns}/claims")) else {
+        return Ok(None);
+    };
+    if raw.is_null() {
+        return Ok(None);
+    }
+    let invalid = CepAuthorityError::Claims;
+    let map = raw
+        .as_object()
+        .ok_or_else(|| invalid("must be an object".into()))?;
+    if map.is_empty() || map.len() > MAX_CLAIMS {
+        return Err(invalid(format!("must hold 1 to {MAX_CLAIMS} entries")));
+    }
+    for (key, value) in map {
+        let plain = key.len() <= 64
+            && key.chars().next().is_some_and(|c| c.is_ascii_lowercase())
+            && key
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+        if !plain {
+            return Err(invalid(format!(
+                "key {key:?} must match [a-z][a-z0-9_]{{0,63}}"
+            )));
+        }
+        match value {
+            Value::String(text) if !text.is_empty() && text.chars().count() <= MAX_CLAIM_LENGTH => {}
+            Value::Number(_) => {}
+            _ => return Err(invalid(format!("{key} must be a non-empty string of at most {MAX_CLAIM_LENGTH} characters or a number"))),
+        }
+    }
+    Ok(Some(map.clone()))
 }
 
 pub const TRANSITION_KINDS: [&str; 4] = [
@@ -580,6 +633,7 @@ pub fn parse_request(
             }
         },
         transition,
+        claims: parse_claims(envelope, ns)?,
     })
 }
 
@@ -945,6 +999,10 @@ impl CepAuthorityService<'_> {
         if let Some(t) = &request.transition {
             // The verified facts travel in the committed decision, so the ledger alone can answer what moved.
             parameters["transition"] = t.record(None);
+        }
+        if let Some(claims) = &request.claims {
+            // Recorded with the decision, so the ledger alone shows what the requester asserted when it asked.
+            parameters["claims"] = Value::Object(claims.clone());
         }
         let action = AuthorityAction::Reserved {
             resource_type: request.kind.resource_type().to_string(),
@@ -1368,6 +1426,7 @@ struct AllowedOperation {
     world_ref: String,
     criteria_sha256: Option<String>,
     decision_envelope_id: String,
+    claims: Option<serde_json::Map<String, Value>>,
 }
 
 fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<AllowedOperation> {
@@ -1392,6 +1451,10 @@ fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<Allo
                 .find_map(|r| r.strip_prefix("settlement-criteria:"))
                 .map(str::to_string),
             decision_envelope_id: format!("env-authority_decision-{operation_id}"),
+            claims: action
+                .pointer("/parameters/claims")
+                .and_then(Value::as_object)
+                .cloned(),
         })
     })
 }

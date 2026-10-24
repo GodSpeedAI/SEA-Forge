@@ -764,6 +764,16 @@ pub enum Request {
         #[serde(default)]
         request_id: Option<String>,
     },
+    /// Record the closure of an obligation's window: SEA-Forge reads RealityTrace's ledger head (C) itself
+    /// and stamps the closure with its own clock (Horizon HORIZON-001 1.1.0, REQ-NAV-012).
+    AuthorityClosure {
+        operation_id: String,
+        discrimination_observation_id: String,
+        #[serde(default)]
+        verification_observation_ids: Vec<String>,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     AgentList,
     AgentProbe {
         endpoint: String,
@@ -1623,6 +1633,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::AuthorityApproval { request_id, .. }
         | Request::AuthorityEvidence { request_id, .. }
         | Request::AuthoritySettle { request_id, .. }
+        | Request::AuthorityClosure { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
         | Request::CaseCommit { request_id, .. }
@@ -1657,6 +1668,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::AuthorityApproval { .. }
             | Request::AuthorityEvidence { .. }
             | Request::AuthoritySettle { .. }
+            | Request::AuthorityClosure { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
             | Request::CaseCommit { .. }
@@ -2559,6 +2571,47 @@ pub async fn handle_request_as(
                 }),
             };
             record_outcome(state, request_id.as_deref(), "authority.settle", &response);
+            response
+        }
+        Request::AuthorityClosure {
+            operation_id,
+            discrimination_observation_id,
+            verification_observation_ids,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.closure");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::closure(
+                            &config,
+                            &root,
+                            &operation_id,
+                            &discrimination_observation_id,
+                            &verification_observation_ids,
+                            &caller,
+                        )
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "closure task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_closure requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.closure", &response);
             response
         }
         Request::AuthorityApprovals => {
