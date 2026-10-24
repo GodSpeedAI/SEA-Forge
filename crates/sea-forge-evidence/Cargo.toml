@@ -9,8 +9,8 @@ repository.workspace = true
 description = "SEA Forge evidence and artifact capture."
 
 [dependencies]
-sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
-sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.1.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
+sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.2.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
