@@ -1,6 +1,6 @@
 name: Release
 
-# Tag/release/publish causal chain (Phase 10.1):
+# Tag/release/binary causal chain:
 #
 #   ordinary PR ──merge──▶ main ──▶ release-please UPDATES the standing release PR
 #                                                       (no tag, no release)
@@ -8,28 +8,36 @@ name: Release
 #                                                       creates the GitHub Release,
 #                                                       sets release_created=true,
 #                                                       sets tag_name=vX.Y.Z
-#                                  └─▶ cargo-publish (same workflow) fires,
+#                                  └─▶ release-binaries (same workflow) fires,
 #                                                       checks out the tag,
 #                                                       verifies version sync,
-#                                                       exchanges an OIDC token,
-#                                                       publishes core then cli.
+#                                                       builds the shipped binaries,
+#                                                       attaches a tarball and
+#                                                       SHA256SUMS to the release.
 #
 # Nothing triggers a merge by way of a tag. The tag is an EFFECT of the
 # maintainer merging the standing release PR.
 #
-# This workflow uses pattern 1 (same-workflow follow-up jobs) per Phase 10.1,
-# because there is no need for a separate manual-approval environment.
+# SEA-Forge is not published to crates.io. Its releases ship binaries on the
+# GitHub Release. To (re)attach binaries to an existing tag, run this workflow
+# from the Actions UI (workflow_dispatch) with `tag` set, e.g. v0.2.0.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to (re)attach binaries to, e.g. v0.2.0. Leave empty to run release-please only."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
-# Release and publish runs are NEVER cancelled — cancelling mid-publish could
-# leave the registry half-published. A new push to main updates the standing
+# Release runs are NEVER cancelled — cancelling mid-upload could leave a
+# release with partial assets. A new push to main updates the standing
 # release PR instead, which does not interrupt an in-flight release.
 concurrency:
   group: release-${{ github.ref }}
@@ -64,23 +72,27 @@ jobs:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
-  cargo-publish:
-    name: publish (crates.io, OIDC)
+  release-binaries:
+    name: release-binaries (GitHub Release)
     needs: [release-please]
-    # Fires only when release-please created a release in THIS run. Output
-    # verified at action SHA 5c625bfb (v4.4.1) README "Root component outputs".
-    if: needs.release-please.outputs.release_created == 'true'
+    # Fires when release-please created a release in THIS run, or when a
+    # maintainer dispatches this workflow with `tag` to (re)attach binaries to
+    # an existing release. Output verified at action SHA 5c625bfb (v4.4.1) README "Root component outputs".
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.tag != '') ||
+      needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    environment: crates-io
+    timeout-minutes: 45
     permissions:
-      contents: read
-      id-token: write   # OIDC token exchange with crates.io
+      contents: write   # gh release upload
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
     steps:
-      - name: Checkout the released tag
+      - name: Checkout the release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
 
       - name: Install Devbox
         uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
@@ -91,53 +103,38 @@ jobs:
         run: devbox run -- just setup
 
       - name: release-check (manifest versions vs tag)
-        # Re-verify at publish time, not just at merge time. The tag here is
-        # the tag_name output (e.g. "v0.1.0"); release-check strips the "v".
-        run: devbox run -- just release-check "${{ needs.release-please.outputs.tag_name }}"
+        # Verify the tag matches the workspace version before shipping binaries.
+        # release-check strips the "v" from the tag.
+        run: devbox run -- just release-check "$RELEASE_TAG"
 
-      - name: Exchange OIDC token for crates.io
-        id: auth
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
-        # The action's post step revokes the token when the job ends.
+      - name: Build release binaries
+        # Only the product entry points ship: the `sea-forge` CLI (crates/sea-forge-cli)
+        # and the `sea-forge-server` daemon. Sandbox helper binaries are not shipped.
+        run: devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
 
-      - name: Publish sea-forge-core (idempotent)
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      - name: Package tarball and SHA256SUMS
         run: |
-          set +e
-          out=$(devbox run -- cargo publish --locked -p sea-forge-core --color never 2>&1)
-          rc=$?
-          printf '%s\n' "$out"
-          if [ "$rc" = "0" ]; then exit 0; fi
-          # Idempotency: cargo publish refuses to republish an existing version.
-          # Treat that specific case as success so a re-run after a partial
-          # failure completes only the missing crate.
-          if grep -qiE 'already (exists|uploaded|published)|destination already exists' <<<"$out"; then
-            echo "::notice::sea-forge-core ${{ needs.release-please.outputs.version }} already published — skipping"
-            exit 0
-          fi
-          echo "::error::sea-forge-core failed to publish (rc=$rc). See docs/skills/release-management.md for recovery."
-          exit "$rc"
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          stage="sea-forge-${version}-x86_64-unknown-linux-gnu"
+          archive="${stage}.tar.gz"
+          rm -rf dist
+          mkdir -p "dist/${stage}"
+          cp target/release/sea-forge target/release/sea-forge-server LICENSE "dist/${stage}/"
+          tar -C dist -czf "dist/${archive}" "${stage}"
+          (cd dist && sha256sum "${archive}" > SHA256SUMS && sha256sum -c SHA256SUMS)
+          tar -tzf "dist/${archive}"
 
-      - name: Publish sea-forge-cli (depends on core, idempotent)
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+      - name: Attach binaries to the GitHub Release
         run: |
-          set +e
-          out=$(devbox run -- cargo publish --locked -p sea-forge-cli --color never 2>&1)
-          rc=$?
-          printf '%s\n' "$out"
-          if [ "$rc" = "0" ]; then exit 0; fi
-          if grep -qiE 'already (exists|uploaded|published)|destination already exists' <<<"$out"; then
-            echo "::notice::sea-forge-cli ${{ needs.release-please.outputs.version }} already published — skipping"
-            exit 0
-          fi
-          echo "::error::sea-forge-cli failed to publish (rc=$rc). Recovery: rerun this workflow from the Actions UI against tag ${{ needs.release-please.outputs.tag_name }}; the idempotent steps above will skip the crate that already published."
-          exit "$rc"
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          archive="sea-forge-${version}-x86_64-unknown-linux-gnu.tar.gz"
+          gh release upload "$RELEASE_TAG" "dist/${archive}" dist/SHA256SUMS \
+            --clobber --repo "$GITHUB_REPOSITORY"
 
-      - name: Partial-publish failure report
+      - name: Binary attach failure report
         if: failure()
         run: |
-          echo "::error::Publication incomplete for tag ${{ needs.release-please.outputs.tag_name }}."
-          echo "Recovery procedure: docs/skills/release-management.md §Partial-publish recovery."
-          echo "Do NOT re-tag or re-release the same version. Re-running this workflow is safe; both steps above are idempotent."
+          echo "::error::Binaries not attached for tag ${RELEASE_TAG}."
+          echo "Recovery: rerun this workflow from the Actions UI (workflow_dispatch) with tag=${RELEASE_TAG}. --clobber makes the rerun safe."

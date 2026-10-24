@@ -1,13 +1,15 @@
 ---
 name: release-management
-description: Consult when cutting a release of sea-forge-core / sea-forge-cli, when a release failed partway through, when configuring crates.io trusted publishing, when rotating the RELEASE_PLEASE_TOKEN, when activating or verifying the main-branch ruleset, or when asked "how do releases work here."
+description: Consult when cutting a release of SEA-Forge, when a release's binaries failed to attach or need to be re-attached to an existing tag, when verifying a downloaded release binary's checksum, when rotating the RELEASE_PLEASE_TOKEN, when activating or verifying the main-branch ruleset, or when asked "how do releases work here."
 ---
 
 # Release management
 
-This is the runbook for releases of `GodSpeedAI/SEA-rs`. It describes what
-Phase 10 of the CI/CD directive actually built. Read together with
-`docs/ci-cd-architecture.md` §5 (the causal chain) and §6 (publication).
+This is the runbook for releases of `GodSpeedAI/SEA-Forge`. SEA-Forge is **not**
+published to crates.io. Every release ships built binaries and a SHA-256
+checksum file as assets of its GitHub Release. Read together with
+`docs/explanations-and-references/ci-cd-architecture.md` §5 (the causal chain)
+and §6 (publication).
 
 ## 1. The causal chain, stated plainly
 
@@ -19,10 +21,10 @@ Phase 10 of the CI/CD directive actually built. Read together with
 - That merge is the **only** event that causes Release Please to cut a tag
   (`vX.Y.Z`) and create the GitHub Release, in that order, in the same
   `release-please.yml` run.
-- The `cargo-publish` job in the same workflow then fires (conditioned on
-  `release_created == 'true'`), checks out the tag, verifies version
-  synchronization, exchanges an OIDC token with crates.io, and publishes
-  `sea-forge-core` then `sea-forge-cli`.
+- The `release-binaries` job in the same workflow then fires (conditioned on
+  `release_created == 'true'`), checks out the tag, runs `just release-check`,
+  builds the shipped binaries in release mode, and uploads a tarball plus
+  `SHA256SUMS` to that GitHub Release.
 - Nothing triggers a merge by way of a tag. A tag is the effect, not the
   trigger.
 
@@ -41,15 +43,15 @@ that is a defect against this runbook.
 - [ ] The release PR's body (pending changelog) is acceptable for public
       release. Hide or rewrite entries that should not appear publicly
       before merging — Release Please will publish what is in the body.
-- [ ] No open partial-publish recovery is in progress for the same version.
-- [ ] (After §6 is complete) crates.io trusted publishing is configured for
-      both crates, workflow path `.github/workflows/release-please.yml`,
-      job `cargo-publish`, environment `crates-io`.
+- [ ] No open binary-attach recovery is in progress for the same version.
+- [ ] Every workspace crate still has `publish = false` in its `[package]`
+      (`cargo metadata --no-deps --format-version 1 | jq '.packages[]|.publish'`
+      must print only `[]`). This guards against an accidental crates.io upload.
 
 ## 3. Version synchronization decision rule
 
-**Default: synchronized.** Both crates share `version.workspace = true` in
-`Cargo.toml`. One Release Please bump moves both. There is no per-crate
+**Default: synchronized.** Every workspace crate shares `version.workspace = true` in
+`Cargo.toml`. One Release Please bump moves all of them. There is no per-crate
 version independence in this repository today.
 
 **Exception evidence required:** if a future change needs one component to
@@ -72,114 +74,64 @@ Without all three, synchronization is the rule.
 4. Watch `.github/workflows/release-please.yml`:
    - The `release-please` job should set `release_created=true` and
      `tag_name=vX.Y.Z`.
-   - The `cargo-publish` job should fire, check out the tag, pass
-     `just release-check`, exchange the OIDC token, and publish
-     `sea-forge-core` then `sea-forge-cli`.
-5. Confirm both crates are visible at their new version:
-   `curl -sL https://crates.io/api/v1/crates/sea-forge-core | jq .versions[-1].num`
-   and the same for `sea-forge-cli`.
-6. Confirm the GitHub Release exists at the new tag with the changelog body.
+   - The `release-binaries` job should fire, check out the tag, pass
+     `just release-check`, build `sea-forge` and `sea-forge-server` with
+     `--release --locked`, and run `gh release upload` for the tarball and
+     `SHA256SUMS`.
+5. Confirm the GitHub Release at `vX.Y.Z` lists these assets:
+   - `sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz`
+   - `SHA256SUMS`
+6. Verify the checksum (§6) on a downloaded copy.
 
-That's the whole procedure. There is no separate manual `cargo publish`,
-`git tag`, or `gh release create` step in the normal path.
+That's the whole procedure. There is no separate manual `gh release create`,
+`gh release upload`, or `git tag` step in the normal path.
 
-## 5. Partial-publish recovery
+## 5. Re-attaching binaries to an existing tag (recovery)
 
-A partial publish happens when, e.g., `sea-forge-core` publishes successfully
-but `sea-forge-cli` fails. crates.io does not support rollback, so the
-recovery is **to complete the missing publish for the already-existing
-tag**, not to re-tag or re-release the same version.
+Use this when the `release-binaries` job failed, was skipped, or a release
+was cut before its binaries were attached (for example `v0.2.0`). Re-running
+is safe: `gh release upload --clobber` replaces assets with the same name.
 
-### Recovery procedure
-
-1. Identify which crate did not publish. The failed `cargo-publish` job's
-   `::error::` annotation names it.
-2. From the Actions UI, re-run the failed workflow against the same tag
-   (`vX.Y.Z`). Both publish steps are idempotent: the step that already
-   succeeded will detect the "already published" message from cargo and
-   skip; the step that failed will publish.
-3. If the re-run also fails for the same crate, debug locally:
+1. From the Actions UI, or from a terminal:
 
    ```sh
-   git fetch --tags --quiet
-   git checkout "vX.Y.Z"
-   devbox shell
-   just setup
-   just release-check "vX.Y.Z"
-   # Bootstrap only if the OIDC path itself is broken; otherwise prefer
-   # rerunning the workflow.
+   gh workflow run release-please.yml --repo GodSpeedAI/SEA-Forge --ref main -f tag=v0.2.0
+   gh run watch --repo GodSpeedAI/SEA-Forge   # optional: follow the run
    ```
 
-4. **Never** cut a new tag or release for the same content. A second
-   `vX.Y.Z` cannot exist; the only fix is to complete the publish of the
-   already-tagged version, or — if the version genuinely cannot ship — to
-   yank it after the fact and cut `vX.(Y+1).0`.
+2. The run checks out `v0.2.0`, runs `release-check` against that tag, builds
+   the binaries, and re-uploads them to the existing release. The `tag` input
+   must name a tag whose GitHub Release already exists; `gh release upload`
+   fails otherwise.
+3. The `release-please` job also runs on a dispatch. On a dispatch it normally
+   only refreshes the standing release PR and does not cut a release, so it is
+   harmless; if it reports `release_created=true`, a new release was cut and
+   must be checked before merging anything else.
+4. **Never** re-tag or re-create a release for the same version to fix a
+   missing asset. Re-attach instead.
 
-### What "idempotent" means concretely
+## 6. Release artifacts and checksum verification
 
-Each `cargo publish` step captures cargo's combined stdout/stderr. If cargo
-returns success, the step passes. If cargo's output matches the pattern
-`already (exists|uploaded|published)` or `destination already exists`, the
-step treats the run as success (the version is already on the registry) and
-prints a `::notice::` annotation. Any other non-zero exit code is a real
-failure and the step fails loudly.
+| Asset | Contents |
+| --- | --- |
+| `sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | `sea-forge` (CLI), `sea-forge-server` (daemon), `LICENSE`, under a top-level `sea-forge-X.Y.Z-x86_64-unknown-linux-gnu/` directory |
+| `SHA256SUMS` | SHA-256 line for the tarball above |
 
-## 6. crates.io trusted-publisher configuration
+Only x86_64 Linux (glibc) is built. Other platforms have no asset yet.
 
-Lives at `https://crates.io/crates/<crate>/settings` for each crate, under
-"Trusted Publishing". The configuration that matches this repository:
-
-- Repository: `GodSpeedAI/SEA-rs`
-- Workflow filename: `.github/workflows/release-please.yml`
-- Environment: `crates-io`
-- Job: `cargo-publish` (implied by the workflow filename + environment)
-
-### How to recreate it if lost
-
-1. Visit `https://crates.io/crates/sea-forge-core/settings` (and the same
-   for `sea-forge-cli`).
-2. Under "Trusted Publishing", add a new publisher with the values above.
-3. Run an **intentional real patch release** (e.g. a docs-only Conventional
-   Commit `docs: ...`) to confirm the OIDC exchange works end to end. This is
-   not a no-op: it bumps the version, cuts a real `vX.Y.Z` tag, creates a
-   GitHub Release, and publishes that version to crates.io. Do this only when
-   you are ready to ship a real (if minor) version, since the published
-   version cannot be unpublished (only yanked). There is no way to validate
-   the trusted-publishing OIDC path without a real publish; `cargo publish
-   --dry-run` does not exercise it.
-
-### Required manual bootstrap (one-time, not yet done)
-
-Trusted publishing on crates.io requires the crate to already exist. Today
-both crates return HTTP 404 from `https://crates.io/api/v1/crates/<name>`.
-The bootstrap is:
+To verify a download:
 
 ```sh
-# 1. Create a one-time classic API token at:
-#    https://crates.io/settings/tokens
-#    Scope: publish-new only. Copy the token to your clipboard.
-
-# 2. In a devbox shell at the repo root. Read the token with hidden input so
-#    it never enters shell history or the terminal scrollback:
-read -rs -p "CARGO_REGISTRY_TOKEN: " CARGO_REGISTRY_TOKEN; echo
-export CARGO_REGISTRY_TOKEN
-just setup
-just release-check        # sanity: versions synchronized, currently 0.1.0
-just publish-bootstrap sea-forge-core
-just publish-bootstrap sea-forge-cli
-
-# 3. Visit https://crates.io/crates/sea-forge-core/settings and the same
-#    for sea-forge-cli:
-#    a. Link this GitHub repository.
-#    b. Add the Trusted Publishing entry from the table above.
-
-# 4. Revoke the classic token at https://crates.io/settings/tokens.
-unset CARGO_REGISTRY_TOKEN
+gh release download vX.Y.Z --repo GodSpeedAI/SEA-Forge \
+  -p 'sea-forge-*-x86_64-unknown-linux-gnu.tar.gz' -p SHA256SUMS
+sha256sum -c SHA256SUMS
+# expected: sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz: OK
+tar -xzf sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz
 ```
 
-After step 3, every subsequent release publishes via OIDC. The
-`cargo-publish` job does not need and does not read any stored
-`CARGO_REGISTRY_TOKEN` repository secret.
+The checksum file is produced in the same job that uploads it, so it protects
+against a corrupted or truncated download, not against a compromised release.
+Signing is not in place.
 
 ## 7. Token rotation
 
@@ -204,38 +156,35 @@ The repository has exactly one secret that needs rotation: `RELEASE_PLEASE_TOKEN
 - **Rotation:**
   1. Visit `https://github.com/settings/personal-access-tokens`.
   2. Generate a new fine-grained token with the same scope on this repo.
-  3. `gh secret set RELEASE_PLEASE_TOKEN --repo GodSpeedAI/SEA-rs` and paste.
+  3. `gh secret set RELEASE_PLEASE_TOKEN --repo GodSpeedAI/SEA-Forge` and paste.
   4. Revoke the old token.
   5. Trigger a release-please run (`workflow_dispatch` on
      `.github/workflows/release-please.yml`) to confirm the new token works.
 - **Never** print the token in a workflow, log, or commit message.
 
-There is no `CARGO_REGISTRY_TOKEN` to rotate: the registry side is OIDC only.
+The release binaries job uses only the run's `GITHUB_TOKEN` (`contents: write`).
+There is no registry token to store or rotate.
 
 ## 8. Dry-running a release
 
-There is no fully safe way to publish to crates.io "for testing" — once a
-version is on the registry it stays there. The safe dry-run sequence is:
-
 1. On a feature branch, run `just release-check` and `just ci` locally.
-2. Trigger `.github/workflows/release-please.yml` via `workflow_dispatch`
-   against `main`. The release-please job will open (or update) the standing
-   release PR; this is recoverable — close the PR if it is unwanted.
-3. **Do not merge the release PR** until you are ready to publish. Merging is
-   the irreversible step.
-4. To verify the publish path itself without a real publish, manually run
-   `cargo publish --dry-run --locked -p sea-forge-core` and the same for
-   `sea-forge-cli` locally. `--dry-run` validates the package — build,
-   manifest, packaging, and dependency resolution — **without uploading** it
-   to the registry. It may still contact the registry to verify dependencies;
-   pass `--offline` only if all registry data must come from the local cache.
+2. To rehearse the binary build, run the same command the job runs:
+   `cargo build --release --locked -p sea-forge-cli -p sea-forge-server`, then
+   check that `target/release/sea-forge` and `target/release/sea-forge-server`
+   exist. Package and checksum steps are in the job's "Package tarball and
+   SHA256SUMS" step.
+3. Trigger `.github/workflows/release-please.yml` via `workflow_dispatch`
+   against `main` without a `tag` input. The release-please job will open (or
+   update) the standing release PR; this is recoverable — close the PR if it
+   is unwanted.
+4. **Do not merge the release PR** until you are ready to release. Merging is
+   the step that cuts the tag and the GitHub Release.
 
 If you need a prerelease channel (alpha/beta), use Conventional Commits'
 `-alpha` / `-beta` suffixes in the version. Release Please will bump to a
-prerelease version and crates.io will treat it as a prerelease (not the
-latest). Configure this by setting `prerelease: true` for the relevant
+prerelease version. Configure this by setting `prerelease: true` for the relevant
 release in `.github/release-please-config.json` only for the duration of the
-prerelease cycle.
+prerelease cycle. GitHub Releases marked as prerelease carry the same assets.
 
 ## 9. Activating branch protection (after the one-time plan action)
 
@@ -330,12 +279,12 @@ Observed or anticipated during Phase 14 validation:
 | `CI / gate` is permanently pending on a PR | required check name was set to a matrix-expanded name like `CI / verify (ubuntu-latest)` instead of the stable `CI / gate` | update the ruleset to require `CI / gate` only |
 | The release PR's `CI / gate` never starts | `RELEASE_PLEASE_TOKEN` is absent or expired, so the workflow fell back to `GITHUB_TOKEN` (F-009) | approve the release PR's pending workflow runs in the Actions tab; create or rotate `RELEASE_PLEASE_TOKEN` (§7) to restore automatic CI |
 | `pr-title.yml` fails on the release PR's title | someone manually edited the release PR title away from Release Please's `chore(main): release vX.Y.Z` | do not bypass; investigate why the title was edited |
-| `cargo-publish` fails "already published" but is treated as failure | the idempotency regex did not match the current cargo output | update the regex in `release-please.yml`; do not re-tag |
-| `cargo-publish` fails on `sea-forge-cli` with "no matching package named `sea-forge-core`" | `sea-forge-core` did not publish first | the workflow already orders core-before-cli; check that the core step's idempotency branch did not falsely skip |
-| Trusted-publishing token exchange returns 401/403 | trusted publisher not yet configured on crates.io, or workflow path / environment / job name in the publisher config does not match this workflow exactly | complete §6's bootstrap and configuration |
-| `just release-check` fails with "workspace version 0.1.0 != tag v0.2.0" | the tag does not match the manifest; an out-of-band version bump was made | never bump `Cargo.toml` manually; let Release Please do it via the release PR |
-| `just check` fails with `context_error: project files changed without a corresponding CURRENT_STATUS.md update` | a tracked project file changed without an `## Updated:` / status refresh | edit `.agents/CURRENT_STATUS.md` (bump the `Updated:` line and describe the change), then rerun |
+| `release-binaries` fails "release not found" on a dispatch | the `tag` input names a tag with no GitHub Release | create the release through Release Please, or fix the tag name; do not create a release by hand |
+| `release-binaries` fails `release-check` with "workspace version 0.2.0 != tag v0.3.0" | the tag does not match the manifest; an out-of-band version bump was made | never bump `Cargo.toml` manually; let Release Please do it via the release PR |
+| `sha256sum -c SHA256SUMS` reports FAILED on a download | truncated or corrupted download, or assets re-uploaded after the file was downloaded | re-download both files from the same release; if it still fails, re-run §5 and compare |
+| `just status-check` fails with "project files changed without corresponding CURRENT_STATUS.yaml and CURRENT_STATUS.md updates" | a tracked project file changed without a status record | add the next revision to `.agents/CURRENT_STATUS.yaml` and rewrite the top of `.agents/CURRENT_STATUS.md`, then rerun |
 | Pre-commit hook fails after pulling changes that touched `Cargo.lock` | toolchain or deps drifted | run `just sync`; the post-checkout hook also prints this hint |
+| `cargo metadata` shows a workspace crate with `publish` not equal to `[]` | a new crate was added without `publish = false` | add `publish = false` to its `[package]` table |
 
 ## 11. Emergency rollback
 
@@ -343,21 +292,17 @@ CI/CD changes can be rolled back without losing evidence:
 
 1. Revert the offending commit on `main` via a normal PR (use
    `revert(scope): ...` as the PR title — Release Please handles `revert`).
-2. If a release shipped a real defect, **yank** the affected crate version(s).
-   Both crates share `version.workspace = true`, so a defective release almost
-   always affects both — yank each one explicitly:
+2. If a release shipped a real defect, remove or replace its binaries and say
+   so in the next release's changelog. Do not delete the tag and re-tag the
+   same version. Remove one asset, for example:
    ```sh
-   cargo yank --vers X.Y.Z sea-forge-core
-   cargo yank --vers X.Y.Z sea-forge-cli
+   gh release delete-asset vX.Y.Z sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz --repo GodSpeedAI/SEA-Forge --yes
    ```
-   Yanking does not delete the version; existing `Cargo.lock` files continue to
-   resolve a yanked version, new ones do not. State this plainly to users in
-   the next release's changelog. (If only one crate is defective, yank only
-   that one — but then the workspace version has already diverged from the
-   registry; the next release re-synchronizes.)
+   Then cut `vX.(Y+1).0` through the normal release PR, or re-attach corrected
+   binaries to the same tag only when the content is unchanged (§5).
 3. To disable the CI/CD automation entirely in an emergency: in the GitHub
    UI, disable `.github/workflows/release-please.yml`. This stops the
-   release PR and publish jobs without touching enforcement of `CI / gate`
+   release PR and binary jobs without touching enforcement of `CI / gate`
    on ordinary PRs. Re-enable by clicking "Enable" on the same workflow.
 
 Never delete a workflow file to disable it; disable via the UI so history is
