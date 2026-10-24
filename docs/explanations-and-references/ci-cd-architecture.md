@@ -237,9 +237,13 @@ rejected because no manual-approval environment boundary is needed.
 The repository targets one registry (crates.io) and publishes two crates
 (`sea-forge-core` and `sea-forge-cli`) that share
 `version.workspace = true`. The single source of truth is
-`[workspace.package] version` in the root `Cargo.toml`. Release Please's
-`rust` strategy bumps that field; both crates inherit it; nothing else
-needs to move. `just release-check [tag]` verifies the workspace version,
+`[workspace.package] version` in the root `Cargo.toml`. Release Please runs
+the `simple` release type with `extra-files` (see
+`.github/release-please-config.json`): it bumps that field through a TOML
+jsonpath and the workspace-member entries in `Cargo.lock` (the `rust`
+strategy is not used because it rewrites each member's `package.version`,
+which fails on the inherited `version.workspace = true`). Both crates
+inherit the version; nothing else needs to move. `just release-check [tag]` verifies the workspace version,
 both crate versions, and the tag all agree before any publish step touches
 the registry, and again at publish time inside the workflow.
 
