@@ -122,7 +122,7 @@ The frontend specs are a **family** of v0.1 documents; the canonical method cata
 | `just doctor/check/test/proof` exist | Shell-SPEC §10.2 | `justfile:30-394` | V-05, V-06 | ✅ | high |
 | CI gate `CI / gate` requires lint+test+macos | `.github/workflows/ci.yml:119-161` | gate job aggregates `needs.{lint,test,macos}.result`; skipped = failure | inspect | ✅ | high |
 | Conventional-commit PR title | `.github/workflows/pr-title.yml` | present | inspect | ✅ | high |
-| Trusted-publishing release flow | `.github/workflows/release-please.yml` | present; bootstrap via `just publish-bootstrap` | not executed this pass | ⚪ | medium |
+| Release binaries flow | `.github/workflows/release-please.yml` (`release-binaries`) | present | not executed this pass | ⚪ | medium |
 | Security workflow | `.github/workflows/security.yml` | present (2.5KB) | not inspected in detail | ⚪ | medium |
 | Devbox pins 8 system tools | Shell-SPEC §3 | `devbox.json` | inspect | ✅ | high |
 

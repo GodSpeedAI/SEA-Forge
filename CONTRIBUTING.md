@@ -92,7 +92,7 @@ updates) so they pass the title check.
 | `git checkout` / `git merge` | `.githooks/post-checkout` prints drift hint if `Cargo.lock` / `rust-toolchain.toml` / `devbox.*` / `.githooks` / `.gitignore` changed |
 | pull request opened | `CI / gate` (lint + test + build + macos + stable gate), `PR title / conventional-commit`, `Security / dependency-review` (advisory) |
 | push to `main` after a normal PR merge | `release-please.yml` updates the standing release PR; **no tag, no release** |
-| push to `main` after the release PR merge | `release-please.yml` cuts the tag, creates the GitHub Release, then publishes both crates to crates.io via OIDC |
+| push to `main` after the release PR merge | `release-please.yml` cuts the tag, creates the GitHub Release, then builds the binaries and attaches a tarball and `SHA256SUMS` to that GitHub Release |
 | weekly schedule | `Security / cargo-deny advisories` runs the network-bound half of `just security` |
 
 `--no-verify` skips the local hooks. It does not skip GitHub CI; the required
@@ -156,14 +156,12 @@ Releases are owned by Release Please. The full runbook is in
 To cut a release: open the standing release PR (titled
 `chore(main): release vX.Y.Z`), verify CI is green and the pending changelog
 is acceptable, and merge it. The tag and the GitHub Release follow
-automatically from that one merge. The crates.io publish of both crates also
-fires automatically **once** the one-time trusted-publisher bootstrap is
-complete for both crates (see `docs/skills/release-management.md` §6 — both
-crates are unpublished today). Until that bootstrap is done the crates will
-not publish automatically and a separate `just publish-bootstrap` step is
-required; do not assume a merged release PR implies a published crate. There
-is no separate `cargo publish` or `git tag` step in the normal path once
-bootstrap is complete.
+automatically from that one merge, and the `release-binaries` job attaches
+the Linux x86_64 binaries (`sea-forge`, `sea-forge-server`) and `SHA256SUMS`
+to the release. SEA-Forge is not published to crates.io; do not look for a
+crates.io package. To verify a download, run `sha256sum -c SHA256SUMS`. To
+re-attach binaries to an existing tag, run the `release-please.yml` workflow
+manually with `tag` set. See `docs/skills/release-management.md` §4-§6.
 
 ## Local-only and remote-only checks
 
@@ -172,7 +170,7 @@ bootstrap is complete.
 | `pr-title.yml` (Conventional Commit title) | remote only | the title does not exist until the PR is opened |
 | `dependency-review-action` (vulnerability diff) | remote only | depends on GitHub's dependency graph |
 | Required `CI / gate` enforcement | remote only | GitHub branch protection |
-| Tag + Release + crates.io publish | remote only | triggered by the release-PR merge |
+| Tag + Release + binary attach | remote only | triggered by the release-PR merge |
 | Everything else | both local and remote, same `just` recipe | parity contract |
 
 ## Where to read more

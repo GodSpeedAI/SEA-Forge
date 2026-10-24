@@ -209,7 +209,7 @@ Coverage philosophy (`ARCHITECTURE.md` §7, `spec-minimum.md` §17): tests asser
 ## 13. Deployment and packaging state
 
 - **No container/deployment manifests present**: no Dockerfile, no k8s yaml, no Helm chart, no Terraform. Deployment is operator-managed; the architecture intentionally keeps the kernel single-process and synchronous.
-- **Release mechanism**: `release-please.yml` (GitHub Actions, OIDC trusted publishing to crates.io for `sea-forge-core` and `sea-forge-cli` only). One-time classic-token bootstrap via `just publish-bootstrap <crate>`.
+- **Release mechanism**: `release-please.yml` (GitHub Actions): release-please cuts the tag and GitHub Release; the `release-binaries` job attaches the `sea-forge` and `sea-forge-server` binaries (x86_64 Linux tarball + SHA256SUMS). Not published to crates.io (every crate sets `publish = false`).
 - **Tauri packaging**: `bun run tauri build` produces a desktop bundle; not yet exercised in CI (Task 14 of the workbench plan, per CURRENT_STATUS).
 - **Version synchronization**: `just release-check [tag]` verifies `workspace.package.version`, `sea-forge-core`, and `sea-forge-cli` agree.
 - **CI gate**: `gate` job requires lint + test + macos all `success` (no path filters; skipped = failed).
