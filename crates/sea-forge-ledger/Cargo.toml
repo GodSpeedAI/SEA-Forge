@@ -9,7 +9,7 @@ repository.workspace = true
 description = "SEA Forge integrity ledger: append-only, chained, MMR-committed, signed."
 
 [dependencies]
-sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
 chrono.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true

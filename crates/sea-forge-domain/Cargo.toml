@@ -9,7 +9,7 @@ repository.workspace = true
 description = "SEA Forge intent vocabulary and domain planning primitives."
 
 [dependencies]
-sea-forge-core = { path = "../sea-forge-core", version = "0.1.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
 
 [lints]
 workspace = true
