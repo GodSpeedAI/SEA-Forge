@@ -52,12 +52,15 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          # PAT so the release PR's push triggers CI. The default GITHUB_TOKEN
-          # cannot trigger a downstream workflow run, which would leave the
-          # release PR without the required CI / gate check.
-          # Scope: contents:write + pull-requests:write on this repo only.
-          # Rotation: docs/skills/release-management.md §Token rotation.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # Prefer the RELEASE_PLEASE_TOKEN PAT: a release PR opened with it
+          # triggers CI, so the required CI / gate check runs (F-009).
+          # Fallback: the job's GITHUB_TOKEN (contents:write + pull-requests:write,
+          # this repo only) when the secret is absent. GitHub creates the release
+          # PR's pull_request runs in an approval-required state for a PR opened or
+          # updated by GITHUB_TOKEN: a maintainer approves those runs (Actions tab)
+          # so CI / gate and conventional-commit execute. See
+          # docs/skills/release-management.md §7.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
