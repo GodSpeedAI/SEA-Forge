@@ -105,6 +105,6 @@ The candidate evaluation passed into `PolicyAuthorityEngine`:
 
 ## 8. Source Trail
 
-* [`crates/sea-forge-domainforge/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domainforge/src/lib.rs) — `load_validate()`, `evaluate()`, `project()`, and finite limits.
-* [`docs/decisions/ADR-001-domainforge-semantic-boundary.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-001-domainforge-semantic-boundary.md) — Architectural decision record defining the boundary.
-* [`crates/sea-forge-authority/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs) — Integration of `DomainForgeCandidate` into final policy decisions.
+* [`crates/sea-forge-domainforge/src/lib.rs`](../../crates/sea-forge-domainforge/src/lib.rs) — `load_validate()`, `evaluate()`, `project()`, and finite limits.
+* [`docs/decisions/ADR-001-domainforge-semantic-boundary.md`](../../docs/decisions/ADR-001-domainforge-semantic-boundary.md) — Architectural decision record defining the boundary.
+* [`crates/sea-forge-authority/src/lib.rs`](../../crates/sea-forge-authority/src/lib.rs) — Integration of `DomainForgeCandidate` into final policy decisions.

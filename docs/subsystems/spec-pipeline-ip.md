@@ -93,6 +93,6 @@ When executing a spec pipeline via `stage_case_plan()`:
 
 ## 8. Source Trail
 
-* [`crates/sea-forge-spec-pipeline/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-spec-pipeline/src/lib.rs) — Pipeline stage hashing, ordering, and execution logic.
-* [`crates/sea-forge-artifact-ip/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-artifact-ip/src/lib.rs) — Artifact-to-IP transition engine and lifecycle management.
-* [`crates/sea-forge-planner/src/lib.rs#L85-L155`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/lib.rs#L85-L155) — `stage_case_plan()` implementation converting pipeline stages to CMMN plan items.
+* [`crates/sea-forge-spec-pipeline/src/lib.rs`](../../crates/sea-forge-spec-pipeline/src/lib.rs) — Pipeline stage hashing, ordering, and execution logic.
+* [`crates/sea-forge-artifact-ip/src/lib.rs`](../../crates/sea-forge-artifact-ip/src/lib.rs) — Artifact-to-IP transition engine and lifecycle management.
+* [`crates/sea-forge-planner/src/lib.rs#L85-L155`](../../crates/sea-forge-planner/src/lib.rs#L85-L155) — `stage_case_plan()` implementation converting pipeline stages to CMMN plan items.

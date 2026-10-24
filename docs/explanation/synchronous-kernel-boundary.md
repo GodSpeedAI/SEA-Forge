@@ -38,27 +38,13 @@ Asynchronous runtimes and HTTP stacks (`tokio`, `hyper`, `h2`, `rustls`, `mio`) 
 
 ---
 
-## 3. The Standalone Tauri Workspace Boundary (ADR-004)
+## 3. The Standalone Desktop Workspace Boundary (Historical)
 
-> Status (2026-10-13): the `src-tauri` workspace described in this section was removed. The section is kept as history of the boundary decision; see ADR-004's status update.
+> Status (2026-10-13): the Tauri `src-tauri` workspace was removed with the desktop shell. This section is kept as history; the current Workbench is a Bun/React web renderer that reaches the kernel through SFWP. See [ADR-004](../decisions/ADR-004-workbench-stack.md).
 
-A subtle but critical architectural decision was made in **ADR-004** regarding the desktop application (`workbench/apps/desktop/src-tauri`):
+The original boundary decision was still instructive. A Tauri host depends on `tokio`, `webkit2gtk`, and native windowing libraries. If it had been an ordinary member of the root Cargo workspace, `cargo check --workspace` would have adopted those dependencies into the kernel's dependency graph, breaking the `no-async-kernel` boundary and forcing headless CI hosts to install GTK and WebKit merely to build the kernel.
 
-### The Risk
-The Tauri desktop framework depends on `tokio`, `webkit2gtk`, and complex native windowing libraries. If `src-tauri` were an ordinary member of the root Cargo workspace, `cargo check --workspace` would adopt Tauri's dependencies into the kernel's dependency graph, permanently breaking the `no-async-kernel` boundary and forcing headless CI servers to install GTK and WebKit libraries merely to build the kernel.
-
-### The Resolution: Empty `[workspace]` Table
-`workbench/apps/desktop/src-tauri/Cargo.toml` explicitly declares an **empty `[workspace]` table**:
-```toml
-[package]
-name = "sea-forge-workbench-desktop"
-version = "0.1.0"
-edition = "2021"
-
-[workspace]
-# Deliberately empty: creates an independent workspace root (ADR-004)
-```
-Because Cargo does not traverse upwards past an existing `[workspace]` table, `src-tauri` forms an independent workspace with its own `Cargo.lock`. The root Rust workspace builds the kernel, CLI, and server without touching desktop dependencies; the desktop builds independently during Workbench gates.
+The Tauri manifest therefore declared an empty `[workspace]` table, making `src-tauri` its own workspace root with its own lockfile. Cargo does not traverse upward past an existing `[workspace]` table. That host is gone; the boundary rule it protected is not.
 
 ---
 
@@ -89,20 +75,21 @@ Invariant BUILD-01 is not an informal guideline; it is enforced mechanically by 
 ```sh
 just no-async-kernel
 ```
-The script inspects `cargo tree` for the 19 synchronous crates:
+The script inspects `cargo tree` for the 22 synchronous crates (all workspace members except `sea-forge-agent` and `sea-forge-server`):
 * `sea-forge-core`, `sea-forge-domain`, `sea-forge-planner`, `sea-forge-authority`
 * `sea-forge-sandbox`, `sea-forge-runtime`, `sea-forge-trace`, `sea-forge-evidence`
 * `sea-forge-settlement`, `sea-forge-capability`, `sea-forge-ledger`, `sea-forge-domainforge`
 * `sea-forge-spec-pipeline`, `sea-forge-cell`, `sea-forge-artifact-ip`, `sea-forge-self-model`
-* `sea-forge-thoth`, `sea-forge-case-runner`, `sea-forge-extension`
+* `sea-forge-thoth`, `sea-forge-case-runner`, `sea-forge-extension`, `sea-forge-cli`
+* `sea-forge-changeset`, `sea-forge-realitytrace`
 
-If any of these 19 crates transitively references `tokio`, `async-std`, `futures`, `reqwest`, or `hyper`, the gate fails immediately and CI turns red.
+If any of these 22 crates transitively references `tokio`, `async-std`, `futures`, `reqwest`, or `hyper`, the gate fails immediately and CI turns red. The two edge crates are where async is allowed.
 
 ---
 
 ## 6. Source Evidence
 
-* [`justfile:111-146`](file:///c:/Users/sprim/projects/sea-rs/justfile#L111-L146) — Canonical `no-async-kernel` verification recipe.
-* [`docs/decisions/ADR-004-workbench-stack.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-004-workbench-stack.md) — Architectural decision isolating the Tauri workspace.
-* [`workbench/apps/desktop/src-tauri/Cargo.toml`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src-tauri/Cargo.toml) — Independent `[workspace]` declaration.
-* [`crates/sea-forge-server/src/case_dispatch.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs) — `spawn_blocking` integration seam.
+* [`justfile:111-146`](../../justfile#L111-L146) — Canonical `no-async-kernel` verification recipe.
+* [`docs/decisions/ADR-004-workbench-stack.md`](../decisions/ADR-004-workbench-stack.md) — Architectural decision isolating the removed Tauri workspace.
+* [`workbench/AGENTS.md`](../../workbench/AGENTS.md) — Current Workbench renderer/host boundary.
+* [`crates/sea-forge-server/src/case_dispatch.rs`](../../crates/sea-forge-server/src/case_dispatch.rs) — `spawn_blocking` integration seam.

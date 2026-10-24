@@ -113,8 +113,8 @@ Raw agent transcripts often contain sensitive context or proprietary prompts. To
 
 ## 8. Source Trail
 
-* [`crates/sea-forge-thoth/src/manager.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-thoth/src/manager.rs) — Thoth manager loop, iteration logic, and SoD enforcement.
-* [`crates/sea-forge-thoth/src/service.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-thoth/src/service.rs) — `thoth.ask` Q&A implementation.
-* [`crates/sea-forge-agent/src/acp.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/acp.rs) — Agent Client Protocol driver and session state.
-* [`crates/sea-forge-agent/src/delegation.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/delegation.rs) — Delegation execution, transcript redaction, and hashing.
-* [`crates/sea-forge-server/src/transcript_seal.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/transcript_seal.rs) — XChaCha20Poly1305 transcript encryption.
+* [`crates/sea-forge-thoth/src/manager.rs`](../../crates/sea-forge-thoth/src/manager.rs) — Thoth manager loop, iteration logic, and SoD enforcement.
+* [`crates/sea-forge-thoth/src/service.rs`](../../crates/sea-forge-thoth/src/service.rs) — `thoth.ask` Q&A implementation.
+* [`crates/sea-forge-agent/src/acp.rs`](../../crates/sea-forge-agent/src/acp.rs) — Agent Client Protocol driver and session state.
+* [`crates/sea-forge-agent/src/delegation.rs`](../../crates/sea-forge-agent/src/delegation.rs) — Delegation execution, transcript redaction, and hashing.
+* [`crates/sea-forge-server/src/transcript_seal.rs`](../../crates/sea-forge-server/src/transcript_seal.rs) — XChaCha20Poly1305 transcript encryption.

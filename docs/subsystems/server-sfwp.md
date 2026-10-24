@@ -98,8 +98,8 @@ The server and CLI resolve the cell root according to `docs/CELL_CONTRACT.md`:
 
 ## 8. Source Trail
 
-* [`crates/sea-forge-server/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/lib.rs) — `ServerState`, Unix listener loop, admission semaphore, and case entry maps.
-* [`crates/sea-forge-server/src/sfwp/mod.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/mod.rs) — SFWP method catalog, interaction classes, and byte caps.
-* [`crates/sea-forge-server/src/sfwp/correlation.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/correlation.rs) — `RequestCorrelationStore` idempotency implementation.
-* [`crates/sea-forge-server/src/config.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/config.rs) — Cell root resolution and configuration loading.
-* [`tests/conformance_sfwp.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/tests/conformance_sfwp.rs) — SFWP protocol negotiation, schema drift, and admission tests.
+* [`crates/sea-forge-server/src/lib.rs`](../../crates/sea-forge-server/src/lib.rs) — `ServerState`, Unix listener loop, admission semaphore, and case entry maps.
+* [`crates/sea-forge-server/src/sfwp/mod.rs`](../../crates/sea-forge-server/src/sfwp/mod.rs) — SFWP method catalog, interaction classes, and byte caps.
+* [`crates/sea-forge-server/src/sfwp/correlation.rs`](../../crates/sea-forge-server/src/sfwp/correlation.rs) — `RequestCorrelationStore` idempotency implementation.
+* [`crates/sea-forge-server/src/config.rs`](../../crates/sea-forge-server/src/config.rs) — Cell root resolution and configuration loading.
+* [`tests/conformance_sfwp.rs`](../../crates/sea-forge-server/tests/conformance_sfwp.rs) — SFWP protocol negotiation, schema drift, and admission tests.

@@ -168,7 +168,20 @@ export async function designCaseViaUi(
   const before = listCases(cell);
   if (!(await visible(b, "center-design"))) await focusFirstOutlineItem(b);
   await b.waitFor(`!!document.querySelector('[data-testid="center-design"]')`, 15000, "Design case entry");
-  await b.click('[data-testid="center-design"]');
+  // The center chips are re-created on every scene update, and a case still settling from the previous
+  // journey keeps streaming them: a click can land on a chip React has just replaced, so its handler never
+  // runs (no template request reaches the gateway). Retry the click until the picker opens; what the
+  // picker must then list is asserted unchanged below.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await b.click('[data-testid="center-design"]');
+      await b.waitFor(`!!window.__gs.store.getState().proposal`, 5000, "template picker opened");
+      break;
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      await b.waitFor(`!!document.querySelector('[data-testid="center-design"]')`, 15000, "Design case entry");
+    }
+  }
   await b.waitFor(`document.querySelectorAll('[data-testid="proposal-template"]').length >= 2`, 15000, "templates listed");
   await b.click(`[data-testid="proposal-template"][data-ref="${templateRef}"]`);
   await b.waitFor(`!!document.querySelector('[data-testid="proposal-param"]')`, 10000, "parameters rendered");

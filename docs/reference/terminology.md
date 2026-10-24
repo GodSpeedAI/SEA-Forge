@@ -7,7 +7,7 @@
 ## Master Glossary
 
 ### ActionGrant
-* **What it is:** A non-cloneable, non-serializable move-only Rust struct (`crates/sea-forge-authority/src/lib.rs`) minted by `PolicyAuthorityEngine` upon an `Allow` decision. It acts as an unforgeable token proving that a specific action was pre-authorized, binding the executable binary hash, workspace boundaries, allowed network ports, and timeout.
+* **What it is:** A non-cloneable, non-serializable move-only Rust struct (`crates/sea-forge-authority/src/lib.rs`) minted by `PolicyAuthorityEngine` upon an `Allow` decision. It acts as an unforgeable token proving that a specific action was pre-authorized, binding the canonical executable path, workspace boundaries, sandbox class, timeout, environment keys, and a boundary map. The current `0.1` policy schema does not accept a `network` boundary dimension, so grants start with a denied network posture.
 * **What it is not:** It is not a serializable capability string, an OAuth token, or an ambient permission flag. It cannot be duplicated or reused across runs.
 
 ### Cell (`SeaCell`)

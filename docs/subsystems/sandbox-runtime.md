@@ -1,132 +1,133 @@
-# Subsystem: Sandboxing & Runtime Execution
+# Subsystem: Sandbox and Runtime
 
-> **OS-level jail isolation, NetworkPosture enforcement, and argv execution consuming ActionGrants.**  
+> **Grant consumption, executable identity re-check, OS confinement, process execution.**
 > Governed crates: `sea-forge-sandbox`, `sea-forge-runtime`
 
 ---
 
 ## 1. Purpose
 
-The **Sandboxing & Runtime Execution** subsystem is the physical execution boundary of SEA Forge. It ensures that once work is authorized by the authority engine, it executes within strictly constrained, isolated environments. It guarantees that child processes cannot traverse the host filesystem, cannot inherit ambient parent secrets, cannot open unauthorized network connections, and cannot exceed declared execution timeouts.
+The runtime is the only code path that turns an `ActionGrant` into a child process. It verifies that the grant still matches the request, re-resolves the executable path, selects a sandbox class, prepares the confinement, spawns the child with an explicit argv and a stripped environment, captures output, and enforces a timeout.
+
+The sandbox crate implements the confinement backends. It does not decide whether an action is allowed; authority does that. It also does not decide whether the outcome is acceptable; settlement does that.
 
 ---
 
-## 2. Responsibilities
+## 2. Sandbox Classes
 
-* **Sandbox Selection & Materialization (`sea-forge-sandbox`):** Selects and configures the appropriate isolation backend based on `SandboxClass` (`Local`, `Jail`, `Microvm`).
-* **Linux Landlock Jails (`JailSandbox`):** Applies Linux Landlock (ABI v1–v6) security rulesets via `landlock_create_ruleset` and `prctl(PR_SET_NO_NEW_PRIVS)`, restricting filesystem access strictly to the run workspace and artifacts directories.
-* **Network Posture Enforcement:** Enforces TCP bind and connect restrictions via Landlock network access flags (`NetworkPosture::Denied` by default, or explicit `AllowTcpPorts`).
-* **macOS Seatbelt Isolation:** Generates dynamic Scheme profiles for macOS `sandbox-exec` restricting read/write access to approved directory trees.
-* **Argv Child Execution (`sea-forge-runtime`):** Spawns child processes using explicit `argv` vectors—never interpolating commands into shell interpreters (`sh -c`).
-* **Pre-Spawn Executable Hash Verification:** Validates that `argv[0]` on disk matches the exact cryptographic hash certified by the `ActionGrant`.
-* **Environment Sanitization & Timeouts:** Strips ambient parent environment variables (forwarding only declared keys such as `PATH` and `HOME`) and kills hanging children upon wall-clock timeout expiry.
-
----
-
-## 3. Non-Responsibilities
-
-* **Policy Decisions:** Does not determine whether a command or file write is permitted (owned by `sea-forge-authority`).
-* **Outcome Settlement:** Does not evaluate whether execution was successful based on stdout or created files (owned by `sea-forge-settlement`).
-
----
-
-## 4. Position in the System
-
-```mermaid
-flowchart LR
-    AUTH["sea-forge-authority"] -->|Mints move-only ActionGrant| RUNTIME["sea-forge-runtime::execute()"]
-    RUNTIME --> VERIFY["Verify Executable SHA-256 vs Grant"]
-    VERIFY --> SELECT["select_sandbox(grant.sandbox_class())"]
-    SELECT --> JAIL["JailSandbox (Landlock / Seatbelt)"]
-    JAIL --> SPAWN["Spawn Child Process (Argv, Minimal Env, Timeout)"]
-    SPAWN --> RESULT["ExecutionResult (Status, Exit Code, Stdout/Stderr)"]
-    RESULT --> SETTLE["sea-forge-settlement"]
-```
-
----
-
-## 5. Core Abstractions
-
-### `SandboxClass` (`sea-forge-sandbox::SandboxClass`)
 ```rust
 pub enum SandboxClass {
-    Local,   // Process-level isolation; trusted-argv0 only
-    Jail,    // OS jail: Linux Landlock ABI v1–v6 or macOS Seatbelt
-    Microvm, // Virtual machine boundary (reserved seam)
+    Local,
+    Jail,
+    Isolated,
+    Microvm,
+    OpenShell,
 }
 ```
 
-### `NetworkPosture` (`sea-forge-sandbox::NetworkPosture`)
-Governs network capabilities for a sandboxed child:
+| Class | Meaning today |
+|---|---|
+| `local` | Process execution without an OS jail. It is still grant-bound and environment-scrubbed, but it is not a confinement boundary for untrusted work. |
+| `jail` | Linux Landlock or macOS Seatbelt confinement. |
+| `isolated` | Linux only. One exclusive subordinate host identity per execution (SEC-01). Not available on other platforms. |
+| `microvm` | Declared seam. `select_sandbox` returns `unsupported_sandbox_class_error`; there is no backend. |
+| `openshell` | Requires a DomainForge projection binding and the `execute_openshell` path. The ordinary host runtime refuses it. |
+
+`select_sandbox` can construct `local`, `jail`, and Linux `isolated`. It refuses `microvm` and bare `openshell`.
+
+---
+
+## 3. Network Posture
+
 ```rust
 pub enum NetworkPosture {
-    Denied,                     // Fail-closed default: zero outbound TCP connect, zero TCP listen
-    AllowTcpPorts(Vec<u16>),   // Explicit grant: only listed TCP ports may be bound or connected
+    Denied,
+    AllowTcpPorts(Vec<u16>),
 }
 ```
-*Note on Network Scope:* Landlock enforcement is TCP-only (`LANDLOCK_ACCESS_NET_BIND_TCP`, `CONNECT_TCP`). UDP and raw sockets are fail-closed by Landlock limitations and documented as out of scope in ADR-002.
 
-### `ExecutionStatus` (`sea-forge-core::types::ExecutionStatus`)
-* `Completed`: Child executed and terminated normally (exit code captured).
-* `SpawnFailed`: Process could not be launched (missing executable, permission error).
-* `TimedOut`: Execution exceeded `timeout_secs`; process was terminated.
-* `SandboxViolation`: Explicit kernel sandbox violation observed.
-* `SuspectedSandboxViolation`: Jail violation inferred from child stderr heuristic (F-20).
+The posture is derived from the grant's `network` boundary when a grant carries one. The current `0.1` policy schema does not accept `network` in `boundary_constraints`, so policy-authored grants carry no ports and collapse to `Denied`.
+
+Enforcement is TCP-only through Landlock `BindTcp` and `ConnectTcp`. UDP and raw sockets are outside Landlock coverage through ABI v6 and are a documented gap, not a claim of complete network isolation.
 
 ---
 
-## 6. Internal Operation: The Linux Landlock Jail
+## 4. Execution Sequence
 
-On Linux hosts with kernel 5.13+, `JailSandbox` uses the unprivileged Linux Landlock LSM:
-
-1. **Pre-Exec Configuration:**
-   * Ruleset created via `landlock_create_ruleset`.
-   * Filesystem read access granted to system libraries (`/usr`, `/lib`, `/bin`) and the run `workspace/`.
-   * Filesystem write access granted **exclusively** to `workspace/` and `artifacts/`.
-   * If `NetworkPosture::Denied`, all TCP bind and connect access is omitted from the ruleset.
-2. **Privilege Dropping:**
-   * Invokes `prctl(PR_SET_NO_NEW_PRIVS, 1)` to prevent child processes from acquiring new credentials via setuid binaries.
-3. **Ruleset Enforcement:**
-   * Invokes `landlock_restrict_self` before calling `execve`.
-   * Any attempt by the child to open files outside `workspace/` or initiate unauthorized TCP connections returns `EACCES` or `EPERM`.
-
----
-
-## 7. The Runtime Execution Seam
-
-`sea_forge_runtime::execute()` requires taking ownership of an `ActionGrant`:
-
-```rust
-pub fn execute(
-    grant: sea_forge_authority::ActionGrant,
-    request: &ExecutionRequest,
-    run_id: &str,
-    workspace: &Path,
-    artifacts: &Path,
-) -> Result<ExecutionResult, ForgeError>
+```mermaid
+flowchart TB
+    G["ActionGrant by value"] --> C{"Class is openshell or operation is execute_sandbox_command?"}
+    C -->|Yes on host path| R["Refuse before spawn"]
+    C -->|No| A["authorize_execution: run, item, roots, timeout, env keys, controls"]
+    A --> P{"argv[0] canonical path equals decision-time path?"}
+    P -->|No| R2["Refuse with identity-changed error"]
+    P -->|Yes| S["Select and prepare sandbox"]
+    S --> E["Spawn with env_clear and declared env only"]
+    E --> T{"Timeout?"}
+    T -->|Yes| K["Kill process group; TimedOut"]
+    T -->|No| O["Capture status and artifacts/stdout.txt, stderr.txt"]
 ```
 
-1. **Grant Re-Check:** Calls `grant.authorize_execution()`, ensuring that the plan item ID, workspace root, artifacts root, and timeout match the grant exactly.
-2. **TOCTOU Executable Validation:** Re-resolves `argv[0]` via `fs::canonicalize` and confirms it matches the binary path verified at decision time.
-3. **Environment Scrubbing:** Strips all ambient environment variables. Passes only explicitly granted variables (`PATH`, `HOME`).
-4. **Child Spawning & Output Capture:** Spawns child redirecting stdout to `artifacts/stdout.txt` and stderr to `artifacts/stderr.txt`.
-5. **Enforced Timeout:** Monitors child using `wait-timeout`. If `timeout_secs` expires, sends `SIGKILL` and returns `ExecutionStatus::TimedOut`.
-6. **Sandbox Teardown:** Invokes `sandbox.destroy(handle)`, ensuring temporary mounts or ephemeral jail structures are cleaned up.
+The identity check compares canonical paths. It does **not** hash the executable. A binary replaced at the same path is a same-instant race rather than a detected modification. The error text says "executable identity changed since the decision", which means the canonical path no longer matches; do not read it as a content-hash proof.
 
 ---
 
-## 8. Failure Modes & Invariants
+## 5. Confinement Details
 
-* **Invariant AUTH-03 (Exact Grant Binding):** If an `ActionGrant` was minted for `run_001` or `item_01`, passing it to execute `run_002` causes `grant.authorize_execution()` to return an immediate error.
-* **Invariant AUTH-05 (Least Secret Exposure):** Parent process credentials (such as GitHub tokens or SOPS keys) are stripped from the environment before spawning. Children never inherit ambient development secrets.
-* **Executable Replacement (TOCTOU):** If an executable binary is modified or replaced on disk between the authority decision and runtime execution, execution aborts before spawn with `"authority grant executable identity changed since the decision"`.
+### Linux Landlock
+
+`JailSandbox` creates a Landlock ruleset, grants reads for the system runtime set and the bound executable tree, grants writes only in `workspace/` and `artifacts/`, sets `PR_SET_NO_NEW_PRIVS`, and calls `landlock_restrict_self` before `execve`.
+
+Landlock availability depends on kernel ABI. Missing or insufficient Landlock is a fail-closed configuration error, not a silent downgrade to `local`.
+
+### Linux Isolated
+
+`IsolatedSandbox` uses a workload identity pool and a helper. It requires Linux and the host prerequisites. The runtime passes the bound executable's parent directory as the one additional read tree, validated so it cannot contain the run.
+
+### macOS Seatbelt
+
+`JailSandbox` generates a Seatbelt profile for `sandbox-exec` restricting reads and writes to approved trees. Platform-specific behavior is covered by sandbox tests on that platform.
+
+### OpenShell
+
+`execute_openshell` requires an `execute_sandbox_command`, an `openshell` grant, and a binding whose cell, model hash, policy digest, and image match the request and grant boundaries. It refuses mismatches with `openshell_binding_mismatch` before creating a sandbox. It copies the sandbox workspace back to the result directory. There is no fallback to another class.
+
+---
+
+## 6. Environment and Timeouts
+
+Both local and jail execution call `env_clear()` and then set only the request's declared environment entries. Ambient parent secrets are not inherited. The declared set is whatever the plan and authority grant allowed, commonly `PATH` and `HOME`, but the mechanism is an allowlist rather than a hardcoded pair.
+
+Timeouts use `wait_timeout`. On expiry the implementation kills the process group and reports `TimedOut`. Output is written to `artifacts/stdout.txt` and `artifacts/stderr.txt`; the returned paths are relative artifact paths.
+
+---
+
+## 7. Status Values
+
+`ExecutionStatus` is `Completed`, `SpawnFailed`, `TimedOut`, `SandboxViolation`, or `SuspectedSandboxViolation`.
+
+`SuspectedSandboxViolation` is inferred from child-controlled stderr. The child may have failed for its own reasons, such as a remote 403. It is recorded as suspected, never as a definite jail violation.
+
+---
+
+## 8. Invariants and Limits
+
+* **Exact grant binding.** Run, plan item, workspace, artifacts, timeout, environment keys, and compensating controls must match.
+* **One spawn path.** Executables are passed as argv vectors, never interpolated into `sh -c`.
+* **No ambient environment.** `env_clear` precedes declared keys.
+* **No silent sandbox downgrade.** A missing jail or unsupported class is an error.
+* **Identity is path equality, not content hashing.** This is the current boundary; do not market it as binary integrity verification.
+* **TCP-only network enforcement.** UDP and raw sockets are out of scope for the Landlock jail.
+* **`local` is not a security boundary.** Use it only for trusted workloads.
 
 ---
 
 ## 9. Source Trail
 
-* [`crates/sea-forge-sandbox/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/lib.rs) — `SandboxClass`, `NetworkPosture`, and `ExecutionSandbox` trait.
-* [`crates/sea-forge-sandbox/src/jail.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/jail.rs) — Linux Landlock ABI ruleset integration and macOS Seatbelt profiles.
-* [`crates/sea-forge-sandbox/src/local.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/local.rs) — Process-level sandbox implementation.
-* [`crates/sea-forge-runtime/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-runtime/src/lib.rs) — `execute()`, grant consumption, TOCTOU check, and timeout enforcement.
-* [`tests/conformance_sandbox.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/tests/conformance_sfwp.rs) — Sandbox boundary and escape rejection tests.
+* [`crates/sea-forge-runtime/src/lib.rs`](../../crates/sea-forge-runtime/src/lib.rs) — `execute`, `execute_openshell`, grant checks.
+* [`crates/sea-forge-sandbox/src/lib.rs`](../../crates/sea-forge-sandbox/src/lib.rs) — class, posture, selection.
+* [`crates/sea-forge-sandbox/src/jail.rs`](../../crates/sea-forge-sandbox/src/jail.rs) — Landlock and Seatbelt execution.
+* [`crates/sea-forge-sandbox/src/isolated.rs`](../../crates/sea-forge-sandbox/src/isolated.rs) — isolated workload identity.
+* [`crates/sea-forge-sandbox/src/local.rs`](../../crates/sea-forge-sandbox/src/local.rs) — local execution.
+* [`crates/sea-forge-sandbox/tests/workload_isolation.rs`](../../crates/sea-forge-sandbox/tests/workload_isolation.rs) — isolation tests.
+* [`crates/sea-forge-sandbox/tests/conformance_m1.rs`](../../crates/sea-forge-sandbox/tests/conformance_m1.rs) — sandbox conformance.

@@ -1,6 +1,6 @@
 # Current status
 
-**Status revision:** 159
+**Status revision:** 162
 
 **Stage:** obligation-settlement (Horizon HORIZON-001 1.1.0 IS7)
 
@@ -18,10 +18,9 @@
 - The live end-to-end check (Horizon J02 revision 2 with a real RealityTrace) runs from Horizon after Cognate #65 lands
 - sea-forge-server test binaries were not run locally (RAM); CI runs them
 
-**Next:** Merge after CI passes; then Horizon stage C3 drives question/threshold declare, claims, discrimination, verification, closure and settlement against a live cell.
+**Next move:** Merge after CI passes; then Horizon stage C3 drives question/threshold declare, claims, discrimination, verification, closure and settlement against a live cell. (Rebased onto main with the docs refresh and the L5 Design-click fix; status renumbered 159 -> 162.)
 
-**Evidence:** `crates/sea-forge-authority/src/cep/obligation.rs`, `crates/sea-forge-authority/tests/cep_obligation.rs`
+**Evidence:**
 
-**Spec:** `.agents/specs/security-implementation-v2.spec.md`
-
-**Ledger:** `.agents/OBSERVED_DEBT.md`
+- `crates/sea-forge-authority/src/cep/obligation.rs`
+- `crates/sea-forge-authority/tests/cep_obligation.rs`
