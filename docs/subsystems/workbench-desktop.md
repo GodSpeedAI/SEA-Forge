@@ -1,120 +1,127 @@
-# Subsystem: Workbench Desktop & Tauri Host
+# Subsystem: Workbench
 
-> **Status update (2026-10-13): the `src-tauri` desktop shell was removed.** The Workbench is a React 19 web app. The sections below that describe the Tauri host, its bridge, its standalone Cargo workspace and its packaging are historical; the React UI, Astryx design system and G1–G9 route guards still apply.
-
-> **React 19 interface, Astryx design system, and G1–G9 route guards.**  
-> Governed workspaces: `workbench/` (Bun workspace) · Governing ADR: `ADR-004`
+> **A React 19 renderer with ten pre-flight guards and no working native host.** The Tauri `src-tauri` shell was removed on 2026-10-13. The renderer still imports `@tauri-apps/api`, so routes can render but cannot reach a cell today.
 
 ---
 
 ## 1. Purpose
 
-The **Workbench Desktop & Tauri Host** subsystem provides the primary graphical operator, approver, and auditor experience for SEA Forge. It renders real-time case horizons, approval inboxes, readiness dashboards, and evidence inspectors while strictly adhering to **ADR-004**: the webview renderer remains a pure presentation layer, completely isolated from direct operating system sockets, filesystem paths, and kernel data structures.
+The Workbench is the graphical surface for readiness, cases, approvals, evidence, memory, assets, operations, and administration. It was designed as a closed presentation layer: the renderer draws state and sends typed queries or commands; the server decides authority and settlement.
+
+That design is only half present. The React application survives. The native host that owned the Unix socket client, the cell supervisor, the event cursor, and the closed `SfwpQuery`/`SfwpCommand` bridge does not.
+
+Read this page as three separate statements:
+
+1. What the renderer contains and what its guards mean.
+2. What the removed host used to provide.
+3. What is therefore missing for an end-to-end Workbench session.
 
 ---
 
-## 2. Responsibilities
+## 2. What Exists Today
 
-* **Tauri 2 Native Host (`src-tauri`):**
-  * Serves as the native trust boundary between the operating system and the web renderer.
-  * Manages the Unix domain socket client (`SocketHandle`) connecting to `sea-forge-server`.
-  * Supervises or adopts the local cell server process (`CellSupervisor`).
-  * Runs a background reconnect and gap-recovery loop maintaining an on-disk event cursor (`app_data_dir/sfwp-cursor.json`).
-  * Exposes a strictly closed, typed command bridge (`bridge.rs`) to the renderer.
-* **React 19 Presentation Layer (`apps/desktop`):**
-  * Implements 17 typed routes via TanStack Router.
-  * Renders UI primitives using the Astryx design system and SEA Forge design tokens.
-  * Manages frontend interactive workflows using XState v5 state machines.
-  * Evaluates G1–G9 route guards against source-backed cell readiness data.
-* **Generated Schema Contracts (`packages/contracts`):**
-  * Generates TypeScript types and AJV runtime validators from Rust `schemars` definitions.
+| Part | Location | Status |
+|---|---|---|
+| React 19 renderer | `workbench/apps/desktop/src` | Present. 17 TanStack Router routes. |
+| Astryx theme and design tokens | `workbench/packages/sea-forge-ui-tokens`, `@astryxdesign/theme-neutral` | Present. |
+| UI components and stories | `workbench/packages/sea-forge-ui-components` | Present. |
+| Generated contracts | `workbench/packages/contracts` | Present. TypeScript types and AJV validators generated from Rust `schemars`. |
+| Tauri host | `workbench/apps/desktop/src-tauri` | **Deleted.** No socket client, supervisor, or IPC bridge. |
+| Renderer transport | `@tauri-apps/api` `invoke` and `listen` | Still imported by hooks. Calls have no host to answer them. |
+
+The Bun workspace still builds and tests the renderer. A browser can display routes. It cannot load real cell data.
 
 ---
 
-## 3. Non-Responsibilities
+## 3. Routes
 
-* **Policy Decisions & Settlement:** The frontend never decides authority or outcome settlement; it displays server-attested state.
-* **Direct Socket or Database Access:** The webview has zero access to raw Unix sockets, SQLite databases, or the `.sea-forge/` directory.
+TanStack Router defines 17 routes:
+
+`/`, `/readiness`, `/thoth`, `/assets`, `/delegate`, `/models`, `/cases`, `/cases/new`, `/inbox`, `/operations`, `/evidence`, `/runs/$runId`, `/memory`, `/capabilities`, `/artifacts`, `/federation`, `/admin`.
+
+`/runs/$runId` sits at the top level because a run can be reached from a case horizon, the evidence index, or an event stream, and an orphan run without a resolvable case still has to open.
+
+Interactive flows use XState v5 machines; server state uses TanStack Query; forms use React Hook Form. The renderer has no direct filesystem, socket, or SQL access by design.
 
 ---
 
-## 4. Position in the System
+## 4. The Ten Guards
+
+`evaluateGuard` returns one of four verdicts:
+
+* `passed`: a source answered and the answer satisfies the guard.
+* `failed`: a source answered and the answer does not.
+* `indeterminate`: no source answered. This is not a pass.
+* `not_applicable`: the guard does not govern this context.
+
+| Guard | Name | Question |
+|---|---|---|
+| G1 | Cell Context | Is a cell attached? |
+| G2 | Identity | Are actor id and role both resolved? |
+| G3 | Sponsor | Does an automated actor have an eligible sponsor? Self-sponsoring operators and system actors get `not_applicable`. |
+| G4 | Policy | Is a policy bundle loaded and hash-addressed? |
+| G5 | Integrity | Is ledger integrity `verified`? |
+| G6 | Resource | Does the requested record or asset exist and remain visible? |
+| G7 | Disclosure | Is retrieval scope permitted? |
+| G8 | Compatibility | Do model, template, and endpoint versions agree? |
+| G9 | Readiness | Is readiness `ready` or `ready_degraded`? |
+| G10 | Standing | Standing is decided server-side when a decision is submitted; there is no pre-check verb, so this usually reports `indeterminate`. |
+
+Only `G1`, `G2`, and `G9` block routes. A `failed` blocking guard renders `GovernedDenialSurface`. An `indeterminate` guard does not block, because blocking on absent evidence would hide surfaces without making anything safer. The guards are operator pre-flight, never enforcement. The server refuses protected work on its own authority.
+
+The old `mockGuardContext` is gone. It had asserted a verified integrity state, a loaded policy digest, and a named actor that did not exist, which let the UI display governance conclusions it had no evidence for.
+
+---
+
+## 5. What the Removed Host Provided
+
+The deleted host had four jobs:
+
+1. **Socket client.** NDJSON over `<root>/server.sock`.
+2. **Cell supervision.** Attach to or launch `sea-forge-server`.
+3. **Event cursor.** Persist the last acknowledged `entry_ulid` and request missed ranges after a reconnect.
+4. **Closed bridge.** Two enums, `SfwpQuery` and `SfwpCommand`, validated by AJV, with no generic backend escape hatch.
+
+The renderer hooks still assume this contract. `invoke` calls and `listen` subscriptions name commands and events that only the host used to implement.
 
 ```mermaid
-flowchart TB
-    subgraph WEBVIEW ["React 19 Renderer (apps/desktop)"]
-        ROUTER["TanStack Router (17 Routes)"]
-        GUARDS["G1-G9 Guard Evaluator"]
-        XSTATE["XState v5 Machines"]
-        AJV["AJV Schema Validators"]
-        ROUTER --> GUARDS
-        GUARDS -->|Guard Failed| DENIAL["GovernedDenialSurface"]
-        GUARDS -->|Guard Passed| PAGES["Page Components"]
-    end
-
-    subgraph TAURI_HOST ["Tauri 2 Host (src-tauri - Standalone Cargo Workspace)"]
-        BRIDGE["bridge.rs (Closed SfwpQuery / SfwpCommand)"]
-        SUPER["CellSupervisor (Process Lifecycle)"]
-        CURSOR["EventCursor (sfwp-cursor.json)"]
-        SOCKET["socket.rs (NDJSON Client)"]
-        WEBVIEW <-->|Tauri IPC (invoke / emit)| BRIDGE
-        BRIDGE <--> SOCKET
-        SOCKET <--> CURSOR
-    end
-
-    subgraph SERVER ["sea-forge-server"]
-        SOCK["server.sock (Unix Domain Socket, 0600)"]
-        SOCKET <-->|SFWP v1 Protocol| SOCK
-    end
+flowchart LR
+    R["React renderer<br/>17 routes"] -->|invoke / listen| API["@tauri-apps/api"]
+    API -.->|no host| MISSING["Removed Tauri host"]
+    MISSING -.->|SFWP v1 NDJSON| SOCK["server.sock"]
+    CLI["sea-forge CLI"] -->|SFWP v1 NDJSON| SOCK
+    SOCK --> SRV["sea-forge-server"]
 ```
 
----
-
-## 5. Core Abstractions
-
-### Standalone Cargo Workspace (`workbench/apps/desktop/src-tauri/Cargo.toml`)
-To enforce invariant **BUILD-01** (keeping the 19 kernel crates free of async runtimes), `src-tauri` declares its own empty `[workspace]` table. This prevents Cargo from adopting the root workspace, ensuring Tauri's substantial asynchronous dependency tree never pollutes the synchronous kernel.
-
-### Closed Host Bridge (`bridge.rs`)
-The renderer reaches the backend exclusively through two closed enums:
-* `SfwpQuery`: `Hello`, `Describe`, `GetSchema`, `ReadinessGet`, `IdentityGet`, `CaseList`, `CaseGetOverview`, `CaseGetHorizon`, `ApprovalList`, `RunList`, `RunGet`, `AssetList`, etc.
-* `SfwpCommand`: `CaseCommit`, `ApprovalDecide`, `ThothAsk`, etc.
-Generic shell execution escapes (`invoke("execute_command")`) are strictly forbidden.
-
-### G1–G9 Route Guards (`guards/guards.ts`)
-Every route evaluates typed guard predicates over `GuardContext`:
-* `G1`: Cell root resolved and socket connected.
-* `G2`: Server version and SFWP protocol negotiated.
-* `G3`: Local actor identity bound and verified.
-* `G4`: Policy engine active and verifiable.
-* `G5`: Genesis self-model validated.
-* `G6`: OS jail sandbox available and operational.
-* `G7`: Integrity ledgers verified without drift.
-* `G8`: Active case selected and valid.
-* `G9`: Required human role satisfied.
-If any blocking guard evaluates to `failed`, the router renders a `GovernedDenialSurface` displaying the exact failed invariant and necessary remediation.
+The dashed path is the gap. The CLI path works.
 
 ---
 
-## 6. Internal Operation: Reconnect & Gap Recovery
+## 6. Invariants
 
-1. On startup, `CellSupervisor` inspects `docs/CELL_CONTRACT.md` resolution ranks and attaches to or launches `sea-forge-server`.
-2. `EventCursor::load()` reads the last acknowledged `entry_ulid` from `sfwp-cursor.json`.
-3. `run_event_loop()` opens a socket connection and sends `events.subscribe { from_cursor: Some(cursor) }`.
-4. If a network blip occurs, the socket reconnects automatically, requests missed events via `events.get_range`, and resumes live streaming without loss of causal order.
+* **API-02, closed renderer seam.** The intended boundary is a closed, typed command and query set validated at the host. The renderer must not gain a generic `invoke_backend(method, arbitrary_json)` escape hatch when the host is restored.
+* **Guards are not authority.** No guard verdict grants permission. Protected work is refused server-side even if the UI says `passed`.
+* **Schema drift fails the build.** Rust contract changes must regenerate `@sea-forge/contracts`; `just workbench-check` compares the projections.
+* **Unknown is not unavailable.** `indeterminate` and `failed` stay distinct in both code and UI copy.
 
 ---
 
-## 7. Failure Modes & Invariants
+## 7. Failure Modes
 
-* **Invariant API-02 (Closed Renderer Seam):** The renderer cannot open filesystem files or connect to remote hosts. All data flows through closed Tauri IPC commands validated by AJV.
-* **Schema Drift:** If a Rust contract type in `sea-forge-server` is updated without regenerating `@sea-forge/contracts`, `just workbench-contracts-gate` and CI fail immediately.
+| Symptom | Cause | What it means |
+|---|---|---|
+| Every data surface is empty or errors on `invoke` | No Tauri host | Expected today. The renderer has no backend transport. |
+| Guard shows `indeterminate` | No source answered | Not a pass. The cell has not reported this fact. |
+| Guard shows `failed` | A source answered negatively | For G1, G2, or G9 the route is blocked with a repair route. |
+| `just workbench-check` fails on contracts | Rust types changed without regeneration | Run the contract generation recipe and commit the projection. |
 
 ---
 
 ## 8. Source Trail
 
-* The Tauri host sources (`workbench/apps/desktop/src-tauri/`) were removed on 2026-10-13; see ADR-004's status update and git history before that date.
-* [`workbench/apps/desktop/src/router.tsx`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/router.tsx) — TanStack Router configuration and route guard integration.
-* [`workbench/apps/desktop/src/guards/guards.ts`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/guards/guards.ts) — G1–G9 guard predicate definitions.
-* [`docs/decisions/ADR-004-workbench-stack.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-004-workbench-stack.md) — Architectural decision record governing the workbench stack.
+* [`router.tsx`](../../workbench/apps/desktop/src/router.tsx) — 17 routes, guard evaluation, denial surface.
+* [`guards.ts`](../../workbench/apps/desktop/src/guards/guards.ts) — G1–G10 predicates and verdict semantics.
+* [`useGuardContext.ts`](../../workbench/apps/desktop/src/guards/useGuardContext.ts) — live guard context and blocking guard list.
+* [`useReadiness.ts`](../../workbench/apps/desktop/src/hooks/useReadiness.ts) — example of a hook that still calls `invoke`.
+* [`ADR-004`](../decisions/ADR-004-workbench-stack.md) — stack decision and its 2026-10-13 status update.
+* [`workbench/AGENTS.md`](../../workbench/AGENTS.md) — Workbench boundary and verification rules.

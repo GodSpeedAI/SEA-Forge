@@ -1,34 +1,27 @@
 # SEA Forge Documentation Home
 
-> **Governed capability-execution kernel organized around cases.**  
-> Pre-execution authority · Sandboxed isolation · Cryptographic evidence · Independent settlement
+> **A local governed capability-execution kernel organized around cases.**
+> Authority before workload effects, sandboxed execution, append-only evidence, and settlement that does not trust exit status.
 
 ---
 
-## 1. What This Project Is
+## 1. What SEA Forge Is
 
-**SEA Forge** is a local, governed execution engine for commands, workflows, and autonomous agents.
+SEA Forge turns a typed intent into a case plan, evaluates authority for each operation, executes allowed operations inside an operating-system sandbox, records trace and evidence, settles the declared outcome independently, and promotes accepted results into capability memory.
 
-Unlike traditional orchestration engines or task runners that execute commands and evaluate success purely by whether a process returns exit code zero (`exit 0`), SEA Forge treats every side effect as a governed operation:
+It is built for the gap between "the command exited 0" and "the declared result actually happened." An agent can exit cleanly after writing nothing, writing to the wrong place, or failing an internal assertion. SEA Forge treats process termination as evidence, not as success.
 
-1. **Authorize before action:** No process may be spawned and no file may be created until a deterministic policy engine evaluates identity, context, and policy rules, minting an explicit, move-only grant.
-2. **Isolate during execution:** Work runs inside operating system jails (Linux Landlock or macOS Seatbelt) with strict workspace boundaries, blocked network by default, minimal environment variables (`PATH`, `HOME`), and enforced timeouts.
-3. **Capture immutable evidence:** All actions, file writes, stdout/stderr captures, and state transitions are appended to tamper-evident, hash-chained ledgers and JSON Lines (`.jsonl`) logs.
-4. **Settle from evidence, not exit code:** Process termination is merely evidence. Outcome acceptance requires fulfilling pre-declared criteria (such as required file artifacts with content SHA-256 hashes, stdout pattern matches, and domain evaluator scores).
-5. **Metabolize into capability:** Accepted outcomes append to semantic capability memory, enabling future intent to discover and reuse proven execution patterns.
+The system is local-first. A cell is one root directory with one owner-only Unix socket, and it can be driven by the CLI today. The server exposes SFWP v1 to clients. The Workbench renderer exists, but its Tauri host was removed on 2026-10-13 and its real backend bridge is currently missing. See [Workbench](subsystems/workbench-desktop.md) before relying on the UI.
 
 ---
 
-## 2. What Problem It Solves
+## 2. The Problems It Targets
 
-Modern AI coding agents and automated workflows suffer from the **"False Success" crisis** and **ambient privilege leakage**:
-
-* **False Success:** An agent or script runs a command, exits 0, and reports success even though it hallucinated an output file, wrote to the wrong location, or silently failed an internal assertion.
-* **Ambient Privilege:** Child processes inherit parent environment variables, unredacted API keys, open network sockets, and unrestricted filesystem access, risking data exfiltration or unintended mutations.
-* **Rewritten History:** Orchestrators frequently overwrite mutable database rows or drop log streams, making post-incident auditing and non-repudiation impossible.
-* **Untyped Intent:** Systems interpolate arbitrary user text into shell commands (`sh -c "$USER_INPUT"`), creating catastrophic injection vulnerabilities.
-
-SEA Forge solves these by enforcing a **fail-closed, single-authority fabric** across all interfaces (CLI, server, desktop Workbench, AI agents). Intent is always typed data; permissions are verified before side effects; and settlement is an independent, evidenced claim check.
+* **False success.** Settlement requires committed criteria to be satisfied by captured evidence. `exit_zero` is only one basis token.
+* **Ambient privilege.** Children do not inherit the parent environment. They receive declared variables, filesystem confinement, and denied network by default. The runtime has a reserved TCP-port grant path, but the current policy schema does not expose it.
+* **Mutable history.** Authoritative state lives in append-only JSONL and hash-chained ledgers. SQLite and JSON views are rebuildable projections.
+* **Shell-string intent.** Intent is interpreted into typed operations. The planner does not interpolate arbitrary text into `sh -c`.
+* **Unaccountable denials.** A denied episode still records authority decisions, a halt, and a settled `Rejected` outcome instead of disappearing.
 
 ---
 
@@ -36,96 +29,88 @@ SEA Forge solves these by enforcing a **fail-closed, single-authority fabric** a
 
 ```mermaid
 flowchart TB
-    subgraph INGRESS ["1. Ingress & Intent"]
-        CLI["sea-forge CLI"]
-        WB["React Desktop Workbench"]
-        SRV["sea-forge-server (SFWP v1)"]
-        CLI & WB & SRV --> INTENT["Typed Intent / CasePlan"]
+    subgraph INGRESS["Ingress"]
+        CLI["sea-forge CLI<br/>21 visible commands"]
+        SRV["sea-forge-server<br/>SFWP v1 over Unix socket"]
+        WB["React Workbench renderer<br/>host bridge absent"]
+        WB -.->|not currently wired| SRV
+        CLI --> INTENT["Interpreted intent / CasePlan"]
+        SRV --> INTENT
     end
 
-    subgraph GOVERNANCE ["2. Governance & Authority"]
-        PLANNER["Deterministic Planner"] --> AUTH["PolicyAuthorityEngine"]
-        DF["DomainForge (.sea Semantic Graph)"] -->|Candidate Verdict| AUTH
-        INTENT --> PLANNER
-        AUTH -->|Deny / Escalate| HALT["Halt & Record Audit Log"]
-        AUTH -->|Allow| GRANT["Mint ActionGrant (Move-Only)"]
+    subgraph GOVERNANCE["Governance"]
+        INTENT --> PLAN["Deterministic planner"]
+        PLAN --> AUTH["PolicyAuthorityEngine"]
+        DF["DomainForge model"] -.->|candidate verdict| AUTH
+        AUTH -->|Deny / Escalate| HALT["Halt and record"]
+        AUTH -->|Allow| GRANT["Move-only ActionGrant"]
     end
 
-    subgraph EXECUTION ["3. Constrained Execution"]
+    subgraph EXECUTION["Execution"]
         GRANT --> RUNTIME["sea-forge-runtime"]
-        RUNTIME --> JAIL["Sandbox (Linux Landlock / macOS Seatbelt)"]
-        JAIL --> CHILD["Workload Execution (Minimal Env, Timeout)"]
+        RUNTIME --> JAIL["Landlock or Seatbelt sandbox"]
+        JAIL --> CHILD["Workload process"]
     end
 
-    subgraph AUDIT ["4. Evidence & Settlement"]
-        CHILD --> CAPTURE["Artifact & Trace Capture"]
+    subgraph RECORD["Evidence and settlement"]
+        CHILD --> CAPTURE["stdout, stderr, artifacts"]
         CAPTURE --> SETTLE["sea-forge-settlement"]
-        SETTLE -->|Evaluate Criteria vs Evidence| VERDICT{"Settled?"}
-        VERDICT -->|Accepted| ENVELOPE["SemanticEnvelope Appended"]
-        VERDICT -->|Rejected| FAIL["Rejection Basis Recorded"]
-        ENVELOPE --> LEDGER["Append-Only Ledgers & Capability Memory"]
+        SETTLE -->|Accepted| ENV["Semantic envelope"]
+        SETTLE -->|Rejected| BASIS["Rejection basis"]
+        ENV --> LEDGER["Ledgers and capability memory"]
+        BASIS --> LEDGER
     end
 ```
 
+The arrow from Workbench to server is dashed on purpose. The renderer still imports `@tauri-apps/api`; without a Tauri host there is no working transport.
+
 ---
 
-## 4. The 8 Concepts You Need First
+## 4. Eight Concepts to Start With
 
-To navigate this codebase confidently, understand these eight core concepts:
-
-1. **Cell (`SeaCell`)**: The self-contained unit of deployment. A single root directory (`SEA_FORGE_ROOT`) that owns one socket (`server.sock`), one socket lock, cases, ledgers, and capability records. See [Cell Contract](file:///c:/Users/sprim/projects/sea-rs/docs/CELL_CONTRACT.md).
-2. **Intent**: The raw, unverified statement of desired action (`intent_id`, `summary`, `actor_id`). Raw intent is never executed; it is deterministic input to the planner.
-3. **Case & Plan (`CasePlan`)**: A CMMN-subset workflow orchestrating multiple `PlanItem`s across stages, milestones, and tasks using event-driven `Sentry` triggers.
-4. **Episode / Run**: A single, concrete execution instance (`run_<timestamp>_<hex>`). Every sandboxed execution is an episode that generates a complete suite of governance records.
-5. **ActionGrant**: A non-cloneable, non-serializable move-only Rust struct minted by the authority engine upon an `Allow` decision. It is consumed by `sea-forge-runtime::execute()`. No process can spawn without holding this grant.
-6. **Settlement (`SettlementEvent`)**: The independent evaluation of run evidence against pre-committed `SettlementCriteria`. Acceptance produces a non-empty, machine-readable `basis` (e.g. `["authority_allow", "exit_zero", "required_artifact_present:model.sea"]`).
-7. **Integrity Ledger (`LedgerStream`)**: An append-only binary/JSONL journal indexed by ULID, secured by hash chains, Merkle Mountain Ranges (MMR), and optional multi-witness cryptographic signatures.
-8. **SFWP (SEA Forge Wire Protocol)**: The versioned (v1) NDJSON protocol over a Unix domain socket connecting Workbench clients to `sea-forge-server` (the Tauri desktop host was removed on 2026-10-13).
+1. **Cell.** One root directory (`SEA_FORGE_ROOT`) that owns `server.sock`, cases, runs, ledgers, approvals, capabilities, and memory. See [Cell Contract](CELL_CONTRACT.md).
+2. **Intent.** A bounded statement of desired action, at most 500 characters. It is interpreted into a known pattern before planning. Unknown intent fails with exit `2`.
+3. **Case and plan.** A CMMN-subset structure of stages, milestones, tasks, and sentries. `CasePlan` is the durable plan; a run is one activation of an item.
+4. **Run or episode.** A concrete execution (`run_<timestamp>_<hex>`) with plan, authority, trace, evidence, settlement, and semantic-envelope records.
+5. **ActionGrant.** A move-only Rust value minted only on `Allow`. It carries boundaries, identity, timeout, environment keys, sandbox class, and the canonical executable path. The runtime consumes it to spawn.
+6. **Settlement.** Evaluation of a claim against execution evidence and workspace state. The result is a status plus machine-readable basis tokens such as `authority_allow`, `exit_zero`, or `required_artifact_missing:model.sea`.
+7. **Integrity ledger.** Per-stream append-only JSONL with ULID ordering, hash chains, Merkle Mountain Range proofs, Ed25519 checkpoints, and optional witness quorums.
+8. **SFWP.** The versioned NDJSON protocol over the cell's Unix socket. It carries closed queries and commands, not a generic backend escape hatch. See [SFWP reference](reference/sfwp-protocol-reference.md).
 
 ---
 
 ## 5. A Representative Journey
 
-Here is what happens when an operator runs a governed workload:
+`sea-forge run --intent "generate a .sea model"` currently does this:
 
-```text
-1. Operator types: sea-forge run --intent "generate demo model"
-2. sea-forge-domain interprets "generate demo model" as IntentPattern::Demo.
-3. sea-forge-planner deterministically creates a CasePlan with PlanItem "generate_and_validate_sea_model".
-   Settlement criteria require: exit code 0, file "model.sea" present, and stdout containing "sea-forge: model valid".
-4. sea-forge-authority evaluates the operations against active policy rules:
-   - Operation 1: WriteFile "model.sea" -> Verdict: Allow.
-   - Operation 2: ExecuteCommand "sea-forge validate model.sea" -> Verdict: Allow.
-5. An AuthorityRequest and AuthorityDecision are committed to the integrity ledger.
-6. Because all verdicts are Allow, ActionGrants are minted. Run scratch workspace/ and artifacts/ directories are created.
-7. Operation 1 materializes the file into workspace/model.sea.
-8. Operation 2 spawns the validator process within the configured SandboxClass (Landlock jail on Linux).
-   Parent secrets are omitted; only PATH and HOME are forwarded; timeout is 60s.
-9. Child exits 0; stdout is captured to artifacts/stdout.txt; model.sea is captured to artifacts/model.sea.
-   Pre-mint identity ifl:hash:<sha256> is computed for all work products.
-10. sea-forge-settlement evaluates:
-    - Did child exit 0? Yes (basis: exit_zero).
-    - Is model.sea present? Yes (basis: required_artifact_present:model.sea).
-    - Did stdout match expected string? Yes (basis: stdout_match).
-    -> Settlement status: Accepted.
-11. SettlementEvent is committed to the ledger; settlement.json and semantic-envelope.json are written.
-12. The capability is appended to capabilities.jsonl, and the command exits 0.
-```
+1. The CLI loads policy, interprets the intent as `Demo`, and validates attribution.
+2. It creates the root, `runs/`, `cases/`, the run directory, `workspace/`, and `artifacts/`.
+3. The planner builds a two-operation plan using the current executable: write `model.sea`, then run `<exe> validate model.sea`.
+4. It commits settlement criteria: exit zero, `model.sea` required, stdout must contain `sea-forge: model valid`.
+5. It commits intent, plan, identity binding, policy snapshot, and criteria to the ledger.
+6. Authority evaluates both operations. Every verdict must be `Allow`; otherwise the run halts and settles without executing.
+7. The write is materialized through a grant. The runtime re-resolves `argv[0]` and requires exact canonical-path equality before spawning the validator.
+8. The child runs in the selected sandbox with a stripped environment. Output and artifacts are captured with SHA-256 content identity.
+9. Settlement checks criteria against the captured evidence. A zero exit with no `model.sea` is rejected.
+10. Accepted work produces `settlement.json` and `semantic-envelope.json`, appends to `capabilities.jsonl`, and attempts deterministic memory extraction.
+11. The case closes as `Completed`, `Terminated: rejected`, or `Terminated: escalated`. The command exits `0`, `3`, or `4`. Dispatch errors exit `2`; other errors exit `1`.
+
+The control-plane directories exist before authority evaluates. The invariant applies to workload effects: no process is spawned and no workload payload is written without `Allow`. This distinction is deliberate and is recorded in [Architecture](architecture.md) and [CLI Run Lifecycle](workflows/cli-run-lifecycle.md).
 
 ---
 
 ## 6. Where to Go Next
 
-Choose your entry path based on your current need:
-
-| Your Goal | Recommended Starting Point |
+| Goal | Start here |
 |---|---|
-| **I want to understand the conceptual model** | [Mental Model](file:///c:/Users/sprim/projects/sea-rs/docs/mental-model.md) |
-| **I want to inspect the system architecture** | [Architecture Overview](file:///c:/Users/sprim/projects/sea-rs/docs/architecture.md) |
-| **I want to explore a specific subsystem** | [Subsystem Guides Index](file:///c:/Users/sprim/projects/sea-rs/docs/documentation-map.md#3-subsystems-layer-3) |
-| **I want to trace execution end-to-end** | [CLI Run Lifecycle Trace](file:///c:/Users/sprim/projects/sea-rs/docs/workflows/cli-run-lifecycle.md) |
-| **I want to understand design trade-offs** | [Explanation & Design Rationale](file:///c:/Users/sprim/projects/sea-rs/docs/documentation-map.md#5-explanation--design-rationale-layer-5) |
-| **I want to run it myself step-by-step** | [Tutorial: First Governed Run](file:///c:/Users/sprim/projects/sea-rs/docs/tutorials/01-first-governed-run.md) |
-| **I want to author policies or configure endpoints** | [How-To Guides](file:///c:/Users/sprim/projects/sea-rs/docs/documentation-map.md#7-how-to-guides-layer-7) |
-| **I need exact CLI flags or SFWP wire APIs** | [Technical Reference](file:///c:/Users/sprim/projects/sea-rs/docs/documentation-map.md#8-technical-reference-layer-8) |
-| **I need to find where a concept lives in code** | [Source Map](file:///c:/Users/sprim/projects/sea-rs/docs/source-map.md) |
+| Understand the conceptual model | [Mental Model](mental-model.md) |
+| Inspect architecture and invariants | [Architecture Overview](architecture.md) |
+| Explore a subsystem | [Subsystem Guides](documentation-map.md#3-subsystems-layer-3) |
+| Trace one run end to end | [CLI Run Lifecycle](workflows/cli-run-lifecycle.md) |
+| See the run visually | [Governed Run Explorer](explainers/governed-run-explorer.html) |
+| Understand design trade-offs | [Explanation and Rationale](documentation-map.md#5-explanation--design-rationale-layer-5) |
+| Run it yourself | [First Governed Run](tutorials/01-first-governed-run.md) |
+| Author policy or configure the cell | [Configuration Spec](reference/configuration-spec.md) and [Policy How-To](how-to/write-authority-policies.md) |
+| Look up exact flags or wire APIs | [CLI Reference](reference/cli-command-reference.md) and [SFWP Reference](reference/sfwp-protocol-reference.md) |
+| Find where a concept lives in code | [Source Map](source-map.md) |
+| Understand the security model | [Landlock Security Model](explanation/landlock-jail-security-model.md) |

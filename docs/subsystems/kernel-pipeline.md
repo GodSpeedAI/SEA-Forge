@@ -7,7 +7,7 @@
 
 ## 1. Purpose
 
-The Kernel & Synchronous Pipeline provides the foundational domain types, deterministic planning, and execution coordination for SEA Forge. It ensures that intent is translated into strongly typed operations, that identifier grammar and path normalization are strictly enforced, and that the 19 core kernel crates remain completely free of asynchronous runtimes.
+The Kernel & Synchronous Pipeline provides the foundational domain types, deterministic planning, and execution coordination for SEA Forge. It ensures that intent is translated into strongly typed operations, that identifier grammar and path normalization are strictly enforced, and that the 22 non-edge kernel crates remain completely free of asynchronous runtimes.
 
 ---
 
@@ -97,7 +97,8 @@ The typed unit of execution:
 * `WriteFile { path, content_hint }`
 * `ExecuteCommand { argv, cwd }`
 * `AgentProbe { endpoint_ref, model, prompt_sha256 }`
-* `AgentTask { endpoint_ref, instruction, max_turns, token_budget, ... }`
+* `ExecuteSandboxCommand { argv, cwd, cell_id, model_hash, policy_digest, image }`
+* `AgentTask { endpoint_ref, instruction, max_turns, token_budget, response_schema, transcript_retention }`
 
 ---
 
@@ -108,7 +109,7 @@ To guarantee that hash chains and signatures remain identical across operating s
 1. **Object Keys:** Sorted lexicographically by raw UTF-8 bytes. Object keys are **not** NFC-normalized (a conservative asymmetry preventing key collision).
 2. **String Values:** Deeply traversed at all levels and normalized to Unicode Normalization Form C (NFC).
 3. **Arrays:** Preserve declared element order.
-4. **Numbers:** Serialized using standard JSON representation without ECMAScript float rounding discrepancies.
+4. **Numbers:** Serialized by `serde_json`'s default formatter. This is not RFC 8785 JCS and does not apply ECMAScript number canonicalization, so external JCS verifiers will compute different bytes.
 
 ```rust
 // Verified test vector: A + combining diaeresis composes to U+00C4 at all depths
@@ -141,11 +142,11 @@ The kernel directly formats the root governance directories:
 
 ## 9. Source Trail
 
-* [`crates/sea-forge-core/src/types.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs) — Persisted domain records and operation enums.
-* [`crates/sea-forge-core/src/ids.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/ids.rs) — Typed identifier generators and validators.
-* [`crates/sea-forge-core/src/canonical.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/canonical.rs) — `jcs-nfc-v1` canonical JSON implementation.
-* [`crates/sea-forge-core/src/path.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/path.rs) — Workspace-relative path validation.
-* [`crates/sea-forge-core/src/approvals.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/approvals.rs) — Approvals journal fold and expiry checks.
-* [`crates/sea-forge-domain/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domain/src/lib.rs) — Intent pattern interpreter.
-* [`crates/sea-forge-planner/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/lib.rs) — Deterministic planning engine.
-* [`crates/sea-forge-planner/src/case_engine.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/case_engine.rs) — CMMN sentry evaluation logic.
+* [`crates/sea-forge-core/src/types.rs`](../../crates/sea-forge-core/src/types.rs) — Persisted domain records and operation enums.
+* [`crates/sea-forge-core/src/ids.rs`](../../crates/sea-forge-core/src/ids.rs) — Typed identifier generators and validators.
+* [`crates/sea-forge-core/src/canonical.rs`](../../crates/sea-forge-core/src/canonical.rs) — `jcs-nfc-v1` canonical JSON implementation.
+* [`crates/sea-forge-core/src/path.rs`](../../crates/sea-forge-core/src/path.rs) — Workspace-relative path validation.
+* [`crates/sea-forge-core/src/approvals.rs`](../../crates/sea-forge-core/src/approvals.rs) — Approvals journal fold and expiry checks.
+* [`crates/sea-forge-domain/src/lib.rs`](../../crates/sea-forge-domain/src/lib.rs) — Intent pattern interpreter.
+* [`crates/sea-forge-planner/src/lib.rs`](../../crates/sea-forge-planner/src/lib.rs) — Deterministic planning engine.
+* [`crates/sea-forge-planner/src/case_engine.rs`](../../crates/sea-forge-planner/src/case_engine.rs) — CMMN sentry evaluation logic.

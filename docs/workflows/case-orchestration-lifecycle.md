@@ -117,7 +117,7 @@ CaseState::Completed (All Required Items Satisfied)
 
 ## 6. Source Trail
 
-* [`crates/sea-forge-server/src/sfwp/case.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/case.rs) — `case.commit` endpoint and validation.
-* [`crates/sea-forge-server/src/case_dispatch.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs) — Subprocess and internal episode dispatching.
-* [`crates/sea-forge-case-runner/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-case-runner/src/lib.rs) — Synchronous case lifecycle coordination.
-* [`crates/sea-forge-planner/src/case_engine.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/case_engine.rs) — CMMN sentry evaluation and transition logic.
+* [`crates/sea-forge-server/src/sfwp/case.rs`](../../crates/sea-forge-server/src/sfwp/case.rs) — `case.commit` endpoint and validation.
+* [`crates/sea-forge-server/src/case_dispatch.rs`](../../crates/sea-forge-server/src/case_dispatch.rs) — Subprocess and internal episode dispatching.
+* [`crates/sea-forge-case-runner/src/lib.rs`](../../crates/sea-forge-case-runner/src/lib.rs) — Synchronous case lifecycle coordination.
+* [`crates/sea-forge-planner/src/case_engine.rs`](../../crates/sea-forge-planner/src/case_engine.rs) — CMMN sentry evaluation and transition logic.

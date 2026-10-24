@@ -92,7 +92,7 @@ The aggregate decision log (`authority/decisions.jsonl`) and active policy mirro
 
 ## 6. Source Evidence
 
-* [`crates/sea-forge-ledger/src/types.rs:182-350`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs#L182-L350) — `LedgerStream` append and hash chaining.
-* [`crates/sea-forge-capability/src/memory.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/memory.rs) — SQLite FTS5 rebuild and indexing logic.
-* [`crates/sea-forge-cli/src/pipeline.rs:138-212`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cli/src/pipeline.rs#L138-L212) — `rebuild_authority_mirrors()` implementation.
-* [`crates/sea-forge-core/src/approvals.rs:86-97`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/approvals.rs#L86-L97) — Latest-line-wins fold rule for `approvals.jsonl`.
+* [`crates/sea-forge-ledger/src/types.rs:182-350`](../../crates/sea-forge-ledger/src/types.rs#L182-L350) — `LedgerStream` append and hash chaining.
+* [`crates/sea-forge-capability/src/memory.rs`](../../crates/sea-forge-capability/src/memory.rs) — SQLite FTS5 rebuild and indexing logic.
+* [`crates/sea-forge-cli/src/pipeline.rs:138-212`](../../crates/sea-forge-cli/src/pipeline.rs#L138-L212) — `rebuild_authority_mirrors()` implementation.
+* [`crates/sea-forge-core/src/approvals.rs:86-97`](../../crates/sea-forge-core/src/approvals.rs#L86-L97) — Latest-line-wins fold rule for `approvals.jsonl`.

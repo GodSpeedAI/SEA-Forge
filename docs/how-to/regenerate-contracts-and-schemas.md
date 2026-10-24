@@ -115,6 +115,6 @@ git add crates/sea-forge-server/ workbench/packages/contracts/
 
 ## 4. Source Trail
 
-* [`crates/sea-forge-server/src/bin/gen_sfwp_schema.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/bin/gen_sfwp_schema.rs) — Rust JSON Schema emitter.
-* [`workbench/packages/contracts/scripts/generate.ts`](file:///c:/Users/sprim/projects/sea-rs/workbench/packages/contracts/scripts/generate.ts) — Bun script generating TS types and AJV validators.
-* [`docs/decisions/ADR-005-sfwp-schema-generation.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-005-sfwp-schema-generation.md) — Governing architectural decision record.
+* [`crates/sea-forge-server/src/bin/gen_sfwp_schema.rs`](../../crates/sea-forge-server/src/bin/gen_sfwp_schema.rs) — Rust JSON Schema emitter.
+* [`workbench/packages/contracts/scripts/generate.ts`](../../workbench/packages/contracts/scripts/generate.ts) — Bun script generating TS types and AJV validators.
+* [`docs/decisions/ADR-005-sfwp-schema-generation.md`](../../docs/decisions/ADR-005-sfwp-schema-generation.md) — Governing architectural decision record.
