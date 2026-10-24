@@ -8,7 +8,7 @@
 
 **Verified:**
 
-- PR #54 CI: lint, test, workbench, authority-opa, verify (macos), go tests, live ladder fail at setup and MSRV at cargo check --locked, all with the same cargo resolution error on sea-forge-cli -> sea-forge-artifact-ip ^0.1.0; gate fails only because its needs failed; the same jobs pass on main at a76c84c
+- PR #54 CI: lint, test, workbench, authority-opa, verify (macOS), go tests, live ladder fail at setup and MSRV at cargo check --locked, all with the same cargo resolution error on sea-forge-cli -> sea-forge-artifact-ip ^0.1.0; gate fails only because its needs failed; the same jobs pass on main at a76c84c
 - Local run of release-please 17.6.0's GenericToml with the new jsonpath over the 22 crate manifests: 102 changed lines, every one an internal path dependency moving 0.1.0 -> 0.2.0, no other line changed, no internal pin left at 0.1.0
 - Simulated release tree (workspace version 0.2.0, crate pins bumped, Cargo.lock bumped by the existing $.package[?(!@.source)].version extra-file): cargo metadata --locked --offline exits 0
 
@@ -29,3 +29,5 @@
 - `.github/release-please-manifest.json`
 - `Cargo.toml`
 - `crates/sea-forge-cli/Cargo.toml`
+- `.github/workflows/release-please.yml`
+- `docs/explanations-and-references/ci-cd-architecture.md`
