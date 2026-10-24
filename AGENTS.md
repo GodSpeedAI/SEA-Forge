@@ -97,7 +97,7 @@ Required gates by claim:
 
 `just ci` does not include `just proof`, Workbench gates, or other-platform tests. Run applicable extra gates and report skipped platform tests with reasons. A fast inner loop changes when cost is paid, not what must ultimately be proven.
 
-Do not run `just pr`, `publish-bootstrap`, `clean`, secrets recipes, or other destructive/external-write recipes without explicit approval.
+Do not run `just pr`, `clean`, secrets recipes, or other destructive/external-write recipes without explicit approval.
 
 ## 6. Testing & Development Discipline
 

@@ -989,28 +989,6 @@ pr:
 
 # --- publication (Phase 10) --------------------------------------------
 
-# One-time manual crates.io bootstrap publish. OIDC trusted publishing for
-# crates.io requires (a) at least one classic-token publish of each crate and
-# (b) linking the repository on https://crates.io/settings before the
-# automated publish job can use trusted publishing. Run this once per crate
-# with a short-lived classic token in CARGO_REGISTRY_TOKEN, then revoke the
-# token. After this, release-please.yml handles subsequent publishes via OIDC.
-[group('release')]
-publish-bootstrap crate:
-    #!/usr/bin/env bash
-    {{set}}
-    if [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
-        echo "fail: CARGO_REGISTRY_TOKEN is not set" >&2
-        echo "next move: create a one-time classic token at https://crates.io/settings/tokens (scope: publish-new), export CARGO_REGISTRY_TOKEN=<token>, then rerun" >&2
-        exit 1
-    fi
-    case "{{crate}}" in
-        sea-forge-core|sea-forge-cli) ;;
-        *) echo "fail: unknown crate '{{crate}}' (expected sea-forge-core or sea-forge-cli)" >&2; exit 1 ;;
-    esac
-    just release-check
-    cargo publish --locked -p {{crate}}
-    echo "[publish-bootstrap] {{crate}} published; now link the repo on https://crates.io/crates/{{crate}}/settings"
 
 # --- casework-environment plan (plan: .agents/plans/godspeed-casework-cognitive-environment.plan.yaml)
 # GATE_GO, activated by T01: Go format, vet, and tests for the casework front end. This is the gate

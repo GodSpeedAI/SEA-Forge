@@ -4,7 +4,7 @@
 
 **Stage:** Distribution moved from crates.io to GitHub Release binaries (publish = false on all workspace crates; release-binaries job; docs updated)
 
-**Summary:** SEA-Forge is no longer distributed through crates.io. Every workspace crate now sets publish = false, and the release-please.yml publish job (crates-io environment, OIDC auth, two cargo publish steps) is replaced by a release-binaries job that builds sea-forge and sea-forge-server in release mode for x86_64-unknown-linux-gnu, packages sea-forge-<version>-x86_64-unknown-linux-gnu.tar.gz with SHA256SUMS, and uploads both to the GitHub Release with gh release upload --clobber. The job runs when release-please creates a release or when workflow_dispatch receives an existing tag, which re-attaches binaries to that release. Docs (release-management runbook, CI/CD architecture, CONTRIBUTING) now describe binary distribution, checksum verification and the re-attach procedure. Verification is local only; no GitHub run has executed the new job yet.
+**Summary:** SEA-Forge is no longer distributed through crates.io. Every workspace crate now sets publish = false, and the release-please.yml publish job (crates-io environment, OIDC auth, two cargo publish steps) is replaced by a release-binaries job that builds sea-forge and sea-forge-server in release mode for x86_64-unknown-linux-gnu, packages sea-forge-<version>-x86_64-unknown-linux-gnu.tar.gz with SHA256SUMS, and uploads both to the GitHub Release with gh release upload --clobber. The job runs when release-please creates a release or when workflow_dispatch receives an existing tag, which re-attaches binaries to that release. Docs (release-management runbook, CI/CD architecture, CONTRIBUTING) now describe binary distribution, checksum verification and the re-attach procedure. Verification is local only; no GitHub run has executed the new job yet. The obsolete just publish-bootstrap recipe is removed.
 
 **Verified:**
 
@@ -25,7 +25,6 @@
 - Binaries are built for x86_64-unknown-linux-gnu only; no other platform is shipped
 - SHA256SUMS is produced in the same job as the tarball and proves integrity against corruption, not against a compromised release; no signing is in place
 - Only sea-forge and sea-forge-server ship; sandbox helper binaries sea-forge-workload-exec and sea-forge-mcp-connect are internal
-- The justfile publish-bootstrap recipe still exists; it is not removed by this change and cannot publish because every crate sets publish = false
 
 **Next move:** Merge the PR after CI is green (maintainer decision; no merge in this change). After merge, verify the next release run attaches assets, or dispatch release-please.yml with tag=v0.2.0 to attach binaries to the existing v0.2.0 release.
 
