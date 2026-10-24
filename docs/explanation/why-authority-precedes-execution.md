@@ -77,6 +77,6 @@ There is no physical way in Rust code to invoke `runtime::execute()` without hol
 
 ## 5. Source Evidence
 
-* [`crates/sea-forge-server/src/case_dispatch.rs#L513-L552`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs#L513-L552) — Enforcement that `workspace/` is created strictly inside the `Verdict::Allow` branch.
-* [`crates/sea-forge-authority/src/lib.rs:69-87`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs#L69-L87) — Definition of move-only `ActionGrant`.
-* [`crates/sea-forge-server/tests/conformance_case_views.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/tests/conformance_case_views.rs) — Conformance test: `a_denied_episode_creates_no_workspace_and_no_artifacts`.
+* [`crates/sea-forge-server/src/case_dispatch.rs#L513-L552`](../../crates/sea-forge-server/src/case_dispatch.rs#L513-L552) — Enforcement that `workspace/` is created strictly inside the `Verdict::Allow` branch.
+* [`crates/sea-forge-authority/src/lib.rs:69-87`](../../crates/sea-forge-authority/src/lib.rs#L69-L87) — Definition of move-only `ActionGrant`.
+* [`crates/sea-forge-server/tests/conformance_case_views.rs`](../../crates/sea-forge-server/tests/conformance_case_views.rs) — Conformance test: `a_denied_episode_creates_no_workspace_and_no_artifacts`.

@@ -58,7 +58,7 @@ Look for `Permission denied (os error 13)` or `Operation not permitted (os error
 1. **If the action was malicious or buggy:** The sandbox functioned correctly; investigate why the child attempted unauthorized mutations.
 2. **If the action was legitimate:**
    * If writing files: Ensure the task writes relative to `.` or into its designated workspace.
-   * If network access is required: Update the active policy bundle to explicitly grant the necessary TCP ports under the rule's `boundaries.network.ports` list.
+   * If network access is required: Network access is currently denied by default and the `0.1` policy schema does not accept a `network` boundary dimension. Use a sandbox class designed for networked work, or file an issue before attempting to grant TCP ports through policy.
 
 ---
 

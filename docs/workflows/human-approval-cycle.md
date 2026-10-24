@@ -54,7 +54,7 @@ sequenceDiagram
 ## 3. Detailed Execution Path
 
 1. **Escalation Detection (`authority/src/lib.rs`):**
-   * During authority evaluation, a rule matching the action declares `disposition: escalate` or `require_approval: true`.
+   * During authority evaluation, a rule matching the action declares `verdict: escalate` or `requires_approval: true`.
    * The engine emits an `AuthorityDecision` with `verdict: Verdict::Escalate` and `outcome: Verdict::Escalate`.
 2. **Journal Append (`core/src/approvals.rs:31-50`):**
    * Formulates an `ApprovalRequest` struct:
@@ -111,7 +111,7 @@ pub fn latest_by_id(root: &Path) -> Result<Vec<ApprovalRequest>, ForgeError> {
 
 ## 6. Source Trail
 
-* [`crates/sea-forge-core/src/approvals.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/approvals.rs) — Journal append, load, fold, and expiry logic.
-* [`crates/sea-forge-server/src/sfwp/approvals.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/approvals.rs) — SFWP `approval.list` and `approval.decide` endpoints.
-* [`workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx) — Desktop UI approval inbox.
-* [`crates/sea-forge-cli/src/main.rs#L148-L171`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cli/src/main.rs#L148-L171) — CLI `sea-forge approve` and `sea-forge reject` commands.
+* [`crates/sea-forge-core/src/approvals.rs`](../../crates/sea-forge-core/src/approvals.rs) — Journal append, load, fold, and expiry logic.
+* [`crates/sea-forge-server/src/sfwp/approvals.rs`](../../crates/sea-forge-server/src/sfwp/approvals.rs) — SFWP `approval.list` and `approval.decide` endpoints.
+* [`workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx`](../../workbench/apps/desktop/src/pages/ApprovalInboxPage.tsx) — Desktop UI approval inbox.
+* [`crates/sea-forge-cli/src/main.rs#L148-L171`](../../crates/sea-forge-cli/src/main.rs#L148-L171) — CLI `sea-forge approve` and `sea-forge reject` commands.

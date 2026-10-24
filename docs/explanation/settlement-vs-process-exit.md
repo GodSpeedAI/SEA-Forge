@@ -123,6 +123,6 @@ If a command exits 0 but fails to generate `model.sea`, the settlement record ex
 
 ## 6. Source Evidence
 
-* [`crates/sea-forge-settlement/src/lib.rs:16-100`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/lib.rs#L16-L100) — Core `settle()` evaluation implementation.
-* [`crates/sea-forge-core/src/types.rs:610-635`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L610-L635) — `SettlementCriteria` schema definition.
-* [`justfile:335-394`](file:///c:/Users/sprim/projects/sea-rs/justfile#L335-L394) — Normative conformance proofs asserting non-empty basis and false-success rejection.
+* [`crates/sea-forge-settlement/src/lib.rs:16-100`](../../crates/sea-forge-settlement/src/lib.rs#L16-L100) — Core `settle()` evaluation implementation.
+* [`crates/sea-forge-core/src/types.rs:610-635`](../../crates/sea-forge-core/src/types.rs#L610-L635) — `SettlementCriteria` schema definition.
+* [`justfile:335-394`](../../justfile#L335-L394) — Normative conformance proofs asserting non-empty basis and false-success rejection.

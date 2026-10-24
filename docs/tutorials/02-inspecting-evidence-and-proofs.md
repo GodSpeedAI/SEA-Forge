@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-* Completed [Tutorial 1: Your First Governed Run](file:///c:/Users/sprim/projects/sea-rs/docs/tutorials/01-first-governed-run.md).
+* Completed [Tutorial 1: Your First Governed Run](../../docs/tutorials/01-first-governed-run.md).
 * `just` command runner installed (run `just --version`).
 * `jq` command-line JSON processor installed.
 
@@ -138,5 +138,5 @@ The resulting `MerkleProof` can be independently validated by any client without
 ## 5. Next Steps
 
 Now that you have verified how evidence and proofs work at the CLI and ledger levels:
-* Walk through the graphical experience in [Tutorial 3: Authoring Your First Workbench Case](file:///c:/Users/sprim/projects/sea-rs/docs/tutorials/03-authoring-first-workbench-case.md).
-* Explore the mathematics of the ledger in the [Integrity Ledger Subsystem Guide](file:///c:/Users/sprim/projects/sea-rs/docs/subsystems/integrity-ledger.md).
+* Walk through the graphical experience in [Tutorial 3: Authoring Your First Workbench Case](../../docs/tutorials/03-authoring-first-workbench-case.md).
+* Explore the mathematics of the ledger in the [Integrity Ledger Subsystem Guide](../../docs/subsystems/integrity-ledger.md).

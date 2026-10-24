@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en" data-register="instrument">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEA Forge — Governed Run Explorer</title>
+  <style>
+    :root {
+      --bg: #f7f7f4;
+      --surface: #fffefb;
+      --ink: #17222a;
+      --muted: #5f6b73;
+      --line: #d9ded6;
+      --accent: #0b6b62;
+      --accent-soft: #dff0ed;
+      --ok: #0f6b4a;
+      --ok-soft: #e3f2ea;
+      --warn: #96590a;
+      --warn-soft: #f8ecd8;
+      --risk: #a4272b;
+      --risk-soft: #f9e2e2;
+      --info: #295f8a;
+      --info-soft: #e2edf5;
+      --focus: #0b6b62;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --serif: Georgia, "Times New Roman", "Noto Serif", serif;
+      --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      --r-1: 6px;
+      --r-2: 12px;
+      --fast: 120ms;
+      --med: 220ms;
+      --slow: 420ms;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 24px 72px;
+    }
+
+    header.top {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
+      gap: 24px;
+      align-items: end;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    header.top p {
+      margin: 10px 0 0;
+      max-width: 62ch;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 18px;
+    }
+
+    .kicker {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 6px 0 0;
+      font-family: var(--serif);
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.05;
+      letter-spacing: -0.015em;
+    }
+
+    .meta {
+      display: grid;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .meta strong { color: var(--ink); font-weight: 600; }
+
+    nav.sections {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    nav.sections a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    nav.sections a:hover,
+    nav.sections a:focus-visible {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    section { margin-top: 56px; }
+
+    .sec-head {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .sec-head .label {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(22px, 3vw, 30px);
+      line-height: 1.15;
+    }
+
+    .lead {
+      max-width: 68ch;
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 18px;
+    }
+
+    figure {
+      margin: 0;
+    }
+
+    figcaption {
+      margin-top: 10px;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 14px;
+    }
+
+    .pipeline {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-2);
+    }
+
+    .pipeline .node rect {
+      fill: var(--surface);
+      stroke: var(--line);
+      stroke-width: 1.5;
+      transition: stroke var(--med) ease, fill var(--med) ease;
+    }
+
+    .pipeline .node text {
+      fill: var(--ink);
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+
+    .pipeline .node .record {
+      fill: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .pipeline .edge {
+      stroke: var(--line);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .pipeline .node.active rect {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 2.5;
+    }
+
+    .pipeline .node.active text.title { fill: var(--accent); }
+
+    .pipeline .flow-dot {
+      fill: var(--accent);
+      opacity: 0;
+    }
+
+    .pipeline .flow-dot.visible { opacity: 1; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 18px 0 22px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      border-radius: var(--r-1);
+      padding: 8px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: background var(--fast) ease, border-color var(--fast) ease, color var(--fast) ease;
+    }
+
+    button:hover { border-color: var(--accent); color: var(--accent); }
+
+    button[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.play { min-width: 92px; }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .step-count {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr);
+      gap: 24px;
+      align-items: start;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-2);
+      padding: 24px;
+    }
+
+    .stage h3 {
+      margin: 0 0 6px;
+      font-family: var(--serif);
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .stage p {
+      margin: 0;
+      max-width: 68ch;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 17px;
+    }
+
+    .records {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .records li {
+      display: grid;
+      grid-template-columns: 14px 1fr;
+      align-items: start;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .records li::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      margin-top: 4px;
+      border: 1.5px solid var(--accent);
+      border-radius: 50%;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(110px, 1fr));
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+
+    .scenario-grid button { min-height: 44px; }
+
+    .scenario-grid button span {
+      display: block;
+      font-family: var(--sans);
+      font-size: 13px;
+    }
+
+    .scenario-grid button small {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      opacity: 0.75;
+    }
+
+    .result {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .cli {
+      margin: 0;
+      background: #10212b;
+      color: #e8f0ef;
+      border-radius: var(--r-2);
+      padding: 18px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .cli .id { color: #8fd7cf; }
+    .cli .ok { color: #9ce0b7; }
+    .cli .bad { color: #f4a5a5; }
+    .cli .warn { color: #f6d28d; }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .status {
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--r-1);
+      padding: 10px;
+      background: var(--surface);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .status dt { color: var(--muted); }
+    .status dd { margin: 4px 0 0; font-weight: 600; }
+
+    .status.accepted { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+    .status.rejected { border-color: var(--risk); background: var(--risk-soft); color: var(--risk); }
+    .status.escalated { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+
+    .basis {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .basis li {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-1);
+      background: var(--surface);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ink);
+    }
+
+    .basis li::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex: none;
+    }
+
+    .basis li.exit::before { border-radius: 2px; }
+    .basis li.artifact::before { transform: rotate(45deg); border-radius: 1px; }
+    .basis li.stdout::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); border-radius: 0; }
+    .basis li.time::before { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); border-radius: 1px; }
+
+    .why {
+      margin: 16px 0 0;
+      padding: 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 0 var(--r-1) var(--r-1) 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 16px;
+    }
+
+    .record-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .record-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-1);
+      padding: 12px;
+    }
+
+    .record-card strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      overflow-wrap: anywhere;
+    }
+
+    .record-card span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: var(--serif);
+    }
+
+    .small-multiples {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .multiple {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r-2);
+      padding: 16px;
+    }
+
+    .multiple h3 {
+      margin: 0 0 4px;
+      font-family: var(--serif);
+      font-size: 18px;
+    }
+
+    .multiple p {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 15px;
+    }
+
+    .multiple .tokens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .sources {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sources a {
+      display: block;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-1);
+      background: var(--surface);
+      color: var(--ink);
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .sources a:hover,
+    .sources a:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+    footer {
+      margin-top: 56px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      header.top { grid-template-columns: 1fr; }
+      .meta { text-align: left; }
+      .stage { grid-template-columns: 1fr; }
+      .result { grid-template-columns: 1fr; }
+      .record-grid { grid-template-columns: repeat(3, 1fr); }
+      .small-multiples { grid-template-columns: 1fr; }
+      .scenario-grid { grid-template-columns: repeat(3, 1fr); }
+      .sources { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .record-grid { grid-template-columns: 1fr; }
+      .scenario-grid { grid-template-columns: repeat(2, 1fr); }
+      .status-strip { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <p class="kicker">SEA Forge · Interactive explainer</p>
+        <h1>A governed run earns acceptance, not just an exit code.</h1>
+        <p>Seven records stand between an operator's intent and a settled outcome. Step through them, switch scenarios, and see why a clean process exit is only one kind of evidence.</p>
+      </div>
+      <div class="meta">
+        <span><strong>Scope</strong> · CLI intent run</span>
+        <span><strong>Records</strong> · plan · authority · trace · evidence · settlement</span>
+        <span><strong>Status</strong> · offline single file</span>
+      </div>
+    </header>
+
+    <nav class="sections" aria-label="Sections">
+      <a href="#pipeline">Pipeline</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#records">Records</a>
+      <a href="#exit-zero">Exit zero</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <main>
+      <section id="pipeline" aria-labelledby="pipeline-title">
+        <div class="sec-head">
+          <span class="label">01</span>
+          <h2 id="pipeline-title">One run is seven commitments.</h2>
+        </div>
+        <p class="lead">The kernel writes a durable record for each stage before it trusts the next one. Click a stage to see what that record proves.</p>
+
+        <figure>
+          <svg class="pipeline" viewBox="0 0 960 210" role="img" aria-labelledby="pipeline-fig-label">
+            <title id="pipeline-fig-label">Seven-stage governed run pipeline from intent to capability envelope</title>
+            <path class="edge" d="M80 78 H 880" />
+            <circle class="flow-dot" id="flow-dot" cx="80" cy="78" r="6" />
+            <g class="node" data-stage="0" id="node-0">
+              <rect x="30" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="80" y="76" text-anchor="middle">Intent</text>
+              <text class="record" x="80" y="94" text-anchor="middle">case.json</text>
+            </g>
+            <g class="node" data-stage="1" id="node-1">
+              <rect x="150" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="200" y="76" text-anchor="middle">Plan</text>
+              <text class="record" x="200" y="94" text-anchor="middle">plan.json</text>
+            </g>
+            <g class="node" data-stage="2" id="node-2">
+              <rect x="270" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="320" y="76" text-anchor="middle">Authority</text>
+              <text class="record" x="320" y="94" text-anchor="middle">authority.json</text>
+            </g>
+            <g class="node" data-stage="3" id="node-3">
+              <rect x="390" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="440" y="76" text-anchor="middle">Execution</text>
+              <text class="record" x="440" y="94" text-anchor="middle">trace.jsonl</text>
+            </g>
+            <g class="node" data-stage="4" id="node-4">
+              <rect x="510" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="560" y="76" text-anchor="middle">Evidence</text>
+              <text class="record" x="560" y="94" text-anchor="middle">evidence.jsonl</text>
+            </g>
+            <g class="node" data-stage="5" id="node-5">
+              <rect x="630" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="680" y="76" text-anchor="middle">Settlement</text>
+              <text class="record" x="680" y="94" text-anchor="middle">settlement.json</text>
+            </g>
+            <g class="node" data-stage="6" id="node-6">
+              <rect x="750" y="46" width="100" height="64" rx="10" />
+              <text class="title" x="800" y="76" text-anchor="middle">Capability</text>
+              <text class="record" x="800" y="94" text-anchor="middle">capabilities.jsonl</text>
+            </g>
+            <text x="480" y="150" text-anchor="middle" fill="#5f6b73" font-family="SFMono-Regular, Consolas, monospace" font-size="11">Authority gates every workload effect. Control-plane records exist before evaluation.</text>
+          </svg>
+          <figcaption>The same seven records exist for every scenario; only their contents change.</figcaption>
+        </figure>
+
+        <div class="controls">
+          <button type="button" id="prev" aria-label="Previous stage">← Prev</button>
+          <button type="button" id="next" aria-label="Next stage">Next →</button>
+          <button type="button" class="play" id="play" aria-label="Play the run once">▶ Play</button>
+          <span class="step-count" id="step-count" aria-live="polite">Stage 1 of 7</span>
+        </div>
+
+        <div class="stage" id="stage-panel" aria-live="polite">
+          <div>
+            <h3 id="stage-title">Intent is interpreted, not trusted.</h3>
+            <p id="stage-text">The CLI loads policy, validates attribution, and interprets the intent string into a typed pattern. Unknown intent fails with exit 2 before a run directory exists.</p>
+          </div>
+          <ul class="records" id="stage-records">
+            <li>case record</li>
+            <li>intent ledger entry</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="scenarios" aria-labelledby="scenarios-title">
+        <div class="sec-head">
+          <span class="label">02</span>
+          <h2 id="scenarios-title">Choose a scenario.</h2>
+        </div>
+        <p class="lead">Every scenario uses the same seven-stage pipeline. The differences are the authority verdicts, the execution result, and the settlement basis.</p>
+
+        <div class="scenario-grid" role="group" aria-label="Run scenarios">
+          <button type="button" data-scenario="accepted" aria-pressed="true"><span>Accepted</span><small>exit 0</small></button>
+          <button type="button" data-scenario="denied" aria-pressed="false"><span>Denied</span><small>exit 3</small></button>
+          <button type="button" data-scenario="escalated" aria-pressed="false"><span>Escalated</span><small>exit 4</small></button>
+          <button type="button" data-scenario="false-success" aria-pressed="false"><span>False success</span><small>exit 3</small></button>
+          <button type="button" data-scenario="nonzero" aria-pressed="false"><span>Nonzero</span><small>exit 3</small></button>
+          <button type="button" data-scenario="timeout" aria-pressed="false"><span>Timeout</span><small>exit 3</small></button>
+          <button type="button" data-scenario="generated-zone" aria-pressed="false"><span>Protected zone</span><small>exit 3</small></button>
+        </div>
+
+        <div class="result">
+          <div>
+            <div class="status-strip">
+              <dl class="status accepted" id="status-settlement">
+                <dt>Settlement</dt>
+                <dd>accepted</dd>
+              </dl>
+              <dl class="status" id="status-execution">
+                <dt>Execution</dt>
+                <dd>completed</dd>
+              </dl>
+              <dl class="status" id="status-exit">
+                <dt>Process exit</dt>
+                <dd>0</dd>
+              </dl>
+            </div>
+            <pre class="cli" id="cli-output"><code>run_id=<span class="id">run_…</span>
+authority=<span class="ok">auth_01:allow</span>
+authority=<span class="ok">auth_02:allow</span>
+execution=completed
+settlement=<span class="ok">accepted</span>
+run_dir=<span class="id">…</span></code></pre>
+            <p class="why" id="scenario-why">The validator exits 0, the required artifact exists, and stdout contains the expected sentence.</p>
+          </div>
+
+          <figure>
+            <ul class="basis" id="basis-list" aria-label="Settlement basis tokens">
+              <li class="authority">authority_allow</li>
+              <li class="exit">exit_zero</li>
+              <li class="artifact">required_artifact_present:model.sea</li>
+              <li class="stdout">stdout_match</li>
+            </ul>
+            <figcaption>Settlement writes a non-empty basis for every outcome. A zero exit is only one token.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="records" aria-labelledby="records-title">
+        <div class="sec-head">
+          <span class="label">03</span>
+          <h2 id="records-title">What each record proves.</h2>
+        </div>
+        <p class="lead">Six durable files carry the run. The seventh, the capability journal, is only appended after settlement accepts.</p>
+
+        <div class="record-grid">
+          <div class="record-card"><strong>plan.json</strong><span>The typed operations and committed settlement criteria.</span></div>
+          <div class="record-card"><strong>authority.json</strong><span>Every policy verdict, matched rule, and identity binding.</span></div>
+          <div class="record-card"><strong>trace.jsonl</strong><span>The ordered lifecycle: created, granted, executed, settled.</span></div>
+          <div class="record-card"><strong>evidence.jsonl</strong><span>stdout, stderr, artifacts, and SHA-256 content identity.</span></div>
+          <div class="record-card"><strong>settlement.json</strong><span>Status plus the basis tokens that justify it.</span></div>
+          <div class="record-card"><strong>semantic-envelope.json</strong><span>The accepted capability as a signed, recallable envelope.</span></div>
+        </div>
+      </section>
+
+      <section id="exit-zero" aria-labelledby="exit-zero-title">
+        <div class="sec-head">
+          <span class="label">04</span>
+          <h2 id="exit-zero-title">Exit zero is evidence, not success.</h2>
+        </div>
+        <p class="lead">Three scenarios end with a rejected settlement even though the child process behaved in a way a shell would accept.</p>
+
+        <figure class="small-multiples">
+          <div class="multiple">
+            <h3>False success</h3>
+            <p>The child exits 0, but the promised artifact is missing.</p>
+            <div class="tokens">
+              <span>exit_zero</span>
+              <span>required_artifact_missing:model.sea</span>
+            </div>
+          </div>
+          <div class="multiple">
+            <h3>Nonzero</h3>
+            <p>The validator runs, fails, and prints the wrong stdout.</p>
+            <div class="tokens">
+              <span>exit_nonzero</span>
+              <span>stdout_mismatch</span>
+            </div>
+          </div>
+          <div class="multiple">
+            <h3>Timeout</h3>
+            <p>The child never finishes inside the granted wall-clock window.</p>
+            <div class="tokens">
+              <span>timed_out</span>
+            </div>
+          </div>
+        </figure>
+        <figcaption>Each rejected run still produces the same durable records as an accepted one.</figcaption>
+      </section>
+
+      <section id="sources" aria-labelledby="sources-title">
+        <div class="sec-head">
+          <span class="label">05</span>
+          <h2 id="sources-title">Sources</h2>
+        </div>
+        <ul class="sources">
+          <li><a href="../workflows/cli-run-lifecycle.md">CLI run lifecycle</a></li>
+          <li><a href="../subsystems/authority-fabric.md">Authority fabric</a></li>
+          <li><a href="../subsystems/settlement-evidence.md">Settlement and evidence</a></li>
+          <li><a href="../reference/persisted-record-schemas.md">Persisted record schemas</a></li>
+          <li><a href="../../crates/sea-forge-cli/src/pipeline.rs">sea-forge-cli/src/pipeline.rs</a></li>
+          <li><a href="../../crates/sea-forge-authority/src/lib.rs">sea-forge-authority/src/lib.rs</a></li>
+          <li><a href="../../crates/sea-forge-settlement/src/lib.rs">sea-forge-settlement/src/lib.rs</a></li>
+          <li><a href="../../crates/sea-forge-domain/src/lib.rs">sea-forge-domain/src/lib.rs</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>Offline documentation page · generated from the current kernel behavior · no runtime calls</p>
+    </footer>
+  </div>
+
+  <script>
+    const stages = [
+      {
+        title: 'Intent is interpreted, not trusted.',
+        text: 'The CLI loads the policy bundle, validates attribution, and interprets the intent into a typed pattern. An unknown intent exits 2 before a run directory exists.',
+        records: ['case record', 'intent ledger entry']
+      },
+      {
+        title: 'The plan is typed before it runs.',
+        text: 'The planner turns the intent into concrete operations and commits settlement criteria before execution. The criteria are not inferred later from the exit code.',
+        records: ['plan.json', 'settlement_criteria ledger entry']
+      },
+      {
+        title: 'Authority gates every workload effect.',
+        text: 'Each operation is evaluated against the policy bundle and identity binding. Only an Allow verdict can mint a move-only ActionGrant. Deny and Escalate halt before workload effects.',
+        records: ['authority.json', 'authority_decision ledger entry']
+      },
+      {
+        title: 'Execution happens only after Allow.',
+        text: 'The runtime consumes the grant, re-resolves the executable, selects the sandbox, and records what actually ran. A denied run records RunHalted instead.',
+        records: ['trace.jsonl', 'ExecutionResult evidence']
+      },
+      {
+        title: 'Evidence is captured, not assumed.',
+        text: 'stdout, stderr, artifacts, and content hashes are recorded as evidence. Each artifact gets a SHA-256 identity and a pre-mint identity.',
+        records: ['evidence.jsonl', 'artifact descriptors']
+      },
+      {
+        title: 'Settlement judges the claim independently.',
+        text: 'Settlement compares the committed criteria with the captured evidence. It never equates a zero exit with success.',
+        records: ['settlement.json', 'SettlementRecorded trace event']
+      },
+      {
+        title: 'Capability memory is earned.',
+        text: 'Only an accepted settlement produces a semantic envelope and appends a capability. Rejected and escalated runs stay recorded, but do not promote capability.',
+        records: ['semantic-envelope.json', 'capabilities.jsonl']
+      }
+    ];
+
+    const scenarios = {
+      accepted: {
+        name: 'Accepted',
+        settlement: 'accepted',
+        execution: 'completed',
+        exit: '0',
+        why: 'The validator exits 0, the required artifact exists, and stdout contains the expected sentence.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:allow', 'ok'],
+          ['authority=', 'auth_02:allow', 'ok'],
+          ['execution=', 'completed', ''],
+          ['settlement=', 'accepted', 'ok'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_allow', 'authority'],
+          ['exit_zero', 'exit'],
+          ['required_artifact_present:model.sea', 'artifact'],
+          ['stdout_match', 'stdout']
+        ]
+      },
+      denied: {
+        name: 'Denied',
+        settlement: 'rejected',
+        execution: 'not_run',
+        exit: '3',
+        why: 'A deny rule matches the first operation. No workload process is spawned, yet the run still produces authority, trace, and settlement records.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:deny', 'bad'],
+          ['authority=', 'auth_02:deny', 'bad'],
+          ['execution=', 'not_run', ''],
+          ['settlement=', 'rejected', 'bad'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_deny', 'authority']
+        ]
+      },
+      escalated: {
+        name: 'Escalated',
+        settlement: 'escalated',
+        execution: 'not_run',
+        exit: '4',
+        why: 'An escalation rule matches the first operation. The run parks for human review instead of silently failing.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:escalate', 'warn'],
+          ['authority=', 'auth_02:deny', 'bad'],
+          ['execution=', 'not_run', ''],
+          ['settlement=', 'escalated', 'warn'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_escalate', 'authority']
+        ]
+      },
+      'false-success': {
+        name: 'False success',
+        settlement: 'rejected',
+        execution: 'completed',
+        exit: '3',
+        why: 'The child exits 0, but the promised model.sea is missing. Settlement rejects the claim despite the clean process exit.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:allow', 'ok'],
+          ['authority=', 'auth_02:allow', 'ok'],
+          ['execution=', 'completed', ''],
+          ['settlement=', 'rejected', 'bad'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_allow', 'authority'],
+          ['exit_zero', 'exit'],
+          ['required_artifact_missing:model.sea', 'artifact'],
+          ['stdout_match', 'stdout']
+        ]
+      },
+      nonzero: {
+        name: 'Nonzero',
+        settlement: 'rejected',
+        execution: 'completed',
+        exit: '3',
+        why: 'The validator runs but exits nonzero and prints the wrong output. Both the exit code and stdout evidence are recorded.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:allow', 'ok'],
+          ['authority=', 'auth_02:allow', 'ok'],
+          ['execution=', 'completed', ''],
+          ['settlement=', 'rejected', 'bad'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_allow', 'authority'],
+          ['exit_nonzero', 'exit'],
+          ['required_artifact_present:model.sea', 'artifact'],
+          ['stdout_mismatch', 'stdout']
+        ]
+      },
+      timeout: {
+        name: 'Timeout',
+        settlement: 'rejected',
+        execution: 'timed_out',
+        exit: '3',
+        why: 'The child never finishes inside the granted wall-clock window. Settlement records the timeout as a durable basis token.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:allow', 'ok'],
+          ['execution=', 'timed_out', 'warn'],
+          ['settlement=', 'rejected', 'bad'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_allow', 'authority'],
+          ['timed_out', 'time']
+        ]
+      },
+      'generated-zone': {
+        name: 'Protected zone',
+        settlement: 'rejected',
+        execution: 'not_run',
+        exit: '3',
+        why: 'The file surface denies the generated-zone write before any rule can allow it. The run halts and settles as rejected.',
+        cli: [
+          ['run_id=', 'run_…', 'id'],
+          ['authority=', 'auth_01:deny', 'bad'],
+          ['authority=', 'auth_02:allow', 'ok'],
+          ['execution=', 'not_run', ''],
+          ['settlement=', 'rejected', 'bad'],
+          ['run_dir=', '…', 'id']
+        ],
+        basis: [
+          ['authority_deny', 'authority']
+        ]
+      }
+    };
+
+    let stageIndex = 0;
+    let scenarioKey = 'accepted';
+    let playing = false;
+    let playTimer = null;
+
+    const stagePanel = document.getElementById('stage-panel');
+    const stageTitle = document.getElementById('stage-title');
+    const stageText = document.getElementById('stage-text');
+    const stageRecords = document.getElementById('stage-records');
+    const stepCount = document.getElementById('step-count');
+    const statusSettlement = document.getElementById('status-settlement');
+    const statusExecution = document.getElementById('status-execution');
+    const statusExit = document.getElementById('status-exit');
+    const cliOutput = document.getElementById('cli-output');
+    const basisList = document.getElementById('basis-list');
+    const scenarioWhy = document.getElementById('scenario-why');
+    const playButton = document.getElementById('play');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    function renderStage() {
+      const stage = stages[stageIndex];
+      stageTitle.textContent = stage.title;
+      stageText.textContent = stage.text;
+      stageRecords.innerHTML = stage.records
+        .map(record => `<li>${record}</li>`)
+        .join('');
+      stepCount.textContent = `Stage ${stageIndex + 1} of ${stages.length}`;
+
+      document.querySelectorAll('.pipeline .node').forEach(node => {
+        const isActive = Number(node.dataset.stage) === stageIndex;
+        node.classList.toggle('active', isActive);
+        node.setAttribute('aria-current', isActive ? 'true' : 'false');
+      });
+
+      const dot = document.getElementById('flow-dot');
+      const x = 80 + stageIndex * 120;
+      dot.setAttribute('cx', String(x));
+      dot.classList.add('visible');
+    }
+
+    function renderScenario() {
+      const scenario = scenarios[scenarioKey];
+
+      statusSettlement.className = `status ${scenario.settlement}`;
+      statusSettlement.querySelector('dd').textContent = scenario.settlement;
+      statusExecution.querySelector('dd').textContent = scenario.execution;
+      statusExit.querySelector('dd').textContent = scenario.exit;
+
+      cliOutput.innerHTML = scenario.cli
+        .map(([label, value, cls]) => `${label}<span class="${cls}">${value}</span>`)
+        .join('\n');
+
+      basisList.innerHTML = scenario.basis
+        .map(([token, kind]) => `<li class="${kind}">${token}</li>`)
+        .join('');
+
+      scenarioWhy.textContent = scenario.why;
+
+      document.querySelectorAll('[data-scenario]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.scenario === scenarioKey));
+      });
+    }
+
+    function setStage(index) {
+      stageIndex = (index + stages.length) % stages.length;
+      renderStage();
+    }
+
+    function setScenario(key) {
+      if (!scenarios[key]) return;
+      scenarioKey = key;
+      renderScenario();
+    }
+
+    function startPlay() {
+      if (playing || reduceMotion.matches) return;
+      playing = true;
+      playButton.textContent = '❚❚ Pause';
+      playButton.setAttribute('aria-label', 'Pause the run');
+      playTimer = window.setInterval(() => {
+        setStage(stageIndex + 1);
+      }, 2200);
+    }
+
+    function stopPlay() {
+      playing = false;
+      playButton.textContent = '▶ Play';
+      playButton.setAttribute('aria-label', 'Play the run once');
+      if (playTimer) window.clearInterval(playTimer);
+      playTimer = null;
+    }
+
+    document.getElementById('prev').addEventListener('click', () => {
+      stopPlay();
+      setStage(stageIndex - 1);
+    });
+
+    document.getElementById('next').addEventListener('click', () => {
+      stopPlay();
+      setStage(stageIndex + 1);
+    });
+
+    playButton.addEventListener('click', () => {
+      if (playing) {
+        stopPlay();
+      } else {
+        startPlay();
+      }
+    });
+
+    document.querySelectorAll('[data-scenario]').forEach(button => {
+      button.addEventListener('click', () => {
+        stopPlay();
+        setScenario(button.dataset.scenario);
+      });
+    });
+
+    document.querySelectorAll('.pipeline .node').forEach(node => {
+      node.addEventListener('click', () => {
+        stopPlay();
+        setStage(Number(node.dataset.stage));
+      });
+    });
+
+    window.addEventListener('keydown', event => {
+      if (event.target instanceof HTMLButtonElement || event.target instanceof HTMLAnchorElement) return;
+      if (event.key === 'ArrowRight') {
+        stopPlay();
+        setStage(stageIndex + 1);
+      }
+      if (event.key === 'ArrowLeft') {
+        stopPlay();
+        setStage(stageIndex - 1);
+      }
+    });
+
+    reduceMotion.addEventListener?.('change', event => {
+      if (event.matches) stopPlay();
+    });
+
+    renderStage();
+    renderScenario();
+  </script>
+</body>
+</html>
