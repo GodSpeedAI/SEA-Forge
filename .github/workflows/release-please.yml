@@ -52,12 +52,14 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          # PAT so the release PR's push triggers CI. The default GITHUB_TOKEN
-          # cannot trigger a downstream workflow run, which would leave the
-          # release PR without the required CI / gate check.
-          # Scope: contents:write + pull-requests:write on this repo only.
-          # Rotation: docs/skills/release-management.md §Token rotation.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # GITHUB_TOKEN, scoped by the job-level permissions above
+          # (contents:write + pull-requests:write, this repo only).
+          # Consequence: a release PR opened with GITHUB_TOKEN does NOT trigger
+          # other workflows, so its CI / gate checks will not start on their own.
+          # RELEASE_PLEASE_TOKEN (a PAT) was intended to avoid this, but that
+          # secret does not exist in this repository, so the input was empty
+          # and every run failed with "Input required and not supplied: token".
+          token: ${{ secrets.GITHUB_TOKEN }}
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
