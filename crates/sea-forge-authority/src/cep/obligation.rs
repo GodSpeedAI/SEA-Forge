@@ -153,10 +153,28 @@ fn inline(row: &SourceRow) -> Option<&Value> {
     row.payload.pointer("/representations/0/inline_content")
 }
 
+/// When SEA-Forge first received execution evidence for the operation: no run before it saw the effect.
+fn execution_floor(
+    entries: &[sea_forge_ledger::LedgerEntry],
+    operation_id: &str,
+) -> Option<DateTime<Utc>> {
+    entries
+        .iter()
+        .filter(|e| {
+            e.record_kind == "evidence_packet" && e.subject_refs.iter().any(|s| s == operation_id)
+        })
+        .filter_map(|e| parse_time(&e.committed_at))
+        .min()
+}
+
 /// The discrimination run (B) must be a completed, uncrashed run of exactly the pinned verifier argv, after the
 /// threshold, with a known non-zero exit: only that proves the statement did not already hold before acting.
 /// A crashed run, a run of another command, or one with no recorded result proves nothing about this verifier.
-fn check_discrimination(row: &SourceRow, obligation: &Obligation) -> Result<(), CepAuthorityError> {
+fn check_discrimination(
+    row: &SourceRow,
+    obligation: &Obligation,
+    execution_floor: Option<DateTime<Utc>>,
+) -> Result<(), CepAuthorityError> {
     let refuse = |why: &str| {
         Err(CepAuthorityError::Evidence(format!(
             "the discrimination run {why}"
@@ -172,13 +190,18 @@ fn check_discrimination(row: &SourceRow, obligation: &Obligation) -> Result<(), 
     if content.get("crashed").and_then(Value::as_bool) != Some(false) {
         return refuse("crashed or does not say it completed; it has no known result");
     }
-    if content
+    let Some(completed) = content
         .get("completed_at")
         .and_then(Value::as_str)
         .and_then(parse_time)
-        .is_none()
-    {
+    else {
         return refuse("has no recorded completion; it has no known result");
+    };
+    // A baseline taken after the operation executed says nothing about the state before acting.
+    if execution_floor.is_some_and(|floor| completed > floor) {
+        return refuse(
+            "completed after the execution evidence; it is not a baseline before acting",
+        );
     }
     let argv = content
         .pointer("/invocation/argv")
@@ -347,7 +370,11 @@ impl CepAuthorityService<'_> {
                 ))
             })?;
         // A bad discrimination run is refused before any closure is frozen.
-        check_discrimination(discrimination, &obligation)?;
+        check_discrimination(
+            discrimination,
+            &obligation,
+            execution_floor(&entries, operation_id),
+        )?;
         let record = json!({
             "operation_id": operation_id,
             "ledger_id": obligation.threshold_ledger,
@@ -431,19 +458,11 @@ impl CepAuthorityService<'_> {
                 obligation.threshold_id, obligation.threshold_ledger, obligation.threshold_position
             )));
         }
-        let execution_floor = entries
-            .iter()
-            .filter(|e| {
-                e.record_kind == "evidence_packet"
-                    && e.subject_refs.iter().any(|s| s == operation_id)
-            })
-            .filter_map(|e| parse_time(&e.committed_at))
-            .min()
-            .ok_or_else(|| {
-                CepAuthorityError::Evidence(format!(
-                    "no execution evidence was submitted for {operation_id}"
-                ))
-            })?;
+        let execution_floor = execution_floor(&entries, operation_id).ok_or_else(|| {
+            CepAuthorityError::Evidence(format!(
+                "no execution evidence was submitted for {operation_id}"
+            ))
+        })?;
 
         let mut basis = json!({
             "expectation_digest": obligation.expectation_digest,
@@ -471,7 +490,7 @@ impl CepAuthorityService<'_> {
                 let before = observation(&rows, discrimination_id).ok_or_else(|| {
                     CepAuthorityError::Evidence("the discrimination run has no known result".into())
                 })?;
-                check_discrimination(before, &obligation)?;
+                check_discrimination(before, &obligation, Some(execution_floor))?;
                 let frame = Frame {
                     obligation: &obligation,
                     b,

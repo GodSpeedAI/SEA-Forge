@@ -240,6 +240,16 @@ impl Scenario {
             argv: argv(),
         }
     }
+    /// A run that started and completed before SEA-Forge received the execution evidence.
+    fn baseline(&self, exit: Option<i64>) -> Run {
+        Run {
+            exit,
+            started: self.floor - Duration::seconds(5),
+            completed: Some(self.floor - Duration::seconds(4)),
+            crashed: false,
+            argv: argv(),
+        }
+    }
     fn add(&self, row: SourceRow) {
         self.rt.rows.borrow_mut().push(row);
     }
@@ -500,14 +510,7 @@ fn a_threshold_that_differs_from_realitytraces_record_is_refused() {
 #[test]
 fn a_discrimination_run_that_already_observed_the_statement_is_refused() {
     let s = scenario(W, 30);
-    s.add(obs_row(
-        5,
-        "obs-d",
-        &Run {
-            exit: Some(0),
-            ..s.run(Some(0))
-        },
-    ));
+    s.add(obs_row(5, "obs-d", &s.baseline(Some(0))));
     s.add(obs_row(7, "obs-v0", &s.run(Some(0))));
     s.wait_close();
     // Refused before any closure is frozen, so nothing can settle on it.
@@ -523,7 +526,8 @@ fn a_discrimination_run_that_already_observed_the_statement_is_refused() {
 /// of exactly the pinned verifier argv. Any other failing observation after T is refused at closure.
 #[test]
 fn a_discrimination_run_of_another_command_crashed_or_incomplete_is_refused_at_closure() {
-    let cases: [(&str, fn(Run) -> Run); 3] = [
+    type Spoil = fn(Run) -> Run;
+    let cases: [(&str, Spoil); 3] = [
         ("pinned verifier argv", |r| Run {
             argv: vec![json!("/bin/false")],
             ..r
@@ -540,7 +544,7 @@ fn a_discrimination_run_of_another_command_crashed_or_incomplete_is_refused_at_c
     ];
     for (why, bad) in cases {
         let s = scenario(W, 30);
-        s.add(obs_row(5, "obs-d", &bad(s.run(Some(1)))));
+        s.add(obs_row(5, "obs-d", &bad(s.baseline(Some(1)))));
         s.add(obs_row(7, "obs-v0", &s.run(Some(0))));
         s.wait_close();
         let err = s.close(&["obs-v0".into()]).unwrap_err().to_string();
@@ -551,6 +555,22 @@ fn a_discrimination_run_of_another_command_crashed_or_incomplete_is_refused_at_c
             "{why}: no closure, no settlement: {settled}"
         );
     }
+}
+
+/// A failing run that completed after the operation executed is not a baseline before acting; otherwise a later
+/// passing verification would settle an effect that may already have held.
+#[test]
+fn a_discrimination_run_completed_after_execution_is_refused_at_closure() {
+    let s = scenario(W, 30);
+    s.add(obs_row(5, "obs-d", &s.run(Some(1))));
+    s.add(obs_row(7, "obs-v0", &s.run(Some(0))));
+    s.wait_close();
+    let err = s.close(&["obs-v0".into()]).unwrap_err().to_string();
+    assert!(
+        err.contains("completed after the execution evidence"),
+        "{err}"
+    );
+    assert!(s.settle().unwrap_err().to_string().contains("pending"));
 }
 
 #[test]
