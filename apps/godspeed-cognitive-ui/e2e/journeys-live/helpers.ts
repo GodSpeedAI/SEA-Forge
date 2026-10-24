@@ -173,8 +173,8 @@ export async function designCaseViaUi(
   // runs (no template request reaches the gateway). Retry the click until the picker opens; what the
   // picker must then list is asserted unchanged below.
   for (let attempt = 1; ; attempt++) {
-    await b.click('[data-testid="center-design"]');
     try {
+      await b.click('[data-testid="center-design"]');
       await b.waitFor(`!!window.__gs.store.getState().proposal`, 5000, "template picker opened");
       break;
     } catch (e) {
