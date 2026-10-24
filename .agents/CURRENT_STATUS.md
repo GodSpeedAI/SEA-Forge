@@ -11,7 +11,7 @@
 - Release run on b09cef6 failed with: release-please failed: value at path package.version is not tagged (after reading the manifest and listing workspace crate versions)
 - release-please 17.6.0 (the version pinned by release-please-action v5.0.0 package-lock) src/strategies/rust.js rewrites every [workspace] member Cargo.toml via CargoToml, which calls replaceTomlValue on ['package','version'] and throws when that value is not a tagged string
 - Local check: GenericToml with jsonpath $.workspace.package.version changes only the root Cargo.toml version line to the new version; $.package[?(!@.source)].version changes exactly the 24 sea-forge-* lock entries and no registry entries
-- Dry run of release-please 17.6.0 release-pr against the pushed branch config: see the PR body for the output
+- release-please 17.6.0 CLI dry run against the pushed branch config (release-pr --dry-run, read-only, no PR created): computed 0.1.0 -> 0.2.0 from the commits since the manifest version, reported 'Would open 1 pull requests', and listed 5 updates: CHANGELOG.md, Cargo.toml (GenericToml), Cargo.lock (GenericToml), .github/release-please-manifest.json, and version.txt (missing in the repo, skipped by release-please with a warning). No error. The one 'commit could not be parsed' log line is a pre-existing non-conventional commit and is ignored by release-please
 
 **Limits:**
 
