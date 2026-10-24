@@ -55,9 +55,11 @@ jobs:
           # Prefer the RELEASE_PLEASE_TOKEN PAT: a release PR opened with it
           # triggers CI, so the required CI / gate check runs (F-009).
           # Fallback: the job's GITHUB_TOKEN (contents:write + pull-requests:write,
-          # this repo only) when the secret is absent. Release PRs opened that way
-          # do not trigger other workflows; a maintainer closes and reopens the
-          # release PR to start its checks. See docs/skills/release-management.md §7.
+          # this repo only) when the secret is absent. GitHub creates the release
+          # PR's pull_request runs in an approval-required state for a PR opened or
+          # updated by GITHUB_TOKEN: a maintainer approves those runs (Actions tab)
+          # so CI / gate and conventional-commit execute. See
+          # docs/skills/release-management.md §7.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
