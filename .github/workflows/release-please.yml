@@ -86,13 +86,14 @@ jobs:
     permissions:
       contents: write   # gh release upload
     env:
-      GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
+          # The build runs dependency build scripts: keep the write credential out of it.
+          persist-credentials: false
 
       - name: Install Devbox
         uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
@@ -126,6 +127,9 @@ jobs:
           tar -tzf "dist/${archive}"
 
       - name: Attach binaries to the GitHub Release
+        # The write token is scoped to this step only.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
@@ -137,4 +141,5 @@ jobs:
         if: failure()
         run: |
           echo "::error::Binaries not attached for tag ${RELEASE_TAG}."
-          echo "Recovery: rerun this workflow from the Actions UI (workflow_dispatch) with tag=${RELEASE_TAG}. --clobber makes the rerun safe."
+          echo "If the upload step failed while replacing existing assets, the release may lack the tarball or carry a SHA256SUMS that does not match it."
+          echo "Recovery: rerun this workflow from the Actions UI (workflow_dispatch) with tag=${RELEASE_TAG}; a successful rerun re-uploads both assets."

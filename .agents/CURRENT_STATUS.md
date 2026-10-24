@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 169
+**Status revision:** 170
 
-**Stage:** Distribution moved from crates.io to GitHub Release binaries (publish = false on all workspace crates; release-binaries job; docs updated)
+**Stage:** Release-binaries job hardened per review: write token scoped to the upload step, checkout credentials not persisted
 
-**Summary:** SEA-Forge is no longer distributed through crates.io. Every workspace crate now sets publish = false, and the release-please.yml publish job (crates-io environment, OIDC auth, two cargo publish steps) is replaced by a release-binaries job that builds sea-forge and sea-forge-server in release mode for x86_64-unknown-linux-gnu, packages sea-forge-<version>-x86_64-unknown-linux-gnu.tar.gz with SHA256SUMS, and uploads both to the GitHub Release with gh release upload --clobber. The job runs when release-please creates a release or when workflow_dispatch receives an existing tag, which re-attaches binaries to that release. Docs (release-management runbook, CI/CD architecture, CONTRIBUTING) now describe binary distribution, checksum verification and the re-attach procedure. Verification is local only; no GitHub run has executed the new job yet. The obsolete just publish-bootstrap recipe is removed.
+**Summary:** SEA-Forge is no longer distributed through crates.io. Every workspace crate now sets publish = false, and the release-please.yml publish job (crates-io environment, OIDC auth, two cargo publish steps) is replaced by a release-binaries job that builds sea-forge and sea-forge-server in release mode for x86_64-unknown-linux-gnu, packages sea-forge-<version>-x86_64-unknown-linux-gnu.tar.gz with SHA256SUMS, and uploads both to the GitHub Release with gh release upload --clobber. The job runs when release-please creates a release or when workflow_dispatch receives an existing tag, which re-attaches binaries to that release. Docs (release-management runbook, CI/CD architecture, CONTRIBUTING) now describe binary distribution, checksum verification and the re-attach procedure. Verification is local only; no GitHub run has executed the new job yet. The obsolete just publish-bootstrap recipe is removed. Review follow-up: GH_TOKEN is now set only on the upload step, actions/checkout uses persist-credentials: false so dependency build scripts cannot read a write credential, and the failure report states that a failed --clobber upload can leave the release without the tarball or with a mismatched SHA256SUMS until a dispatch rerun succeeds.
 
 **Verified:**
 
+- actionlint .github/workflows/release-please.yml exits 0 after the review fixes
 - cargo metadata --no-deps --format-version 1 | jq '.packages[]|{name,publish}': all 24 workspace packages report publish == []
 - actionlint .github/workflows/release-please.yml exits 0; yaml.safe_load parses it with jobs release-please and release-binaries
 - Local release build: flock -o cargo.lock env RUSTC_WRAPPER= CARGO_INCREMENTAL=0 cargo build --release -j 1 --locked -p sea-forge-cli -p sea-forge-server exited 0 (10m 53s, ram-guard lowest available 2556 MB); target/release/sea-forge --version prints sea-forge 0.2.0
