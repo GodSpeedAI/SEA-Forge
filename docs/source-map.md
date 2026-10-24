@@ -1,80 +1,107 @@
 # SEA Forge Source Traceability Map
 
-This document establishes the **concrete evidence trail** connecting the concepts, invariants, abstractions, and capabilities of SEA Forge to their implementation in Rust crates, TypeScript modules, configuration files, and conformance test suites.
+This map connects the system's concepts and invariants to the code, tests, and persisted records that implement them. Use it to move from a claim in the docs to a file you can inspect.
+
+Paths are relative to the repository root. Line anchors are omitted on purpose: they drift. Open the symbol by name.
 
 ---
 
-## 1. Core Architectural Invariants
+## 1. Invariants and Enforcement
 
-| Invariant | Concept | Implementation Evidence | Enforcement Location | Mechanical Verifier |
-|---|---|---|---|---|
-| **AUTH-01** | Authority precedes every side effect, including workspace creation | [`ActionGrant`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs#L69-L87) | [`case_dispatch.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs#L513-L552), [`case-runner/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-case-runner/src/lib.rs) | `conformance_case_episode::a_denied_episode_creates_no_workspace_and_no_artifacts` |
-| **DOM-01** | Settlement evaluates criteria and evidence, never exit code alone | [`settle()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/lib.rs#L16-L100) | [`sea_forge_settlement::settle`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/lib.rs#L16-L100) | `a_zero_exit_without_the_declared_artifact_is_rejected` |
-| **DOM-02** | Every sandboxed case activation is an episode with full trace and evidence | [`TraceEvent`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L528-L541), [`EvidenceRecord`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L595-L608) | [`case_dispatch.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs) | `an_allowed_episode_records_its_trace_and_evidence` |
-| **DOM-03** | Domain-bound plans resolve hash-pinned DomainForge model before authority | [`DomainForgeCandidate::evaluate`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs) | [`bundle.load_domainforge_model()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/case_dispatch.rs) | `conformance_m5`, `conformance_m10` |
-| **BUILD-01** | 19 kernel crates are async-free; Tokio only in server and agent | `Cargo.toml` manifests | [`crates/sea-forge-server/Cargo.toml`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/Cargo.toml) | `just no-async-kernel` |
-| **DATA-01** | History is append-only; views are rebuildable projections | [`LedgerStream`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs#L182-L350) | [`crates/sea-forge-ledger/src/types.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs) | `ledger_rebuild_to_byte_equivalence` |
-| **DATA-02** | Canonical run locator resolves both flat `<root>/runs` and case-owned layouts | [`run_views::run_dir`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/run_views.rs) | [`crates/sea-forge-server/src/sfwp/run_views.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/run_views.rs) | `conformance_run_locator` (6 tests) |
-| **DATA-03** | Request IDs are idempotency keys; mutations deduplicate before execution | [`RequestCorrelationStore`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/correlation.rs) | [`crates/sea-forge-server/src/sfwp/correlation.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/correlation.rs) | `durable_mutation_without_request_id_fails_closed_before_admission` |
-| **API-01** | Rust types are canonical; JSON Schema and TS/AJV are committed projections | [`SCHEMA_TYPES`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/mod.rs) | [`crates/sea-forge-server/src/bin/gen_sfwp_schema.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/bin/gen_sfwp_schema.rs) | `conformance_sfwp::generated_schemas_are_committed_and_current` |
-| **GEN-01** | Generated zones are never hand-edited | Planner/authority generated-zone guards | [`crates/sea-forge-core/src/path.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/path.rs) | `just proof` P4 (`write generated zone` exits 3) |
-| **OPS-01** | Invalid configuration blocks server start; cell root is immutable | [`ServerConfig::validate`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/config.rs) | [`crates/sea-forge-server/src/config.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/config.rs) | `invalid_config_blocks_server_startup` |
-
----
-
-## 2. Rust Workspace Crate Index (22 Crates)
-
-| Crate | Root Directory | Responsibilities | Core Public Symbols | Key Test Location |
-|---|---|---|---|---|
-| `sea-forge-core` | `crates/sea-forge-core` | Foundation types, IDs, error taxonomy, canonical JSON, path validation, approvals fold | [`ForgeError`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/errors.rs), [`ids::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/ids.rs), [`canonical::canonical_json`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/canonical.rs), [`approvals::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/approvals.rs) | `tests/conformance_minimum.rs` |
-| `sea-forge-domain` | `crates/sea-forge-domain` | Intent interpretation vocabulary and parsing | [`interpret()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domain/src/lib.rs), [`IntentPattern`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domain/src/lib.rs) | `src/lib.rs:tests` |
-| `sea-forge-planner` | `crates/sea-forge-planner` | Deterministic intent-to-plan translation, templates, criteria derivation, CMMN sentries | [`plan()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/lib.rs), [`stage_case_plan()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/lib.rs), [`case_engine::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-planner/src/case_engine.rs) | `tests/conformance_m2.rs` |
-| `sea-forge-authority` | `crates/sea-forge-authority` | Policy engine, rules, candidate evaluation, and non-cloneable ActionGrants | [`PolicyAuthorityEngine`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs), [`ActionGrant`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs#L69-L87), [`GovernanceVerdict`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-authority/src/lib.rs) | `tests/conformance_authority.rs` |
-| `sea-forge-sandbox` | `crates/sea-forge-sandbox` | Landlock Linux jails, macOS Seatbelt, process sandbox, NetworkPosture, environments | [`select_sandbox()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/lib.rs), [`JailSandbox`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/jail.rs), [`NetworkPosture`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/lib.rs) | `tests/conformance_sandbox.rs` |
-| `sea-forge-runtime` | `crates/sea-forge-runtime` | Argv execution consuming ActionGrant, verifying executable identity at spawn | [`execute()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-runtime/src/lib.rs#L7-L93) | `src/lib.rs:tests` |
-| `sea-forge-trace` | `crates/sea-forge-trace` | Append-only JSONL lifecycle trace recorder | [`JsonlTraceRecorder`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-trace/src/lib.rs) | `src/lib.rs:tests` |
-| `sea-forge-evidence` | `crates/sea-forge-evidence` | Evidence record creation, SHA-256 artifact hashing, pre-mint IFL identity | [`JsonlEvidenceWriter`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-evidence/src/lib.rs), [`capture_file()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-evidence/src/lib.rs) | `src/lib.rs:tests` |
-| `sea-forge-settlement` | `crates/sea-forge-settlement` | Outcome evaluation against declared criteria, batch evaluation, SWE_SEED declarations | [`settle()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/lib.rs#L16-L100), [`declaration::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/declaration.rs) | `tests/conformance_settlement.rs` |
-| `sea-forge-capability` | `crates/sea-forge-capability` | Semantic envelopes, promotion policies, SQLite FTS memory | [`append()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/lib.rs), [`recall()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/lib.rs), [`rebuild_capability()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/promotion.rs) | `tests/conformance_m4.rs` |
-| `sea-forge-ledger` | `crates/sea-forge-ledger` | ULID-ordered integrity ledgers, hash chains, MMR construction, Ed25519 signatures | [`LedgerStream`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs#L182-L350), [`LedgerManager`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs) | `tests/conformance_ledger.rs` |
-| `sea-forge-domainforge` | `crates/sea-forge-domainforge` | First-party adapter to `domainforge-core`, side-effect-free `.sea` parsing, projections | [`load_validate()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domainforge/src/lib.rs), [`evaluate()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-domainforge/src/lib.rs) | `src/lib.rs:tests` |
-| `sea-forge-server` | `crates/sea-forge-server` | Tokio server edge, SFWP v1 protocol, request admission semaphore, event streaming | [`ServerState`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/lib.rs#L66-L120), [`sfwp::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/sfwp/mod.rs) | `tests/conformance_sfwp.rs` |
-| `sea-forge-cli` | `crates/sea-forge-cli` | Primary command-line interface (24 subcommands) | [`main()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cli/src/main.rs), [`pipeline::run()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cli/src/pipeline.rs) | `tests/cli_tests.rs` |
-| `sea-forge-case-runner` | `crates/sea-forge-case-runner` | Shared CMMN case execution primitives | [`CaseRunner`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-case-runner/src/lib.rs#L16-L100) | `tests/conformance_case_runner.rs` |
-| `sea-forge-spec-pipeline` | `crates/sea-forge-spec-pipeline` | Spec-to-code deterministic stage chaining (ADR/PRD/Code/Test) | [`compute_chain_hash()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-spec-pipeline/src/lib.rs), [`run_pipeline()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-spec-pipeline/src/lib.rs) | `tests/conformance_m5.rs` |
-| `sea-forge-cell` | `crates/sea-forge-cell` | Federation bundle import/export and template adoption | [`bundle::export()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cell/src/bundle.rs), [`template::adopt()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-cell/src/template.rs) | `tests/conformance_m6.rs` |
-| `sea-forge-artifact-ip` | `crates/sea-forge-artifact-ip` | Artifact-to-IP transitions (synthesize, productize, capitalize, attest) | [`transition()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-artifact-ip/src/lib.rs) | `tests/conformance_m8.rs` |
-| `sea-forge-self-model` | `crates/sea-forge-self-model` | Bundled canonical models (`seaforge-system`, `adlc-odi-case`), deterministic release | [`bundled()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-self-model/src/lib.rs), [`verify_bundled()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-self-model/src/lib.rs) | `tests/conformance_m9.rs` |
-| `sea-forge-thoth` | `crates/sea-forge-thoth` | ADLC manager loop, progress judgment, Thoth ask service, Separation of Duties | [`ThothManager`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-thoth/src/manager.rs), [`service::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-thoth/src/service.rs) | `tests/conformance_m11.rs`, `tests/conformance_m15.rs` |
-| `sea-forge-agent` | `crates/sea-forge-agent` | Agent Client Protocol (ACP) driver, OpenAI/Anthropic providers, sealed transcripts | [`run_delegation()`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/lib.rs), [`acp::*`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/acp.rs) | `tests/conformance_m12.rs`, `tests/conformance_m13.rs` |
-| `sea-forge-extension` | `crates/sea-forge-extension` | Governed extension registry and descriptor validation | [`ExtensionRegistry`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-extension/src/lib.rs) | `src/lib.rs:tests` |
-
----
-
-## 3. Workbench Desktop Subsystem (`workbench/`)
-
-| Component | Directory | Responsibility | Core Source Files |
+| Invariant | Claim | Implementation | Verification |
 |---|---|---|---|
-| **Tauri Host** (removed 2026-10-13) | `workbench/apps/desktop/src-tauri` (deleted) | Former standalone Cargo workspace owning socket transport, cell supervisor, and event loop; see ADR-004 status update | — |
-| **React Renderer** | `workbench/apps/desktop/src` | 17 TanStack routes, Astryx design theme, XState case authoring machines, G1–G9 guards | [`router.tsx`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/router.tsx), [`guards/guards.ts`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/guards/guards.ts), [`pages/*`](file:///c:/Users/sprim/projects/sea-rs/workbench/apps/desktop/src/pages) |
-| **Generated Contracts** | `workbench/packages/contracts` | TypeScript types and AJV validators generated from Rust `schemars` definitions | [`scripts/generate.ts`](file:///c:/Users/sprim/projects/sea-rs/workbench/packages/contracts/scripts/generate.ts), `schema/*.json` |
-| **UI Components** | `workbench/packages/sea-forge-ui-components` | Governed UI primitives (denial surface, journey ribbon, diff viewer, evidence card) | `src/*`, Storybook stories |
-| **UI Tokens** | `workbench/packages/sea-forge-ui-tokens` | Design tokens projected onto `@astryxdesign/theme-neutral` | `tokens.json`, `dist/*` |
+| **AUTH-01** | No workload process or workload payload exists without `Allow` | [`ActionGrant`](../crates/sea-forge-authority/src/lib.rs), [`run_intent`](../crates/sea-forge-cli/src/pipeline.rs), [`CaseRunner`](../crates/sea-forge-case-runner/src/lib.rs) | [`cell_episode.rs`](../crates/sea-forge-case-runner/tests/cell_episode.rs). Intent runs create control-plane directories before evaluation; the invariant covers workload effects. |
+| **AUTH-02** | One authority fabric serves CLI, server, and protected paths | [`PolicyAuthorityEngine`](../crates/sea-forge-authority/src/lib.rs), [`case_dispatch`](../crates/sea-forge-server/src/case_dispatch.rs) | [`conformance_m0_authority.rs`](../crates/sea-forge-authority/tests/conformance_m0_authority.rs) |
+| **DOM-01** | Settlement never trusts exit status alone | [`settle`](../crates/sea-forge-settlement/src/lib.rs), [`SettlementCriteria`](../crates/sea-forge-core/src/types.rs) | [`criteria_provenance.rs`](../crates/sea-forge-settlement/tests/criteria_provenance.rs) |
+| **DOM-02** | Every settled activation has trace and evidence | [`TraceEvent`](../crates/sea-forge-core/src/types.rs), [`EvidenceRecord`](../crates/sea-forge-core/src/types.rs) | [`cell_episode_live.rs`](../crates/sea-forge-case-runner/tests/cell_episode_live.rs) |
+| **DOM-03** | A bound domain model is resolved before authority decides | [`load_validate`](../crates/sea-forge-domainforge/src/lib.rs), [`evaluate`](../crates/sea-forge-domainforge/src/lib.rs) | [`conformance_m10.rs`](../crates/sea-forge-planner/tests/conformance_m10.rs) |
+| **BUILD-01** | 22 kernel crates stay free of Tokio, async runtimes, and HTTP clients | Crate manifests | `just no-async-kernel` |
+| **DATA-01** | Source history is append-only; views are rebuildable | [`LedgerStream`](../crates/sea-forge-ledger/src/types.rs) | [`conformance_m0_ledger.rs`](../crates/sea-forge-ledger/tests/conformance_m0_ledger.rs) |
+| **DATA-02** | Flat and case-owned run layouts resolve through one locator | [`run_views`](../crates/sea-forge-server/src/sfwp/run_views.rs) | Server conformance tests |
+| **DATA-03** | Request ids are idempotency keys | [`correlation`](../crates/sea-forge-server/src/sfwp/correlation.rs) | Server conformance tests |
+| **API-01** | Rust types are canonical; JSON Schema and TypeScript are committed projections | [`SCHEMA_TYPES`](../crates/sea-forge-server/src/sfwp/mod.rs), [`gen_sfwp_schema`](../crates/sea-forge-server/src/bin/gen_sfwp_schema.rs) | `just workbench-check` |
+| **GEN-01** | Generated zones are protected | [`path`](../crates/sea-forge-core/src/path.rs) | `just proof` P4 |
+| **OPS-01** | A present but invalid `server.yaml` fails startup; root and socket stay fixed | [`ServerConfig`](../crates/sea-forge-server/src/config.rs) | Server unit tests |
 
 ---
 
-## 4. Persisted Record Locations (Cell Store Truth)
+## 2. Rust Workspace (24 Crates)
 
-| Record Name | Relative Path | Schema Struct | Append / Write Mechanism |
+Two crates are async edges: `sea-forge-server` and `sea-forge-agent`. The other 22 are synchronous.
+
+| Crate | Responsibility | Main entry points |
+|---|---|---|
+| [`sea-forge-core`](../crates/sea-forge-core/src/lib.rs) | Types, IDs, errors, canonical JSON, path rules, approvals fold | `ForgeError`, `ids`, `canonical`, `approvals` |
+| [`sea-forge-domain`](../crates/sea-forge-domain/src/lib.rs) | Intent vocabulary and interpretation | `interpret`, `IntentPattern` |
+| [`sea-forge-planner`](../crates/sea-forge-planner/src/lib.rs) | Deterministic intent-to-plan translation, criteria, sentries | `plan`, `stage_case_plan`, `criteria` |
+| [`sea-forge-authority`](../crates/sea-forge-authority/src/lib.rs) | Policy decisions, candidate evaluation, grant minting | `PolicyAuthorityEngine`, `ActionGrant` |
+| [`sea-forge-sandbox`](../crates/sea-forge-sandbox/src/lib.rs) | Sandbox selection, Landlock, Seatbelt, environment, network posture, OpenShell adapter | `select_sandbox`, `JailSandbox`, `NetworkPosture` |
+| [`sea-forge-runtime`](../crates/sea-forge-runtime/src/lib.rs) | Grant consumption, executable re-resolution, process execution | `execute` |
+| [`sea-forge-trace`](../crates/sea-forge-trace/src/lib.rs) | Append-only JSONL lifecycle trace | `JsonlTraceRecorder` |
+| [`sea-forge-evidence`](../crates/sea-forge-evidence/src/lib.rs) | Evidence capture, artifact SHA-256, pre-mint identity | `JsonlEvidenceWriter`, `capture_file` |
+| [`sea-forge-settlement`](../crates/sea-forge-settlement/src/lib.rs) | Criteria evaluation, batch records, declarations | `settle`, `declaration` |
+| [`sea-forge-capability`](../crates/sea-forge-capability/src/lib.rs) | Envelopes, promotion policy, memory extraction, SQLite index | `append`, `recall`, `promotion` |
+| [`sea-forge-ledger`](../crates/sea-forge-ledger/src/lib.rs) | ULID streams, hash chains, MMR proofs, Ed25519 checkpoints, witness receipts | `LedgerStream`, `LedgerManager` |
+| [`sea-forge-domainforge`](../crates/sea-forge-domainforge/src/lib.rs) | Side-effect-free `.sea` parsing and candidate evaluation | `load_validate`, `evaluate` |
+| [`sea-forge-server`](../crates/sea-forge-server/src/lib.rs) | Async SFWP edge, admission, correlation, identity, events, agent/MCP/Postgres edges | `ServerState`, `sfwp`, `config` |
+| [`sea-forge-cli`](../crates/sea-forge-cli/src/main.rs) | Operator CLI: 21 visible top-level commands plus four hidden test commands | `main`, `pipeline`, `plan_pipeline`, `commands` |
+| [`sea-forge-case-runner`](../crates/sea-forge-case-runner/src/lib.rs) | Shared CMMN-subset case execution primitives | `CaseRunner` |
+| [`sea-forge-spec-pipeline`](../crates/sea-forge-spec-pipeline/src/lib.rs) | Deterministic ADR/PRD/Code/Test stage chaining | `compute_chain_hash`, `run_pipeline` |
+| [`sea-forge-cell`](../crates/sea-forge-cell/src/lib.rs) | Federation bundle import/export and template adoption | `bundle`, `template` |
+| [`sea-forge-artifact-ip`](../crates/sea-forge-artifact-ip/src/lib.rs) | Artifact-to-IP transitions | `transition` |
+| [`sea-forge-self-model`](../crates/sea-forge-self-model/src/lib.rs) | Bundled canonical models and release verification | `bundled`, `verify_bundled` |
+| [`sea-forge-extension`](../crates/sea-forge-extension/src/lib.rs) | Governed extension registry and descriptor validation | `ExtensionRegistry` |
+| [`sea-forge-thoth`](../crates/sea-forge-thoth/src/lib.rs) | Manager loop, progress judgment, typed ask, separation of duties | `ThothManager`, `service` |
+| [`sea-forge-agent`](../crates/sea-forge-agent/src/lib.rs) | Async Anthropic, OpenAI-compatible, and ACP drivers; sealed transcripts | `run_delegation`, `acp` |
+| [`sea-forge-changeset`](../crates/sea-forge-changeset/src/lib.rs) | Git-backed transactional workspaces, validation, compare-and-swap promotion | `capture_base`, `collect`, `validate`, `promote` |
+| [`sea-forge-realitytrace`](../crates/sea-forge-realitytrace/src/lib.rs) | Ledger-derived security evidence bridge to RealityTrace | `expectation_record`, `proof_completed`, `project` |
+
+The four hidden CLI commands are `validate`, `stage-check`, `internal-test-sleep`, and `internal-test-swe-seed`. They exist for the executable's own validation path and internal tests; they are not part of the operator surface.
+
+---
+
+## 3. Workbench (`workbench/`)
+
+| Component | Directory | Responsibility | Source |
 |---|---|---|---|
-| **Case Record** | `.sea-forge/cases/<case_id>.json` | [`Case`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L23-L35) | `write_json_new` on creation |
-| **Case Events** | `.sea-forge/cases/<case_id>/case-events.jsonl` | [`TraceEvent`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L528-L541) | O_APPEND with ledger stream commit |
-| **Plan Record** | `.sea-forge/runs/<run_id>/plan.json` | [`CasePlan`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L37-L48) | `write_json_new` before plan_created trace |
-| **Authority Decisions** | `.sea-forge/runs/<run_id>/authority.json` | `Vec<`[`AuthorityDecision`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L428-L466)`>` | Materialized aggregate view from ledger |
-| **Trace Events** | `.sea-forge/runs/<run_id>/trace.jsonl` | [`TraceEvent`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L528-L541) | `JsonlTraceRecorder::append()` |
-| **Evidence Records** | `.sea-forge/runs/<run_id>/evidence.jsonl` | [`EvidenceRecord`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L595-L608) | `JsonlEvidenceWriter::append()` |
-| **Settlement Record** | `.sea-forge/runs/<run_id>/settlement.json` | [`SettlementEvent`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L794-L805) | Written after `settle()` evaluation |
-| **Semantic Envelope** | `.sea-forge/runs/<run_id>/semantic-envelope.json` | [`SemanticEnvelope`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L1125-L1145) | Written on run completion |
-| **Capability Ledger** | `.sea-forge/capabilities.jsonl` | [`SemanticEnvelope`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L1125-L1145) | `capability::append()` with `file.sync_data()` |
-| **Approvals Journal** | `.sea-forge/approvals.jsonl` | [`ApprovalRequest`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L867-L892) | `core::approvals::append()` (latest line wins) |
-| **Integrity Ledger** | `.sea-forge/ledgers/<stream_id>/entries.jsonl` | [`LedgerEntry`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs#L89-L108) | `LedgerStream::commit_entry()` with flock |
+| **React renderer** | `workbench/apps/desktop/src` | Routes, drafts, queries, XState machines, G1–G10 pre-flight guards | [`router.tsx`](../workbench/apps/desktop/src/router.tsx), [`guards.ts`](../workbench/apps/desktop/src/guards/guards.ts) |
+| **Tauri host** | `workbench/apps/desktop/src-tauri` (deleted) | Former socket transport and event loop; removed 2026-10-13 | None. The renderer still imports `@tauri-apps/api`, so no live backend bridge exists. |
+| **Contracts** | `workbench/packages/contracts` | Generated TypeScript types and AJV validators | [`generate.ts`](../workbench/packages/contracts/scripts/generate.ts) |
+| **UI components** | `workbench/packages/sea-forge-ui-components` | Governed primitives and stories | `src/` |
+| **UI tokens** | `workbench/packages/sea-forge-ui-tokens` | Design tokens for the Astryx neutral theme | `tokens.json`, `dist/` |
+
+The guard verdict set is `passed`, `failed`, `indeterminate`, or `not_applicable`. Guards describe readiness; they do not enforce authority.
+
+---
+
+## 4. Persisted Records
+
+| Record | Path | Shape | Write path |
+|---|---|---|---|
+| Intent case record | `.sea-forge/cases/<case_id>.json` | `Case` | `write_json_new` |
+| Planned case record | `.sea-forge/cases/<case_id>/case.json` | `Case` | `write_json_new` |
+| Case events | `.sea-forge/cases/<case_id>/case-events.jsonl` | `TraceEvent` | Append with ledger commit |
+| Plan | `.sea-forge/runs/<run_id>/plan.json` | `CasePlan` | Written once before `plan_created` |
+| Authority view | `.sea-forge/runs/<run_id>/authority.json` | `AuthorityDecision[]` | Materialized from ledger |
+| Trace | `.sea-forge/runs/<run_id>/trace.jsonl` | `TraceEvent` | `JsonlTraceRecorder` |
+| Evidence | `.sea-forge/runs/<run_id>/evidence.jsonl` | `EvidenceRecord` | `JsonlEvidenceWriter` |
+| Settlement | `.sea-forge/runs/<run_id>/settlement.json` | `SettlementEvent` | After `settle` |
+| Semantic envelope | `.sea-forge/runs/<run_id>/semantic-envelope.json` | `SemanticEnvelope` | On settlement |
+| Capabilities | `.sea-forge/capabilities.jsonl` | `SemanticEnvelope` | `capability::append` |
+| Memory items | `.sea-forge/memory/items.jsonl` | Extracted memory items | Deterministic extraction |
+| Memory index | `.sea-forge/memory/index.sqlite` | SQLite FTS | Derived; `sea-forge memory rebuild` |
+| Approvals | `.sea-forge/approvals.jsonl` | `ApprovalRequest` | `approvals::append`; latest line wins |
+| Ledger | `.sea-forge/ledgers/<stream>/entries.jsonl` | `LedgerEntry` | `LedgerStream` with `flock` |
+
+`.sea-forge/` is runtime output, not source. Do not treat any path under it as a repository artifact.
+
+---
+
+## 5. Where the Normative Text Lives
+
+* [`AGENTS.md`](../AGENTS.md) defines the operating contract and required gates.
+* [`.agents/specs/`](../.agents/specs) holds normative specs.
+* [`.agents/CURRENT_STATUS.yaml`](../.agents/CURRENT_STATUS.yaml) is the handoff record.
+* [`docs/execution/`](execution/) is historical execution material, not the current architecture description.
+
+When code and prose disagree, believe the code and tests, then fix the prose.

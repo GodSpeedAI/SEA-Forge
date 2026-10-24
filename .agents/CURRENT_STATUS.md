@@ -17,7 +17,7 @@
 - Not reproduced locally: the full live ladder needs more memory than this host has spare; proof is the Casework live check on this PR.
 - The diagnosis rests on the absence of the template request; no L5 failure screenshot exists in the evidence bundle.
 
-**Next move:** Merge after the docs PR (status revision 159); then SEA-Forge #48 merges main and renumbers its status revision.
+**Next move:** The docs PR (159) is merged; merge this, then SEA-Forge #48 merges main and renumbers its status revision.
 
 **Evidence:**
 

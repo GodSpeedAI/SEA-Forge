@@ -1,53 +1,52 @@
-# Subsystem: Capability & Semantic Memory
+# Subsystem: Capability and Memory
 
-> **Semantic capability envelopes, SQLite full-text search, and multi-stage capability promotion.**  
+> **Semantic envelopes, promotion records, extracted memory items, and a rebuildable SQLite index.**
 > Governed crate: `sea-forge-capability`
 
 ---
 
 ## 1. Purpose
 
-The **Capability & Semantic Memory** subsystem metabolizes verified execution outcomes into durable, searchable institutional knowledge. It ensures that when a workload settles successfully, its parameters, evidence references, and artifacts are sealed into a `SemanticEnvelope`. It powers capability recall across runs and implements a rigorous, evidence-weighted promotion pipeline from single demonstrations to proven, metabolized capabilities.
+Capability memory turns a settled run into reusable knowledge. It appends a `SemanticEnvelope` for the run, records promotion state for the capability the run exercised, extracts discrete `MemoryItem` statements, and builds a searchable SQLite FTS index over those items.
+
+The append-only journals are truth. SQLite is a cache.
 
 ---
 
 ## 2. Responsibilities
 
-* **Envelope Serialization & Durability:** Appends `SemanticEnvelope` records to `.sea-forge/capabilities.jsonl` using power-loss-safe `sync_data()` flushes.
-* **Resilient Capability Recall (`recall()`):** Scans capability records using byte-oriented streams to prevent a single malformed or non-UTF-8 line from corrupting an entire recall query.
-* **SQLite Full-Text Search (FTS5):** Maintains `.sea-forge/memory/sqlite.db` as a derived full-text search index over discrete `MemoryItem`s (`Fact`, `Decision`, `Outcome`, `Preference`).
-* **Capability Promotion Lifecycle:** Evaluates settlement declarations against `CapabilityPromotionPolicy` rules to advance capabilities across maturity tiers (`Attempted` → `Demonstrated` → `Proven` → `Metabolized`).
-* **Deterministic Projection Rebuilding:** Reconstructs SQLite indexes and capability summaries directly from append-only source records via `sea-forge recall --rebuild`.
+* Append envelopes to `<root>/capabilities.jsonl` with `sync_data()` after each write.
+* Recall envelopes by text, entity, process, and settlement status while tolerating malformed lines.
+* Rebuild `memory/index.sqlite` from `memory/items.jsonl`.
+* Evaluate promotion policy and write `<root>/capabilities/<name>.json`.
+* Rebuild capability records deterministically from declarations and envelopes.
+* Validate extension descriptors used by the capability surface.
+
+It does not settle runs, sign ledgers, or decide authority.
 
 ---
 
-## 3. Non-Responsibilities
-
-* **Settlement Evaluation:** Does not determine whether an outcome is accepted (owned by `sea-forge-settlement`).
-* **Cryptographic Signatures:** Does not sign ledgers (owned by `sea-forge-ledger`).
-
----
-
-## 4. Position in the System
+## 3. Data Flow
 
 ```mermaid
 flowchart TB
-    SETTLE["Settlement Acceptance"] --> ENV["Construct SemanticEnvelope"]
-    ENV --> APPEND["Append to capabilities.jsonl (Power-Loss Safe)"]
-    APPEND --> PROMO["Capability Promotion Engine"]
-    PROMO --> TIERS{"Evaluate Promotion Policy"}
-    TIERS -->|Counts & Variation Met| RECORD["Update CapabilityRecord (Proven / Metabolized)"]
-    
-    ITEMS["Memory Items (items.jsonl)"] --> FTS["SQLite FTS5 Index (sqlite.db)"]
-    RECALL["sea-forge recall query"] --> FTS & APPEND
+    SET["Settlement status"] --> ENV["SemanticEnvelope"]
+    ENV --> CAP["capabilities.jsonl"]
+    ENV --> ITEMS["memory/items.jsonl"]
+    ITEMS --> IDX["memory/index.sqlite"]
+    DECL["Settlement declarations"] --> PROMO["Promotion policy"]
+    ENV --> PROMO
+    PROMO --> REC["capabilities/<name>.json"]
+    IDX --> RECALL["memory recall"]
+    CAP --> RCL["capability recall"]
 ```
 
 ---
 
-## 5. Core Abstractions
+## 4. Records
 
-### `SemanticEnvelope` (`sea-forge-core::types::SemanticEnvelope`)
-The comprehensive summary of a completed run:
+### `SemanticEnvelope`
+
 ```rust
 pub struct SemanticEnvelope {
     pub version: String,
@@ -68,59 +67,88 @@ pub struct SemanticEnvelope {
 }
 ```
 
-### `CapabilityStatus` & Promotion Tiers
-* `Attempted`: Initiated but lacks sufficient settlement declarations.
-* `Demonstrated`: Succeeded once with verified evidence in a specific context.
-* `Proven`: Repeatedly accepted across declared variation dimensions with minimum reliability weight.
-* `Metabolized`: Consistently proven with reduced orchestration burden and proven recovery across required disruptions.
+`capability_delta` names the attempted capability and the settlement result. `cell_id` is absent for local legacy envelopes and present for federation-origin envelopes.
 
-### `MemoryItem` (`sea-forge-core::types::MemoryItem`)
-Discrete units of knowledge indexed for semantic search:
-* `kind`: `Fact`, `Decision`, `Outcome`, or `Preference`.
-* `statement`: Clear, human-readable natural language statement.
-* `provenance`: Links to exact `run_ids` and `evidence_refs`.
-* `dedup_key`: Hash key preventing duplicate insertions during re-indexing.
+### `MemoryItem`
 
----
+```rust
+pub struct MemoryItem {
+    pub version: String,
+    pub memory_id: String,
+    pub kind: MemoryKind,
+    pub statement: String,
+    pub attribution: Attribution,
+    pub provenance: MemoryItemProvenance,
+    pub dedup_key: String,
+    pub created_at: String,
+    pub last_confirmed_at: String,
+}
+```
 
-## 6. Internal Operation
+`MemoryKind` is `Fact`, `Decision`, `Outcome`, or `Preference`. Provenance links run ids and evidence refs. `dedup_key` prevents duplicate insertions during re-indexing.
 
-### Safe Byte-Oriented Recall Scan
-`capability::recall()` avoids unbounded line buffering:
-1. Opens `capabilities.jsonl`.
-2. Reads bytes until `\n` into a reusable buffer.
-3. Attempts JSON parsing. If a line is corrupted (e.g. from an unclean shutdown), it increments a `malformed` counter and continues to the next line rather than aborting the scan (F-25.r).
-4. Matches query filters: actor entity, process ID, settlement status, and query text.
+### `CapabilityRecord`
 
-### Capability Promotion Logic
-To achieve `Proven` status under `CapabilityPromotionPolicy`:
-* Must satisfy minimum declaration count (`min_declarations`).
-* Total evidence weight must meet `min_total_weight`.
-* Regression weight must not exceed `max_regression_weight`.
-* Must span required variation dimensions (e.g., testing multiple platforms or inputs).
-* Must demonstrate recovery across required disruptions.
+A record carries counts, status, policy reference and hash, qualifying thresholds, variation and recovery facts, orchestration facts, confidence, contraction reasons, an evidence sample, and `rebuilt_at`.
 
 ---
 
-## 7. State & Persistence
+## 5. Promotion
 
-* `.sea-forge/capabilities.jsonl`: The append-only journal of all completed semantic envelopes.
-* `.sea-forge/memory/items.jsonl`: Append-only journal of discrete memory statements.
-* `.sea-forge/memory/sqlite.db`: Rebuildable SQLite FTS5 database indexing `items.jsonl`.
-* `.sea-forge/capabilities/<name>.json`: Materialized summary of a capability's current status.
+`CapabilityStatus` is `Attempted`, `Demonstrated`, `Proven`, or `Metabolized`.
+
+Promotion is policy-driven. `CapabilityPromotionPolicy` sets minimum declaration count, total evidence weight, maximum regression weight, required variation dimensions, and required recovery disruptions. A record that fails a threshold does not advance; contraction reasons are recorded.
+
+`rebuild_capability` reconstructs a record from declarations and envelopes. The policy snapshot is stored under `<root>/capabilities/policies/<sha256>.json`. The materialized record is `<root>/capabilities/<name>.json`.
 
 ---
 
-## 8. Failure Modes & Invariants
+## 6. Recall and Rebuild
 
-* **Invariant DATA-01 (Projections Are Not Truth):** The SQLite database (`sqlite.db`) is strictly a disposable cache. If deleted or corrupted, executing `sea-forge recall --rebuild` reads `items.jsonl` and regenerates the database without data loss.
-* **Corrupted Lines in Capabilities Journal:** Single non-UTF-8 or truncated lines are safely skipped during recall scans and logged as malformed lines in the query result.
+`capability::recall` reads `capabilities.jsonl` with a byte-oriented line scanner. A malformed line increments a `malformed` counter and the scan continues. One corrupt append does not hide every earlier envelope.
+
+`memory::rebuild_index(items_path, index_path, now)` reads items, writes a temporary SQLite file, inserts rows and metadata, commits, runs `integrity_check`, and replaces the target. The CLI exposes this as:
+
+```bash
+sea-forge memory rebuild --root <cell>
+```
+
+The command reads `memory/items.jsonl` and writes `memory/index.sqlite`. There is no `recall --rebuild` command.
+
+`memory::recall_with_fallback` can query the index and fall back to the source when needed.
+
+---
+
+## 7. Persistence
+
+```text
+.sea-forge/
+├── capabilities.jsonl
+├── capabilities/<name>.json
+├── capabilities/policies/<sha256>.json
+└── memory/
+    ├── items.jsonl
+    └── index.sqlite
+```
+
+Only the JSONL and promotion source records are durable truth. `index.sqlite` is derived. Deleting it loses no source data; rebuild it from `items.jsonl`.
+
+---
+
+## 8. Invariants and Failure Modes
+
+* **DATA-01.** SQLite is a projection. It is not authoritative.
+* **Malformed lines are counted, not fatal.** Recall continues and reports the count.
+* **Dedup is keyed.** Re-indexing the same item does not duplicate it.
+* **Extraction failure does not reverse settlement.** The run remains settled; extraction is best-effort and logged.
+* **Promotion is evidence-weighted.** A single success does not become `Proven` without the policy's counts, variation, and recovery evidence.
 
 ---
 
 ## 9. Source Trail
 
-* [`crates/sea-forge-capability/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/lib.rs) — `append()`, `recall()`, and extension descriptor validation.
-* [`crates/sea-forge-capability/src/promotion.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/promotion.rs) — Capability promotion rules and `rebuild_capability()`.
-* [`crates/sea-forge-capability/src/memory.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-capability/src/memory.rs) — SQLite FTS5 semantic memory indexing and search.
-* [`crates/sea-forge-core/src/types.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L1012-L1174) — Schemas for capabilities, envelopes, and memory items.
+* [`crates/sea-forge-capability/src/lib.rs`](../../crates/sea-forge-capability/src/lib.rs) — `append`, `recall`, extension validation.
+* [`crates/sea-forge-capability/src/memory.rs`](../../crates/sea-forge-capability/src/memory.rs) — memory append, SQLite index build and recall.
+* [`crates/sea-forge-capability/src/promotion.rs`](../../crates/sea-forge-capability/src/promotion.rs) — promotion policy and record rebuild.
+* [`crates/sea-forge-cli/src/commands/memory.rs`](../../crates/sea-forge-cli/src/commands/memory.rs) — `memory rebuild`.
+* [`crates/sea-forge-core/src/types.rs`](../../crates/sea-forge-core/src/types.rs) — envelope, memory item, capability record.

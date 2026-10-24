@@ -1,55 +1,40 @@
-# Subsystem: Settlement, Evidence & Artifact Hashing
+# Subsystem: Settlement, Evidence, and Artifact Identity
 
-> **Independent outcome qualification, machine-readable basis proofs, and cryptographic artifact identity.**  
+> **Outcome qualification from evidence, with explicit basis tokens.**
 > Governed crates: `sea-forge-settlement`, `sea-forge-evidence`, `sea-forge-trace`
+> Interactive companion: [Governed Run Explorer](../explainers/governed-run-explorer.html)
 
 ---
 
 ## 1. Purpose
 
-The **Settlement, Evidence & Artifact Hashing** subsystem evaluates whether execution outcomes actually satisfy declared goals. It enforces the foundational invariant **DOM-01**: process exit status (`exit 0`) is merely one piece of evidence, not acceptance. Settlement provides an independent, objective evaluation of all work products, stdout streams, and evaluator metrics, emitting an immutable `SettlementEvent` with an explicit, machine-readable `basis`.
+Settlement answers a narrower question than "did the command work": did the captured evidence satisfy the criteria that were committed before execution? Process exit status is one input. Required artifacts, stdout content, execution status, batch evaluator results, and authority verdicts all participate.
+
+A settlement record is durable and machine-readable. Every status carries a non-empty basis. An accepted run with no basis is invalid.
 
 ---
 
-## 2. Responsibilities
+## 2. What Settlement Evaluates
 
-* **Independent Outcome Evaluation (`sea-forge-settlement::settle`):** Evaluates a `SettlementClaim` against declared criteria without rereading execution policies or trusting process exit codes alone.
-* **Settlement Basis Formulation:** Formulates explicit, auditable string tokens (e.g., `authority_allow`, `exit_zero`, `required_artifact_present:model.sea`, `stdout_match`) that justify acceptance or rejection.
-* **Batch Evaluation:** Evaluates multi-record JSONL datasets against per-record evaluators and minimum pass ratios (`min_pass_ratio`).
-* **Artifact Hashing & Pre-Mint Identity (`sea-forge-evidence`):** Computes SHA-256 digests of all output files and mints canonical pre-mint identities (`ifl:hash:<sha256>`).
-* **Lifecycle Event Tracing (`sea-forge-trace`):** Appends discrete lifecycle state transitions to `.sea-forge/runs/<run_id>/trace.jsonl`.
-* **SWE_SEED Declarations:** Reconciles external work contracts and independent verification attestations.
+`settle(claim, workspace, run_dir)` evaluates:
 
----
+1. **Authority verdicts.** Any `Escalate` produces `Escalated` with `review_required = true`. Any `Deny` produces `Rejected`. Otherwise it records `authority_allow`.
+2. **Missing execution.** A write-only item with no execution is accepted on its materialized artifacts and records `write_only`. A non-write item with no execution is rejected.
+3. **Execution status.** `SpawnFailed`, `TimedOut`, `SandboxViolation`, and `SuspectedSandboxViolation` reject without evaluating exit status.
+4. **Exit code.** Only when `require_exit_zero` is set. Basis is `exit_zero` or `exit_nonzero`.
+5. **Required artifacts.** Checked in the run's `workspace/`, not in `artifacts/`. Basis is `required_artifact_present:<path>` or `required_artifact_missing:<path>`.
+6. **Stdout.** `stdout_must_contain` is checked against `run_dir + execution.stdout_path`. Basis is `stdout_match` or `stdout_mismatch`.
+7. **Evaluator scores.** Recorded as `evaluator_score:<name>=<value>` evidence. They do not override the other checks.
+8. **Batch records.** `min_pass_ratio` adds `batch_pass_ratio`, `batch_threshold`, `batch_passed`, and `batch_below_threshold`. Failing records are written to `run_dir/quarantine/<plan_item_id>.jsonl`, never silently dropped.
 
-## 3. Non-Responsibilities
+`SettlementCriteria` also carries `agent_output_must_contain` and `require_approval`. Those are enforced by the agent delegation and server paths before or around settlement, not inside `settle` itself. Read the criteria struct as a shared contract with several evaluators, not as one function's input list.
 
-* **Policy Decisions:** Does not decide whether work should run (owned by `sea-forge-authority`).
-* **Process Execution:** Does not run commands or capture stdout directly (owned by `sea-forge-runtime`).
-* **Capability Storage:** Does not manage SQLite memory indexes (owned by `sea-forge-capability`).
-
----
-
-## 4. Position in the System
-
-```mermaid
-flowchart TB
-    EXEC["sea-forge-runtime"] --> CAPTURE["Artifact & Output Capture"]
-    CAPTURE --> TRACE["sea-forge-trace (trace.jsonl)"]
-    CAPTURE --> EVID["sea-forge-evidence (evidence.jsonl)"]
-    EVID --> CLAIM["Assemble SettlementClaim"]
-    CLAIM --> SETTLE["sea-forge-settlement::settle()"]
-    SETTLE --> EVENT["SettlementEvent (Status + Basis Tokens)"]
-    EVENT --> LEDGER["Commit to Integrity Ledger"]
-    EVENT --> ENV["Construct SemanticEnvelope"]
-```
+There is no expected-content-hash criterion. Artifact SHA-256 values are recorded in evidence descriptors; settlement does not compare them to a pre-declared digest.
 
 ---
 
-## 5. Core Abstractions
+## 3. Criteria
 
-### `SettlementCriteria` (`sea-forge-core::types::SettlementCriteria`)
-The declarative acceptance contract:
 ```rust
 pub struct SettlementCriteria {
     pub require_exit_zero: bool,
@@ -64,112 +49,75 @@ pub struct SettlementCriteria {
 }
 ```
 
-### `SettlementEvent` (`sea-forge-core::types::SettlementEvent`)
-The immutable settlement record:
+A criteria record committed to the ledger also carries `criteria_id`, `origin_refs`, `derivation`, `declared_at`, `criteria_sha256`, and `criteria_record_hash`. The `criteria_ref` on the settlement points back to it. If the ref is absent, settlement appends `legacy_unattributed_criteria`.
+
+---
+
+## 4. Settlement Event
+
 ```rust
 pub struct SettlementEvent {
     pub version: String,
     pub settlement_id: String,
     pub run_id: String,
-    pub status: SettlementStatus,     // Accepted, Rejected, Escalated
-    pub basis: Vec<String>,           // Non-empty factual foundation
+    pub status: SettlementStatus,
+    pub basis: Vec<String>,
     pub review_required: bool,
     pub settled_at: String,
     pub criteria_ref: Option<String>,
 }
 ```
 
-### `EvidenceRecord` & `ArtifactDescriptor` (`sea-forge-core::types`)
-* `EvidenceRecord`: An append-only evidence envelope (`kind: Artifact | AuthorityDecision | ExecutionResult | Recall`).
-* `ArtifactDescriptor`: Metadata describing a generated file:
-  * `artifact_id`: Unique identifier (`art_<ts>_<hex>`).
-  * `content_sha256`: SHA-256 hash of file content.
-  * `pre_mint_identity`: Cryptographic pre-mint identity formatted as `ifl:hash:<sha256>`.
-  * `producer`: Binds entity, process, run, and plan item.
+`SettlementStatus` is `Accepted`, `Rejected`, or `Escalated`. The event is committed to the ledger, written to `settlement.json`, and traced as `SettlementRecorded`.
 
 ---
 
-## 6. Internal Operation: The `settle()` Algorithm
+## 5. Evidence and Artifact Identity
 
-The settlement evaluator executes the following deterministic logic:
+`sea-forge-evidence` appends `EvidenceRecord` values and captures files. `EvidenceKind` is `Artifact`, `AuthorityDecision`, `ExecutionResult`, or `Recall`.
 
-```rust
-// 1. Authority evaluation checks
-if claim.authority_verdicts.contains(&Verdict::Escalate) {
-    basis.push("authority_escalate");
-    return (SettlementStatus::Escalated, review_required: true);
-}
-if claim.authority_verdicts.contains(&Verdict::Deny) {
-    basis.push("authority_deny");
-    return (SettlementStatus::Rejected, review_required: false);
-}
+An `ArtifactDescriptor` carries:
 
-// 2. Write-only task handling (F-10)
-if claim.write_only {
-    basis.push("write_only");
-    // Verify file presence on disk; never invent exit 0
-    let mut accepted = true;
-    for path in &claim.criteria.required_artifacts {
-        let present = safe_existing(workspace, path).is_ok_and(|c| c.is_file());
-        basis.push(format!("required_artifact_{}:{path}", if present { "present" } else { "missing" }));
-        accepted &= present;
-    }
-    return (if accepted { SettlementStatus::Accepted } else { SettlementStatus::Rejected }, false);
-}
+* `artifact_id`: `art_<timestamp>_<hex>`;
+* `artifact_type`, `stage`, `producer`, `owner`, `license`, `review_status`;
+* `source_refs`;
+* `content_sha256`: SHA-256 of the file content;
+* `pre_mint_identity`: `ifl:hash:<sha256>`.
 
-// 3. Process execution evaluation
-match execution.status {
-    ExecutionStatus::SpawnFailed => { basis.push("spawn_failed"); Rejected }
-    ExecutionStatus::TimedOut => { basis.push("timed_out"); Rejected }
-    ExecutionStatus::SandboxViolation => { basis.push("jail_violation"); Rejected }
-    ExecutionStatus::SuspectedSandboxViolation => { basis.push("suspected_jail_violation"); Rejected }
-    ExecutionStatus::Completed => {
-        let mut accepted = true;
-        if claim.criteria.require_exit_zero {
-            let zero = execution.exit_code == Some(0);
-            basis.push(if zero { "exit_zero" } else { "exit_nonzero" });
-            accepted &= zero;
-        }
-        for path in &claim.criteria.required_artifacts {
-            let present = safe_existing(workspace, path).is_ok_and(|c| c.is_file());
-            basis.push(format!("required_artifact_{}:{path}", if present { "present" } else { "missing" }));
-            accepted &= present;
-        }
-        if let Some(needle) = &claim.criteria.stdout_must_contain {
-            let matches = file_contains(stdout_path, needle)?;
-            basis.push(if matches { "stdout_match" } else { "stdout_mismatch" });
-            accepted &= matches;
-        }
-        // Evaluators & batch ratio checks...
-        (if accepted { SettlementStatus::Accepted } else { SettlementStatus::Rejected }, false)
-    }
-}
+These fields describe the artifact. They are evidence, not settlement acceptance rules.
+
+---
+
+## 6. Persistence
+
+```text
+.sea-forge/runs/<run_id>/
+├── trace.jsonl           # lifecycle, including SettlementRecorded
+├── evidence.jsonl        # execution and artifact evidence
+├── settlement.json       # SettlementEvent
+└── quarantine/<item>.jsonl
 ```
 
----
-
-## 7. State & Persistence
-
-Settlement writes directly to the run record directory:
-* `.sea-forge/runs/<run_id>/trace.jsonl`: Appends `SettlementRecorded` event.
-* `.sea-forge/runs/<run_id>/evidence.jsonl`: Appends `ExecutionResult` and `Artifact` evidence records.
-* `.sea-forge/runs/<run_id>/settlement.json`: The serialized `SettlementEvent`.
-* `.sea-forge/ledgers/`: Commits `settlement_event` record into the integrity stream.
+The ledger receives the `settlement_event` record. The capability envelope is built later and does not retroactively change the settlement.
 
 ---
 
-## 8. Failure Modes & Invariants
+## 7. Invariants and Failure Modes
 
-* **Invariant DOM-01 (Settlement vs. Exit Code):** A command exiting with code 0 that fails to create a required artifact is settled as `Rejected` with basis `["authority_allow", "exit_zero", "required_artifact_missing:<path>"]`.
-* **Invariant DOM-02 (Every Activation Is an Episode):** Case stage tasks cannot bypass settlement. Every activation produces complete trace and evidence records.
-* **Missing Basis Proof:** An accepted settlement with an empty `basis` array is illegal and fails conformance proof P1.
+* **DOM-01.** Exit zero with a missing required artifact is `Rejected` with `required_artifact_missing:<path>`. Basis would include `authority_allow`, `exit_zero`, and the missing-artifact token.
+* **DOM-02.** A settled case activation has trace and evidence, including denials and escalations.
+* **Basis is never empty.** Acceptance without a factual basis fails conformance.
+* **Artifact scope.** Required artifacts are resolved under `workspace/`. Looking in `artifacts/` is a documentation mistake that leads to false rejections.
+* **Suspected is not proven.** A stderr heuristic produces `suspected_jail_violation`, not `jail_violation`.
+* **Quarantine is explicit.** Batch failures are written down. They are not discarded.
 
 ---
 
-## 9. Source Trail
+## 8. Source Trail
 
-* [`crates/sea-forge-settlement/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/lib.rs) — Core `settle()` evaluation engine.
-* [`crates/sea-forge-settlement/src/declaration.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-settlement/src/declaration.rs) — SWE_SEED declarations and settlement authorities.
-* [`crates/sea-forge-evidence/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-evidence/src/lib.rs) — `JsonlEvidenceWriter`, file capture, SHA-256 calculation, and pre-mint ID formatting.
-* [`crates/sea-forge-trace/src/lib.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-trace/src/lib.rs) — `JsonlTraceRecorder` append-only logger.
-* [`crates/sea-forge-core/src/types.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-core/src/types.rs#L610-L635) — `SettlementCriteria` and `SettlementClaim` structures.
+* [`crates/sea-forge-settlement/src/lib.rs`](../../crates/sea-forge-settlement/src/lib.rs) — `settle`, batch evaluation, prompt-schema checks.
+* [`crates/sea-forge-settlement/src/declaration.rs`](../../crates/sea-forge-settlement/src/declaration.rs) — declarations and settlement authorities.
+* [`crates/sea-forge-evidence/src/lib.rs`](../../crates/sea-forge-evidence/src/lib.rs) — evidence writer, artifact capture, hashing.
+* [`crates/sea-forge-trace/src/lib.rs`](../../crates/sea-forge-trace/src/lib.rs) — trace recorder.
+* [`crates/sea-forge-core/src/types.rs`](../../crates/sea-forge-core/src/types.rs) — criteria, claim, event, artifact descriptor.
+* [`crates/sea-forge-settlement/tests/criteria_provenance.rs`](../../crates/sea-forge-settlement/tests/criteria_provenance.rs) — criteria and batch tests.

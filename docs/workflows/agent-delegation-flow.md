@@ -102,7 +102,7 @@ sequenceDiagram
 
 ## 5. Source Trail
 
-* [`crates/sea-forge-agent/src/delegation.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/delegation.rs) — `run_delegation()` and transcript summarization.
-* [`crates/sea-forge-agent/src/acp.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-agent/src/acp.rs) — Agent Client Protocol session and tool permission interception.
-* [`crates/sea-forge-server/src/transcript_seal.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/transcript_seal.rs) — XChaCha20Poly1305 cryptographic transcript sealing.
-* [`crates/sea-forge-server/src/swe_seed_reconciliation.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/src/swe_seed_reconciliation.rs) — SWE_SEED work contract reconciliation.
+* [`crates/sea-forge-agent/src/delegation.rs`](../../crates/sea-forge-agent/src/delegation.rs) — `run_delegation()` and transcript summarization.
+* [`crates/sea-forge-agent/src/acp.rs`](../../crates/sea-forge-agent/src/acp.rs) — Agent Client Protocol session and tool permission interception.
+* [`crates/sea-forge-server/src/transcript_seal.rs`](../../crates/sea-forge-server/src/transcript_seal.rs) — XChaCha20Poly1305 cryptographic transcript sealing.
+* [`crates/sea-forge-server/src/swe_seed_reconciliation.rs`](../../crates/sea-forge-server/src/swe_seed_reconciliation.rs) — SWE_SEED work contract reconciliation.

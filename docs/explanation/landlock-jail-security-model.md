@@ -67,8 +67,9 @@ In SEA Forge, sandboxed tasks default to `NetworkPosture::Denied`:
 * Any attempt by the child process to call `connect()` on a TCP socket immediately fails with `EPERM`.
 * Even if the host has active internet access, the sandboxed child cannot reach external servers or exfiltrate data.
 
-### Explicit Port Allowlists
-If an authority rule explicitly grants a `network` boundary (e.g. `ports: [443, 8080]`), `NetworkPosture::from_granted_ports` adds explicit Landlock rules allowing TCP connections only to those ports.
+### Reserved Port Allowlist Path
+
+The runtime contains `ActionGrant::network_tcp_ports` and `NetworkPosture::from_granted_ports` to project a future `network` boundary dimension into explicit Landlock TCP rules. The current `0.1` policy validator does not accept `network` under `boundary_constraints`, so policy-authored grants currently carry no port list and start with `NetworkPosture::Denied`.
 
 ### Known Scope Limitations (ADR-002)
 As documented in **ADR-002**, through Landlock ABI v6:
@@ -91,6 +92,6 @@ This Linux kernel flag ensures that:
 
 ## 6. Source Evidence
 
-* [`crates/sea-forge-sandbox/src/jail.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/jail.rs) — Complete Linux Landlock syscall implementation and ABI version discovery.
-* [`crates/sea-forge-sandbox/src/lib.rs:48-92`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-sandbox/src/lib.rs#L48-L92) — `NetworkPosture` implementation.
-* [`docs/decisions/ADR-002-audit-remediation-dependencies.md`](file:///c:/Users/sprim/projects/sea-rs/docs/decisions/ADR-002-audit-remediation-dependencies.md) — Scope analysis of Landlock network limitations.
+* [`crates/sea-forge-sandbox/src/jail.rs`](../../crates/sea-forge-sandbox/src/jail.rs) — Complete Linux Landlock syscall implementation and ABI version discovery.
+* [`crates/sea-forge-sandbox/src/lib.rs:48-92`](../../crates/sea-forge-sandbox/src/lib.rs#L48-L92) — `NetworkPosture` implementation.
+* [`docs/decisions/ADR-002-audit-remediation-dependencies.md`](../../docs/decisions/ADR-002-audit-remediation-dependencies.md) — Scope analysis of Landlock network limitations.

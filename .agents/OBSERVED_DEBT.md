@@ -18,6 +18,26 @@
 - Scope: this phase is contract/tests/fixtures/evidence only; production
   security mechanisms must not be implemented to make the baseline green.
 
+## Open: The runtime has a reserved TCP-port grant path that policy cannot express
+
+- Observed: 2026-10-23.
+- Evidence: `crates/sea-forge-authority/src/lib.rs` defines
+  `ActionGrant::network_tcp_ports` and `NetworkPosture::from_granted_ports`
+  consumes it, but the same file's `PolicyRule` validation rejects any
+  `boundary_constraints` key outside a fixed allowlist that does not include
+  `network`. A minimal policy containing `boundary_constraints: { network: [] }`
+  fails to load with `schema_error: unsupported boundary dimension`; removing
+  that dimension loads and the demo run settles accepted.
+- Impact: the runtime contains a deliberate fail-narrow projection for TCP
+  ports, but no policy author can reach it in schema `0.1`. Documentation must
+  describe the path as reserved, and any future networked workload has no
+  honest policy surface.
+- Next move: either add `network` to the accepted boundary dimensions with a
+  strict numeric-port validator and a policy-schema version bump, or remove the
+  dead projection until the surface is deliberately designed.
+- Scope: discovered during docs reconciliation; changing the policy schema is
+  a public contract change requiring its own spec, tests, and review.
+
 Record concrete debt, gaps, risks, or defects found while working but outside
 the current task. Each entry needs evidence, impact, and a next move. Remove an
 entry when resolved; do not use this file as a backlog of ideas.

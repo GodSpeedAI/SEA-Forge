@@ -125,6 +125,6 @@ Each ledger stream lives in a private directory within the cell:
 
 ## 9. Source Trail
 
-* [`crates/sea-forge-ledger/src/types.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/types.rs) — `LedgerManager`, `LedgerStream`, `LedgerEntry`, MMR algorithms, and Merkle proofs.
-* [`crates/sea-forge-ledger/src/signing.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-ledger/src/signing.rs) — Ed25519 cryptographic key generation, signing, and verification.
-* [`tests/conformance_ledger.rs`](file:///c:/Users/sprim/projects/sea-rs/crates/sea-forge-server/tests/conformance_lifecycle.rs) — Ledger verification, hash-chain integrity, and MMR proof tests.
+* [`crates/sea-forge-ledger/src/types.rs`](../../crates/sea-forge-ledger/src/types.rs) — `LedgerManager`, `LedgerStream`, `LedgerEntry`, MMR algorithms, and Merkle proofs.
+* [`crates/sea-forge-ledger/src/signing.rs`](../../crates/sea-forge-ledger/src/signing.rs) — Ed25519 cryptographic key generation, signing, and verification.
+* [`tests/conformance_ledger.rs`](../../crates/sea-forge-server/tests/conformance_lifecycle.rs) — Ledger verification, hash-chain integrity, and MMR proof tests.
