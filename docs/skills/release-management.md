@@ -190,6 +190,11 @@ The repository has exactly one secret that needs rotation: `RELEASE_PLEASE_TOKEN
 - **Why it exists:** the default `GITHUB_TOKEN` cannot trigger CI on the bot's
   own release PR. Without this PAT, the release PR would never receive the
   required `CI / gate` check (F-009).
+- **When it is absent:** `release-please.yml` falls back to the job's
+  `GITHUB_TOKEN` so release-please still runs (it failed with "Input required
+  and not supplied: token" from 2026-10-13 while the secret did not exist). A
+  release PR opened with `GITHUB_TOKEN` starts no workflows: a maintainer closes
+  and reopens it to run its required checks. Never bypass the ruleset instead.
 - **Scope:** fine-grained, this repository only, `contents: write` and
   `pull-requests: write`. No `workflows`, no admin, no org scope.
 - **Expiration:** set the shortest practical expiration when creating it
@@ -321,7 +326,7 @@ Observed or anticipated during Phase 14 validation:
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `CI / gate` is permanently pending on a PR | required check name was set to a matrix-expanded name like `CI / verify (ubuntu-latest)` instead of the stable `CI / gate` | update the ruleset to require `CI / gate` only |
-| The release PR's `CI / gate` never starts | `release-please.yml` is using the default `GITHUB_TOKEN` instead of `RELEASE_PLEASE_TOKEN` (F-009) | confirm `RELEASE_PLEASE_TOKEN` secret exists and is non-expired; confirm the workflow reads it |
+| The release PR's `CI / gate` never starts | `RELEASE_PLEASE_TOKEN` is absent or expired, so the workflow fell back to `GITHUB_TOKEN` (F-009) | close and reopen the release PR to start its checks; create or rotate `RELEASE_PLEASE_TOKEN` (§7) to restore automatic CI |
 | `pr-title.yml` fails on the release PR's title | someone manually edited the release PR title away from Release Please's `chore(main): release vX.Y.Z` | do not bypass; investigate why the title was edited |
 | `cargo-publish` fails "already published" but is treated as failure | the idempotency regex did not match the current cargo output | update the regex in `release-please.yml`; do not re-tag |
 | `cargo-publish` fails on `sea-forge-cli` with "no matching package named `sea-forge-core`" | `sea-forge-core` did not publish first | the workflow already orders core-before-cli; check that the core step's idempotency branch did not falsely skip |

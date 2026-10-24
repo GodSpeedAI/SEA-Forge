@@ -152,9 +152,10 @@ cannot leave a permanently pending or silently-passing required check.
   with the default `GITHUB_TOKEN` and needs no `actions: write`.
 - `release-please.yml` `release-please` job has `contents: write` and
   `pull-requests: write` (it tags, releases, and opens the release PR). It uses
-  the `RELEASE_PLEASE_TOKEN` secret (a fine-grained PAT), not the default
-  `GITHUB_TOKEN`, so CI can run on the bot's own release PR (F-009; see
-  `docs/skills/release-management.md` §7).
+  the `RELEASE_PLEASE_TOKEN` secret (a fine-grained PAT) when present, so CI can
+  run on the bot's own release PR (F-009), and falls back to the job's
+  `GITHUB_TOKEN` when the secret is absent; release PRs then need a maintainer
+  close/reopen to start their checks (see `docs/skills/release-management.md` §7).
 - `release-please.yml` `cargo-publish` job has `id-token: write` only, plus
   `contents: read`. It exchanges an OIDC token via
   `rust-lang/crates-io-auth-action@v1.0.5`; the token is auto-revoked in the

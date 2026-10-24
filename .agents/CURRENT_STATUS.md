@@ -4,24 +4,24 @@
 
 **Stage:** release-please token fix (Release workflow failing on every push to main)
 
-**Summary:** The Release workflow's release-please job failed on every push to main because its token input referenced secrets.RELEASE_PLEASE_TOKEN, which does not exist in the repository (zero Actions secrets), so the input was empty. release-please.yml now passes secrets.GITHUB_TOKEN under the job's existing contents:write and pull-requests:write permissions. The cargo-publish OIDC job is unchanged. Release PRs opened with GITHUB_TOKEN do not trigger other workflows, so their CI and gate checks need a follow-up decision before a release merge.
+**Summary:** The Release workflow's release-please job failed on every push to main since 2026-10-13 because its token input referenced secrets.RELEASE_PLEASE_TOKEN, which does not exist in the repository (zero Actions secrets), so the input was empty. release-please.yml now passes secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN: the PAT when present (release PRs trigger CI, F-009), otherwise the job's GITHUB_TOKEN under its existing contents:write and pull-requests:write permissions. The cargo-publish OIDC job is unchanged. The release-management skill and CI/CD architecture docs describe the fallback and the maintainer close/reopen that starts a GITHUB_TOKEN release PR's checks.
 
 **Verified:**
 
 - python yaml.safe_load parses .github/workflows/release-please.yml
 - gh secret list and gh api actions/secrets report zero repository secrets, so RELEASE_PLEASE_TOKEN is absent
 - gh run 40062078573 and the last 30 release-please runs all conclude failure with the empty-token error
-- actionlint is not installed on this host, so workflow lint was not run
+- actionlint is not installed on this host, so workflow lint was not run; CI parses the workflow
 
 **Limits:**
 
-- Release PRs created with GITHUB_TOKEN do not trigger workflows, so CI / gate and conventional-commit will not run on the release PR; gate and conventional-commit are required on main
-- Mitigation options, none implemented: create the RELEASE_PLEASE_TOKEN secret per docs/skills/release-management.md section 7, or a GitHub App token; both need a maintainer action
-- No Rust build or test was run (memory-constrained host); the change touches only the workflow token input
-- Docs in docs/skills/release-management.md still describe RELEASE_PLEASE_TOKEN as the live token
+- Until RELEASE_PLEASE_TOKEN exists, release PRs start no workflows on their own; a maintainer closes and reopens the release PR so the required CI / gate and conventional-commit checks run
+- Creating RELEASE_PLEASE_TOKEN (docs/skills/release-management.md section 7) is a maintainer credential action, not done here
+- No Rust build or test was run; the change touches only the workflow token input and docs
 
-**Next move:** Maintainer decides how release PRs get required checks (create RELEASE_PLEASE_TOKEN or a GitHub App token) before the next release merge; then review and merge this PR.
+**Next move:** Merge once CI is green; maintainer may create RELEASE_PLEASE_TOKEN to restore automatic CI on release PRs.
 
 **Evidence:**
 
 - `.github/workflows/release-please.yml`
+- `docs/skills/release-management.md`
