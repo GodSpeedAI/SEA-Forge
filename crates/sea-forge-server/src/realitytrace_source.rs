@@ -183,23 +183,39 @@ impl EvidenceSource for RealityTraceSource {
     }
 }
 
+/// The rows of `ledger_id` in one export. A row of that ledger without a numeric `append_ordinal` or a string
+/// `record_kind` fails the whole read: dropping it could hide verification evidence from settlement.
+fn rows_of_ledger(export: &[Value], ledger_id: &str) -> Result<Vec<SourceRow>, String> {
+    export
+        .iter()
+        .filter(|r| r.get("ledger_id").and_then(Value::as_str) == Some(ledger_id))
+        .enumerate()
+        .map(|(index, r)| {
+            let ordinal = r
+                .get("append_ordinal")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| {
+                    format!("ledger {ledger_id} row {index} has no numeric append_ordinal")
+                })?;
+            let record_kind = r
+                .get("record_kind")
+                .and_then(Value::as_str)
+                .ok_or_else(|| format!("ledger {ledger_id}:{ordinal} has no string record_kind"))?;
+            Ok(SourceRow {
+                ledger_id: ledger_id.to_string(),
+                ordinal,
+                record_kind: record_kind.to_string(),
+                payload: r.get("payload").cloned().unwrap_or(Value::Null),
+            })
+        })
+        .collect()
+}
+
 impl ObligationSource for RealityTraceSource {
     /// The rows of one RealityTrace ledger, from the repository that holds it, after its chain verified.
     fn ledger_rows(&self, ledger_id: &str) -> Result<Vec<SourceRow>, String> {
         for repo in self.repos()? {
-            let rows: Vec<SourceRow> = self
-                .export(&repo)?
-                .iter()
-                .filter(|r| r.get("ledger_id").and_then(Value::as_str) == Some(ledger_id))
-                .filter_map(|r| {
-                    Some(SourceRow {
-                        ledger_id: ledger_id.to_string(),
-                        ordinal: r.get("append_ordinal")?.as_u64()?,
-                        record_kind: r.get("record_kind")?.as_str()?.to_string(),
-                        payload: r.get("payload").cloned().unwrap_or(Value::Null),
-                    })
-                })
-                .collect();
+            let rows = rows_of_ledger(&self.export(&repo)?, ledger_id)?;
             if rows.is_empty() {
                 continue;
             }
@@ -308,5 +324,24 @@ mod tests {
             .recorded_item(&item("sxr:L:2"))
             .unwrap_err()
             .contains("cannot run"));
+    }
+
+    #[test]
+    fn a_malformed_row_of_the_ledger_fails_the_read_instead_of_being_dropped() {
+        let good = json!({"ledger_id": "L", "append_ordinal": 1, "record_kind": "run.begun", "payload": {}});
+        let other = json!({"ledger_id": "M", "append_ordinal": "x"});
+        let rows = rows_of_ledger(&[good.clone(), other.clone()], "L").unwrap();
+        assert_eq!(
+            rows.len(),
+            1,
+            "rows of other ledgers are ignored, even malformed ones"
+        );
+        let no_ordinal =
+            json!({"ledger_id": "L", "append_ordinal": "2", "record_kind": "observation.recorded"});
+        let err = rows_of_ledger(&[good.clone(), no_ordinal], "L").unwrap_err();
+        assert!(err.contains("append_ordinal"), "{err}");
+        let no_kind = json!({"ledger_id": "L", "append_ordinal": 2, "record_kind": 7});
+        let err = rows_of_ledger(&[good, no_kind], "L").unwrap_err();
+        assert!(err.contains("record_kind"), "{err}");
     }
 }

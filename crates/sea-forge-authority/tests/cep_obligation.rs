@@ -510,12 +510,47 @@ fn a_discrimination_run_that_already_observed_the_statement_is_refused() {
     ));
     s.add(obs_row(7, "obs-v0", &s.run(Some(0))));
     s.wait_close();
-    s.close(&["obs-v0".into()]).unwrap();
+    // Refused before any closure is frozen, so nothing can settle on it.
     assert!(s
-        .settle()
+        .close(&["obs-v0".into()])
         .unwrap_err()
         .to_string()
         .contains("before acting"));
+    assert!(s.settle().unwrap_err().to_string().contains("pending"));
+}
+
+/// False success: a failing run proves "not observed before acting" only if it is a completed, uncrashed run
+/// of exactly the pinned verifier argv. Any other failing observation after T is refused at closure.
+#[test]
+fn a_discrimination_run_of_another_command_crashed_or_incomplete_is_refused_at_closure() {
+    let cases: [(&str, fn(Run) -> Run); 3] = [
+        ("pinned verifier argv", |r| Run {
+            argv: vec![json!("/bin/false")],
+            ..r
+        }),
+        ("crashed", |r| Run {
+            crashed: true,
+            exit: None,
+            ..r
+        }),
+        ("no recorded completion", |r| Run {
+            completed: None,
+            ..r
+        }),
+    ];
+    for (why, bad) in cases {
+        let s = scenario(W, 30);
+        s.add(obs_row(5, "obs-d", &bad(s.run(Some(1)))));
+        s.add(obs_row(7, "obs-v0", &s.run(Some(0))));
+        s.wait_close();
+        let err = s.close(&["obs-v0".into()]).unwrap_err().to_string();
+        assert!(err.contains(why), "{why}: {err}");
+        let settled = s.settle().unwrap_err().to_string();
+        assert!(
+            settled.contains("pending"),
+            "{why}: no closure, no settlement: {settled}"
+        );
+    }
 }
 
 #[test]

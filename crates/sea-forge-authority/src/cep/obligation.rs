@@ -153,6 +153,48 @@ fn inline(row: &SourceRow) -> Option<&Value> {
     row.payload.pointer("/representations/0/inline_content")
 }
 
+/// The discrimination run (B) must be a completed, uncrashed run of exactly the pinned verifier argv, after the
+/// threshold, with a known non-zero exit: only that proves the statement did not already hold before acting.
+/// A crashed run, a run of another command, or one with no recorded result proves nothing about this verifier.
+fn check_discrimination(row: &SourceRow, obligation: &Obligation) -> Result<(), CepAuthorityError> {
+    let refuse = |why: &str| {
+        Err(CepAuthorityError::Evidence(format!(
+            "the discrimination run {why}"
+        )))
+    };
+    if row.ledger_id != obligation.threshold_ledger || row.ordinal <= obligation.threshold_position
+    {
+        return refuse("is not after the threshold; the expectation was not formed first");
+    }
+    let Some(content) = inline(row) else {
+        return refuse("has no recorded result");
+    };
+    if content.get("crashed").and_then(Value::as_bool) != Some(false) {
+        return refuse("crashed or does not say it completed; it has no known result");
+    }
+    if content
+        .get("completed_at")
+        .and_then(Value::as_str)
+        .and_then(parse_time)
+        .is_none()
+    {
+        return refuse("has no recorded completion; it has no known result");
+    }
+    let argv = content
+        .pointer("/invocation/argv")
+        .and_then(Value::as_array);
+    if !argv.is_some_and(|a| argv_digest(a) == obligation.verifier_argv_digest) {
+        return refuse("is not a run of the pinned verifier argv");
+    }
+    match content.get("exit_code").and_then(Value::as_i64) {
+        Some(0) => {
+            refuse("observed the statement before acting; the operation should not have executed")
+        }
+        Some(_) => Ok(()),
+        None => refuse("has no known result"),
+    }
+}
+
 /// Three-valued result of one verification run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunResult {
@@ -304,11 +346,8 @@ impl CepAuthorityService<'_> {
                     "RealityTrace recorded no observation {discrimination_observation_id}"
                 ))
             })?;
-        if discrimination.ordinal <= obligation.threshold_position {
-            return Err(CepAuthorityError::Evidence(
-                "the discrimination run is not after the threshold; the expectation was not formed first".into(),
-            ));
-        }
+        // A bad discrimination run is refused before any closure is frozen.
+        check_discrimination(discrimination, &obligation)?;
         let record = json!({
             "operation_id": operation_id,
             "ledger_id": obligation.threshold_ledger,
@@ -429,16 +468,10 @@ impl CepAuthorityService<'_> {
                     .get("discrimination_observation_id")
                     .and_then(Value::as_str)
                     .unwrap_or("");
-                let before = observation(&rows, discrimination_id).and_then(inline);
-                match before.and_then(|v| v.get("exit_code")).and_then(Value::as_i64) {
-                    Some(code) if code != 0 => {}
-                    Some(_) => {
-                        return Err(CepAuthorityError::Evidence(
-                            "the discrimination run observed the statement before acting; the operation should not have executed".into(),
-                        ))
-                    }
-                    None => return Err(CepAuthorityError::Evidence("the discrimination run has no known result".into())),
-                }
+                let before = observation(&rows, discrimination_id).ok_or_else(|| {
+                    CepAuthorityError::Evidence("the discrimination run has no known result".into())
+                })?;
+                check_discrimination(before, &obligation)?;
                 let frame = Frame {
                     obligation: &obligation,
                     b,
