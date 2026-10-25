@@ -84,6 +84,14 @@ exactly as if you had done the work by hand. `scripts/reset-cell.sh` refuses
 any directory without the marker `seed-cell.sh` writes, so it cannot be pointed
 at a real cell.
 
+The seeded cell's `server.yaml` binds the uid that ran the seed as the gateway
+principal. `operator_a` and `operator_b` have no uid of their own; the seed
+sends their requests as `on_behalf_of` through that gateway, so separation of
+duty compares the two end users. The seed puts no symlinks inside the cell: the
+tool link it needs lives under the build target directory. An offline backup
+(`scripts/casework-cell-backup.sh`) refuses any cell that holds symlinks or
+hardlinked files, because the restore script refuses them.
+
 ## The cell
 
 A *cell* is one `.sea-forge` directory holding a server's socket, its

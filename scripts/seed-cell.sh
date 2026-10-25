@@ -35,9 +35,10 @@ if [ -e "$CELL" ] && [ ! -e "$STAMP" ]; then
 fi
 
 say "building the binaries this seed drives"
+TARGET="${CARGO_TARGET_DIR:-$REPO/target}"
 cargo build -q --manifest-path "$REPO/Cargo.toml" -p sea-forge-cli -p sea-forge-server --bins
-CLI="$REPO/target/debug/sea-forge"
-SERVER="$REPO/target/debug/sea-forge-server"
+CLI="$TARGET/debug/sea-forge"
+SERVER="$TARGET/debug/sea-forge-server"
 
 # Re-seeding must be safe, so start from a clean cell rather than appending a
 # second copy of everything to the ledgers.
@@ -49,26 +50,38 @@ fi
 mkdir -p "$CELL"
 : >"$STAMP"
 
-# One uid maps to exactly one actor. operator_a is this user's direct principal;
-# operator_b has no OS principal (uid omitted) and is reachable only through the
-# gateway's on_behalf_of or an authenticated workload claim.
+# One uid maps to exactly one actor, and this script runs as one uid. That uid
+# is the gateway principal; operator_a and operator_b have no OS principal of
+# their own and act only through the gateway's on_behalf_of (the same mechanism
+# the casework gateway uses for its live operators). The server attributes each
+# request to the end user, so separation of duty still compares operator_a and
+# operator_b.
 uid="$(id -u)"
 cat >"$CELL/server.yaml" <<YAML
 identity:
   bindings:
     - uid: $uid
-      actor_id: operator_a
+      actor_id: gateway
+      roles: [service]
+    - actor_id: operator_a
       roles: [operator]
     - actor_id: operator_b
       roles: [operator]
+gateway:
+  uid: $uid
+  actor: gateway
+  delegable_actors: [operator_a, operator_b]
 YAML
 
-# `<cell>/sea-forge` must be the SERVER: policy matches on argv0's file name,
-# and the authority engine additionally requires argv0 to canonicalize to the
-# process actually executing it — which, for work the server submits in
-# process, is the server. The CLI goes beside it under its own name.
-ln -sf "$SERVER" "$CELL/sea-forge"
-ln -sf "$CLI" "$CELL/sea-forge-cli"
+# Policy matches on argv0's file name, and the authority engine additionally
+# requires argv0 to canonicalize to the process actually executing the work.
+# For work the server submits in process, that process is the server, so the
+# tool link is named `sea-forge` and points at the server. It lives under the
+# build target dir, OUTSIDE the cell: a backup of the cell must not carry
+# symlinks, and scripts/casework-cell-restore.sh refuses them by design.
+TOOLS="$TARGET/demo-tools"
+mkdir -p "$TOOLS"
+ln -sfn "$SERVER" "$TOOLS/sea-forge"
 
 say "cell root: $CELL"
 
@@ -133,7 +146,7 @@ if [ ! -S "$SOCK" ]; then
     exit 1
 fi
 
-python3 "$REPO/scripts/seed_approvals.py" "$CELL" "$SOCK"
+python3 "$REPO/scripts/seed_approvals.py" "$CELL" "$SOCK" "$TOOLS/sea-forge"
 
 say "done"
 cat <<EOF
@@ -141,7 +154,7 @@ cat <<EOF
   Seeded cell: $CELL
 
   Or inspect it from the command line:
-      $CLI case list --root $CELL
+      $CLI runs --root $CELL
 
   Remove everything this created:
       just cell-reset

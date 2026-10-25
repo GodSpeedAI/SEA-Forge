@@ -3313,7 +3313,9 @@ async fn commit_plan(
                 "exit_code": output.exit_code,
             })
         }
-        Err(e) => serde_json::json!({"error": e.to_string()}),
+        // Typed refusals (unsafe path, input, plan) carry their class so a
+        // client branches on `error_class`, never on the message text.
+        Err(e) => forge_error_response(&e),
     }
 }
 
