@@ -1,21 +1,15 @@
 # Current status
 
-**Status revision:** 174
+**Status revision:** 175
 
-**Stage:** settlement-pending error class and offline ledger crash recovery (ledger repair)
+**Stage:** release provenance restored
 
-**Summary:** Settlement that is not yet decidable now returns its own error class cep_settlement_pending (CepAuthorityError::SettlementPending) at the two named sites (window still open; closure not yet recorded), instead of cep_evidence_refused. Nothing is written for either. Ledger crash recovery is tightened: quarantine only removes the bytes after the last complete newline-terminated record, at most one record; a corrupt record followed by more data, or a broken chain, is refused with 'damaged beyond an interrupted append' and nothing is truncated. New sea-forge ledger repair (offline, exclusive lock) quarantines the torn tail, rebuilds the MMR cache only from verified entries, then verifies. Verify stays read-only and prints the repair hint for crash residue only. Tail repair is crash-safe: the quarantine file is created exclusively and fsynced before entries.jsonl is cut in place (set_len + fsync), and residue containing a newline is refused as damage, since an append writes the entry and its newline in one call.
+**Summary:** Restores the signed build-provenance attestation step in release-please.yml and its verification section in docs/skills/release-management.md exactly as merged in #58 (a914709). The squash of #62 was built from a tree that predated #58 and reverted both files; no other #58 or #59 file was affected (checked by intersecting the changed-file sets).
 
 **Verified:**
 
-- cargo test -p sea-forge-authority --lib --test cep_approvals --test cep_authority --test cep_compiler_upgrade --test cep_obligation --test cep_settlement --test cep_transition: 43+14+18+9+21+17+17 passed, 0 failed
-- cargo test -p sea-forge-ledger --lib --test crash_residue --test conformance_m0_ledger --test projection_boundary: 37+23+6+3 passed, 0 failed (crash_residue 6 new; m0 incl. crash_recovery_quarantines_incomplete_tail and rebuilds_mmr_ahead_of_entries unchanged)
-- cargo test -p sea-forge-cli --test ledger_repair --test conformance_m0_migrate --test conformance_m13 --test conformance_m3: 2+3+8+2 passed, 0 failed (ledger_repair 2 new; conformance_m3 tampered-ledger resume still fails closed)
-- cargo test -p sea-forge-server --lib cep_authority; --test crash_recovery_startup --test conformance_cep_authority: 1+3+13 passed, 0 failed (startup_refuses_corruption_before_the_tail_and_cuts_no_history new)
-- cargo clippy -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server --all-targets -- -D warnings: exit 0
-- cargo fmt --check -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server: exit 0
-- Existing startup and ledger-tamper tests reviewed: none restarts a server over a tampered middle entry; the conformance_m3 tamper case expects a failing resume and still gets one
-- cargo test -p sea-forge-ledger (all suites pass, incl. new newline_terminated_corrupt_line_is_refused_and_never_truncated); sea-forge-server crash_recovery_startup 3/3; sea-forge-cli ledger_repair 2/2
+- git diff a914709 -- .github/workflows/release-please.yml docs/skills/release-management.md is empty after this change
+- the changed-file intersection of #58/#59 with #62 is only these two files plus CURRENT_STATUS
 
 **Limits:**
 
@@ -34,20 +28,9 @@
 - startup now refuses a ledger whose chain is broken as well as mid-ledger corruption (fail closed); a crash-torn final record is still repaired silently at startup
 - a complete final record missing only its newline is quarantined as one torn record
 
-**Next move:** Merge the branch after CI is green (maintainer decision). Horizon should key retry on error_class cep_settlement_pending, and operators should use sea-forge ledger repair (with --root before the action word) for crash residue.
+**Next move:** Merge, then replay #60 and #61 onto main with the fixed helper (it now replays only each branch's own diff).
 
 **Evidence:**
 
-- `crates/sea-forge-authority/src/cep.rs`
-- `crates/sea-forge-authority/src/cep/obligation.rs`
-- `crates/sea-forge-authority/tests/cep_obligation.rs`
-- `crates/sea-forge-server/src/cep_authority.rs`
-- `crates/sea-forge-ledger/src/types.rs`
-- `crates/sea-forge-ledger/tests/crash_residue.rs`
-- `crates/sea-forge-cli/src/main.rs`
-- `crates/sea-forge-cli/src/commands/ledger.rs`
-- `crates/sea-forge-cli/tests/ledger_repair.rs`
-- `crates/sea-forge-server/src/lib.rs`
-- `crates/sea-forge-server/tests/crash_recovery_startup.rs`
-- `docs/reference/cli-command-reference.md`
-- `docs/operations/troubleshooting.md`
+- `.github/workflows/release-please.yml`
+- `docs/skills/release-management.md`
