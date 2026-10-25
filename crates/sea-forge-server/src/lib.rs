@@ -416,7 +416,9 @@ impl ServerState {
 /// rejected/cancelled outcome from ledger truth.
 /// A kill between an entry write and its derived `mmr.json` leaves the cache
 /// behind `entries.jsonl` (F-04). Repair every ledger from its entries before
-/// anything verifies it, or the cell refuses to start ever again.
+/// anything verifies it, or the cell refuses to start ever again. Only crash
+/// residue (one torn final record) is quarantined; a corrupt record followed by
+/// more data, or a broken chain, makes startup refuse rather than cut history.
 fn recover_interrupted_appends(config: &ServerConfig) -> Result<(), ForgeError> {
     let ledgers = config.root.join("ledgers");
     if !ledgers.exists() {

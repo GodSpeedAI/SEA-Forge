@@ -162,12 +162,14 @@ The index is derived state; the journal remains authoritative.
 Verifies and proves integrity-ledger entries, or replays persisted case order.
 
 ```sh
-sea-forge ledger verify <LEDGER_ID> [--root <PATH>]
-sea-forge ledger prove <LEDGER_ID> <ENTRY_ULID> [--root <PATH>]
-sea-forge ledger replay --case <CASE_ID> [--root <PATH>]
+sea-forge ledger --root <PATH> verify <LEDGER_ID>
+sea-forge ledger --root <PATH> repair <LEDGER_ID>
+sea-forge ledger --root <PATH> prove <LEDGER_ID> <ENTRY_ULID>
+sea-forge ledger --root <PATH> replay --case <CASE_ID>
 ```
 
-* `verify` prints `verified`, or prints a verification failure and returns `1`.
+* `verify` prints `verified`, or prints a verification failure and returns `1`. It is read-only. When the only problem is crash residue (one torn final record after an interrupted append, or an MMR cache behind complete entries) it also prints the diagnosis and the hint to run `ledger repair`.
+* `repair` is offline recovery: stop the server first. Under the same exclusive stream lock appends use, it moves the bytes after the last complete record (at most one torn record) to `ledgers/quarantine/`, prints how many bytes and records were quarantined and where, rebuilds the MMR cache from verified entries if it is behind, then verifies and returns non-zero if verification still fails. It never truncates a corrupt record followed by more data, and never rebuilds over a tampered entry: it refuses, writes nothing, and the ledger must be investigated.
 * `prove` prints the entry hash, leaf index, proof hashes, and MMR peaks.
 * `replay` reads `cases/<case_id>/case-events.jsonl` only; it never re-executes an episode. It prints persisted dispatch/settlement events in file order and rejects missing, duplicate, or non-monotonic ordinals.
 

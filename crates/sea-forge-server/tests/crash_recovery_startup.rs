@@ -59,3 +59,39 @@ fn startup_quarantines_a_torn_tail_and_keeps_the_valid_entries() {
     let quarantine = root.path().join("ledgers/quarantine");
     assert_eq!(std::fs::read_dir(quarantine).unwrap().count(), 1);
 }
+
+#[test]
+fn startup_refuses_corruption_before_the_tail_and_cuts_no_history() {
+    let root = tempfile::tempdir().unwrap();
+    let ledger = LedgerStream::open(root.path(), "case-damaged", "sea-forge-server").unwrap();
+    ledger
+        .append("test", vec![], json!({"n": 0}), vec![])
+        .unwrap();
+    ledger
+        .append("test", vec![], json!({"n": 1}), vec![])
+        .unwrap();
+    let entries = root.path().join("ledgers/case-damaged/entries.jsonl");
+    let mut content = std::fs::read(&entries).unwrap();
+    // A corrupt record followed by a complete one: damage, not an interrupted append.
+    content.extend_from_slice(b"{\"entry_ulid\":\"half\n");
+    content.extend_from_slice(b"{\"entry_ulid\":\"after\"}\n");
+    std::fs::write(&entries, &content).unwrap();
+
+    let err = start(root.path()).err().expect("startup must refuse");
+    assert!(
+        err.to_string()
+            .contains("damaged beyond an interrupted append"),
+        "{err}"
+    );
+    assert_eq!(
+        std::fs::read(&entries).unwrap(),
+        content,
+        "nothing truncated"
+    );
+    assert!(!root
+        .path()
+        .join("ledgers/quarantine")
+        .read_dir()
+        .unwrap()
+        .any(|_| true));
+}

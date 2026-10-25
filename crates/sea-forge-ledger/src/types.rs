@@ -1509,18 +1509,6 @@ impl LedgerStream {
         Ok(())
     }
 
-    /// Rebuild the derived MMR cache from the entries on disk and persist it.
-    /// `entries.jsonl` is the single source of truth; this repairs the crash
-    /// state where `mmr.json` is ahead of (or behind) the surviving entries.
-    fn rebuild_mmr(&self) -> Result<(), ForgeError> {
-        let entries = self.read_entries_unlocked()?;
-        let mut mmr = MmrState::empty();
-        for entry in &entries {
-            mmr = mmr.append(&entry.entry_hash)?;
-        }
-        self.save_mmr(&mmr)
-    }
-
     /// `read_last_entry` serialized with appenders, for callers outside the stream lock.
     fn read_last_entry_shared(&self) -> Result<Option<LedgerEntry>, ForgeError> {
         if !self.entries_path().exists() {
@@ -1563,18 +1551,8 @@ impl LedgerStream {
         if !path.exists() {
             return Ok(Vec::new());
         }
-        let file = File::open(&path).map_err(|e| ForgeError::io("open entries", e))?;
-        let mut entries = Vec::new();
-        for line in BufReader::new(file).lines() {
-            let line = line.map_err(|e| ForgeError::io("read entries", e))?;
-            if line.trim().is_empty() {
-                continue;
-            }
-            let entry: LedgerEntry = serde_json::from_str(&line)
-                .map_err(|e| ForgeError::Serialization(format!("parse entry: {e}")))?;
-            entries.push(entry);
-        }
-        Ok(entries)
+        let bytes = fs::read(&path).map_err(|e| ForgeError::io("read entries", e))?;
+        parse_entry_lines(&bytes)
     }
 
     /// Read all checkpoints from the stream.
@@ -1878,54 +1856,8 @@ impl LedgerStream {
         if !path.exists() {
             return Ok(());
         }
-        let file = File::open(&path).map_err(|e| ForgeError::io("open entries", e))?;
-        let mut seen_ulids = std::collections::HashSet::new();
-        let mut expected_ordinal = 0u64;
-        let mut previous_hash: Option<String> = None;
-        let mut mmr = MmrState::empty();
-        for line in BufReader::new(file).lines() {
-            let line = line.map_err(|e| ForgeError::io("read entries", e))?;
-            if line.trim().is_empty() {
-                continue;
-            }
-            let entry: LedgerEntry = serde_json::from_str(&line)
-                .map_err(|e| ForgeError::Serialization(format!("parse entry: {e}")))?;
-            if entry.append_ordinal != expected_ordinal {
-                return Err(ForgeError::Internal(format!(
-                    "ledger_integrity_error: ordinal gap at {expected_ordinal}"
-                )));
-            }
-            if previous_hash.as_ref() != entry.previous_entry_hash.as_ref() {
-                return Err(ForgeError::Internal(
-                    "ledger_integrity_error: predecessor chain break".into(),
-                ));
-            }
-            if !seen_ulids.insert(entry.entry_ulid.clone()) {
-                return Err(ForgeError::Internal(
-                    "ledger_integrity_error: duplicate entry_ulid".into(),
-                ));
-            }
-            let expected_payload_hash = payload_hash(&entry.payload)?;
-            if expected_payload_hash != entry.payload_hash {
-                return Err(ForgeError::Internal(
-                    "ledger_integrity_error: payload hash mismatch".into(),
-                ));
-            }
-            let expected_entry_hash = entry_hash(&entry)?;
-            if expected_entry_hash != entry.entry_hash {
-                return Err(ForgeError::Internal(
-                    "ledger_integrity_error: entry hash mismatch".into(),
-                ));
-            }
-            mmr = mmr.append(&entry.entry_hash)?;
-            if mmr.leaf_count - 1 != entry.mmr_leaf_index {
-                return Err(ForgeError::Internal(
-                    "ledger_integrity_error: mmr leaf index mismatch".into(),
-                ));
-            }
-            previous_hash = Some(entry.entry_hash.clone());
-            expected_ordinal += 1;
-        }
+        let entries = self.read_entries_unlocked()?;
+        let mmr = check_entry_chain(&entries)?;
         let stored_mmr = self.load_mmr()?;
         if stored_mmr != mmr {
             return Err(ForgeError::Internal(
@@ -2115,56 +2047,74 @@ impl LedgerStream {
 
     // ---- Crash recovery ----
 
-    /// Move an incomplete uncheckpointed tail to quarantine.
-    /// Returns the number of quarantined lines.
-    /// Holds the stream lock, so it never races an append.
-    pub fn quarantine_incomplete_tail(&self) -> Result<usize, ForgeError> {
-        self.with_exclusive_lock(|| self.quarantine_incomplete_tail_locked())
+    /// Read-only diagnosis of crash residue: what `ledger repair` would quarantine, and whether the
+    /// derived MMR cache is out of step with complete entries. Fails when the ledger is damaged beyond
+    /// an interrupted append (corruption before the final record, or a broken chain): nothing is
+    /// repairable then, and nothing is written.
+    pub fn crash_residue(&self) -> Result<CrashResidue, ForgeError> {
+        if !self.entries_path().exists() {
+            return Ok(CrashResidue::default());
+        }
+        self.with_shared_lock(|| {
+            let content = fs::read(self.entries_path())
+                .map_err(|e| ForgeError::io("read entries for diagnosis", e))?;
+            let diagnosis = diagnose_entries(&content)?;
+            Ok(CrashResidue {
+                torn_bytes: diagnosis.scan.residue_bytes,
+                torn_records: diagnosis.scan.residue_records,
+                mmr_stale: self.load_mmr()? != diagnosis.mmr,
+            })
+        })
     }
 
-    fn quarantine_incomplete_tail_locked(&self) -> Result<usize, ForgeError> {
+    /// Repair crash residue, under the exclusive stream lock: move the bytes after the last complete,
+    /// parseable, newline-terminated record to quarantine (at most one torn record), and rebuild the
+    /// derived MMR cache from entries that verify. A corrupt record followed by more data, or a broken
+    /// chain, is refused and nothing is written.
+    pub fn repair_tail(&self) -> Result<TailRepair, ForgeError> {
+        self.with_exclusive_lock(|| self.repair_tail_locked())
+    }
+
+    fn repair_tail_locked(&self) -> Result<TailRepair, ForgeError> {
         let path = self.entries_path();
         if !path.exists() {
-            return Ok(0);
+            return Ok(TailRepair::default());
         }
-        let content = fs::read_to_string(&path)
-            .map_err(|e| ForgeError::io("read entries for quarantine", e))?;
-        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
-        let mut last_valid = 0usize;
-        for (i, line) in lines.iter().enumerate() {
-            if serde_json::from_str::<LedgerEntry>(line).is_err() {
-                break;
-            }
-            last_valid = i + 1;
-        }
-        let quarantined = lines.len() - last_valid;
-        if quarantined > 0 {
-            let quarantined_lines = &lines[last_valid..];
+        let content = fs::read(&path).map_err(|e| ForgeError::io("read entries for repair", e))?;
+        let diagnosis = diagnose_entries(&content)?;
+        let kept = diagnosis.scan.kept_bytes;
+        let mut repair = TailRepair {
+            kept_records: diagnosis.entries.len(),
+            quarantined_bytes: diagnosis.scan.residue_bytes,
+            quarantined_records: diagnosis.scan.residue_records,
+            ..TailRepair::default()
+        };
+        if diagnosis.scan.residue_bytes > 0 {
             let q_path = self.root.join("ledgers").join("quarantine").join(format!(
                 "{}-{}.jsonl",
                 self.ledger_id,
                 ulid()?
             ));
-            let q_content = quarantined_lines.join("\n");
-            fs::write(&q_path, q_content.as_bytes())
+            fs::write(&q_path, &content[kept..])
                 .map_err(|e| ForgeError::io("write quarantine", e))?;
-            // Truncate entries file to valid lines only.
-            let valid_content = lines[..last_valid].join("\n");
-            if valid_content.is_empty() {
-                fs::write(&path, b"").map_err(|e| ForgeError::io("truncate entries", e))?;
-            } else {
-                fs::write(&path, format!("{valid_content}\n").as_bytes())
-                    .map_err(|e| ForgeError::io("truncate entries", e))?;
-            }
+            fs::write(&path, &content[..kept])
+                .map_err(|e| ForgeError::io("truncate entries", e))?;
+            repair.quarantine_path = Some(q_path);
         }
-        // F-04: always reconcile the derived MMR cache with the surviving
-        // entries, so a crash that left `mmr.json` ahead of `entries.jsonl`
-        // (the pre-fix commit order) is repaired rather than failing `verify()`
-        // forever.
-        self.rebuild_mmr()?;
-        Ok(quarantined)
+        // `entries.jsonl` is the source of truth and `mmr.json` a derived cache: rebuild the cache
+        // only from entries that verified above, never over a tampered history.
+        if self.load_mmr()? != diagnosis.mmr {
+            self.save_mmr(&diagnosis.mmr)?;
+            repair.mmr_rebuilt = true;
+        }
+        Ok(repair)
     }
 
+    /// Quarantine crash residue (startup path). Returns the number of quarantined records.
+    /// Holds the stream lock, so it never races an append.
+    pub fn quarantine_incomplete_tail(&self) -> Result<usize, ForgeError> {
+        self.repair_tail().map(|repair| repair.quarantined_records)
+    }
     // ---- Key rotation ----
 
     /// Verify checkpoints using a map of key_id → VerifyingKey.
@@ -2205,6 +2155,149 @@ impl LedgerStream {
         }
         Ok(())
     }
+}
+
+/// Crash residue found by [`LedgerStream::crash_residue`]: what `ledger repair` would quarantine.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CrashResidue {
+    /// Bytes after the last complete, parseable, newline-terminated record (at most one record).
+    pub torn_bytes: usize,
+    /// Records among `torn_bytes` (0 for whitespace only, 1 for a torn or unterminated record).
+    pub torn_records: usize,
+    /// The derived MMR cache differs from the complete entries (written entries-first, so a crash
+    /// leaves it behind; a rebuild from verified entries repairs it).
+    pub mmr_stale: bool,
+}
+
+impl CrashResidue {
+    /// Whether `ledger repair` can bring the ledger back to verifying.
+    pub fn is_repairable(&self) -> bool {
+        self.torn_bytes > 0 || self.mmr_stale
+    }
+}
+
+/// What [`LedgerStream::repair_tail`] did.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TailRepair {
+    pub kept_records: usize,
+    pub quarantined_bytes: usize,
+    pub quarantined_records: usize,
+    pub quarantine_path: Option<PathBuf>,
+    pub mmr_rebuilt: bool,
+}
+
+/// Where the complete prefix of an entries file ends, and what follows it. Pure: no I/O.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TailScan {
+    kept_bytes: usize,
+    residue_bytes: usize,
+    residue_records: usize,
+}
+
+/// The shared detection behind `verify`, `ledger repair` and startup recovery. Pure: no I/O.
+struct TailDiagnosis {
+    scan: TailScan,
+    entries: Vec<LedgerEntry>,
+    mmr: MmrState,
+}
+
+/// Split an entries file into its complete prefix and crash residue. The prefix is the longest run of
+/// newline-terminated lines that are blank or parse as an entry. What follows it may be one torn or
+/// unterminated record. Anything with a second record in it is corruption before the tail: refused.
+fn scan_entries_tail(content: &[u8]) -> Result<(TailScan, Vec<LedgerEntry>), ForgeError> {
+    let mut kept = 0usize;
+    let mut entries = Vec::new();
+    while let Some(offset) = content[kept..].iter().position(|byte| *byte == b'\n') {
+        let line = &content[kept..kept + offset];
+        if line.iter().all(u8::is_ascii_whitespace) {
+            kept += offset + 1;
+            continue;
+        }
+        let Ok(entry) = serde_json::from_slice::<LedgerEntry>(line) else {
+            break;
+        };
+        entries.push(entry);
+        kept += offset + 1;
+    }
+    let residue = &content[kept..];
+    let newlines = residue.iter().filter(|byte| **byte == b'\n').count();
+    if newlines > 1 || (newlines == 1 && residue.last() != Some(&b'\n')) {
+        return Err(ForgeError::Internal(
+            "ledger_integrity_error: the ledger is damaged beyond an interrupted append (a corrupt record is followed by more data); investigate it, nothing was truncated"
+                .into(),
+        ));
+    }
+    let scan = TailScan {
+        kept_bytes: kept,
+        residue_bytes: residue.len(),
+        residue_records: usize::from(residue.iter().any(|byte| !byte.is_ascii_whitespace())),
+    };
+    Ok((scan, entries))
+}
+
+fn parse_entry_lines(content: &[u8]) -> Result<Vec<LedgerEntry>, ForgeError> {
+    let mut entries = Vec::new();
+    for line in content.split(|byte| *byte == b'\n') {
+        if line.iter().all(u8::is_ascii_whitespace) {
+            continue;
+        }
+        let entry: LedgerEntry = serde_json::from_slice(line)
+            .map_err(|e| ForgeError::Serialization(format!("parse entry: {e}")))?;
+        entries.push(entry);
+    }
+    Ok(entries)
+}
+
+fn diagnose_entries(content: &[u8]) -> Result<TailDiagnosis, ForgeError> {
+    let (scan, entries) = scan_entries_tail(content)?;
+    let mmr = check_entry_chain(&entries)?;
+    Ok(TailDiagnosis { scan, entries, mmr })
+}
+
+/// Check ordinals, predecessor links, ULID uniqueness, payload and entry hashes, and MMR leaf indices
+/// of complete entries, returning the MMR they commit to.
+fn check_entry_chain(entries: &[LedgerEntry]) -> Result<MmrState, ForgeError> {
+    let mut seen_ulids = std::collections::HashSet::new();
+    let mut previous_hash: Option<String> = None;
+    let mut mmr = MmrState::empty();
+    for (index, entry) in entries.iter().enumerate() {
+        let expected_ordinal = index as u64;
+        if entry.append_ordinal != expected_ordinal {
+            return Err(ForgeError::Internal(format!(
+                "ledger_integrity_error: ordinal gap at {expected_ordinal}"
+            )));
+        }
+        if previous_hash.as_ref() != entry.previous_entry_hash.as_ref() {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: predecessor chain break".into(),
+            ));
+        }
+        if !seen_ulids.insert(entry.entry_ulid.clone()) {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: duplicate entry_ulid".into(),
+            ));
+        }
+        let expected_payload_hash = payload_hash(&entry.payload)?;
+        if expected_payload_hash != entry.payload_hash {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: payload hash mismatch".into(),
+            ));
+        }
+        let expected_entry_hash = entry_hash(entry)?;
+        if expected_entry_hash != entry.entry_hash {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: entry hash mismatch".into(),
+            ));
+        }
+        mmr = mmr.append(&entry.entry_hash)?;
+        if mmr.leaf_count - 1 != entry.mmr_leaf_index {
+            return Err(ForgeError::Internal(
+                "ledger_integrity_error: mmr leaf index mismatch".into(),
+            ));
+        }
+        previous_hash = Some(entry.entry_hash.clone());
+    }
+    Ok(mmr)
 }
 
 fn hash_entry(entry: &LedgerEntry) -> String {

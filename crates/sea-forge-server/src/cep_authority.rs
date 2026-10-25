@@ -340,3 +340,32 @@ pub fn closure(
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_forge_authority::cep::CepAuthorityError;
+
+    #[test]
+    fn settlement_pending_is_a_no_side_effect_retry_class_not_an_evidence_refusal() {
+        let pending = refusal(
+            CepAuthorityError::SettlementPending("the window is still open".into()).class(),
+            CepAuthorityError::SettlementPending("the window is still open".into()),
+        );
+        assert_eq!(
+            pending["error_class"], "cep_settlement_pending",
+            "{pending}"
+        );
+        assert_eq!(pending["no_side_effect"], true, "{pending}");
+        assert!(pending["error"]
+            .as_str()
+            .unwrap()
+            .contains("settlement pending"));
+
+        let refused = refusal(
+            CepAuthorityError::Evidence("no evidence".into()).class(),
+            CepAuthorityError::Evidence("no evidence".into()),
+        );
+        assert_eq!(refused["error_class"], "cep_evidence_refused", "{refused}");
+    }
+}
