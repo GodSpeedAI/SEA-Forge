@@ -39,6 +39,19 @@ if ! flock -n 9; then
 fi
 # Lock held from here until this process exits: no server can start against the cell.
 
+# Refuse up front, before any archive is written, a cell that holds symlinks or hardlinked files.
+# scripts/casework-cell-restore.sh refuses link members by design, so such an archive would
+# "succeed" here and then be impossible to restore. A hardlink is a regular file with link
+# count > 1; tar stores the second name as a link member, so it is refused too.
+links="$(cd "$cell" && find . \( -type l -o \( -type f -links +1 \) \) \
+  ! -name server.sock.lock ! -name .server.lock ! -name server.sock.binding -print | LC_ALL=C sort)"
+if [ -n "$links" ]; then
+  echo "casework-cell-backup: $cell holds symlinks or hardlinked files that restore refuses; no archive written:" >&2
+  printf '%s\n' "$links" | sed 's/^/  /' >&2
+  echo "casework-cell-backup: remove or replace them (copy the content to a regular file) and retry" >&2
+  exit 1
+fi
+
 umask 077
 tmp_archive="$archive.partial"
 trap 'rm -f "$tmp_archive" "$archive.manifest.partial"' EXIT
