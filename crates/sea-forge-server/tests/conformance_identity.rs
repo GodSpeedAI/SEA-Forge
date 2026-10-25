@@ -448,7 +448,6 @@ async fn approval_decide_resolves_as_the_verified_actor_and_refuses_unbound_ones
                 artifacts_root: None,
                 timeout_secs: Some(60),
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })

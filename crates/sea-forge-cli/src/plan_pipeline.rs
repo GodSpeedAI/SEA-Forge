@@ -268,7 +268,6 @@ fn run_plan_inner(
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 })?;
@@ -319,7 +318,6 @@ fn run_plan_inner(
                     timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
                         .then_some(options.timeout_secs),
                     env_keys,
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment,
                 })?;

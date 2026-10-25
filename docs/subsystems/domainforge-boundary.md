@@ -15,7 +15,7 @@ The **DomainForge Semantic Boundary** integrates SEA Forge with the canonical Do
 
 * **Side-Effect-Free `.sea` Parsing:** Loads and validates `.sea` source files using `domainforge-core 0.16.0` without invoking external binaries or accessing the filesystem directly.
 * **Finite Resource Protection:** Enforces strict limits on source count, aggregate byte size, import depth, AST node counts, and expression nesting depth before parsing, preventing denial-of-service (DoS) or stack overflow attacks.
-* **Candidate Authority Evaluation:** Evaluates candidate policy verdicts from the semantic model, translating DomainForge traces into candidate governance records for `sea-forge-authority`.
+* **Candidate Authority Evaluation:** Evaluates candidate policy verdicts from the semantic model, translating DomainForge traces into candidate governance records for `sea-forge-authority`. **Status (B-08/SUP-09h): not wired.** A policy bundle that enables `engine: domainforge` is refused at load with `authority_engine_unavailable`, required or optional. The former filename-stem candidate evaluator (SUP-09h) and its composition into authority decisions have been removed.
 * **In-Memory Projections:** Generates in-memory representations of external projections (such as CALM architecture models or RDF ontologies) through pure library APIs.
 * **Hash-Pinned Model Tracking (`DomainModelRef`):** Records cryptographic hashes of all parsed sources, concept references, and validation diagnostics.
 
@@ -36,9 +36,6 @@ flowchart LR
     SOURCES[".sea Source Files (In-Memory)"] --> LIMITS["Check Finite Limits (Nesting <= 256, Bytes <= 1MiB)"]
     LIMITS --> DF["domainforge-core 0.16.0"]
     DF --> GRAPH["DomainModel (Graph + DomainModelRef)"]
-    GRAPH --> EVAL["evaluate_authority()"]
-    EVAL --> CANDIDATE["DomainForgeCandidate (Candidate Verdict)"]
-    CANDIDATE --> AUTH["sea-forge-authority (Final Decision)"]
     GRAPH --> PROJ["project() -> In-Memory SortedMap"]
 ```
 
@@ -74,13 +71,6 @@ pub struct DomainModelRef {
 - `adapter_descriptor_sha256`: Computed over adapter name, version, and linked `domainforge_version` (`sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e`).
 - Legacy records without `identity_scheme_version` deserialize with `"unknown-pre-versioning"` via `#[serde(default)]`.
 
-### `DomainForgeCandidate`
-The candidate evaluation passed into `PolicyAuthorityEngine`:
-* `raw_decision`: Original DomainForge decision string.
-* `normalized_disposition`: `CandidateDisposition::Allow | Deny | Escalate`.
-* `reason`: Explanatory text.
-* `evidence_refs`: Trace references from the semantic validator.
-
 ---
 
 ## 6. Internal Operation
@@ -105,6 +95,6 @@ The candidate evaluation passed into `PolicyAuthorityEngine`:
 
 ## 8. Source Trail
 
-* [`crates/sea-forge-domainforge/src/lib.rs`](../../crates/sea-forge-domainforge/src/lib.rs) — `load_validate()`, `evaluate()`, `project()`, and finite limits.
+* [`crates/sea-forge-domainforge/src/lib.rs`](../../crates/sea-forge-domainforge/src/lib.rs) — `load_validate()`, `project()`, and finite limits.
 * [`docs/decisions/ADR-001-domainforge-semantic-boundary.md`](../../docs/decisions/ADR-001-domainforge-semantic-boundary.md) — Architectural decision record defining the boundary.
-* [`crates/sea-forge-authority/src/lib.rs`](../../crates/sea-forge-authority/src/lib.rs) — Integration of `DomainForgeCandidate` into final policy decisions.
+* [`crates/sea-forge-authority/src/lib.rs`](../../crates/sea-forge-authority/src/lib.rs) — Refuses `engine: domainforge` at bundle load (`authority_engine_unavailable`).

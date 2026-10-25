@@ -37,7 +37,6 @@ fn mcp_scope_and_exact_request_digest_share_the_existing_authority_grant() {
                 artifacts_root: None,
                 timeout_secs: Some(10),
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })

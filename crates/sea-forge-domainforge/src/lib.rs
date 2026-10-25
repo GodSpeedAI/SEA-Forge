@@ -80,24 +80,6 @@ pub struct SourceRef {
     pub sha256: String,
 }
 
-/// Normalized candidate disposition from a DomainForge authority result.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum CandidateDisposition {
-    Allow,
-    Deny,
-    Escalate,
-}
-
-/// DomainForge authority verdict trace preserved as evidence.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DomainForgeTrace {
-    pub raw_decision: String,
-    pub normalized_disposition: CandidateDisposition,
-    pub reason: String,
-    pub evidence_refs: Vec<String>,
-}
-
 /// Descriptor hash for this adapter (computed over adapter name, version, and domainforge_version).
 pub const ADAPTER_DESCRIPTOR_SHA256: &str =
     "sha256:16fcd1519e00727b2d17c68c3ddbefd633dacf3dcadd51a0ef37a900a119460e";
@@ -624,84 +606,6 @@ fn format_diagnostics(diags: &[ApplicationDiagnostic]) -> String {
         })
         .collect::<Vec<_>>()
         .join("; ")
-}
-
-/// Normalize a DomainForge authority decision to a SEA Forge candidate disposition.
-///
-/// | DomainForge result | SEA Forge candidate disposition |
-/// |---|---|
-/// | `Reject` or `Deny` | `deny` |
-/// | `Escalate` | `escalate` |
-/// | `Allow` | `allow` |
-/// | `NotApplicable` | no candidate; `deny` if policy requires DomainForge |
-pub fn normalize_authority(raw_decision: &str) -> CandidateDisposition {
-    match raw_decision {
-        "Allow" => CandidateDisposition::Allow,
-        "Reject" | "Deny" => CandidateDisposition::Deny,
-        "Escalate" => CandidateDisposition::Escalate,
-        _ => CandidateDisposition::Deny, // NotApplicable or unknown → deny-if-required
-    }
-}
-
-pub fn evaluate_authority(
-    model: &DomainModel,
-    operation_kind: &str,
-    resource_id: &str,
-    evidence_refs: Vec<String>,
-) -> Result<DomainForgeTrace, ForgeError> {
-    if evidence_refs.is_empty() || model.model_ref.validation_evidence_refs.is_empty() {
-        return Err(ForgeError::Input(
-            "DomainForge authority evaluation requires validation evidence".into(),
-        ));
-    }
-    // Only a plain relative path inside the workspace can name a model target. The raw `/`
-    // segments are checked, not `Path::components()`, which silently drops an interior `.` and
-    // empty segments: an absolute path, an empty, `.` or `..` segment, or a backslash (a Windows
-    // separator that Unix reads as one name) is rejected before the name match, so
-    // `../elsewhere/Sample.sh` or `models/./Sample.sea` never matches `Sample`.
-    let path = std::path::Path::new(resource_id);
-    let workspace_relative = !resource_id.contains('\\')
-        && resource_id
-            .split('/')
-            .all(|segment| !segment.is_empty() && segment != "." && segment != "..");
-    let semantic_target = workspace_relative
-        && path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .is_some_and(|target| {
-                model
-                    .graph
-                    .all_entities()
-                    .iter()
-                    .any(|entity| entity.name().eq_ignore_ascii_case(target))
-                    || model
-                        .graph
-                        .all_resources()
-                        .iter()
-                        .any(|resource| resource.name().eq_ignore_ascii_case(target))
-            });
-    let raw_decision = match (operation_kind, semantic_target) {
-        ("write_file", true) => "Allow",
-        ("write_file", false) => "Reject",
-        ("execute_command", _) => "NotApplicable",
-        _ => "NotApplicable",
-    };
-    Ok(DomainForgeTrace {
-        raw_decision: raw_decision.into(),
-        normalized_disposition: normalize_authority(raw_decision),
-        // SUP-09h: this is a filename-stem approximation, not the real
-        // domainforge-core authority subsystem. The evidence string must
-        // describe what actually ran — an ASCII-case-insensitive stem match
-        // of `resource_id` against declared entity/resource names — so a
-        // durable record never asserts "evaluated validated model against
-        // canonical action" until that evaluator is wired.
-        reason: "DomainForge stem-heuristic authority approximation: write_file allowed iff \
-                 the resource_id is a plain workspace-relative path whose file stem \
-                 ASCII-case-insensitively matches a declared entity/resource name; full policy \
-                 evaluation not yet wired"
-            .into(),
-        evidence_refs,
-    })
 }
 
 /// In-memory projection of a DomainModel into CALM or RDF.

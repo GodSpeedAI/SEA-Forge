@@ -92,7 +92,6 @@ impl Cell {
                 artifacts_root: None,
                 timeout_secs: Some(60),
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })

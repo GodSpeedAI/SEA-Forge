@@ -1,7 +1,6 @@
 use sea_forge_core::ForgeError;
 use sea_forge_domainforge::{
-    load_validate, normalize_authority, CandidateDisposition, DomainModelRef, SeaSourceSet,
-    SourceFile, MAX_IMPORT_DEPTH,
+    load_validate, DomainModelRef, SeaSourceSet, SourceFile, MAX_IMPORT_DEPTH,
 };
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -162,23 +161,6 @@ fn no_side_effects_on_invalid_input() {
         entries.is_empty(),
         "no files should be written by the adapter"
     );
-}
-
-#[test]
-fn authority_normalization_table() {
-    assert_eq!(normalize_authority("Allow"), CandidateDisposition::Allow);
-    assert_eq!(normalize_authority("Deny"), CandidateDisposition::Deny);
-    assert_eq!(normalize_authority("Reject"), CandidateDisposition::Deny);
-    assert_eq!(
-        normalize_authority("Escalate"),
-        CandidateDisposition::Escalate
-    );
-    // NotApplicable or unknown → deny (deny-if-required).
-    assert_eq!(
-        normalize_authority("NotApplicable"),
-        CandidateDisposition::Deny
-    );
-    assert_eq!(normalize_authority("Unknown"), CandidateDisposition::Deny);
 }
 
 // ── Task 5: Source-set trust boundary (M0 prerequisite) ──

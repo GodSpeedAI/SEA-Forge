@@ -30,6 +30,12 @@ const GENERATED_IN_TEST: &[&str] = &["B0509.yaml", "B0510.yaml", "B0511.yaml", "
 /// equal the sibling's reference record in identity and probes.
 const NEWLY_ACCEPTED: &[(&str, &str, &str)] = &[];
 
+/// Real bundles that enable `engine: domainforge` (B-08/SUP-09h): the engine is
+/// not wired, so the new code refuses them with `authority_engine_unavailable`
+/// before any other bundle check. The reference rejected doc_011 earlier as an
+/// incomplete v0.2 bundle (`schema_error`); the refusal now takes precedence.
+const REFUSED_DOMAINFORGE_ENGINE: &[&str] = &["doc_011_8f23190964a9.yaml"];
+
 /// Adversarial bundle cases the reference accepts and the new code rejects:
 /// (id, first line of label).
 const STRICTER: &[(&str, &str)] = &[("B0169.yaml", "rules Vec = ~ (list replaced)")];
@@ -236,7 +242,6 @@ fn evaluate_one(
         artifacts_root: None,
         timeout_secs: None,
         env_keys: Default::default(),
-        domainforge_candidate: None,
         opa_candidate: None,
         environment: None,
     })
@@ -423,6 +428,12 @@ fn yaml_corpus_bundle_proof() {
             real_n += 1;
             if n_acc {
                 real_acc += 1;
+            }
+            if REFUSED_DOMAINFORGE_ENGINE.contains(&id.as_str()) {
+                if n_acc || new["error_class"] != "config:authority_engine_unavailable" {
+                    failures.push(format!("REFUSED-ENGINE {}", describe(id, input, r, new)));
+                }
+                continue;
             }
             if r_acc != n_acc || (n_acc && !same_proof(r, new)) {
                 failures.push(format!("REAL {}", describe(id, input, r, new)));

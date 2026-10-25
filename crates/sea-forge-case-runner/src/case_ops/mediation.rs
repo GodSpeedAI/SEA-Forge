@@ -167,20 +167,6 @@ pub(super) fn authorize_with_bundle_callback<T>(
     stream.commit_typed("authority_policy", vec![], &bundle, vec![])?;
     let integrity = bundle.integrity_ledger.clone();
     let binding = bundle.resolve_identity(actor_id, ActorRole::Operator);
-    let domainforge_model = bundle.load_domainforge_model()?;
-    let domainforge_candidate = domainforge_model
-        .as_ref()
-        .map(|model| {
-            sea_forge_authority::DomainForgeCandidate::evaluate(
-                model,
-                action,
-                vec![format!(
-                    "domain-model:{}",
-                    model.model_ref.semantic_model_sha256
-                )],
-            )
-        })
-        .transpose()?;
     let engine = PolicyAuthorityEngine::new(bundle)?;
     engine.load_opaque_constraints(load_opaque_constraints(root)?)?;
     let evidence = stream.commit_typed(
@@ -206,7 +192,6 @@ pub(super) fn authorize_with_bundle_callback<T>(
         artifacts_root: None,
         timeout_secs: None,
         env_keys: Default::default(),
-        domainforge_candidate: domainforge_candidate.as_ref(),
         opa_candidate: None,
         environment: None,
     })?;

@@ -130,7 +130,6 @@ fn decide(
             artifacts_root: Some(&h.artifacts),
             timeout_secs: Some(10),
             env_keys,
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })
@@ -490,7 +489,6 @@ fn t05_governed_side_effect_runs_only_after_authorization_and_emission() {
             artifacts_root: Some(&h.artifacts),
             timeout_secs: Some(10),
             env_keys,
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })
