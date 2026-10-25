@@ -100,6 +100,8 @@ just casework-stack-down    # stop gateway and kernel; cell data is kept
 same-origin. `configs/live-serve.json` has no `static_root`. Sign in with a configured username
 (dev auth accepts any password, see below). Offline cell backup and restore: `just casework-cell-backup
 <archive>` and `just casework-cell-restore <archive> <target>` (the kernel must be stopped).
+The backup refuses, before writing anything, a cell that contains symlinks or hardlinked files,
+since the restore would refuse them.
 
 ### Live endpoints
 

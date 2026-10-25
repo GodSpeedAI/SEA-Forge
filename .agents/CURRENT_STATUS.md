@@ -1,33 +1,35 @@
 # Current status
 
-**Status revision:** 171
+**Status revision:** 172
 
-**Stage:** Branch reconciliation completion record and security round 4 handoff prompt carried to main
+**Stage:** Limit B-12: demonstration cell seeds end to end; unsafe-path refusal carries error_class; cell backup refuses links
 
-**Summary:** Documentation only. The 2026-10-21 branch reconciliation report is replaced by its completed version (PR #39 outcome, retained work, branch dispositions), with its completion evidence under .agents/evidence/branch-reconciliation-20261021/ and the security round 4 handoff prompt under .agents/prompts/. These existed only as a local commit on an operator checkout. No code or behaviour changes.
+**Summary:** scripts/seed-cell.sh now exits 0 against the server. Three causes were fixed. (1) The server's submit error path dropped error_class, so the 'unsafe workspace-relative path' refusal (already a unsafe_path_error class) was invisible to clients; commit_plan now returns forge_error_response for every typed submit refusal. (2) seed_approvals.py sent no request_id, sent absolute plan and policy paths, and sent operator_b with no uid and no delegation; every request now carries a fresh request_id, workspace-relative paths, and is sent as the gateway principal with on_behalf_of for operator_a and operator_b. The expected refusals are checked by error_class: operator_a self-approval is separation_of_duty, operator_b approval succeeds with resolved_by=operator_b. (3) seed-cell.sh no longer places sea-forge and sea-forge-cli symlinks inside the cell. The server tool link lives under the build target dir, outside the cell, and the script honours CARGO_TARGET_DIR. casework-cell-backup.sh refuses up front, before writing any archive, a cell that holds symlinks or hardlinked files, and lists them. Restore is unchanged.
 
 **Verified:**
 
-- scripts/check-agent-context.sh passes
-- The carried files contain no Windows absolute file:/// links
+- cargo test -p sea-forge-server --test conformance_dispatch_remediation: 4 passed, 0 failed (new test absolute_plan_path_refusal_carries_error_class asserts error_class unsafe_path_error and no case_id)
+- cargo test -p sea-forge-server with conformance_case_episode, conformance_lifecycle, conformance_identity, sfwp_delegated_identity, security_acceptance_v1, conformance_role_propagation: all pass (11, 4, 15, 10, 1, 4, 9 tests)
+- cargo clippy -p sea-forge-server --all-targets -- -D warnings: exit 0; cargo fmt -p sea-forge-server --check: exit 0
+- CARGO_TARGET_DIR=~/projects/_wt/sf-target scripts/seed-cell.sh ~/projects/_wt/b12-cell: exit 0; 0 symlinks in the cell; two cases seeded (one waiting, one resolved by operator_b)
+- scripts/casework-cell-backup.sh on the seeded cell: exit 0, 103 files; scripts/casework-cell-restore.sh into an empty target: exit 0, 103 files verified; diff -r against the source tree is empty
+- scripts/casework-cell-backup.sh on a copy with a planted symlink and a hardlinked file: exit 1, lists both, no archive written
 
 **Limits:**
 
-- The live release PR content is produced by the Release run on main after this merges; it has been checked here by the updater run and the locked resolution, not yet by CI on the regenerated PR
-- Until RELEASE_PLEASE_TOKEN exists, a release PR opened by GITHUB_TOKEN gets its pull_request runs in an approval-required state; a maintainer approves them (carried from 167)
-- Creating RELEASE_PLEASE_TOKEN is a maintainer credential action, not done here (carried from 167)
-- Only the obligation modality settles; prohibition and permission are refused as unsupported (carried from 164)
-- The DomainForge write-authority engine is still a filename-stem approximation, not model-semantic authority (SUP-09h); readiness B-08 records it as a documented limitation (carried from 164)
-- A crate added later with versioned path dependencies must be added to the extra-files list, or the next release PR fails the same way
-- The release-binaries job has not run on GitHub; it is unverified until a release run or a workflow_dispatch with tag v0.2.0 completes
-- Binaries are built for x86_64-unknown-linux-gnu only; no other platform is shipped
-- SHA256SUMS is produced in the same job as the tarball and proves integrity against corruption, not against a compromised release; no signing is in place
-- Only sea-forge and sea-forge-server ship; sandbox helper binaries sea-forge-workload-exec and sea-forge-mcp-connect are internal
+- The seeded cell's server.yaml makes the script's uid the gateway principal; operator_a and operator_b act only through on_behalf_of (the supported delegation path), not through their own uid
+- The escalation policy's argv0 link lives in <target>/demo-tools/sea-forge, outside the cell; the recorded plan argv therefore names that path, which survives only while the target dir does
+- The seed script's closing hint 'sea-forge case list' is stale (no such subcommand); not changed here
+- The backup check runs under the cell lock after the live-server check; it does not scan the cell for other special file types (fifos, devices) beyond what restore already refuses
 
-**Next move:** Merge after CI is green.
+**Next move:** Orchestrator reviews branch fix/b12-seed-cell-and-backup; no push or PR made here. Confirm the gateway-based seeding is the intended demo identity model before merge.
 
 **Evidence:**
 
-- `.agents/reports/branch-reconciliation-20261021.md`
-- `.agents/evidence/branch-reconciliation-20261021/completion.json`
-- `.agents/prompts/security-round4-handoff.md`
+- `crates/sea-forge-server/src/lib.rs`
+- `crates/sea-forge-server/tests/conformance_dispatch_remediation.rs`
+- `scripts/seed_approvals.py`
+- `scripts/seed-cell.sh`
+- `scripts/casework-cell-backup.sh`
+- `docs/execution/OPERATIONS_AND_STARTUP.md`
+- `apps/godspeed-casework-go/README.md`

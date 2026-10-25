@@ -274,3 +274,46 @@ fn f19_huge_timeout_is_clamped_not_panic() {
         "{response}"
     );
 }
+
+#[test]
+fn absolute_plan_path_refusal_carries_error_class() {
+    // Seed-script regression: an absolute plan path is refused as an unsafe
+    // workspace-relative path. The refusal must name its class, so a client
+    // (scripts/seed_approvals.py) can branch on `error_class` rather than on
+    // message text, and must not be mistaken for an escalation miss.
+    let root = tempfile::tempdir().unwrap();
+    let policy_path = write_policy(root.path(), "allow");
+    let argv = vec![trusted_self_executable(root.path())
+        .to_string_lossy()
+        .into_owned()];
+    let plan_path = root.path().join("plan.json");
+    fs::write(
+        &plan_path,
+        serde_json::to_vec(&plan(vec![sandboxed_task("task_a", argv, false)])).unwrap(),
+    )
+    .unwrap();
+
+    let state = state(root.path());
+    let request: Request = serde_json::from_value(serde_json::json!({
+        "verb": "submit",
+        "plan": plan_path.to_string_lossy(),
+        "policy": policy_path.strip_prefix(root.path()).unwrap().to_string_lossy(),
+        "entity": "operator_local",
+        "process": "test",
+        "timeout": 60,
+    }))
+    .unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let response = rt.block_on(handle_request(request, &state));
+    assert!(
+        response["error"]
+            .as_str()
+            .is_some_and(|message| message.contains("unsafe workspace-relative path")),
+        "{response}"
+    );
+    assert_eq!(response["error_class"], "unsafe_path_error", "{response}");
+    assert!(response.get("case_id").is_none(), "{response}");
+}
