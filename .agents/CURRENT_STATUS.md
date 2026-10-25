@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 173
+**Status revision:** 174
 
 **Stage:** settlement-pending error class and offline ledger crash recovery (ledger repair)
 
-**Summary:** Settlement that is not yet decidable now returns its own error class cep_settlement_pending (CepAuthorityError::SettlementPending) at the two named sites (window still open; closure not yet recorded), instead of cep_evidence_refused. Nothing is written for either. Ledger crash recovery is tightened: quarantine only removes the bytes after the last complete newline-terminated record, at most one record; a corrupt record followed by more data, or a broken chain, is refused with 'damaged beyond an interrupted append' and nothing is truncated. New sea-forge ledger repair (offline, exclusive lock) quarantines the torn tail, rebuilds the MMR cache only from verified entries, then verifies. Verify stays read-only and prints the repair hint for crash residue only.
+**Summary:** Settlement that is not yet decidable now returns its own error class cep_settlement_pending (CepAuthorityError::SettlementPending) at the two named sites (window still open; closure not yet recorded), instead of cep_evidence_refused. Nothing is written for either. Ledger crash recovery is tightened: quarantine only removes the bytes after the last complete newline-terminated record, at most one record; a corrupt record followed by more data, or a broken chain, is refused with 'damaged beyond an interrupted append' and nothing is truncated. New sea-forge ledger repair (offline, exclusive lock) quarantines the torn tail, rebuilds the MMR cache only from verified entries, then verifies. Verify stays read-only and prints the repair hint for crash residue only. Tail repair is crash-safe: the quarantine file is created exclusively and fsynced before entries.jsonl is cut in place (set_len + fsync), and residue containing a newline is refused as damage, since an append writes the entry and its newline in one call.
 
 **Verified:**
 
@@ -15,6 +15,7 @@
 - cargo clippy -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server --all-targets -- -D warnings: exit 0
 - cargo fmt --check -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server: exit 0
 - Existing startup and ledger-tamper tests reviewed: none restarts a server over a tampered middle entry; the conformance_m3 tamper case expects a failing resume and still gets one
+- cargo test -p sea-forge-ledger (all suites pass, incl. new newline_terminated_corrupt_line_is_refused_and_never_truncated); sea-forge-server crash_recovery_startup 3/3; sea-forge-cli ledger_repair 2/2
 
 **Limits:**
 

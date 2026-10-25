@@ -149,6 +149,25 @@ fn corruption_before_the_tail_is_refused_and_never_truncated() {
 }
 
 #[test]
+fn newline_terminated_corrupt_line_is_refused_and_never_truncated() {
+    let tmp = tempdir().unwrap();
+    let stream = seeded(tmp.path(), 3);
+    // An append writes the entry and its newline in one call, so a torn append cannot end in a
+    // newline: a complete-looking corrupt line is damage, not crash residue.
+    append_raw(&stream, b"{garbage\n");
+    let before = fs::read(stream.entries_path()).unwrap();
+
+    let err = stream.repair_tail().unwrap_err().to_string();
+    assert!(
+        err.contains("damaged beyond an interrupted append"),
+        "{err}"
+    );
+    assert!(stream.crash_residue().is_err());
+    assert_eq!(fs::read(stream.entries_path()).unwrap(), before);
+    assert_eq!(quarantine_files(tmp.path()), 0);
+}
+
+#[test]
 fn tampered_complete_entry_is_never_repaired() {
     let tmp = tempdir().unwrap();
     let stream = seeded(tmp.path(), 4);

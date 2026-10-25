@@ -2069,7 +2069,7 @@ impl LedgerStream {
 
     /// Repair crash residue, under the exclusive stream lock: move the bytes after the last complete,
     /// parseable, newline-terminated record to quarantine (at most one torn record), and rebuild the
-    /// derived MMR cache from entries that verify. A corrupt record followed by more data, or a broken
+    /// derived MMR cache from entries that verify. A newline-terminated corrupt record, a corrupt record followed by more data, or a broken
     /// chain, is refused and nothing is written.
     pub fn repair_tail(&self) -> Result<TailRepair, ForgeError> {
         self.with_exclusive_lock(|| self.repair_tail_locked())
@@ -2095,9 +2095,24 @@ impl LedgerStream {
                 self.ledger_id,
                 ulid()?
             ));
-            fs::write(&q_path, &content[kept..])
+            // Quarantine first and make it durable, then cut the tail in place: a crash at any point
+            // leaves the verified prefix intact and the discarded bytes recoverable.
+            let mut quarantine = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&q_path)
+                .map_err(|e| ForgeError::io("create quarantine", e))?;
+            quarantine
+                .write_all(&content[kept..])
+                .and_then(|()| quarantine.sync_all())
                 .map_err(|e| ForgeError::io("write quarantine", e))?;
-            fs::write(&path, &content[..kept])
+            let entries = OpenOptions::new()
+                .write(true)
+                .open(&path)
+                .map_err(|e| ForgeError::io("open entries for truncation", e))?;
+            entries
+                .set_len(kept as u64)
+                .and_then(|()| entries.sync_all())
                 .map_err(|e| ForgeError::io("truncate entries", e))?;
             repair.quarantine_path = Some(q_path);
         }
@@ -2202,8 +2217,9 @@ struct TailDiagnosis {
 }
 
 /// Split an entries file into its complete prefix and crash residue. The prefix is the longest run of
-/// newline-terminated lines that are blank or parse as an entry. What follows it may be one torn or
-/// unterminated record. Anything with a second record in it is corruption before the tail: refused.
+/// newline-terminated lines that are blank or parse as an entry. What follows it may be one
+/// unterminated record: an append writes the entry and its newline in one call, so a torn append never
+/// ends in a newline. Residue containing any newline is corruption, not a crash: refused.
 fn scan_entries_tail(content: &[u8]) -> Result<(TailScan, Vec<LedgerEntry>), ForgeError> {
     let mut kept = 0usize;
     let mut entries = Vec::new();
@@ -2220,10 +2236,9 @@ fn scan_entries_tail(content: &[u8]) -> Result<(TailScan, Vec<LedgerEntry>), For
         kept += offset + 1;
     }
     let residue = &content[kept..];
-    let newlines = residue.iter().filter(|byte| **byte == b'\n').count();
-    if newlines > 1 || (newlines == 1 && residue.last() != Some(&b'\n')) {
+    if residue.contains(&b'\n') {
         return Err(ForgeError::Internal(
-            "ledger_integrity_error: the ledger is damaged beyond an interrupted append (a corrupt record is followed by more data); investigate it, nothing was truncated"
+            "ledger_integrity_error: the ledger is damaged beyond an interrupted append (a corrupt record is newline-terminated or followed by more data); investigate it, nothing was truncated"
                 .into(),
         ));
     }
