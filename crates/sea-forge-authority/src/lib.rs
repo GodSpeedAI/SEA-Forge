@@ -5,9 +5,6 @@ pub use opa::{OpaBinding, OpaCandidate, OpaTrace, OPA_VERSION};
 
 use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
-use sea_forge_domainforge::{
-    evaluate_authority, CandidateDisposition, DomainForgeTrace, DomainModel, DomainModelRef,
-};
 use sea_forge_ledger::{types::payload_hash, CommittedRecordRef, LedgerStream, PreActionAssurance};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -312,52 +309,6 @@ pub struct ExecutionGrantContext<'a> {
     pub timeout_secs: u64,
     pub env_keys: BTreeSet<String>,
     pub compensating_controls: &'a [String],
-}
-
-pub struct DomainForgeCandidate {
-    disposition: CandidateDisposition,
-    model_ref: DomainModelRef,
-    trace: DomainForgeTrace,
-}
-
-impl DomainForgeCandidate {
-    pub fn evaluate(
-        model: &DomainModel,
-        action: &AuthorityAction,
-        evidence_refs: Vec<String>,
-    ) -> Result<Self, ForgeError> {
-        let (operation_kind, resource_id) = match action {
-            AuthorityAction::WriteFile { path, .. } => ("write_file", path.as_str()),
-            AuthorityAction::ExecuteCommand { argv, .. } => (
-                "execute_command",
-                argv.first().map(String::as_str).unwrap_or(""),
-            ),
-            AuthorityAction::ExecuteSandboxCommand { argv, .. } => (
-                "execute_sandbox_command",
-                argv.first().map(String::as_str).unwrap_or(""),
-            ),
-            AuthorityAction::Reserved {
-                resource_type,
-                resource_id,
-                ..
-            } => (resource_type.as_str(), resource_id.as_str()),
-            AuthorityAction::ExternalApi { host } => ("external_api", host.as_str()),
-            AuthorityAction::AgentProbe { host, .. } => ("external_api", host.as_str()),
-            AuthorityAction::AgentTask { host, .. } => ("external_api", host.as_str()),
-            AuthorityAction::GitCommit { .. } => ("git_commit", "repository"),
-            AuthorityAction::GithubPr { .. } => ("github_pr", "pull_request"),
-            AuthorityAction::PromoteChangeset { reference, .. } => {
-                ("promote_changeset", reference.as_str())
-            }
-            AuthorityAction::Unclassified { .. } => ("unclassified", "unknown"),
-        };
-        let trace = evaluate_authority(model, operation_kind, resource_id, evidence_refs)?;
-        Ok(Self {
-            disposition: trace.normalized_disposition.clone(),
-            trace,
-            model_ref: model.model_ref.clone(),
-        })
-    }
 }
 
 pub fn resolve_candidates(
@@ -926,39 +877,6 @@ impl AuthorityPolicyBundle {
         self.policy_bundle_hash = Some(self.content_hash()?);
         Ok(())
     }
-    pub fn load_domainforge_model(&self) -> Result<Option<DomainModel>, ForgeError> {
-        if !self
-            .policy_engines
-            .iter()
-            .any(|engine| engine.engine == "domainforge")
-        {
-            return Ok(None);
-        }
-        let source = self
-            .sources
-            .iter()
-            .find(|source| source.surface == "domain_model")
-            .ok_or_else(|| {
-                ForgeError::Input("DomainForge engine requires domain_model source".into())
-            })?;
-        let base = self
-            .source_base
-            .as_deref()
-            .unwrap_or_else(|| Path::new("."));
-        let path = base.join(&source.path);
-        let content = fs::read_to_string(&path)
-            .map_err(|error| ForgeError::io("read DomainForge model source", error))?;
-        let uri = source.path.clone();
-        sea_forge_domainforge::load_validate(&sea_forge_domainforge::SeaSourceSet {
-            entry_uri: uri.clone(),
-            files: vec![sea_forge_domainforge::SourceFile {
-                uri,
-                sha256: source.sha256.clone(),
-                content,
-            }],
-        })
-        .map(Some)
-    }
     pub fn load(path: &Path) -> Result<Self, ForgeError> {
         let text = fs::read_to_string(path).map_err(|e| ForgeError::Config {
             class: "missing_config_error",
@@ -1060,6 +978,19 @@ impl AuthorityPolicyBundle {
             path: path.into(),
             message,
         };
+        // B-08/SUP-09h: DomainForge authority evaluation is not wired, so a
+        // bundle that enables it is refused at load, required or optional alike.
+        if self
+            .policy_engines
+            .iter()
+            .any(|engine| engine.engine == "domainforge")
+        {
+            return Err(ForgeError::Config {
+                class: "authority_engine_unavailable",
+                path: path.into(),
+                message: "engine 'domainforge' is not available: DomainForge authority evaluation is not wired (B-08/SUP-09h); remove the candidate".into(),
+            });
+        }
         if self.version != RECORD_VERSION && self.version != "0.2" {
             return Err(schema("version must equal 0.1 or 0.2".into()));
         }
@@ -1578,7 +1509,6 @@ pub struct AuthorityEvaluation<'a> {
     pub artifacts_root: Option<&'a Path>,
     pub timeout_secs: Option<u64>,
     pub env_keys: BTreeSet<String>,
-    pub domainforge_candidate: Option<&'a DomainForgeCandidate>,
     pub opa_candidate: Option<&'a OpaCandidate>,
     /// `(item_env_ref, provides_commands)` — when the PlanItem declares an
     /// environment, pass its reference and the spec's `provides.commands` list
@@ -2143,7 +2073,6 @@ impl PolicyAuthorityEngine {
             artifacts_root,
             timeout_secs,
             env_keys,
-            domainforge_candidate,
             opa_candidate,
             environment,
         } = input;
@@ -2321,7 +2250,7 @@ impl PolicyAuthorityEngine {
             timestamp_utc: timestamp.clone(),
             actor: json!({"actor_id":actor.actor_id,"actor_type":binding.actor_type,"principal":binding.principal}),
             action: json!({"tool_name":"sea-forge-cli","operation":kind,"resource_type":resource_type,"resource_id":resource_id,"parameters":parameters}),
-            context: json!({"repo":null,"branch":null,"environment":"local-slice","run_id":run_id,"plan_item_id":plan_item_id,"workspace_root":workspace_root,"artifacts_root":artifacts_root,"timeout_secs":timeout_secs,"env_keys":env_keys,"domain_model_ref":domainforge_candidate.map(|candidate| &candidate.model_ref),"source_platform":"cli","channel":"cli"}),
+            context: json!({"repo":null,"branch":null,"environment":"local-slice","run_id":run_id,"plan_item_id":plan_item_id,"workspace_root":workspace_root,"artifacts_root":artifacts_root,"timeout_secs":timeout_secs,"env_keys":env_keys,"domain_model_ref":null,"source_platform":"cli","channel":"cli"}),
             evidence: json!({"identity_binding_source":binding.identity_binding_source,"tool_trace_ref":null,"payload_hash":hash_canonical(action)?}),
         };
         let expected_binding = self
@@ -2605,26 +2534,7 @@ impl PolicyAuthorityEngine {
             .iter()
             .filter(|engine| engine.engine != "local")
         {
-            let disposition = if configured.engine == "domainforge" {
-                match domainforge_candidate {
-                    Some(candidate)
-                        if candidate.trace.raw_decision == "NotApplicable"
-                            && !configured.required =>
-                    {
-                        continue
-                    }
-                    Some(candidate) if candidate.trace.raw_decision == "NotApplicable" => {
-                        GovernanceDisposition::Deny
-                    }
-                    Some(candidate) => match candidate.disposition {
-                        CandidateDisposition::Allow => GovernanceDisposition::Allow,
-                        CandidateDisposition::Deny => GovernanceDisposition::Deny,
-                        CandidateDisposition::Escalate => GovernanceDisposition::Escalate,
-                    },
-                    _ if configured.required => GovernanceDisposition::Deny,
-                    _ => GovernanceDisposition::Escalate,
-                }
-            } else if configured.engine == "opa" {
+            let disposition = if configured.engine == "opa" {
                 match opa_candidate {
                     // A candidate evaluated over another policy's Rego bundle
                     // is not this engine's verdict: refuse it, whatever it says.
@@ -2656,18 +2566,13 @@ impl PolicyAuthorityEngine {
                     } else {
                         "opa:candidate_bundle_mismatch".into()
                     }
-                } else if configured.engine == "domainforge" && domainforge_candidate.is_some() {
-                    "domainforge candidate normalized".into()
                 } else {
                     "configured authority engine unavailable".into()
                 },
                 evidence_refs: if let Some(candidate) = opa {
                     candidate.evidence_refs()
                 } else {
-                    domainforge_candidate
-                        .filter(|_| configured.engine == "domainforge")
-                        .map(|candidate| candidate.trace.evidence_refs.clone())
-                        .unwrap_or_else(|| vec![format!("engine:{}:candidate", configured.engine)])
+                    vec![format!("engine:{}:candidate", configured.engine)]
                 },
             });
         }
@@ -3687,7 +3592,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -3716,7 +3620,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -3845,7 +3748,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -4234,7 +4136,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -4287,55 +4188,16 @@ mod tests {
     }
 
     #[test]
-    fn domainforge_candidate_is_composed_with_local_authority() {
+    fn domainforge_engine_is_refused_before_composition() {
+        // B-08/SUP-09h: the DomainForge engine is not wired, so no bundle that
+        // enables it reaches candidate composition or evaluation.
         let bundle: AuthorityPolicyBundle = complete_v02(sea_forge_core::yaml::from_str(
             "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\npolicy_engines:\n  - engine: domainforge\n    fail_mode: closed\n    required: true\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
         )
         .unwrap());
-        let source = include_str!("../../sea-forge-domainforge/tests/fixtures/demo.sea");
-        let model = sea_forge_domainforge::load_validate(&sea_forge_domainforge::SeaSourceSet {
-            entry_uri: "demo.sea".into(),
-            files: vec![sea_forge_domainforge::SourceFile {
-                uri: "demo.sea".into(),
-                sha256: sha256_bytes(source.as_bytes()),
-                content: source.into(),
-            }],
-        })
-        .unwrap();
-        for (path, expected) in [
-            ("Sample.sea", Verdict::Allow),
-            ("Unknown.sea", Verdict::Deny),
-        ] {
-            let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
-            let actor = actor();
-            let action = AuthorityAction::WriteFile {
-                path: path.into(),
-                content_hint: "fixed".into(),
-            };
-            let candidate =
-                DomainForgeCandidate::evaluate(&model, &action, vec!["evi_domainforge".into()])
-                    .unwrap();
-            let decision = engine
-                .evaluate(AuthorityEvaluation {
-                    actor: &actor,
-                    binding: bundle.resolve_identity("operator_local", ActorRole::Operator),
-                    run_id: "run_domainforge",
-                    case_id: "case_test",
-                    plan_item_id: "item_domainforge",
-                    sequence: 1,
-                    action: &action,
-                    workspace_root: Path::new("/tmp/workspace"),
-                    evidence_refs: vec![],
-                    artifacts_root: None,
-                    timeout_secs: None,
-                    env_keys: Default::default(),
-                    domainforge_candidate: Some(&candidate),
-                    opa_candidate: None,
-                    environment: None,
-                })
-                .unwrap();
-            assert_eq!(decision.verdict, expected);
-            assert_eq!(decision.candidate_verdicts.len(), 2);
+        match PolicyAuthorityEngine::new(bundle) {
+            Ok(_) => panic!("domainforge engine must be refused"),
+            Err(error) => assert_eq!(error.class(), "authority_engine_unavailable"),
         }
     }
 
@@ -4372,7 +4234,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 })
@@ -4410,7 +4271,6 @@ mod tests {
                 artifacts_root: None,
                 timeout_secs: None,
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })
@@ -4481,7 +4341,6 @@ mod tests {
                 artifacts_root: None,
                 timeout_secs: None,
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })
@@ -4578,7 +4437,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 })
@@ -4627,7 +4485,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -4658,7 +4515,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -4877,7 +4733,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 },
@@ -4917,7 +4772,6 @@ mod tests {
                 artifacts_root: Some(Path::new("/tmp/artifacts")),
                 timeout_secs: Some(10),
                 env_keys: BTreeSet::from(["PATH".into()]),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })
@@ -4978,7 +4832,6 @@ mod tests {
                     artifacts_root: None,
                     timeout_secs: None,
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                 environment: None,
                 })
@@ -5241,7 +5094,6 @@ rules:
                 artifacts_root: None,
                 timeout_secs: None,
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })

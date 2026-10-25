@@ -289,7 +289,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             json!({"plan_id":plan.plan_id}),
         )?;
         let mut evidence = JsonlEvidenceWriter::create(&run_dir.join("evidence.jsonl"), &run_id)?;
-        let domainforge_model = policy_snapshot.load_domainforge_model()?;
         let engine = PolicyAuthorityEngine::new(bundle)?;
         engine.load_opaque_constraints(load_opaque_constraints(&root)?)?;
         // Load environment spec if the item declares one (§7.6).
@@ -380,19 +379,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 Default::default()
             };
             let evidence_id = format!("evi_{:04}", index + 1);
-            let domainforge_candidate = domainforge_model
-                .as_ref()
-                .map(|model| {
-                    sea_forge_authority::DomainForgeCandidate::evaluate(
-                        model,
-                        &action,
-                        vec![format!(
-                            "domain-model:{}",
-                            model.model_ref.semantic_model_sha256
-                        )],
-                    )
-                })
-                .transpose()?;
             let decision = engine.evaluate(AuthorityEvaluation {
                 actor: &actor,
                 binding: binding.clone(),
@@ -408,7 +394,6 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
                 timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
                     .then_some(options.timeout_secs),
                 env_keys,
-                domainforge_candidate: domainforge_candidate.as_ref(),
                 opa_candidate: None,
                 environment: env_ctx,
             })?;

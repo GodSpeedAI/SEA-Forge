@@ -301,7 +301,6 @@ fn run_helper(h: &ExecutionFixture, case: &str) -> RunEvidence {
             artifacts_root: Some(&h.artifacts),
             timeout_secs: Some(10),
             env_keys: env.keys().cloned().collect(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })

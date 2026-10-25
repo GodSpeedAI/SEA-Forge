@@ -153,7 +153,6 @@ fn run_case(case: &str, protected: bool) -> Scenario {
             artifacts_root: Some(&artifacts),
             timeout_secs: Some(10),
             env_keys: env.keys().cloned().collect(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })

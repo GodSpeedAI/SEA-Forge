@@ -218,7 +218,6 @@ fn grant_for(
             artifacts_root: Some(&fx.artifacts),
             timeout_secs: Some(30),
             env_keys: BTreeSet::new(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })

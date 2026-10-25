@@ -445,7 +445,6 @@ fn jit_elevation_needs_independent_one_use_approval_and_ends_at_the_resource() {
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })

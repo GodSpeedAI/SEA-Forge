@@ -385,7 +385,6 @@ pub async fn execute_with_permission_broker(
         artifacts_root: None,
         timeout_secs: Some(snapshot.timeout.as_secs()),
         env_keys: Default::default(),
-        domainforge_candidate: None,
         opa_candidate: None,
         environment: None,
     })?;
@@ -479,7 +478,6 @@ pub async fn execute_with_permission_broker(
                     artifacts_root: None,
                     timeout_secs: Some(snapshot.timeout.as_secs()),
                     env_keys: Default::default(),
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 })?;
@@ -2039,7 +2037,6 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
                 artifacts_root: None,
                 timeout_secs: Some(self.timeout_secs),
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             }) {

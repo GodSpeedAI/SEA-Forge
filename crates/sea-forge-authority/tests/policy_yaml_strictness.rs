@@ -478,7 +478,6 @@ fn evaluate_and_grant(bundle: AuthorityPolicyBundle, action: &AuthorityAction) -
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })
@@ -783,10 +782,42 @@ fn evaluate(bundle: AuthorityPolicyBundle, action: &AuthorityAction) -> Verdict 
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })
         .unwrap()
         .verdict
+}
+
+/// B-08/SUP-09h: `engine: domainforge` is not wired, so a bundle that enables it
+/// is refused at load before any evaluation, whether the engine is required or not.
+#[test]
+fn domainforge_engine_is_refused_required_or_optional() {
+    for required in ["true", "false"] {
+        let text = format!(
+            r#"version: "0.2"
+identity_bindings:
+  - principal: operator_local
+    actor_type: human
+    role: operator
+policy_engines:
+  - engine: domainforge
+    fail_mode: closed
+    required: {required}
+rules:
+  - name: allow-write
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: ""
+"#
+        );
+        assert_eq!(load_error_class(&text), "authority_engine_unavailable");
+        let message = load_error_message(&text);
+        assert!(
+            message.contains("engine 'domainforge' is not available")
+                && message.contains("B-08/SUP-09h"),
+            "unexpected message: {message}"
+        );
+    }
 }

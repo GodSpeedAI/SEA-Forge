@@ -87,7 +87,7 @@ The intent, case plan, identity binding, and authority policy snapshot are commi
 
 ### Step 4 — Evaluate authority
 
-For each operation, the authority engine evaluates the action, workspace boundary, actor binding, environment, and any DomainForge candidate. Each evaluation produces:
+For each operation, the authority engine evaluates the action, workspace boundary, actor binding, environment, and any DomainForge candidate (none exists: a bundle that enables `engine: domainforge` is refused at load with `authority_engine_unavailable`). Each evaluation produces:
 
 * an `AuthorityEvaluated` trace event;
 * a prepared `AuthorityDecision` evidence record;
