@@ -140,7 +140,6 @@ fn decide(bundle: &AuthorityPolicyBundle, candidate: Option<&OpaCandidate>) -> A
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: candidate,
             environment: None,
         })

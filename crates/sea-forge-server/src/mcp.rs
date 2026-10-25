@@ -183,7 +183,6 @@ impl Broker {
             artifacts_root: None,
             timeout_secs: Some(10),
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })?)

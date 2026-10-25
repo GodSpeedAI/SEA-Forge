@@ -242,7 +242,9 @@ fn required_integrity_checkpoint_precedes_command_start_and_witness_outage_halts
 }
 
 #[test]
-fn run_ingress_composes_domainforge_candidate() {
+fn run_ingress_refuses_domainforge_engine_at_load() {
+    // B-08/SUP-09h: engine domainforge is not wired, so a bundle that enables it
+    // is refused at load with the classed error before any evaluation.
     let parent = temp_root("domainforge-ingress");
     let root = parent.join("state");
     let policy = integrity_policy(&parent, 0, false, true);
@@ -259,25 +261,15 @@ fn run_ingress_composes_domainforge_candidate() {
         .output()
         .unwrap();
     assert!(
-        output.status.success(),
-        "stderr: {}",
+        !output.status.success(),
+        "a domainforge bundle must be refused"
+    );
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let run_dir = fs::read_dir(root.join("runs"))
-        .unwrap()
-        .next()
-        .unwrap()
-        .unwrap()
-        .path();
-    let decisions: serde_json::Value =
-        serde_json::from_slice(&fs::read(run_dir.join("authority.json")).unwrap()).unwrap();
-    assert!(decisions.as_array().unwrap().iter().any(|decision| {
-        decision["candidate_verdicts"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|candidate| candidate["engine"] == "domainforge")
-    }));
+    assert!(text.contains("authority_engine_unavailable"), "{text}");
     fs::remove_dir_all(parent).unwrap();
 }
 

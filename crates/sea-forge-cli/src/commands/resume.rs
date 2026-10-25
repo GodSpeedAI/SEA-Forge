@@ -352,7 +352,6 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                     timeout_secs: matches!(operation, Operation::ExecuteCommand { .. })
                         .then_some(options.timeout_secs),
                     env_keys,
-                    domainforge_candidate: None,
                     opa_candidate: None,
                     environment: None,
                 })?;
@@ -926,7 +925,6 @@ fn resume_artifact_transition(
             artifacts_root: Some(&artifacts),
             timeout_secs: Some(options.timeout_secs),
             env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: Some((
                 item.environment.as_deref().unwrap_or(""),

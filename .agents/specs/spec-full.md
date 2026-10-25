@@ -1205,7 +1205,7 @@ contain private key bytes.
 - `policy_engines[]` declares candidate engines (`local`, `domainforge`, `opa`,
   `governedspeed`, implementation-defined), endpoint/config refs, supported
   surfaces, and fail mode. `domainforge` additionally declares the required
-  `DomainModelRef` or source-set selector. Any engine used for action gating MUST
+  `DomainModelRef` or source-set selector. **Current implementation (B-08/SUP-09h):** `engine: domainforge` is refused at bundle load with `authority_engine_unavailable`, required or optional, until DomainForge authority evaluation is wired. Any engine used for action gating MUST
   declare `fail_mode: closed`; `pass` and `open` modes are schema errors for
   action gating even if they remain valid for advisory evaluation outside the
   authority path.

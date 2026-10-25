@@ -758,24 +758,6 @@ pub(crate) fn execute_sandbox(
         role: actor_role,
     };
     let action = sea_forge_core::types::AuthorityAction::from(&operation);
-    // DOM-03: the domain model judges the action *before* policy authority
-    // does, exactly as `cli/src/pipeline.rs:486-498` does it. A policy with no
-    // `domainforge` engine yields `None` and the evaluation is unchanged; a
-    // policy that declares one but whose model has drifted fails here, with a
-    // typed error, before any grant exists.
-    let domainforge_candidate = bundle
-        .load_domainforge_model()?
-        .map(|model| {
-            sea_forge_authority::DomainForgeCandidate::evaluate(
-                &model,
-                &action,
-                vec![format!(
-                    "domain-model:{}",
-                    model.model_ref.semantic_model_sha256
-                )],
-            )
-        })
-        .transpose()?;
     let decision = engine.evaluate(AuthorityEvaluation {
         actor: &actor,
         binding: bundle.resolve_identity(&actor.actor_id, actor.role.clone()),
@@ -789,7 +771,6 @@ pub(crate) fn execute_sandbox(
         artifacts_root: Some(&artifacts),
         timeout_secs: Some(timeout),
         env_keys: ["PATH", "HOME"].into_iter().map(str::to_owned).collect(),
-        domainforge_candidate: domainforge_candidate.as_ref(),
         opa_candidate: None,
         environment: None,
     })?;

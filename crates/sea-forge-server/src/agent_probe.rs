@@ -207,7 +207,6 @@ pub async fn probe(
         artifacts_root: None,
         timeout_secs: Some(snapshot.timeout.as_secs()),
         env_keys: Default::default(),
-        domainforge_candidate: None,
         opa_candidate: None,
         environment: None,
     })?;
@@ -253,7 +252,6 @@ pub async fn probe(
                 artifacts_root: None,
                 timeout_secs: Some(snapshot.timeout.as_secs()),
                 env_keys: Default::default(),
-                domainforge_candidate: None,
                 opa_candidate: None,
                 environment: None,
             })?;

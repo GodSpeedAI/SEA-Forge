@@ -128,7 +128,6 @@ fn allow_decision(h: &Harness, seq: usize) -> sea_forge_core::types::AuthorityDe
             artifacts_root: Some(&h.artifacts),
             timeout_secs: Some(10),
             env_keys: ["PATH", "HOME"].iter().map(|k| k.to_string()).collect(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })

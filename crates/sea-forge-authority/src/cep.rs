@@ -1030,7 +1030,6 @@ impl CepAuthorityService<'_> {
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })?)
@@ -1220,7 +1219,6 @@ impl CepAuthorityService<'_> {
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })?;
@@ -1495,7 +1493,6 @@ impl CepAuthorityService<'_> {
             artifacts_root: None,
             timeout_secs: None,
             env_keys: Default::default(),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })?;

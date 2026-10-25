@@ -28,8 +28,7 @@
 //! inside the sandbox.
 
 use sea_forge_authority::{
-    AuthorityEvaluation, AuthorityPolicyBundle, DomainForgeCandidate, OpaBinding, OpaCandidate,
-    PolicyAuthorityEngine,
+    AuthorityEvaluation, AuthorityPolicyBundle, OpaBinding, OpaCandidate, PolicyAuthorityEngine,
 };
 use sea_forge_changeset::{
     capture_base, collect, export_base, promote, validate, BaseIdentity, ChangeRules, Changeset,
@@ -568,20 +567,6 @@ impl<'a> Authority<'a> {
         action: &AuthorityAction,
         opa_candidate: Option<&OpaCandidate>,
     ) -> Result<AuthorityDecision, ForgeError> {
-        let candidate = self
-            .bundle
-            .load_domainforge_model()?
-            .map(|model| {
-                DomainForgeCandidate::evaluate(
-                    &model,
-                    action,
-                    vec![format!(
-                        "domain-model:{}",
-                        model.model_ref.semantic_model_sha256
-                    )],
-                )
-            })
-            .transpose()?;
         self.engine.evaluate(AuthorityEvaluation {
             actor: &self.actor,
             binding: self
@@ -597,7 +582,6 @@ impl<'a> Authority<'a> {
             artifacts_root: Some(scope.artifacts),
             timeout_secs: scope.timeout_secs,
             env_keys: scope.env_keys,
-            domainforge_candidate: candidate.as_ref(),
             opa_candidate,
             environment: None,
         })

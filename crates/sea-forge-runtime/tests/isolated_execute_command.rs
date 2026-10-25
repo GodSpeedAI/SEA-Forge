@@ -96,7 +96,6 @@ fn run(root: &Path, run_id: &str, action: &str) -> (ExecutionResult, String) {
             artifacts_root: Some(&artifacts),
             timeout_secs: Some(30),
             env_keys: BTreeSet::from([ACTION.to_string()]),
-            domainforge_candidate: None,
             opa_candidate: None,
             environment: None,
         })
