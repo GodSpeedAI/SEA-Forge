@@ -129,9 +129,28 @@ sha256sum -c SHA256SUMS
 tar -xzf sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz
 ```
 
-The checksum file is produced in the same job that uploads it, so it protects
-against a corrupted or truncated download, not against a compromised release.
-Signing is not in place.
+The checksum file is produced in the same job that uploads it, so on its own it
+protects against a corrupted or truncated download, not against a compromised
+release. The tarball also carries a signed build-provenance attestation
+(Sigstore, keyless; step "Attest build provenance") when the job builds the
+commit its run is for, which is the case for every release Release Please
+creates. It binds the tarball's digest to this workflow and to the commit it
+was built from. Verify both before installing:
+
+```sh
+gh attestation verify sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
+  --repo GodSpeedAI/SEA-Forge \
+  --signer-workflow GodSpeedAI/SEA-Forge/.github/workflows/release-please.yml \
+  --source-digest "$(git rev-parse 'vX.Y.Z^{commit}')"
+```
+
+A tarball replaced on the release page by anything other than that workflow,
+or built from a different commit than the tag, fails this check. A re-attach
+(§5) dispatched from `main` for an older tag builds the tag's commit while the
+run is for `main`'s head; the job then attaches the tarball without an
+attestation and logs a warning rather than attest the wrong source. Releases
+attached before the attestation step existed (v0.2.0) have none; the next
+release is the first attested one.
 
 ## 7. Token rotation
 
