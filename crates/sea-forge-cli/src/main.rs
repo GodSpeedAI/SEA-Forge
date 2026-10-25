@@ -276,9 +276,12 @@ enum Command {
 
 #[derive(Subcommand)]
 enum LedgerAction {
-    Verify {
-        ledger_id: String,
-    },
+    /// Read-only. Exits 1 on failure; crash residue is reported with the `ledger repair` hint.
+    Verify { ledger_id: String },
+    /// Offline crash recovery: quarantine a torn final record and rebuild the derived MMR cache from
+    /// verified entries, then verify. Refuses (writes nothing) when the ledger is damaged beyond an
+    /// interrupted append. Stop the server first.
+    Repair { ledger_id: String },
     Prove {
         ledger_id: String,
         entry_ulid: String,

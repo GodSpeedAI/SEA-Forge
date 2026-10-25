@@ -1,7 +1,7 @@
 use crate::LedgerAction;
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{TraceEvent, TraceKind};
-use sea_forge_ledger::types::LedgerStream;
+use sea_forge_ledger::types::{CrashResidue, LedgerStream};
 use std::fs;
 use std::path::Path;
 
@@ -16,6 +16,44 @@ pub fn execute(action: LedgerAction, root: &Path) -> Result<u8, ForgeError> {
                 }
                 Err(e) => {
                     println!("ledger {ledger_id}: VERIFICATION FAILED: {e}");
+                    match stream.crash_residue() {
+                        Ok(residue) if residue.is_repairable() => {
+                            println!("ledger {ledger_id}: {}", describe_residue(&residue));
+                            println!(
+                                "hint: run `sea-forge ledger --root {} repair {ledger_id}` (with the server stopped) to recover",
+                                root.display()
+                            );
+                        }
+                        _ => {}
+                    }
+                    Ok(1)
+                }
+            }
+        }
+        LedgerAction::Repair { ledger_id } => {
+            let stream = LedgerStream::open(root, &ledger_id, "cli_repair")?;
+            let repair = stream.repair_tail()?;
+            println!(
+                "ledger {ledger_id}: kept {} records; quarantined {} bytes ({} record(s)){}",
+                repair.kept_records,
+                repair.quarantined_bytes,
+                repair.quarantined_records,
+                repair
+                    .quarantine_path
+                    .as_ref()
+                    .map(|path| format!(" to {}", path.display()))
+                    .unwrap_or_default()
+            );
+            if repair.mmr_rebuilt {
+                println!("ledger {ledger_id}: rebuilt the MMR cache from the verified entries");
+            }
+            match stream.verify() {
+                Ok(()) => {
+                    println!("ledger {ledger_id}: verified");
+                    Ok(0)
+                }
+                Err(e) => {
+                    println!("ledger {ledger_id}: VERIFICATION FAILED after repair: {e}");
                     Ok(1)
                 }
             }
@@ -44,6 +82,20 @@ pub fn execute(action: LedgerAction, root: &Path) -> Result<u8, ForgeError> {
         }
         LedgerAction::Replay { case } => replay_case(root, &case),
     }
+}
+
+fn describe_residue(residue: &CrashResidue) -> String {
+    let mut parts = Vec::new();
+    if residue.torn_bytes > 0 {
+        parts.push(format!(
+            "crash residue: an interrupted append left {} torn byte(s) after the last complete record",
+            residue.torn_bytes
+        ));
+    }
+    if residue.mmr_stale {
+        parts.push("the MMR cache is behind the complete entries".to_string());
+    }
+    parts.join("; ")
 }
 
 /// Print the persisted dispatch/settlement order for a case (spec §17.2 T13.2).

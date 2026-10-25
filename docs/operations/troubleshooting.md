@@ -38,8 +38,10 @@ ls -l $SEA_FORGE_ROOT/server.sock
 ./target/debug/sea-forge runs --unsettled --root $SEA_FORGE_ROOT
 
 # 4. Verify integrity ledger hash chains
-./target/debug/sea-forge ledger verify main --root $SEA_FORGE_ROOT
+./target/debug/sea-forge ledger --root $SEA_FORGE_ROOT verify main
 ```
+
+If `ledger verify` reports crash residue (a torn final record after a crash mid-append), stop the server and run `./target/debug/sea-forge ledger --root $SEA_FORGE_ROOT repair main`. It quarantines only the torn bytes and reports where they went. If it refuses with "damaged beyond an interrupted append", the ledger is corrupt before its tail: investigate it, do not repair it.
 
 ### 2. Forensic Investigation of a Failed Run
 To reconstruct what happened during a rejected or halted run:

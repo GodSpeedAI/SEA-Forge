@@ -713,10 +713,11 @@ fn m0_crash_recovery_quarantines_incomplete_tail() {
     let stream = LedgerStream::open(tmp.path(), "case_crash", "w1").unwrap();
     append_mixed_records(&stream, 5);
 
-    // Simulate crash: append a truncated line to the entries file.
+    // Simulate crash: an append writes the entry and its newline in one call, so an interrupted
+    // append leaves an unterminated prefix.
     let path = stream.entries_path();
     let mut file = fs::OpenOptions::new().append(true).open(&path).unwrap();
-    file.write_all(b"{\"version\":\"0.2\",\"incomplete\":\n")
+    file.write_all(b"{\"version\":\"0.2\",\"incomplete\":")
         .unwrap();
     drop(file);
 

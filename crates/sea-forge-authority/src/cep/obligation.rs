@@ -423,7 +423,7 @@ impl CepAuthorityService<'_> {
         }
         let now = Utc::now();
         if now < obligation.closes_at {
-            return Err(CepAuthorityError::Evidence(
+            return Err(CepAuthorityError::SettlementPending(
                 "the window is still open; settlement is pending".into(),
             ));
         }
@@ -433,7 +433,7 @@ impl CepAuthorityService<'_> {
                     == Some(format!("{CLOSURE_KEY}{operation_id}").as_str())
         });
         if closure.is_none() && now <= obligation.latest_closure() {
-            return Err(CepAuthorityError::Evidence(
+            return Err(CepAuthorityError::SettlementPending(
                 "the closure has not been recorded yet; settlement is pending".into(),
             ));
         }

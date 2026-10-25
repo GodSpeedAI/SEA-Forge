@@ -101,6 +101,9 @@ pub enum CepAuthorityError {
     Approval(String),
     /// Evidence or settlement refused: broken chain, wrong world, no allow decision, criteria changed, policy.
     Evidence(String),
+    /// Settlement is not yet decidable: the obligation's window is still open, or its closure is not
+    /// recorded yet. Nothing is written. A client may retry later; this is not a refusal of the evidence.
+    SettlementPending(String),
     /// A world transition whose facts do not hold: unregistered or identical worlds, or claims that
     /// contradict what SEA-Forge recomputes from the registered identities.
     Transition(String),
@@ -125,6 +128,7 @@ impl fmt::Display for CepAuthorityError {
             Self::World(m) => write!(f, "world refused: {m}"),
             Self::Approval(m) => write!(f, "approval refused: {m}"),
             Self::Evidence(m) => write!(f, "evidence or settlement refused: {m}"),
+            Self::SettlementPending(m) => write!(f, "settlement pending: {m}"),
             Self::Transition(m) => write!(f, "world transition refused: {m}"),
             Self::Claims(m) => write!(f, "malformed authority request: claims {m}"),
             Self::Internal(m) => write!(f, "{m}"),
@@ -150,6 +154,7 @@ impl CepAuthorityError {
             Self::World(_) => "cep_world_refused",
             Self::Approval(_) => "cep_approval_refused",
             Self::Evidence(_) => "cep_evidence_refused",
+            Self::SettlementPending(_) => "cep_settlement_pending",
             Self::Transition(_) => "cep_transition_refused",
             Self::Internal(_) => "cep_authority_internal",
         }

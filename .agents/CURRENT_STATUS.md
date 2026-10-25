@@ -1,15 +1,21 @@
 # Current status
 
-**Status revision:** 172
+**Status revision:** 174
 
-**Stage:** Release tarball carries a signed build-provenance attestation
+**Stage:** settlement-pending error class and offline ledger crash recovery (ledger repair)
 
-**Summary:** The release-binaries job now runs actions/attest-build-provenance (v4.2.2, pinned by SHA) on the packaged tarball before uploading it. The job gains id-token: write and attestations: write. The attestation is a Sigstore-signed (keyless) SLSA provenance statement binding the tarball's sha256 to this repository, workflow and commit, so a downloader can detect a tarball that this workflow did not build with gh attestation verify. The release-management runbook documents the verification command and that releases attached before this change need a re-attach to gain an attestation. A re-attach dispatched from main for an older tag builds the tag's commit while the run is for main's head; the job then skips the attestation with a warning instead of naming the wrong source commit, and the runbook verifies the source commit with --source-digest.
+**Summary:** Settlement that is not yet decidable now returns its own error class cep_settlement_pending (CepAuthorityError::SettlementPending) at the two named sites (window still open; closure not yet recorded), instead of cep_evidence_refused. Nothing is written for either. Ledger crash recovery is tightened: quarantine only removes the bytes after the last complete newline-terminated record, at most one record; a corrupt record followed by more data, or a broken chain, is refused with 'damaged beyond an interrupted append' and nothing is truncated. New sea-forge ledger repair (offline, exclusive lock) quarantines the torn tail, rebuilds the MMR cache only from verified entries, then verifies. Verify stays read-only and prints the repair hint for crash residue only. Tail repair is crash-safe: the quarantine file is created exclusively and fsynced before entries.jsonl is cut in place (set_len + fsync), and residue containing a newline is refused as damage, since an append writes the entry and its newline in one call.
 
 **Verified:**
 
-- actionlint .github/workflows/release-please.yml exits 0
-- yaml.safe_load parses the workflow; release-binaries permissions are contents: write, id-token: write, attestations: write
+- cargo test -p sea-forge-authority --lib --test cep_approvals --test cep_authority --test cep_compiler_upgrade --test cep_obligation --test cep_settlement --test cep_transition: 43+14+18+9+21+17+17 passed, 0 failed
+- cargo test -p sea-forge-ledger --lib --test crash_residue --test conformance_m0_ledger --test projection_boundary: 37+23+6+3 passed, 0 failed (crash_residue 6 new; m0 incl. crash_recovery_quarantines_incomplete_tail and rebuilds_mmr_ahead_of_entries unchanged)
+- cargo test -p sea-forge-cli --test ledger_repair --test conformance_m0_migrate --test conformance_m13 --test conformance_m3: 2+3+8+2 passed, 0 failed (ledger_repair 2 new; conformance_m3 tampered-ledger resume still fails closed)
+- cargo test -p sea-forge-server --lib cep_authority; --test crash_recovery_startup --test conformance_cep_authority: 1+3+13 passed, 0 failed (startup_refuses_corruption_before_the_tail_and_cuts_no_history new)
+- cargo clippy -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server --all-targets -- -D warnings: exit 0
+- cargo fmt --check -p sea-forge-authority -p sea-forge-ledger -p sea-forge-cli -p sea-forge-server: exit 0
+- Existing startup and ledger-tamper tests reviewed: none restarts a server over a tampered middle entry; the conformance_m3 tamper case expects a failing resume and still gets one
+- cargo test -p sea-forge-ledger (all suites pass, incl. new newline_terminated_corrupt_line_is_refused_and_never_truncated); sea-forge-server crash_recovery_startup 3/3; sea-forge-cli ledger_repair 2/2
 
 **Limits:**
 
@@ -19,14 +25,29 @@
 - Only the obligation modality settles; prohibition and permission are refused as unsupported (carried from 164)
 - The DomainForge write-authority engine is still a filename-stem approximation, not model-semantic authority (SUP-09h); readiness B-08 records it as a documented limitation (carried from 164)
 - A crate added later with versioned path dependencies must be added to the extra-files list, or the next release PR fails the same way
+- The release-binaries job has not run on GitHub; it is unverified until a release run or a workflow_dispatch with tag v0.2.0 completes
 - Binaries are built for x86_64-unknown-linux-gnu only; no other platform is shipped
+- SHA256SUMS is produced in the same job as the tarball and proves integrity against corruption, not against a compromised release; no signing is in place
 - Only sea-forge and sea-forge-server ship; sandbox helper binaries sea-forge-workload-exec and sea-forge-mcp-connect are internal
-- The provenance attestation proves which workflow run built the tarball; it does not make the build reproducible, and trust still rests on the GitHub-hosted runner and the pinned toolchain
-- The attestation step is verified by actionlint locally; it runs for real on the next release or tag re-attach
+- obligation.rs record_closure 'window is still open; a closure is recorded once it closes' still returns cep_evidence_refused by decision (it concerns recording a closure, not settlement)
+- ledger repair is offline by contract but does not check that the server is stopped; the operator must stop the server first
+- startup now refuses a ledger whose chain is broken as well as mid-ledger corruption (fail closed); a crash-torn final record is still repaired silently at startup
+- a complete final record missing only its newline is quarantined as one torn record
 
-**Next move:** Merge after CI is green, then dispatch release-please.yml with tag=v0.2.0 to re-attach v0.2.0 with an attestation and check gh attestation verify on the download.
+**Next move:** Merge the branch after CI is green (maintainer decision). Horizon should key retry on error_class cep_settlement_pending, and operators should use sea-forge ledger repair (with --root before the action word) for crash residue.
 
 **Evidence:**
 
-- `.github/workflows/release-please.yml`
-- `docs/skills/release-management.md`
+- `crates/sea-forge-authority/src/cep.rs`
+- `crates/sea-forge-authority/src/cep/obligation.rs`
+- `crates/sea-forge-authority/tests/cep_obligation.rs`
+- `crates/sea-forge-server/src/cep_authority.rs`
+- `crates/sea-forge-ledger/src/types.rs`
+- `crates/sea-forge-ledger/tests/crash_residue.rs`
+- `crates/sea-forge-cli/src/main.rs`
+- `crates/sea-forge-cli/src/commands/ledger.rs`
+- `crates/sea-forge-cli/tests/ledger_repair.rs`
+- `crates/sea-forge-server/src/lib.rs`
+- `crates/sea-forge-server/tests/crash_recovery_startup.rs`
+- `docs/reference/cli-command-reference.md`
+- `docs/operations/troubleshooting.md`

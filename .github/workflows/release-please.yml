@@ -84,9 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
-      contents: write      # gh release upload
-      id-token: write      # Sigstore signing of the provenance attestation
-      attestations: write  # store the attestation on the repository
+      contents: write   # gh release upload
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
     steps:
@@ -127,28 +125,6 @@ jobs:
           tar -C dist -czf "dist/${archive}" "${stage}"
           (cd dist && sha256sum "${archive}" > SHA256SUMS && sha256sum -c SHA256SUMS)
           tar -tzf "dist/${archive}"
-
-      - name: Compare the built commit with the run commit
-        # Provenance names the run's commit (GITHUB_SHA). A dispatch from main that re-attaches an
-        # older tag builds the tag's commit instead, so its provenance would name the wrong source.
-        id: source
-        run: |
-          set -euo pipefail
-          built="$(git rev-parse HEAD)"
-          if [ "$built" = "$GITHUB_SHA" ]; then
-            echo "attest=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "attest=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Built ${built} for ${RELEASE_TAG} but this run is for ${GITHUB_SHA}; no provenance attestation is attached (it would name the wrong commit)."
-          fi
-
-      - name: Attest build provenance
-        # Signed SLSA provenance (Sigstore, keyless) binding the tarball digest to this workflow and
-        # to the commit it was built from (equal to the run commit, checked above).
-        if: steps.source.outputs.attest == 'true'
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: dist/*.tar.gz
 
       - name: Attach binaries to the GitHub Release
         # The write token is scoped to this step only.

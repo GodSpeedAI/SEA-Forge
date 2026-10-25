@@ -490,7 +490,32 @@ fn before_the_window_closes_closure_and_settlement_are_pending() {
         .unwrap_err()
         .to_string()
         .contains("still open"));
-    assert!(s.settle().unwrap_err().to_string().contains("pending"));
+    let err = s.settle().unwrap_err();
+    assert!(err.to_string().contains("pending"), "{err}");
+    assert!(
+        matches!(err, CepAuthorityError::SettlementPending(_)),
+        "{err:?}"
+    );
+    assert_eq!(err.class(), "cep_settlement_pending");
+}
+
+#[test]
+fn after_the_window_closes_but_before_the_grace_ends_an_unrecorded_closure_is_pending() {
+    // Window closed, grace still running, no closure recorded yet: retry later, nothing written.
+    let s = scenario(W, 30);
+    s.standard(&[s.run(Some(0))]);
+    s.wait_close();
+    let err = s.settle().unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("closure has not been recorded yet"),
+        "{err}"
+    );
+    assert!(
+        matches!(err, CepAuthorityError::SettlementPending(_)),
+        "{err:?}"
+    );
+    assert_eq!(err.class(), "cep_settlement_pending");
 }
 
 #[test]
@@ -500,11 +525,11 @@ fn a_threshold_that_differs_from_realitytraces_record_is_refused() {
     let ids = s.standard(&[s.run(Some(0))]);
     s.wait_close();
     s.close(&ids).unwrap();
-    assert!(s
-        .settle()
-        .unwrap_err()
-        .to_string()
-        .contains("do not match its record"));
+    let err = s.settle().unwrap_err();
+    assert!(err.to_string().contains("do not match its record"), "{err}");
+    // A genuine evidence refusal is still a refusal, not a retry-later pending.
+    assert!(matches!(err, CepAuthorityError::Evidence(_)), "{err:?}");
+    assert_eq!(err.class(), "cep_evidence_refused");
 }
 
 #[test]
@@ -519,7 +544,9 @@ fn a_discrimination_run_that_already_observed_the_statement_is_refused() {
         .unwrap_err()
         .to_string()
         .contains("before acting"));
-    assert!(s.settle().unwrap_err().to_string().contains("pending"));
+    let err = s.settle().unwrap_err();
+    assert!(err.to_string().contains("pending"), "{err}");
+    assert_eq!(err.class(), "cep_settlement_pending");
 }
 
 /// False success: a failing run proves "not observed before acting" only if it is a completed, uncrashed run
