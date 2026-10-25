@@ -4,6 +4,8 @@
 
 Accepted
 
+Status update (2026-10-25): capability 2 below (translating DomainForge authority results into candidate verdicts) and the M0 "authority normalization" item are not wired. The filename-stem approximation that stood in for them was removed (B-08): `AuthorityEvaluation` no longer carries a DomainForge candidate, and a policy bundle that enables `engine: domainforge`, whether required or optional, is refused at load with `authority_engine_unavailable`. DomainForge still provides `.sea` loading, semantic validation and model identity (`DomainModelRef`). The normalization rules below describe the intended design, kept for when model-semantic authority evaluation lands; they are not current behaviour.
+
 ## Date
 
 2026-07-11

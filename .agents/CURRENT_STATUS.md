@@ -1,20 +1,15 @@
 # Current status
 
-**Status revision:** 177
+**Status revision:** 178
 
-**Stage:** b08-domainforge-engine-fail-closed
+**Stage:** ADR-001 status update for B-08
 
-**Summary:** B-08/SUP-09h: a policy bundle that enables engine: domainforge is refused at load with authority_engine_unavailable, required or optional, before any other bundle check. The filename-stem DomainForge candidate evaluator, its composition into authority decisions, and the bundle-level model load were removed from sea-forge-authority, sea-forge-domainforge, sea-forge-case-runner, sea-forge-cli and sea-forge-server. Revision 176 (the B-12 replay) replaced the limits list with the B-12 branch's stale copy and dropped 14 open limits; this revision restores them, keeps B-12's four, adds B-08's, and drops only the filename-stem DomainForge limit that B-08 resolves.
+**Summary:** ADR-001 gains a dated status update: DomainForge authority translation and the M0 normalization item are not wired; the filename-stem candidate was removed and bundles enabling engine domainforge are refused at load with authority_engine_unavailable, required or optional. The original decision text is kept as the intended design.
 
 **Verified:**
 
-- cargo test -p sea-forge-authority --no-fail-fast: 16 test binaries ok, including domainforge_engine_is_refused_before_composition, policy_yaml_strictness domainforge_engine_is_refused_required_or_optional, and yaml_corpus expecting the refusal for doc_011
-- cargo test -p sea-forge-domainforge --no-fail-fast: ok
-- cargo test -p sea-forge-case-runner --no-fail-fast: ok
-- cargo test -p sea-forge-cli --test lifecycle: 12 passed (run_ingress_refuses_domainforge_engine_at_load)
-- cargo test -p sea-forge-server --lib: ok
-- cargo check --all-targets for authority, domainforge, case-runner, cli, server, runtime, realitytrace, extension, artifact-ip: ok
-- cargo clippy -D warnings --all-targets for domainforge, authority, case-runner, cli, server: clean; cargo fmt applied and checked
+- crates/sea-forge-authority/src/lib.rs validate() refuses any policy_engines entry with engine domainforge, class authority_engine_unavailable
+- tests/policy_yaml_strictness.rs asserts the refusal for required true and false
 
 **Limits:**
 
@@ -40,14 +35,8 @@
 - fixtures/yaml-corpus/reference.json still records the old doc_011 outcome (schema_error); the corpus test carries the new expectation in REFUSED_DOMAINFORGE_ENGINE
 - docs/subsystems/domainforge-boundary.md section on DomainForgeCandidate wording not fully rewritten
 
-**Next move:** Merge after CI; the domain_model source surface remains required for v0.2 bundles and can be revisited separately.
+**Next move:** Merge B-08; model-semantic DomainForge authority evaluation remains future work.
 
 **Evidence:**
 
-- `crates/sea-forge-authority/src/lib.rs`
-- `crates/sea-forge-authority/tests/policy_yaml_strictness.rs`
-- `crates/sea-forge-authority/tests/yaml_corpus.rs`
-- `crates/sea-forge-authority/tests/fixtures/yaml-corpus/real/doc_011_8f23190964a9.yaml`
-- `docs/subsystems/domainforge-boundary.md`
-- `docs/workflows/cli-run-lifecycle.md`
-- `.agents/specs/spec-full.md`
+- `docs/decisions/ADR-001-domainforge-semantic-boundary.md`
