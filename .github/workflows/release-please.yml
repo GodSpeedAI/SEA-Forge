@@ -9,11 +9,13 @@ name: Release
 #                                                       sets release_created=true,
 #                                                       sets tag_name=vX.Y.Z
 #                                  └─▶ release-binaries (same workflow) fires,
-#                                                       checks out the tag,
-#                                                       verifies version sync,
-#                                                       builds the shipped binaries,
-#                                                       attaches a tarball and
-#                                                       SHA256SUMS to the release.
+#                                                       calls package.yml: builds the
+#                                                       deb/tarball, macOS pkg/dmg and
+#                                                       Windows setup.exe/zip on their own
+#                                                       runners and install-tests each one.
+#                                  └─▶ publish-release (after every package passes)
+#                                                       writes SHA256SUMS, attests
+#                                                       provenance, attaches all assets.
 #
 # Nothing triggers a merge by way of a tag. The tag is an EFFECT of the
 # maintainer merging the standing release PR.
@@ -73,16 +75,29 @@ jobs:
           manifest-file: .github/release-please-manifest.json
 
   release-binaries:
-    name: release-binaries (GitHub Release)
+    name: release-binaries (build and install-test packages)
+    # Reusable workflow: builds every package on its own runner and install-tests it there.
+    # Runs when release-please created a release in THIS run, or when a maintainer dispatches
+    # this workflow with `tag` to (re)attach binaries to an existing release.
     needs: [release-please]
-    # Fires when release-please created a release in THIS run, or when a
-    # maintainer dispatches this workflow with `tag` to (re)attach binaries to
-    # an existing release. Output verified at action SHA 5c625bfb (v4.4.1) README "Root component outputs".
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.tag != '') ||
       needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/package.yml
+    with:
+      ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
+      version: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
+      upload: true
+    permissions:
+      contents: read       # the reusable workflow only reads; publishing happens below
+
+  publish-release:
+    name: release-binaries (GitHub Release)
+    needs: [release-please, release-binaries]
+    # Publish only when every package was built and install-tested.
+    if: needs.release-binaries.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     permissions:
       contents: write      # gh release upload
       id-token: write      # Sigstore signing of the provenance attestation
@@ -94,39 +109,32 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
-          # The build runs dependency build scripts: keep the write credential out of it.
+          # Keep the write credential out of the checkout.
           persist-credentials: false
 
-      - name: Install Devbox
-        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+      - name: Download the packages
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          enable-cache: true
+          pattern: pkg-*
+          path: dist
+          merge-multiple: true
 
-      - name: Setup pinned toolchain
-        run: devbox run -- just setup
-
-      - name: release-check (manifest versions vs tag)
-        # Verify the tag matches the workspace version before shipping binaries.
-        # release-check strips the "v" from the tag.
-        run: devbox run -- just release-check "$RELEASE_TAG"
-
-      - name: Build release binaries
-        # Only the product entry points ship: the `sea-forge` CLI (crates/sea-forge-cli)
-        # and the `sea-forge-server` daemon. Sandbox helper binaries are not shipped.
-        run: devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
-
-      - name: Package tarball and SHA256SUMS
+      - name: SHA256SUMS over every asset
         run: |
           set -euo pipefail
+          cd dist
+          ls -l
           version="${RELEASE_TAG#v}"
-          stage="sea-forge-${version}-x86_64-unknown-linux-gnu"
-          archive="${stage}.tar.gz"
-          rm -rf dist
-          mkdir -p "dist/${stage}"
-          cp target/release/sea-forge target/release/sea-forge-server LICENSE "dist/${stage}/"
-          tar -C dist -czf "dist/${archive}" "${stage}"
-          (cd dist && sha256sum "${archive}" > SHA256SUMS && sha256sum -c SHA256SUMS)
-          tar -tzf "dist/${archive}"
+          # Every package family must be present for this version (macOS may be universal or arm64).
+          for pattern in "sea-forge_${version}_amd64.deb" "sea-forge-${version}-x86_64-unknown-linux-gnu.tar.gz" \
+                         "sea-forge-${version}-macos-*.pkg" "sea-forge-${version}-macos-*.dmg" \
+                         "sea-forge-${version}-x86_64-pc-windows-msvc-setup.exe" "sea-forge-${version}-x86_64-pc-windows-msvc.zip"; do
+            found=$(compgen -G "$pattern" | wc -l)
+            test "$found" -ge 1 || { echo "::error::missing asset matching ${pattern}"; exit 1; }
+          done
+          sha256sum $(ls | grep -v '^SHA256SUMS$') > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
 
       - name: Compare the built commit with the run commit
         # Provenance names the run's commit (GITHUB_SHA). A dispatch from main that re-attaches an
@@ -143,27 +151,24 @@ jobs:
           fi
 
       - name: Attest build provenance
-        # Signed SLSA provenance (Sigstore, keyless) binding the tarball digest to this workflow and
-        # to the commit it was built from (equal to the run commit, checked above).
+        # Signed SLSA provenance (Sigstore, keyless) binding every asset digest to this workflow
+        # and to the commit it was built from (equal to the run commit, checked above).
         if: steps.source.outputs.attest == 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/*.tar.gz
+          subject-path: dist/*
 
-      - name: Attach binaries to the GitHub Release
+      - name: Attach packages to the GitHub Release
         # The write token is scoped to this step only.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version="${RELEASE_TAG#v}"
-          archive="sea-forge-${version}-x86_64-unknown-linux-gnu.tar.gz"
-          gh release upload "$RELEASE_TAG" "dist/${archive}" dist/SHA256SUMS \
-            --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$RELEASE_TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Binary attach failure report
         if: failure()
         run: |
           echo "::error::Binaries not attached for tag ${RELEASE_TAG}."
-          echo "If the upload step failed while replacing existing assets, the release may lack the tarball or carry a SHA256SUMS that does not match it."
-          echo "Recovery: rerun this workflow from the Actions UI (workflow_dispatch) with tag=${RELEASE_TAG}; a successful rerun re-uploads both assets."
+          echo "If the upload step failed while replacing existing assets, the release may lack some packages or carry a SHA256SUMS that does not match them."
+          echo "Recovery: rerun this workflow from the Actions UI (workflow_dispatch) with tag=${RELEASE_TAG}; a successful rerun re-uploads every asset."

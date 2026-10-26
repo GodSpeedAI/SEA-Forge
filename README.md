@@ -641,6 +641,65 @@ The common property is simple:
 
 ---
 
+## Install a release
+
+Each [GitHub Release](https://github.com/GodSpeedAI/SEA-Forge/releases) attaches
+native packages for the `sea-forge` CLI and the `sea-forge-server` daemon.
+**The packages are unsigned**: there is no Apple Developer ID and no Windows
+Authenticode certificate, so the OS may warn on first use (see below).
+
+### Linux (amd64)
+
+```sh
+sudo apt install ./sea-forge_<version>_amd64.deb
+sea-forge --version
+```
+
+The `sea-forge-<version>-x86_64-unknown-linux-gnu.tar.gz` archive has the same two binaries if you prefer to copy them yourself.
+
+### macOS
+
+```sh
+sudo installer -pkg sea-forge-<version>-macos-universal.pkg -target /
+sea-forge --version
+```
+
+Or open the `.dmg` and double-click the `.pkg`. Binaries go to `/usr/local/bin`.
+Gatekeeper may block an unsigned package. Either Control-click the package,
+choose **Open**, or remove the quarantine flag first:
+
+```sh
+xattr -d com.apple.quarantine sea-forge-<version>-macos-universal.pkg
+```
+
+### Windows (x86_64)
+
+Run `sea-forge-<version>-x86_64-pc-windows-msvc-setup.exe`. It installs for the
+current user only (no administrator rights) to
+`%LOCALAPPDATA%\Programs\SEA-Forge`, adds that folder to your user `PATH`, and
+removes both on uninstall. Open a new terminal, then:
+
+```powershell
+sea-forge --version
+```
+
+SmartScreen may block the installer: choose **More info**, then **Run anyway**.
+The `.zip` contains the two executables and `LICENSE` if you want no installer.
+
+### Verify a download
+
+```sh
+sha256sum -c SHA256SUMS      # macOS: shasum -a 256 -c SHA256SUMS
+gh attestation verify <asset> --repo GodSpeedAI/SEA-Forge
+```
+
+`sea-forge-server` takes no command-line arguments. It is configured with
+`SEA_FORGE_ROOT`, `SEA_FORGE_SOCKET`, and `<root>/server.yaml`.
+
+Release packaging details are in `docs/skills/release-management.md` §6.
+
+---
+
 ## Install and verify the repository
 
 ### Prerequisites
