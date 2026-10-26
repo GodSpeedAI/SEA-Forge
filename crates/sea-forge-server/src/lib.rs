@@ -1411,6 +1411,15 @@ async fn run_inner(
     let supervisor_settings = config.supervisor.clone();
     // SEC-02/08: database session expiry is enforced by the trusted server
     // for its whole lifetime, independent of episodes and issuance.
+    // Windows has no Postgres broker: a configured database must refuse startup,
+    // never run without its session supervisor.
+    #[cfg(windows)]
+    if !config.postgres.is_empty() {
+        return Err(ForgeError::Input(
+            "postgres resources require the Linux database broker; this host cannot supervise them (workload_isolation_unavailable)".into(),
+        )
+        .into());
+    }
     #[cfg(target_os = "linux")]
     let _database_supervisors = config
         .postgres
