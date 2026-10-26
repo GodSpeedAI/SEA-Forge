@@ -14,7 +14,7 @@ use sea_forge_sandbox::{ExecutionSandbox, LocalSandbox, NetworkPosture, SandboxS
 use std::{
     collections::BTreeMap,
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -106,7 +106,7 @@ fn minimal_env() -> BTreeMap<String, String> {
 }
 
 /// PID written by the parent script after it spawned the grandchild.
-fn spawned_pid(path: &PathBuf) -> Option<u32> {
+fn spawned_pid(path: &Path) -> Option<u32> {
     fs::read_to_string(path).ok()?.trim().parse().ok()
 }
 
@@ -148,7 +148,7 @@ fn unique_token(tag: &str) -> String {
 
 /// cmd.exe arguments for a grandchild that waits about 5 s, then writes
 /// `marker`. The token sits in the command line so the process can be found.
-fn grandchild_args(token: &str, marker: &PathBuf) -> String {
+fn grandchild_args(token: &str, marker: &Path) -> String {
     format!(
         "/d /c ping -n {GRANDCHILD_PINGS} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
         marker.display()
