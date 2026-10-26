@@ -28,7 +28,7 @@ pub enum SandboxClass {
 | Class | Meaning today |
 |---|---|
 | `local` | Process execution without an OS jail. It is still grant-bound and environment-scrubbed, but it is not a confinement boundary for untrusted work. |
-| `jail` | Linux Landlock or macOS Seatbelt confinement. |
+| `jail` | Linux Landlock or macOS App Sandbox confinement. Other platforms refuse. |
 | `isolated` | Linux only. One exclusive subordinate host identity per execution (SEC-01). Not available on other platforms. |
 | `microvm` | Declared seam. `select_sandbox` returns `unsupported_sandbox_class_error`; there is no backend. |
 | `openshell` | Requires a DomainForge projection binding and the `execute_openshell` path. The ordinary host runtime refuses it. |
@@ -84,9 +84,11 @@ Landlock availability depends on kernel ABI. Missing or insufficient Landlock is
 
 `IsolatedSandbox` uses a workload identity pool and a helper. It requires Linux and the host prerequisites. The runtime passes the bound executable's parent directory as the one additional read tree, validated so it cannot contain the run.
 
-### macOS Seatbelt
+### macOS App Sandbox
 
-`JailSandbox` generates a Seatbelt profile for `sandbox-exec` restricting reads and writes to approved trees. Platform-specific behavior is covered by sandbox tests on that platform.
+`JailSandbox` runs each execution through a private copy of `sea-forge-jail-launcher`, ad-hoc signed (`codesign -s -`) with `com.apple.security.app-sandbox` and read-write temporary exceptions for the canonical workspace and artifacts trees. The copy execs the workload, so the sandbox is inherited by every descendant. The entitlements carry no network key, so TCP, UDP and DNS are denied. `NetworkPosture::AllowTcpPorts` is refused with `jail_unavailable` because the App Sandbox cannot grant per-port access. The copy lives in the run directory beside the artifacts root and is removed after the run.
+
+`JailSandbox::new()` succeeds only when `/usr/bin/codesign` and the launcher exist next to the running executable. Reads outside the sandbox's default system set are denied. The App Sandbox does not filter environment variables, so the runtime's `env_clear` remains the environment boundary. The backend is covered by `tests/macos_app_sandbox_jail.rs` on a macOS runner. Packaging must ship `sea-forge-jail-launcher` next to `sea-forge`, or the jail is unavailable there.
 
 ### OpenShell
 

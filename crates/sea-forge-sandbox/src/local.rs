@@ -11,7 +11,7 @@ pub struct LocalSandbox;
 
 /// Kills the timed-out child's process group (Unix). The group id is the child pid.
 #[cfg(unix)]
-fn kill_timed_out_group(child: &std::process::Child) -> Result<(), SandboxError> {
+pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), SandboxError> {
     let group = format!("-{}", child.id());
     let group_kill = Command::new("/bin/kill")
         .args(["-KILL", "--", &group])

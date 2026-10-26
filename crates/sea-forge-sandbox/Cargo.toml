@@ -42,6 +42,10 @@ path = "src/bin/sea-forge-workload-exec.rs"
 name = "sea-forge-mcp-connect"
 path = "src/bin/sea-forge-mcp-connect.rs"
 
+[[bin]]
+name = "sea-forge-jail-launcher"
+path = "src/bin/sea-forge-jail-launcher.rs"
+
 [dev-dependencies]
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.2.0" }
 sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.2.0" }
