@@ -142,6 +142,11 @@ Set-Content -Path $probePath -Value $ProbeScript -Encoding utf8
 $AdmittedProbe = @'
 param([string] $PipeName)
 $ErrorActionPreference = 'Stop'
+# Start-Process with LoadUserProfile inherits the runner's TEMP, which sfprobe cannot write; Add-Type needs a temp folder.
+$tempDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Temp'
+New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+$env:TEMP = $tempDir
+$env:TMP = $tempDir
 $request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_probe","role":"operator"}}'
 try {
     Add-Type -Namespace SfProbe -Name Win -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern System.IntPtr CreateFileW(string name, uint access, uint share, System.IntPtr security, uint disposition, uint flags, System.IntPtr template);'
@@ -165,8 +170,8 @@ $CreateProbe = @'
 param([string] $PipeName)
 $ErrorActionPreference = 'Stop'
 try {
-    # 255 = PIPE_UNLIMITED_INSTANCES, so a busy-instance error cannot stand in for the DACL refusal.
-    $instance = New-Object System.IO.Pipes.NamedPipeServerStream($PipeName, [System.IO.Pipes.PipeDirection]::InOut, 255)
+    # The maximum instance count keeps a busy-instance error from standing in for the DACL refusal.
+    $instance = New-Object System.IO.Pipes.NamedPipeServerStream($PipeName, [System.IO.Pipes.PipeDirection]::InOut, [System.IO.Pipes.NamedPipeServerStream]::MaxAllowedServerInstances)
     Write-Output 'CREATED'
 } catch {
     Write-Output ('DENIED ' + $_.Exception.GetType().FullName + ': ' + $_.Exception.Message)
