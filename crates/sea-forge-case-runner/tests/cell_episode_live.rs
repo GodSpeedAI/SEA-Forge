@@ -32,6 +32,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tempfile::TempDir;
 
@@ -396,6 +397,14 @@ fn live_authorized_episode_runs_in_a_microvm() {
 
 // ── 2. Egress to a host outside the policy is denied ──
 
+/// Claim (narrowed): an outbound connection to 203.0.113.10:443 did not
+/// succeed, and no `CONNECTED` was observed. No egress observed.
+///
+/// This does not show that the sandbox's network enforcement refused the
+/// connection. OpenShell 0.1.3 logged no `DENIED` record for that destination in
+/// live run 40281322154 (`denials.log` was empty), so the cause (policy, missing
+/// route or no listener) is not attributed. The denial record is printed below
+/// as evidence.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_network_egress_is_denied() {
@@ -421,6 +430,11 @@ fn live_network_egress_is_denied() {
     );
     let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
     assert!(!stdout.contains("CONNECTED"), "stdout: {stdout}");
+    let denials = read_or_empty(&run_dir.join("artifacts/openshell/denials.log"));
+    println!(
+        "egress evidence: status {:?}, denials.log {denials:?}",
+        execution.status
+    );
     assert_ne!(episode.settlement.status, SettlementStatus::Accepted);
     assert!(episode.promotion_request.is_none());
     stream.verify().expect("ledger verifies");
@@ -732,26 +746,66 @@ fn live_workspace_symlink_cannot_reach_host_files() {
 
 // ── 8. Two concurrent sandboxes cannot see each other's files ──
 
+/// Claim: a sandbox cannot read a token that a concurrently running sandbox
+/// holds. Episode A writes its token and stays alive; episode B starts only
+/// once A's sandbox exists and then searches the readable trees. B first plants
+/// its own control token in `/tmp`, so a silent search cannot pass: the probe
+/// must exit 0 and find that control. A's sandbox must still exist when B has
+/// finished, which shows the two really overlapped.
+/// B searches `/sandbox` and `/tmp`, the only writable trees in the policy and
+/// so the only places A's token can exist. Other trees are refused by Landlock
+/// at open (`/home`, `/var`, `/opt` in run 40285510892), which would turn the
+/// probe into an error, not a result.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_concurrent_sandboxes_are_isolated() {
     let live = live();
     let token = format!("sf-token-a-{}", nanos());
+    let control = format!("sf-control-b-{}", nanos());
     // B gets the token reversed, so its own argv never holds the literal.
     let reversed: String = token.chars().rev().collect();
-    let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 20; cat a-token.txt");
+    let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 90; cat a-token.txt");
     let searcher = format!(
-        "T=$(printf '%s' '{reversed}' | rev); sleep 6; timeout 25 grep -rIa --exclude-dir=proc --exclude-dir=sys --exclude-dir=dev -- \"$T\" / > found.txt 2>/dev/null; echo \"grep_exit=$?\"; exit 0"
+        "printf '%s' '{control}' > /tmp/b-control.txt; T=$(printf '%s' '{reversed}' | rev); \
+         TREES=' /sandbox /tmp'; echo \"trees=$TREES\"; \
+         timeout 60 grep -rIa --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' $TREES > found.txt 2> errors.txt; \
+         echo \"grep_exit=$?\"; exit 0"
     );
     let root_a = new_root();
     let root_b = new_root();
+    let name_a = adapter_sandbox_name(
+        &root_a
+            .path()
+            .join("runs")
+            .join("run_live_iso_a")
+            .join("artifacts"),
+    );
 
     let ((stdout_a, _), (stdout_b, result_b)) = std::thread::scope(|scope| {
         let a =
             scope.spawn(|| run_completed(&root_a, &live, "run_live_iso_a", &["sh", "-c", &writer]));
+        let deadline = Instant::now() + Duration::from_secs(600);
+        while !live.sandbox_exists(&name_a) {
+            assert!(
+                !a.is_finished() && Instant::now() < deadline,
+                "episode A never came up"
+            );
+            std::thread::sleep(Duration::from_secs(2));
+        }
+        // Settle delay: A's upload and token write happen after creation.
+        std::thread::sleep(Duration::from_secs(30));
+        assert!(
+            !a.is_finished(),
+            "episode A finished before B could overlap it"
+        );
         let b = scope
             .spawn(|| run_completed(&root_b, &live, "run_live_iso_b", &["sh", "-c", &searcher]));
-        (a.join().expect("episode A"), b.join().expect("episode B"))
+        let b_result = b.join().expect("episode B");
+        assert!(
+            live.sandbox_exists(&name_a),
+            "A's sandbox was gone before B finished, so the episodes did not overlap"
+        );
+        (a.join().expect("episode A"), b_result)
     });
 
     // A really held its token: its own sandbox echoed it back.
@@ -760,11 +814,26 @@ fn live_concurrent_sandboxes_are_isolated() {
         "episode A did not hold its token"
     );
     println!("episode B stdout: {stdout_b:?}");
+    let grep_exit = stdout_b
+        .lines()
+        .find_map(|line| line.strip_prefix("grep_exit="))
+        .unwrap_or("missing");
+    let errors = read_or_empty(&result_b.join("errors.txt"));
+    assert_eq!(
+        grep_exit, "0",
+        "B's search must complete over readable trees: {stdout_b:?}; grep stderr: {errors}"
+    );
     assert!(!stdout_b.contains(&token), "B's stdout holds A's token");
     assert!(
-        result_b.join("found.txt").is_file(),
-        "B's search output came back"
+        stdout_b.contains("trees=") && stdout_b.contains(" /tmp"),
+        "B must search /tmp, where its control lives: {stdout_b:?}"
     );
+    let found = read_or_empty(&result_b.join("found.txt"));
+    assert!(
+        found.contains(&control),
+        "B's positive control in its own /tmp was not found: the search did not run"
+    );
+    assert!(!found.contains(&token), "B's search found A's token");
     let (mut files, mut links) = (Vec::new(), Vec::new());
     walk_without_following(&result_b, &mut files, &mut links);
     for file in files {

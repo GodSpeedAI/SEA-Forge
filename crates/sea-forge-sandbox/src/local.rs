@@ -1,7 +1,7 @@
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
 use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
 use std::{
-    fs::{self, File},
+    fs,
     process::{Command, Stdio},
     time::Duration,
 };
@@ -26,7 +26,9 @@ pub(crate) fn execution_result(
     }
 }
 
-/// Kills the timed-out child's process group (Unix). The group id is the child pid.
+/// Kills the child's process group (Unix). The group id is the child pid.
+/// Called on timeout, and after normal completion so that background
+/// descendants left in the group cannot outlive the execution.
 #[cfg(unix)]
 pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), SandboxError> {
     let group = format!("-{}", child.id());
@@ -88,10 +90,12 @@ impl ExecutionSandbox for LocalSandbox {
         let started_at = chrono::Utc::now().to_rfc3339();
         fs::create_dir_all(&h.spec.artifacts_root)
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-        let stdout = File::create(h.spec.artifacts_root.join("stdout.txt"))
-            .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-        let stderr = File::create(h.spec.artifacts_root.join("stderr.txt"))
-            .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
+        let stdout =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stdout.txt"))
+                .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
+        let stderr =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stderr.txt"))
+                .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
 
         let (argv, cwd) = match &req.operation {
             Operation::ExecuteCommand { argv, cwd } if !argv.is_empty() => (argv, cwd),
@@ -140,6 +144,9 @@ impl ExecutionSandbox for LocalSandbox {
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
         let (state, code) = if let Some(status) = status {
+            // Best effort: leftover descendants must not outlive the run.
+            #[cfg(unix)]
+            let _ = kill_timed_out_group(&child);
             (ExecutionStatus::Completed, status.code().map(i64::from))
         } else {
             #[cfg(unix)]

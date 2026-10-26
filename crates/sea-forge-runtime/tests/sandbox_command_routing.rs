@@ -37,6 +37,7 @@ fi
 case "$1" in
   --version) echo "openshell 0.1.3"; exit 0 ;;
   status) exit 0 ;;
+  gateway) echo '{"compute_drivers":[{"name":"vm","capabilities":{"driver_name":"vm","driver_version":"0.1.3"}}]}'; exit 0 ;;
   logs) exit 0 ;;
   policy) echo '{"hash":"h1","version":3,"config_revision":"r7","policy_source":"sandbox"}'; exit 0 ;;
   sandbox)

@@ -4,6 +4,7 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+mod artifact_output;
 pub mod environment;
 #[cfg(target_os = "linux")]
 pub mod isolated;
@@ -29,7 +30,9 @@ pub use environment::{
 pub use isolated::IsolatedSandbox;
 pub use jail::JailSandbox;
 pub use local::LocalSandbox;
-pub use openshell::{projection_identity, OpenShellBinding, OpenShellSandbox, ProjectionIdentity};
+pub use openshell::{
+    projection_identity, ApprovedProjection, OpenShellBinding, OpenShellSandbox, ProjectionIdentity,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SandboxClass {

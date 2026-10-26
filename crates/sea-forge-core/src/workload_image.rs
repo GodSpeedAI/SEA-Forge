@@ -149,10 +149,12 @@ fn is_registry(part: &str) -> bool {
     host_ok && port_ok
 }
 
-/// A repository path segment: lowercase alphanumerics, with single `.`, `_`
-/// or `-` separators between them, and alphanumeric at both ends.
+/// A repository path component per the OCI distribution grammar:
+/// `[a-z0-9]+ (separator [a-z0-9]+)*` where a separator is a single `.`,
+/// a single `_`, a double `__`, or a run of one or more `-`.
 fn is_path_component(part: &str) -> bool {
     let alnum = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit();
+    let separator = |b: u8| matches!(b, b'.' | b'_' | b'-');
     let bytes = part.as_bytes();
     let (Some(&first), Some(&last)) = (bytes.first(), bytes.last()) else {
         return false;
@@ -160,11 +162,25 @@ fn is_path_component(part: &str) -> bool {
     if !alnum(first) || !alnum(last) {
         return false;
     }
-    let separator = |b: u8| matches!(b, b'.' | b'_' | b'-');
-    bytes.iter().all(|&b| alnum(b) || separator(b))
-        && !bytes
-            .windows(2)
-            .any(|pair| separator(pair[0]) && separator(pair[1]))
+    let mut i = 0;
+    while i < bytes.len() {
+        if alnum(bytes[i]) {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < bytes.len() && separator(bytes[i]) {
+            i += 1;
+        }
+        // Non-empty and bounded by alphanumerics because the component
+        // starts and ends with one.
+        let run = &bytes[start..i];
+        let valid = run == b"." || run == b"_" || run == b"__" || run.iter().all(|&b| b == b'-');
+        if !valid {
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(test)]
@@ -180,6 +196,10 @@ mod tests {
             "cell",
             "localhost:5000/team/cell",
             "ghcr.io/org/cell@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "registry.example/team/my__image:1",
+            "registry.example/team/my--image:1",
+            "registry.example/a-b-c:1",
+            "registry.example/a.b_c:1",
         ] {
             assert!(
                 matches!(WorkloadImage::parse(text), Ok(WorkloadImage::Oci { .. })),
@@ -197,6 +217,12 @@ mod tests {
             "cell:",
             "cell@sha256:short",
             "cell@md5:0123",
+            "registry.example/a___b:1",
+            "registry.example/_a:1",
+            "registry.example/a.:1",
+            "registry.example/a..b:1",
+            "registry.example/a._b:1",
+            "registry.example/a-.b:1",
             "native:",
             "native:sha256:abc@windows-x86_64",
             "native:sha256:0123@windows-x86_64",

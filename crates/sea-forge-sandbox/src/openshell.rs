@@ -290,6 +290,56 @@ pub fn projection_identity(projection_dir: &Path) -> Result<ProjectionIdentity, 
     })
 }
 
+/// Copies the projection's files into `snapshot`, reading each source file
+/// once, and verifies the copy. Every later read goes to the snapshot, so a
+/// file swapped in the source directory after this point is never used.
+fn snapshot_projection(source: &Path, snapshot: &Path) -> Result<ProjectionIdentity, SandboxError> {
+    use std::io::Write;
+    match fs::symlink_metadata(snapshot) {
+        Ok(_) => fs::remove_dir_all(snapshot).map_err(|e| err("io_error", e.to_string()))?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(err("io_error", e.to_string())),
+    }
+    fs::create_dir_all(snapshot).map_err(|e| err("io_error", e.to_string()))?;
+    for name in PROJECTION_ARTIFACTS
+        .iter()
+        .copied()
+        .chain(["openshell.lock"])
+    {
+        let from = source.join(name);
+        let bytes = fs::read(&from).map_err(|e| {
+            err(
+                "openshell_projection_error",
+                format!("{}: {e}", from.display()),
+            )
+        })?;
+        let mut copy = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(snapshot.join(name))
+            .map_err(|e| err("io_error", e.to_string()))?;
+        copy.write_all(&bytes)
+            .map_err(|e| err("io_error", e.to_string()))?;
+    }
+    // The source directory must hold exactly the artifacts, as the lock says;
+    // an extra file is not part of the authorized projection.
+    let present = fs::read_dir(source)
+        .map_err(|e| err("openshell_projection_error", e.to_string()))?
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name != "openshell.lock")
+        .collect::<std::collections::BTreeSet<_>>();
+    if present.iter().map(String::as_str).ne(PROJECTION_ARTIFACTS) {
+        return Err(err(
+            "openshell_projection_tampered",
+            format!(
+                "the projection directory holds {present:?}, expected {PROJECTION_ARTIFACTS:?}"
+            ),
+        ));
+    }
+    projection_identity(snapshot)
+}
+
 /// The host facts the local driver check needs. Gathered once, then judged by
 /// `host_verdict`, which is pure and unit-tested for every platform.
 struct HostFacts {
@@ -590,13 +640,33 @@ fn strings(args: &[&str]) -> Vec<String> {
     args.iter().map(|s| s.to_string()).collect()
 }
 
+/// The identity the runtime authorized for a projection. When set, `prepare`
+/// refuses a projection snapshot that does not carry exactly these values.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ApprovedProjection {
+    pub cell_id: String,
+    pub model_hash: String,
+    pub policy_digest: String,
+}
+
 pub struct OpenShellSandbox {
     binding: OpenShellBinding,
+    approved: Option<ApprovedProjection>,
 }
 
 impl OpenShellSandbox {
     pub fn new(binding: OpenShellBinding) -> Self {
-        Self { binding }
+        Self {
+            binding,
+            approved: None,
+        }
+    }
+
+    /// Require the projection snapshot to carry the identity the runtime
+    /// authorized, rather than whatever the projection directory holds now.
+    pub fn approving(mut self, approved: ApprovedProjection) -> Self {
+        self.approved = Some(approved);
+        self
     }
 
     /// The binding's image, parsed. Refused when it is neither kind.
@@ -681,6 +751,62 @@ impl OpenShellSandbox {
         Ok(out)
     }
 
+    /// The compute driver the gateway reports, which must be the projection's.
+    /// `gateway info` is the only 0.1.3 surface that names it, and it needs
+    /// admin rights, so a gateway that cannot answer is refused.
+    fn gateway_driver(&self, expected: ComputeDriver) -> Result<Value, SandboxError> {
+        let info = self.cli_ok(
+            "openshell_driver_unverified",
+            &strings(&["gateway", "info", "-o", "json"]),
+            CONTROL_TIMEOUT,
+        )?;
+        let info: Value = serde_json::from_str(&info.stdout).map_err(|e| {
+            err(
+                "openshell_driver_unverified",
+                format!("gateway info is not JSON: {e}"),
+            )
+        })?;
+        // `name` is the driver the gateway configured (`compute_driver`);
+        // `capabilities.driver_name` is the implementation, e.g. `openshell-driver-vm`.
+        let drivers = info
+            .pointer("/compute_drivers")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let field = |d: &Value, pointer: &str| {
+            d.pointer(pointer)
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let reported: Vec<String> = drivers.iter().map(|d| field(d, "/name")).collect();
+        let implementations: Vec<String> = drivers
+            .iter()
+            .map(|d| field(d, "/capabilities/driver_name"))
+            .collect();
+        if reported.is_empty() {
+            return Err(err(
+                "openshell_driver_unverified",
+                "gateway info names no compute driver",
+            ));
+        }
+        if reported != [expected.name().to_string()] {
+            return Err(err(
+                "openshell_driver_mismatch",
+                format!(
+                    "the projection requires the {} driver, the gateway reports {reported:?}",
+                    expected.name()
+                ),
+            ));
+        }
+        Ok(json!({
+            "driver": expected.name(),
+            "source": "gateway_info",
+            "gateway_reports": reported,
+            "implementations": implementations,
+        }))
+    }
+
     /// One sandbox per artifacts directory, which is unique per run.
     fn name(spec: &SandboxSpec) -> String {
         let digest = Sha256::digest(spec.artifacts_root.to_string_lossy().as_bytes());
@@ -691,8 +817,14 @@ impl OpenShellSandbox {
         spec.artifacts_root.join("openshell")
     }
 
-    fn workspace_path(&self) -> Result<String, SandboxError> {
-        let sandbox = read_json(&self.binding.projection_dir.join("sandbox.json"))?;
+    /// The snapshot of the projection taken by `prepare`. Every read after
+    /// preparation goes here, never to the caller's projection directory.
+    fn projection_dir(spec: &SandboxSpec) -> PathBuf {
+        Self::evidence_dir(spec).join("projection")
+    }
+
+    fn workspace_path(&self, spec: &SandboxSpec) -> Result<String, SandboxError> {
+        let sandbox = read_json(&Self::projection_dir(spec).join("sandbox.json"))?;
         let workspaces = sandbox
             .pointer("/workspaces")
             .and_then(Value::as_array)
@@ -709,8 +841,13 @@ impl OpenShellSandbox {
 
     /// Run the prover and require containment with full coverage. Returns the
     /// prover's JSON envelope for the evidence record.
-    fn prove(&self, candidate: &Path, class: &'static str) -> Result<Value, SandboxError> {
-        let boundary = self.binding.projection_dir.join("policy.yaml");
+    fn prove(
+        &self,
+        spec: &SandboxSpec,
+        candidate: &Path,
+        class: &'static str,
+    ) -> Result<Value, SandboxError> {
+        let boundary = Self::projection_dir(spec).join("policy.yaml");
         let out = run(
             &self.binding.prover,
             &[
@@ -787,7 +924,7 @@ impl OpenShellSandbox {
                 "sandbox".to_string(),
                 "download".to_string(),
                 name,
-                self.workspace_path()?,
+                self.workspace_path(&h.spec)?,
                 dest.display().to_string(),
             ],
             TRANSFER_TIMEOUT,
@@ -823,13 +960,14 @@ impl OpenShellSandbox {
         name: &str,
         identity: &ProjectionIdentity,
         enforcement: &Value,
+        driver: &Value,
         workload: &WorkloadImage,
     ) -> Result<(), SandboxError> {
         let evidence = Self::evidence_dir(spec);
         fs::create_dir_all(&evidence).map_err(|e| err("io_error", e.to_string()))?;
-        let policy = self.binding.projection_dir.join("policy.yaml");
+        let policy = Self::projection_dir(spec).join("policy.yaml");
 
-        let projected = self.prove(&policy, "openshell_policy_unverified")?;
+        let projected = self.prove(spec, &policy, "openshell_policy_unverified")?;
 
         let mut args = strings(&[
             "sandbox",
@@ -859,6 +997,7 @@ impl OpenShellSandbox {
         fs::write(&effective_path, &effective.stdout)
             .map_err(|e| err("io_error", e.to_string()))?;
         let contained = self.prove(
+            spec,
             &effective_path,
             "openshell_effective_policy_exceeds_boundary",
         )?;
@@ -885,7 +1024,7 @@ impl OpenShellSandbox {
                 "upload".to_string(),
                 name.to_string(),
                 ".".to_string(),
-                self.workspace_path()?,
+                self.workspace_path(spec)?,
                 "--no-git-ignore".to_string(),
             ],
             Some(&spec.workspace_root),
@@ -910,6 +1049,7 @@ impl OpenShellSandbox {
             },
             "prover": { "projected": projected, "effective": contained },
             "enforcement": enforcement,
+            "compute_driver": driver,
         });
         fs::write(
             evidence.join("execution.json"),
@@ -934,11 +1074,31 @@ impl ExecutionSandbox for OpenShellSandbox {
             ));
         }
         let workload = self.workload()?;
-        let identity = projection_identity(&self.binding.projection_dir)?;
-        let enforcement = check_enforcement(
-            identity.compute_driver,
-            &self.binding.projection_dir.join("policy.yaml"),
-        )?;
+        // Snapshot first: the identity checked, the policy proved and the
+        // policy created are all read from this copy, never the source.
+        let snapshot = Self::projection_dir(spec);
+        let identity = snapshot_projection(&self.binding.projection_dir, &snapshot)?;
+        if let Some(approved) = &self.approved {
+            let snapshot_identity = (
+                &identity.cell_id,
+                &identity.model_hash,
+                &identity.policy_digest,
+            );
+            if snapshot_identity
+                != (
+                    &approved.cell_id,
+                    &approved.model_hash,
+                    &approved.policy_digest,
+                )
+            {
+                return Err(err(
+                    "openshell_projection_tampered",
+                    "the projection differs from the identity the runtime authorized",
+                ));
+            }
+        }
+        let enforcement =
+            check_enforcement(identity.compute_driver, &snapshot.join("policy.yaml"))?;
         check_workload_kind(identity.compute_driver, &workload)?;
 
         let version = run(
@@ -972,8 +1132,9 @@ impl ExecutionSandbox for OpenShellSandbox {
             ));
         }
 
+        let driver = self.gateway_driver(identity.compute_driver)?;
         let name = Self::name(spec);
-        if let Err(error) = self.create(spec, &name, &identity, &enforcement, &workload) {
+        if let Err(error) = self.create(spec, &name, &identity, &enforcement, &driver, &workload) {
             // Never leave a sandbox behind that failed verification.
             let _ = self.delete(&name);
             return Err(error);
@@ -1018,7 +1179,7 @@ impl ExecutionSandbox for OpenShellSandbox {
                 ));
             }
         }
-        let workspace = self.workspace_path()?;
+        let workspace = self.workspace_path(&h.spec)?;
         let workdir = if cwd == "." {
             workspace
         } else {
@@ -1026,10 +1187,12 @@ impl ExecutionSandbox for OpenShellSandbox {
         };
 
         fs::create_dir_all(&h.spec.artifacts_root).map_err(|e| err("io_error", e.to_string()))?;
-        let stdout = File::create(h.spec.artifacts_root.join("stdout.txt"))
-            .map_err(|e| err("io_error", e.to_string()))?;
-        let stderr = File::create(h.spec.artifacts_root.join("stderr.txt"))
-            .map_err(|e| err("io_error", e.to_string()))?;
+        let stdout =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stdout.txt"))
+                .map_err(|e| err("io_error", e.to_string()))?;
+        let stderr =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stderr.txt"))
+                .map_err(|e| err("io_error", e.to_string()))?;
 
         let mut command = Command::new(&self.binding.cli);
         command.env_clear();

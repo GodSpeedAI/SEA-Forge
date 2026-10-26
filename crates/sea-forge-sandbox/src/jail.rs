@@ -369,11 +369,7 @@ fn execute_linux(
     req: &ExecutionRequest,
 ) -> Result<ExecutionResult, SandboxError> {
     use sea_forge_core::types::Operation;
-    use std::{
-        fs::{self, File},
-        sync::mpsc,
-        thread,
-    };
+    use std::{fs, sync::mpsc, thread};
 
     fn map_err<E: std::fmt::Display>(e: E) -> SandboxError {
         SandboxError::new("jail_unavailable", e.to_string())
@@ -396,8 +392,8 @@ fn execute_linux(
 
     let stdout_path = h.spec.artifacts_root.join("stdout.txt");
     let stderr_path = h.spec.artifacts_root.join("stderr.txt");
-    let stdout = File::create(&stdout_path).map_err(map_err)?;
-    let stderr = File::create(&stderr_path).map_err(map_err)?;
+    let stdout = crate::artifact_output::create_output_file(&stdout_path).map_err(map_err)?;
+    let stderr = crate::artifact_output::create_output_file(&stderr_path).map_err(map_err)?;
 
     let workspace_root = h.spec.workspace_root.clone();
     let artifacts_root = h.spec.artifacts_root.clone();
@@ -507,6 +503,12 @@ fn run_jailed(
         .map_err(map_err)?;
 
     let (state, code) = if let Some(status) = status {
+        // Best effort: leftover descendants must not outlive the run.
+        let group = format!("-{}", child.id());
+        let _ = Command::new("/bin/kill")
+            .args(["-KILL", "--", &group])
+            .env_clear()
+            .output();
         (ExecutionStatus::Completed, status.code().map(i64::from))
     } else {
         let group = format!("-{}", child.id());
@@ -710,8 +712,10 @@ mod macos {
         .map_err(unavailable)?;
         let copy = sign_launcher(&private.0, &entitlements)?;
 
-        let stdout = File::create(artifacts.join("stdout.txt")).map_err(unavailable)?;
-        let stderr = File::create(artifacts.join("stderr.txt")).map_err(unavailable)?;
+        let stdout = crate::artifact_output::create_output_file(&artifacts.join("stdout.txt"))
+            .map_err(unavailable)?;
+        let stderr = crate::artifact_output::create_output_file(&artifacts.join("stderr.txt"))
+            .map_err(unavailable)?;
         let mut command = Command::new(&copy);
         command
             .args(argv)
@@ -737,6 +741,8 @@ mod macos {
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(unavailable)?;
         let (state, code) = if let Some(status) = status {
+            // Best effort: leftover descendants must not outlive the run.
+            let _ = kill_timed_out_group(&child);
             (ExecutionStatus::Completed, status.code().map(i64::from))
         } else {
             kill_timed_out_group(&child)?;
