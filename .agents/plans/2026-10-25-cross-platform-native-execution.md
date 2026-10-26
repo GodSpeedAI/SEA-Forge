@@ -169,3 +169,37 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
 - Linux ubuntu-24.04 + KVM, OpenShell 0.1.3 release binaries (sha256 vs asset digest + checksums files; driver-vm digest only), Docker stopped: gateway mTLS up, `Using compute driver driver=vm`, supervisor sessions accepted (runs 40255566950, 40256113550). SEA-Forge refused every sandbox: effective policy ⊄ boundary because OpenShell 0.1.3 supervisor enriches proxy-mode policies with baseline RO paths incl. /var/log, /app (supervisor lib.rs:1566-1590) which DomainForge's BASELINE_READ_ONLY lacked. Fail-closed behaviour confirmed live. Fix routed to DomainForge (projection must describe runtime enforcement), fixture regenerated.
 - live-proof.sh had never run (no KVM locally): needed gateway launch-signing keys and mTLS client identity (upstream e2e pattern); unauthenticated gateway escape hatch deliberately NOT used. NGC default image needs auth on hosted runners → docker.io/library/ubuntu:24.04.
 - macOS hosted runner: kern.hv_support=0 (nested virt unavailable) → `krun_start_enter failed: -22`. BLOCKED (external prerequisite: Apple Silicon host with Hypervisor.framework, e.g. self-hosted or larger runner).
+
+## Phase 4 — MXC live (Windows 11 Pro 26300.9807, 2026-10-26)
+
+- Build: OpenShell v0.1.3 (source e1f3c82) built for x86_64-pc-windows-msvc by
+  `.github/workflows/openshell-windows.yml` (branch `ci/openshell-windows`, run
+  40262602873; SHA256SUMS verified on download). The gateway imports
+  `libz3.dll`; without it it exits `0xC0000135`. `wxc-exec.exe` and
+  `winhttp-proxy-shim.exe` come from npm `@microsoft/mxc-sdk` 0.8.0 (pinned).
+- Upstream `run-mxc-e2e.ps1`, backend `process_container` (AppContainer):
+  **PASS 4/4**: fs-rw (in-policy write lands), fs-readonly (control write lands,
+  denied write blocked), fs-default-deny (agent launched, write absent),
+  network-reject (create refused by policy). Evidence
+  `~/projects/_wt/containers/evidence/mxc-e2e-host-20261026/`.
+- Local harness/config changes needed to reach that result (diff in the
+  evidence bundle, `harness-local-changes.diff`), each an upstream v0.1.3 gap:
+  1. the example `mxc-gateway.toml` lacks the required `[openshell] version = 2`;
+  2. caller `driver_config` is refused unless `allow_driver_config = true`;
+  3. MXC host filesystem grants are refused while resource admission is enabled
+     ("no trusted label resolver"), so the run sets
+     `[openshell.drivers.mxc.resource_admission] enabled = false`;
+  4. `Get-NetTCPConnection` cannot see listeners on this host (CIM error), so the
+     readiness probe is a TCP connect;
+  5. the policy fixtures hardcode `C:/work/openshell-mxc-e2e`; a custom
+     `-DemoDir` is not substituted.
+- SEA-Forge on MXC: **Blocked**. The v0.1.3 MXC driver runs one fixed command at
+  create (`driver_config.command`), has no in-sandbox supervisor, no
+  `sandbox exec`/upload/download, and `supports_sandbox_authentication = false`.
+  SEA-Forge's OpenShell backend uploads a workspace, runs `sandbox exec`, and
+  downloads artifacts; none of that exists on MXC. Host grants also require
+  turning resource admission off (item 3), which SEA-Forge would have to refuse
+  as an authority downgrade. DomainForge projects only `vm`; an `mxc` projection
+  needs host paths. Phase 2's capability table already refuses what MXC cannot
+  enforce (Landlock hard requirement, Linux process identity). Least-cost
+  remedy upstream: an MXC exec/transfer surface plus a label resolver.
