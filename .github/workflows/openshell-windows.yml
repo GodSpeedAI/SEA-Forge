@@ -81,8 +81,9 @@ jobs:
           Copy-Item crates\openshell-driver-mxc\examples\* $out -Recurse
           & "$out\openshell.exe" --version | Tee-Object "$out\VERSION.txt"
           git rev-parse HEAD | Out-File -Encoding ascii "$out\SOURCE_COMMIT.txt"
-          Get-ChildItem $out -File | Get-FileHash -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path -Leaf $_.Path)" } | Out-File -Encoding ascii "$out\SHA256SUMS"
+          $sums = Get-ChildItem $out -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path -Leaf $_.Path)" }
+          $sums | Out-File -Encoding ascii "$out\SHA256SUMS"
           Get-Content "$out\SHA256SUMS"
 
       - name: Upload
