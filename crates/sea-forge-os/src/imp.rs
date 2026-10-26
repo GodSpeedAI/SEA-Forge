@@ -408,7 +408,8 @@ pub enum EntryState {
 /// with `FILE_FLAG_OPEN_REPARSE_POINT`, refused if it is a reparse point, and
 /// checked to be a direct child of its pinned parent.
 pub struct PinnedDir {
-    handle: OwnedHandle,
+    /// Keeps the directory pinned for as long as this value lives.
+    _pin: OwnedHandle,
     path: PathBuf,
 }
 
@@ -515,7 +516,7 @@ impl PinnedDir {
         }
         let resolved = handle_final_path(handle.as_raw_handle() as HANDLE).map_err(PinError::Io)?;
         Ok(PinnedDir {
-            handle,
+            _pin: handle,
             path: resolved,
         })
     }
@@ -610,13 +611,7 @@ impl PinnedDir {
         let outcome = file
             .write_all(bytes)
             .and_then(|()| file.sync_all())
-            .and_then(|()| {
-                rename_handle_into(
-                    file.as_raw_handle() as HANDLE,
-                    self.handle.as_raw_handle() as HANDLE,
-                    name,
-                )
-            });
+            .and_then(|()| rename_handle_to(file.as_raw_handle() as HANDLE, &self.path.join(name)));
         if outcome.is_err() {
             let info = FILE_DISPOSITION_INFO { DeleteFile: true };
             // SAFETY: the handle is live and was opened with DELETE access; `info` is a live struct of the size passed.
@@ -633,10 +628,12 @@ impl PinnedDir {
     }
 }
 
-/// Renames the open file `file` to `name` inside the directory `root_dir`,
-/// replacing an existing entry. `name` must be a single relative component.
-fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Result<()> {
-    let name_wide: Vec<u16> = name.encode_wide().collect();
+/// Renames the open file `file` to `target`, replacing an existing entry.
+/// `target` is a full path under a pinned directory, so the rename cannot
+/// leave that directory while the pin is held. (A relative `RootDirectory`
+/// form returned ERROR_INVALID_PARAMETER on the CI runner.)
+fn rename_handle_to(file: HANDLE, target: &Path) -> io::Result<()> {
+    let name_wide: Vec<u16> = target.as_os_str().encode_wide().collect();
     let name_bytes = name_wide.len() * mem::size_of::<u16>();
     // FILE_RENAME_INFO already holds one UTF-16 unit in `FileName`, so the
     // header plus `name_bytes` is always large enough for the name.
@@ -649,7 +646,7 @@ fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Resul
         (*info).Anonymous = FILE_RENAME_INFO_0 {
             ReplaceIfExists: true,
         };
-        (*info).RootDirectory = root_dir;
+        (*info).RootDirectory = std::ptr::null_mut();
         (*info).FileNameLength = name_bytes as u32;
         let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
         std::ptr::copy_nonoverlapping(name_wide.as_ptr(), destination, name_wide.len());
