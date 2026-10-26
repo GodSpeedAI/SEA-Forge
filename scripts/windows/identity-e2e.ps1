@@ -142,7 +142,7 @@ Set-Content -Path $probePath -Value $ProbeScript -Encoding utf8
 $AdmittedProbe = @'
 param([string] $PipeName)
 $ErrorActionPreference = 'Stop'
-$request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_local","role":"operator"}}'
+$request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_probe","role":"operator"}}'
 try {
     Add-Type -Namespace SfProbe -Name Win -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern System.IntPtr CreateFileW(string name, uint access, uint share, System.IntPtr security, uint disposition, uint flags, System.IntPtr template);'
     $h = [SfProbe.Win]::CreateFileW('\\.\pipe\' + $PipeName, 0x12018B, 0, [IntPtr]::Zero, 3, 0x110000, [IntPtr]::Zero)
@@ -188,7 +188,7 @@ function New-Cell([string] $Name, [string[]] $ExtraSids = @()) {
     $socket = Join-Path $root 'server.sock'
     $extra = ''
     foreach ($sid in $ExtraSids) {
-        $extra += "`n    - sid: '$sid'`n      actor_id: operator_local`n      roles: [operator]"
+        $extra += "`n    - sid: '$sid'`n      actor_id: operator_probe`n      roles: [operator]"
     }
     $yaml = @"
 socket_path: '$socket'
