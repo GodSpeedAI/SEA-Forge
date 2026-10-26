@@ -766,18 +766,24 @@ impl OpenShellSandbox {
                 format!("gateway info is not JSON: {e}"),
             )
         })?;
-        let reported: Vec<String> = info
+        // `name` is the driver the gateway configured (`compute_driver`);
+        // `capabilities.driver_name` is the implementation, e.g. `openshell-driver-vm`.
+        let drivers = info
             .pointer("/compute_drivers")
             .and_then(Value::as_array)
-            .map(|drivers| {
-                drivers
-                    .iter()
-                    .filter_map(|d| d.pointer("/capabilities/driver_name"))
-                    .filter_map(Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
+            .cloned()
             .unwrap_or_default();
+        let field = |d: &Value, pointer: &str| {
+            d.pointer(pointer)
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let reported: Vec<String> = drivers.iter().map(|d| field(d, "/name")).collect();
+        let implementations: Vec<String> = drivers
+            .iter()
+            .map(|d| field(d, "/capabilities/driver_name"))
+            .collect();
         if reported.is_empty() {
             return Err(err(
                 "openshell_driver_unverified",
@@ -797,6 +803,7 @@ impl OpenShellSandbox {
             "driver": expected.name(),
             "source": "gateway_info",
             "gateway_reports": reported,
+            "implementations": implementations,
         }))
     }
 
