@@ -17,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 /// Per-test temp tree: `workspace/`, `artifacts/`, and `outside/` (not granted).
@@ -146,12 +146,62 @@ fn unique_token(tag: &str) -> String {
     format!("sfjob{tag}{}x{nanos}", std::process::id())
 }
 
-/// cmd.exe arguments for a grandchild that waits about 5 s, then writes
-/// `marker`. The token sits in the command line so the process can be found.
-fn grandchild_args(token: &str, marker: &Path) -> String {
+/// cmd.exe arguments for a grandchild that waits about `pings - 1` seconds,
+/// then writes `marker`. The token sits in the command line so the process
+/// can be found.
+fn grandchild_args_with_pings(token: &str, marker: &Path, pings: u32) -> String {
     format!(
-        "/d /c ping -n {GRANDCHILD_PINGS} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
+        "/d /c ping -n {pings} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
         marker.display()
+    )
+}
+
+/// Same, with the suite-default grandchild lifetime (`GRANDCHILD_PINGS`).
+fn grandchild_args(token: &str, marker: &Path) -> String {
+    grandchild_args_with_pings(token, marker, GRANDCHILD_PINGS)
+}
+
+/// PowerShell body that attempts a `CreateProcessW` with
+/// `CREATE_BREAKAWAY_FROM_JOB` (0x01000000) for a cmd child carrying `token`,
+/// then writes "created lasterror" to `result`. The P/Invoke is the only way
+/// to pass the breakaway flag: Start-Process does not expose it.
+fn breakaway_script(token: &str, result: &Path) -> String {
+    format!(
+        r#"$def = @'
+using System;
+using System.Runtime.InteropServices;
+public static class SfBreakaway {{
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct STARTUPINFO {{
+    public uint cb;
+    public string lpReserved;
+    public string lpDesktop;
+    public string lpTitle;
+    public uint dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags;
+    public ushort wShowWindow, cbReserved2;
+    public IntPtr lpReserved2;
+    public IntPtr hStdInput, hStdOutput, hStdError;
+  }}
+  [StructLayout(LayoutKind.Sequential)]
+  public struct PROCESS_INFORMATION {{
+    public IntPtr hProcess, hThread;
+    public uint dwProcessId, dwThreadId;
+  }}
+  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern bool CreateProcessW(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+}}
+'@
+Add-Type -TypeDefinition $def
+$si = New-Object SfBreakaway+STARTUPINFO
+$si.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
+$pi = New-Object SfBreakaway+PROCESS_INFORMATION
+$ok = [SfBreakaway]::CreateProcessW($null, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$si, [ref]$pi)
+$err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+Set-Content -LiteralPath {result} -Value ("{{0}} {{1}}" -f $ok, $err)"#,
+        cmdline = ps_single(&format!(
+            "cmd /d /c ping -n 30 127.0.0.1 >nul & rem {token}"
+        )),
+        result = ps_single(&result.display().to_string()),
     )
 }
 
@@ -381,4 +431,111 @@ fn child_sees_only_req_env() {
         stdout.contains("LEAK=%SF_WIN_HOST_LEAK_PROBE%"),
         "host env var leaked into the child: {stdout:?}"
     );
+}
+
+/// Normal completion must also stop the tree: the workload exits while its
+/// detached grandchild keeps running, and only the job's kill-on-close
+/// handle-drop (fired when `execute` returns) can reap it. This is the
+/// completion-path twin of `timeout_kills_whole_process_tree`, which covers
+/// the timeout path.
+#[test]
+fn completion_job_close_kills_a_running_grandchild() {
+    let dirs = Dirs::new("done");
+    let token = unique_token("done");
+    let marker = dirs.outside.join("grandchild-marker.txt");
+    let spawned = dirs.outside.join("grandchild-spawned.txt");
+
+    // The parent starts the grandchild (Start-Process: a separate process,
+    // which inherits the job), records its pid, and exits immediately, so the
+    // run completes normally while the grandchild is still alive.
+    let script = format!(
+        "$p = Start-Process -FilePath {cmd} -ArgumentList {args} -PassThru; Set-Content -LiteralPath {sp} -Value $p.Id",
+        cmd = ps_single(&cmd_exe()),
+        args = ps_single(&grandchild_args_with_pings(&token, &marker, 8)),
+        sp = ps_single(&spawned.display().to_string()),
+    );
+    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
+    assert_eq!(result.status, ExecutionStatus::Completed);
+    let pid = spawned_pid(&spawned)
+        .filter(|pid| *pid > 0)
+        .unwrap_or_else(|| {
+            panic!(
+                "grandchild was never spawned before completion; the test would be vacuous\n{}",
+                child_output(&dirs)
+            )
+        });
+
+    // The grandchild would stay alive for about 7 s (ping -n 8) and write its
+    // marker only at the end. Once `execute` returned, the job handle is
+    // closed, so a contained grandchild is already dead: no live token
+    // process may remain and the marker may never appear.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let survivors = live_pids_with_token(&token);
+        if survivors.is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "grandchild (pid {pid}) survived normal completion: {survivors:?}"
+        );
+        thread::sleep(Duration::from_millis(500));
+    }
+    assert!(
+        !marker.exists(),
+        "grandchild outlived normal completion and wrote {}",
+        marker.display()
+    );
+}
+
+/// NT semantics: `CREATE_BREAKAWAY_FROM_JOB` fails at `CreateProcessW` with
+/// `ERROR_ACCESS_DENIED` unless the job sets
+/// `JOB_OBJECT_LIMIT_BREAKAWAY_OK`. The Local backend's job deliberately
+/// omits both breakaway flags, so a workload's breakaway attempt must be
+/// refused by the kernel. If `CreateProcessW` ever returned success, the new
+/// process would be OUTSIDE the job (a real escape) and the survivor check
+/// below would catch it.
+#[test]
+fn breakaway_from_job_attempt_is_refused() {
+    let dirs = Dirs::new("brk");
+    let token = unique_token("brk");
+    let result_file = dirs.artifacts.join("breakaway-result.txt");
+
+    let script = breakaway_script(&token, &result_file);
+    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
+    assert_eq!(
+        result.status,
+        ExecutionStatus::Completed,
+        "\n{}",
+        child_output(&dirs)
+    );
+    let outcome = fs::read_to_string(&result_file).unwrap_or_default();
+    let mut parts = outcome.split_whitespace();
+    let created = parts.next().unwrap_or_default();
+    let last_error = parts.next().unwrap_or_default();
+    assert_eq!(
+        created,
+        "False",
+        "CreateProcessW(CREATE_BREAKAWAY_FROM_JOB) succeeded: the workload \
+         escaped the job\n{outcome}\n{}",
+        child_output(&dirs)
+    );
+    assert_eq!(
+        last_error, "5",
+        "breakaway must be refused with ERROR_ACCESS_DENIED (5), got {outcome}"
+    );
+
+    // Nothing carrying the token may be running afterwards.
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let survivors = live_pids_with_token(&token);
+        if survivors.is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "processes with token {token} are alive after the refused breakaway: {survivors:?}"
+        );
+        thread::sleep(Duration::from_millis(500));
+    }
 }

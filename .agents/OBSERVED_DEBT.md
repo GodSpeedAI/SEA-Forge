@@ -1141,3 +1141,187 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   coordinator suite has its own recorded idempotency flake entry above.
 - Next move: stabilize when the fixture stack next changes (T13 at the earliest); live gates are
   unaffected (-p 1, default build).
+
+## Open: F15 block-tally guard is best-effort under libtest's default parallelism
+
+- Observed: 2026-10-26 (W1 capability-harvest bite proof; one-off demo, reverted).
+- Scope: the `no_blocked_scenarios_in_required_mode` guard tests in
+  sea-forge-sandbox/tests/conformance_m1.rs, sea-forge-sandbox/tests/safe_write_windows.rs,
+  sea-forge-changeset/tests/changeset_windows.rs. Under default (multi-thread) libtest, the
+  guard can finish before a blocked scenario's tally lands, so a required lane with exactly
+  one blocked scenario may show the guard green while the scenario's own REQUIRE-env panic
+  still fails the suite (the deterministic signal). Demonstrated: with
+  `SEA_FORGE_REQUIRE_LANDLOCK_NET=1` and `--test-threads` default, the guard passed while the
+  panicking demo failed; with `--test-threads=1` both failed deterministically.
+- Not a false-green: any blocked scenario in a required lane panics its own test
+  (`blocked_or_require` / `blocked` / `make_junction` REQUIRE branches), so the lane is red
+  either way; the guard is the second, machine-greppable net (and the only net for a future
+  helper that tallies but forgets the REQUIRE check).
+- Next move: if a guard miss is ever observed on a lane, run the affected suite with
+  `--test-threads=1` there, or move the tally check into a post-suite harness step.
+
+## Open: Windows-target cross-check of sea-forge-server is blocked on Linux by ring's build script (pre-existing)
+
+- Observed: 2026-10-26 (W5 capability-harvest F33 adapter move).
+- Evidence: `cargo check --target x86_64-pc-windows-msvc -p sea-forge-server` on
+  the Linux workstation fails in `ring v0.17.14`'s build script (cc-rs: "failed
+  to find tool lib.exe"; with CC/AR overrides to clang-cl it fails on missing
+  MSVC/Windows-SDK headers, e.g. `assert.h`). `ring 0.17.14` is in HEAD's
+  Cargo.lock, pulled reqwest ← sea-forge-agent ← sea-forge-server — edges
+  untouched by the F33 change. `cargo check --target x86_64-pc-windows-msvc -p
+  sea-forge-os` (and the F33 `pipe_edge.rs` adapter compiled in a scratch crate
+  against real tokio 1.53.3) both pass on this host.
+- Impact: the W5 design's local Windows-cfg compile check covers sea-forge-os
+  and the moved adapter, but not the whole server crate; the full Windows
+  compile of the server (incl. `Acceptor`, `pipe_transport_tests`) is first
+  proven on the portability.yml windows lane.
+- Next move: if local Windows cross-checks become routine, fetch MSVC
+  headers/libs via `xwin` (or a cross CI image) and document the setup; until
+  then rely on the windows lane and the per-crate os check.
+- Scope: tooling only; no product behavior. Also noted (not debt): the
+  no-async-kernel gate comment (justfile ~:440) still cites
+  `sea-forge-os/tokio-pipes` as its motivating example — historical context,
+  owned by W1's file.
+
+## Open: F08 cgroup Active-path verification deferred to the ci.yml lane (no local delegation)
+
+- Observed: 2026-10-26 (W3 capability-harvest F08 Linux).
+- Scope: crates/sea-forge-sandbox/src/cgroup.rs,
+  crates/sea-forge-sandbox/tests/setsid_lifecycle.rs.
+- Evidence: WSL2 workstation mounts cgroup2 at /sys/fs/cgroup (kernel 6.18)
+  but the root is root-owned and `sudo -n` requires interactive auth, so no
+  user-delegated root exists locally (`/sys/fs/cgroup/non-systemd` probe
+  mkdir → EACCES, honestly reported by `cgroup::containment()`). Local runs
+  verified: the Unavailable/forced paths, the REQUIRE=1 bite (5 scenarios
+  panic with `SEA_FORGE_REQUIRE_CGROUP=1 but ... is unavailable` and fail
+  the lane), and the hazard scenario (setsid descendant survives a bare
+  group kill and writes late.txt after the completion boundary — the F08
+  finding, reproduced deterministically).
+- Impact: the Active-path assertions (pre-exec join, `cgroup.kill` reaches
+  the setsid descendant, verified-empty teardown, destroy sweep) have never
+  executed against a real delegated cgroup; they are first proven in the
+  ci.yml F08 lane (preflight exports SEA_FORGE_CGROUP_ROOT +
+  SEA_FORGE_REQUIRE_CGROUP=1). A logic error that only manifests on a real
+  cgroupfs (e.g. `cgroup.kill` write semantics, procs read-back timing)
+  would surface there, not locally.
+- Next move: green-light the ci.yml lane run; if the preflight falls back to
+  REQUIRE_CGROUP=0, treat the lane as BLOCKED-tallied, not proven, until a
+  delegated runner (or local sudo setup per the test module docs) exists.
+
+## Open: containment outcome not yet carried in ExecutionResult (W3b wiring point)
+
+- Observed: 2026-10-26 (W3 capability-harvest F08 Linux).
+- Scope: crates/sea-forge-sandbox/src/{local.rs,jail.rs} teardown paths,
+  crates/sea-forge-sandbox/src/cgroup.rs (`acquire_spawn_lease`/
+  `attach_lease`/`report_degrade`).
+- Behavior as landed: when containment is unavailable (non-required lane)
+  the run proceeds with the process-group kill only, the typed reason is
+  printed on stderr via `report_degrade`, and the typed value is queryable
+  via `cgroup::containment()` — but `ExecutionResult` (sea-forge-core) has
+  no field to *claim* `CgroupLeaf`/`ProcessGroup`, so execute/destroy cannot
+  return the containment outcome to settlement. Also, a teardown failure on
+  the completion path now fails the whole `execute()` call (the pre-F08
+  `let _ =` discard is gone); W3b may prefer to fold that into the
+  `LifecycleContainment` result field instead of an Err.
+- Next move: W3b composite adds `ExecutionResult.lifecycle_containment:
+  LifecycleContainment { CgroupLeaf { kill_verified }, ProcessGroup,
+  SandboxCagePersists }`, populates it from the lease state in
+  local.rs/jail.rs, and decides Err-vs-field for teardown failures; the
+  capability map must fail closed (report ProcessGroup, never CgroupLeaf,
+  when containment was unavailable).
+
+## Pending: sea-forge-sandbox/src/lib.rs `pin_error` needs three match arms for the new PinError variants (W6 F05)
+
+- Observed: 2026-10-26 (W6 capability-harvest F05). `sea_forge_os::PinError` gained
+  `WriteShareHeld(PathBuf)`, `IdentityChanged(PathBuf)`, `FinalPathMismatch(PathBuf)`; the
+  exhaustive `match` in `pin_error` (crates/sea-forge-sandbox/src/lib.rs:709) no longer
+  compiles. The file is owned by another subagent, so the arms were NOT applied here.
+- Evidence: `cargo check --target x86_64-pc-windows-msvc -p sea-forge-sandbox --tests` fails
+  with exactly E0004 naming the three variants; with the arms below applied (validated in a
+  throwaway copy of the tree, not this worktree) the crate and all windows-gated test files
+  (`safe_write_windows.rs`, `windows_local_job.rs`) check and clippy clean for the windows
+  target. The arms to insert before the `PinError::Io` arm:
+  `PinError::WriteShareHeld(_) => ForgeError::UnsafePath(format!("parent is held by another writer; exclusive pin refused: {}", path.display()))`,
+  `PinError::IdentityChanged(_) => ForgeError::UnsafePath(format!("parent was substituted after its pin was validated: {}", path.display()))`,
+  `PinError::FinalPathMismatch(_) => ForgeError::UnsafePath(format!("parent resolves to a different object than the path given: {}", path.display()))`.
+- Impact: until sequenced, the portability.yml windows lane cannot compile sea-forge-sandbox;
+  sea-forge-os itself is green (`cargo check --offline --target x86_64-pc-windows-msvc -p
+  sea-forge-os --locked --all-targets` and windows-target clippy `-D warnings` pass).
+- Next move: owner of sandbox/src/lib.rs applies the three arms (wording may be adjusted to
+  house style; variants and payload shapes are fixed by sea-forge-os).
+
+## Open: F05 behavior changes to watch on the windows lane (W6)
+
+- Observed: 2026-10-26 (W6 F05). Three deliberate, fail-closed changes whose runtime behavior
+  is only attested on the windows lane, not locally (WSL cannot run NTFS semantics):
+  1. Exclusive pin: `PinnedDir::open` now uses share mode `FILE_SHARE_READ` only. A concurrent
+     materialization write into the SAME parent directory fails loud (`WriteShareHeld`);
+     analysis says materialization is sequential (no concurrent same-dir writes today). Any
+     external process holding a write/delete handle on a workspace dir being materialized now
+     fails the write loud instead of pinning alongside it.
+  2. Final-path confirm: `PinnedDir::open` refuses (FinalPathMismatch) when the opened
+     handle's final path does not name the requested path, so a parent chain that resolves
+     through an alias/junction is refused in `safe_write` (no-root variant) instead of
+     silently writing to the real location.
+  3. D6 spike: production create/rename moved to RootDirectory-anchored `NtCreateFile` /
+     `NtSetInformationFile(FileRenameInformationEx)`. The previously failing Win32
+     `SetFileInformationByHandle(FileRenameInfo)` relative form is re-probed (not asserted) by
+     `relative_root_anchored_create_and_rename_spike` (`#[ignore]`; lane must run
+     `cargo test -p sea-forge-os --lib -- --include-ignored`).
+- Impact: if the anchored path regresses on a build (ERROR_INVALID_PARAMETER again), the
+  failure is loud (io error naming the operation); per-use revalidation (FileAttributeTagInfo +
+  FILE_ID_INFO before every child op) remains the load-bearing backstop.
+- Next move: portability.yml windows lane runs the spike plus
+  `pinned_dir_open_fails_loud_when_a_writer_holds_the_directory`,
+  `revalidation_refuses_a_swapped_directory_identity`,
+  `junction_planting_in_a_pinned_directory_is_refused_and_the_target_stays_empty`,
+  `job_list_attribute_places_the_child_in_the_job_at_creation`,
+  `breakaway_from_job_is_refused_when_the_job_forbids_it`,
+  `completion_job_close_kills_a_running_grandchild`, `breakaway_from_job_attempt_is_refused`.
+
+## Open: F08 macOS teardown behavior attested only by the portability macos lane (W7)
+
+- Observed: 2026-10-26 (W7 capability-harvest F08 macOS).
+- Scope: crates/sea-forge-sandbox/src/jail.rs (macOS module only),
+  crates/sea-forge-sandbox/src/local.rs (one line: `TEARDOWN_DEADLINE`
+  narrowed from `cfg(unix)` to `cfg(target_os = "linux")` — it was dead code
+  on macOS and failed a `-D warnings` macos build; content unchanged),
+  crates/sea-forge-sandbox/tests/macos_app_sandbox_jail.rs.
+- Landed: verified macOS teardown — completion-path group kill is no longer
+  discarded (`teardown_verified` propagates real kill errors); after the
+  group kill, survivors are classified from a descendant census sampled
+  while the workload ran (ppid-tree walk via libproc, 100 ms interval;
+  possible because a setsid descendant keeps its parent link and the
+  workload's death reparents everything to launchd, so the census must be
+  recorded BEFORE cancellation). Survivors are typed
+  `MacTeardown::CagePersists` (crate-private, jail.rs macos module), reported
+  loudly on stderr mirroring `cgroup::report_degrade`, and are NOT errors.
+  `destroy` (macOS arm) sweeps the per-process `LIVE_RUNS` registry (runs
+  whose execute aborted between spawn and teardown): zombie-leader reaping
+  (waitpid WNOHANG), pid-recycle-guarded group kill, census survivor check,
+  verified-empty group readback; failed sweeps stay registered for retry.
+- Evidence: local verification is compile-and-lint only — `cargo check
+  --offline --target aarch64-apple-darwin -p sea-forge-sandbox --lib
+  --all-targets --locked` green; `cargo clippy --offline --target
+  aarch64-apple-darwin -p sea-forge-sandbox --all-targets --locked -- -D
+  warnings` green; `cargo check` (host linux) green; no macOS hardware.
+  Every runtime assertion (setsid-inside-App-Sandbox works at all, the
+  cage denies the survivor's outside write, libproc enumeration semantics
+  under the sandbox, `/bin/kill -0` liveness timing) is first proven by the
+  portability.yml macOS lane running macos_app_sandbox_jail.rs.
+- Impact: three residual windows documented in-code and asserted by
+  `setsid_descendant_survives_the_sweep_but_stays_sandbox_caged`
+  (survivor-alive / outside-denied / inside-expected): (a) the census race
+  window — a descendant forked+setsid'd in the last census interval before
+  workload exit is invisible (bounded by CENSUS_INTERVAL = 100 ms); (b) pid
+  reuse has no pidfd — identity is pid + kernel start time, so a recycled
+  pid is excluded rather than pinned; (c) an execute that fails between
+  spawn and teardown leaves only the registry+group (setsid escapees of an
+  aborted run are enumerated only as far as the last published census).
+- Next move: portability.yml macOS lane runs macos_app_sandbox_jail.rs
+  (9 tests incl. cage-persists); if the helper-exec-inside-sandbox shape
+  fails there (test binary copied into the granted workspace, run with
+  `--exact cage_persists_helper`), the failure names itself in stderr.txt.
+  W3b lifts `macos::MacTeardown` into the public
+  `LifecycleContainment::{ProcessGroup, SandboxCagePersists}` mapping
+  documented on the enum.

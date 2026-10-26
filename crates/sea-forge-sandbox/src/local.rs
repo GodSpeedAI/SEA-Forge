@@ -55,6 +55,55 @@ pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), Sa
     Ok(())
 }
 
+/// Bounded wait for teardown kills to take effect (mirrors the Windows
+/// `terminate_and_wait` deadline). Linux-only: it is consumed by the
+/// cgroup-leaf teardown; the other-Unix teardown is a bare group kill.
+#[cfg(target_os = "linux")]
+const TEARDOWN_DEADLINE: Duration = Duration::from_secs(5);
+
+/// F08 teardown (Linux): kill through the run's cgroup leaf first — atomic,
+/// and it reaches `setsid` descendants regardless of their session — then
+/// the process-group kill as the secondary, then remove the leaf, which the
+/// kernel only allows once it is empty. Every failure propagates: a survivor
+/// can never masquerade as a settled run.
+#[cfg(target_os = "linux")]
+pub(crate) fn teardown_run(
+    child: &std::process::Child,
+    lease: Option<crate::cgroup::CgroupLease>,
+) -> Result<(), SandboxError> {
+    if let Some(lease) = &lease {
+        lease.kill_verified(TEARDOWN_DEADLINE).map_err(|err| {
+            let leaf = lease.leaf().display();
+            match err {
+                crate::cgroup::KillError::Survivors(pids) => SandboxError::new(
+                    "internal_error",
+                    format!("cgroup leaf {leaf} retained processes after kill: {pids:?}"),
+                ),
+                crate::cgroup::KillError::Io(e) => SandboxError::new(
+                    "internal_error",
+                    format!("cgroup leaf {leaf} kill failed: {e}"),
+                ),
+            }
+        })?;
+    }
+    // Secondary: the group kill composes with containment — anything that
+    // somehow sits outside the leaf but inside the group is still reached.
+    kill_timed_out_group(child)?;
+    if let Some(lease) = lease {
+        lease.remove().map_err(|e| {
+            SandboxError::new("internal_error", format!("cgroup leaf cleanup failed: {e}"))
+        })?;
+    }
+    Ok(())
+}
+
+/// F08 teardown (other Unix): process-group kill only; failures propagate
+/// instead of being discarded on the completion path.
+#[cfg(all(unix, not(target_os = "linux")))]
+pub(crate) fn teardown_run(child: &std::process::Child) -> Result<(), SandboxError> {
+    kill_timed_out_group(child)
+}
+
 /// Terminates the timed-out child's job (Windows) and waits until it is empty.
 /// Termination is asynchronous; survivors are reported only after the wait.
 #[cfg(windows)]
@@ -121,6 +170,17 @@ impl ExecutionSandbox for LocalSandbox {
             use std::os::unix::process::CommandExt;
             command.process_group(0);
         }
+        // F08: acquire this run's cgroup lifecycle leaf before spawning.
+        // Under SEA_FORGE_REQUIRE_CGROUP=1 an unavailable cgroup refuses the
+        // run (`cgroup_unavailable`, fail closed); otherwise the typed
+        // degrade is surfaced and the process-group kill remains. The child
+        // joins the leaf pre-exec (no uncontained window), composing with
+        // the group setup above.
+        #[cfg(target_os = "linux")]
+        let lease = {
+            let acquired = crate::cgroup::acquire_spawn_lease("local", std::process::id())?;
+            crate::cgroup::attach_lease(&mut command, acquired, "local")?
+        };
         for (k, v) in &req.env {
             command.env(k, v);
         }
@@ -138,19 +198,40 @@ impl ExecutionSandbox for LocalSandbox {
         #[cfg(unix)]
         let mut child = match command.spawn() {
             Ok(child) => child,
-            Err(_) => return Ok(spawn_failed()),
+            Err(_) => {
+                // A pre-exec join failure means nothing exec'd (fail
+                // closed); the leaf is empty and is removed before the
+                // spawn failure is reported. A removal failure is loud — a
+                // leaked leaf must not pass silently.
+                #[cfg(target_os = "linux")]
+                if let Some(lease) = lease {
+                    lease.remove().map_err(|e| {
+                        SandboxError::new(
+                            "internal_error",
+                            format!("cgroup leaf cleanup after spawn failure failed: {e}"),
+                        )
+                    })?;
+                }
+                return Ok(spawn_failed());
+            }
         };
         let status = child
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
         let (state, code) = if let Some(status) = status {
-            // Best effort: leftover descendants must not outlive the run.
-            #[cfg(unix)]
-            let _ = kill_timed_out_group(&child);
+            // F08: leftover descendants must not outlive the run. Teardown
+            // failures propagate (previously the completion-path result was
+            // discarded here), so a survivor can never read as Completed.
+            #[cfg(target_os = "linux")]
+            teardown_run(&child, lease)?;
+            #[cfg(all(unix, not(target_os = "linux")))]
+            teardown_run(&child)?;
             (ExecutionStatus::Completed, status.code().map(i64::from))
         } else {
-            #[cfg(unix)]
-            kill_timed_out_group(&child)?;
+            #[cfg(target_os = "linux")]
+            teardown_run(&child, lease)?;
+            #[cfg(all(unix, not(target_os = "linux")))]
+            teardown_run(&child)?;
             #[cfg(windows)]
             kill_timed_out_job(&job)?;
             child
@@ -176,6 +257,12 @@ impl ExecutionSandbox for LocalSandbox {
     }
 
     fn destroy(&self, _h: SandboxHandle) -> Result<(), SandboxError> {
+        // F08: verified teardown of any lifecycle leaves this process
+        // leaked (spawn-failure windows, earlier teardown errors). On hosts
+        // without containment there is nothing to verify and no leaf can
+        // exist; failures propagate — destroy is not a silent no-op.
+        #[cfg(target_os = "linux")]
+        crate::cgroup::destroy_process_leaves(std::process::id())?;
         Ok(())
     }
 }

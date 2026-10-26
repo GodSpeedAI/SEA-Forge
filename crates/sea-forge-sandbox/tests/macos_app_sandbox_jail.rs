@@ -241,3 +241,216 @@ fn background_child_does_not_outlive_completed_execution() {
         "background child wrote after the execution completed"
     );
 }
+
+// ---------------------------------------------------------------------------
+// F08 cage-persists: a setsid descendant escapes the kill sweep but stays
+// inside the App Sandbox cage.
+// ---------------------------------------------------------------------------
+
+/// Hidden helper: run inside the jail as the setsid'd descendant, driven by
+/// env (mirrors the `net_probe_helper` pattern in conformance_m1.rs). The
+/// parent test copies this binary into the granted workspace first, so the
+/// jailed workload can read and exec it — reads outside the granted trees
+/// are denied.
+///
+/// `SEA_FORGE_CAGE_WS`      absolute workspace path (sandbox-granted)
+/// `SEA_FORGE_CAGE_OUTSIDE` absolute directory outside the granted trees
+///
+/// Sequence: `setsid(2)` out of the workload's process group (the F08
+/// escape), record the pid, attempt the outside write and record its
+/// outcome in the workspace, write `late.txt` into the workspace after a
+/// delay, then stay alive for the parent's survivor assertion. The parent
+/// test owns killing us.
+#[test]
+fn cage_persists_helper() {
+    let (Ok(workspace), Ok(outside)) = (
+        std::env::var("SEA_FORGE_CAGE_WS"),
+        std::env::var("SEA_FORGE_CAGE_OUTSIDE"),
+    ) else {
+        return; // not running as the helper
+    };
+
+    // setsid(2): a new session and process group that the workload's group
+    // kill cannot reach. Fails (EPERM) only if this process were already a
+    // group leader, which the background-spawn shape prevents.
+    #[allow(unsafe_code)]
+    {
+        // SAFETY: setsid(2) has no pointer arguments; failure (EPERM) is
+        // reported through the return value.
+        if unsafe { libc::setsid() } < 0 {
+            let _ = fs::write(
+                format!("{workspace}/helper-failed.txt"),
+                format!("setsid: {}", std::io::Error::last_os_error()),
+            );
+            return;
+        }
+    }
+    fs::write(
+        format!("{workspace}/detached.pid"),
+        std::process::id().to_string(),
+    )
+    .expect("record the descendant pid");
+
+    // The escape attempt: write outside the sandbox-allowed trees. The App
+    // Sandbox must deny this even though the group kill already missed us.
+    match fs::write(format!("{outside}/outside-marker.txt"), "escape") {
+        Ok(()) => fs::write(format!("{workspace}/outside_denied.txt"), "0"),
+        Err(_) => fs::write(format!("{workspace}/outside_denied.txt"), "1"),
+    }
+    .expect("record the outside-write outcome");
+
+    // The late write INSIDE the authorized workspace, after the run has
+    // settled (the workload exits as soon as the pid marker exists).
+    thread::sleep(Duration::from_secs(3));
+    fs::write(format!("{workspace}/late.txt"), "late").expect("late inside write");
+
+    // Hold the pid alive for the parent's survivor assertion.
+    thread::sleep(Duration::from_secs(30));
+}
+
+/// F08 cage-persists regression: a workload whose `setsid`ed descendant
+/// outlives cancellation keeps writing INSIDE the authorized workspace, but
+/// its write OUTSIDE the sandbox-allowed trees stays denied. Asserts the
+/// documented F08 macOS boundary from outside the child (host-side pid
+/// liveness, host-side file existence), following this file's convention of
+/// never trusting the child's self-report.
+///
+/// Asserted invariants:
+/// 1. **survivor-alive** — the descendant SURVIVES the cancellation. This
+///    is the documented limitation (POSIX process groups cannot reach a new
+///    session), asserted so a future change cannot silently claim lifecycle
+///    containment this platform does not provide; a real fix (kernel-level
+///    containment) must update this assertion and the F08 documentation
+///    together, visibly.
+/// 2. **outside-denied** (load-bearing) — the descendant's write outside
+///    the granted trees is DENIED: escaping the kill sweep never becomes
+///    escaping the cage, because the App Sandbox is inherited by every
+///    descendant regardless of session.
+/// 3. **inside-expected** — the descendant's late write into the authorized
+///    workspace after the run completed is EXPECTED: precisely the F08
+///    lifecycle residual accepted for this backend (the cage holds;
+///    lifecycle does not).
+#[test]
+fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
+    let fx = fixture();
+    let helper = fx.workspace.join("cage-helper");
+    fs::copy(
+        std::env::current_exe().expect("current test executable"),
+        &helper,
+    )
+    .expect("copy the helper into the granted workspace");
+
+    let mut env = BTreeMap::from([("PATH".to_string(), PATH_ENV.to_string())]);
+    env.insert(
+        "SEA_FORGE_CAGE_WS".to_string(),
+        fx.workspace.display().to_string(),
+    );
+    env.insert(
+        "SEA_FORGE_CAGE_OUTSIDE".to_string(),
+        fx.outside.display().to_string(),
+    );
+    let request = ExecutionRequest {
+        plan_item_id: "macos-app-sandbox-jail-cage-persists".into(),
+        operation: Operation::ExecuteCommand {
+            argv: sh(&format!(
+                "'{helper}' --exact cage_persists_helper & \
+                 i=0; while [ ! -f '{ws}/detached.pid' ] && [ $i -lt 400 ]; do \
+                 i=$((i+1)); sleep 0.05; done; \
+                 [ -f '{ws}/detached.pid' ] || {{ echo helper-never-recorded; exit 9; }}",
+                helper = helper.display(),
+                ws = fx.workspace.display(),
+            )),
+            cwd: ".".into(),
+        },
+        timeout_secs: 20,
+        env,
+        compensating_controls: vec![],
+    };
+
+    let jail = JailSandbox::new().expect("macOS App Sandbox jail must be available");
+    let spec = SandboxSpec {
+        workspace_root: fx.workspace.clone(),
+        artifacts_root: fx.artifacts.clone(),
+        network: NetworkPosture::Denied,
+    };
+    let handle = jail.prepare(&spec).expect("prepare");
+    let result = jail.execute(&handle, &request).expect("execute");
+    assert_eq!(result.status, ExecutionStatus::Completed);
+    assert_eq!(
+        result.exit_code,
+        Some(0),
+        "the workload itself must succeed; stderr: {}",
+        fs::read_to_string(fx.artifacts.join("stderr.txt")).unwrap_or_default()
+    );
+
+    // INVARIANT 1 (documented limitation, asserted): the descendant survives
+    // the cancellation. Liveness is checked from the host by pid — the
+    // marker is the recorded identity, exactly what the runtime's census
+    // also observed before the group kill.
+    let survivor: i32 = fs::read_to_string(fx.workspace.join("detached.pid"))
+        .expect("the descendant recorded its pid")
+        .trim()
+        .parse()
+        .expect("pid");
+    let alive = Command::new("/bin/kill")
+        .args(["-0", &survivor.to_string()])
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+    assert!(
+        alive,
+        "the setsid descendant {survivor} did not survive the sweep — if teardown now \
+         reaches setsid descendants, update this test and the F08 macOS documentation \
+         together"
+    );
+
+    // INVARIANT 2 (load-bearing): the outside write is DENIED — the cage
+    // persists. The descendant itself reports the denial (it cannot write
+    // outside), and the host confirms no file landed.
+    let outcome = fs::read_to_string(fx.workspace.join("outside_denied.txt"))
+        .expect("the descendant recorded its outside-write outcome");
+    assert_eq!(
+        outcome.trim(),
+        "1",
+        "the descendant's write outside the granted trees must be denied"
+    );
+    assert!(
+        !fx.outside.join("outside-marker.txt").exists(),
+        "the setsid descendant escaped the cage: a file exists outside the granted trees"
+    );
+
+    // INVARIANT 3 (expected residual): the late write lands inside the
+    // authorized workspace after the run completed. This is precisely the
+    // F08 lifecycle residual accepted for the macOS backend.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !fx.workspace.join("late.txt").exists() {
+        assert!(
+            Instant::now() < deadline,
+            "the descendant's expected late write inside the workspace never landed"
+        );
+        thread::sleep(Duration::from_millis(50));
+    }
+
+    // Tests own their processes: kill the survivor so nothing outlives the
+    // test binary.
+    Command::new("/bin/kill")
+        .args(["-9", &survivor.to_string()])
+        .status()
+        .expect("kill the survivor");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let alive = Command::new("/bin/kill")
+            .args(["-0", &survivor.to_string()])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if !alive {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "the survivor {survivor} survived its own cleanup kill"
+        );
+        thread::sleep(Duration::from_millis(50));
+    }
+}
