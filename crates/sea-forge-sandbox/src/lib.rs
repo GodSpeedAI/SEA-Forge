@@ -390,35 +390,100 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
     Ok(())
 }
 
-/// Windows: open the entry itself (`FILE_FLAG_OPEN_REPARSE_POINT`, the analogue
-/// of `O_NOFOLLOW`) and refuse if it is a reparse point (symlink, junction).
-/// Truncation happens only after that check.
+/// Windows: `safe_write` without an authorized root. It refuses reparse
+/// points and hard-linked entries and never truncates an entry it has not
+/// vetted. Parent-directory substitution is caught only by
+/// [`safe_write_within`], which knows the root to compare against.
 #[cfg(windows)]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    write_planned_windows(None, destination, bytes)
+}
+
+/// Writes `bytes` to `destination`, which must resolve inside `root`.
+///
+/// Windows: the entry is opened without truncation and with
+/// `FILE_FLAG_OPEN_REPARSE_POINT`. Before any truncation the handle must show
+/// a regular entry (not a reparse point or directory), a single hard link,
+/// and a resolved path inside the canonical `root`. The resolved path is
+/// taken from the handle, so a junction swapped into a parent directory is
+/// caught too. A file this call created is deleted again on refusal.
+#[cfg(windows)]
+pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    write_planned_windows(Some(root), destination, bytes)
+}
+
+/// Non-Windows: parent-directory containment is not checked here (see the
+/// residual-race note on the Unix `safe_write`).
+#[cfg(not(windows))]
+pub fn safe_write_within(_root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    safe_write(destination, bytes)
+}
+
+#[cfg(windows)]
+fn write_planned_windows(
+    root: Option<&Path>,
+    destination: &Path,
+    bytes: &[u8],
+) -> Result<(), ForgeError> {
     use std::io::Write;
-    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
-    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
-        .open(destination)
+    let canonical_root = root
+        .map(|root| {
+            root.canonicalize()
+                .map_err(|e| ForgeError::io("canonicalize workspace", e))
+        })
+        .transpose()?;
+    let mut planned = sea_forge_os::open_planned_file(destination)
         .map_err(|e| ForgeError::io(format!("open planned file {}", destination.display()), e))?;
-    let attributes = file
-        .metadata()
-        .map_err(|e| ForgeError::io("inspect planned file", e))?
-        .file_attributes();
-    if attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+    if let Err(error) = vet_planned_windows(&planned, destination, canonical_root.as_deref()) {
+        if planned.created() {
+            let _ = planned.delete();
+        }
+        return Err(error);
+    }
+    planned
+        .file()
+        .set_len(0)
+        .map_err(|e| ForgeError::io("truncate planned file", e))?;
+    planned
+        .file()
+        .write_all(bytes)
+        .map_err(|e| ForgeError::io("write planned file", e))?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn vet_planned_windows(
+    planned: &sea_forge_os::PlannedFile,
+    destination: &Path,
+    root: Option<&Path>,
+) -> Result<(), ForgeError> {
+    if planned.is_reparse_point() {
         return Err(ForgeError::UnsafePath(format!(
             "destination {} is a reparse point (symlink or junction)",
             destination.display()
         )));
     }
-    file.set_len(0)
-        .map_err(|e| ForgeError::io("truncate planned file", e))?;
-    file.write_all(bytes)
-        .map_err(|e| ForgeError::io("write planned file", e))?;
+    if planned.is_directory() {
+        return Err(ForgeError::UnsafePath(format!(
+            "destination {} is a directory",
+            destination.display()
+        )));
+    }
+    if planned.links() != 1 {
+        return Err(ForgeError::UnsafePath(format!(
+            "destination {} has {} hard links; refusing to truncate a shared file",
+            destination.display(),
+            planned.links()
+        )));
+    }
+    if let Some(root) = root {
+        if !planned.final_path().starts_with(root) {
+            return Err(ForgeError::UnsafePath(format!(
+                "destination {} resolves outside the workspace",
+                destination.display()
+            )));
+        }
+    }
     Ok(())
 }
 
@@ -444,7 +509,7 @@ pub fn materialize(
     )?;
     if let sea_forge_core::types::Operation::WriteFile { path, content_hint } = operation {
         let destination = safe_join(root, path)?;
-        safe_write(&destination, content_hint.as_bytes())?;
+        safe_write_within(root, &destination, content_hint.as_bytes())?;
     }
     Ok(())
 }

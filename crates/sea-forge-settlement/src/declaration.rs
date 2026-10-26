@@ -413,20 +413,16 @@ impl ProcessTree {
     }
 
     fn terminate(&self, _child: &std::process::Child) -> Result<(), ForgeError> {
+        // Termination is asynchronous: wait for the job to empty before
+        // reporting survivors, so a busy child is not a false failure.
         self.0
-            .terminate()
-            .map_err(settlement_authority_unavailable)?;
-        if self
-            .0
-            .active_processes()
-            .map_err(settlement_authority_unavailable)?
-            != 0
-        {
-            return Err(settlement_authority_unavailable(
-                "timed out process group survived termination",
-            ));
-        }
-        Ok(())
+            .terminate_and_wait(std::time::Duration::from_secs(5))
+            .map_err(|error| match error.kind() {
+                std::io::ErrorKind::TimedOut => {
+                    settlement_authority_unavailable("timed out process group survived termination")
+                }
+                _ => settlement_authority_unavailable(error),
+            })
     }
 }
 

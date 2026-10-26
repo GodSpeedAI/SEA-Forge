@@ -71,28 +71,73 @@ impl Acceptor {
     }
 }
 
+/// Waits for the first bytes of a connection, at most `limit`.
+///
+/// `Err(())` means the peer sent nothing within the limit. `Ok(false)` means
+/// end of stream or a read error, which the caller treats as "no bytes".
+#[cfg(any(windows, test))]
+async fn first_bytes_within<R>(reader: &mut R, limit: std::time::Duration) -> Result<bool, ()>
+where
+    R: tokio::io::AsyncBufRead + Unpin,
+{
+    use tokio::io::AsyncBufReadExt;
+    match tokio::time::timeout(limit, reader.fill_buf()).await {
+        Err(_) => Err(()),
+        Ok(Ok(bytes)) => Ok(!bytes.is_empty()),
+        Ok(Err(_)) => Ok(false),
+    }
+}
+
 /// Windows: the peer SID is only available once the client has written, so
 /// the first bytes are buffered here and the SID is read from the pipe token.
 /// The buffered bytes stay in the returned reader.
+///
+/// A client that connects and never writes is dropped after the request
+/// deadline (`REQUEST_TIMEOUT`), so it cannot hold an admission permit
+/// indefinitely. `None` means the connection was closed.
 #[cfg(windows)]
 async fn identify_pipe_client(
     pipe: NamedPipeServer,
-) -> (
+) -> Option<(
     tokio::io::BufReader<NamedPipeServer>,
     Option<crate::identity::PeerIdentity>,
-) {
-    use tokio::io::AsyncBufReadExt;
+)> {
     let mut buffered = tokio::io::BufReader::new(pipe);
-    if buffered
-        .fill_buf()
-        .await
-        .map(|bytes| bytes.is_empty())
-        .unwrap_or(true)
-    {
-        return (buffered, None);
+    match first_bytes_within(&mut buffered, REQUEST_TIMEOUT).await {
+        Err(()) => {
+            tracing::warn!("pipe client sent no request within the 10s server timeout; closing it");
+            None
+        }
+        Ok(false) => Some((buffered, None)),
+        Ok(true) => {
+            let peer = crate::identity::PeerIdentity::of_pipe(buffered.get_ref());
+            Some((buffered, peer))
+        }
     }
-    let peer = crate::identity::PeerIdentity::of_pipe(buffered.get_ref());
-    (buffered, peer)
+}
+
+#[cfg(test)]
+mod first_bytes_tests {
+    use super::first_bytes_within;
+    use std::time::Duration;
+    use tokio::io::{AsyncWriteExt, BufReader};
+
+    #[tokio::test]
+    async fn idle_connection_times_out_instead_of_waiting_forever() {
+        let (_client, server) = tokio::io::duplex(64);
+        let mut reader = BufReader::new(server);
+        let outcome = first_bytes_within(&mut reader, Duration::from_millis(50)).await;
+        assert!(outcome.is_err(), "an idle pipe was not bounded");
+    }
+
+    #[tokio::test]
+    async fn a_client_that_writes_is_admitted() {
+        let (mut client, server) = tokio::io::duplex(64);
+        client.write_all(b"{}\n").await.expect("write");
+        let mut reader = BufReader::new(server);
+        let outcome = first_bytes_within(&mut reader, Duration::from_secs(5)).await;
+        assert_eq!(outcome, Ok(true));
+    }
 }
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 
@@ -1562,7 +1607,10 @@ async fn run_inner(
             let _permit = permit;
             // Windows reads the client SID only after the first bytes arrive.
             #[cfg(windows)]
-            let (stream, peer) = identify_pipe_client(stream).await;
+            let Some((stream, peer)) = identify_pipe_client(stream).await
+            else {
+                return;
+            };
             if let Err(e) = handle_connection(
                 stream,
                 state,
@@ -4518,7 +4566,9 @@ mod pipe_transport_tests {
             pipe
         });
         server.connect().await.expect("connect");
-        let (_reader, peer) = identify_pipe_client(server).await;
+        let Some((_reader, peer)) = identify_pipe_client(server).await else {
+            panic!("an identified client was dropped before admission");
+        };
         assert_eq!(peer.map(|p| p.sid), Some(me));
         drop(client.join().expect("client thread"));
     }

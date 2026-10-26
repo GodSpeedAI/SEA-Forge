@@ -181,20 +181,25 @@ fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
 /// no half-close, so the request is delimited by its newline alone.
 #[cfg(windows)]
 fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
+    use std::os::windows::fs::OpenOptionsExt;
     let pipe_name = sea_forge_core::pipe_name_for(socket_path)
         .map_err(|error| ForgeError::io("derive server pipe name", error))?;
+    // Identification-only QoS: the server can read this caller's SID but cannot
+    // impersonate it, so a squatting pipe server gains no client authority.
+    // Explicit access rights avoid GENERIC_WRITE, which would request
+    // FILE_APPEND_DATA; the server's DACL does not grant that right.
     let mut pipe = std::fs::OpenOptions::new()
-        .read(true)
-        .write(true)
+        .access_mode(CLIENT_PIPE_ACCESS)
+        .security_qos_flags(SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION)
         .open(&pipe_name)
         .map_err(|error| ForgeError::io("connect to sea-forge-server", error))?;
     let server = sea_forge_os::pipe_server_sid(&pipe)
         .map_err(|error| ForgeError::io("read server pipe identity", error))?;
-    let me = sea_forge_os::current_sid()
+    let expected = expected_server_sid()
         .map_err(|error| ForgeError::io("read current user identity", error))?;
-    if !server_identity_matches(&server, &me) {
+    if !server_identity_matches(&server, &expected) {
         return Err(ForgeError::Input(format!(
-            "refusing pipe {pipe_name}: its server runs as {server}, not this user ({me})"
+            "refusing pipe {pipe_name}: its server runs as {server}, not the expected server principal {expected}"
         )));
     }
     pipe.write_all(format!("{}\n", serde_json::to_string(request)?).as_bytes())
@@ -221,8 +226,39 @@ fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
     Ok(line)
 }
 
+/// Optional trusted server principal. Unset means the server must run as the
+/// calling user (the default). Set it to a SID such as a service account when
+/// the server runs under another identity that this user is admitted to.
+#[cfg(windows)]
+const EXPECTED_SERVER_SID_ENV: &str = "SEA_FORGE_SERVER_SID";
+#[cfg(windows)]
+const SECURITY_SQOS_PRESENT: u32 = 0x0010_0000;
+#[cfg(windows)]
+const SECURITY_IDENTIFICATION: u32 = 0x0001_0000;
+#[cfg(windows)]
+const CLIENT_PIPE_ACCESS: u32 = sea_forge_os::CLIENT_PIPE_RIGHTS;
+
+/// The server SID this client accepts: the configured trusted principal when
+/// `SEA_FORGE_SERVER_SID` is set, otherwise the calling user.
+#[cfg(windows)]
+fn expected_server_sid() -> std::io::Result<String> {
+    match std::env::var(EXPECTED_SERVER_SID_ENV) {
+        Ok(configured) if !configured.trim().is_empty() => {
+            let sid = configured.trim().to_string();
+            if !sid.starts_with("S-1-") {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("{EXPECTED_SERVER_SID_ENV} is not a SID"),
+                ));
+            }
+            Ok(sid)
+        }
+        _ => sea_forge_os::current_sid(),
+    }
+}
+
 /// The pipe's server SID must be exactly the expected principal. A squatted
-/// pipe owned by another user fails this comparison before any request leaves.
+/// pipe owned by another principal fails this comparison before any request leaves.
 #[cfg(windows)]
 fn server_identity_matches(server_sid: &str, expected_sid: &str) -> bool {
     !server_sid.is_empty() && server_sid == expected_sid

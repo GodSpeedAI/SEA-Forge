@@ -53,21 +53,18 @@ pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), Sa
     Ok(())
 }
 
-/// Terminates the timed-out child's job (Windows) and verifies it is empty.
+/// Terminates the timed-out child's job (Windows) and waits until it is empty.
+/// Termination is asynchronous; survivors are reported only after the wait.
 #[cfg(windows)]
 fn kill_timed_out_job(job: &sea_forge_os::Job) -> Result<(), SandboxError> {
-    job.terminate()
-        .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
-    let survivors = job
-        .active_processes()
-        .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
-    if survivors != 0 {
-        return Err(SandboxError::new(
-            "internal_error",
-            "timed out process group survived termination",
-        ));
-    }
-    Ok(())
+    job.terminate_and_wait(std::time::Duration::from_secs(5))
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::TimedOut => SandboxError::new(
+                "internal_error",
+                "timed out process group survived termination",
+            ),
+            _ => SandboxError::new("internal_error", e.to_string()),
+        })
 }
 
 impl ExecutionSandbox for LocalSandbox {
