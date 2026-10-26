@@ -359,3 +359,19 @@ refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
       CLI-driven E2E (limitation).
     - F14 confirmed, fixed: `Job::terminate_and_wait` (5 s) used by local and settlement.
     - F15 confirmed, fixed: `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1` in CI turns missing link privilege into a failure.
+
+### Pass 2 (2026-10-26)
+
+- Reviewer: `codex exec -s read-only`, model `gpt-6.1-sol`, session 01a17798-660c-77d1-bede-0e018a655d53,
+  exit 0 (a first attempt timed out waiting on stdin and was discarded as incomplete). Frozen SHA
+  16c70703. Output: `~/projects/_wt/containers/review/pass2/pass2-findings.md`.
+- Counts: critical 0, high 6, medium 6, low 1. Pass-1 fixes judged correct: F02, F03, F06, F09, F11–F14,
+  F19, F20, F22–F24. F01, F07, F10 closed by narrowing claims (limitations remain).
+- Resolutions:
+  - F26 (new regression from the F21 fix, infinite loop on invalid interior bytes) confirmed, fixed in 156f54dc.
+  - F18 (macOS UDP/DNS, OpenShell restart cells) confirmed: matrix corrected.
+  - F08 confirmed, OPEN: `setsid` descendants escape group kill on Local and both Jails; needs a supervisor
+    these backends do not have. Matrix and capability rows state it.
+  - F25 confirmed: CURRENT_STATUS revision corrected (see final status revision).
+  - F04, F05, F30: branch `fix/review2-windows`.
+  - F27, F28, F29, F15, F16, F17: branch `fix/review2-sandbox`.
