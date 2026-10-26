@@ -21,6 +21,7 @@
 //! `openshell` and `openshell-prover` must be on PATH.
 
 use sea_forge_case_runner::cell_episode::{run_cell_episode, CellEpisode, CellEpisodeRequest};
+use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{
     ExecutionRequest, ExecutionStatus, Operation, SettlementCriteria, SettlementStatus, Verdict,
 };
@@ -139,12 +140,23 @@ fn write(dir: &Path, rel: &str, content: impl AsRef<[u8]>) {
 
 /// A bare authoritative repository at `root/auth.git` with one base commit.
 fn authoritative(root: &Path) {
+    authoritative_with_links(root, &[]);
+}
+
+/// Like `authoritative`, with symbolic links `(path, target)` in the base
+/// tree. The export checks them out as links in the workspace.
+fn authoritative_with_links(root: &Path, links: &[(&str, &Path)]) {
     git(root, &["init", "-q", "-b", "main", "seed"]);
     let seed = root.join("seed");
     write(&seed, "README.md", "hello\n");
     write(&seed, "src/app.py", "print('v1')\n");
     write(&seed, "pyproject.toml", "[project]\nname='x'\n");
     write(&seed, "uv.lock", "lock-v1\n");
+    for (rel, target) in links {
+        let path = seed.join(rel);
+        fs::create_dir_all(path.parent().expect("parent directory")).expect("create directories");
+        std::os::unix::fs::symlink(target, &path).expect("create symlink");
+    }
     git(&seed, &["add", "-A"]);
     git(&seed, &["commit", "-q", "-m", "base"]);
     git(root, &["clone", "-q", "--bare", "seed", "auth.git"]);
@@ -158,6 +170,13 @@ fn main_ref(repo: &Path) -> String {
 fn new_root() -> TempDir {
     let root = tempfile::tempdir().expect("temp root");
     authoritative(root.path());
+    root
+}
+
+/// A fresh temporary root whose base tree carries the given symbolic links.
+fn new_root_with_links(links: &[(&str, &Path)]) -> TempDir {
+    let root = tempfile::tempdir().expect("temp root");
+    authoritative_with_links(root.path(), links);
     root
 }
 
@@ -232,6 +251,18 @@ fn run_live(
     run: &str,
     argv: &[&str],
 ) -> (CellEpisode, LedgerStream) {
+    try_run_live(root, live, image, argv0, run, argv).expect("live episode")
+}
+
+/// Like `run_live`, but returns SEA-Forge's refusal instead of panicking.
+fn try_run_live(
+    root: &TempDir,
+    live: &Live,
+    image: &str,
+    argv0: &str,
+    run: &str,
+    argv: &[&str],
+) -> Result<(CellEpisode, LedgerStream), ForgeError> {
     let stream = LedgerStream::open(&root.path().join("ledger"), format!("case-{CASE}"), ENTITY)
         .expect("open ledger");
     let policy = write_policy(root.path(), live, image, argv0);
@@ -258,9 +289,8 @@ fn run_live(
             committed_at: WHEN,
         },
         &stream,
-    )
-    .expect("live episode");
-    (episode, stream)
+    )?;
+    Ok((episode, stream))
 }
 
 /// The run's own record of the sandbox it used, from `artifacts/openshell`.
@@ -566,4 +596,247 @@ fn live_artifacts_are_retrieved_and_sandbox_cleaned_up() {
         .to_string();
     assert!(!live.sandbox_exists(&sandbox), "sandbox {sandbox} is gone");
     stream.verify().expect("ledger verifies");
+}
+
+/// Regular files and symbolic links under `dir`. A link is reported, never
+/// followed: following one would read the host file it points at.
+fn walk_without_following(dir: &Path, files: &mut Vec<PathBuf>, links: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).expect("read directory") {
+        let path = entry.expect("directory entry").path();
+        let meta = fs::symlink_metadata(&path).expect("file metadata");
+        if meta.file_type().is_symlink() {
+            links.push(path);
+        } else if meta.is_dir() {
+            walk_without_following(&path, files, links);
+        } else {
+            files.push(path);
+        }
+    }
+}
+
+/// Runs one episode that must complete with exit 0, checks its ledger, and
+/// returns its stdout and the result directory it came back to.
+fn run_completed(root: &TempDir, live: &Live, run: &str, argv: &[&str]) -> (String, PathBuf) {
+    let (episode, stream) = run_live(root, live, &live.image, "sh", run, argv);
+    let execution = episode.execution.as_ref().expect("execution");
+    assert_eq!(
+        execution.status,
+        ExecutionStatus::Completed,
+        "{run} completes"
+    );
+    assert_eq!(execution.exit_code, Some(0), "{run} exits 0");
+    stream.verify().expect("ledger verifies");
+    let run_dir = root.path().join("runs").join(run);
+    (
+        read_or_empty(&run_dir.join("artifacts/stdout.txt")),
+        run_dir.join("result"),
+    )
+}
+
+// ── 7. A workspace symlink cannot disclose host files ──
+
+/// Refusal classes that name the symlink or transfer layer that stopped it.
+const SYMLINK_REFUSALS: &[&str] = &[
+    "openshell_transfer_failed",
+    "openshell_create_failed",
+    "export_failed",
+    "malformed_workspace",
+];
+
+#[test]
+#[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
+fn live_workspace_symlink_cannot_reach_host_files() {
+    let live = live();
+    // Host-only secrets, outside the workspace and the repository. The
+    // symlinks are committed in the base tree, so the export places them in
+    // the workspace before the episode.
+    let host = tempfile::tempdir().expect("host directory");
+    let stamp = nanos();
+    let file_secret = format!("host-file-secret-{stamp}");
+    let dir_secret = format!("host-dir-secret-{stamp}");
+    let secret_file = host.path().join("secret.txt");
+    fs::write(&secret_file, &file_secret).expect("write host file secret");
+    let secret_dir = host.path().join("secret-dir");
+    write(&secret_dir, "inner.txt", &dir_secret);
+    let root = new_root_with_links(&[
+        ("leak-file", secret_file.as_path()),
+        ("leak-dir", secret_dir.as_path()),
+    ]);
+
+    let run = "run_live_symlink";
+    let run_dir = root.path().join("runs").join(run);
+    let sandbox = adapter_sandbox_name(&run_dir.join("artifacts"));
+    let read = "cat leak-file > out-file.txt 2>&1; cat leak-dir/inner.txt > out-dir.txt 2>&1; ls -la > listing.txt 2>&1; true";
+    let secrets = [file_secret.as_str(), dir_secret.as_str()];
+
+    match try_run_live(&root, &live, &live.image, "sh", run, &["sh", "-c", read]) {
+        Err(error) => {
+            let class = error.class();
+            println!("symlink scenario: refused by SEA-Forge, class {class}: {error:?}");
+            assert!(
+                SYMLINK_REFUSALS.contains(&class),
+                "unexpected refusal class {class}: {error:?}"
+            );
+            assert!(
+                !live.sandbox_exists(&sandbox),
+                "sandbox {sandbox} remains after a refusal"
+            );
+            for dir in [run_dir.join("artifacts"), run_dir.join("result")] {
+                let (mut files, mut links) = (Vec::new(), Vec::new());
+                if dir.exists() {
+                    walk_without_following(&dir, &mut files, &mut links);
+                }
+                for file in files {
+                    let text = read_or_empty(&file);
+                    for secret in secrets {
+                        assert!(!text.contains(secret), "host secret in {}", file.display());
+                    }
+                }
+            }
+        }
+        Ok((episode, stream)) => {
+            let execution = episode.execution.as_ref().expect("execution");
+            println!(
+                "symlink scenario: accepted; status {:?}, exit {:?}, settlement {:?}",
+                execution.status, execution.exit_code, episode.settlement.status
+            );
+            assert!(!live.sandbox_exists(&sandbox), "sandbox {sandbox} is gone");
+            stream.verify().expect("ledger verifies");
+
+            let result = run_dir.join("result");
+            let (mut files, mut links) = (Vec::new(), Vec::new());
+            for dir in [run_dir.join("artifacts"), result.clone()] {
+                if dir.exists() {
+                    walk_without_following(&dir, &mut files, &mut links);
+                }
+            }
+            for link in &links {
+                let target = fs::read_link(link).expect("read link");
+                println!("link came back: {} -> {}", link.display(), target.display());
+            }
+            for file in &files {
+                let text = read_or_empty(file);
+                for secret in secrets {
+                    assert!(!text.contains(secret), "host secret in {}", file.display());
+                }
+            }
+            // Printed only after the disclosure check passed.
+            let out = read_or_empty(&result.join("out-file.txt"));
+            println!(
+                "out-file.txt after the link was read: {:?}",
+                out.chars().take(200).collect::<String>()
+            );
+        }
+    }
+}
+
+// ── 8. Two concurrent sandboxes cannot see each other's files ──
+
+#[test]
+#[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
+fn live_concurrent_sandboxes_are_isolated() {
+    let live = live();
+    let token = format!("sf-token-a-{}", nanos());
+    // B gets the token reversed, so its own argv never holds the literal.
+    let reversed: String = token.chars().rev().collect();
+    let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 20; cat a-token.txt");
+    let searcher = format!(
+        "T=$(printf '%s' '{reversed}' | rev); sleep 6; timeout 25 grep -rIa --exclude-dir=proc --exclude-dir=sys --exclude-dir=dev -- \"$T\" / > found.txt 2>/dev/null; echo \"grep_exit=$?\"; exit 0"
+    );
+    let root_a = new_root();
+    let root_b = new_root();
+
+    let ((stdout_a, _), (stdout_b, result_b)) = std::thread::scope(|scope| {
+        let a =
+            scope.spawn(|| run_completed(&root_a, &live, "run_live_iso_a", &["sh", "-c", &writer]));
+        let b = scope
+            .spawn(|| run_completed(&root_b, &live, "run_live_iso_b", &["sh", "-c", &searcher]));
+        (a.join().expect("episode A"), b.join().expect("episode B"))
+    });
+
+    // A really held its token: its own sandbox echoed it back.
+    assert!(
+        stdout_a.contains(&token),
+        "episode A did not hold its token"
+    );
+    println!("episode B stdout: {stdout_b:?}");
+    assert!(!stdout_b.contains(&token), "B's stdout holds A's token");
+    assert!(
+        result_b.join("found.txt").is_file(),
+        "B's search output came back"
+    );
+    let (mut files, mut links) = (Vec::new(), Vec::new());
+    walk_without_following(&result_b, &mut files, &mut links);
+    for file in files {
+        let text = read_or_empty(&file);
+        assert!(
+            !text.contains(&token),
+            "B's result {} holds A's token",
+            file.display()
+        );
+    }
+}
+
+// ── 9. A tampered projection is refused before any sandbox is created ──
+
+#[test]
+#[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
+fn live_tampered_projection_is_refused_before_create() {
+    let live = live();
+    let root = new_root();
+    // A copy of the real projection with one read-write path added to the
+    // policy and openshell.lock left as it was.
+    let tampered = tempfile::tempdir().expect("tampered projection directory");
+    for entry in fs::read_dir(&live.projection).expect("projection directory") {
+        let entry = entry.expect("directory entry");
+        if entry.file_type().expect("file type").is_file() {
+            fs::copy(entry.path(), tampered.path().join(entry.file_name()))
+                .expect("copy projection file");
+        }
+    }
+    let policy_path = tampered.path().join("policy.yaml");
+    let policy = fs::read_to_string(&policy_path).expect("policy.yaml");
+    let edited = policy.replacen("  - /tmp\n", "  - /tmp\n  - /home\n", 1);
+    assert_ne!(edited, policy, "the edit must add a read_write path");
+    fs::write(&policy_path, edited).expect("write tampered policy");
+    let forged = Live {
+        projection: tampered.path().to_path_buf(),
+        gateway: live.gateway.clone(),
+        image: live.image.clone(),
+        cli: live.cli.clone(),
+        prover: live.prover.clone(),
+    };
+
+    let run = "run_live_tampered";
+    let refusal = match try_run_live(
+        &root,
+        &forged,
+        &forged.image,
+        "sh",
+        run,
+        &["sh", "-c", "true"],
+    ) {
+        Ok(_) => panic!("a tampered projection must not run an episode"),
+        Err(error) => error,
+    };
+    let class = refusal.class();
+    println!("tampered projection: refused before create, class {class}: {refusal:?}");
+    assert_eq!(class, "openshell_projection_tampered");
+
+    let name = adapter_sandbox_name(&root.path().join("runs").join(run).join("artifacts"));
+    let listed = Command::new(&live.cli)
+        .args(["--gateway", &live.gateway, "sandbox", "list"])
+        .output()
+        .expect("openshell must run");
+    assert!(
+        listed.status.success(),
+        "sandbox list failed: {}",
+        String::from_utf8_lossy(&listed.stderr)
+    );
+    let text = String::from_utf8_lossy(&listed.stdout);
+    assert!(
+        !text.contains(&name),
+        "sandbox {name} exists after a refused run:\n{text}"
+    );
+    assert!(!live.sandbox_exists(&name), "sandbox {name} exists");
 }
