@@ -52,7 +52,13 @@ CI logs) and the GitHub Actions runs named below.
 ## Phase status
 
 - Phase 0: done (this record, baseline in `~/projects/_wt/containers/baseline/BASELINE.md`).
-- Phase 1: in progress.
+- Phase 1: done (Windows control plane; portability run 40260946741).
+- Phase 2: done (enforcement capability, workload identity).
+- Phase 3: Linux live proof in progress; macOS Blocked (no nested virt on hosted runners).
+- Phase 4: MXC probed; see Phase 4 section.
+- Phase 5: WSLc Blocked.
+- Phase 6: done.
+- H4 packaging: done (package.yml, run 40257119484).
 
 ## Phase 1 Windows limitations
 
@@ -133,8 +139,7 @@ Subsystem document: `docs/subsystems/openshell-execution.md` sections 3.1 and 3.
   platform, and `argv[0]` must be that executable. The wire `image` stays a string.
 * **Limits recorded.** Native hashing is TOCTOU-limited (the gateway re-opens the
   file). OpenShell's binary-identity crate covers only Linux procfs. The `vm`
-  row is upstream's claim and is not live-proven (live proof NOT RUN).
-- Phase 6: macOS App Sandbox jail (branch `feat/macos-app-sandbox-jail`, stacked on `feat/cross-platform-native`). See the Phase 6 section below.
+  row is upstream's claim and is not live-proven (live proof: see Phase 3).
 
 ## Phase 6 — macOS App Sandbox jail
 
@@ -143,4 +148,24 @@ Subsystem document: `docs/subsystems/openshell-execution.md` sections 3.1 and 3.
 - Refused with `jail_unavailable`: `NetworkPosture::AllowTcpPorts` (no per-port control), a missing `codesign` or launcher, an unsigned or unverified launcher, and a launcher copy inside the workspace.
 - Evidence: probe run 40254192454 on macOS 26.6.2 arm64 (`probes/macos-app-sandbox` on `ci/macos-app-sandbox-probe`).
 - Verification: `.github/workflows/portability.yml` job `macos` runs `tests/macos_app_sandbox_jail.rs` and `--lib`. Linux tests are unchanged; `conformance_m1` now treats macOS like Linux for the construction check.
-- Not done: packaging the launcher beside the release `sea-forge` binary; read-only system-tree exceptions beyond the App Sandbox defaults.
+- Packaging: the macOS pkg/dmg ship `sea-forge-jail-launcher` beside `sea-forge` (package.yml). Not done: read-only system-tree exceptions beyond the App Sandbox defaults.
+
+## Phase 5 — WSLc (BLOCKED, evidence `~/projects/_wt/containers/recon/wslc-deep.md`, `~/projects/_wt/containers/recon/wslc-mxc.md`, 2026-10-25)
+wslc.exe reports 3.0.3.0 (WSL 3.0.3.0). Findings on Win11 26300.9807:
+- No container→Windows-host route: loopback listener 127.0.0.1:18555 unreachable via host.docker.internal, 172.17.0.1, 10.255.255.254, LAN IPs; `--network host` → "host mode networking is not supported". OpenShell supervisors dial the gateway, so a WSLc-hosted supervisor cannot reach a Windows gateway.
+- Containers cannot create network namespaces (`unshare -n`, `unshare -Urn` EPERM) and the CLI has no --cap-drop/--security-opt/--read-only/--pids-limit; in-container NNP works, bounding-set drop untested with util-linux.
+- Bridge egress (DNS, HTTP to example.com/1.1.1.1) failed on this host; `--network none` blocks all.
+- Works: reverse publish (-p 127.0.0.1:port), rw/ro bind mounts (virtiofs), lifecycle verbs, image digests via `image inspect`, `events` JSON stream.
+Decision: no WSLc driver is written. It would be a new container driver whose supervisor cannot reach the gateway and whose hardening flags do not exist (spec: no competing sandbox framework). Least-cost remedy: WSLc gaining a host-gateway route (or host networking) plus cap-drop/no-new-privileges/read-only flags or a Docker-compatible API (OpenShell's docker driver would then apply unchanged).
+
+## Phase 4 — MXC probe (`~/projects/_wt/containers/recon/mxc-probe.md`)
+wxc-exec.exe from npm @microsoft/mxc-sdk 0.8.0 (tgz sha256 06bb2399…, exe sha256 6049c647…): --probe tier base-container, isolationSessionAvailable true. processcontainer run: write outside grant "Access is denied" + absent on host; granted workspace write present; network block → DNS failure.
+
+## Phase 6 — macOS App Sandbox probe (branch ci/macos-app-sandbox-probe, run 40254192454, macOS 26.6.2 arm64)
+Ad-hoc-signed launcher with app-sandbox + temporary-exception absolute-path rw (workspace): writes outside, symlink-through, hard-link creation, $HOME secret read all denied (control without entitlement: all succeed); inherited by sh and perl grandchildren; network.client=false blocks TCP+UDP loopback, DNS, HTTPS; network.client=true allows all (no per-host/port control). Env is not filtered (launcher's caller must clear it — SEA-Forge already env_clears). /usr/bin/python3 xcrun shim refuses to run in App Sandbox.
+Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network only; AllowTcpPorts refused). OpenShell remains the class for governed egress/credentials; no macOS-native OpenShell driver exists upstream (#3956 closed, not on roadmap).
+
+## Phase 3 — Linux/macOS OpenShell MicroVM (branch ci/openshell-live)
+- Linux ubuntu-24.04 + KVM, OpenShell 0.1.3 release binaries (sha256 vs asset digest + checksums files; driver-vm digest only), Docker stopped: gateway mTLS up, `Using compute driver driver=vm`, supervisor sessions accepted (runs 40255566950, 40256113550). SEA-Forge refused every sandbox: effective policy ⊄ boundary because OpenShell 0.1.3 supervisor enriches proxy-mode policies with baseline RO paths incl. /var/log, /app (supervisor lib.rs:1566-1590) which DomainForge's BASELINE_READ_ONLY lacked. Fail-closed behaviour confirmed live. Fix routed to DomainForge (projection must describe runtime enforcement), fixture regenerated.
+- live-proof.sh had never run (no KVM locally): needed gateway launch-signing keys and mTLS client identity (upstream e2e pattern); unauthenticated gateway escape hatch deliberately NOT used. NGC default image needs auth on hosted runners → docker.io/library/ubuntu:24.04.
+- macOS hosted runner: kern.hv_support=0 (nested virt unavailable) → `krun_start_enter failed: -22`. BLOCKED (external prerequisite: Apple Silicon host with Hypervisor.framework, e.g. self-hosted or larger runner).
