@@ -12,7 +12,7 @@ if [ "$#" -ne 3 ]; then
     exit 2
 fi
 version=$1
-bindir=$2
+bindir=$(cd "$2" && pwd)
 outdir=$3
 
 case "$version" in
