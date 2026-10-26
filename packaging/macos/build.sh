@@ -26,7 +26,7 @@ case "$version" in
 esac
 
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
-for bin in sea-forge sea-forge-server; do
+for bin in sea-forge sea-forge-server sea-forge-jail-launcher; do
     if [ ! -x "$arm_dir/$bin" ]; then
         echo "error: missing executable $arm_dir/$bin" >&2
         exit 1
@@ -51,7 +51,7 @@ trap 'rm -rf "$work"' EXIT
 # Payload: bin/ installs to /usr/local/bin.
 stage="$work/stage"
 mkdir -p "$stage/bin"
-for bin in sea-forge sea-forge-server; do
+for bin in sea-forge sea-forge-server sea-forge-jail-launcher; do
     if [ -n "$x86_dir" ]; then
         lipo -create "$arm_dir/$bin" "$x86_dir/$bin" -output "$stage/bin/$bin"
     else
@@ -91,7 +91,7 @@ Unsigned package
     gh attestation verify ${pkg_name} --repo GodSpeedAI/SEA-Forge
 
 Uninstall
-  sudo rm /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server
+  sudo rm /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server /usr/local/bin/sea-forge-jail-launcher
   sudo pkgutil --forget ai.godspeed.sea-forge
 
 Licence: see LICENSE in this image.

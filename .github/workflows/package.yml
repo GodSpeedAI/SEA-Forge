@@ -200,7 +200,9 @@ jobs:
         run: devbox run -- just release-check "${{ steps.version.outputs.version }}"
 
       - name: Build arm64 binaries
-        run: devbox run -- cargo build --release --locked --target aarch64-apple-darwin -p sea-forge-cli -p sea-forge-server
+        run: |
+          devbox run -- cargo build --release --locked --target aarch64-apple-darwin -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked --target aarch64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
 
       - name: Build x86_64 binaries (cross)
         id: x86
@@ -210,6 +212,7 @@ jobs:
           set -euo pipefail
           devbox run -- rustup target add x86_64-apple-darwin
           devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
 
       - name: Choose package variant
         id: variant
@@ -253,7 +256,9 @@ jobs:
           sudo installer -pkg "$pkg" -target /
           test "$(/usr/local/bin/sea-forge --version)" = "sea-forge ${VERSION}"
           echo "install test: /usr/local/bin/sea-forge --version -> $(/usr/local/bin/sea-forge --version)"
-          for bin in sea-forge sea-forge-server; do
+          otool -s __TEXT __info_plist /usr/local/bin/sea-forge-jail-launcher | grep -q . || { echo "::error::jail launcher lacks its embedded Info.plist"; exit 1; }
+          echo "install test: sea-forge-jail-launcher carries an embedded Info.plist"
+          for bin in sea-forge sea-forge-server sea-forge-jail-launcher; do
             archs=$(lipo -archs "/usr/local/bin/${bin}")
             echo "install test: lipo -archs ${bin} -> ${archs}"
             for want in $EXPECT; do
@@ -298,7 +303,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          sudo rm -f /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server
+          sudo rm -f /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server /usr/local/bin/sea-forge-jail-launcher
           sudo pkgutil --forget ai.godspeed.sea-forge >/dev/null 2>&1 || true
 
       - name: Upload packages
