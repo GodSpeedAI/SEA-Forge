@@ -361,6 +361,25 @@ jobs:
 
           echo "$BIN" >> "$GITHUB_PATH"
 
+      - name: Codesign openshell-driver-vm with the Hypervisor entitlement
+        # Upstream e2e-vm.sh (v0.1.3) does this on Darwin before launching the
+        # VM driver. Without it, libkrun fails at VmCreate (krun_start_enter -22).
+        run: |
+          set -euo pipefail
+          ENT="$RUNNER_TEMP/driver-entitlements.plist"
+          cat >"$ENT" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>com.apple.security.hypervisor</key>
+              <true/>
+          </dict>
+          </plist>
+          PLIST
+          codesign --entitlements "$ENT" --force -s - "$HOME/.local/libexec/openshell/openshell-driver-vm"
+          codesign -d --entitlements - "$HOME/.local/libexec/openshell/openshell-driver-vm" 2>&1 | tee -a evidence/install.txt
+
       - name: Install proof tools (e2fsprogs)
         run: |
           brew install e2fsprogs
