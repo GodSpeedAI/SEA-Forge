@@ -25,6 +25,7 @@ members = [
     "crates/sea-forge-thoth",
     "crates/sea-forge-agent",
     "crates/sea-forge-realitytrace",
+    "crates/sea-forge-os",
 ]
 
 [workspace.package]

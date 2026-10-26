@@ -2445,6 +2445,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
+ "winapi-util",
 ]
 
 [[package]]
@@ -2560,6 +2561,14 @@ dependencies = [
  "sha2 0.11.1",
  "tempfile",
  "unicode-normalization",
+]
+
+[[package]]
+name = "sea-forge-os"
+version = "0.2.0"
+dependencies = [
+ "tokio",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
