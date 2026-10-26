@@ -5,6 +5,8 @@ use std::{
 };
 
 mod artifact_output;
+#[cfg(target_os = "linux")]
+pub mod cgroup;
 pub mod environment;
 #[cfg(target_os = "linux")]
 pub mod isolated;
@@ -18,6 +20,8 @@ pub mod socket_policy;
 pub mod syscall_filter;
 #[cfg(target_os = "linux")]
 pub mod workload;
+#[cfg(unix)]
+mod write_staging;
 
 pub use observation::{open_observation_file, open_observation_root};
 
@@ -387,15 +391,16 @@ fn checked_parent(
     }
     Ok(safe_parent)
 }
-/// F-25.i / F04: replaces the destination entry, never writing an existing
-/// inode. The bytes go to a fresh temp sibling created with
-/// `O_CREAT|O_EXCL|O_NOFOLLOW` in the destination's parent, which is opened
-/// with `O_DIRECTORY|O_NOFOLLOW`. The temp file is fsynced and then renamed
-/// over the destination with `renameat`, relative to that directory
-/// descriptor. An existing hard link to the old entry therefore keeps its
-/// bytes, because only the directory entry changes. A symlink at the
-/// destination is refused before anything is written, and a directory fails
-/// with `EISDIR`.
+/// F-25.i / F04 / F32: replaces the destination entry, never writing an
+/// existing inode. The bytes go to a fresh temp file created with
+/// `O_CREAT|O_EXCL|O_NOFOLLOW` inside a protected 0700 staging directory
+/// (a child of the destination's parent, which is opened with
+/// `O_DIRECTORY|O_NOFOLLOW`). The temp file is fsynced and then renamed over
+/// the destination with `renameat`, with the staging descriptor as the
+/// rename source — a writer of the destination directory cannot substitute
+/// it. An existing hard link to the old entry therefore keeps its bytes,
+/// because only the directory entry changes. A symlink at the destination is
+/// refused before anything is written, and a directory fails with `EISDIR`.
 ///
 /// The parent is opened by path, and its containment is not checked here.
 /// Callers that need containment use `safe_write_within`. A concurrent hard
@@ -434,8 +439,11 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
 
 /// Unix: replaces the entry `name` inside the already-open directory `dir`.
 /// Shared by `safe_write` and `safe_write_within`. The bytes go to a fresh
-/// `O_CREAT|O_EXCL` temp sibling, which is fsynced and renamed over `name`.
-/// Afterwards the entry is checked against the written file (see below).
+/// `O_CREAT|O_EXCL` temp file inside a protected staging directory (see
+/// `write_staging`), which is fsynced and then renamed over `name` with the
+/// staging descriptor as the rename source — a writer of the destination
+/// directory therefore has no temp name it could substitute. Afterwards the
+/// entry is checked against the written file (see below).
 #[cfg(unix)]
 fn write_entry_unix(
     dir: &std::os::fd::OwnedFd,
@@ -443,11 +451,24 @@ fn write_entry_unix(
     name: &std::ffi::OsStr,
     bytes: &[u8],
 ) -> Result<(), ForgeError> {
-    use rustix::fs::{AtFlags, Mode, OFlags};
+    write_entry_unix_inner(dir, destination, name, bytes, None)
+}
+
+/// `pause` runs after the temp file is created and synced but before it is
+/// published — exactly the window a concurrent writer of the destination
+/// directory would race. Tests drive it to replay the substitution attack
+/// deterministically instead of racing a one-call API.
+#[cfg(unix)]
+fn write_entry_unix_inner(
+    dir: &std::os::fd::OwnedFd,
+    destination: &Path,
+    name: &std::ffi::OsStr,
+    bytes: &[u8],
+    pause: Option<&dyn Fn()>,
+) -> Result<(), ForgeError> {
+    use rustix::fs::AtFlags;
     use rustix::io::Errno;
     use std::io::Write;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
     let open_error = |error: Errno| {
         ForgeError::io(
@@ -472,38 +493,51 @@ fn write_entry_unix(
         Err(Errno::NOENT) => 0o666,
         Err(error) => return Err(open_error(error)),
     };
-    let mut attempts = 0;
-    let (temp_name, fd) = loop {
-        let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        let mut candidate = std::ffi::OsString::from(".");
-        candidate.push(name);
-        candidate.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
-        match rustix::fs::openat(
-            dir,
-            candidate.as_os_str(),
-            OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-            Mode::from_raw_mode(mode),
-        ) {
-            Ok(fd) => break (candidate, fd),
-            Err(Errno::EXIST) if attempts < 16 => attempts += 1,
-            Err(error) => return Err(open_error(error)),
+    let staging = match write_staging::StagingDir::create(dir) {
+        Ok(staging) => staging,
+        Err(write_staging::StagingCreateError::Rebind) => {
+            return Err(ForgeError::UnsafePath(format!(
+                "write staging directory for {} was substituted during materialization",
+                destination.display()
+            )))
+        }
+        Err(write_staging::StagingCreateError::Io(error)) => {
+            return Err(ForgeError::io(
+                format!(
+                    "create write staging directory for {}",
+                    destination.display()
+                ),
+                error,
+            ))
         }
     };
-    let mut file = std::fs::File::from(fd);
+    let (mut file, temp_name) = staging.new_temp(name, u32::from(mode)).map_err(|error| {
+        ForgeError::io(
+            format!("open staged temp for {}", destination.display()),
+            error,
+        )
+    })?;
     let outcome = file
         .write_all(bytes)
         .and_then(|()| file.sync_all())
         .and_then(|()| {
-            rustix::fs::renameat(dir, temp_name.as_os_str(), dir, name)
-                .map_err(std::io::Error::from)
+            if let Some(pause) = pause {
+                pause();
+            }
+            staging.publish(temp_name.as_os_str(), dir, name)
         });
-    if let Err(error) = outcome {
-        let _ = rustix::fs::unlinkat(dir, temp_name.as_os_str(), AtFlags::empty());
-        return Err(ForgeError::io("write planned file", error));
+    if outcome.is_err() {
+        staging.discard_temp(temp_name.as_os_str());
     }
+    staging.remove(dir);
+    // No fallback to a destination-directory temp: a staging or write
+    // failure is a failed write.
+    outcome.map_err(|error| ForgeError::io("write planned file", error))?;
     // F32: after the rename, the entry must be the regular file just written.
-    // This detects substitution of the entry; it does not prevent it. A
-    // mismatch is reported as an error, never as success.
+    // The staged rename source is unreachable from the destination directory,
+    // so a destination-side writer cannot substitute it; the check is kept as
+    // belt-and-suspenders for the destination entry itself. A mismatch is
+    // reported as an error, never as success.
     let substituted = || {
         ForgeError::UnsafePath(format!(
             "destination {} was substituted during materialization",
@@ -685,6 +719,18 @@ fn pin_error(error: sea_forge_os::PinError, path: &Path) -> ForgeError {
         }
         PinError::Escaped(_) => ForgeError::UnsafePath(format!(
             "parent resolves outside the workspace: {}",
+            path.display()
+        )),
+        PinError::WriteShareHeld(_) => ForgeError::UnsafePath(format!(
+            "parent is held by another writer; exclusive pin refused: {}",
+            path.display()
+        )),
+        PinError::IdentityChanged(_) => ForgeError::UnsafePath(format!(
+            "parent was substituted after its pin was validated: {}",
+            path.display()
+        )),
+        PinError::FinalPathMismatch(_) => ForgeError::UnsafePath(format!(
+            "parent resolves to a different object than the path given: {}",
             path.display()
         )),
         PinError::Io(error) => ForgeError::io(format!("pin directory {}", path.display()), error),
@@ -939,6 +985,106 @@ mod tests {
             Err(ForgeError::UnsafePath(_))
         ));
         assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// F32 regression: a process with write access to the destination
+    /// directory must not be able to make the published entry contain bytes
+    /// it chose. The pause hook replays the deterministic mid-write attack —
+    /// it scans the destination directory for a temp-name entry (the rename
+    /// source of the pre-staging scheme), unlinks it, and plants attacker
+    /// bytes under the same name. With staging, no such entry ever exists in
+    /// the destination directory and the plant is inert.
+    #[cfg(unix)]
+    #[test]
+    fn substituted_temp_name_cannot_publish_attacker_bytes() {
+        use std::os::unix::fs::PermissionsExt;
+        use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+        use std::sync::Arc;
+        let (parent, root, _) = unix_write_fixture("staged-substitute");
+        let destination = root.join("planned.txt");
+        // 0: attacker found nothing to substitute; 1: substitution replayed.
+        let attack = Arc::new(AtomicU8::new(0));
+        let staging_mode = Arc::new(AtomicU32::new(u32::MAX));
+        let pause = {
+            let attack = attack.clone();
+            let staging_mode = staging_mode.clone();
+            let watched = root.clone();
+            move || {
+                for entry in fs::read_dir(&watched).unwrap() {
+                    let entry = entry.unwrap();
+                    let name = entry.file_name();
+                    let name = name.to_string_lossy();
+                    if name.contains(".sf-tmp-") {
+                        // The destination directory exposed the rename
+                        // source: unlink it and plant attacker bytes.
+                        attack.store(1, Ordering::SeqCst);
+                        fs::remove_file(entry.path()).unwrap();
+                        fs::write(entry.path(), b"attacker bytes").unwrap();
+                    } else if name.starts_with(".sf-staging-") {
+                        let mode = entry.metadata().unwrap().permissions().mode() & 0o777;
+                        staging_mode.store(mode, Ordering::SeqCst);
+                    }
+                }
+            }
+        };
+        let dir = rustix::fs::open(
+            &root,
+            rustix::fs::OFlags::RDONLY
+                | rustix::fs::OFlags::DIRECTORY
+                | rustix::fs::OFlags::NOFOLLOW
+                | rustix::fs::OFlags::CLOEXEC,
+            rustix::fs::Mode::empty(),
+        )
+        .unwrap();
+        write_entry_unix_inner(
+            &dir,
+            &destination,
+            std::ffi::OsStr::new("planned.txt"),
+            b"kernel bytes",
+            Some(&pause),
+        )
+        .unwrap();
+        assert_eq!(
+            attack.load(Ordering::SeqCst),
+            0,
+            "a temp name must never be resolvable in the destination directory"
+        );
+        assert_eq!(
+            staging_mode.load(Ordering::SeqCst),
+            0o700,
+            "the staging directory must be mode 0700"
+        );
+        let meta = fs::symlink_metadata(&destination).unwrap();
+        assert!(meta.is_file(), "published entry must be a regular file");
+        assert_eq!(fs::read(&destination).unwrap(), b"kernel bytes");
+        let leftovers: Vec<String> = fs::read_dir(&root)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with(".sf-staging-") || name.contains(".sf-tmp-"))
+            .collect();
+        assert!(leftovers.is_empty(), "leftover entries: {leftovers:?}");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// F32: a staging directory swapped to a symlink before the write is
+    /// refused, and the symlink target is untouched.
+    #[cfg(unix)]
+    #[test]
+    fn staging_directory_rebind_is_refused() {
+        use std::os::unix::fs::symlink;
+        let (parent, root, outside) = unix_write_fixture("staging-rebind");
+        let destination = root.join("planned.txt");
+        symlink(
+            &outside,
+            root.join(format!(".sf-staging-{}", std::process::id())),
+        )
+        .unwrap();
+
+        let result = safe_write(&destination, b"captured");
+        assert!(matches!(result, Err(ForgeError::UnsafePath(_))));
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        assert!(!destination.exists());
         fs::remove_dir_all(parent).unwrap();
     }
 }
