@@ -238,24 +238,23 @@ applicable, no test that exercises it, `BLK` = backend blocked. Only `L` counts.
 | 1 | authorized workspace r/w | L | L | L `live_authorized_episode_runs_in_a_microvm` | L | L exit code + stdout | — |
 | 2 | unauthorized FS write blocked | L | L | GAP (`live_host_filesystem_is_not_visible` only reads) | L | — | — |
 | 3 | symlink/reparse/junction escape | L | GAP | L `live_workspace_symlink_cannot_reach_host_files` | L | — | L `changeset_windows.rs` |
-| 4 | unauthorized network blocked | L | L TCP only; UDP/DNS GAP | L* `live_network_egress_is_denied` (no positive control; see F17) | L TCP+UDP+DNS | — | — |
+| 4 | unauthorized network blocked | L | L TCP only; UDP/DNS GAP | no egress observed; no positive control, no denial record (F17) | L TCP+UDP+DNS | — | — |
 | 5 | authorized network restricted | GAP | L TCP ports | GAP | — (AllowTcpPorts refused) | — | — |
 | 6 | modified executable rejected | GAP | GAP | GAP (native pin is MXC-only; stub) | GAP | — | — |
 | 7 | provider credentials inaccessible | GAP | GAP | S host env not forwarded | L `$HOME` secret unreadable | L env cleared | — |
-| 8 | exfiltration to unauthorized endpoint | via 4 | TCP only | via 4* | via 4 | — | — |
+| 8 | exfiltration to unauthorized endpoint | via 4 | TCP only | GAP | via 4 | — | — |
 | 9 | projection / lock tampering | — | — | L `live_tampered_projection_is_refused_before_create` + S | — | — | — |
-| 10 | frozen-run authority widening | GAP | GAP | GAP (review F03) | GAP | — | — |
+| 10 | frozen-run authority widening | GAP | GAP | S (projection snapshot + approved identity, review F03) | GAP | — | — |
 | 11 | process-tree cancellation | L | GAP | L `live_timeout_cancels_the_command` | L (same pgid only; `setsid` escapes) | L cooperative tree only; WMI-created processes are outside the job | — |
 | 12 | no host fallback on failure | L | L | S | L `jail_unavailable` | — | L second server, squatting |
-| 13 | concurrent sandboxes isolated | L | GAP | L* `live_concurrent_sandboxes_are_isolated` (see F16) | GAP | — | L second-user DACL denial |
+| 13 | concurrent sandboxes isolated | L | GAP | L `live_concurrent_sandboxes_are_isolated` (control token, overlap checked) | GAP | — | L second-user DACL denial |
 | 14 | restart leaves no orphans | L (launcher death) | GAP | L cleanup after run; gateway/driver restart GAP | GAP | L kill-on-close | — |
 | 15 | evidence attributable | — | — | L execution.json, effective-policy.yaml, denials.log | — | — | — |
 | 16 | transfer cannot escape paths | L | L | GAP (no malicious-archive test) | — | — | L |
 
-`*` = test strengthened in review pass 1 fixes; see the review section.
 Windows Local claims lifecycle and environment only, so most rows are `—`.
 The stretch bar (12 exercised scenarios per applicable backend) is met by
-Linux Isolated only; it is not met by Linux OpenShell vm (9 L), Linux Jail or
+Linux Isolated only; it is not met by Linux OpenShell vm (7 L: 1, 3, 9, 11, 13, 14, 15), Linux Jail or
 macOS Jail.
 
 ## Phase 3 — Linux live proof result (2026-10-26)
@@ -331,5 +330,32 @@ refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
   - F20 confirmed (pre-existing in the tarball): helpers shipped and install-checked.
   - F22, F23, F24 confirmed: skills corrected.
   - F25 confirmed: unsafe inventory corrected.
-  - F02, F03, F06, F08, F16, F17, F21: branch `fix/review1-sandbox`.
-  - F04, F05, F09, F11, F12, F13, F14, F15: branch `fix/review1-windows`.
+  - Sandbox branch `fix/review1-sandbox` (merged; live 9/9 run 40286201426, Portability 40283796428):
+    - F02 confirmed, fixed: `prepare` reads `openshell gateway info -o json` `compute_drivers[].name` and
+      refuses `openshell_driver_mismatch` / `openshell_driver_unverified` before create; execution.json
+      records `compute_driver.source = "gateway_info"`.
+    - F03 confirmed, fixed: the projection is snapshotted into `artifacts/openshell/projection/` before any
+      read, the lock is verified on the snapshot, every later read and CLI/prover argument uses it, and the
+      runtime-approved identity (`OpenShellSandbox::approving`) must match (`openshell_projection_tampered`).
+    - F06 confirmed, fixed: `artifact_output.rs` removes a planted entry and opens `create_new` + `O_NOFOLLOW`
+      for local, Linux/macOS jail and OpenShell outputs; test `artifact_output_no_follow.rs`.
+    - F08 confirmed, partly fixed: the process group is killed on completion too (local, Linux jail, macOS
+      jail). A `setsid()` descendant still escapes; documented in `docs/subsystems/sandbox-runtime.md`. OPEN.
+    - F16 confirmed, fixed: B plants and must find its own control, grep must exit 0, A must outlive B; B
+      searches the policy's writable trees `/sandbox` and `/tmp`.
+    - F17 confirmed, claim narrowed: OpenShell 0.1.3 logs no denial for the probe (denials.log empty); the
+      test asserts no connection only and says so. Scenario 4 on OpenShell vm stays "no egress observed",
+      without a positive control. OPEN (needs a reachable controlled endpoint).
+    - F21 confirmed, fixed: OCI repository-component separator grammar.
+  - Windows branch `fix/review1-windows` (merged; Portability 40285346128 green incl. identity E2E):
+    - F04, F05 confirmed, fixed: `safe_write_within` opens without truncation (`OPEN_ALWAYS`, no-follow),
+      refuses link count ≠ 1, reparse points and a handle final path outside the canonical root, and deletes
+      a file it created on refusal; tests in `safe_write_windows.rs`.
+    - F09 confirmed, fixed: CLI opens with identification-only QoS; the server accepts identification level.
+    - F11 confirmed, fixed: client ACE is `0x12018B` (no `FILE_CREATE_PIPE_INSTANCE`); E2E shows an admitted
+      user cannot create an instance.
+    - F12 confirmed, fixed: identity read bounded by the request deadline.
+    - F13 confirmed, fixed: optional `SEA_FORGE_SERVER_SID` pins the expected server; not exercised by a
+      CLI-driven E2E (limitation).
+    - F14 confirmed, fixed: `Job::terminate_and_wait` (5 s) used by local and settlement.
+    - F15 confirmed, fixed: `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1` in CI turns missing link privilege into a failure.
