@@ -184,6 +184,31 @@ pub struct CaseEntry {
     pub run_dir: Option<String>,
 }
 
+/// Why `ServerState::reload_config` refused a reload. The previous snapshot
+/// stays live in every case.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReloadError {
+    /// The error class, when the refusal has one. `None` for an ordinary invalid file.
+    pub error_class: Option<&'static str>,
+    /// The operator-facing reason.
+    pub message: String,
+}
+
+impl ReloadError {
+    fn invalid(message: String) -> Self {
+        Self {
+            error_class: None,
+            message,
+        }
+    }
+}
+
+impl std::fmt::Display for ReloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
 /// Shared server state.
 pub struct ServerState {
     /// The cell this server owns. Fixed for the process lifetime: `server.yaml`
@@ -435,7 +460,7 @@ impl ServerState {
     /// running cell silently reverted every setting to its default, which is a
     /// fail-open of exactly the kind §8.4 exists to prevent. Nothing to re-read
     /// means nothing to change.
-    pub fn reload_config(&self) -> Result<Arc<ServerConfig>, String> {
+    pub fn reload_config(&self) -> Result<Arc<ServerConfig>, ReloadError> {
         let config_path = self.root.join("server.yaml");
         if !config_path.exists() {
             tracing::debug!(
@@ -444,12 +469,27 @@ impl ServerState {
             );
             return Ok(self.config());
         }
-        let mut next = ServerConfig::load(&config_path)?;
+        let mut next = ServerConfig::load(&config_path).map_err(ReloadError::invalid)?;
         // The cell is fixed at startup. A `root:` or `socket_path:` key that
         // drifted into the file cannot move a running server's records or
         // socket out from under its own connections and in-flight runs.
         next.root = self.root.clone();
         next.socket_path = self.config().socket_path.clone();
+        // F30: the Windows server pipe's DACL admits the SIDs it was built with
+        // at startup and cannot be rebuilt live. A reload that changes that set
+        // would half-apply the identity bindings, so it is refused instead. The
+        // active snapshot keeps the startup set (every change is refused), so
+        // comparing against it is the same as comparing against startup.
+        #[cfg(windows)]
+        if crate::config::reload_changes_pipe_admission(&self.config(), &next) {
+            return Err(ReloadError {
+                error_class: Some(crate::config::IDENTITY_RELOAD_REQUIRES_RESTART),
+                message: "server.yaml changes the identity SIDs admitted by the Windows \
+                          server pipe, which is fixed at startup; restart the server to apply \
+                          this identity change. The previous configuration stays active."
+                    .to_string(),
+            });
+        }
 
         let next = Arc::new(next);
         *self.config.write().unwrap_or_else(|e| e.into_inner()) = Arc::clone(&next);
@@ -1482,13 +1522,7 @@ async fn run_inner(
         .collect::<Result<Vec<_>, _>>()?;
     // Windows: the SIDs the pipe DACL must admit, read before `config` moves.
     #[cfg(windows)]
-    let pipe_bound_sids: Vec<String> = config
-        .identity
-        .bindings
-        .iter()
-        .filter_map(|binding| binding.sid.clone())
-        .chain(config.gateway.as_ref().map(|gateway| gateway.sid.clone()))
-        .collect();
+    let pipe_bound_sids: Vec<String> = crate::config::pipe_admitted_sids(&config);
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -3428,7 +3462,8 @@ async fn commit_plan(
     // below runs on the reloaded snapshot. An invalid file keeps the previous
     // one and is reported to the operator — a silent log line would let a cell
     // run for days on a configuration its `server.yaml` no longer describes.
-    if let Err(message) = state.reload_config() {
+    if let Err(refusal) = state.reload_config() {
+        let message = refusal.message;
         tracing::warn!("invalid config reload — keeping last-known-good: {message}");
         let _ = state
             .publish_event(
@@ -3438,6 +3473,7 @@ async fn commit_plan(
                 serde_json::json!({
                     "config_path": state.root.join("server.yaml").display().to_string(),
                     "message": message,
+                    "error_class": refusal.error_class,
                 }),
             )
             .await;

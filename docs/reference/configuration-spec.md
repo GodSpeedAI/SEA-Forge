@@ -40,6 +40,7 @@ A value that does not start with `S-1-` is refused. The CLI opens the pipe with 
 * **Present but invalid:** startup fails before the socket is bound or cell records are created. Unknown fields are rejected (`deny_unknown_fields`); this is not a permissive schema.
 * **Reload trigger:** the running server re-reads `server.yaml` on case submission (`submit` / case commit), not on every request.
 * **Invalid reload:** the previous validated snapshot remains live, and the server publishes an `invalid_reload_error` operator event. It does not half-apply a configuration.
+* **Identity reload on Windows:** the server pipe's security descriptor admits the SIDs bound in `identity` (and the gateway SID), and it is built once at startup. On Windows, a reload that adds or removes any such SID is refused with error class `identity_reload_requires_restart`, and the previous snapshot stays live. The refusal is published as an `invalid_reload_error` event whose `error_class` is that value. Restart the server to apply a SID change. Role changes and other non-SID settings still reload. On Unix, identity is matched by uid on the socket, so identity reloads apply live.
 * **Deleted file:** a reload with no file is a no-op. It does not reset the process to defaults.
 * **Fixed root and socket:** a reload cannot move the cell root or socket. Those are process-lifetime properties.
 * **Immutable supervisor:** supervisor settings are read when the task is spawned at startup. Changing them requires a restart.
