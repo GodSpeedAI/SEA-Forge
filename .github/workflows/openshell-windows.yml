@@ -74,6 +74,10 @@ jobs:
           $rel = "target\x86_64-pc-windows-msvc\release"
           Copy-Item "$rel\openshell.exe","$rel\openshell-gateway.exe","$rel\openshell-prover.exe" $out
           Get-ChildItem $rel -Filter *.dll | Copy-Item -Destination $out
+          # The gateway and prover import libz3.dll from the prebuilt Z3 the build downloaded.
+          $z3 = Get-ChildItem target -Recurse -Filter libz3.dll | Select-Object -First 1
+          if (-not $z3) { throw "libz3.dll not found under target" }
+          Copy-Item $z3.FullName $out
           $test = Get-Content test-build.json | ForEach-Object { try { $_ | ConvertFrom-Json } catch {} } |
             Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'wxc_exec_real' -and $_.executable } |
             Select-Object -First 1
