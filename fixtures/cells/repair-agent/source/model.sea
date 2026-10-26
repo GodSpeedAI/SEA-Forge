@@ -45,10 +45,10 @@ NetworkFlow "resolve-python-packages" from "RepairAgent" to "package-mirror"
 Endpoint "live-egress-control"
     @host "10.0.2.2"
     @port "46244"
-    @protocol "tcp"
+    @protocol "http"
 
 NetworkFlow "live-egress-allow" from "RepairAgent" to "live-egress-control"
-    @operation "connect"
+    @operation "read"
 
 Credential "package-mirror-token"
     @provider "sea-forge"

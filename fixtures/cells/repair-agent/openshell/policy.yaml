@@ -30,9 +30,11 @@ network_policies:
     - path: /usr/local/bin/python
     - path: /usr/local/bin/uv
     endpoints:
-    - host: "10.0.2.2"
+    - access: read-only
+      enforcement: enforce
+      host: "10.0.2.2"
       port: 46244
-      protocol: tcp
+      protocol: rest
     name: live-egress-allow
   cell_resolve_python_packages:
     binaries:

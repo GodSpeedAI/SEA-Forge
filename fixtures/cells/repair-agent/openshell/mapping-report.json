@@ -198,7 +198,7 @@
     },
     {
       "class": "enforced",
-      "note": "tcp 10.0.2.2:46244 for operation 'connect', restricted to the Cell's declared executables",
+      "note": "http 10.0.2.2:46244 for operation 'read', restricted to the Cell's declared executables",
       "phase": "live",
       "source": "ec80a4ae4102346a",
       "target": "policy.yaml#/network_policies/cell_live_egress_allow"

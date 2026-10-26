@@ -2,12 +2,12 @@
   "cell_id": "9093569307216df6",
   "created_at": "2026-10-12T00:00:00Z",
   "files": {
-    "mapping-report.json": "sha256:77ff5312698da6c5c6578b4238b13f6a29a32df02e6ff0315162907154429de2",
-    "policy.yaml": "sha256:42f65c47ba4109af5d7ff92fe8f784cbb5d42fa1e1a9d0f9d948bd48ec8a6789",
+    "mapping-report.json": "sha256:b77fefd57b43fac44d569c7a4fe33ed8b24f6c58e6716e430272ee79f41c471b",
+    "policy.yaml": "sha256:e8a8f97850327cb14cd09e655e34a6593b1781b1da5131485da3e1a39931a948",
     "sandbox.json": "sha256:a49588d13b0f46d122cbbf3a044707a855dc0078d7d242845e77891f2ec6e655"
   },
   "model": {
-    "hash": "sha256:6160691223fa88c272e600812153acc6eb4cfb8b2b31895ba92caad703fd2080",
+    "hash": "sha256:5223910645a3fc60bfb77e55625495b4e7dfd852e878d3bf8d53ae1b078012e5",
     "version": "1.0.0"
   },
   "openshell_version": "0.1.3",
@@ -15,7 +15,7 @@
     "hash": null,
     "present": false
   },
-  "policy_digest": "sha256:42f65c47ba4109af5d7ff92fe8f784cbb5d42fa1e1a9d0f9d948bd48ec8a6789",
+  "policy_digest": "sha256:e8a8f97850327cb14cd09e655e34a6593b1781b1da5131485da3e1a39931a948",
   "profile": {
     "id": "python-agent-v1",
     "version": "1.0.0"

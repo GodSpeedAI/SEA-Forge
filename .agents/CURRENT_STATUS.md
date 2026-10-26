@@ -1,27 +1,28 @@
 # Current status
 
-**Status revision:** 184
+**Status revision:** 185
 
-**Stage:** capability-harvest: all six findings implemented on feat/hardening-capability-harvest; lifecycle containment surfaced on ExecutionResult; ready for CI lanes and independent review
+**Stage:** capability-harvest: CI round 1 triaged — F17 fixture rule reshaped to the provable vocabulary; windows pin failures under fix
 
-**Summary:** F15 skip integrity + cgroup preflight; F05 exclusive pinned dirs with anchored ops and per-use revalidation; F08 cgroup-v2 containment (Linux), verified job membership (Windows), census+typed CagePersists (macOS); F32 staged-dir publishes; F33 edge pipe adapter with unified-graph gate; F17 host-observed arrival proof pair; domainforge-core 0.21.2; ExecutionResult.lifecycle_containment (CgroupLeaf/JobObject/ProcessGroup/PidNamespace/ExternalSandbox/SandboxCagePersists/NoProcess) populated truthfully per backend and flowing into evidence, traces, and settlement.
+**Summary:** CI round 1: kernel-security green; portability windows job failed (two pin tests + an access violation in the new anchored FFI — fix subagent working); openshell-live failed because the prover refuses tcp-protocol endpoint rules. Local prober evidence (openshell-prover 0.1.3 AND 0.1.5): tcp rules are unsupported in candidate and boundary policies; IP-literal+rest parses and self-checks within_boundary. DomainForge model vocabulary has no L4-connect operation (only read/write map to access presets), so the F17 control endpoint now projects as a rest (http/read) rule on 10.0.2.2:46244 — the KVM lane will reveal whether enforcement permits a raw connect under a rest grant, which is precisely what the positive control exists to discover.
 
 **Verified:**
 
-- just check EXIT=0 on the full worktree before W3b; W3b gates green: sandbox/core/cli/settlement/runtime/case-runner/server clippy+tests, windows-msvc and apple-darwin checks, no-async-kernel, fmt
-- 8 commits landed through pre-commit (status coupling, fmt --all, gitleaks clean)
-- Unavailable->ProcessGroup containment assertion ran locally; Active/Windows/macOS assertions are placed for their CI lanes
+- Prober probe: v0.1.3 and v0.1.5 both return 'unsupported' for tcp rules (candidate and boundary); ip+rest and host+rest parse; clean==clean control within_boundary
+- Regenerated fixture passes openshell-prover 0.1.3 self-check: within_boundary, full coverage domains
+- Fixture-consuming suites green after the regen: cell_episode 24, opa_candidate 29, openshell_stub 35
+- domainforge CLI installed at exactly 0.21.2 for regeneration (0.19.0 was stale in ~/.cargo)
 
 **Limits:**
 
-- cgroup Active-path, windows JobObject, and macOS cage-persists assertions await their CI lanes
-- F17 denial proof awaits the openshell-live KVM dispatch
-- sea-forge-cli lifecycle post_start_internal_error_is_run_correlated_and_traced fails on pristine HEAD on this WSL2 host (stash-verified; likely host-specific; main CI is green)
-- F05 NTFS/junction and anchored-rename tests await the portability windows lane
+- Whether OpenShell enforcement permits a raw TCP connect under a rest grant is unknown until the KVM lane runs
+- Windows pin failures and the access violation await the fix subagent and a lane re-run
+- CI (ubuntu test, macOS) and casework lanes were still running at triage time
 
-**Next move:** Commit W3b, push feat/hardening-capability-harvest, open the PR for ci.yml+kernel-security lanes, dispatch openshell-live.yml, then footprint and the independent codex review.
+**Next move:** Land the windows FFI fix, push both fixes, re-dispatch openshell-live, then footprint completion and the codex review.
 
 **Evidence:**
 
+- /tmp/prover-probe (probe outputs)
 - .tmp/harvest/
 - .agents/OBSERVED_DEBT.md
