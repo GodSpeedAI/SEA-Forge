@@ -249,7 +249,14 @@ pub fn execute_openshell(
     )?;
 
     use sea_forge_sandbox::ExecutionSandbox as _;
-    let sandbox = sea_forge_sandbox::OpenShellSandbox::new(binding);
+    // The sandbox must run the projection the checks above authorized.
+    let sandbox = sea_forge_sandbox::OpenShellSandbox::new(binding).approving(
+        sea_forge_sandbox::ApprovedProjection {
+            cell_id: cell_id.clone(),
+            model_hash: model_hash.clone(),
+            policy_digest: policy_digest.clone(),
+        },
+    );
     let spec = SandboxSpec {
         workspace_root: workspace.to_path_buf(),
         artifacts_root: artifacts.to_path_buf(),

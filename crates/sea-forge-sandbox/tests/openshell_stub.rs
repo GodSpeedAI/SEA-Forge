@@ -11,8 +11,8 @@
 
 use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
 use sea_forge_sandbox::{
-    select_openshell, select_sandbox, ExecutionSandbox, NetworkPosture, OpenShellBinding,
-    OpenShellSandbox, SandboxClass, SandboxError, SandboxHandle, SandboxSpec,
+    select_openshell, select_sandbox, ApprovedProjection, ExecutionSandbox, NetworkPosture,
+    OpenShellBinding, OpenShellSandbox, SandboxClass, SandboxError, SandboxHandle, SandboxSpec,
 };
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -38,8 +38,26 @@ if [ "$1" = "--gateway" ]; then
 fi
 case "$1" in
   --version)
+    # Swap the projection's policy and lock while the CLI is being probed.
+    if [ -f "$CTL/swap_on_version" ]; then
+      P=$(cat "$CTL/swap_on_version")
+      cp "$CTL/swap/policy.yaml" "$P/policy.yaml"
+      cp "$CTL/swap/openshell.lock" "$P/openshell.lock"
+    fi
     if [ -f "$CTL/version" ]; then cat "$CTL/version"; else echo "openshell 0.1.3"; fi
     exit 0
+    ;;
+  gateway)
+    if [ "$2" = "info" ]; then
+      if [ -f "$CTL/gateway_info_fail" ]; then
+        echo "gateway info requires admin privileges" >&2
+        exit 1
+      fi
+      DRIVER=vm
+      if [ -f "$CTL/gateway_driver" ]; then DRIVER=$(cat "$CTL/gateway_driver"); fi
+      echo "{\"gateway\":\"stub\",\"server\":\"stub\",\"auth\":null,\"status\":\"Connected\",\"version\":\"0.1.3\",\"compute_drivers\":[{\"name\":\"$DRIVER\",\"capabilities\":{\"driver_name\":\"$DRIVER\",\"driver_version\":\"0.1.3\"}}],\"extensions\":[]}"
+      exit 0
+    fi
     ;;
   status)
     if [ -f "$CTL/gateway_down" ]; then
@@ -828,6 +846,7 @@ fn a_matching_native_image_is_created_without_an_image_and_runs_only_its_executa
     let mut h = harness();
     let image = bind_native(&mut h, b"tool");
     reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    ctl(&h, "gateway_driver", "mxc");
     let exe = h
         .binding
         .native_executable
@@ -867,3 +886,112 @@ fn an_unparseable_image_is_refused() {
     );
     assert!(calls(&h).is_empty());
 }
+
+/// A self-consistent projection lock for `policy`, as `openshell.lock` writes it.
+fn lock_for(policy: &str) -> String {
+    json!({
+        "cell_id": "cell_test",
+        "openshell_version": "0.1.3",
+        "model": { "hash": "sha256:model" },
+        "policy_digest": digest(policy.as_bytes()),
+        "files": {
+            "mapping-report.json": digest(MAPPING_REPORT.as_bytes()),
+            "policy.yaml": digest(policy.as_bytes()),
+            "sandbox.json": digest(SANDBOX_JSON.as_bytes()),
+        },
+    })
+    .to_string()
+}
+
+const SWAPPED_POLICY: &str = "version: 1\n# swapped after the grant\n";
+
+fn approved_original() -> ApprovedProjection {
+    ApprovedProjection {
+        cell_id: "cell_test".into(),
+        model_hash: "sha256:model".into(),
+        policy_digest: digest(POLICY.as_bytes()),
+    }
+}
+
+#[test]
+fn projection_swapped_during_the_cli_version_call_is_not_used() {
+    let h = harness();
+    let swap = h.root.join("ctl/swap");
+    fs::create_dir_all(&swap).expect("swap dir");
+    fs::write(swap.join("policy.yaml"), SWAPPED_POLICY).expect("swap policy");
+    fs::write(swap.join("openshell.lock"), lock_for(SWAPPED_POLICY)).expect("swap lock");
+    ctl(&h, "swap_on_version", &h.binding.projection_dir.display().to_string());
+
+    let sandbox = OpenShellSandbox::new(h.binding.clone()).approving(approved_original());
+    let handle = sandbox.prepare(&h.spec).expect("prepare uses the snapshot");
+
+    // The source really was swapped, so the snapshot is the only reason this passes.
+    assert_eq!(
+        fs::read_to_string(h.binding.projection_dir.join("policy.yaml")).unwrap(),
+        SWAPPED_POLICY
+    );
+    let snapshot = h.root.join("artifacts/openshell/projection");
+    assert_eq!(
+        fs::read_to_string(snapshot.join("policy.yaml")).unwrap(),
+        POLICY
+    );
+    let lines = calls(&h);
+    let create = find_after(&lines, 0, "sandbox create", |l| {
+        l.starts_with("openshell sandbox create ")
+    });
+    assert!(
+        lines[create].contains(&snapshot.join("policy.yaml").display().to_string()),
+        "{}",
+        lines[create]
+    );
+    assert!(
+        lines.iter().any(|l| l.contains(&format!(
+            "--boundary {}",
+            snapshot.join("policy.yaml").display()
+        ))),
+        "prover must read the snapshot boundary: {lines:#?}"
+    );
+    let record = read_record(&h);
+    assert_eq!(record["projected_policy_digest"], json!(digest(POLICY.as_bytes())));
+    assert_eq!(record["compute_driver"]["driver"], "vm");
+    assert_eq!(record["compute_driver"]["source"], "gateway_info");
+    sandbox.destroy(handle).expect("destroy");
+}
+
+#[test]
+fn projection_that_differs_from_the_authorized_identity_is_refused_before_create() {
+    let h = harness();
+    reproject(&h, SANDBOX_JSON, SWAPPED_POLICY);
+
+    let sandbox = OpenShellSandbox::new(h.binding.clone()).approving(approved_original());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_projection_tampered"
+    );
+    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+}
+
+#[test]
+fn gateway_driver_that_differs_from_the_projection_is_refused_before_create() {
+    let h = harness();
+    ctl(&h, "gateway_driver", "docker");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_mismatch"
+    );
+    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+}
+
+#[test]
+fn gateway_that_cannot_report_its_driver_is_refused_before_create() {
+    let h = harness();
+    ctl(&h, "gateway_info_fail", "1");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_unverified"
+    );
+    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+}
+

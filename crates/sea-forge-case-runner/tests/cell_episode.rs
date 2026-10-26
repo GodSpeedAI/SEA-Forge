@@ -66,6 +66,10 @@ case "$1" in
     fi
     exit 0
     ;;
+  gateway)
+    echo '{"compute_drivers":[{"name":"vm","capabilities":{"driver_name":"vm","driver_version":"0.1.3"}}]}'
+    exit 0
+    ;;
   logs)
     if [ -f "$CTL/logs" ]; then cat "$CTL/logs"; fi
     exit 0
