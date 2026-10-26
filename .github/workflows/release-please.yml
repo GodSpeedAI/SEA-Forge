@@ -119,6 +119,16 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Every package was built from the release tag
+        run: |
+          set -euo pipefail
+          tag_commit="$(git rev-parse HEAD)"
+          for os in linux macos windows; do
+            built="$(cat "dist/built-from-${os}.txt")"
+            test "$built" = "$tag_commit" || { echo "::error::${os} packages built from ${built}, tag ${RELEASE_TAG} is ${tag_commit}"; exit 1; }
+            rm "dist/built-from-${os}.txt"
+          done
+
       - name: SHA256SUMS over every asset
         run: |
           set -euo pipefail

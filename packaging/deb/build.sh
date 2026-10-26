@@ -23,7 +23,10 @@ case "$version" in
 esac
 
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
-for bin in sea-forge sea-forge-server; do
+# The isolated backend runs sea-forge-workload-exec and the MCP bridge runs
+# sea-forge-mcp-connect; both are found beside the running executable.
+bins="sea-forge sea-forge-server sea-forge-workload-exec sea-forge-mcp-connect"
+for bin in $bins; do
     if [ ! -x "$bindir/$bin" ]; then
         echo "error: missing executable $bindir/$bin" >&2
         exit 1
@@ -39,7 +42,7 @@ printf 'Source: sea-forge\n\nPackage: sea-forge\nArchitecture: amd64\nDescriptio
     > "$work/shlibs/debian/control"
 (
     cd "$work/shlibs"
-    dpkg-shlibdeps -O -e"$bindir/sea-forge" -e"$bindir/sea-forge-server" \
+    dpkg-shlibdeps -O $(for bin in $bins; do printf -- '-e%s ' "$bindir/$bin"; done) \
         > "$work/shlibs.out" 2> "$work/shlibs.err" || {
         cat "$work/shlibs.err" >&2
         exit 1
@@ -56,8 +59,9 @@ esac
 
 root="$work/sea-forge_${version}_amd64"
 mkdir -p "$root/DEBIAN" "$root/usr/bin" "$root/usr/share/doc/sea-forge"
-install -m 0755 "$bindir/sea-forge" "$root/usr/bin/sea-forge"
-install -m 0755 "$bindir/sea-forge-server" "$root/usr/bin/sea-forge-server"
+for bin in $bins; do
+    install -m 0755 "$bindir/$bin" "$root/usr/bin/$bin"
+done
 install -m 0644 "$repo_root/LICENSE" "$root/usr/share/doc/sea-forge/copyright"
 
 installed_kib=$(du -sk "$root/usr" | cut -f1)

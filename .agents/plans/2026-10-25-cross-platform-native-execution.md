@@ -13,7 +13,7 @@ CI logs) and the GitHub Actions runs named below.
 | Release assets | linux x86_64 tarball + SHA256SUMS + build provenance only | `release-please.yml:118-149` |
 | Windows compile blockers (layer 1) | `sea-forge-changeset` (unix FileTypeExt/nlink), `sea-forge-sandbox` local.rs (`CommandExt::process_group`), authority test fixtures | Portability run 40251961705 |
 | Windows compile blockers (later layers) | server/CLI Unix sockets, `SO_PEERCRED`, rustix unconditional in server | recon/sea-forge.md §4 |
-| `unsafe` | zero `unsafe` blocks; workspace `unsafe_code = "deny"`, most crates `forbid` | `Cargo.toml:38` |
+| `unsafe` | workspace `unsafe_code = "deny"`; pre-existing Linux exceptions: `sea-forge-sandbox/src/socket_policy.rs` (seccomp notify) and `src/bin/sea-forge-workload-exec.rs` (raw syscalls). (Corrected after review F25; first written as "zero".) | `Cargo.toml:38` |
 | OpenShell pin | SEA-Forge pins CLI `openshell 0.1.3`; every flag it uses is unchanged at v0.1.5 and HEAD c4688aa | recon/openshell-compat.md |
 | OpenShell drivers | docker, podman, kubernetes, vm (Linux KVM / macOS HVF, Apple Silicon), mxc (Windows only, feature `compute-driver-mxc`) | gateway `lib.rs:73-125` |
 | WSLc driver upstream | none; issue #3956 is macOS (closed, "not on roadmap") | recon/openshell.md §4 |
@@ -26,9 +26,10 @@ CI logs) and the GitHub Actions runs named below.
 
 ## Decisions
 
-1. **One `unsafe` home.** Windows FFI with no safe equivalent (named-pipe client
+1. **One home for new `unsafe`.** Windows FFI with no safe equivalent (named-pipe client
    token SID, pipe DACL, server-SID check, Job Objects) lives in one new
-   Windows-only crate `sea-forge-os`; every other crate keeps `forbid(unsafe_code)`.
+   Windows-only crate `sea-forge-os`; no other new `unsafe` is added (the two
+   pre-existing Linux sandbox exceptions are unchanged).
    Hard-link / reparse checks use the already-locked safe `winapi-util`.
    `windows-sys` 0.61 is already in `Cargo.lock` (tokio/mio): no new crate.
 2. **Windows control plane = named pipes with OS-backed identity.** Pipe name is
@@ -212,51 +213,50 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
   enforce (Landlock hard requirement, Linux process identity). Least-cost
   remedy upstream: an MXC exec/transfer surface plus a label resolver.
 
-## Capability matrix (2026-10-26)
+## Capability matrix (2026-10-26, corrected after review pass 1)
 
 | Backend | Host | Status | Evidence |
 |---|---|---|---|
-| Local (Landlock + seccomp) | Linux | Passing | ci.yml `test (ubuntu)`, kernel-security socket gates (22.04/24.04 VMs) |
-| Jail (Landlock, no net / port allowlist) | Linux | Passing | `tests/conformance_m1.rs` in ci.yml |
-| OpenShell `vm` (KVM microVM) | Linux | Passing, live | openshell-live runs 40268910844 + repetitions; 6/6 `cell_episode_live` with Docker stopped |
-| Local (Seatbelt) | macOS | Built, untested by scenario | no scenario tests (gap) |
-| Jail (App Sandbox) | macOS | Passing | portability.yml `macos`, `tests/macos_app_sandbox_jail.rs` 7/7 |
-| OpenShell `vm` (HVF) | macOS | **Blocked** | hosted runners report `kern.hv_support=0`; `krun_start_enter failed: -22`. Needs a bare-metal Apple Silicon runner |
-| Local (Job Object only) | Windows | Passing for lifecycle only; **no FS/network containment** | portability.yml `windows`: `windows_local_job.rs` 5/5 |
-| Control plane (named pipe, SID identity) | Windows | Passing | `scripts/windows/identity-e2e.ps1` 10/10 |
+| Local | all | **Trusted host execution: no FS, network or syscall containment on any OS** (env cleared; process group / Job Object for lifecycle only) | `local.rs` applies no Landlock, seccomp or Seatbelt |
+| Isolated (per-run UID, Landlock, seccomp, namespaces) | Linux | Passing | `workload_boundary.rs`, `workload_isolation.rs`, `unix_socket_reach.rs`, `state_tree.rs` in ci.yml; kernel-security socket gates |
+| Jail (Landlock FS + **TCP-only** network rules) | Linux | Passing for FS and TCP; **UDP/DNS not restricted** | `conformance_m1.rs` |
+| OpenShell `vm` (KVM microVM) | Linux | Passing, live | openshell-live runs 40268910844, 40269436237, 40269901711, 40269528859 (6/6), 40275738307 (9/9); Docker stopped |
+| Jail (App Sandbox) | macOS | Passing for FS and network (no network entitlement blocks TCP, UDP, DNS) | portability.yml `macos`, `macos_app_sandbox_jail.rs` |
+| OpenShell `vm` (HVF) | macOS | **Blocked** | hosted runners report `kern.hv_support=0`; needs bare-metal Apple Silicon |
+| Control plane (named pipe, SID identity) | Windows | Passing (see review fixes) | `scripts/windows/identity-e2e.ps1` |
 | OpenShell `mxc` (AppContainer) | Windows | Upstream driver works; **SEA-Forge Blocked** | Phase 4 section |
 | WSLc | Windows | **Blocked** | Phase 5 section |
-| Isolated (Firecracker-class microVM, no OpenShell) | Linux | Unchanged; refuses off Linux | — |
 
-## Conformance matrix (Phase 8 scenarios)
+## Conformance matrix (Phase 8 scenarios, corrected after review pass 1)
 
-`L` = live on the real mechanism, `S` = stub CLI (sequence and refusal logic only),
-`—` = not applicable to the backend's claimed guarantees, `GAP` = applicable, no test,
-`BLK` = backend blocked. A `GAP` or `BLK` is never a pass.
+`L` = live on the real mechanism with the named test, `S` = stub CLI (sequence
+and refusal logic only), `—` = the backend claims no such guarantee, `GAP` =
+applicable, no test that exercises it, `BLK` = backend blocked. Only `L` counts.
 
-| # | Scenario | Linux Local | Linux Jail | Linux OpenShell vm | macOS Jail | Windows Local | Windows pipe CP |
+| # | Scenario | Linux Isolated | Linux Jail | Linux OpenShell vm | macOS Jail | Windows Local (lifecycle only) | Windows pipe CP |
 |---|---|---|---|---|---|---|---|
-| 1 | authorized workspace r/w | L | L | L (`live_authorized_episode_runs_in_a_microvm`) | L | L (exit/stdout) | — |
-| 2 | unauthorized FS write blocked | L | L | L (`live_host_filesystem_is_not_visible`) | L | — (not contained) | — |
-| 3 | symlink/reparse/junction escape | L | GAP | L (`live_workspace_symlink_cannot_reach_host_files`: link dangles in the VM) | L | — | L (`changeset_windows.rs`) |
-| 4 | unauthorized network blocked | L | L | L (`live_network_egress_is_denied`) | L | — (not contained) | — |
-| 5 | authorized network restricted | L(?) | L | GAP (no live allowed-endpoint test) | — (AllowTcpPorts refused) | — | — |
-| 6 | modified executable rejected | GAP | GAP | S (native hash pin) | GAP | GAP | — |
-| 7 | provider credentials inaccessible | GAP | GAP | S (host env not forwarded) | L (`$HOME` secret read denied) | L (env cleared) | — |
-| 8 | exfiltration to unauthorized endpoint | via 4 | via 4 | via 4 | via 4 | — | — |
-| 9 | projection / lock tampering | — | — | L (`live_tampered_projection_is_refused_before_create`: `openshell_projection_tampered`, no sandbox) + S | — | — | — |
-| 10 | frozen-run authority widening | GAP (sandbox side) | GAP | GAP | GAP | GAP | — |
-| 11 | process-tree cancellation | L | GAP | L (`live_timeout_cancels_the_command`) | L | L (tree + WMI) | — |
-| 12 | no host fallback on failure | L | L | S | L (`jail_unavailable`) | — | L (second server, squatting) |
-| 13 | concurrent sandboxes isolated | L | GAP | L (`live_concurrent_sandboxes_are_isolated`; search partial, timing-based overlap) | GAP | GAP | L (second-user DACL denial) |
-| 14 | restart leaves no orphans | L (partial) | GAP | L (cleanup) + S (destroy idempotent); gateway restart GAP | GAP | L (kill-on-close) | — |
-| 15 | evidence attributable | — | — | L (execution.json, effective-policy.yaml, denials.log) | — | — | — |
-| 16 | transfer cannot escape paths | L | L | L (flat upload / download into run dir) | — | — | L |
+| 1 | authorized workspace r/w | L | L | L `live_authorized_episode_runs_in_a_microvm` | L | L exit code + stdout | — |
+| 2 | unauthorized FS write blocked | L | L | GAP (`live_host_filesystem_is_not_visible` only reads) | L | — | — |
+| 3 | symlink/reparse/junction escape | L | GAP | L `live_workspace_symlink_cannot_reach_host_files` | L | — | L `changeset_windows.rs` |
+| 4 | unauthorized network blocked | L | L TCP only; UDP/DNS GAP | L* `live_network_egress_is_denied` (no positive control; see F17) | L TCP+UDP+DNS | — | — |
+| 5 | authorized network restricted | GAP | L TCP ports | GAP | — (AllowTcpPorts refused) | — | — |
+| 6 | modified executable rejected | GAP | GAP | GAP (native pin is MXC-only; stub) | GAP | — | — |
+| 7 | provider credentials inaccessible | GAP | GAP | S host env not forwarded | L `$HOME` secret unreadable | L env cleared | — |
+| 8 | exfiltration to unauthorized endpoint | via 4 | TCP only | via 4* | via 4 | — | — |
+| 9 | projection / lock tampering | — | — | L `live_tampered_projection_is_refused_before_create` + S | — | — | — |
+| 10 | frozen-run authority widening | GAP | GAP | GAP (review F03) | GAP | — | — |
+| 11 | process-tree cancellation | L | GAP | L `live_timeout_cancels_the_command` | L (same pgid only; `setsid` escapes) | L cooperative tree only; WMI-created processes are outside the job | — |
+| 12 | no host fallback on failure | L | L | S | L `jail_unavailable` | — | L second server, squatting |
+| 13 | concurrent sandboxes isolated | L | GAP | L* `live_concurrent_sandboxes_are_isolated` (see F16) | GAP | — | L second-user DACL denial |
+| 14 | restart leaves no orphans | L (launcher death) | GAP | L cleanup after run; gateway/driver restart GAP | GAP | L kill-on-close | — |
+| 15 | evidence attributable | — | — | L execution.json, effective-policy.yaml, denials.log | — | — | — |
+| 16 | transfer cannot escape paths | L | L | GAP (no malicious-archive test) | — | — | L |
 
-Per applicable backend, the stretch bar of 12 exercised scenarios is met by
-Linux Local only. Linux OpenShell vm has 12 live (run 40275738307, 9/9 tests), 2 stub-only, 2 GAP (5, 10); macOS Jail 9;
-Windows Local covers lifecycle and environment only, because it claims no
-filesystem or network containment.
+`*` = test strengthened in review pass 1 fixes; see the review section.
+Windows Local claims lifecycle and environment only, so most rows are `—`.
+The stretch bar (12 exercised scenarios per applicable backend) is met by
+Linux Isolated only; it is not met by Linux OpenShell vm (9 L), Linux Jail or
+macOS Jail.
 
 ## Phase 3 — Linux live proof result (2026-10-26)
 

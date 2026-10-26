@@ -37,8 +37,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: package-${{ github.ref }}-${{ github.event_name == 'workflow_call' && inputs.ref || 'direct' }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+  # In a called workflow github.event_name is the CALLER's event, so the inputs
+  # (empty on direct push/dispatch runs) are used directly.
+  group: package-${{ github.ref }}-${{ inputs.ref || 'direct' }}
+  cancel-in-progress: ${{ !inputs.upload }}
 
 jobs:
   linux:
@@ -51,14 +53,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || '' }}
+          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve version
         id: version
         shell: bash
         env:
-          REQUESTED: ${{ github.event_name == 'workflow_call' && inputs.version || '' }}
+          REQUESTED: ${{ inputs.version || '' }}
         run: |
           set -euo pipefail
           workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
@@ -82,7 +84,9 @@ jobs:
         run: devbox run -- just release-check "${{ steps.version.outputs.version }}"
 
       - name: Build release binaries
-        run: devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+        run: |
+          devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked -p sea-forge-sandbox --bin sea-forge-workload-exec --bin sea-forge-mcp-connect
 
       # The Devbox (Nix) toolchain links the Nix loader and a /nix/store RUNPATH
       # into the binaries; they would not start on a host without Nix. Point
@@ -93,7 +97,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get install -y patchelf >/dev/null
-          for b in target/release/sea-forge target/release/sea-forge-server; do
+          for b in target/release/sea-forge target/release/sea-forge-server \
+                   target/release/sea-forge-workload-exec target/release/sea-forge-mcp-connect; do
             patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath "$b"
             readelf -l "$b" | grep -F '[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]'
             if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
@@ -112,7 +117,8 @@ jobs:
           stage="sea-forge-${VERSION}-x86_64-unknown-linux-gnu"
           rm -rf "dist-stage"
           mkdir -p "dist-stage/${stage}"
-          cp target/release/sea-forge target/release/sea-forge-server LICENSE "dist-stage/${stage}/"
+          cp target/release/sea-forge target/release/sea-forge-server target/release/sea-forge-workload-exec \
+             target/release/sea-forge-mcp-connect LICENSE "dist-stage/${stage}/"
           tar -C dist-stage -czf "dist/${stage}.tar.gz" "${stage}"
           rm -rf dist-stage
           ls -l dist
@@ -138,6 +144,9 @@ jobs:
           printf '%s\n' "$server_help" | grep -q "takes no arguments"
           echo "install test: sea-forge-server --help -> refused, exit $rc: $server_help"
           dpkg -L sea-forge
+          for helper in sea-forge-workload-exec sea-forge-mcp-connect; do
+            test -x "/usr/bin/$helper" || { echo "::error::$helper not installed beside sea-forge-server"; exit 1; }
+          done
           dpkg -s sea-forge | sed -n '1,12p'
           # The runner has Nix; prove the package also runs where it does not.
           for image in ubuntu:22.04 debian:12; do
@@ -148,6 +157,8 @@ jobs:
           if command -v sea-forge >/dev/null 2>&1; then echo "sea-forge still on PATH"; exit 1; fi
           test ! -e /usr/bin/sea-forge
           test ! -e /usr/bin/sea-forge-server
+          test ! -e /usr/bin/sea-forge-workload-exec
+          test ! -e /usr/bin/sea-forge-mcp-connect
           echo "install test: removed; /usr/bin/sea-forge* gone"
 
       - name: Install test (functional smoke from a re-installed package)
@@ -160,14 +171,18 @@ jobs:
           sh packaging/smoke-cell.sh /usr/bin/sea-forge /usr/bin/sea-forge-server
           sudo apt-get remove -y sea-forge
 
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-linux.txt
+
       - name: Upload packages
-        if: github.event_name != 'workflow_call' || inputs.upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pkg-linux
           path: |
             dist/*.deb
             dist/*.tar.gz
+            dist/built-from-linux.txt
           if-no-files-found: error
 
       - name: Job summary
@@ -190,14 +205,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || '' }}
+          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve version
         id: version
         shell: bash
         env:
-          REQUESTED: ${{ github.event_name == 'workflow_call' && inputs.version || '' }}
+          REQUESTED: ${{ inputs.version || '' }}
         run: |
           set -euo pipefail
           workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
@@ -355,14 +370,18 @@ jobs:
           sudo rm -f /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server /usr/local/bin/sea-forge-jail-launcher
           sudo pkgutil --forget ai.godspeed.sea-forge >/dev/null 2>&1 || true
 
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-macos.txt
+
       - name: Upload packages
-        if: github.event_name != 'workflow_call' || inputs.upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pkg-macos
           path: |
             dist/*.pkg
             dist/*.dmg
+            dist/built-from-macos.txt
           if-no-files-found: error
 
       - name: Job summary
@@ -391,14 +410,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_call' && inputs.ref || '' }}
+          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Resolve version
         id: version
         shell: bash
         env:
-          REQUESTED: ${{ github.event_name == 'workflow_call' && inputs.version || '' }}
+          REQUESTED: ${{ inputs.version || '' }}
         run: |
           set -euo pipefail
           workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
@@ -488,12 +507,16 @@ jobs:
             echo "- Functional smoke (CLI + daemon cell): NOT RUN, not yet supported on Windows (native port pending)."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-windows.txt
+
       - name: Upload packages
-        if: github.event_name != 'workflow_call' || inputs.upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pkg-windows
           path: |
             dist/*-setup.exe
             dist/*.zip
+            dist/built-from-windows.txt
           if-no-files-found: error
