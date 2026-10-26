@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-05/SEC-02/SEC-08 against a real PostgreSQL cluster and a real
 //! isolated workload. PostgreSQL's own refusals (SQLSTATE 42501), its
 //! `pg_stat_activity`, and a launcher-side digest of the protected table are

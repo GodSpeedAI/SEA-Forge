@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Stage 6 over a real Unix socket: the `authority_request` verb returns CEP
 //! `authority_decision` envelopes from the real policy engine, commits them to
 //! the cell's append-only ledger, and fails closed.

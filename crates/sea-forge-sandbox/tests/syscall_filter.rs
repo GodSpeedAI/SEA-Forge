@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-06 syscall surface of an isolated workload.
 //!
 //! Landlock confines what an isolated workload can open, connect to and

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Frozen behavioral acceptance probes. RED is an unmet contract, never a stub.
 //! Reuses conformance_identity and convergence_t05/t06 public entry points.
 #![cfg(unix)]

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Run-record conformance tests (Task 8, ADR-003 additive): `run.list`, `run.get`.
 //!
 //! Fixtures are written as raw JSON rather than constructed from the typed

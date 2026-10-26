@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! First RealityTrace vertical slice (ADR-012): the SEC-12 denied write.
 //!
 //! The executor attempts a write to a read-only protected record through the

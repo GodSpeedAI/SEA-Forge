@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Fail-closed service lifecycle conformance (spec §8.3, §8.4, §8.5, §11.1).
 //!
 //! Three seams, each of which fails *open* if it regresses — which is why they

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SFWP case mutation and execution verbs over a real socket (T04, P2).
 //!
 //! Every test here drives the real server over its Unix socket on a temp

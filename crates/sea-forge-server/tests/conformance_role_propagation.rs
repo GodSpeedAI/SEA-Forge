@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! F-08 regression: the server must evaluate authority for the role the
 //! identity gate actually verified, not a hardcoded `ActorRole::Operator`.
 //!

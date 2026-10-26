@@ -1,3 +1,4 @@
+#![cfg(unix)]
 // Any Unix: Linux walks procfs, other Unix walks openat; both must hold.
 #![cfg(unix)]
 

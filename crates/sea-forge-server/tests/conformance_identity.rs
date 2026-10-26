@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Governed actor identity over the wire (SF-005, decision U-07).
 //!
 //! The unit tests in `server::identity` prove the resolver's logic. These prove

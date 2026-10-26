@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Disposable PostgreSQL cluster for security tests: peer-authenticated
 //! administrator for the launcher's OS user, SCRAM for everything else, no
 //! TCP listener, and a protected `audit_log` table with reader/writer roles.

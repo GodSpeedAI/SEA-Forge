@@ -248,6 +248,14 @@ impl PipeSecurity {
     }
 }
 
+// SAFETY: the descriptor is an immutable, LocalAlloc'd self-relative security
+// descriptor written once in `new` and only read afterwards; it is freed once,
+// in `drop`. Nothing mutates it through a shared reference, so moving or sharing
+// `PipeSecurity` across threads cannot race.
+unsafe impl Send for PipeSecurity {}
+// SAFETY: see the `Send` impl above; shared access is read-only.
+unsafe impl Sync for PipeSecurity {}
+
 impl Drop for PipeSecurity {
     fn drop(&mut self) {
         // SAFETY: the descriptor came from ConvertStringSecurityDescriptorToSecurityDescriptorW (LocalAlloc) and is freed exactly once.
