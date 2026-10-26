@@ -148,14 +148,9 @@ impl ExecutionSandbox for IsolatedSandbox {
                 status = ExecutionStatus::SuspectedSandboxViolation;
             }
         }
-        Ok(ExecutionResult {
-            status,
-            exit_code,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at,
-            finished_at: chrono::Utc::now().to_rfc3339(),
-        })
+        Ok(crate::local::execution_result(
+            status, exit_code, started_at,
+        ))
     }
 
     fn collect_artifacts(
