@@ -142,13 +142,13 @@ Set-Content -Path $probePath -Value $ProbeScript -Encoding utf8
 $AdmittedProbe = @'
 param([string] $PipeName)
 $ErrorActionPreference = 'Stop'
-# Start-Process with LoadUserProfile inherits the runner's TEMP, which sfprobe cannot write; Add-Type needs a temp folder.
-$tempDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Temp'
-New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-$env:TEMP = $tempDir
-$env:TMP = $tempDir
 $request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_probe","role":"operator"}}'
 try {
+    # Start-Process with LoadUserProfile inherits the runner's TEMP, which sfprobe cannot write; Add-Type needs a temp folder.
+    $tempDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Temp'
+    New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+    $env:TEMP = $tempDir
+    $env:TMP = $tempDir
     Add-Type -Namespace SfProbe -Name Win -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern System.IntPtr CreateFileW(string name, uint access, uint share, System.IntPtr security, uint disposition, uint flags, System.IntPtr template);'
     $h = [SfProbe.Win]::CreateFileW('\\.\pipe\' + $PipeName, 0x12018B, 0, [IntPtr]::Zero, 3, 0x110000, [IntPtr]::Zero)
     if ($h.ToInt64() -eq -1) { throw ('CreateFile failed, Win32 error ' + [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()) }
@@ -219,7 +219,11 @@ function Invoke-ProbeAs([string] $ScriptPath, [string] $PipeName) {
         -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $ScriptPath, '-PipeName', $PipeName) `
         -RedirectStandardOutput $out -RedirectStandardError $err
     $line = (Get-Content -Path $out -ErrorAction SilentlyContinue | Select-Object -Last 1)
-    if (-not $line) { return "no output (exit=$($run.ExitCode))" }
+    if (-not $line) {
+        $detail = (Get-Content -Path $err -ErrorAction SilentlyContinue | Select-Object -First 3) -join ' | '
+        if ($detail.Length -gt 300) { $detail = $detail.Substring(0, 300) }
+        return "no output (exit=$($run.ExitCode)) stderr: $detail"
+    }
     return [string] $line
 }
 
