@@ -53,3 +53,60 @@ CI logs) and the GitHub Actions runs named below.
 
 - Phase 0: done (this record, baseline in `~/projects/_wt/containers/baseline/BASELINE.md`).
 - Phase 1: in progress.
+
+## Phase 1 Windows limitations
+
+Recorded from inspection on branch `feat/xplat-hardening` (stacked on
+`feat/cross-platform-native`). Each item is weaker on Windows than on Linux or
+macOS, or is unverified there. Line numbers refer to that branch.
+
+- **Local sandbox containment.** The `Local` class on Windows is contained by a
+  kill-on-close Job Object only. There is no filesystem, network or syscall
+  containment. The Landlock and Seatbelt paths are Unix-only.
+  `crates/sea-forge-sandbox/src/local.rs:121-141`.
+- **Job Object limits.** Only `KILL_ON_JOB_CLOSE` is set. No memory, CPU,
+  process-count or breakaway limits. `crates/sea-forge-os/src/imp.rs`
+  (`Job::kill_on_close`).
+- **Spawn flags.** `spawn_in_job` sets `CREATE_SUSPENDED` with
+  `creation_flags`, which replaces any flags set earlier on the `Command`
+  (std exposes no getter). All current call sites set none.
+  `crates/sea-forge-os/src/imp.rs` (`spawn_in_job`).
+- **Settlement and ACP trees.** The SWE_SEED tree and the ACP agent child now
+  start suspended inside a job. Residual: a child that exits before assignment
+  is reported as a spawn failure, not as an error with its own status.
+  `crates/sea-forge-settlement/src/declaration.rs` (`ProcessTree::spawn`),
+  `crates/sea-forge-agent/src/acp.rs` (Windows spawn block).
+- **MicroVM and Postgres.** MicroVM virtualization is refused on Windows, so
+  the isolated backends fail closed. `crates/sea-forge-sandbox/src/openshell.rs:191-197`.
+  The Postgres broker refuses startup on Windows.
+  `crates/sea-forge-server/src/lib.rs:1414`.
+- **Pipe identity.** Only the SID is matched. `uid` bindings are ignored on
+  Windows. `crates/sea-forge-server/src/identity.rs:458-465`. The pipe DACL is
+  fixed when the server starts, so a binding change needs a restart.
+  `crates/sea-forge-os/src/imp.rs` (`PipeSecurity::new`).
+- **CLI response deadline.** The 120 s deadline is a helper thread, not a
+  socket timeout. After a timeout the reader stays blocked on the pipe until the
+  process exits. Unix sets a per-read timeout instead.
+  `crates/sea-forge-cli/src/commands/agent.rs` (`exchange`, Windows).
+- **Owner-only files.** `write_private` checks the file's DACL but not the
+  parent directory's ACL, and it does not set an owner. `CREATE_NEW` refuses an
+  existing entry, including a planted link. Ledger signing keys and the
+  transcript seal key use it. `crates/sea-forge-os/src/imp.rs` (`write_private`),
+  `crates/sea-forge-ledger/src/signing.rs`, `crates/sea-forge-server/src/transcript_seal.rs`.
+- **Safe write.** `safe_write` opens with `FILE_FLAG_OPEN_REPARSE_POINT` and
+  checks the reparse attribute after the open. A swap between the open and the
+  check is not reachable through the no-follow open, but the check is not
+  atomic. `crates/sea-forge-sandbox/src/lib.rs:399-420`.
+- **Changeset scan.** Every reparse point (symlink, junction, mount point) is
+  refused on Windows, as a `reparse_point` finding. Before this branch the scan
+  ignored symlinks on Windows. Unix now flags symlinks at scan time as well.
+  `crates/sea-forge-changeset/src/lib.rs` (`is_link_or_reparse`). Junction and
+  symlink refusal depend on the CI runner allowing symlink creation; a missing
+  privilege prints `SKIPPED`.
+- **Unexercised on Windows.** The Unix socket publish path
+  (`crates/sea-forge-server/src/lib.rs:1454-1462`), `SO_PEERCRED`
+  (`crates/sea-forge-server/src/lib.rs:2467`), and the `observation.rs` Unix
+  open path are compiled out on Windows and have no Windows test.
+- **Build coverage.** Server and CLI compile and test only in the Portability
+  workflow (`.github/workflows/portability.yml`). `ring` cannot be built for
+  the Windows target from Linux, so these crates have no local Windows check.

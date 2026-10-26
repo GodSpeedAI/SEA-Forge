@@ -21,6 +21,9 @@ tracing.workspace = true
 url.workspace = true
 zeroize.workspace = true
 
+[target.'cfg(windows)'.dependencies]
+sea-forge-os = { path = "../sea-forge-os", version = "0.2.0" }
+
 [lints]
 workspace = true
 

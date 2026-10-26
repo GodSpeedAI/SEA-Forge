@@ -62,3 +62,24 @@ jobs:
             target/release/sea-forge.exe
             target/release/sea-forge-server.exe
           if-no-files-found: error
+
+      - name: Changeset reparse-point and hard-link tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-changeset --test changeset_windows -- --nocapture
+
+      - name: Identity E2E (real OS identity, pipe DACL, squatting)
+        shell: pwsh
+        run: |
+          $server = (Resolve-Path target/release/sea-forge-server.exe).Path
+          & (Resolve-Path scripts/windows/identity-e2e.ps1).Path -ServerExe $server -Work 'C:\sfe2e'
+          exit $LASTEXITCODE
+
+      - name: Upload identity E2E log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-identity-e2e-log
+          path: |
+            C:\sfe2e\identity-e2e.log
+            C:\sfe2e\*.log
+          if-no-files-found: warn

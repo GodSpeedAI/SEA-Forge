@@ -18,21 +18,25 @@ pub fn load_or_create_signing_key(key_dir: &Path, key_id: &str) -> Result<Signin
         let signing_key = SigningKey::from_bytes(&rand::random());
         fs::create_dir_all(key_dir).map_err(|e| ForgeError::io("create key directory", e))?;
         // Create the private key file with mode 0600 from the start (F-22): no
-        // world-readable window between `write` and a later `chmod`.
-        let mut options = std::fs::OpenOptions::new();
-        options.write(true).create_new(true);
+        // world-readable window between `write` and a later `chmod`. Windows
+        // gets the equivalent owner-only DACL from `write_private`.
+        #[cfg(windows)]
+        sea_forge_os::write_private(&path, &signing_key.to_bytes())
+            .map_err(|e| ForgeError::io("create signing key", e))?;
         #[cfg(unix)]
         {
+            let mut options = std::fs::OpenOptions::new();
+            options.write(true).create_new(true);
             use std::os::unix::fs::OpenOptionsExt;
             options.mode(0o600);
+            let mut file = options
+                .open(&path)
+                .map_err(|e| ForgeError::io("create signing key", e))?;
+            use std::io::Write;
+            file.write_all(&signing_key.to_bytes())
+                .and_then(|_| file.sync_all())
+                .map_err(|e| ForgeError::io("write signing key", e))?;
         }
-        let mut file = options
-            .open(&path)
-            .map_err(|e| ForgeError::io("create signing key", e))?;
-        use std::io::Write;
-        file.write_all(&signing_key.to_bytes())
-            .and_then(|_| file.sync_all())
-            .map_err(|e| ForgeError::io("write signing key", e))?;
         Ok(signing_key)
     }
 }

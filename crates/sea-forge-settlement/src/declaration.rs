@@ -302,18 +302,13 @@ impl SweSeedTransport for CommandSweSeedTransport {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        // Own process group (Unix) or job object (Windows) so timeout can terminate the full tree.
+        // Own process group (Unix) or a suspended-start job object (Windows) so timeout can terminate the full tree.
         #[cfg(unix)]
         {
             use std::os::unix::process::CommandExt;
             command.process_group(0);
         }
-        let tree = ProcessTree::new()?;
-        let mut child = command.spawn().map_err(settlement_authority_unavailable)?;
-        if let Err(error) = tree.attach(&child) {
-            let _ = child.kill();
-            return Err(error);
-        }
+        let (mut child, tree) = ProcessTree::spawn(&mut command)?;
         let mut stdin = child
             .stdin
             .take()
@@ -395,12 +390,9 @@ struct ProcessTree;
 
 #[cfg(unix)]
 impl ProcessTree {
-    fn new() -> Result<Self, ForgeError> {
-        Ok(Self)
-    }
-
-    fn attach(&self, _child: &std::process::Child) -> Result<(), ForgeError> {
-        Ok(())
+    fn spawn(command: &mut Command) -> Result<(std::process::Child, Self), ForgeError> {
+        let child = command.spawn().map_err(settlement_authority_unavailable)?;
+        Ok((child, Self))
     }
 
     fn terminate(&self, child: &std::process::Child) -> Result<(), ForgeError> {
@@ -413,14 +405,11 @@ struct ProcessTree(sea_forge_os::Job);
 
 #[cfg(windows)]
 impl ProcessTree {
-    fn new() -> Result<Self, ForgeError> {
-        sea_forge_os::Job::kill_on_close()
-            .map(Self)
-            .map_err(settlement_authority_unavailable)
-    }
-
-    fn attach(&self, child: &std::process::Child) -> Result<(), ForgeError> {
-        self.0.assign(child).map_err(settlement_authority_unavailable)
+    /// The child is created suspended and assigned to the job before it runs.
+    fn spawn(command: &mut Command) -> Result<(std::process::Child, Self), ForgeError> {
+        let (child, job) =
+            sea_forge_os::spawn_in_job(command).map_err(settlement_authority_unavailable)?;
+        Ok((child, Self(job)))
     }
 
     fn terminate(&self, _child: &std::process::Child) -> Result<(), ForgeError> {
