@@ -763,7 +763,7 @@ fn live_concurrent_sandboxes_are_isolated() {
     let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 90; cat a-token.txt");
     let searcher = format!(
         "printf '%s' '{control}' > /tmp/b-control.txt; T=$(printf '%s' '{reversed}' | rev); \
-         timeout 60 grep -rIas --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' /sandbox /tmp /home /var /opt > found.txt 2> errors.txt; \
+         timeout 60 grep -rIa --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' /sandbox /tmp /home /var /opt > found.txt 2> errors.txt; \
          echo \"grep_exit=$?\"; exit 0"
     );
     let root_a = new_root();
