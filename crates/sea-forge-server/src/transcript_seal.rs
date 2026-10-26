@@ -142,9 +142,18 @@ fn write_private_file(path: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
         .map_err(|e| ForgeError::io("write sealed transcript key", e))
 }
 
-#[cfg(not(unix))]
+/// Windows: owner-and-SYSTEM-only DACL, created with `CREATE_NEW`. The
+/// overwrite semantics of the Unix branch are kept by unlinking first; removing
+/// a link unlinks the link itself, never its target.
+#[cfg(windows)]
 fn write_private_file(path: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
-    std::fs::write(path, bytes).map_err(|e| ForgeError::io("write sealed transcript key", e))
+    match std::fs::remove_file(path) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(ForgeError::io("write sealed transcript key", e)),
+    }
+    sea_forge_os::write_private(path, bytes)
+        .map_err(|e| ForgeError::io("write sealed transcript key", e))
 }
 
 #[cfg(test)]
