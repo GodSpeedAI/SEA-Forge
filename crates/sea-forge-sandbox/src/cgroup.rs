@@ -38,7 +38,26 @@
 //!   a bare pid is refused by construction.
 //! - **Verified teardown**: emptiness is read back from `cgroup.procs`
 //!   (bounded), and `rmdir` succeeds only for an empty cgroup — the kernel
-//!   enforces the check.
+//!   enforces the check. An empty leaf whose `rmdir` is nonetheless denied
+//!   (EACCES/EPERM/EBUSY) after the bounded retries is a typed degrade, not
+//!   an error: containment succeeded and removal is hygiene, so the removal
+//!   refusal is printed on stderr, the leaf is left in place under its
+//!   owner-prefixed name — which is its registration for
+//!   [`destroy_process_leaves`]: the prefix scan re-adopts it and
+//!   re-attempts the removal under the same degrade rule — and the teardown
+//!   succeeds. A leaf that still lists members remains an error.
+//!
+//!   Kernel-behavior note (round-3 CI probe, kernel 6.17-azure): the drained
+//!   leaf read back empty, then `rmdir` failed EACCES on three attempts while
+//!   the parent root probed as runner-owned (`mode 755 uid 1001 gid 1001`,
+//!   the same uid as the deleting process) — so the VFS permission check was
+//!   satisfied and the denial is cgroupfs-specific. The same probe window
+//!   showed `cgroup.procs` writes and root `mkdir` succeeding while the
+//!   `cgroup.kill` write was denied the same way. Candidate explanation:
+//!   cgroupfs delegation propagation on this kernel denies control
+//!   operations the file modes appear to grant (candidate upstream note);
+//!   the contract here treats removal as degradeable hygiene exactly so the
+//!   containment claim never depends on it.
 //!
 //! Degrade is typed, never silent: [`containment`] reports
 //! [`CGroupContainment::Unavailable`] with the reason when containment cannot
@@ -336,6 +355,15 @@ impl CgroupLease {
     /// syscall is the rmdir itself and its permission check runs against the
     /// parent — the delegated parent's mode and owner as probe output, so
     /// host-side evidence names the denied operation instead of guessing it.
+    ///
+    /// Degrade: a leaf verified EMPTY by the read-back below whose `rmdir`
+    /// still fails EACCES/EPERM/EBUSY after the bounded retries is reported
+    /// on stderr and recorded for [`destroy_process_leaves`] (it stays in
+    /// place under its owner-prefixed name, so the destroy sweep's scan
+    /// re-adopts it and re-attempts the removal under this same rule), and
+    /// this returns `Ok(())` — containment already succeeded, removal is
+    /// hygiene, and an undeletable empty leaf must never fail a settled run.
+    /// A non-empty leaf, or any other error, remains an error.
     pub fn remove(&self) -> io::Result<()> {
         let mut last_err: Option<io::Error> = None;
         for attempt in 0..REMOVE_ATTEMPTS {
@@ -352,6 +380,14 @@ impl CgroupLease {
         let err = last_err.expect("at least one rmdir attempt ran");
         let kind = err.kind();
         let members = self.procs().unwrap_or_default();
+        if members.is_empty() && undeletable_denial(&err) {
+            eprintln!(
+                "sea-forge-sandbox: cgroup leaf {} is empty but rmdir was denied ({err}); \
+                 recorded for the destroy sweep",
+                self.leaf.display()
+            );
+            return Ok(());
+        }
         Err(io::Error::new(
             kind,
             format!(
@@ -362,6 +398,19 @@ impl CgroupLease {
             ),
         ))
     }
+}
+
+/// Whether a failed `rmdir` is the empty-but-undeletable cgroupfs refusal the
+/// teardown degrades on: permission-class (EACCES/EPERM) or busy-class
+/// (EBUSY) denials of the removal syscall itself, observed on kernel
+/// 6.17-azure where cgroupfs denies the rmdir of a drained, runner-owned
+/// leaf while procs writes and mkdir work (see the module note). Any other
+/// error — or a leaf that still lists members — stays an error.
+fn undeletable_denial(err: &io::Error) -> bool {
+    matches!(
+        err.raw_os_error(),
+        Some(libc::EACCES) | Some(libc::EPERM) | Some(libc::EBUSY)
+    )
 }
 
 /// Metadata probe of `leaf`'s parent (the delegated root) for error text: an
@@ -634,9 +683,14 @@ pub fn report_degrade(backend: &str, reason: &str) {
 }
 
 /// Verified teardown of every leaf this process leaked (a spawn-failure
-/// window, or a teardown that errored before removal). Empty leaves are
-/// removed; leaves that still hold members are killed first and required to
-/// drain. Errors propagate — `destroy` is never a silent no-op.
+/// window, a teardown that errored before removal, or an empty-but-
+/// undeletable leaf recorded for the sweep by [`CgroupLease::remove`]'s
+/// degrade). Empty leaves are removed; leaves that still hold members are
+/// killed first and required to drain. An empty leaf whose removal this
+/// kernel refuses (the same EACCES/EPERM/EBUSY class as at teardown) is
+/// re-attempted and degrades the same way — printed, not an error — so a
+/// leaf the filesystem refuses to release can never fail `destroy`. Every
+/// other error propagates — `destroy` is never a silent no-op.
 pub fn destroy_process_leaves(owner_pid: u32) -> Result<(), SandboxError> {
     let root = match containment() {
         CGroupContainment::Active { root } => root,

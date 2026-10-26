@@ -13,8 +13,8 @@ use std::time::{Duration, Instant};
 
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
-    FileRenameInformationEx, NtCreateFile, NtSetInformationFile, FILE_CREATE, FILE_DIRECTORY_FILE,
-    FILE_NON_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
+    NtCreateFile, FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
+    FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
 };
 use windows_sys::Win32::Foundation::{
     LocalFree, RtlNtStatusToDosError, ERROR_ALREADY_EXISTS, ERROR_FILE_EXISTS,
@@ -29,9 +29,9 @@ use windows_sys::Win32::Security::{
     PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, GetFileInformationByHandle,
-    GetFileInformationByHandleEx, GetFinalPathNameByHandleW, GetLongPathNameW,
-    SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
+    CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, FileRenameInfo,
+    GetFileInformationByHandle, GetFileInformationByHandleEx, GetFinalPathNameByHandleW,
+    GetLongPathNameW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
     FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
     FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
     FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
@@ -453,11 +453,6 @@ const DIRECTORY_FLAGS: u32 = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE
 /// (`FILE_SHARE_WRITE` would admit exactly the concurrent directory mutator
 /// this pin exists to exclude; `FILE_SHARE_DELETE` would admit renames.)
 const PINNED_DIR_SHARE: u32 = FILE_SHARE_READ;
-/// `FILE_RENAME_FLAG_REPLACE_IF_EXISTS` (`FILE_RENAME_INFO.Flags`): the
-/// rename may replace an existing destination entry. windows-sys does not
-/// declare the flag, and the value is fixed by the `FILE_RENAME_INFO`
-/// contract used with `FileRenameInformationEx`.
-const FILE_RENAME_FLAG_REPLACE_IF_EXISTS: u32 = 0x0000_0001;
 
 fn is_not_found(error: &io::Error) -> bool {
     matches!(
@@ -975,46 +970,46 @@ fn pin_error_into_io(error: PinError) -> io::Error {
     }
 }
 
-/// Builds the absolute NT rename target for `name` inside the pinned
-/// directory's resolved path: `\??\C:\dir\name` (local) or
-/// `\??\UNC\server\share\dir\name` (UNC).
+/// Builds the absolute Win32 rename target for `name` inside the pinned
+/// directory's resolved path: `\\?\C:\dir\name` (local) or
+/// `\\?\UNC\server\share\dir\name` (UNC).
 ///
-/// Platform contract: `GetFinalPathNameByHandleW(VOLUME_NAME_DOS)` emits the
-/// Win32 device namespace (`\\?\C:\...`, `\\?\UNC\...`), while the
-/// kernel-side absolute form `NtSetInformationFile(FileRenameInformationEx)`
-/// resolves is the object-manager namespace (`\??\...`) — the same string
-/// with the leading `\\?\` collapsed to `\??\`. No Win32 layer runs between
-/// this call and NTFS, so the rewrite happens here, unit-exactly.
+/// Platform contract: `GetFinalPathNameByHandleW(VOLUME_NAME_DOS)` emits
+/// exactly this namespace (`\\?\...`), and the years-proven rename call,
+/// `SetFileInformationByHandle` with information class `FileRenameInfo`
+/// (class 10), resolves the device-form path as-is — no namespace rewrite
+/// happens here, unit-exactly. (The round-3 experiments with
+/// `\??\`-namespace and class-65 forms are recorded in the spike test's
+/// verdict comment; every one of them was rejected on Server 2025 x64.)
 fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
-    const WIN32_DEVICE_PREFIX: [u16; 4] = [b'\\' as u16, b'\\' as u16, b'?' as u16, b'\\' as u16];
-    const NT_DEVICE_PREFIX: [u16; 4] = [b'\\' as u16, b'?' as u16, b'?' as u16, b'\\' as u16];
-    let dir: Vec<u16> = pinned.as_os_str().encode_wide().collect();
-    let mut target: Vec<u16> = Vec::with_capacity(dir.len() + 1 + name.len());
-    if dir.starts_with(&WIN32_DEVICE_PREFIX) {
-        target.extend_from_slice(&NT_DEVICE_PREFIX);
-        target.extend_from_slice(&dir[WIN32_DEVICE_PREFIX.len()..]);
-    } else {
-        // Not a resolved final path; passed through as-is so the rename
-        // fails loudly with the recorded layout instead of guessing a prefix.
-        target.extend_from_slice(&dir);
-    }
+    let mut target: Vec<u16> = pinned.as_os_str().encode_wide().collect();
     target.push(b'\\' as u16);
     target.extend(name.encode_wide());
     std::ffi::OsString::from_wide(&target)
 }
 
-/// Renames the open file `file` to the absolute NT path `target`, replacing
-/// an existing entry: `NtSetInformationFile(FileRenameInformationEx)` with
-/// `FILE_RENAME_FLAG_REPLACE_IF_EXISTS` and a `RootDirectory`-NULL,
-/// fully-qualified target.
+/// Renames the open file `file` to the absolute `\\?\` path `target`,
+/// replacing an existing entry: `SetFileInformationByHandle` with information
+/// class `FileRenameInfo` (class 10), `ReplaceIfExists=TRUE`, and a
+/// `RootDirectory`-NULL, fully-qualified device-form target.
 ///
-/// The F05 invariant survives the move away from the `RootDirectory`-relative
-/// target (which this platform does not support; see the spike test) because
-/// it never depended on the target's name form:
+/// This is the years-proven form: the pre-anchored implementation (commit
+/// 53c3bd9a) shipped exactly this call with full absolute paths and passed on
+/// every Windows runner for the project's lifetime. Round 3 re-probed the
+/// alternatives on Server 2025 x64 and all three were rejected with
+/// ERROR_INVALID_PARAMETER — the Win32 class-10 `RootDirectory`-relative
+/// target, the NT class-65 (`FileRenameInformationEx`) `RootDirectory`-relative
+/// target, and the NT class-65 absolute `\??\` target — so class 10 with the
+/// absolute `\\?\` target is the form production ships (see the spike test's
+/// verdict comment).
+///
+/// The F05 invariant survives the move (it also held for every form tried in
+/// between) because it never depended on the target's name form:
 ///
 /// 1. The *source* is identified by handle — the rename moves exactly the
 ///    file this code created and wrote, so nothing can substitute the
-///    content by name between write and rename.
+///    content by name between write and rename. The API renames the
+///    handle's file; no name resolution happens on the source at all.
 /// 2. The *target's directory* is the exclusively pinned `PinnedDir`, whose
 ///    share mode excludes every other write/delete handle and whose identity
 ///    is revalidated immediately before the rename — so nothing can
@@ -1022,11 +1017,7 @@ fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
 ///    window either.
 ///
 /// Platform contract: `FileNameLength` is counted in BYTES of the target
-/// (terminator excluded), the buffer is exactly header + bytes, and a
-/// `RootDirectory`-relative name is refused by Server 2025 with
-/// ERROR_INVALID_PARAMETER for both the Win32 class (`FileRenameInformation`,
-/// class 10) and the NT class (`FileRenameInformationEx`, class 65) — hence
-/// the absolute form.
+/// (terminator excluded) and the buffer is exactly header + bytes.
 fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
     let target_wide: Vec<u16> = target.encode_wide().collect();
     // FileNameLength is counted in BYTES of the target name (not characters),
@@ -1041,41 +1032,30 @@ fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
     // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
     unsafe {
         (*info).Anonymous = FILE_RENAME_INFO_0 {
-            Flags: FILE_RENAME_FLAG_REPLACE_IF_EXISTS,
+            ReplaceIfExists: true,
         };
         (*info).RootDirectory = null_mut();
         (*info).FileNameLength = target_bytes as u32;
         let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
         std::ptr::copy_nonoverlapping(target_wide.as_ptr(), destination, target_wide.len());
     }
-    // SAFETY: IO_STATUS_BLOCK is plain data; all-zero is a valid initial value.
-    let mut status_block: IO_STATUS_BLOCK = unsafe { mem::zeroed() };
-    // SAFETY: `file` is a live handle opened with DELETE access; `info` points at `size` initialized bytes that outlive the call; `status_block` is a live out-struct.
-    let status = unsafe {
-        NtSetInformationFile(
-            file,
-            &mut status_block,
-            info.cast(),
-            size as u32,
-            FileRenameInformationEx,
-        )
-    };
-    if status < 0 {
-        // Decisive instrumentation for the recorded code-87 history on the
-        // windows lane: the raw NTSTATUS plus the exact struct fields as
-        // sent, so a recurrence of ERROR_INVALID_PARAMETER with the absolute
-        // form can be compared byte-for-byte against this layout.
-        let mapped = nt_error(status);
+    // SAFETY: `file` is a live handle opened with DELETE access; `info` points at `size` initialized bytes that outlive the call.
+    let ok = unsafe { SetFileInformationByHandle(file, FileRenameInfo, info.cast(), size as u32) };
+    if ok == FALSE {
+        // Instrumentation for the recorded ERROR_INVALID_PARAMETER history on
+        // the windows lane: the raw Win32 error code plus the exact struct
+        // fields as sent, so a recurrence with any form can be compared
+        // byte-for-byte against this layout.
+        let error = last_error();
         return Err(io::Error::new(
-            mapped.kind(),
+            error.kind(),
             format!(
-                "NtSetInformationFile(FileRenameInformationEx) rename failed: \
-                 {mapped} (NTSTATUS {:#010x}); FileRenameInfo sent: class=\
-                 FileRenameInformationEx, Flags=FILE_RENAME_FLAG_REPLACE_IF_EXISTS \
-                 (0x1), RootDirectory=NULL, FileNameLength={target_bytes} bytes \
-                 ({} UTF-16 units, terminator excluded), InputBufferLength={size} \
-                 bytes, target={:?}",
-                status as u32,
+                "SetFileInformationByHandle(FileRenameInfo) rename failed: {error} \
+                 (os code {}); FileRenameInfo sent: class=FileRenameInformation (10), \
+                 ReplaceIfExists=TRUE, RootDirectory=NULL, FileNameLength={target_bytes} \
+                 bytes ({} UTF-16 units, terminator excluded), buffer={size} bytes, \
+                 target={:?}",
+                error.raw_os_error().unwrap_or(0),
                 target_wide.len(),
                 target.to_string_lossy(),
             ),
@@ -1309,6 +1289,7 @@ mod tests {
     use std::ffi::c_void;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::process::{Command, Stdio};
+    use windows_sys::Wdk::Storage::FileSystem::{FileRenameInformationEx, NtSetInformationFile};
     use windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED;
     use windows_sys::Win32::Security::Authorization::{
         ConvertSecurityDescriptorToStringSecurityDescriptorW, GetNamedSecurityInfoW, SE_FILE_OBJECT,
@@ -1321,6 +1302,14 @@ mod tests {
         LPPROC_THREAD_ATTRIBUTE_LIST, PROCESS_INFORMATION, PROC_THREAD_ATTRIBUTE_JOB_LIST,
         PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, STARTUPINFOEXW, STARTUPINFOW,
     };
+
+    /// `FILE_RENAME_FLAG_REPLACE_IF_EXISTS` (`FILE_RENAME_INFO.Flags`): the
+    /// rename may replace an existing destination entry. windows-sys does not
+    /// declare the flag, and the value is fixed by the `FILE_RENAME_INFO`
+    /// contract used with `FileRenameInformationEx`. Spike-only: the
+    /// production rename is the Win32 class-10 form with `ReplaceIfExists`
+    /// (see `rename_handle_into`).
+    const FILE_RENAME_FLAG_REPLACE_IF_EXISTS: u32 = 0x0000_0001;
 
     #[test]
     fn current_sid_is_a_user_sid() {
@@ -1663,8 +1652,10 @@ mod tests {
 
     /// The Win32 relative-target rename (`SetFileInformationByHandle` with
     /// class `FileRenameInformation` — information class 10 — and a
-    /// `RootDirectory` handle). Spike-only: production renames with an
-    /// absolute `\??\` target (see `rename_handle_into`).
+    /// `RootDirectory` handle). Spike-only: production renames with the
+    /// class-10 absolute `\\?\` target and no `RootDirectory` (see
+    /// `rename_handle_into`); the relative form is one of the three this
+    /// platform rejects.
     fn set_rename_info_with_root(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Result<()> {
         let name_wide: Vec<u16> = name.encode_wide().collect();
         let name_bytes = name_wide.len() * mem::size_of::<u16>();
@@ -1692,8 +1683,8 @@ mod tests {
 
     /// The NT relative-target rename (`NtSetInformationFile` with class
     /// `FileRenameInformationEx` — information class 65 — and a
-    /// `RootDirectory` handle). The form production shipped before the
-    /// round-2 verdict; spike-only.
+    /// `RootDirectory` handle). Spike-only: one of the three forms this
+    /// platform rejects (see the spike test's verdict comment).
     fn set_rename_info_ex_with_root(
         file: HANDLE,
         root_dir: HANDLE,
@@ -1736,20 +1727,27 @@ mod tests {
     /// `cargo test -p sea-forge-os --lib -- --include-ignored`.
     ///
     /// Recorded platform verdict (Server 2025 x64, capability-harvest CI
-    /// round 2): BOTH RootDirectory-relative target forms are rejected with
-    /// ERROR_INVALID_PARAMETER — the Win32 class
-    /// `SetFileInformationByHandle(FileRenameInformation)` (class 10) and the
-    /// NT class `NtSetInformationFile(FileRenameInformationEx)` (class 65).
-    /// Production therefore renames with an absolute `\??\` target and no
-    /// `RootDirectory` (see `rename_handle_into`). This spike re-probes both
-    /// relative forms on every lane run and RECORDS the verdict instead of
-    /// asserting success, so a platform that starts accepting the
-    /// race-free relative form is visible in the log rather than silently
-    /// unexercised.
+    /// rounds 2-3): THREE forms are rejected with ERROR_INVALID_PARAMETER —
+    /// (1) the Win32 class-10 relative target,
+    /// `SetFileInformationByHandle(FileRenameInformation)` + `RootDirectory`
+    /// (the form the prior branch shipped until 53c3bd9a), (2) the NT
+    /// class-65 relative target,
+    /// `NtSetInformationFile(FileRenameInformationEx)` + `RootDirectory`, and
+    /// (3) the NT class-65 absolute `\??\` target with `RootDirectory` NULL
+    /// (the round-3 production attempt). The working form — the one the
+    /// pre-anchored implementation used for the project's lifetime — is the
+    /// Win32 class-10 ABSOLUTE target via `SetFileInformationByHandle`
+    /// (`FileRenameInfo`, `ReplaceIfExists=TRUE`, `RootDirectory=NULL`,
+    /// `\\?\`-prefixed path), which production ships (see
+    /// `rename_handle_into`). This spike re-probes both relative forms on
+    /// every lane run and RECORDS the verdict instead of asserting success,
+    /// so a platform that starts accepting the race-free relative form is
+    /// visible in the log rather than silently unexercised.
     #[test]
     #[ignore = "windows portability lane: relative-target rename verdict (Server 2025 x64 \
-                rejected both the class-10 Win32 and class-65 NT RootDirectory-relative forms \
-                with ERROR_INVALID_PARAMETER); run with --include-ignored"]
+                rejected the class-10 Win32 relative, class-65 NT relative, and class-65 NT \
+                absolute forms with ERROR_INVALID_PARAMETER; the working form is class-10 \
+                absolute via SetFileInformationByHandle); run with --include-ignored"]
     fn relative_target_rename_platform_verdict_spike() {
         let dir = std::env::temp_dir().join(format!("sf-os-spike-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);

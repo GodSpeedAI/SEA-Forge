@@ -22,6 +22,10 @@
 //!   needed by `live_network_allow_control_connects` and
 //!   `live_network_denial_proven` only
 //!
+//! Optional: `SEA_FORGE_REQUIRE_EGRESS_CONTROL=1` turns an unavailable
+//! positive egress control (see `live_network_allow_control_connects`) from
+//! a tallied `BLOCKED:` into a lane failure.
+//!
 //! `openshell` and `openshell-prover` must be on PATH.
 
 use sea_forge_case_runner::cell_episode::{run_cell_episode, CellEpisode, CellEpisodeRequest};
@@ -430,9 +434,11 @@ fn live_authorized_episode_runs_in_a_microvm() {
 /// nothing: the attempt could fail for any reason (policy, missing route, or
 /// no listener at that address). The distinguishing evidence lives in the
 /// control pair below (`live_network_allow_control_connects` and
-/// `live_network_denial_proven`), which points an allowed and a denied variant
+/// `live_network_denial_proven`), which points a granted and a denied variant
 /// at the same demonstrably reachable target and reads the host-side arrival
-/// log. OpenShell 0.1.3 logs no denial for the probe (live run 40281322154
+/// log — on OpenShell 0.1.x the granted variant degrades to a tallied
+/// `BLOCKED:` (no expressible positive control; see its claim). OpenShell
+/// 0.1.3 logs no denial for the probe (live run 40281322154
 /// left `denials.log` empty); the denial record is printed for the record only.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
@@ -1010,32 +1016,79 @@ fn second_image() -> String {
     required("SEA_FORGE_OPENSHELL_SECOND_IMAGE")
 }
 
-/// Claim (redesigned after round 2): the flow the projection grants —
+/// Required-lane switch for the egress positive control: when a lane sets
+/// this to `1`, an unavailable positive control fails the lane instead of
+/// degrading to a tallied `BLOCKED:` — for future platforms where the
+/// control becomes expressible (see
+/// [`live_network_allow_control_connects`]'s claim for what would make it
+/// expressible).
+const REQUIRE_EGRESS_CONTROL: &str = "SEA_FORGE_REQUIRE_EGRESS_CONTROL";
+
+/// Process-wide tally of live scenarios that could not run because the
+/// gateway lacks a prerequisite they prove. A run of the ladder stays
+/// green, but every blocked scenario is labeled `BLOCKED:` in the output
+/// and must never read as a tested pass; a required lane (the matching
+/// `SEA_FORGE_REQUIRE_*` variable set) must not skip, so the helper fails
+/// the scenario there. This is the established pattern from
+/// `crates/sea-forge-sandbox/tests/conformance_m1.rs` (F15: a skip can
+/// never count as a pass).
+static BLOCKED_SCENARIOS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Record an unavailable prerequisite for `what`. Under `require_env` this
+/// fails the scenario; otherwise the scenario is tallied and labeled
+/// `BLOCKED:` so it cannot be mistaken for a tested pass.
+fn blocked_or_require(require_env: &str, what: &str, why: &dyn std::fmt::Display) {
+    BLOCKED_SCENARIOS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    if std::env::var(require_env).as_deref() == Ok("1") {
+        panic!("{require_env}=1 but {what} is unavailable, not a pass: {why}");
+    }
+    eprintln!("BLOCKED: {what} scenario could not run: {why}");
+}
+
+/// Claim (BLOCKED-degraded after round 3): the flow the projection grants —
 /// `cell_live_egress_allow`, endpoint `live-egress-control`
 /// (10.0.2.2:46244, protocol `rest`), binaries including
-/// `/usr/local/bin/python` — carries the run's token to the host-side arrival
-/// listener THROUGH OpenShell's governed egress proxy, and the log gains
-/// exactly one arrival carrying the token.
+/// `/usr/local/bin/python` — should carry the run's token to the host-side
+/// arrival listener THROUGH OpenShell's governed egress proxy, and the log
+/// should gain exactly one arrival carrying the token.
 ///
-/// Round-2 evidence: a raw connect to the granted endpoint exits 1 with no
-/// host arrival — OpenShell 0.1.x does not translate rest-endpoint grants
-/// into raw-socket permission; governed egress goes through its proxy. The
-/// payload therefore (a) prints every proxy-bearing environment variable,
-/// the route table and a `/proc/net/tcp` snapshot (the record of how the
-/// guest reaches the host), (b) attempts the raw connect and records the
-/// outcome — expected failure, deliberately sending no bytes so the token in
-/// the arrival log can only travel over the tunnel — and (c) discovers the
-/// egress proxy (environment variables, then config files under the sandbox
-/// paths; everything found is printed), issues an HTTP CONNECT to
-/// <egress-host>:<port> through it, and sends the token over the tunnel.
+/// On OpenShell 0.1.x this positive control is not expressible, so the test
+/// no longer fails the ladder when the guest discovers no proxy: it prints
+/// the full discovery dump (that dump IS the evidence pack) and tallies an
+/// honest `BLOCKED:` through the conformance `blocked_or_require` pattern,
+/// hard-failing only under [`REQUIRE_EGRESS_CONTROL`]`=1`. The three-round
+/// evidence chain behind the BLOCKED:
+///
+/// - Round 1: `openshell-prover` refuses tcp-protocol endpoint rules in
+///   candidate AND boundary policies ("uses an IP literal with explicit TCP
+///   semantics" / "mixes REST controls into L4 authority"), so a raw
+///   connect to the granted endpoint cannot be authorized as L4.
+/// - Round 2: the endpoint re-expressed as an http/read rest flow is
+///   accepted by the prover, but a raw connect to the granted endpoint
+///   exits 1 with no host arrival — OpenShell 0.1.x does not translate
+///   rest-endpoint grants into raw-socket permission; governed egress goes
+///   through its proxy.
+/// - Round 3: the guest has no proxy env/config on OpenShell 0.1.x
+///   (`NO_PROXY_DISCOVERABLE` — env, then config files under the sandbox
+///   paths), so no CONNECT tunnel can be built either.
+///
+/// Upstream requirements that would make this control expressible (any
+/// one): (1) provable L4/connect endpoint semantics in the policy
+/// vocabulary, (2) a guest-side egress proxy discoverable by the workload,
+/// or (3) upstream controllable-egress endpoints.
+///
+/// The payload still runs the full evidence pass before any BLOCKED: (a) it
+/// prints every proxy-bearing environment variable, the route table and a
+/// `/proc/net/tcp` snapshot (the record of how the guest reaches the host),
+/// (b) attempts the raw connect and records the outcome — deliberately
+/// sending no bytes so the token in the arrival log could only travel over
+/// the tunnel — and (c) discovers the egress proxy and, when one IS found,
+/// issues an HTTP CONNECT to <egress-host>:<port> through it and sends the
+/// token over the tunnel.
 ///
 /// The listener is host state the sandbox cannot reach except over the
-/// libkrun user network, so the arrival line is host-observed evidence that
-/// the granted flow was honored end to end. Together with the deny variant
-/// this is the pair that makes the denial a proof rather than a blackhole
-/// observation. If no proxy is discoverable the test fails loudly printing
-/// everything discovered; that output plus the deny variant's refusal is the
-/// honest BLOCKED evidence pack.
+/// libkrun user network, so an arrival line would be host-observed evidence
+/// that the granted flow was honored end to end.
 ///
 /// What this does not prove: that ungranted destinations are denied (that is
 /// the paired test's claim), that the pypi REST endpoint is usable, or
@@ -1178,6 +1231,26 @@ fn live_network_allow_control_connects() {
     assert_eq!(execution.status, ExecutionStatus::Completed);
     let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
     let stderr = read_or_empty(&run_dir.join("artifacts/stderr.txt"));
+    // The payload already ran the full evidence pass (raw connect, proxy env,
+    // routes, /proc/net/tcp, discovery scan). NO_PROXY_DISCOVERABLE means the
+    // positive control is not expressible on this gateway (rounds 1-3, see
+    // the claim): degrade to an honest BLOCKED with the dump printed FIRST —
+    // the dump is the evidence pack — instead of failing the ladder.
+    if stdout.contains("NO_PROXY_DISCOVERABLE") {
+        println!("guest egress discovery dump (BLOCKED evidence pack):\n{stdout}");
+        blocked_or_require(
+            REQUIRE_EGRESS_CONTROL,
+            &format!("the egress allow-control proof ({host}:{port} through the discovered proxy)"),
+            &format!(
+                "the guest has no workload-discoverable egress proxy and the provers \
+                 refuse tcp rules in candidate and boundary policies, so no positive \
+                 control exists on this gateway (OpenShell 0.1.x) today; \
+                 stdout:\n{stdout}\nstderr:\n{stderr}"
+            ),
+        );
+        stream.verify().expect("ledger verifies");
+        return;
+    }
     assert_eq!(
         execution.exit_code,
         Some(0),
@@ -1206,22 +1279,25 @@ fn live_network_allow_control_connects() {
     stream.verify().expect("ledger verifies");
 }
 
-/// Claim (mirrored with the allow variant after round 2): bash — a binary no
-/// network flow grants — cannot establish the SAME proxied tunnel to the
-/// control endpoint that `live_network_allow_control_connects` demonstrably
-/// establishes from inside a sandbox on this gateway: the CONNECT through the
-/// discovered egress proxy is refused or never established, the host-side
-/// arrival listener records no new line, and OpenShell's own denial record is
-/// printed for the record.
+/// Claim (narrowed after round 3): bash — a binary no network flow grants —
+/// does not reach the control endpoint: the CONNECT through the discovered
+/// egress proxy is refused or never established, the host-side arrival
+/// listener records no new line for this run's token, and OpenShell's own
+/// denial record is printed for the record.
 ///
-/// Attribution chain: the listener is proven alive from the host below (its
-/// own probe arrival is logged before the snapshot), the paired allow test
-/// proves the discovered proxy carries an allowed run's token to the same
-/// address, and this run's token appears nowhere in the arrival log while the
-/// line count is unchanged. The refusal is therefore attributable to the
-/// policy, not to a blackhole or a dead proxy. The pair only proves this when
-/// both of its tests run, which `live-proof.sh` enforces (`--include-ignored`
-/// plus a ladder check).
+/// With no positive control on this platform (the rounds-1-3 evidence chain
+/// in the paired test's claim), this proves NON-ARRIVAL plus a
+/// guest-recorded refusal marker on a demonstrably-reachable target — the
+/// listener is proven alive from the host below (its own probe arrival is
+/// logged before the snapshot, so the target address is reachable and the
+/// listener demonstrably logs) — NOT attribution to policy enforcement:
+/// without the allow variant's arrival on the same path, a block applied
+/// outside the guest's policy (gateway-level, network-level) cannot be
+/// distinguished from enforcement inside it. If a future platform makes the
+/// positive control expressible, the attribution chain is restored by
+/// requiring the paired arrival again. The ladder still runs both tests
+/// (`live-proof.sh` enforces membership), because the allow variant's
+/// discovery dump is half of the recorded evidence either way.
 ///
 /// What this does not prove: that OpenShell scopes L4 grants per binary rather
 /// than per sandbox — if a gateway widened a projected flow to every guest

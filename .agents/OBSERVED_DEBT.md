@@ -1376,3 +1376,32 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   `/usr/lib/libSystem.B.dylib` only and gated by `otool -L` in the test
   (any foreign dependency fails loudly); the protocol, markers, and every
   assertion are unchanged.
+
+## Open: cgroupfs denies rmdir of drained delegated leaves on kernel 6.17-azure, so teardown leaves linger
+
+- Observed: 2026-10-26 (capability-harvest round 3/4).
+- Evidence: the round-3 Linux lane's `rmdir failed after 3 attempts` error
+  names a leaf whose `remaining members: []` (the verified empty read-back),
+  and the same error's parent probe reads
+  `/sys/fs/cgroup/sea-forge: mode 755 uid 1001 gid 1001` — runner-owned, the
+  same uid as the deleting process, so the VFS permission check was
+  satisfied and the denial is cgroupfs-specific. The same probe window shows
+  the leaf's `cgroup.procs` writes and the root's `mkdir` succeeding while
+  the `cgroup.kill` write and the leaf `rmdir` are denied.
+- Impact: on such kernels an otherwise-clean teardown cannot delete its
+  leaf; without a degrade the settled run fails on pure hygiene. Leaves
+  linger under `/sys/fs/cgroup/sea-forge/` until `destroy_process_leaves`
+  re-attempts them (or the kernel releases them).
+- Next move: landed in round 4 (crates/sea-forge-sandbox/src/cgroup.rs):
+  an EMPTY leaf whose rmdir fails EACCES/EPERM/EBUSY after the bounded
+  retries is printed on stderr, recorded for `destroy_process_leaves` (the
+  owner-prefix scan re-adopts and re-attempts it under the same degrade
+  rule), and teardown succeeds; a non-empty leaf remains
+  `KillError`/error. Candidate root causes: cgroupfs delegation propagation
+  limits on this kernel denying control operations the file modes appear to
+  grant; candidate upstream note against cgroup-v2 §2-5-2 delegation
+  semantics. Close this entry when a kernel upgrade (or an upstream
+  explanation naming the required operation) lets the sweep's rmdir succeed
+  on the lane.
+- Scope: kernel-side behavior, not fixable from this repository; the
+  degrade keeps containment claims independent of removal hygiene.

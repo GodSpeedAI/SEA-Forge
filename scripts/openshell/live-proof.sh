@@ -7,13 +7,20 @@
 # (SECOND_IMAGE). The live tests are the ones in
 # crates/sea-forge-case-runner/tests/cell_episode_live.rs. It also starts the
 # host-side egress arrival listener (egress-control.py) that the network
-# control tests observe: the allowed variant's arrival and the denied variant's
-# non-arrival are host-observed evidence (EGRESS_ARRIVAL_LOG).
+# control tests observe: the denied variant's non-arrival is host-observed
+# evidence (EGRESS_ARRIVAL_LOG). On a gateway with no expressible positive
+# control (OpenShell 0.1.x: no workload-discoverable egress proxy, and the
+# provers refuse tcp rules) the allowed variant prints its full discovery
+# dump and tallies a BLOCKED: scenario instead of failing the ladder — a
+# BLOCKED tally never fails this run. Set
+# SEA_FORGE_REQUIRE_EGRESS_CONTROL=1 to make a blocked positive control fail
+# the lane instead (for platforms where the control becomes expressible).
 #
 # This script is the only place in the repository that starts a real OpenShell
 # gateway and sandboxes for the live proof. Nothing else should.
 #
-# It never reports success unless the live tests ran and passed.
+# It never reports success unless the live tests ran and passed (a BLOCKED
+# tally is an honest, labeled non-run, not a pass).
 #
 # Exit codes:
 #   0  live tests ran and passed
@@ -39,6 +46,10 @@
 #   EGRESS_HOST      guest-reachable host address (default: 10.0.2.2, the
 #                    libkrun user-networking host alias the fixture names)
 #   EGRESS_ARRIVAL_LOG  arrival log path (default: $STATE_DIR/egress-arrivals.log)
+#   SEA_FORGE_REQUIRE_EGRESS_CONTROL=1
+#                    fail the run when the egress allow-control could not run
+#                    (a gateway where the positive control is not expressible
+#                    tallies BLOCKED instead, which otherwise passes through)
 
 set -euo pipefail
 

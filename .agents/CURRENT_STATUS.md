@@ -1,24 +1,23 @@
 # Current status
 
-**Status revision:** 188
+**Status revision:** 189
 
-**Stage:** capability-harvest: round-3 fixes committed — cgroup.kill pidfd degrade, absolute-target anchored rename, C cage helper, proxy-CONNECT egress control; pushing for CI round 3
+**Stage:** capability-harvest: round-4 closures committed — pushing for the convergence round
 
-**Summary:** Round 2 named every residual. Round 3: (1) cgroup.kill write failures degrade to the membership-scoped pidfd sweep (delegation containment applies to the kill file beyond procs delegation); (2) the Windows rename keeps the handle-identified source and switches to an absolute \??\ target with a revalidate() immediately before the rename — the relative-target form is recorded as a platform-verdict spike (both class-10-Win32 and class-65-NT rejected ERROR_INVALID_PARAMETER on Server 2025); (3) the macOS cage helper is now a C program compiled at test time against libSystem only (the nix-linked Rust helper was correctly blocked by the cage from loading /nix/store dylibs); (4) the F17 allow/deny pair discovers the guest egress proxy and tunnels HTTP CONNECT through it — a granting proxy must yield exactly one token arrival, a refusing proxy must yield a refusal marker with an unchanged arrival count, and no-proxy produces the honest BLOCKED evidence pack. All payloads were functionally simulated off-lane against a real CONNECT proxy.
+**Summary:** cgroup: an empty leaf whose rmdir the kernel denies (6.17-azure delegation propagation limits; parent probe mode 755 uid 1001) now degrades to a logged destroy-sweep record instead of failing settled runs — non-empty leaves still error. macOS: the cage helper's parent holds 1.5s post-fork so the 100ms census observes the detached child (round-3 confirmed the census never sampled before reparenting). Windows: the final rename uses the years-proven SetFileInformationByHandle(FileRenameInfo) absolute-target call; three RootDirectory-relative/NT-absolute forms are recorded as INVALID_PARAMETER-rejected platform verdicts. F17: the allow-control is now an honest BLOCKED scenario (SEA_FORGE_REQUIRE_EGRESS_CONTROL flips it to a lane failure) with the full guest dump and the three-round upstream-requirement chain; the deny variant keeps its narrowed non-attribution claim.
 
 **Verified:**
 
-- Full local sweep green: sandbox lib+all tests, case-runner non-ignored suites, openshell_stub 35, clippy -D warnings, windows-msvc and apple-darwin cross-targets, fmt
-- F17 payloads simulated end-to-end with a fake CONNECT proxy: allow grant path (200+arrival), deny refuse path (403, no arrival), deny leak path (asserts fire), no-proxy paths
+- Full local sweep green: sandbox all targets, case-runner non-ignored, clippy -D warnings host + windows-msvc + aarch64-apple-darwin, fmt
+- graft build run; diff reviewed; 6 files changed +313/-135
 
 **Limits:**
 
-- All four fixes await their CI lanes: cgroup kill drain, windows rename verdict, macOS helper execution, KVM proxy discovery
+- All four closures await their CI lanes (round 4)
 
-**Next move:** Push, re-dispatch openshell-live, collect round 3, then freeze for the codex adversarial review.
+**Next move:** Push, re-dispatch openshell-live, collect round 4; if green, freeze for the codex adversarial review and fill the record.
 
 **Evidence:**
 
-- .tmp/harvest/
 - .agents/OBSERVED_DEBT.md
-- gh runs 40369591334 / 40384807768 / 40384823244
+- gh runs 40400357003 / 40400356837 / 40400369301
