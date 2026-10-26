@@ -97,6 +97,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(uid),
+                    sid: None,
                     actor_id: "cognate-service".into(),
                     roles: vec![ActorRole::Service],
                 },
@@ -104,6 +105,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
                 // with separate authority-issued private capabilities.
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },

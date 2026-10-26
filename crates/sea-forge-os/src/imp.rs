@@ -4,7 +4,7 @@ use std::ffi::c_void;
 use std::io;
 use std::mem;
 use std::os::windows::ffi::OsStrExt;
-use std::os::windows::io::{AsRawHandle, BorrowedHandle, FromRawHandle, OwnedHandle};
+use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::process::Child;
 use std::ptr::{null, null_mut};
 
@@ -120,9 +120,9 @@ impl Drop for Impersonation {
 /// The client must already have written at least one byte: impersonation
 /// fails with `ERROR_CANNOT_IMPERSONATE` before the first read. The result is
 /// read from the kernel token, so it cannot be spoofed by a reused process id.
-pub fn pipe_client_sid(pipe: BorrowedHandle<'_>) -> io::Result<String> {
+pub fn pipe_client_sid(pipe: &impl AsRawHandle) -> io::Result<String> {
     let handle = pipe.as_raw_handle() as HANDLE;
-    // SAFETY: `handle` is a live pipe handle for the duration of this call.
+    // SAFETY: the kernel validates the handle; an invalid one makes the call fail.
     if unsafe { ImpersonateNamedPipeClient(handle) } == FALSE {
         return Err(last_error());
     }
@@ -161,10 +161,10 @@ pub fn pipe_client_sid(pipe: BorrowedHandle<'_>) -> io::Result<String> {
 
 /// SID of the process that owns the server end of a named pipe.
 /// The client compares it with the expected owner before sending anything.
-pub fn pipe_server_sid(pipe: BorrowedHandle<'_>) -> io::Result<String> {
+pub fn pipe_server_sid(pipe: &impl AsRawHandle) -> io::Result<String> {
     let handle = pipe.as_raw_handle() as HANDLE;
     let mut pid: u32 = 0;
-    // SAFETY: `handle` is a live pipe handle; `pid` is a valid out-pointer.
+    // SAFETY: the kernel validates the handle; `pid` is a valid out-pointer.
     if unsafe { GetNamedPipeServerProcessId(handle, &mut pid) } == FALSE {
         return Err(last_error());
     }
@@ -352,7 +352,6 @@ impl Job {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::os::windows::io::AsHandle;
     use std::process::{Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -397,12 +396,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn pipe_identity_handle_api_compiles_for_borrowed_handles() {
-        // Compile-time check that the borrowed-handle signatures accept std handles.
-        fn takes(_: fn(BorrowedHandle<'_>) -> io::Result<String>) {}
-        takes(pipe_client_sid);
-        takes(pipe_server_sid);
-        let _ = std::io::stdin().as_handle();
-    }
 }

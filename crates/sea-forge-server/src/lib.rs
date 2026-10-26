@@ -27,7 +27,68 @@ use std::sync::{
     Arc,
 };
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::{UnixListener, UnixStream};
+#[cfg(windows)]
+use tokio::net::windows::named_pipe::NamedPipeServer;
+use tokio::io::{AsyncRead, AsyncWrite};
+
+/// The accepted client connection: a Unix stream, or a named-pipe server end.
+#[cfg(unix)]
+type Transport = UnixStream;
+/// The accepted client connection: a Unix stream, or a named-pipe server end.
+#[cfg(windows)]
+type Transport = NamedPipeServer;
+
+/// Accepts client connections on the control-plane endpoint.
+///
+/// Unix: a bound `UnixListener`. Windows: a named pipe. Each accept connects
+/// the current instance and creates the next one before handing the connected
+/// instance off, so there is never a moment without a listening instance.
+#[cfg(unix)]
+struct Acceptor(UnixListener);
+
+#[cfg(unix)]
+impl Acceptor {
+    async fn accept(&mut self) -> std::io::Result<Transport> {
+        self.0.accept().await.map(|(stream, _)| stream)
+    }
+}
+
+#[cfg(windows)]
+struct Acceptor {
+    name: String,
+    security: sea_forge_os::PipeSecurity,
+    next: NamedPipeServer,
+}
+
+#[cfg(windows)]
+impl Acceptor {
+    async fn accept(&mut self) -> std::io::Result<Transport> {
+        self.next.connect().await?;
+        let successor = sea_forge_os::create_pipe_server(&self.name, &self.security, false)?;
+        Ok(std::mem::replace(&mut self.next, successor))
+    }
+}
+
+/// Windows: the peer SID is only available once the client has written, so
+/// the first bytes are buffered here and the SID is read from the pipe token.
+/// The buffered bytes stay in the returned reader.
+#[cfg(windows)]
+async fn identify_pipe_client(
+    pipe: NamedPipeServer,
+) -> (
+    tokio::io::BufReader<NamedPipeServer>,
+    Option<crate::identity::PeerIdentity>,
+) {
+    use tokio::io::AsyncBufReadExt;
+    let mut buffered = tokio::io::BufReader::new(pipe);
+    if buffered.fill_buf().await.map(|bytes| bytes.is_empty()).unwrap_or(true) {
+        return (buffered, None);
+    }
+    let peer = crate::identity::PeerIdentity::of_pipe(buffered.get_ref());
+    (buffered, peer)
+}
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 
 use sfwp::correlation::RequestCorrelationStore;
@@ -1360,6 +1421,15 @@ async fn run_inner(
                 .map_err(|e| ForgeError::Input(e.to_string()))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    // Windows: the SIDs the pipe DACL must admit, read before `config` moves.
+    #[cfg(windows)]
+    let pipe_bound_sids: Vec<String> = config
+        .identity
+        .bindings
+        .iter()
+        .filter_map(|binding| binding.sid.clone())
+        .chain(config.gateway.as_ref().map(|gateway| gateway.sid.clone()))
+        .collect();
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -1370,18 +1440,45 @@ async fn run_inner(
     // replaces any stale socket a crashed server left behind — which is why
     // no unlink of the live path is needed. `forbid(unsafe_code)` at the crate
     // root rules out setting `umask` around the bind instead.
-    let staging_path = suffixed(&socket_path, ".binding")?;
-    let _ = std::fs::remove_file(&staging_path);
-    let listener = UnixListener::bind(&staging_path)?;
     #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
-    }
-    std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
-        // Leave no orphaned staging socket behind on a failed publish.
+    let mut acceptor = {
+        let staging_path = suffixed(&socket_path, ".binding")?;
         let _ = std::fs::remove_file(&staging_path);
-    })?;
+        let listener = UnixListener::bind(&staging_path)?;
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
+        }
+        std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
+            // Leave no orphaned staging socket behind on a failed publish.
+            let _ = std::fs::remove_file(&staging_path);
+        })?;
+        Acceptor(listener)
+    };
+    // Windows: a named pipe derived from the socket path. The first instance
+    // is refused if the name already exists, so a squatter cannot be joined.
+    // The DACL admits SYSTEM, this user, and each SID the cell binds.
+    #[cfg(windows)]
+    let mut acceptor = {
+        let name = sea_forge_core::pipe_name_for(&socket_path)
+            .map_err(|e| ForgeError::io("derive server pipe name", e))?;
+        let mut sids: Vec<String> = pipe_bound_sids.clone();
+        sids.sort();
+        sids.dedup();
+        let security = sea_forge_os::PipeSecurity::new(&sids)
+            .map_err(|e| ForgeError::io("build server pipe security", e))?;
+        let first = sea_forge_os::create_pipe_server(&name, &security, true).map_err(|e| {
+            ForgeError::Input(format!(
+                "server pipe {name} already exists or cannot be created \
+                 (another server may be running): {e}"
+            ))
+        })?;
+        Acceptor {
+            name,
+            security,
+            next: first,
+        }
+    };
 
     tracing::info!("server listening on {}", socket_path.display());
 
@@ -1400,14 +1497,14 @@ async fn run_inner(
     loop {
         let incoming = if let Some(receiver) = authenticated.as_mut() {
             tokio::select! {
-                accepted = listener.accept() => accepted.map(|(stream, _)| (stream, None)),
+                accepted = acceptor.accept() => accepted.map(|stream| (stream, None)),
                 connection = receiver.recv() => match connection {
                     Some(connection) => Ok((connection.stream, Some(connection.identity))),
                     None => return Err("trusted workload issuer disconnected".into()),
                 }
             }
         } else {
-            listener.accept().await.map(|(stream, _)| (stream, None))
+            acceptor.accept().await.map(|stream| (stream, None))
         };
         let (stream, workload_identity) = match incoming {
             Ok(accepted) => accepted,
@@ -1430,7 +1527,9 @@ async fn run_inner(
         // accepted stream is still whole. It is the one fact about the caller
         // that cannot be asserted (SF-005, U-07), and `into_split` inside
         // `handle_connection` would put it out of reach.
+        #[cfg(unix)]
         let peer = crate::identity::PeerIdentity::of(&stream);
+        #[cfg(unix)]
         if peer.is_none() {
             // Not fatal: inspect verbs stay available. Every protected verb on
             // this connection will be refused as `identity_unverifiable`.
@@ -1447,6 +1546,9 @@ async fn run_inner(
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             let _permit = permit;
+            // Windows reads the client SID only after the first bytes arrive.
+            #[cfg(windows)]
+            let (stream, peer) = identify_pipe_client(stream).await;
             if let Err(e) = handle_connection(
                 stream,
                 state,
@@ -1462,14 +1564,17 @@ async fn run_inner(
     }
 }
 
-async fn handle_connection(
-    stream: UnixStream,
+async fn handle_connection<S>(
+    stream: S,
     state: Arc<ServerState>,
     peer: Option<crate::identity::PeerIdentity>,
     mut workload_identity: Option<workload_connection::WorkloadIdentity>,
     require_workload_auth: bool,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let (reader, mut writer) = stream.into_split();
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+where
+    S: AsyncRead + AsyncWrite + Send + Unpin + 'static,
+{
+    let (reader, mut writer) = tokio::io::split(stream);
     let mut reader = BufReader::new(reader);
     let mut line = String::new();
 

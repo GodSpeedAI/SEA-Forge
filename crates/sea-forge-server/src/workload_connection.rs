@@ -9,7 +9,7 @@ use sea_forge_core::types::{Actor, AuthorityAction};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::path::Path;
-use tokio::net::UnixStream;
+use crate::Transport;
 
 fn request_digest(request: &Value) -> String {
     hex::encode(Sha256::digest(request.to_string().as_bytes()))
@@ -29,7 +29,7 @@ pub fn authentication_action(principal: &str, actor: &Actor, request: &Value) ->
 /// A connection received from the trusted launcher's in-memory control plane.
 /// There is deliberately no JSON constructor or public-socket equivalent.
 pub struct AuthenticatedConnection {
-    pub(crate) stream: UnixStream,
+    pub(crate) stream: Transport,
     pub(crate) identity: WorkloadIdentity,
 }
 
@@ -46,7 +46,7 @@ pub(crate) struct WorkloadIdentity {
 impl AuthenticatedConnection {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        stream: UnixStream,
+        stream: Transport,
         grant: ActionGrant,
         principal: &str,
         actor: Actor,

@@ -1,3 +1,4 @@
+use crate::identity::PrincipalKey;
 use sea_forge_agent::AgentConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -27,6 +28,13 @@ const MAX_SUPERVISOR_ACTOR_LEN: usize = 128;
 const MAX_GATEWAY_ACTOR_LEN: usize = 128;
 const MAX_GATEWAY_DELEGABLE_ACTORS: usize = 256;
 
+/// The config key that names the gateway's native principal.
+#[cfg(unix)]
+const GATEWAY_KEY_NAME: &str = "uid";
+/// The config key that names the gateway's native principal.
+#[cfg(windows)]
+const GATEWAY_KEY_NAME: &str = "sid";
+
 /// Which OS uid is the multi-user gateway, and which end-user actors it
 /// may speak for (plan T02, operator decision D-2).
 ///
@@ -38,8 +46,13 @@ const MAX_GATEWAY_DELEGABLE_ACTORS: usize = 256;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GatewayConfig {
-    /// The OS uid of the gateway process, as `SO_PEERCRED` reports it.
+    /// The OS uid of the gateway process, as `SO_PEERCRED` reports it. Required on Unix.
+    #[cfg(unix)]
     pub uid: u32,
+    /// The Windows user SID of the gateway process, as the pipe token reports it.
+    /// Required on Windows.
+    #[cfg(windows)]
+    pub sid: String,
     /// The gateway principal's own actor id (bound to `uid` with the
     /// gateway role). Defaults to `"gateway"`.
     #[serde(default = "default_gateway_actor")]
@@ -48,6 +61,32 @@ pub struct GatewayConfig {
     /// default — a gateway with no allowlist delegates nothing.
     #[serde(default)]
     pub delegable_actors: Vec<String>,
+}
+
+impl GatewayConfig {
+    /// The gateway's native principal key (uid on Unix, SID on Windows).
+    pub fn principal(&self) -> PrincipalKey {
+        #[cfg(unix)]
+        return self.uid;
+        #[cfg(windows)]
+        return self.sid.clone();
+    }
+
+    /// The bare key value as written in config (uid number or SID string).
+    pub fn raw_key(&self) -> String {
+        #[cfg(unix)]
+        return self.uid.to_string();
+        #[cfg(windows)]
+        return self.sid.clone();
+    }
+
+    /// Operator-facing `uid N` / `SID S` label of the gateway principal.
+    pub fn principal_label(&self) -> String {
+        #[cfg(unix)]
+        return format!("uid {}", self.uid);
+        #[cfg(windows)]
+        return format!("SID {}", self.sid);
+    }
 }
 
 fn default_gateway_actor() -> String {
@@ -515,13 +554,15 @@ impl ServerConfig {
             // rather than discovered as a runtime refusal at the first
             // delegated request in production.
             if !self.identity.bindings.iter().any(|binding| {
-                binding.uid == Some(gateway.uid) && binding.actor_id == gateway.actor
+                binding.principal() == Some(gateway.principal())
+                    && binding.actor_id == gateway.actor
             }) {
                 return Err(format!(
-                    "gateway.uid {} must be bound to the gateway actor {:?} in `identity.bindings` \
-                     (expected `- uid: {}, actor_id: {}, roles: [...]`), or the gateway can never \
+                    "gateway.{} {} must be bound to the gateway actor {:?} in `identity.bindings` \
+                     (expected `- {}: {}, actor_id: {}, roles: [...]`), or the gateway can never \
                      present its own claim",
-                    gateway.uid, gateway.actor, gateway.uid, gateway.actor
+                    GATEWAY_KEY_NAME, gateway.raw_key(), gateway.actor, GATEWAY_KEY_NAME,
+                    gateway.raw_key(), gateway.actor
                 ));
             }
             for actor in &gateway.delegable_actors {
@@ -744,6 +785,7 @@ mod tests {
         assert!(error.contains("unknown field"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn load_rejects_out_of_range_supervisor_settings() {
         let dir = tempfile::tempdir().unwrap();
@@ -793,6 +835,7 @@ mod tests {
         ServerConfig::load(&path)
     }
 
+    #[cfg(unix)]
     #[test]
     fn two_actors_on_one_uid_fail_to_load() {
         // The regression guard: this config used to load, and every binding
@@ -813,6 +856,7 @@ mod tests {
         assert!(error.contains("on_behalf_of"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_same_actor_bound_twice_fails_to_load() {
         let error = load_yaml(
@@ -823,6 +867,7 @@ mod tests {
         assert!(error.contains("more than once"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn many_uid_less_actors_and_one_direct_principal_load() {
         let config = load_yaml(
@@ -833,6 +878,7 @@ mod tests {
         assert_eq!(config.identity.bindings[2].uid, None);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_binding_without_a_uid_parses_as_none() {
         let config = load_yaml(
@@ -859,6 +905,7 @@ mod tests {
         assert!(default.gateway.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn an_explicit_gateway_section_parses_field_by_field() {
         let dir = tempfile::tempdir().unwrap();
@@ -876,6 +923,7 @@ mod tests {
         assert_eq!(gateway.delegable_actors, vec!["operator_a", "operator_b"]);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_gateway_actor_defaults_to_gateway() {
         let dir = tempfile::tempdir().unwrap();
@@ -895,6 +943,7 @@ mod tests {
     /// A gateway section that names a uid no binding covers is a cell where
     /// delegation could never resolve. Refused at load: an operator who wrote
     /// the section meant it to work.
+    #[cfg(unix)]
     #[test]
     fn load_rejects_a_gateway_uid_with_no_binding() {
         let dir = tempfile::tempdir().unwrap();
@@ -914,6 +963,7 @@ mod tests {
 
     /// ... and an allowlisted actor no binding covers, for the same reason on
     /// the other side of the delegation.
+    #[cfg(unix)]
     #[test]
     fn load_rejects_a_delegable_actor_with_no_binding() {
         let dir = tempfile::tempdir().unwrap();
@@ -946,6 +996,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn an_unknown_gateway_field_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
@@ -956,6 +1007,7 @@ mod tests {
         assert!(error.contains("unknown field"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn load_rejects_invalid_gateway_settings() {
         let dir = tempfile::tempdir().unwrap();

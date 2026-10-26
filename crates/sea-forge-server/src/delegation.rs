@@ -1337,6 +1337,15 @@ async fn run_acp_episode(
         }
         // SEC-01/SEC-06: a dedicated subordinate host identity per agent. Any
         // missing prerequisite fails closed; there is no shared-UID fallback.
+        // Linux-only: refuse everywhere else rather than silently run unisolated.
+        #[cfg(not(target_os = "linux"))]
+        "isolated" => {
+            return Err(ForgeError::Config {
+                class: "workload_isolation_unavailable",
+                path: root.join("server.yaml"),
+                message: "isolated execution requires Linux workload isolation on this host".into(),
+            });
+        }
         #[cfg(target_os = "linux")]
         "isolated" => {
             use sea_forge_sandbox::workload;
@@ -1767,16 +1776,29 @@ fn harvest_swe_seed(
         // file, apparent size) so a sparse or swapped file cannot make the
         // launcher allocate more than the limit.
         let file = {
+            #[cfg(unix)]
             use std::os::unix::fs::OpenOptionsExt;
+            #[cfg(windows)]
+            use std::os::windows::fs::OpenOptionsExt;
             std::fs::OpenOptions::new()
                 .read(true)
-                .custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32)
+                .custom_flags(no_follow_open_flag())
                 .open(&canonical)
                 .map_err(|error| ForgeError::io("open SWE_SEED evidence", error))?
         };
         let metadata = file
             .metadata()
             .map_err(|error| ForgeError::io("stat SWE_SEED evidence", error))?;
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+            if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+                return Err(ForgeError::UnsafePath(
+                    "SWE_SEED evidence is a reparse point".into(),
+                ));
+            }
+        }
         if !metadata.is_file() || metadata.len() > 1_048_576 {
             return Err(ForgeError::Input(
                 "SWE_SEED evidence file exceeds 1 MiB".into(),
@@ -2273,4 +2295,17 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
             }
         })
     }
+}
+
+/// Open flag that refuses to follow a final symlink: `O_NOFOLLOW` on Unix,
+/// `FILE_FLAG_OPEN_REPARSE_POINT` on Windows (where the reparse check follows).
+#[cfg(unix)]
+fn no_follow_open_flag() -> i32 {
+    rustix::fs::OFlags::NOFOLLOW.bits() as i32
+}
+
+/// See the Unix variant.
+#[cfg(windows)]
+fn no_follow_open_flag() -> u32 {
+    0x0020_0000
 }

@@ -35,11 +35,13 @@ fn two_actors() -> IdentityBindings {
         bindings: vec![
             IdentityBinding {
                 uid: Some(uid),
+                sid: None,
                 actor_id: "operator_a".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
             },
             IdentityBinding {
                 uid: None,
+                sid: None,
                 actor_id: "operator_b".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
             },

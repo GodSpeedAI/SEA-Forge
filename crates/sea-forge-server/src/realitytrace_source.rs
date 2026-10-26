@@ -232,6 +232,7 @@ impl ObligationSource for RealityTraceSource {
 mod tests {
     use super::*;
     use serde_json::json;
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
     /// A stand-in `realitytrace` that answers `repo list`, `ledger export` and `ledger verify` from files.

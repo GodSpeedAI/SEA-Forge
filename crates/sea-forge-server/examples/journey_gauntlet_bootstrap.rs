@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! One-shot cell bootstrap for the UX Journey Settlement Gauntlet
 //! (`.agents/reports/ux-journey-settlement/harness/gauntlet_runner.py`).
 //!
@@ -102,12 +103,14 @@ fn main() {
         bindings: sea_forge_server::identity::current_uid()
             .map(|uid| IdentityBinding {
                 uid: Some(uid),
+                sid: None,
                 actor_id: OPERATOR_ACTOR_ID.into(),
                 roles: vec![ActorRole::Operator],
             })
             .into_iter()
             .chain(std::iter::once(IdentityBinding {
                 uid: None,
+                sid: None,
                 actor_id: APPROVER_ACTOR_ID.into(),
                 roles: vec![ActorRole::SecurityOfficer],
             }))
@@ -163,3 +166,6 @@ rules:\n\
         root.display()
     );
 }
+
+#[cfg(windows)]
+fn main() {}
