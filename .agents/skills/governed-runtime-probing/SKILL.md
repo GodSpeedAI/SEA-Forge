@@ -27,7 +27,13 @@ in separate result columns.
      cloud metadata IP) → host listener logs no connection
    - credential read → synthetic secret absent from sandbox output and from
      any listener capture
-   - kill/cancel → no surviving descendant (process list by job/cgroup/pgid)
+   - kill/cancel → no surviving descendant. Include a descendant that
+     detaches (`setsid`, double fork, or a new job/session) and later writes a
+     host-checkable marker. Record its pid and a readiness marker before
+     cancelling; afterwards check that pid independently of its group or
+     parent, and check that the delayed marker never appears. A query by the
+     original pgid/job alone cannot support a complete-lifecycle claim; report
+     it as group-only.
    - backend failure (stop gateway, remove binary) → SEA-Forge refuses; no
      host process ran (check a host-side marker)
 5. Pair every denial probe with a positive control that uses the same

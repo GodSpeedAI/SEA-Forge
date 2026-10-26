@@ -253,9 +253,14 @@ applicable, no test that exercises it, `BLK` = backend blocked. Only `L` counts.
 | 16 | transfer cannot escape paths | L | L | GAP (no malicious-archive test) | — | — | L |
 
 Windows Local claims lifecycle and environment only, so most rows are `—`.
-The stretch bar (12 exercised scenarios per applicable backend) is met by
-Linux Isolated only; it is not met by Linux OpenShell vm (6 L: 1, 3, 9, 11, 13, 15), Linux Jail or
-macOS Jail.
+The stretch bar (12 exercised scenarios per applicable backend) is **not met
+by any backend** (corrected after review pass 3, F18). Counting rule: only `L`
+cells count, one per row; "via 4" and stub (`S`) cells do not count, and a
+network-block test does not count as credential or exfiltration coverage.
+Counts: Linux Isolated 9 (1, 2, 3, 4, 11, 12, 13, 14, 16); Linux OpenShell vm 6
+(1, 3, 9, 11, 13, 15); Linux Jail 6 (1, 2, 4, 5, 12, 16); macOS Jail 7 (1, 2,
+3, 4, 7, 11, 12). Restoring the claim needs a distinct fixture and log for each
+added scenario.
 
 ## Phase 3 — Linux live proof result (2026-10-26)
 
