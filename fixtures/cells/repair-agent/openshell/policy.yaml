@@ -21,6 +21,19 @@ filesystem_policy:
 landlock:
   compatibility: hard_requirement
 network_policies:
+  cell_live_egress_allow:
+    binaries:
+    - path: /usr/bin/just
+    - path: /usr/bin/python
+    - path: /usr/bin/uv
+    - path: /usr/local/bin/just
+    - path: /usr/local/bin/python
+    - path: /usr/local/bin/uv
+    endpoints:
+    - host: "10.0.2.2"
+      port: 46244
+      protocol: tcp
+    name: live-egress-allow
   cell_resolve_python_packages:
     binaries:
     - path: /usr/bin/just

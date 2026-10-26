@@ -5,7 +5,10 @@
 # libkrun MicroVMs, no container engine) can run the sea-forge-case-runner live
 # tests against the RepairAgent projection, including a non-bootstrap image
 # (SECOND_IMAGE). The live tests are the ones in
-# crates/sea-forge-case-runner/tests/cell_episode_live.rs.
+# crates/sea-forge-case-runner/tests/cell_episode_live.rs. It also starts the
+# host-side egress arrival listener (egress-control.py) that the network
+# control tests observe: the allowed variant's arrival and the denied variant's
+# non-arrival are host-observed evidence (EGRESS_ARRIVAL_LOG).
 #
 # This script is the only place in the repository that starts a real OpenShell
 # gateway and sandboxes for the live proof. Nothing else should.
@@ -31,6 +34,11 @@
 #   ALLOW_CONTAINER_SOCKET=1
 #                    proceed even if a Docker or Podman socket exists. The run
 #                    then does NOT establish the Docker-free claim, and it says so.
+#   EGRESS_PORT      arrival listener port (default: 46244; the committed
+#                    fixture's live-egress-control endpoint names this port)
+#   EGRESS_HOST      guest-reachable host address (default: 10.0.2.2, the
+#                    libkrun user-networking host alias the fixture names)
+#   EGRESS_ARRIVAL_LOG  arrival log path (default: $STATE_DIR/egress-arrivals.log)
 
 set -euo pipefail
 
@@ -45,8 +53,19 @@ IMAGE="${IMAGE:-nvcr.io/nvidia/base/ubuntu:24.04}"
 SECOND_IMAGE="${SECOND_IMAGE:-docker.io/library/python:3.13-slim}"
 EXPECTED_VERSION="0.1.3"
 TEST_FILE="$REPO_ROOT/crates/sea-forge-case-runner/tests/cell_episode_live.rs"
+# The egress control. The arrival listener binds 0.0.0.0 on this port; the
+# projection's `live-egress-control` endpoint names the same port and the
+# libkrun user-networking address that reaches the host from the guest. The
+# address default matches the committed fixture; overriding it means the guest
+# target no longer matches the projected endpoint (see the fixture's model.sea).
+EGRESS_PORT="${EGRESS_PORT:-46244}"
+EGRESS_HOST="${EGRESS_HOST:-10.0.2.2}"
+EGRESS_CONTROL_ADDR="${EGRESS_HOST}:${EGRESS_PORT}"
+EGRESS_ARRIVAL_LOG="${EGRESS_ARRIVAL_LOG:-$STATE_DIR/egress-arrivals.log}"
+EGRESS_HELPER="$SCRIPT_DIR/egress-control.py"
 
 GATEWAY_PID=""
+EGRESS_PID=""
 
 blocked() {
     echo "BLOCKED: $*" >&2
@@ -60,6 +79,10 @@ fail() {
 
 cleanup() {
     local rc=$?
+    if [[ -n "$EGRESS_PID" ]]; then
+        kill "$EGRESS_PID" 2>/dev/null || true
+        wait "$EGRESS_PID" 2>/dev/null || true
+    fi
     if [[ -n "$GATEWAY_PID" ]]; then
         kill "$GATEWAY_PID" 2>/dev/null || true
         wait "$GATEWAY_PID" 2>/dev/null || true
@@ -144,6 +167,15 @@ export PATH="$PATH:/usr/sbin:/sbin"
 if [[ ! -f "$TEST_FILE" ]]; then
     blocked "live test target not present: ${TEST_FILE#"$REPO_ROOT"/}"
 fi
+
+# The egress control tests must be part of the ladder this script runs
+# (--include-ignored). A rename that drops them from the file fails here
+# instead of silently shrinking the proof.
+for egress_test in live_network_allow_control_connects live_network_denial_proven; do
+    if ! grep -q "fn $egress_test" "$TEST_FILE"; then
+        blocked "egress control test missing from the ladder: $egress_test"
+    fi
+done
 
 PROJECTION_ABS="$REPO_ROOT/$PROJECTION_DIR"
 if [[ ! -f "$PROJECTION_ABS/sandbox.json" ]]; then
@@ -314,6 +346,40 @@ if (( ready == 0 )); then
     fail "gateway did not answer on https://127.0.0.1:$PORT (mTLS) within 60 s"
 fi
 echo "OK: gateway answered on https://127.0.0.1:$PORT (mTLS, registered as $GATEWAY_NAME)"
+
+# ---------------------------------------------------------------------------
+# Host-side egress arrival listener. The guest's allowed variant connects to
+# EGRESS_CONTROL_ADDR and the listener records one line per accepted
+# connection, so arrivals and non-arrivals are host-observed evidence. See
+# scripts/openshell/egress-control.py and the live tests it feeds.
+# ---------------------------------------------------------------------------
+
+if [[ ! -f "$EGRESS_HELPER" ]]; then
+    fail "egress control helper missing: $EGRESS_HELPER"
+fi
+: >"$EGRESS_ARRIVAL_LOG"
+EGRESS_READY="$STATE_DIR/egress-listener.ready"
+EGRESS_PIDFILE="$STATE_DIR/egress-listener.pid"
+rm -f "$EGRESS_READY" "$EGRESS_PIDFILE"
+python3 -I "$EGRESS_HELPER" serve --port "$EGRESS_PORT" --log "$EGRESS_ARRIVAL_LOG" \
+    --ready "$EGRESS_READY" --pidfile "$EGRESS_PIDFILE" &
+EGRESS_PID=$!
+ready=0
+for _ in $(seq 1 20); do
+    if ! kill -0 "$EGRESS_PID" 2>/dev/null; then
+        break
+    fi
+    if [[ -s "$EGRESS_READY" ]]; then
+        ready=1
+        break
+    fi
+    sleep 0.5
+done
+if (( ready == 0 )); then
+    fail "egress arrival listener did not start on 0.0.0.0:$EGRESS_PORT"
+fi
+export EGRESS_CONTROL_ADDR EGRESS_ARRIVAL_LOG
+echo "OK: egress arrival listener on 0.0.0.0:$EGRESS_PORT (log $EGRESS_ARRIVAL_LOG); guest target $EGRESS_CONTROL_ADDR"
 
 # ---------------------------------------------------------------------------
 # Live tests. Only cargo's exit status decides success.

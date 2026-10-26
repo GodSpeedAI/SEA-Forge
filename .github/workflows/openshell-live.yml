@@ -251,6 +251,12 @@ jobs:
           if [ -d "$STATE" ]; then
             find "$STATE" -maxdepth 2 -type f \( -name '*.log' -o -name '*.toml' -o -name '*.db' \) -exec cp {} evidence/state/ \;
           fi
+          # Host-side egress control evidence: one JSON line per accepted
+          # connection on the live-proof.sh arrival listener. The allow test's
+          # arrival and the deny test's non-arrival are read from this log.
+          if [ -f "$STATE/egress-arrivals.log" ]; then
+            cp "$STATE/egress-arrivals.log" evidence/egress-arrivals.log
+          fi
           ls -la evidence/state | tee evidence/state/listing.txt
 
       - name: Summarize
@@ -272,6 +278,19 @@ jobs:
             grep -E '^(OK: |WARNING: |test |test result)' evidence/live-proof.log 2>/dev/null || true
             echo '```'
             echo ""
+            if [ -s evidence/egress-arrivals.log ]; then
+              echo "### Egress control arrivals (host listener log)"
+              echo ""
+              echo '```'
+              cat evidence/egress-arrivals.log
+              echo '```'
+              echo ""
+            else
+              echo "### Egress control arrivals"
+              echo ""
+              echo "no arrival was logged (the deny variant requires none; a missing allow arrival fails the ladder)"
+              echo ""
+            fi
             echo "Bootstrap image: docker.io/library/ubuntu:24.04 (IMAGE override). The script default nvcr.io/nvidia/base/ubuntu:24.04 needs registry auth on hosted runners."
           } >> "$GITHUB_STEP_SUMMARY"
 

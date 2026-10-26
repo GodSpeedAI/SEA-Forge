@@ -198,6 +198,13 @@
     },
     {
       "class": "enforced",
+      "note": "tcp 10.0.2.2:46244 for operation 'connect', restricted to the Cell's declared executables",
+      "phase": "live",
+      "source": "ec80a4ae4102346a",
+      "target": "policy.yaml#/network_policies/cell_live_egress_allow"
+    },
+    {
+      "class": "enforced",
       "note": "https pypi.godspeed.internal:443 for operation 'read', restricted to the Cell's declared executables",
       "phase": "live",
       "source": "6388423bd89b2550",

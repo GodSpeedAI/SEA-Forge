@@ -42,6 +42,14 @@ Endpoint "package-mirror"
 NetworkFlow "resolve-python-packages" from "RepairAgent" to "package-mirror"
     @operation "read"
 
+Endpoint "live-egress-control"
+    @host "10.0.2.2"
+    @port "46244"
+    @protocol "tcp"
+
+NetworkFlow "live-egress-allow" from "RepairAgent" to "live-egress-control"
+    @operation "connect"
+
 Credential "package-mirror-token"
     @provider "sea-forge"
     @scope "package-mirror:read"

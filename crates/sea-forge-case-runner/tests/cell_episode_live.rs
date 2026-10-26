@@ -16,7 +16,11 @@
 //! - `SEA_FORGE_OPENSHELL_PROJECTION`: absolute path to the projection directory
 //! - `SEA_FORGE_OPENSHELL_IMAGE`: the bootstrap sandbox image
 //! - `SEA_FORGE_OPENSHELL_SECOND_IMAGE`: a non-bootstrap image, needed by
-//!   `live_non_bootstrap_image_is_used` only
+//!   `live_non_bootstrap_image_is_used` and the two network control tests
+//! - `EGRESS_CONTROL_ADDR` and `EGRESS_ARRIVAL_LOG`: the host-side egress
+//!   control that `live-proof.sh` starts (a TCP arrival listener and its log),
+//!   needed by `live_network_allow_control_connects` and
+//!   `live_network_denial_proven` only
 //!
 //! `openshell` and `openshell-prover` must be on PATH.
 
@@ -30,6 +34,7 @@ use sea_forge_sandbox::{select_openshell, NetworkPosture, OpenShellBinding, Sand
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
@@ -421,12 +426,14 @@ fn live_authorized_episode_runs_in_a_microvm() {
 /// Claim (narrowed): an outbound connection to 203.0.113.10:443 did not
 /// succeed, and no `CONNECTED` was observed. No egress was observed.
 ///
-/// No positive control exists in this environment: there is no reachable
-/// allowed endpoint, and OpenShell 0.1.3 logs no denial for the probe (live run
-/// 40281322154 left `denials.log` empty). The connection could fail for any
-/// reason (policy, missing route, or no listener at a documentation address),
-/// so this is not enforcement evidence and proves no network denial. The
-/// denial record is printed below for the record only.
+/// The connection target is documentation space, so this alone distinguishes
+/// nothing: the attempt could fail for any reason (policy, missing route, or
+/// no listener at that address). The distinguishing evidence lives in the
+/// control pair below (`live_network_allow_control_connects` and
+/// `live_network_denial_proven`), which points an allowed and a denied variant
+/// at the same demonstrably reachable target and reads the host-side arrival
+/// log. OpenShell 0.1.3 logs no denial for the probe (live run 40281322154
+/// left `denials.log` empty); the denial record is printed for the record only.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_network_egress_is_not_observed() {
@@ -967,4 +974,206 @@ fn live_tampered_projection_is_refused_before_create() {
         "sandbox {name} exists after a refused run:\n{text}"
     );
     assert!(!live.sandbox_exists(&name), "sandbox {name} exists");
+}
+
+// ── 10. The projected egress grant is honored, and its denial is host-observed ──
+
+/// The host-side egress control `live-proof.sh` starts: the guest-reachable
+/// address to connect to and the arrival log the listener appends to. The
+/// committed fixture's `live-egress-control` endpoint names the same host and
+/// port.
+fn egress_control() -> (String, u16, PathBuf) {
+    let addr = required("EGRESS_CONTROL_ADDR");
+    let (host, port) = addr
+        .rsplit_once(':')
+        .expect("EGRESS_CONTROL_ADDR is host:port");
+    let port: u16 = port.parse().expect("EGRESS_CONTROL_ADDR port is numeric");
+    let log = PathBuf::from(required("EGRESS_ARRIVAL_LOG"));
+    (host.to_string(), port, log)
+}
+
+/// The arrival log's lines. A missing log counts as empty: the listener may
+/// legitimately not have logged anything yet.
+fn arrival_lines(log: &Path) -> Vec<String> {
+    fs::read_to_string(log)
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_string)
+        .collect()
+}
+
+/// The non-bootstrap image. The control pair runs there because the granted
+/// binary is python (`/usr/local/bin/python` is in the projected binaries
+/// list) and the bootstrap image carries no python at all; running both
+/// variants on the same image also keeps the guest environment identical.
+fn second_image() -> String {
+    required("SEA_FORGE_OPENSHELL_SECOND_IMAGE")
+}
+
+/// Claim: the flow the projection grants — `cell_live_egress_allow`, raw TCP
+/// to the fixture's `live-egress-control` endpoint, binaries including
+/// `/usr/local/bin/python` — connects from inside the sandbox, and the
+/// host-side arrival listener records exactly one arrival carrying this run's
+/// unique token.
+///
+/// The listener is host state the sandbox cannot reach except over the libkrun
+/// user network, so the arrival line is host-observed evidence that the
+/// granted flow was honored end to end: the guest sent the token, the host
+/// received it. Together with the guest route table printed below, this is
+/// the positive control that makes `live_network_denial_proven` a denial
+/// proof rather than a blackhole observation.
+///
+/// What this does not prove: that ungranted destinations are denied (that is
+/// the paired test's claim), that the pypi REST endpoint is usable, or
+/// anything about DNS-name endpoints — the control endpoint is an IP literal
+/// and the connect is a raw TCP probe. It also depends on the fixture's
+/// endpoint naming the address the guest can actually reach the host at
+/// (10.0.2.2, the libkrun user-networking host alias); a wrong address fails
+/// here loudly rather than passing anything that follows.
+#[test]
+#[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
+fn live_network_allow_control_connects() {
+    let live = live();
+    let (host, port, log) = egress_control();
+    let image = second_image();
+    let root = new_root();
+    let token = format!("sf-egress-allow-{}", nanos());
+    // The guest prints its route table first (the record of how it reaches
+    // the host), then connects and sends the token as the first bytes.
+    let connect = format!(
+        "import socket\n\
+         print(open('/proc/net/route').read(), end='')\n\
+         s = socket.create_connection(('{host}', {port}), timeout=15)\n\
+         s.sendall(b'{token}\\n')\n\
+         print('CONNECTED', s.recv(64).decode(errors='replace').strip())\n\
+         s.close()\n"
+    );
+    let run = "run_live_egress_allow";
+    let (episode, stream) = run_live(
+        &root,
+        &live,
+        &image,
+        "python",
+        run,
+        &["python", "-c", &connect],
+    );
+    let run_dir = root.path().join("runs").join(run);
+
+    assert_eq!(episode.decision.verdict, Verdict::Allow);
+    let execution = episode.execution.as_ref().expect("execution");
+    assert_eq!(execution.status, ExecutionStatus::Completed);
+    assert_eq!(
+        execution.exit_code,
+        Some(0),
+        "the granted connect must succeed inside the sandbox"
+    );
+    let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
+    assert!(
+        stdout.contains("CONNECTED"),
+        "the guest did not observe the connection: {stdout:?}"
+    );
+    println!("guest route table:\n{stdout}");
+
+    let arrivals: Vec<String> = arrival_lines(&log)
+        .into_iter()
+        .filter(|line| line.contains(&token))
+        .collect();
+    assert_eq!(
+        arrivals.len(),
+        1,
+        "exactly one host-side arrival must carry this run's token: {arrivals:?}"
+    );
+    println!("host arrival: {}", arrivals[0]);
+    stream.verify().expect("ledger verifies");
+}
+
+/// Claim: bash — a binary no network flow grants — cannot connect to the same
+/// control address that the allowed variant demonstrably reaches, and the
+/// host-side arrival listener records no arrival carrying this run's token.
+///
+/// Attribution chain: the listener is proven alive from the host below (its
+/// own probe arrival is logged before the snapshot), the paired
+/// `live_network_allow_control_connects` proves the same address is reachable
+/// from inside a sandbox on this gateway, and this run's token appears nowhere
+/// in the arrival log while the line count is unchanged. The failed connect is
+/// therefore attributable to the policy, not to a blackhole or a dead
+/// listener. The pair only proves this when both of its tests run, which
+/// `live-proof.sh` enforces (`--include-ignored` plus a ladder check).
+///
+/// What this does not prove: that OpenShell scopes L4 grants per binary rather
+/// than per sandbox — if a gateway widened a projected flow to every guest
+/// process, this test would fail and record that fact. OpenShell 0.1.3 also
+/// logs no denial event for the probe (denials.log is printed for the record
+/// only); the denial evidence is the arrival log, not a denial record.
+#[test]
+#[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
+fn live_network_denial_proven() {
+    let live = live();
+    let (host, port, log) = egress_control();
+    let image = second_image();
+
+    // The listener must be proven to log arrivals before the guest's
+    // non-arrival can count as evidence. This runs from the host over
+    // loopback, which the guest's policy cannot influence.
+    let probe = format!("sf-egress-probe-{}", nanos());
+    std::net::TcpStream::connect(("127.0.0.1", port))
+        .expect("the arrival listener must be reachable from the host")
+        .write_all(format!("{probe}\n").as_bytes())
+        .expect("the arrival listener must accept the probe");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        assert!(
+            Instant::now() < deadline,
+            "the arrival log never recorded the host probe {probe}"
+        );
+        if arrival_lines(&log).iter().any(|line| line.contains(&probe)) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
+    let root = new_root();
+    let token = format!("sf-egress-deny-{}", nanos());
+    let before = arrival_lines(&log).len();
+    // The route table goes to stdout so the address the guest used is on the
+    // record. If the connect ever succeeded, the token would be logged and
+    // every assertion below would fail.
+    let connect = format!(
+        "cat /proc/net/route; exec 3<>/dev/tcp/{host}/{port} && printf '%s\\n' '{token}' >&3 && echo CONNECTED"
+    );
+    let run = "run_live_egress_deny";
+    let (episode, stream) =
+        try_run_live(&root, &live, &image, "bash", run, &["bash", "-c", &connect])
+            .expect("the denied episode itself must run; the connect inside it must fail");
+    let run_dir = root.path().join("runs").join(run);
+
+    let execution = episode.execution.as_ref().expect("execution");
+    assert_ne!(
+        execution.exit_code,
+        Some(0),
+        "a connect from a binary no flow grants must not succeed"
+    );
+    let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
+    assert!(!stdout.contains("CONNECTED"), "stdout: {stdout}");
+    println!("guest route table:\n{stdout}");
+
+    let after = arrival_lines(&log);
+    assert_eq!(
+        after.len(),
+        before,
+        "the arrival log must not gain a line from this run: {:?}",
+        &after[before.min(after.len())..]
+    );
+    assert!(
+        !after.iter().any(|line| line.contains(&token)),
+        "the denied run's token reached the host listener"
+    );
+    let denials = read_or_empty(&run_dir.join("artifacts/openshell/denials.log"));
+    println!(
+        "denial evidence: status {:?}, denials.log {denials:?}",
+        execution.status
+    );
+    assert_ne!(episode.settlement.status, SettlementStatus::Accepted);
+    assert!(episode.promotion_request.is_none());
+    stream.verify().expect("ledger verifies");
 }
