@@ -766,7 +766,8 @@ fn live_concurrent_sandboxes_are_isolated() {
     let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 90; cat a-token.txt");
     let searcher = format!(
         "printf '%s' '{control}' > /tmp/b-control.txt; T=$(printf '%s' '{reversed}' | rev); \
-         timeout 60 grep -rIa --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' /sandbox /tmp /var /opt > found.txt 2> errors.txt; \
+         TREES=''; for d in /sandbox /tmp /home /var /opt; do if [ -r \"$d\" ] && [ -x \"$d\" ]; then TREES=\"$TREES $d\"; fi; done; echo \"trees=$TREES\"; \
+         timeout 60 grep -rIa --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' $TREES > found.txt 2> errors.txt; \
          echo \"grep_exit=$?\"; exit 0"
     );
     let root_a = new_root();
@@ -822,6 +823,10 @@ fn live_concurrent_sandboxes_are_isolated() {
         "B's search must complete over readable trees: {stdout_b:?}; grep stderr: {errors}"
     );
     assert!(!stdout_b.contains(&token), "B's stdout holds A's token");
+    assert!(
+        stdout_b.contains("trees=") && stdout_b.contains(" /tmp"),
+        "B must search /tmp, where its control lives: {stdout_b:?}"
+    );
     let found = read_or_empty(&result_b.join("found.txt"));
     assert!(
         found.contains(&control),
