@@ -399,11 +399,19 @@ fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
                 class: "git_metadata".into(),
                 message: "the workspace contains Git metadata".into(),
             });
-        } else if is_foreign_reparse_point(&meta) {
+        } else if is_link_or_reparse(&meta) {
+            // Windows: a symlink is a reparse point too, and Git there would
+            // record its target's content as a plain file, so both are refused
+            // here. Unix keeps the `symlink` class the validator also uses.
             findings.push(Finding {
                 path: relative,
-                class: "reparse_point".into(),
-                message: "junctions and other reparse points cannot be part of a changeset".into(),
+                class: if cfg!(windows) {
+                    "reparse_point"
+                } else {
+                    "symlink"
+                }
+                .into(),
+                message: "symbolic links and reparse points cannot be part of a changeset".into(),
             });
         } else if file_type.is_dir() {
             scan(root, &path, findings)?;
@@ -439,18 +447,18 @@ fn is_special_file(_file_type: fs::FileType) -> bool {
     false
 }
 
-/// `FILE_ATTRIBUTE_REPARSE_POINT` entries that are not symlinks (junctions,
-/// mount points, other reparse tags). Symlinks keep the Unix behaviour.
+/// Symlinks on Unix; every reparse point on Windows (symlinks, junctions,
+/// mount points, other tags). Walking into one would leave the workspace.
 #[cfg(windows)]
-fn is_foreign_reparse_point(meta: &fs::Metadata) -> bool {
+fn is_link_or_reparse(meta: &fs::Metadata) -> bool {
     use std::os::windows::fs::MetadataExt;
     const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 && !meta.file_type().is_symlink()
+    meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
 }
 
 #[cfg(unix)]
-fn is_foreign_reparse_point(_meta: &fs::Metadata) -> bool {
-    false
+fn is_link_or_reparse(meta: &fs::Metadata) -> bool {
+    meta.file_type().is_symlink()
 }
 
 /// Number of hard links to a regular file.
