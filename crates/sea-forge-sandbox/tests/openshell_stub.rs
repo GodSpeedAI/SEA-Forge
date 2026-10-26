@@ -920,7 +920,11 @@ fn projection_swapped_during_the_cli_version_call_is_not_used() {
     fs::create_dir_all(&swap).expect("swap dir");
     fs::write(swap.join("policy.yaml"), SWAPPED_POLICY).expect("swap policy");
     fs::write(swap.join("openshell.lock"), lock_for(SWAPPED_POLICY)).expect("swap lock");
-    ctl(&h, "swap_on_version", &h.binding.projection_dir.display().to_string());
+    ctl(
+        &h,
+        "swap_on_version",
+        &h.binding.projection_dir.display().to_string(),
+    );
 
     let sandbox = OpenShellSandbox::new(h.binding.clone()).approving(approved_original());
     let handle = sandbox.prepare(&h.spec).expect("prepare uses the snapshot");
@@ -952,7 +956,10 @@ fn projection_swapped_during_the_cli_version_call_is_not_used() {
         "prover must read the snapshot boundary: {lines:#?}"
     );
     let record = read_record(&h);
-    assert_eq!(record["projected_policy_digest"], json!(digest(POLICY.as_bytes())));
+    assert_eq!(
+        record["projected_policy_digest"],
+        json!(digest(POLICY.as_bytes()))
+    );
     assert_eq!(record["compute_driver"]["driver"], "vm");
     assert_eq!(record["compute_driver"]["source"], "gateway_info");
     sandbox.destroy(handle).expect("destroy");
@@ -968,7 +975,9 @@ fn projection_that_differs_from_the_authorized_identity_is_refused_before_create
         error_class(sandbox.prepare(&h.spec)),
         "openshell_projection_tampered"
     );
-    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
 }
 
 #[test]
@@ -980,7 +989,9 @@ fn gateway_driver_that_differs_from_the_projection_is_refused_before_create() {
         error_class(sandbox.prepare(&h.spec)),
         "openshell_driver_mismatch"
     );
-    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
 }
 
 #[test]
@@ -992,6 +1003,7 @@ fn gateway_that_cannot_report_its_driver_is_refused_before_create() {
         error_class(sandbox.prepare(&h.spec)),
         "openshell_driver_unverified"
     );
-    assert!(calls(&h).iter().all(|l| !l.starts_with("openshell sandbox create")));
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
 }
-

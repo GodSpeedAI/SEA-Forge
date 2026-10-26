@@ -301,7 +301,11 @@ fn snapshot_projection(source: &Path, snapshot: &Path) -> Result<ProjectionIdent
         Err(e) => return Err(err("io_error", e.to_string())),
     }
     fs::create_dir_all(snapshot).map_err(|e| err("io_error", e.to_string()))?;
-    for name in PROJECTION_ARTIFACTS.iter().copied().chain(["openshell.lock"]) {
+    for name in PROJECTION_ARTIFACTS
+        .iter()
+        .copied()
+        .chain(["openshell.lock"])
+    {
         let from = source.join(name);
         let bytes = fs::read(&from).map_err(|e| {
             err(
@@ -1123,8 +1127,7 @@ impl ExecutionSandbox for OpenShellSandbox {
 
         let driver = self.gateway_driver(identity.compute_driver)?;
         let name = Self::name(spec);
-        if let Err(error) = self.create(spec, &name, &identity, &enforcement, &driver, &workload)
-        {
+        if let Err(error) = self.create(spec, &name, &identity, &enforcement, &driver, &workload) {
             // Never leave a sandbox behind that failed verification.
             let _ = self.delete(&name);
             return Err(error);
@@ -1177,10 +1180,12 @@ impl ExecutionSandbox for OpenShellSandbox {
         };
 
         fs::create_dir_all(&h.spec.artifacts_root).map_err(|e| err("io_error", e.to_string()))?;
-        let stdout = crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stdout.txt"))
-            .map_err(|e| err("io_error", e.to_string()))?;
-        let stderr = crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stderr.txt"))
-            .map_err(|e| err("io_error", e.to_string()))?;
+        let stdout =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stdout.txt"))
+                .map_err(|e| err("io_error", e.to_string()))?;
+        let stderr =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stderr.txt"))
+                .map_err(|e| err("io_error", e.to_string()))?;
 
         let mut command = Command::new(&self.binding.cli);
         command.env_clear();

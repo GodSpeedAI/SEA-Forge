@@ -93,14 +93,12 @@ impl ExecutionSandbox for LocalSandbox {
         let started_at = chrono::Utc::now().to_rfc3339();
         fs::create_dir_all(&h.spec.artifacts_root)
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-        let stdout = crate::artifact_output::create_output_file(
-            &h.spec.artifacts_root.join("stdout.txt"),
-        )
-        .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-        let stderr = crate::artifact_output::create_output_file(
-            &h.spec.artifacts_root.join("stderr.txt"),
-        )
-        .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
+        let stdout =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stdout.txt"))
+                .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
+        let stderr =
+            crate::artifact_output::create_output_file(&h.spec.artifacts_root.join("stderr.txt"))
+                .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
 
         let (argv, cwd) = match &req.operation {
             Operation::ExecuteCommand { argv, cwd } if !argv.is_empty() => (argv, cwd),

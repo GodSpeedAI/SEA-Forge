@@ -6,7 +6,9 @@
 
 use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
 use sea_forge_sandbox::{ExecutionSandbox, LocalSandbox, NetworkPosture, SandboxSpec};
-use std::{collections::BTreeMap, fs, os::unix::fs::symlink, path::PathBuf, thread, time::Duration};
+use std::{
+    collections::BTreeMap, fs, os::unix::fs::symlink, path::PathBuf, thread, time::Duration,
+};
 
 const CANARY: &str = "host canary: must not change\n";
 

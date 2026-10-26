@@ -369,11 +369,7 @@ fn execute_linux(
     req: &ExecutionRequest,
 ) -> Result<ExecutionResult, SandboxError> {
     use sea_forge_core::types::Operation;
-    use std::{
-        fs,
-        sync::mpsc,
-        thread,
-    };
+    use std::{fs, sync::mpsc, thread};
 
     fn map_err<E: std::fmt::Display>(e: E) -> SandboxError {
         SandboxError::new("jail_unavailable", e.to_string())
