@@ -193,6 +193,14 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
      readiness probe is a TCP connect;
   5. the policy fixtures hardcode `C:/work/openshell-mxc-e2e`; a custom
      `-DemoDir` is not substituted.
+- Upstream `wxc_exec_real` (`--ignored`, real wxc-exec): 6 dry-run config tests
+  pass; `pc_oneshot_in_policy_write_succeeds` and
+  `pc_oneshot_out_of_policy_write_denied` pass (evidence
+  `wxc_exec_real-oneshot-20261026.log`). `iso_lifecycle_round_trip` reports ok
+  but isolation_session provisioning on this host fails `policy_validation`
+  ("the network is unrestricted and cannot be filtered or denied"), so it is
+  counted as unverified. `pc_https_egress_reads_injected_ca_bundle` hung past
+  15 min and was killed: NOT RUN to completion.
 - SEA-Forge on MXC: **Blocked**. The v0.1.3 MXC driver runs one fixed command at
   create (`driver_config.command`), has no in-sandbox supervisor, no
   `sandbox exec`/upload/download, and `supports_sandbox_authentication = false`.
