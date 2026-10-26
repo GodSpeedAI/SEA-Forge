@@ -10,14 +10,14 @@ repository.workspace = true
 description = "SEA Forge command execution runtime."
 
 [dependencies]
-sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
-sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.2.0" }
-sea-forge-authority = { path = "../sea-forge-authority", version = "0.2.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.3.0" }
+sea-forge-sandbox = { path = "../sea-forge-sandbox", version = "0.3.0" }
+sea-forge-authority = { path = "../sea-forge-authority", version = "0.3.0" }
 chrono.workspace = true
 wait-timeout.workspace = true
 
 [dev-dependencies]
-sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.2.0" }
+sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.3.0" }
 serde_json.workspace = true
 sha2.workspace = true
 hex.workspace = true

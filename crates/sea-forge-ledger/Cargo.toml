@@ -10,7 +10,7 @@ repository.workspace = true
 description = "SEA Forge integrity ledger: append-only, chained, MMR-committed, signed."
 
 [dependencies]
-sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.3.0" }
 chrono.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true
@@ -22,7 +22,7 @@ hex.workspace = true
 unicode-normalization.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-sea-forge-os = { path = "../sea-forge-os", version = "0.2.0" }
+sea-forge-os = { path = "../sea-forge-os", version = "0.3.0" }
 
 [dev-dependencies]
 tempfile = "3"
