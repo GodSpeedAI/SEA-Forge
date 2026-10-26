@@ -42,9 +42,10 @@ case "$1" in
   policy) echo '{"hash":"h1","version":3,"config_revision":"r7","policy_source":"sandbox"}'; exit 0 ;;
   sandbox)
     case "$2" in
-      create|delete|upload) exit 0 ;;
+      create|upload) exit 0 ;;
+      delete) [ -f "$LOG.delete_fail" ] && exit 1; exit 0 ;;
       get) echo "version: 1"; exit 0 ;;
-      download) mkdir -p "$5" && echo done > "$5/result.txt"; exit $? ;;
+      download) [ -f "$LOG.download_fail" ] && exit 1; mkdir -p "$5" && echo done > "$5/result.txt"; exit $? ;;
       exec) echo "stub-stdout"; exit 0 ;;
     esac
     ;;
@@ -389,6 +390,29 @@ fn openshell_execution_requires_the_authorized_projection() {
         lines[exec]
     );
     assert!(fx.result_dir.join("result.txt").exists());
+
+    // (e) The download fails and so does the delete: the cleanup failure is
+    // reported with the primary failure, never hidden behind it.
+    fs::write(fx.log.with_extension("log.download_fail"), "").expect("ctl");
+    fs::write(fx.log.with_extension("log.delete_fail"), "").expect("ctl");
+    let operation = sandbox_op(&["/bin/sh", "-c", "true"], &digest, IMAGE);
+    let action = AuthorityAction::from(&operation);
+    let grant = grant_for(&fx, &digest, IMAGE, &action);
+    let error = sea_forge_runtime::execute_openshell(
+        grant,
+        &request_for(operation),
+        RUN_ID,
+        &fx.workspace,
+        &fx.artifacts,
+        binding(&fx, Some(IMAGE)),
+        &fx.result_dir,
+    )
+    .expect_err("a failed download with a failed cleanup must fail");
+    assert_eq!(error.class(), "openshell_cleanup_failed", "(e)");
+    assert!(
+        error.to_string().contains("lifetime unverified"),
+        "(e) {error}"
+    );
 }
 
 #[test]

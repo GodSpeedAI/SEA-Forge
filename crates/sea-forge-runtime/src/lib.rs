@@ -269,10 +269,19 @@ pub fn execute_openshell(
         sandbox.download_workspace(&handle, result_dir)?;
         Ok(result)
     });
-    let destroyed = sandbox.destroy(handle);
-    let result = outcome.map_err(|e| config(e.class, e.message))?;
-    destroyed.map_err(|e| config(e.class, e.message))?;
-    Ok(result)
+    // A failed destroy is never hidden behind the execution outcome: the
+    // sandbox lifetime is then unverified, and both failures are reported.
+    match (outcome, sandbox.destroy(handle)) {
+        (Ok(result), Ok(())) => Ok(result),
+        (Err(e), Ok(())) | (Ok(_), Err(e)) => Err(config(e.class, e.message)),
+        (Err(primary), Err(cleanup)) => Err(config(
+            cleanup.class,
+            format!(
+                "sandbox lifetime unverified after {}: {}; cleanup failed: {}",
+                primary.class, primary.message, cleanup.message
+            ),
+        )),
+    }
 }
 
 #[cfg(test)]

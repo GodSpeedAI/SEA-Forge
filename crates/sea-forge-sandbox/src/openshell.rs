@@ -1046,6 +1046,22 @@ impl OpenShellSandbox {
     }
 }
 
+/// A primary failure whose cleanup also failed. The cleanup class wins: the
+/// sandbox may still exist, so its lifetime is unverified.
+pub(crate) fn combine_cleanup_failure(
+    name: &str,
+    primary: &SandboxError,
+    cleanup: &SandboxError,
+) -> SandboxError {
+    err(
+        "openshell_cleanup_failed",
+        format!(
+            "sandbox {name} may still exist (lifetime unverified) after {}: {}; cleanup failed: {}",
+            primary.class, primary.message, cleanup.message
+        ),
+    )
+}
+
 impl ExecutionSandbox for OpenShellSandbox {
     fn class(&self) -> SandboxClass {
         SandboxClass::OpenShell
@@ -1130,9 +1146,12 @@ impl ExecutionSandbox for OpenShellSandbox {
         let driver = self.gateway_driver(identity.compute_driver)?;
         let name = Self::name(spec);
         if let Err(error) = self.create(spec, &name, &identity, &enforcement, &driver, &workload) {
-            // Never leave a sandbox behind that failed verification.
-            let _ = self.delete(&name);
-            return Err(error);
+            // Never leave a sandbox behind that failed verification. A failed
+            // delete keeps both failures and the sandbox name visible.
+            return Err(match self.delete(&name) {
+                Ok(()) => error,
+                Err(cleanup) => combine_cleanup_failure(&name, &error, &cleanup),
+            });
         }
         Ok(SandboxHandle {
             class: SandboxClass::OpenShell,
