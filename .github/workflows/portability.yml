@@ -68,6 +68,10 @@ jobs:
         shell: bash
         run: cargo test --locked -p sea-forge-changeset --test changeset_windows -- --nocapture
 
+      - name: Local sandbox job-object tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-sandbox --test windows_local_job -- --test-threads=1 --nocapture
+
       - name: Identity E2E (real OS identity, pipe DACL, squatting)
         shell: pwsh
         run: |
