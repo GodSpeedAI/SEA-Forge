@@ -85,21 +85,36 @@ fn taskkill_exe() -> String {
     format!(r"{}\System32\taskkill.exe", system_root())
 }
 
-/// Minimal environment for the child. `req.env` is the only env the child gets.
-fn base_env() -> BTreeMap<String, String> {
+/// Environment passed as `req.env` for the containment tests. PowerShell needs
+/// the standard Windows profile variables to start, so pass a full snapshot of
+/// the host environment. The env contract is tested separately in
+/// `child_sees_only_req_env`.
+fn host_env() -> BTreeMap<String, String> {
+    std::env::vars().collect()
+}
+
+/// Minimal environment for the env test. Only these names reach the child.
+fn minimal_env() -> BTreeMap<String, String> {
     let root = system_root();
+    let temp = std::env::temp_dir().display().to_string();
     BTreeMap::from([
         ("PATH".to_string(), format!(r"{root}\System32;{root}")),
         ("SYSTEMROOT".to_string(), root),
-        (
-            "TEMP".to_string(),
-            std::env::temp_dir().display().to_string(),
-        ),
-        (
-            "TMP".to_string(),
-            std::env::temp_dir().display().to_string(),
-        ),
+        ("TEMP".to_string(), temp.clone()),
+        ("TMP".to_string(), temp),
     ])
+}
+
+/// Child stdout and stderr, for assertion messages.
+fn child_output(dirs: &Dirs) -> String {
+    let read = |name: &str| {
+        fs::read_to_string(dirs.artifacts.join(name)).unwrap_or_else(|e| format!("<{e}>"))
+    };
+    format!(
+        "stdout.txt: {:?}\nstderr.txt: {:?}",
+        read("stdout.txt"),
+        read("stderr.txt")
+    )
 }
 
 fn powershell_argv(script: &str) -> Vec<String> {
@@ -150,7 +165,7 @@ fn run(dirs: &Dirs, argv: Vec<String>, timeout_secs: u64) -> ExecutionResult {
             cwd: ".".into(),
         },
         timeout_secs,
-        env: base_env(),
+        env: host_env(),
         compensating_controls: vec![],
     };
     sandbox.execute(&handle, &req).expect("execute")
@@ -232,10 +247,11 @@ fn timeout_kills_whole_process_tree() {
     assert_eq!(result.exit_code, None);
     assert!(
         spawned.exists(),
-        "grandchild was never spawned before the timeout; the test would be vacuous"
+        "grandchild was never spawned before the timeout; the test would be vacuous\n{}",
+        child_output(&dirs)
     );
 
-    // The grandchild would write its marker about 5 s after spawning.
+    // The grandchild writes its marker about 35 s after spawning.
     thread::sleep(Duration::from_secs(POST_KILL_WAIT_SECS));
     let survivors = live_pids_with_token(&token);
     kill_tree(&survivors);
@@ -270,7 +286,8 @@ fn wmi_created_process_cannot_escape_timeout_kill() {
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert!(
         spawned.exists(),
-        "WMI create never ran before the timeout; the test would be vacuous"
+        "WMI create never ran before the timeout; the test would be vacuous\n{}",
+        child_output(&dirs)
     );
 
     thread::sleep(Duration::from_secs(POST_KILL_WAIT_SECS));
@@ -313,9 +330,10 @@ fn normal_completion_propagates_exit_code_and_captures_stdout() {
 #[test]
 fn child_sees_only_req_env() {
     let dirs = Dirs::new("env");
-    // %USERNAME% is set in the test process. Only req.env may reach the child,
-    // so an unset variable prints literally. %SF_REQ_PROBE% is in req.env.
-    let mut env = base_env();
+    // Set a host variable that is NOT in req.env. Only req.env may reach the
+    // child, so the child must print it literally. %SF_REQ_PROBE% is in req.env.
+    std::env::set_var("SF_WIN_HOST_LEAK_PROBE", "host-leak-value");
+    let mut env = minimal_env();
     env.insert("SF_REQ_PROBE".into(), "granted".into());
     let spec = SandboxSpec {
         workspace_root: dirs.workspace.clone(),
@@ -331,7 +349,7 @@ fn child_sees_only_req_env() {
                 cmd_exe(),
                 "/d".into(),
                 "/c".into(),
-                "echo LEAK=%USERNAME% GRANT=%SF_REQ_PROBE%".into(),
+                "echo LEAK=%SF_WIN_HOST_LEAK_PROBE% GRANT=%SF_REQ_PROBE%".into(),
             ],
             cwd: ".".into(),
         },
@@ -347,7 +365,7 @@ fn child_sees_only_req_env() {
         "req.env value did not reach the child: {stdout:?}"
     );
     assert!(
-        stdout.contains("LEAK=%USERNAME%"),
+        stdout.contains("LEAK=%SF_WIN_HOST_LEAK_PROBE%"),
         "host env var leaked into the child: {stdout:?}"
     );
 }
