@@ -84,6 +84,22 @@ jobs:
       - name: Build release binaries
         run: devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
 
+      # The Devbox (Nix) toolchain links the Nix loader and a /nix/store RUNPATH
+      # into the binaries; they would not start on a host without Nix. Point
+      # them at the system loader and drop the RUNPATH, then refuse any
+      # remaining /nix/store reference.
+      - name: Detach binaries from the Nix toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y patchelf >/dev/null
+          for b in target/release/sea-forge target/release/sea-forge-server; do
+            patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath "$b"
+            readelf -l "$b" | grep -F '[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]'
+            if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
+            if readelf -d "$b" | grep -F /nix/store; then echo "::error::$b references /nix/store"; exit 1; fi
+          done
+
       - name: Package deb and tarball
         shell: bash
         env:
@@ -123,6 +139,11 @@ jobs:
           echo "install test: sea-forge-server --help -> refused, exit $rc: $server_help"
           dpkg -L sea-forge
           dpkg -s sea-forge | sed -n '1,12p'
+          # The runner has Nix; prove the package also runs where it does not.
+          for image in ubuntu:22.04 debian:12; do
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" sh -ec \
+              "apt-get update -qq >/dev/null && apt-get install -y -qq /dist/${deb##*/} >/dev/null && test \"\$(sea-forge --version)\" = 'sea-forge ${VERSION}' && echo \"clean $image: \$(sea-forge --version)\""
+          done
           sudo apt-get remove -y sea-forge
           if command -v sea-forge >/dev/null 2>&1; then echo "sea-forge still on PATH"; exit 1; fi
           test ! -e /usr/bin/sea-forge
@@ -213,6 +234,21 @@ jobs:
           devbox run -- rustup target add x86_64-apple-darwin
           devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-cli -p sea-forge-server
           devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
+
+      # Devbox (Nix) toolchains can link /nix/store dylibs (e.g. libiconv); such a
+      # binary would not load on a Mac without Nix. Refuse any such reference.
+      - name: Binaries load only system libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          for b in target/*-apple-darwin/release/sea-forge target/*-apple-darwin/release/sea-forge-server \
+                   target/*-apple-darwin/release/sea-forge-jail-launcher; do
+            otool -L "$b"
+            if otool -L "$b" | tail -n +2 | grep -F /nix/store; then echo "::error::$b links /nix/store"; bad=1; fi
+            if otool -l "$b" | grep -A2 LC_RPATH | grep -F /nix/store; then echo "::error::$b has a /nix/store rpath"; bad=1; fi
+          done
+          exit "$bad"
 
       - name: Choose package variant
         id: variant
