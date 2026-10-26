@@ -107,16 +107,17 @@ fn jail_class_is_jail() {
 
 #[test]
 fn jail_unavailable_on_unsupported_platform_returns_error() {
-    // On non-Linux, JailSandbox::new() must return an error.
-    #[cfg(not(target_os = "linux"))]
+    // Off Linux and macOS, JailSandbox::new() must return an error.
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let result = JailSandbox::new();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().class, "unsupported_sandbox_class_error");
     }
     // On Linux, if Landlock is not supported by the kernel, the error is
-    // detected at execute time rather than at construction time.
-    #[cfg(target_os = "linux")]
+    // detected at execute time rather than at construction time. On macOS the
+    // App Sandbox preflight runs here; macos_app_sandbox_jail covers the rest.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         let _ = JailSandbox::new();
     }

@@ -53,3 +53,13 @@ CI logs) and the GitHub Actions runs named below.
 
 - Phase 0: done (this record, baseline in `~/projects/_wt/containers/baseline/BASELINE.md`).
 - Phase 1: in progress.
+- Phase 6: macOS App Sandbox jail (branch `feat/macos-app-sandbox-jail`, stacked on `feat/cross-platform-native`). See the Phase 6 section below.
+
+## Phase 6 — macOS App Sandbox jail
+
+- Scope: implement the existing `Jail` sandbox class on macOS with the App Sandbox, not a new class. No `sandbox-exec`, SBPL or `sandbox_init`.
+- Mechanism: `sea-forge-jail-launcher` (a new bin in `sea-forge-sandbox`, which only execs its argv) is copied per execution into a fresh directory beside the artifacts root, ad-hoc signed with workspace/artifacts read-write temporary exceptions and no network entitlement, verified for `com.apple.security.app-sandbox`, then run with `env_clear`, the same timeout and process-group kill as the local path.
+- Refused with `jail_unavailable`: `NetworkPosture::AllowTcpPorts` (no per-port control), a missing `codesign` or launcher, an unsigned or unverified launcher, and a launcher copy inside the workspace.
+- Evidence: probe run 40254192454 on macOS 26.6.2 arm64 (`probes/macos-app-sandbox` on `ci/macos-app-sandbox-probe`).
+- Verification: `.github/workflows/portability.yml` job `macos` runs `tests/macos_app_sandbox_jail.rs` and `--lib`. Linux tests are unchanged; `conformance_m1` now treats macOS like Linux for the construction check.
+- Not done: packaging the launcher beside the release `sea-forge` binary; read-only system-tree exceptions beyond the App Sandbox defaults.

@@ -3,7 +3,7 @@ use crate::{
     SandboxSpec,
 };
 use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult};
-// Only the Linux jail classifies an execution outcome; macOS never reaches these uses.
+// Only the Linux jail classifies an execution outcome here; the macOS module imports its own.
 #[cfg(target_os = "linux")]
 use sea_forge_core::types::ExecutionStatus;
 
@@ -272,7 +272,12 @@ impl JailSandbox {
         {
             Ok(JailSandbox)
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        {
+            macos::preflight()?;
+            Ok(JailSandbox)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
             Err(SandboxError::new(
                 "unsupported_sandbox_class_error",
@@ -303,7 +308,11 @@ impl ExecutionSandbox for JailSandbox {
         {
             execute_linux(h, req)
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        {
+            macos::execute(h, req)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
             let _ = (h, req);
             Err(SandboxError::new(
@@ -338,13 +347,13 @@ impl ExecutionSandbox for JailSandbox {
 /// force an unbounded parent-side read. 64 KiB + 1 mirrors settlement's
 /// stderr cap idiom (the +1 keeps an over-cap stream distinguishable from an
 /// exactly-at-cap one).
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const MAX_STDERR_SCAN_BYTES: u64 = 65_537;
 
 /// Read at most [`MAX_STDERR_SCAN_BYTES`] bytes of the child's stderr file,
 /// lossily decoded. Open/read failure yields an empty string, matching the
 /// pre-cap `read_to_string(..).unwrap_or_default()` behavior.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn read_capped_stderr(path: &std::path::Path) -> String {
     use std::io::Read;
     let mut bytes = Vec::new();
@@ -520,4 +529,253 @@ fn run_jailed(
         started_at,
         finished_at: chrono::Utc::now().to_rfc3339(),
     })
+}
+
+/// macOS App Sandbox backend.
+///
+/// Each execution gets its own copy of `sea-forge-jail-launcher`, ad-hoc signed
+/// with `com.apple.security.app-sandbox` and temporary exceptions that grant
+/// read-write access to exactly the workspace and artifacts trees. The copy then
+/// execs the workload, and the kernel applies the sandbox at exec time, so every
+/// descendant inherits it. No network entitlement is requested, which denies
+/// all TCP, UDP and DNS. Per-port grants cannot be expressed, so
+/// `AllowTcpPorts` is refused.
+///
+/// Reads outside the sandbox's default system set are denied, which is stricter
+/// than the Linux jail's read-only `/`. Environment variables are not filtered by
+/// the App Sandbox, so the caller's `env_clear` remains the only env boundary.
+#[cfg(target_os = "macos")]
+mod macos {
+    use crate::{local::kill_timed_out_group, NetworkPosture, SandboxError, SandboxHandle};
+    use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
+    use std::{
+        fs::{self, File},
+        os::unix::process::CommandExt,
+        path::{Path, PathBuf},
+        process::{Command, Stdio},
+        time::Duration,
+    };
+    use wait_timeout::ChildExt;
+
+    const CODESIGN: &str = "/usr/bin/codesign";
+    const LAUNCHER: &str = "sea-forge-jail-launcher";
+
+    fn unavailable(message: impl std::fmt::Display) -> SandboxError {
+        SandboxError::new("jail_unavailable", message.to_string())
+    }
+
+    /// Finds the launcher next to the running executable. Cargo puts integration
+    /// test binaries in `target/<profile>/deps/`, where the bin sits one level up.
+    fn launcher_path() -> Result<PathBuf, SandboxError> {
+        let exe = std::env::current_exe()
+            .map_err(|e| unavailable(format!("locate current executable: {e}")))?;
+        let dir = exe
+            .parent()
+            .ok_or_else(|| unavailable("current executable has no parent directory"))?;
+        let mut candidates = vec![dir.join(LAUNCHER)];
+        if dir.file_name().is_some_and(|name| name == "deps") {
+            if let Some(parent) = dir.parent() {
+                candidates.push(parent.join(LAUNCHER));
+            }
+        }
+        candidates
+            .into_iter()
+            .find(|candidate| candidate.is_file())
+            .ok_or_else(|| unavailable(format!("{LAUNCHER} was not found next to the executable")))
+    }
+
+    /// Succeeds only when the signing tool and the launcher are present.
+    pub(super) fn preflight() -> Result<(), SandboxError> {
+        if !Path::new(CODESIGN).is_file() {
+            return Err(unavailable(format!("{CODESIGN} is missing")));
+        }
+        launcher_path().map(|_| ())
+    }
+
+    fn canonical_dir(path: &Path) -> Result<PathBuf, SandboxError> {
+        fs::create_dir_all(path).map_err(unavailable)?;
+        path.canonicalize().map_err(unavailable)
+    }
+
+    /// Removes the per-execution launcher directory when the execution ends.
+    struct PrivateDir(PathBuf);
+
+    impl Drop for PrivateDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn xml_escape(text: &str) -> String {
+        text.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;")
+    }
+
+    /// App Sandbox entitlements: sandbox on, read-write temporary exceptions for
+    /// the given directories (trailing slash, as the exception syntax requires),
+    /// and no network entitlement.
+    fn entitlements_plist(read_write: &[&Path]) -> String {
+        let paths: String = read_write
+            .iter()
+            .map(|path| {
+                format!(
+                    "\t\t<string>{}/</string>\n",
+                    xml_escape(&path.to_string_lossy())
+                )
+            })
+            .collect();
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
+<plist version=\"1.0\">\n<dict>\n\
+\t<key>com.apple.security.app-sandbox</key>\n\t<true/>\n\
+\t<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>\n\
+\t<array>\n{paths}\t</array>\n\
+</dict>\n</plist>\n"
+        )
+    }
+
+    /// Copies the launcher into `dir`, signs the copy with `entitlements`, and
+    /// verifies that the signature carries the App Sandbox key.
+    fn sign_launcher(dir: &Path, entitlements: &Path) -> Result<PathBuf, SandboxError> {
+        let copy = dir.join(LAUNCHER);
+        fs::copy(launcher_path()?, &copy).map_err(unavailable)?;
+        let signed = Command::new(CODESIGN)
+            .args(["-s", "-", "--force", "--entitlements"])
+            .arg(entitlements)
+            .arg(&copy)
+            .env_clear()
+            .output()
+            .map_err(unavailable)?;
+        if !signed.status.success() {
+            return Err(unavailable(format!(
+                "codesign failed: {}",
+                String::from_utf8_lossy(&signed.stderr).trim()
+            )));
+        }
+        let verified = Command::new(CODESIGN)
+            .args(["-d", "--entitlements", ":-"])
+            .arg(&copy)
+            .env_clear()
+            .output()
+            .map_err(unavailable)?;
+        let stdout = String::from_utf8_lossy(&verified.stdout);
+        if !verified.status.success() || !stdout.contains("com.apple.security.app-sandbox") {
+            return Err(unavailable(
+                "signed launcher does not carry the App Sandbox entitlement",
+            ));
+        }
+        Ok(copy)
+    }
+
+    pub(super) fn execute(
+        h: &SandboxHandle,
+        req: &ExecutionRequest,
+    ) -> Result<ExecutionResult, SandboxError> {
+        let started_at = chrono::Utc::now().to_rfc3339();
+        if let NetworkPosture::AllowTcpPorts(_) = &h.spec.network {
+            return Err(unavailable(
+                "macOS App Sandbox cannot restrict network by port",
+            ));
+        }
+        let (argv, cwd) = match &req.operation {
+            Operation::ExecuteCommand { argv, cwd } if !argv.is_empty() => (argv, cwd),
+            _ => {
+                return Err(SandboxError::new(
+                    "input_error",
+                    "execution request requires non-empty execute_command",
+                ));
+            }
+        };
+
+        let workspace = canonical_dir(&h.spec.workspace_root)?;
+        let artifacts = canonical_dir(&h.spec.artifacts_root)?;
+        let run_parent = artifacts
+            .parent()
+            .ok_or_else(|| unavailable("artifacts root has no parent for the launcher copy"))?
+            .to_path_buf();
+        if run_parent.starts_with(&workspace) {
+            return Err(unavailable(
+                "launcher copy must not be placed inside the workspace",
+            ));
+        }
+        let cwd = crate::safe_join(&h.spec.workspace_root, cwd)
+            .map_err(|e| SandboxError::new("unsafe_path_error", e.to_string()))?;
+
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let private = run_parent.join(format!("sea-forge-jail-{}-{nanos}", std::process::id()));
+        fs::create_dir(&private).map_err(unavailable)?;
+        let private = PrivateDir(private);
+
+        let entitlements = private.0.join("entitlements.plist");
+        fs::write(
+            &entitlements,
+            entitlements_plist(&[workspace.as_path(), artifacts.as_path()]),
+        )
+        .map_err(unavailable)?;
+        let copy = sign_launcher(&private.0, &entitlements)?;
+
+        let stdout = File::create(artifacts.join("stdout.txt")).map_err(unavailable)?;
+        let stderr = File::create(artifacts.join("stderr.txt")).map_err(unavailable)?;
+        let mut command = Command::new(&copy);
+        command
+            .args(argv)
+            .current_dir(&cwd)
+            .env_clear()
+            .stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .process_group(0);
+        for (k, v) in &req.env {
+            command.env(k, v);
+        }
+        let mut child = match command.spawn() {
+            Ok(child) => child,
+            Err(_) => {
+                return Ok(ExecutionResult {
+                    status: ExecutionStatus::SpawnFailed,
+                    exit_code: None,
+                    stdout_path: "artifacts/stdout.txt".into(),
+                    stderr_path: "artifacts/stderr.txt".into(),
+                    started_at,
+                    finished_at: chrono::Utc::now().to_rfc3339(),
+                })
+            }
+        };
+        let status = child
+            .wait_timeout(Duration::from_secs(req.timeout_secs))
+            .map_err(unavailable)?;
+        let (state, code) = if let Some(status) = status {
+            (ExecutionStatus::Completed, status.code().map(i64::from))
+        } else {
+            kill_timed_out_group(&child)?;
+            child.wait().map_err(unavailable)?;
+            (ExecutionStatus::TimedOut, None)
+        };
+
+        let mut result = ExecutionResult {
+            status: state,
+            exit_code: code,
+            stdout_path: "artifacts/stdout.txt".into(),
+            stderr_path: "artifacts/stderr.txt".into(),
+            started_at,
+            finished_at: chrono::Utc::now().to_rfc3339(),
+        };
+        // Same suspicion heuristic as the Linux jail, extended to the errno text
+        // the App Sandbox produces. Child-written stderr is only evidence.
+        if result.status == ExecutionStatus::Completed && result.exit_code != Some(0) {
+            let stderr_text =
+                super::read_capped_stderr(&artifacts.join("stderr.txt")).to_lowercase();
+            if stderr_text.contains("permission denied")
+                || stderr_text.contains("operation not permitted")
+            {
+                result.status = ExecutionStatus::SuspectedSandboxViolation;
+            }
+        }
+        Ok(result)
+    }
 }
