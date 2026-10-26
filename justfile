@@ -435,11 +435,39 @@ no-async-kernel:
             fi
         done
     done
+    # A per-crate pass cannot see feature unification: `-p` resolves the crate
+    # in isolation, so a cfg(windows)-only optional dependency enabled by an
+    # adapter crate (e.g. sea-forge-os/tokio-pipes via sea-forge-server, review
+    # F33) is invisible on every target. Re-check the unified workspace graph
+    # for the host and for the Windows MSVC target (the triple the
+    # package/release workflows use): fail if any kernel crate appears among a
+    # forbidden dep's dependents. `cargo tree --target` resolves from the
+    # lockfile: no target toolchain and no network access are needed.
+    for target in host x86_64-pc-windows-msvc; do
+        if [ "$target" = host ]; then
+            target_args=""
+        else
+            target_args="--target $target"
+        fi
+        for dep in "${forbidden_deps[@]}"; do
+            # Normal edges only: a kernel crate's own direct or dev dependency
+            # on a forbidden dep is already caught by the per-crate pass above.
+            # $target_args is intentionally unquoted: it is either empty or
+            # exactly two words (--target <triple>).
+            output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1) || continue
+            for crate in "${kernel_crates[@]}"; do
+                if echo "$output" | grep -q "$crate v"; then
+                    echo "fail: kernel crate $crate depends on $dep (unified workspace graph, target: $target)" >&2
+                    status=1
+                fi
+            done
+        done
+    done
     if [ "$status" -ne 0 ]; then
         echo "fail: forbidden async/HTTP dependency in a kernel crate" >&2
         exit 1
     fi
-    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates"
+    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates (host and x86_64-pc-windows-msvc graphs)"
 
 # Workbench (Bun workspace) lint + typecheck + build + test. Not part of the
 # kernel `check`/`ci` gates — the frontend is developed and gated separately
