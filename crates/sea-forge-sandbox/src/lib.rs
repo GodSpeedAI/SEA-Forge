@@ -397,19 +397,14 @@ fn checked_parent(
 /// destination is refused before anything is written, and a directory fails
 /// with `EISDIR`.
 ///
-/// Residual race: the parent is opened by path, so a parent component swapped
-/// to a symlink between validation and open is not detected here. Per-component
-/// re-validation in `safe_join` keeps that window narrow until
-/// `openat2(RESOLVE_BENEATH)` stabilizes. A concurrent hard link created after
-/// the check is harmless: the rename replaces the entry, and the link keeps
-/// the old inode, so no race can make this write reach a shared inode.
+/// The parent is opened by path, and its containment is not checked here.
+/// Callers that need containment use `safe_write_within`. A concurrent hard
+/// link created after the check is harmless: the rename replaces the entry,
+/// and the link keeps the old inode, so no race can make this write reach a
+/// shared inode.
 #[cfg(unix)]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
-    use rustix::fs::{AtFlags, Mode, OFlags};
-    use rustix::io::Errno;
-    use std::io::Write;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    use rustix::fs::{Mode, OFlags};
 
     let parent = destination.parent().ok_or_else(|| {
         ForgeError::UnsafePath(format!(
@@ -423,20 +418,45 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
             destination.display()
         ))
     })?;
+    let dir = rustix::fs::open(
+        parent,
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+        Mode::empty(),
+    )
+    .map_err(|error| {
+        ForgeError::io(
+            format!("open planned file {}", destination.display()),
+            std::io::Error::from(error),
+        )
+    })?;
+    write_entry_unix(&dir, destination, name, bytes)
+}
+
+/// Unix: replaces the entry `name` inside the already-open directory `dir`.
+/// Shared by `safe_write` and `safe_write_within`. The bytes go to a fresh
+/// `O_CREAT|O_EXCL` temp sibling, which is fsynced and renamed over `name`.
+/// Afterwards the entry is checked against the written file (see below).
+#[cfg(unix)]
+fn write_entry_unix(
+    dir: &std::os::fd::OwnedFd,
+    destination: &Path,
+    name: &std::ffi::OsStr,
+    bytes: &[u8],
+) -> Result<(), ForgeError> {
+    use rustix::fs::{AtFlags, Mode, OFlags};
+    use rustix::io::Errno;
+    use std::io::Write;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
     let open_error = |error: Errno| {
         ForgeError::io(
             format!("open planned file {}", destination.display()),
             std::io::Error::from(error),
         )
     };
-    let dir = rustix::fs::open(
-        parent,
-        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-        Mode::empty(),
-    )
-    .map_err(open_error)?;
     // The mode of an existing entry is kept; a new file gets 0666 minus the umask.
-    let mode = match rustix::fs::statat(&dir, name, AtFlags::SYMLINK_NOFOLLOW) {
+    let mode = match rustix::fs::statat(dir, name, AtFlags::SYMLINK_NOFOLLOW) {
         Ok(stat) => match stat.st_mode & libc::S_IFMT {
             libc::S_IFLNK => {
                 return Err(ForgeError::UnsafePath(format!(
@@ -459,7 +479,7 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
         candidate.push(name);
         candidate.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
         match rustix::fs::openat(
-            &dir,
+            dir,
             candidate.as_os_str(),
             OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
             Mode::from_raw_mode(mode),
@@ -474,14 +494,37 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
         .write_all(bytes)
         .and_then(|()| file.sync_all())
         .and_then(|()| {
-            rustix::fs::renameat(&dir, temp_name.as_os_str(), &dir, name)
+            rustix::fs::renameat(dir, temp_name.as_os_str(), dir, name)
                 .map_err(std::io::Error::from)
         });
     if let Err(error) = outcome {
-        let _ = rustix::fs::unlinkat(&dir, temp_name.as_os_str(), AtFlags::empty());
+        let _ = rustix::fs::unlinkat(dir, temp_name.as_os_str(), AtFlags::empty());
         return Err(ForgeError::io("write planned file", error));
     }
-    let _ = rustix::fs::fsync(&dir);
+    // F32: after the rename, the entry must be the regular file just written.
+    // This detects substitution of the entry; it does not prevent it. A
+    // mismatch is reported as an error, never as success.
+    let substituted = || {
+        ForgeError::UnsafePath(format!(
+            "destination {} was substituted during materialization",
+            destination.display()
+        ))
+    };
+    let written = rustix::fs::fstat(&file).map_err(|error| {
+        ForgeError::io(
+            format!("stat planned file {}", destination.display()),
+            std::io::Error::from(error),
+        )
+    })?;
+    let entry =
+        rustix::fs::statat(dir, name, AtFlags::SYMLINK_NOFOLLOW).map_err(|_| substituted())?;
+    if entry.st_dev != written.st_dev
+        || entry.st_ino != written.st_ino
+        || (entry.st_mode & libc::S_IFMT) != libc::S_IFREG
+    {
+        return Err(substituted());
+    }
+    let _ = rustix::fs::fsync(dir);
     Ok(())
 }
 
@@ -540,14 +583,76 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
     write_entry_windows(&dir, destination, file_name, bytes)
 }
 
-/// Non-Windows: parent-directory containment is not checked here (see the
-/// residual-race note on the Unix `safe_write`).
-#[cfg(not(windows))]
+/// Unix: writes `bytes` to `destination`, which must resolve inside `root`.
+///
+/// `root` is canonicalized, and the destination must sit under it (the raw
+/// `root` prefix is also accepted). Only plain path components are allowed.
+/// The root is opened with `O_DIRECTORY`, and each parent component is opened
+/// relative to the previous directory with `O_DIRECTORY|O_NOFOLLOW`, so a
+/// symlink ancestor fails as `UnsafePath`. The entry is then replaced through
+/// the final directory descriptor (`write_entry_unix`).
+///
+/// Residual: a directory that is already open can still be renamed elsewhere
+/// by a concurrent writer. The descriptor stays bound to the inode, so the
+/// write lands in the moved directory. That relocation is not excluded here.
+#[cfg(unix)]
+pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    use rustix::fs::{Mode, OFlags};
+    use rustix::io::Errno;
+
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|e| ForgeError::io("canonicalize workspace", e))?;
+    let relative = destination
+        .strip_prefix(&canonical_root)
+        .or_else(|_| destination.strip_prefix(root))
+        .map_err(|_| {
+            ForgeError::UnsafePath(format!(
+                "destination {} resolves outside the workspace",
+                destination.display()
+            ))
+        })?;
+    let names = normal_components(relative, destination)?;
+    let (file_name, parents) = names.split_last().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination is not a file: {}",
+            destination.display()
+        ))
+    })?;
+    let mut dir = rustix::fs::open(
+        canonical_root.as_path(),
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
+        Mode::empty(),
+    )
+    .map_err(|error| ForgeError::io("open workspace root", std::io::Error::from(error)))?;
+    for parent in parents {
+        dir = rustix::fs::openat(
+            &dir,
+            *parent,
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )
+        .map_err(|error| match error {
+            Errno::LOOP | Errno::NOTDIR => ForgeError::UnsafePath(format!(
+                "parent is a symlink or not a directory: {}",
+                destination.display()
+            )),
+            other => ForgeError::io(
+                format!("open parent of {}", destination.display()),
+                std::io::Error::from(other),
+            ),
+        })?;
+    }
+    write_entry_unix(&dir, destination, file_name, bytes)
+}
+
+/// Neither Unix nor Windows: no containment support is available here.
+#[cfg(not(any(unix, windows)))]
 pub fn safe_write_within(_root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
     safe_write(destination, bytes)
 }
 
-#[cfg(windows)]
+#[cfg(any(unix, windows))]
 fn normal_components<'a>(
     relative: &'a Path,
     destination: &Path,
@@ -779,6 +884,60 @@ mod tests {
 
         let result = safe_write(&destination, b"captured");
         assert!(matches!(result, Err(ForgeError::UnsafePath(_))));
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// F31 regression: a parent swapped to a symlink after the caller planned
+    /// `a/b/file.txt` must not let the write reach the outside directory.
+    #[cfg(unix)]
+    #[test]
+    fn ancestor_symlink_substitution_is_refused() {
+        use std::os::unix::fs::symlink;
+        let (parent, root, _) = unix_write_fixture("ancestor-swap");
+        let outside = parent.join("outside");
+        fs::create_dir_all(root.join("a/b")).unwrap();
+        fs::create_dir_all(outside.join("b")).unwrap();
+        let destination = root.join("a/b/file.txt");
+
+        fs::rename(root.join("a"), root.join("a_aside")).unwrap();
+        symlink(&outside, root.join("a")).unwrap();
+
+        let result = safe_write_within(&root, &destination, b"x");
+        assert!(matches!(result, Err(ForgeError::UnsafePath(_))));
+        assert_eq!(fs::read_dir(outside.join("b")).unwrap().count(), 0);
+        assert!(!root.join("a_aside/b/file.txt").exists());
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// A plain nested write inside the workspace still succeeds.
+    #[cfg(unix)]
+    #[test]
+    fn nested_write_inside_root_succeeds() {
+        let (parent, root, _) = unix_write_fixture("nested-write");
+        fs::create_dir_all(root.join("a/b")).unwrap();
+        let destination = root.join("a/b/file.txt");
+
+        safe_write_within(&root, &destination, b"nested bytes").unwrap();
+        assert_eq!(fs::read(&destination).unwrap(), b"nested bytes");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// A destination outside the root is refused and nothing is written.
+    #[cfg(unix)]
+    #[test]
+    fn destination_outside_root_is_refused() {
+        let (parent, root, outside) = unix_write_fixture("outside-root");
+        let escaped = root.join("../outside.txt");
+
+        assert!(matches!(
+            safe_write_within(&root, &outside, b"captured"),
+            Err(ForgeError::UnsafePath(_))
+        ));
+        assert!(matches!(
+            safe_write_within(&root, &escaped, b"captured"),
+            Err(ForgeError::UnsafePath(_))
+        ));
         assert_eq!(fs::read(&outside).unwrap(), b"outside original");
         fs::remove_dir_all(parent).unwrap();
     }
