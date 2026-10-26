@@ -424,6 +424,7 @@ jobs:
           $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
           if (($userPath -split ';') -contains $app) { throw 'user PATH still contains the install dir' }
           Write-Host 'uninstall: binaries removed and user PATH entry removed'
+          exit 0
 
       - name: Functional smoke
         shell: bash
