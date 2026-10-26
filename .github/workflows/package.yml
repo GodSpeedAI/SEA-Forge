@@ -43,7 +43,7 @@ concurrency:
 jobs:
   linux:
     name: package (linux amd64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # oldest supported glibc (2.35) widens the .deb audience
     timeout-minutes: 60
     permissions:
       contents: read
