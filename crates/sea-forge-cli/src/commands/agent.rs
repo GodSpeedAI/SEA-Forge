@@ -175,8 +175,11 @@ fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
 /// Windows: open the server's named pipe, verify the server runs as this user
 /// before sending anything, then exchange one request line and one response.
 ///
-/// Limitation: a synchronous named-pipe handle has no read timeout and no
-/// half-close, so the request is delimited by its newline alone.
+/// The response read has the same 120 s deadline as the Unix client. A
+/// synchronous pipe handle has no read timeout, so the read runs on a helper
+/// thread and the caller stops waiting after 120 s. The helper then stays
+/// blocked on the handle until the process exits. A synchronous pipe also has
+/// no half-close, so the request is delimited by its newline alone.
 #[cfg(windows)]
 fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
     let pipe_name = sea_forge_core::pipe_name_for(socket_path)
@@ -197,9 +200,24 @@ fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
     }
     pipe.write_all(format!("{}\n", serde_json::to_string(request)?).as_bytes())
         .map_err(|error| ForgeError::io("write server request", error))?;
-    let mut line = String::new();
-    BufReader::new(pipe)
-        .read_line(&mut line)
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        let result = BufReader::new(pipe).read_line(&mut line).map(|_| line);
+        // The receiver is gone after a timeout; the send result is then unused.
+        let _ = sender.send(result);
+    });
+    let line = receiver
+        .recv_timeout(Duration::from_secs(120))
+        .map_err(|_| {
+            ForgeError::io(
+                "read server response",
+                std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "no response from sea-forge-server within 120 s",
+                ),
+            )
+        })?
         .map_err(|error| ForgeError::io("read server response", error))?;
     Ok(line)
 }
