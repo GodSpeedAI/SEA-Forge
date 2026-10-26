@@ -24,7 +24,7 @@ use std::{
 };
 
 const POLICY: &str = "version: 1\n";
-const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
+const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","compute_driver":"vm","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
 const MAPPING_REPORT: &str = r#"{"schema":"domainforge.openshell.mapping/v1","unmapped":[]}"#;
 /// The sandbox image the authorized binding names. Every test binds it.
 const IMAGE: &str = "registry.example/cell:1";
@@ -189,6 +189,7 @@ fn harness() -> Harness {
         cli: bin.join("openshell"),
         prover: bin.join("openshell-prover"),
         local_microvm_gateway: false,
+        native_executable: None,
     };
     let spec = SandboxSpec {
         workspace_root: workspace,
@@ -304,6 +305,9 @@ fn prepare_execute_download_destroy_happy_path() {
     assert_eq!(record["effective_policy"]["version"], 3);
     assert_eq!(record["effective_policy"]["config_revision"], "r7");
     assert_eq!(record["prover"]["effective"]["result"], "within_boundary");
+    assert_eq!(record["enforcement"]["driver"], "vm");
+    assert_eq!(record["enforcement"]["provides"]["landlock_hard"], true);
+    assert_eq!(record["enforcement"]["requires"]["egress_proxy"], false);
 
     let result = sandbox
         .execute(&handle, &request(&["echo", "hi"], 30, &[("FOO", "bar")]))
@@ -655,4 +659,190 @@ fn gateway_name_is_passed_through() {
             "gateway not passed through: {line}"
         );
     }
+}
+
+const HARD_LANDLOCK_POLICY: &str = "version: 1\nlandlock:\n  compatibility: hard_requirement\n";
+
+/// Rewrites the projection's `sandbox.json` and `policy.yaml` and re-locks
+/// them, so the projection still verifies. Used to vary the driver and policy.
+fn reproject(h: &Harness, sandbox_json: &str, policy: &str) {
+    let dir = &h.binding.projection_dir;
+    fs::write(dir.join("policy.yaml"), policy).expect("write policy.yaml");
+    fs::write(dir.join("sandbox.json"), sandbox_json).expect("write sandbox.json");
+    let mut lock: Value =
+        serde_json::from_str(&fs::read_to_string(dir.join("openshell.lock")).expect("lock"))
+            .expect("parse lock");
+    lock["policy_digest"] = json!(digest(policy.as_bytes()));
+    lock["files"]["policy.yaml"] = json!(digest(policy.as_bytes()));
+    lock["files"]["sandbox.json"] = json!(digest(sandbox_json.as_bytes()));
+    fs::write(dir.join("openshell.lock"), lock.to_string()).expect("write lock");
+}
+
+fn sandbox_json_for(driver: &str) -> String {
+    SANDBOX_JSON.replace(
+        "\"compute_driver\":\"vm\"",
+        &format!("\"compute_driver\":\"{driver}\""),
+    )
+}
+
+/// Writes `bytes` as the native executable and returns the native image that
+/// pins it on this host, with the binding pointing at the file.
+fn bind_native(h: &mut Harness, bytes: &[u8]) -> String {
+    let exe = h.root.join("native-tool");
+    fs::write(&exe, bytes).expect("write native executable");
+    h.binding.native_executable = Some(exe);
+    format!(
+        "native:sha256:{}@{}-{}",
+        hex::encode(Sha256::digest(bytes)),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    )
+}
+
+#[test]
+fn compute_driver_is_read_from_the_lock_and_refused_when_unsupported() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("docker"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_unsupported"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn unknown_compute_driver_is_a_projection_error() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("firecracker"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_projection_error"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn mxc_cannot_enforce_a_landlock_hard_requirement_and_nothing_is_created() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("mxc"), HARD_LANDLOCK_POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let error = match sandbox.prepare(&h.spec) {
+        Ok(_) => panic!("mxc must not enforce a hard Landlock requirement"),
+        Err(error) => error,
+    };
+    assert_eq!(error.class, "openshell_enforcement_unavailable");
+    assert!(error.message.contains("Landlock"), "{}", error.message);
+    let lines = calls(&h);
+    assert!(!has_prefix(&lines, "openshell sandbox create "));
+    assert!(!has_prefix(&lines, "openshell-prover "));
+}
+
+#[test]
+fn a_native_image_on_vm_is_refused_before_anything_runs() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool");
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_workload_kind_mismatch"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn an_oci_image_on_mxc_is_refused_before_anything_runs() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_workload_kind_mismatch"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn a_native_executable_whose_hash_differs_from_the_pin_is_refused() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool");
+    // The pin names other bytes than the file holds.
+    let pinned = image.replace(
+        &hex::encode(Sha256::digest(b"tool")),
+        &hex::encode(Sha256::digest(b"other")),
+    );
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let mut binding = h.binding.clone();
+    binding.image = Some(pinned);
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_executable_identity_mismatch"
+    );
+    assert!(!has_prefix(&calls(&h), "openshell sandbox create "));
+}
+
+#[test]
+fn a_native_image_for_another_platform_is_refused() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool").replace(
+        &format!("@{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        "@plan9-riscv64",
+    );
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_executable_identity_mismatch"
+    );
+}
+
+#[test]
+fn a_matching_native_image_is_created_without_an_image_and_runs_only_its_executable() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool");
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let exe = h
+        .binding
+        .native_executable
+        .clone()
+        .expect("native executable");
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    let handle = sandbox.prepare(&h.spec).expect("prepare");
+    let lines = calls(&h);
+    let create = find_after(&lines, 0, "sandbox create", |l| {
+        l.starts_with("openshell sandbox create ")
+    });
+    assert!(!lines[create].contains("--from"), "{}", lines[create]);
+
+    let exe_text = exe.display().to_string();
+    let result = sandbox
+        .execute(&handle, &request(&[exe_text.as_str(), "x"], 30, &[]))
+        .expect("execute the pinned executable");
+    assert_eq!(result.status, ExecutionStatus::Completed);
+    let refused = sandbox.execute(&handle, &request(&["/bin/sh", "-c", "true"], 30, &[]));
+    assert_eq!(
+        error_class(refused),
+        "openshell_executable_identity_mismatch"
+    );
+}
+
+#[test]
+fn an_unparseable_image_is_refused() {
+    let h = harness();
+    let mut binding = h.binding.clone();
+    binding.image = Some("has a space".into());
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_image_invalid"
+    );
+    assert!(calls(&h).is_empty());
 }

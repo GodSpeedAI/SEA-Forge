@@ -53,3 +53,28 @@ CI logs) and the GitHub Actions runs named below.
 
 - Phase 0: done (this record, baseline in `~/projects/_wt/containers/baseline/BASELINE.md`).
 - Phase 1: in progress.
+
+## Phase 2: OpenShell enforcement capability and workload identity
+
+Branch `feat/openshell-capability`, stacked on `feat/cross-platform-native`.
+Subsystem document: `docs/subsystems/openshell-execution.md` sections 3.1 and 3.2.
+
+* **Driver and host.** `sandbox.json`'s `compute_driver` is read from the
+  verified lock. `vm`: `/dev/kvm` on Linux, `aarch64` plus `kern.hv_support=1`
+  on macOS, refused on Windows. `mxc`: Windows only. `docker`, `podman` and
+  `kubernetes` have no enforcement table and are refused. `probe_host_virtualization`
+  is replaced by `probe_local_driver`, and it still runs only when the gateway is
+  local. The `local_microvm_gateway` flag now means "the gateway runs its
+  compute driver on this host".
+* **Enforcement capability, separate from policy proof.** A static table gives
+  what each driver enforces (Landlock hard requirement, Linux process identity,
+  egress proxy). The policy's demands are read from three `policy.yaml` fields.
+  An unmet demand is `openshell_enforcement_unavailable` and nothing is created.
+  The result is `enforcement` in `execution.json`.
+* **Workload identity.** `sea_forge_core::workload_image::WorkloadImage` parses
+  an OCI reference or `native:sha256:<hex>@<os>-<arch>`. Kind must match the
+  driver. A native executable is hashed in `prepare` against its pin and the host
+  platform, and `argv[0]` must be that executable. The wire `image` stays a string.
+* **Limits recorded.** Native hashing is TOCTOU-limited (the gateway re-opens the
+  file). OpenShell's binary-identity crate covers only Linux procfs. The `vm`
+  row is upstream's claim and is not live-proven (live proof NOT RUN).

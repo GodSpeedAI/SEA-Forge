@@ -444,6 +444,7 @@ impl Harness {
             cli: self.path().join("bin/openshell"),
             prover: self.path().join("bin/openshell-prover"),
             local_microvm_gateway: false,
+            native_executable: None,
         }
     }
 

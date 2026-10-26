@@ -89,6 +89,7 @@ impl Live {
             cli: self.cli.clone(),
             prover: self.prover.clone(),
             local_microvm_gateway: true,
+            native_executable: None,
         }
     }
 

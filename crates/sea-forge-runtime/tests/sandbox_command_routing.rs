@@ -25,7 +25,7 @@ const MODEL: &str = "sha256:model";
 const IMAGE: &str = "registry.example/cell:1";
 const RUN_ID: &str = "run_sandbox_command";
 const POLICY: &str = "version: 1\n";
-const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
+const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","compute_driver":"vm","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
 const MAPPING_REPORT: &str = r#"{"schema":"domainforge.openshell.mapping/v1","unmapped":[]}"#;
 
 const OPENSHELL_STUB: &str = r##"#!/bin/sh
@@ -143,6 +143,7 @@ fn binding(fx: &Fixture, image: Option<&str>) -> OpenShellBinding {
         cli: fx.cli.clone(),
         prover: fx.prover.clone(),
         local_microvm_gateway: false,
+        native_executable: None,
     }
 }
 
@@ -387,4 +388,43 @@ fn openshell_execution_requires_the_authorized_projection() {
         lines[exec]
     );
     assert!(fx.result_dir.join("result.txt").exists());
+}
+
+#[test]
+fn an_oci_grant_and_a_native_binding_never_match_across_kinds() {
+    let fx = fixture();
+    let digest = projection_digest();
+    let native = format!(
+        "native:sha256:{}@{}-{}",
+        "a".repeat(64),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+    // Each direction: the grant names one kind of image and the binding the other.
+    for (granted, bound) in [(native.as_str(), IMAGE), (IMAGE, native.as_str())] {
+        let operation = sandbox_op(&["/bin/sh", "-c", "true"], &digest, granted);
+        let action = AuthorityAction::from(&operation);
+        let grant = grant_for(&fx, &digest, granted, &action);
+        let error = sea_forge_runtime::execute_openshell(
+            grant,
+            &request_for(operation),
+            RUN_ID,
+            &fx.workspace,
+            &fx.artifacts,
+            binding(&fx, Some(bound)),
+            &fx.result_dir,
+        )
+        .expect_err("an OCI image and a native identity must never match each other");
+        assert_eq!(
+            error.class(),
+            "openshell_binding_mismatch",
+            "{granted} vs {bound}"
+        );
+    }
+    assert!(
+        !calls(&fx)
+            .iter()
+            .any(|c| c.starts_with("openshell sandbox create")),
+        "a cross-kind mismatch must create nothing"
+    );
 }
