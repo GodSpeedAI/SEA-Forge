@@ -11,7 +11,7 @@
 SEA-Forge can run authorized work in an NVIDIA OpenShell sandbox. The sandbox is defined by a DomainForge OpenShell projection, a directory with these files:
 
 * `policy.yaml`: the sandbox policy (the Cell boundary).
-* `sandbox.json`: sandbox creation parameters that OpenShell keeps outside the policy, including `vm_shape`, the workspace mount and the execution timeout.
+* `sandbox.json`: sandbox creation parameters that OpenShell keeps outside the policy, including `compute_driver`, `vm_shape`, the workspace mount and the execution timeout.
 * `mapping-report.json`: the source element of each policy rule.
 * `openshell.lock`: the identities the projection binds (`cell_id`, `model.hash`, `policy_digest`, `openshell_version`) and the sha256 of its files.
 
@@ -44,7 +44,30 @@ Not required: Docker Engine, Docker Desktop, Podman, Kubernetes. They are option
 |---|---|---|
 | Linux x86_64 / aarch64 | KVM. `/dev/kvm` must be openable by the user running the gateway. | Supported by OpenShell. This integration's live proof has NOT been run yet (see section 9). |
 | macOS Apple Silicon | Hypervisor.framework. The driver binary must carry the `com.apple.security.hypervisor` entitlement (upstream's Homebrew formula ad-hoc signs it). | Not tested by this integration. |
-| Windows | The gateway's compute drivers are unsupported natively. Under WSL2 the Linux build runs, but MicroVMs need nested virtualization: `/dev/kvm` exists only when `nestedVirtualization=true` is set under `[wsl2]` in `%UserProfile%\.wslconfig` and WSL is restarted (`wsl --shutdown`), and the CPU and Windows build must support it. | OpenShell's own support matrix lists only "WSL 2 + Docker Desktop" as experimental and makes no MicroVM-on-WSL2 claim. `probe_host_virtualization()` detects a missing `/dev/kvm`, reports error class `openshell_virtualization_unavailable`, and names the WSL2 setting when it sees a Microsoft kernel. There is no fallback. The development host is WSL2 with `nestedVirtualization=false`, so the live proof is BLOCKED there. |
+| Windows | The `vm` driver is refused (`openshell_driver_unsupported_on_host`). Under WSL2 the Linux build runs, but MicroVMs need nested virtualization: `/dev/kvm` exists only when `nestedVirtualization=true` is set under `[wsl2]` in `%UserProfile%\.wslconfig` and WSL is restarted (`wsl --shutdown`). | OpenShell's own support matrix makes no MicroVM-on-WSL2 claim. The Linux `vm` check (`probe_local_driver`) reports a missing `/dev/kvm` as `openshell_virtualization_unavailable` and names the WSL2 setting on a Microsoft kernel. There is no fallback. The `mxc` driver runs only here (see section 3.1). The development host is WSL2 with `nestedVirtualization=false`, so the live proof is BLOCKED there. |
+
+### 3.1 Compute drivers and enforcement
+
+The projection's `sandbox.json` names one `compute_driver`. The adapter reads it from the verified lock, then checks two things before anything reaches the gateway.
+
+| Driver | Host it runs on (checked when the gateway is local) | Enforces (`Enforcement` table in `openshell.rs`) |
+|---|---|---|
+| `vm` | Linux: `/dev/kvm` opens. macOS: `aarch64` and `sysctl -n kern.hv_support` prints `1`. Anything else: `openshell_driver_unsupported_on_host`. | Landlock hard requirement, Linux process identity, egress proxy |
+| `mxc` | Windows only (`openshell_driver_unsupported_on_host` elsewhere) | Egress proxy only. It cannot enforce Landlock or Linux process identity (`crates/openshell-driver-mxc/README.md`). |
+| `docker`, `podman`, `kubernetes` | Not projected by DomainForge, and no enforcement table exists. Refused on every host (`openshell_driver_unsupported`). | None |
+
+An unknown `compute_driver` name is a projection error (`openshell_projection_error`). The `vm` row is upstream's design claim. It is not yet live-proven here (section 9).
+
+**Enforcement capability is not policy proof.** The enforcement check reads only three fields of `policy.yaml`: `landlock.compatibility: hard_requirement`, `process.run_as_user` or `run_as_group`, and a non-empty `network_policies`. Each one the policy demands must be in the driver's row, or the run stops with `openshell_enforcement_unavailable`, which names every gap. This check runs before the prover and before `sandbox create`. Its result is recorded as `enforcement` in `execution.json`, next to `prover`. The prover checks containment of the policy; the enforcement check asks whether the driver can carry out the policy at all. Neither is evidence of runtime isolation.
+
+### 3.2 Workload identity
+
+`sea_forge_core::workload_image::WorkloadImage` parses the binding's image string:
+
+* An OCI reference, `[registry/]name[:tag][@sha256:<64 hex>]`. Any other string is refused as `openshell_image_invalid`, including a `native:` string that is not a valid native identity.
+* A native executable, `native:sha256:<64 lowercase hex>@<os>-<arch>`. The string must be exactly this form. The binding's `native_executable` path is hashed before creation, and its platform must equal this host (`std::env::consts::OS`-`ARCH`). A mismatch in either is `openshell_executable_identity_mismatch`. Every `execute` must name that same path as `argv[0]`.
+
+The kind must match the driver: `vm` takes only OCI images, and `mxc` takes only native executables. Otherwise the run stops with `openshell_workload_kind_mismatch`. A native image is not passed to `sandbox create --from`. The `image` field of `ExecuteSandboxCommand` stays a string on the wire and in the ledger. The runtime's exact-match binding check refuses an OCI grant against a native binding, and the reverse (`sandbox_command_routing.rs::an_oci_grant_and_a_native_binding_never_match_across_kinds`).
 
 ---
 
@@ -161,15 +184,16 @@ A governed run passes through these steps in order. Each step either passes or e
 
 1. **Projection identity, OPA, authority.** `run_cell_episode` first reads the projection identity and requires an image. If the policy configures `opa`, the OPA candidate is recorded as ledger kind `opa_evaluation`. The authority engine then evaluates an `execute_sandbox_command` action (`ExecuteSandboxCommand`), and the decision is committed as `authority_decision` before any repository access or sandbox call. Only a rule with `sandbox_class: openshell` grants it, and that rule must pin exactly one `cell_id`, one `model_hash`, one `openshell_policy_digest` and one `sandbox_image`, and must name an `argv0`. A host `ExecuteCommand` is unchanged and never reaches this class: the `openshell` class is refused on any rule that is not `execute_sandbox_command`.
 2. **Binding.** `sea_forge_runtime::execute_openshell` reads the projection's identity from `openshell.lock` and compares the `cell_id`, `model.hash` and policy digest with the grant. The image is compared with the grant's `sandbox_image`. A mismatch is refused with `openshell_binding_mismatch`. The lock must cover exactly `policy.yaml`, `sandbox.json` and `mapping-report.json`. Each file must match its sha256 in the lock, and the projection directory must hold exactly those three files. A missing, extra or edited file is refused with `openshell_projection_tampered`.
-3. **Host checks.** The adapter checks the CLI version against the lock, host virtualization (when the gateway is local), and gateway reachability (`openshell status`).
-4. **Projected policy.** `openshell-prover` must report the projected `policy.yaml` as `within_boundary` with all five required domains covered. A failure here is `openshell_policy_unverified`, and no sandbox is created.
-5. **Creation and effective policy.** The sandbox is created with `--policy policy.yaml`, `--detach`, `--no-auto-providers` and `--no-tty`, from the configured image when one is set. The policy the gateway actually composed is then read with `openshell sandbox get --policy-only`, including provider rules. It must also be within the projected policy, checked by the prover. Otherwise the sandbox is deleted and the run fails with `openshell_effective_policy_exceeds_boundary`.
-6. **Workspace.** The private workspace is uploaded with `openshell sandbox upload --no-git-ignore`. It is an export of the base Git tree, with no `.git`. The authoritative repository is never mounted or uploaded.
-7. **Execution.** The command runs with `openshell sandbox exec` in the workspace directory, with only the request's environment variables passed through `--env` and the Cell's timeout. Exit code 124 is reported as `TimedOut`. If the CLI itself does not finish within the timeout plus 30 seconds, the adapter kills it and reports a timeout. A non-zero exit with logged denials is reported as a sandbox violation. Stdout and stderr are captured in `artifacts/stdout.txt` and `artifacts/stderr.txt`.
-8. **Collection and cleanup.** The workspace is downloaded to the result directory with `openshell sandbox download`. Denials are written to `denials.log`. The sandbox is deleted on every path once it exists. An explicit changeset is then built in a separate staging repository by `sea-forge-changeset`.
-9. **Settlement.** Settlement decides the outcome (`sea-forge-settlement`). This adapter does not decide it.
-10. **Promotion request.** The episode runs `PromoteChangeset` only when settlement accepted and validation accepted a non-empty changeset. The rule must require approval, so the evaluation escalates and nothing is allowed outright. The evaluation is committed as a second `authority_decision`, and the episode returns a `PromotionRequest`. The episode never moves the authoritative ref. The same OPA candidate is passed to this evaluation. It can only deny or escalate; the promotion rule still escalates.
-11. **Promotion.** `promote_cell_changeset` is a separate call. It checks that the request describes exactly its changeset and this repository, then consumes an approval through `grant_after_approval` (`approval_grant_consumption`). The requester must differ from the resolver, and the resolver must hold the approver role. The grant is bound to the exact proposal (repository, reference, expected base, proposed commit and tree, changeset digest and paths). A changed proposal needs a new decision and a new approval. The compare-and-swap, `git update-ref <ref> <new> <expected-old>`, is performed by the trusted promotion path (`sea_forge_changeset::promote`), never by a guest command. Each attempt that reaches the swap is recorded as `workspace_promotion`. A moved ref is a conflict (`stale_base`), and nothing is merged.
+3. **Enforcement capability and workload identity.** The compute driver must have an enforcement row, and it must provide what the policy requires (section 3.1). The image must be the kind the driver runs, and a native executable must match its pin (section 3.2). Both checks run before any host probe, the CLI, or the gateway.
+4. **Host checks.** The adapter checks the CLI version against the lock, the driver's host requirements (when the gateway is local, section 3.1), and gateway reachability (`openshell status`).
+5. **Projected policy.** `openshell-prover` must report the projected `policy.yaml` as `within_boundary` with all five required domains covered. A failure here is `openshell_policy_unverified`, and no sandbox is created.
+6. **Creation and effective policy.** The sandbox is created with `--policy policy.yaml`, `--detach`, `--no-auto-providers` and `--no-tty`, from the configured image when one is set. The policy the gateway actually composed is then read with `openshell sandbox get --policy-only`, including provider rules. It must also be within the projected policy, checked by the prover. Otherwise the sandbox is deleted and the run fails with `openshell_effective_policy_exceeds_boundary`.
+7. **Workspace.** The private workspace is uploaded with `openshell sandbox upload --no-git-ignore`. It is an export of the base Git tree, with no `.git`. The authoritative repository is never mounted or uploaded.
+8. **Execution.** The command runs with `openshell sandbox exec` in the workspace directory, with only the request's environment variables passed through `--env` and the Cell's timeout. Exit code 124 is reported as `TimedOut`. If the CLI itself does not finish within the timeout plus 30 seconds, the adapter kills it and reports a timeout. A non-zero exit with logged denials is reported as a sandbox violation. Stdout and stderr are captured in `artifacts/stdout.txt` and `artifacts/stderr.txt`.
+9. **Collection and cleanup.** The workspace is downloaded to the result directory with `openshell sandbox download`. Denials are written to `denials.log`. The sandbox is deleted on every path once it exists. An explicit changeset is then built in a separate staging repository by `sea-forge-changeset`.
+10. **Settlement.** Settlement decides the outcome (`sea-forge-settlement`). This adapter does not decide it.
+11. **Promotion request.** The episode runs `PromoteChangeset` only when settlement accepted and validation accepted a non-empty changeset. The rule must require approval, so the evaluation escalates and nothing is allowed outright. The evaluation is committed as a second `authority_decision`, and the episode returns a `PromotionRequest`. The episode never moves the authoritative ref. The same OPA candidate is passed to this evaluation. It can only deny or escalate; the promotion rule still escalates.
+12. **Promotion.** `promote_cell_changeset` is a separate call. It checks that the request describes exactly its changeset and this repository, then consumes an approval through `grant_after_approval` (`approval_grant_consumption`). The requester must differ from the resolver, and the resolver must hold the approver role. The grant is bound to the exact proposal (repository, reference, expected base, proposed commit and tree, changeset digest and paths). A changed proposal needs a new decision and a new approval. The compare-and-swap, `git update-ref <ref> <new> <expected-old>`, is performed by the trusted promotion path (`sea_forge_changeset::promote`), never by a guest command. Each attempt that reaches the swap is recorded as `workspace_promotion`. A moved ref is a conflict (`stale_base`), and nothing is merged.
 
 For the happy path the ledger kinds are, in order: `authority_decision`, `openshell_execution`, `workspace_changeset`, `settlement_event`, `authority_decision`, `settlement_criteria`, `approval_resolution`, `approval_grant_consumption`, `workspace_promotion`. Details are in ADR-009, "Episode flow".
 
@@ -184,10 +208,16 @@ Classes raised by the OpenShell adapter and its runtime entry point. Each class 
 | `openshell_binding_missing` | The `openshell` class is selected through `select_sandbox` without a projection binding. Use `select_openshell`. |
 | `openshell_binding_mismatch` | The grant's `cell_id`, `model_hash`, `openshell_policy_digest` or `sandbox_image` does not equal the projection's value (`openshell.lock` identity, or the image). |
 | `openshell_projection_tampered` | `openshell.lock` does not cover exactly `policy.yaml`, `sandbox.json` and `mapping-report.json`; a file is missing, extra, or does not match its sha256 in the lock; or the lock's policy digest disagrees with `policy.yaml`. |
-| `openshell_projection_error` | A projection file cannot be read or parsed, a required field is missing, or the projection does not declare exactly one workspace mount. |
+| `openshell_projection_error` | A projection file cannot be read or parsed, a required field is missing (including `compute_driver`), `compute_driver` names an unknown driver, or the projection does not declare exactly one workspace mount. |
 | `openshell_unavailable` | The `openshell` or `openshell-prover` binary cannot be started. |
 | `openshell_version_mismatch` | `openshell --version` does not report the version the projection's lock names. |
-| `openshell_virtualization_unavailable` | The gateway is local and `/dev/kvm` cannot be opened. On a Microsoft kernel the message names the WSL2 setting. |
+| `openshell_driver_unsupported` | The projection's driver is `docker`, `podman` or `kubernetes`, which SEA-Forge has no enforcement table for. Refused on every host. |
+| `openshell_driver_unsupported_on_host` | The gateway is local and the driver does not run on this OS: `vm` on Windows, or `mxc` anywhere but Windows. |
+| `openshell_virtualization_unavailable` | The gateway is local and the `vm` driver's virtualization is missing: `/dev/kvm` cannot be opened on Linux, or macOS lacks Apple Silicon or `kern.hv_support=1`. On a Microsoft kernel the message names the WSL2 setting. |
+| `openshell_enforcement_unavailable` | The policy requires a guarantee the projected driver does not provide (Landlock hard requirement, Linux process identity, or egress proxy). The message names each gap. Nothing is created. |
+| `openshell_image_invalid` | The binding's image is neither a valid OCI reference nor a `native:sha256:…@<os>-<arch>` identity. |
+| `openshell_workload_kind_mismatch` | A native image on `vm`, or an OCI image on `mxc`. |
+| `openshell_executable_identity_mismatch` | The native executable is missing, hashes to other bytes than its pin, is for another platform, or an `execute` names a different `argv[0]`. |
 | `openshell_gateway_unavailable` | `openshell status` does not succeed. |
 | `openshell_policy_unverified` | The projected `policy.yaml` is not `within_boundary`, or the prover did not cover a required domain, or the prover printed no JSON result. |
 | `openshell_create_failed` | `openshell sandbox create` fails. |
@@ -204,7 +234,7 @@ Classes raised by the OpenShell adapter and its runtime entry point. Each class 
 
 Files are written under `<run>/artifacts/openshell/`:
 
-* `execution.json`: written when the sandbox is created and verified. Fields: `schema` (`sea-forge.openshell.execution/v1`), `sandbox` (the sandbox name), `gateway`, `image`, `cell_id`, `model_hash`, `projected_policy_digest`, `openshell_version`, `effective_policy` (`sha256`, `hash`, `version`, `config_revision`, `source`, as reported by `openshell policy get`), and `prover` (`projected` and `effective`, the two prover JSON envelopes).
+* `execution.json`: written when the sandbox is created and verified. Fields: `schema` (`sea-forge.openshell.execution/v1`), `sandbox` (the sandbox name), `gateway`, `image`, `cell_id`, `model_hash`, `projected_policy_digest`, `openshell_version`, `effective_policy` (`sha256`, `hash`, `version`, `config_revision`, `source`, as reported by `openshell policy get`), `prover` (`projected` and `effective`, the two prover JSON envelopes), and `enforcement` (`driver`, `provides` and `requires`, each with `landlock_hard`, `linux_process_identity` and `egress_proxy`).
 * `effective-policy.yaml`: the policy the gateway composed, as returned by `openshell sandbox get --policy-only`.
 * `denials.log`: the lines of `openshell logs --source sandbox -n 2000` that contain ` DENIED `, written after the command finishes. The log format is not verified in this change.
 
@@ -216,7 +246,9 @@ Ledger record kinds for a governed run are added by `sea-forge-case-runner` and 
 
 ## 8. Limits
 
-* The prover checks policy containment, not runtime isolation.
+* The prover checks policy containment, not runtime isolation. The enforcement table records what upstream claims a driver enforces. It is not a test of that claim.
+* Native executable hashing is TOCTOU-limited: the file is hashed in `prepare`, and the gateway later opens the same path itself. OpenShell's binary-identity crate covers only Linux procfs, so it does not cover a Windows `mxc` executable.
+* A `vm` check on Windows is covered by a unit test of the pure verdict function (`openshell.rs` `tests`), not by a stub run, because the stub tests run on Linux.
 * Filesystem widening is reported by the prover as `unsupported` (unresolved path), which the adapter treats as failure.
 * External effects of a command, for example an HTTP request that reached an allowed host, are not rolled back by rejecting a changeset.
 * Credential-bound network flows and read-only mounts are refused by the DomainForge projection, so no credential is delivered into a sandbox yet.
@@ -233,7 +265,7 @@ Ledger record kinds for a governed run are added by `sea-forge-case-runner` and 
 
 | Claim | How verified | Status |
 |---|---|---|
-| Adapter control flow and failure handling | `cargo test -p sea-forge-sandbox --test openshell_stub` against stub executables (21 tests in the file) | Not re-run for this document. Last recorded result: passed (16 tests at that time; the file now has 21 `#[test]` functions). |
+| Adapter control flow and failure handling | `cargo test -p sea-forge-sandbox --test openshell_stub` against stub executables (30 tests in the file) | Passed for the enforcement and workload-identity change (30 of 30). Earlier results: passed. |
 | Changeset guarantees | `cargo test -p sea-forge-changeset` against real git (15 tests in the file) | Not re-run for this document. Last recorded result: passed. |
 | Authority: sandbox-command rules, promotion rules, OPA stub failures | `cargo test -p sea-forge-authority --test sandbox_command --test promote_changeset --test opa_candidate` | Passes. The tests marked `requires opa 1.21.1 on PATH` (`real_opa_*`) are ignored by default; run with `--ignored` against a local `opa` 1.21.1, all 7 pass. The `authority-opa` CI job runs them (see below). |
 | Projected policy within prover coverage; weakened variants rejected | DomainForge gate `scripts/verify/projection-targets/openshell.sh` with the real `openshell-prover` 0.1.3 | Passes. The gate script is not in this worktree, so it was not re-run here. |
@@ -257,6 +289,9 @@ Test names are given as `file::test_name`, with the file under `crates/`. The ca
 | Every sandbox-command rule pins cell, model, policy digest, image and argv0 | `sea-forge-authority/src/lib.rs` (rule validation) | `sea-forge-authority/tests/sandbox_command.rs::sandbox_command_rule_requires_every_binding`; `sea-forge-authority/tests/sandbox_command.rs::malformed_sandbox_command_is_denied` |
 | A guest command cannot run on the host runtime | `sea-forge-runtime/src/lib.rs` (`execute` refuses with `sandbox_command_requires_openshell`) | `sea-forge-runtime/tests/sandbox_command_routing.rs::guest_command_cannot_run_on_the_host` |
 | A guest command cannot run on the local or jail backend | `sea-forge-sandbox` local and jail backends | `sea-forge-sandbox/tests/sandbox_command_host_refusal.rs::local_backend_refuses_sandbox_commands`; `sea-forge-sandbox/tests/sandbox_command_host_refusal.rs::jail_backend_refuses_sandbox_commands` |
+| The compute driver must enforce what the policy requires, checked before any create | `sea-forge-sandbox/src/openshell.rs` (`check_enforcement`, `driver_enforces` table) | `sea-forge-sandbox/tests/openshell_stub.rs::mxc_cannot_enforce_a_landlock_hard_requirement_and_nothing_is_created`; `sea-forge-sandbox/tests/openshell_stub.rs::compute_driver_is_read_from_the_lock_and_refused_when_unsupported` |
+| A native executable must match its pin and platform; an image must be the driver's kind | `sea-forge-sandbox/src/openshell.rs` (`verify_native_identity`, `check_workload_kind`) | `sea-forge-sandbox/tests/openshell_stub.rs::a_native_executable_whose_hash_differs_from_the_pin_is_refused`; `sea-forge-sandbox/tests/openshell_stub.rs::an_oci_image_on_mxc_is_refused_before_anything_runs`; `sea-forge-sandbox/tests/openshell_stub.rs::a_native_image_on_vm_is_refused_before_anything_runs` |
+| An OCI grant never matches a native binding, and the reverse | `sea-forge-runtime/src/lib.rs` (exact-match binding check) | `sea-forge-runtime/tests/sandbox_command_routing.rs::an_oci_grant_and_a_native_binding_never_match_across_kinds` |
 | A host command is refused by the OpenShell backend | `sea-forge-sandbox/src/openshell.rs`, `sea-forge-runtime/src/lib.rs` (`execute_openshell` refuses with `sandbox_command_required`) | `sea-forge-sandbox/tests/openshell_stub.rs::host_command_operation_is_refused_by_the_openshell_backend` |
 | A grant is bound to cell, model, policy digest and image | `sea-forge-runtime/src/lib.rs` (`execute_openshell` compares the request with the projection and image) | `sea-forge-runtime/tests/sandbox_command_routing.rs::openshell_execution_requires_the_authorized_projection`; `sea-forge-authority/tests/sandbox_command.rs::mismatched_sandbox_command_is_denied`. Policy-digest mismatch in the episode: `sea-forge-case-runner/tests/cell_episode.rs::grant_for_a_different_policy_digest_is_refused` |
 | A tampered policy or sandbox file is refused before anything runs | `sea-forge-sandbox/src/openshell.rs` (per-file sha256 against `openshell.lock`) | `sea-forge-sandbox/tests/openshell_stub.rs::tampered_policy_is_refused_before_anything_runs`; `sea-forge-sandbox/tests/openshell_stub.rs::tampered_mapping_report_is_refused` |

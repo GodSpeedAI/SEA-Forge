@@ -10,17 +10,24 @@
 //! 1. the projection is checked against its own lock (a policy edited after
 //!    projection is refused),
 //! 2. the CLI version must be the one the projection targets,
-//! 3. the gateway must answer,
-//! 4. the policy the gateway actually composed, including provider rules, must
+//! 3. the projection's compute driver must be one whose enforcement SEA-Forge
+//!    knows, and it must enforce what the policy requires (Landlock hard
+//!    requirement, Linux process identity, egress proxy). This is the
+//!    enforcement capability; it is separate from the policy proof below,
+//! 4. the workload image must match the driver's kind (OCI for `vm`, native
+//!    executable for `mxc`), and a native executable must hash to its pin,
+//! 5. the gateway must answer,
+//! 6. the policy the gateway actually composed, including provider rules, must
 //!    be within the projected policy according to `openshell-prover`, with
 //!    every required domain covered.
 //!
 //! Any failure is an error. Nothing here falls back to another sandbox class.
 //! The prover checks policy containment; it is not evidence of runtime
-//! isolation.
+//! isolation, and neither is the enforcement table.
 
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
 use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::workload_image::WorkloadImage;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -63,9 +70,12 @@ pub struct OpenShellBinding {
     pub image: Option<String>,
     pub cli: PathBuf,
     pub prover: PathBuf,
-    /// The gateway runs MicroVMs on this host, so this host must offer the
-    /// virtualization the driver needs.
+    /// The gateway runs its compute driver on this host, so this host must
+    /// provide what that driver needs (see `probe_local_driver`).
     pub local_microvm_gateway: bool,
+    /// The native executable a `native:sha256:…` image pins. Hashed before
+    /// creation and required to be the `argv[0]` of every command.
+    pub native_executable: Option<PathBuf>,
 }
 
 impl OpenShellBinding {
@@ -77,6 +87,85 @@ impl OpenShellBinding {
             cli: PathBuf::from("openshell"),
             prover: PathBuf::from("openshell-prover"),
             local_microvm_gateway: true,
+            native_executable: None,
+        }
+    }
+}
+
+/// The OpenShell compute drivers, by the name `sandbox.json` gives them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ComputeDriver {
+    Vm,
+    Mxc,
+    Docker,
+    Podman,
+    Kubernetes,
+}
+
+/// What a driver enforces, or what a policy requires of its driver.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Enforcement {
+    pub landlock_hard: bool,
+    pub linux_process_identity: bool,
+    pub egress_proxy: bool,
+}
+
+impl Enforcement {
+    fn json(self) -> Value {
+        json!({
+            "landlock_hard": self.landlock_hard,
+            "linux_process_identity": self.linux_process_identity,
+            "egress_proxy": self.egress_proxy,
+        })
+    }
+}
+
+impl ComputeDriver {
+    fn parse(name: &str) -> Option<Self> {
+        match name {
+            "vm" => Some(Self::Vm),
+            "mxc" => Some(Self::Mxc),
+            "docker" => Some(Self::Docker),
+            "podman" => Some(Self::Podman),
+            "kubernetes" => Some(Self::Kubernetes),
+            _ => None,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Vm => "vm",
+            Self::Mxc => "mxc",
+            Self::Docker => "docker",
+            Self::Podman => "podman",
+            Self::Kubernetes => "kubernetes",
+        }
+    }
+
+    /// What the driver enforces, from OpenShell 0.1.3. `None` means SEA-Forge
+    /// has no table for the driver, so the projection is refused.
+    ///
+    /// * `vm`: `openshell-driver-vm` runs the workload in a libkrun MicroVM
+    ///   whose guest init and supervisor apply the policy. Upstream's design
+    ///   claims all three guarantees. This is not live-proven here (see the
+    ///   subsystem document, section 9).
+    /// * `mxc`: `crates/openshell-driver-mxc/README.md`. The workload runs in
+    ///   an AppContainer through `wxc-exec`, which cannot enforce Landlock or
+    ///   Linux process identity. Network goes only through the egress proxy,
+    ///   and the driver fails closed when egress is disabled.
+    fn enforces(self) -> Option<Enforcement> {
+        match self {
+            Self::Vm => Some(Enforcement {
+                landlock_hard: true,
+                linux_process_identity: true,
+                egress_proxy: true,
+            }),
+            Self::Mxc => Some(Enforcement {
+                landlock_hard: false,
+                linux_process_identity: false,
+                egress_proxy: true,
+            }),
+            Self::Docker | Self::Podman | Self::Kubernetes => None,
         }
     }
 }
@@ -88,6 +177,7 @@ pub struct ProjectionIdentity {
     pub model_hash: String,
     pub policy_digest: String,
     pub openshell_version: String,
+    pub compute_driver: ComputeDriver,
 }
 
 fn err(class: &'static str, message: impl Into<String>) -> SandboxError {
@@ -135,12 +225,10 @@ fn text_field(value: &Value, pointer: &str, file: &str) -> Result<String, Sandbo
 /// Read a projection's identity and verify the policy against the lock.
 pub fn projection_identity(projection_dir: &Path) -> Result<ProjectionIdentity, SandboxError> {
     let lock = read_json(&projection_dir.join("openshell.lock"))?;
-    let identity = ProjectionIdentity {
-        cell_id: text_field(&lock, "/cell_id", "openshell.lock")?,
-        model_hash: text_field(&lock, "/model/hash", "openshell.lock")?,
-        policy_digest: text_field(&lock, "/policy_digest", "openshell.lock")?,
-        openshell_version: text_field(&lock, "/openshell_version", "openshell.lock")?,
-    };
+    let cell_id = text_field(&lock, "/cell_id", "openshell.lock")?;
+    let model_hash = text_field(&lock, "/model/hash", "openshell.lock")?;
+    let policy_digest = text_field(&lock, "/policy_digest", "openshell.lock")?;
+    let openshell_version = text_field(&lock, "/openshell_version", "openshell.lock")?;
     // The lock must name exactly the projection's artifacts, and every one of
     // them must be present and unchanged. A missing, extra or edited file
     // means this is not the projection that was authorized.
@@ -178,43 +266,226 @@ pub fn projection_identity(projection_dir: &Path) -> Result<ProjectionIdentity, 
             ),
         ));
     }
-    if text_field(&lock, "/files/policy.yaml", "openshell.lock")? != identity.policy_digest {
+    if text_field(&lock, "/files/policy.yaml", "openshell.lock")? != policy_digest {
         return Err(err(
             "openshell_projection_tampered",
             "openshell.lock is internally inconsistent",
         ));
     }
-    Ok(identity)
+    // Read only after the lock has verified sandbox.json.
+    let sandbox = read_json(&projection_dir.join("sandbox.json"))?;
+    let driver = text_field(&sandbox, "/compute_driver", "sandbox.json")?;
+    let compute_driver = ComputeDriver::parse(&driver).ok_or_else(|| {
+        err(
+            "openshell_projection_error",
+            format!("sandbox.json declares an unknown compute_driver `{driver}`"),
+        )
+    })?;
+    Ok(ProjectionIdentity {
+        cell_id,
+        model_hash,
+        policy_digest,
+        openshell_version,
+        compute_driver,
+    })
 }
 
-/// Whether this host can run the MicroVM driver. Linux needs KVM.
-pub fn probe_host_virtualization() -> Result<(), SandboxError> {
-    // Windows has no KVM path here: refuse rather than report a host as capable.
-    if cfg!(windows) {
-        return Err(SandboxError::new(
-            "workload_isolation_unavailable",
-            "MicroVM virtualization is not available on Windows hosts",
+/// The host facts the local driver check needs. Gathered once, then judged by
+/// `host_verdict`, which is pure and unit-tested for every platform.
+struct HostFacts {
+    os: &'static str,
+    arch: &'static str,
+    /// `/dev/kvm` opened, or the open error. Linux only.
+    kvm: Result<(), String>,
+    /// Whether `/proc/version` names a Microsoft kernel (WSL). Linux only.
+    wsl: bool,
+    /// `kern.hv_support` as printed by `sysctl`. macOS only.
+    hv_support: String,
+}
+
+fn host_facts() -> HostFacts {
+    let os = std::env::consts::OS;
+    let linux = os == "linux";
+    let macos = os == "macos";
+    HostFacts {
+        os,
+        arch: std::env::consts::ARCH,
+        kvm: if linux {
+            File::open("/dev/kvm").map(drop).map_err(|e| e.to_string())
+        } else {
+            Ok(())
+        },
+        wsl: linux
+            && fs::read_to_string("/proc/version")
+                .map(|v| v.to_ascii_lowercase().contains("microsoft"))
+                .unwrap_or(false),
+        hv_support: if macos {
+            // Run with a cleared environment: the value does not depend on the caller.
+            Command::new("/usr/sbin/sysctl")
+                .args(["-n", "kern.hv_support"])
+                .env_clear()
+                .output()
+                .ok()
+                .filter(|out| out.status.success())
+                .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+                .unwrap_or_else(|| "unavailable".to_string())
+        } else {
+            String::new()
+        },
+    }
+}
+
+fn host_verdict(driver: ComputeDriver, host: &HostFacts) -> Result<(), SandboxError> {
+    match driver {
+        ComputeDriver::Vm => match host.os {
+            "linux" => match &host.kvm {
+                Ok(()) => Ok(()),
+                Err(e) => {
+                    let hint = if host.wsl {
+                        " This is WSL2: enable nested virtualization (`nestedVirtualization=true` under [wsl2] in .wslconfig) and restart WSL."
+                    } else {
+                        " Enable KVM and grant this user access to /dev/kvm."
+                    };
+                    Err(err(
+                        "openshell_virtualization_unavailable",
+                        format!("cannot open /dev/kvm: {e}. OpenShell MicroVMs need KVM on Linux.{hint}"),
+                    ))
+                }
+            },
+            "macos" if host.arch == "aarch64" && host.hv_support.trim() == "1" => Ok(()),
+            "macos" => Err(err(
+                "openshell_virtualization_unavailable",
+                format!(
+                    "the vm driver on macOS needs Apple Silicon and kern.hv_support=1; this host has arch {} and kern.hv_support `{}`",
+                    host.arch, host.hv_support
+                ),
+            )),
+            os => Err(err(
+                "openshell_driver_unsupported_on_host",
+                format!("the vm driver runs on Linux (KVM) and on macOS (Apple Silicon); this host is {os}"),
+            )),
+        },
+        ComputeDriver::Mxc if host.os == "windows" => Ok(()),
+        ComputeDriver::Mxc => Err(err(
+            "openshell_driver_unsupported_on_host",
+            format!("the mxc driver runs only on Windows; this host is {}", host.os),
+        )),
+        other => Err(err(
+            "openshell_driver_unsupported",
+            format!("the {} driver is not supported by SEA-Forge", other.name()),
+        )),
+    }
+}
+
+/// Whether this host provides what `driver` needs. Called when the gateway
+/// runs its compute driver on this host (`local_microvm_gateway`).
+fn probe_local_driver(driver: ComputeDriver) -> Result<(), SandboxError> {
+    host_verdict(driver, &host_facts())
+}
+
+fn present(value: Option<&Value>) -> bool {
+    match value {
+        None | Some(Value::Null) => false,
+        Some(Value::String(text)) => !text.is_empty(),
+        Some(Value::Array(items)) => !items.is_empty(),
+        Some(Value::Object(map)) => !map.is_empty(),
+        Some(_) => true,
+    }
+}
+
+/// The guarantees `policy.yaml` demands. Only the three fields the enforcement
+/// check needs are read; the policy's meaning is OpenShell's and the prover's.
+fn policy_requires(policy: &Path) -> Result<Enforcement, SandboxError> {
+    let bytes = fs::read(policy).map_err(|e| {
+        err(
+            "openshell_projection_error",
+            format!("{}: {e}", policy.display()),
+        )
+    })?;
+    let doc: Value = sea_forge_core::yaml::from_slice(&bytes).map_err(|e| {
+        err(
+            "openshell_projection_error",
+            format!("{}: {e}", policy.display()),
+        )
+    })?;
+    Ok(Enforcement {
+        landlock_hard: doc
+            .pointer("/landlock/compatibility")
+            .and_then(Value::as_str)
+            == Some("hard_requirement"),
+        linux_process_identity: present(doc.pointer("/process/run_as_user"))
+            || present(doc.pointer("/process/run_as_group")),
+        egress_proxy: present(doc.get("network_policies")),
+    })
+}
+
+/// The enforcement capability check. It runs before anything reaches the
+/// gateway, and returns the record that `execution.json` keeps.
+fn check_enforcement(driver: ComputeDriver, policy: &Path) -> Result<Value, SandboxError> {
+    let provides = driver.enforces().ok_or_else(|| {
+        err(
+            "openshell_driver_unsupported",
+            format!(
+                "the {} driver has no enforcement table in SEA-Forge",
+                driver.name()
+            ),
+        )
+    })?;
+    let requires = policy_requires(policy)?;
+    let gaps: Vec<&str> = [
+        (
+            requires.landlock_hard && !provides.landlock_hard,
+            "a Landlock hard_requirement",
+        ),
+        (
+            requires.linux_process_identity && !provides.linux_process_identity,
+            "Linux process identity (process.run_as_user or run_as_group)",
+        ),
+        (
+            requires.egress_proxy && !provides.egress_proxy,
+            "an egress proxy (network_policies)",
+        ),
+    ]
+    .into_iter()
+    .filter(|(gap, _)| *gap)
+    .map(|(_, name)| name)
+    .collect();
+    if !gaps.is_empty() {
+        return Err(err(
+            "openshell_enforcement_unavailable",
+            format!(
+                "the {} driver cannot enforce {}",
+                driver.name(),
+                gaps.join("; ")
+            ),
         ));
     }
-    if !cfg!(target_os = "linux") {
-        return Ok(());
-    }
-    match File::open("/dev/kvm") {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            let wsl = fs::read_to_string("/proc/version")
-                .map(|v| v.to_ascii_lowercase().contains("microsoft"))
-                .unwrap_or(false);
-            let hint = if wsl {
-                " This is WSL2: enable nested virtualization (`nestedVirtualization=true` under [wsl2] in .wslconfig) and restart WSL."
-            } else {
-                " Enable KVM and grant this user access to /dev/kvm."
-            };
-            Err(err(
-                "openshell_virtualization_unavailable",
-                format!("cannot open /dev/kvm: {e}. OpenShell MicroVMs need KVM on Linux.{hint}"),
-            ))
+    Ok(json!({
+        "driver": driver.name(),
+        "provides": provides.json(),
+        "requires": requires.json(),
+    }))
+}
+
+/// `vm` runs OCI images; `mxc` runs native executables.
+fn check_workload_kind(
+    driver: ComputeDriver,
+    workload: &WorkloadImage,
+) -> Result<(), SandboxError> {
+    let refused = |message: &str| {
+        Err(err(
+            "openshell_workload_kind_mismatch",
+            format!("{message}; the binding's image is the wrong kind for the projection's driver"),
+        ))
+    };
+    match (driver, workload) {
+        (ComputeDriver::Vm, WorkloadImage::Native { .. }) => {
+            refused("the vm driver runs OCI images, not native executables")
         }
+        (ComputeDriver::Mxc, WorkloadImage::Oci { .. }) => {
+            refused("the mxc driver runs native executables, not OCI images")
+        }
+        _ => Ok(()),
     }
 }
 
@@ -322,6 +593,43 @@ pub struct OpenShellSandbox {
 impl OpenShellSandbox {
     pub fn new(binding: OpenShellBinding) -> Self {
         Self { binding }
+    }
+
+    /// The binding's image, parsed. Refused when it is neither kind.
+    fn workload(&self) -> Result<WorkloadImage, SandboxError> {
+        let image = self.binding.image.as_deref().unwrap_or_default();
+        WorkloadImage::parse(image).map_err(|e| err("openshell_image_invalid", e.to_string()))
+    }
+
+    /// A native image pins the executable's sha256 and the platform it runs
+    /// on. The file is hashed here, before creation. The gateway later opens
+    /// the same path itself, so this check is not a snapshot of what runs.
+    fn verify_native_identity(&self, workload: &WorkloadImage) -> Result<(), SandboxError> {
+        let WorkloadImage::Native { sha256, platform } = workload else {
+            return Ok(());
+        };
+        let mismatch = |message: String| err("openshell_executable_identity_mismatch", message);
+        let host = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
+        if *platform != host {
+            return Err(mismatch(format!(
+                "the native image is for {platform}, and this host is {host}"
+            )));
+        }
+        let executable = self
+            .binding
+            .native_executable
+            .as_ref()
+            .ok_or_else(|| mismatch("the native image declares no native_executable".into()))?;
+        let bytes =
+            fs::read(executable).map_err(|e| mismatch(format!("{}: {e}", executable.display())))?;
+        let actual = hex::encode(Sha256::digest(&bytes));
+        if actual != *sha256 {
+            return Err(mismatch(format!(
+                "{} hashes to sha256:{actual}, but the image pins sha256:{sha256}",
+                executable.display()
+            )));
+        }
+        Ok(())
     }
 
     fn cli(&self, args: &[String], timeout: Duration) -> Result<Output, SandboxError> {
@@ -490,6 +798,8 @@ impl OpenShellSandbox {
         spec: &SandboxSpec,
         name: &str,
         identity: &ProjectionIdentity,
+        enforcement: &Value,
+        workload: &WorkloadImage,
     ) -> Result<(), SandboxError> {
         let evidence = Self::evidence_dir(spec);
         fs::create_dir_all(&evidence).map_err(|e| err("io_error", e.to_string()))?;
@@ -508,9 +818,10 @@ impl OpenShellSandbox {
             "--no-auto-providers",
             "--no-tty",
         ]);
-        if let Some(image) = &self.binding.image {
+        // A native executable is not an image: the gateway's default applies.
+        if let WorkloadImage::Oci { reference } = workload {
             args.push("--from".to_string());
-            args.push(image.clone());
+            args.push(reference.clone());
         }
         self.cli_ok("openshell_create_failed", &args, CREATE_TIMEOUT)?;
 
@@ -570,6 +881,7 @@ impl OpenShellSandbox {
                 "source": status["policy_source"],
             },
             "prover": { "projected": projected, "effective": contained },
+            "enforcement": enforcement,
         });
         fs::write(
             evidence.join("execution.json"),
@@ -593,7 +905,13 @@ impl ExecutionSandbox for OpenShellSandbox {
                 "the OpenShell binding names no sandbox image",
             ));
         }
+        let workload = self.workload()?;
         let identity = projection_identity(&self.binding.projection_dir)?;
+        let enforcement = check_enforcement(
+            identity.compute_driver,
+            &self.binding.projection_dir.join("policy.yaml"),
+        )?;
+        check_workload_kind(identity.compute_driver, &workload)?;
 
         let version = run(&self.binding.cli, &strings(&["--version"]), CONTROL_TIMEOUT)?;
         let expected = format!("openshell {}", identity.openshell_version);
@@ -607,8 +925,9 @@ impl ExecutionSandbox for OpenShellSandbox {
             ));
         }
         if self.binding.local_microvm_gateway {
-            probe_host_virtualization()?;
+            probe_local_driver(identity.compute_driver)?;
         }
+        self.verify_native_identity(&workload)?;
         let status = self.cli(&strings(&["status"]), CONTROL_TIMEOUT)?;
         if status.code != Some(0) {
             return Err(err(
@@ -621,7 +940,7 @@ impl ExecutionSandbox for OpenShellSandbox {
         }
 
         let name = Self::name(spec);
-        if let Err(error) = self.create(spec, &name, &identity) {
+        if let Err(error) = self.create(spec, &name, &identity, &enforcement, &workload) {
             // Never leave a sandbox behind that failed verification.
             let _ = self.delete(&name);
             return Err(error);
@@ -652,6 +971,20 @@ impl ExecutionSandbox for OpenShellSandbox {
             }
         };
         crate::validate_relative_path(cwd).map_err(|e| err("unsafe_path_error", e.to_string()))?;
+        // A native image runs exactly the executable it pins, never another.
+        if let WorkloadImage::Native { .. } = self.workload()? {
+            let declared = self
+                .binding
+                .native_executable
+                .as_ref()
+                .map(|p| p.display().to_string());
+            if declared.as_deref() != argv.first().map(String::as_str) {
+                return Err(err(
+                    "openshell_executable_identity_mismatch",
+                    "argv[0] is not the native executable the image pins",
+                ));
+            }
+        }
         let workspace = self.workspace_path()?;
         let workdir = if cwd == "." {
             workspace
@@ -750,5 +1083,97 @@ impl ExecutionSandbox for OpenShellSandbox {
 
     fn destroy(&self, h: SandboxHandle) -> Result<(), SandboxError> {
         self.delete(&Self::name(&h.spec))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn host(os: &'static str, arch: &'static str) -> HostFacts {
+        HostFacts {
+            os,
+            arch,
+            kvm: Ok(()),
+            wsl: false,
+            hv_support: String::new(),
+        }
+    }
+
+    fn class(result: Result<(), SandboxError>) -> &'static str {
+        match result {
+            Ok(()) => "ok",
+            Err(error) => error.class,
+        }
+    }
+
+    #[test]
+    fn vm_on_windows_is_refused_as_unsupported_on_host() {
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Vm, &host("windows", "x86_64"))),
+            "openshell_driver_unsupported_on_host"
+        );
+    }
+
+    #[test]
+    fn vm_on_linux_needs_kvm() {
+        let mut facts = host("linux", "x86_64");
+        assert_eq!(class(host_verdict(ComputeDriver::Vm, &facts)), "ok");
+        facts.kvm = Err("Permission denied".into());
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Vm, &facts)),
+            "openshell_virtualization_unavailable"
+        );
+    }
+
+    #[test]
+    fn vm_on_macos_needs_apple_silicon_and_hypervisor_support() {
+        let mut facts = host("macos", "aarch64");
+        facts.hv_support = "1\n".into();
+        assert_eq!(class(host_verdict(ComputeDriver::Vm, &facts)), "ok");
+        facts.hv_support = "0".into();
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Vm, &facts)),
+            "openshell_virtualization_unavailable"
+        );
+        facts.hv_support = "1".into();
+        facts.arch = "x86_64";
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Vm, &facts)),
+            "openshell_virtualization_unavailable"
+        );
+    }
+
+    #[test]
+    fn mxc_runs_only_on_windows() {
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Mxc, &host("windows", "x86_64"))),
+            "ok"
+        );
+        assert_eq!(
+            class(host_verdict(ComputeDriver::Mxc, &host("linux", "x86_64"))),
+            "openshell_driver_unsupported_on_host"
+        );
+    }
+
+    #[test]
+    fn container_drivers_have_no_enforcement_table() {
+        for driver in [
+            ComputeDriver::Docker,
+            ComputeDriver::Podman,
+            ComputeDriver::Kubernetes,
+        ] {
+            assert!(driver.enforces().is_none());
+            assert_eq!(
+                class(host_verdict(driver, &host("linux", "x86_64"))),
+                "openshell_driver_unsupported"
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_compute_driver_names_do_not_parse() {
+        assert_eq!(ComputeDriver::parse("firecracker"), None);
+        assert_eq!(ComputeDriver::parse("vm"), Some(ComputeDriver::Vm));
     }
 }

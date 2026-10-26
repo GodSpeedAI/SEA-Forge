@@ -9,6 +9,7 @@ pub mod ids;
 pub mod path;
 pub mod pipe_name;
 pub mod types;
+pub mod workload_image;
 pub mod yaml;
 
 pub use pipe_name::pipe_name_for;
