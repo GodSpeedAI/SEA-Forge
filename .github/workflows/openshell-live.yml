@@ -15,6 +15,8 @@ on:
 
 permissions:
   contents: read
+  # Push the two derived live-test images to GHCR; the VM driver pulls them with the job token.
+  packages: write
 
 concurrency:
   # One gateway port (18081) per runner; never run two live proofs at once.
@@ -162,6 +164,31 @@ jobs:
 
           echo "$BIN" >> "$GITHUB_PATH"
 
+      - name: Build and push live-test images (before Docker stops)
+        # The projected policy keeps /sandbox read-only and grants /sandbox/workspace
+        # read-write, so the workload image must already contain that directory
+        # (the VM driver creates only /sandbox). Stock images do not, so each live
+        # image is the public base plus one owned, empty /sandbox/workspace.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          build() {
+            local base="$1" name="$2" var="$3" ref digest
+            ref="ghcr.io/${owner}/sea-forge-live-${name}:${{ github.run_id }}"
+            printf 'FROM %s\nRUN mkdir -p /sandbox/workspace && chmod 0755 /sandbox /sandbox/workspace\n' "$base" \
+              | docker build --pull -t "$ref" -
+            docker push "$ref" >/dev/null
+            digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$ref")"
+            echo "$var=$digest" >> "$GITHUB_ENV"
+            echo "$name: base $base ($(docker inspect --format '{{index .RepoDigests 0}}' "$base")) -> $digest" | tee -a evidence/images.txt
+          }
+          build docker.io/library/ubuntu:24.04 ubuntu LIVE_IMAGE
+          build docker.io/library/python:3.13-slim python LIVE_SECOND_IMAGE
+          docker logout ghcr.io
+
       - name: Stop Docker (Docker-free claim)
         run: |
           set -uo pipefail
@@ -198,9 +225,11 @@ jobs:
       - name: Live proof
         env:
           STATE_DIR: ${{ runner.temp }}/openshell-state
-          # The script's NGC default (nvcr.io/nvidia/base/ubuntu:24.04) needs registry
-          # auth, which hosted runners do not have. A public bootstrap image is used.
-          IMAGE: docker.io/library/ubuntu:24.04
+          # Digest-pinned images from the build step (public bases + /sandbox/workspace).
+          IMAGE: ${{ env.LIVE_IMAGE }}
+          SECOND_IMAGE: ${{ env.LIVE_SECOND_IMAGE }}
+          # Registry auth for the VM driver's GHCR pull (job-scoped token, ghcr uses __token__).
+          OPENSHELL_REGISTRY_TOKEN: ${{ github.token }}
         run: |
           set +e
           devbox run -- bash scripts/openshell/live-proof.sh 2>&1 | tee evidence/live-proof.log
