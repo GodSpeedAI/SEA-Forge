@@ -144,8 +144,8 @@ param([string] $PipeName)
 $ErrorActionPreference = 'Stop'
 $request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_probe","role":"operator"}}'
 try {
-    # Start-Process with LoadUserProfile inherits the runner's TEMP, which sfprobe cannot write; Add-Type needs a temp folder.
-    $tempDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Temp'
+    # Start-Process inherits the runner TEMP, which sfprobe cannot write; Add-Type needs a writable temp folder, so use the all-users Public folder.
+    $tempDir = 'C:\Users\Public\sf-probe-temp'
     New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
     $env:TEMP = $tempDir
     $env:TMP = $tempDir
