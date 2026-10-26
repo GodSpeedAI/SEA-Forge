@@ -1,6 +1,7 @@
 use sea_forge_core::errors::ForgeError;
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
@@ -145,13 +146,20 @@ pub(crate) fn request(root: &Path, mut request: Value) -> Result<Value, ForgeErr
         }
     }
     let socket_path = root.join("server.sock");
-    let mut stream = UnixStream::connect(&socket_path)
+    let line = exchange(&socket_path, &request)?;
+    serde_json::from_str(line.trim()).map_err(ForgeError::from)
+}
+
+/// Unix: connect to the server socket, send one request line, read one response line.
+#[cfg(unix)]
+fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
+    let mut stream = UnixStream::connect(socket_path)
         .map_err(|error| ForgeError::io("connect to sea-forge-server", error))?;
     stream
         .set_read_timeout(Some(Duration::from_secs(120)))
         .map_err(|error| ForgeError::io("configure server timeout", error))?;
     stream
-        .write_all(format!("{}\n", serde_json::to_string(&request)?).as_bytes())
+        .write_all(format!("{}\n", serde_json::to_string(request)?).as_bytes())
         .map_err(|error| ForgeError::io("write server request", error))?;
     stream
         .shutdown(std::net::Shutdown::Write)
@@ -160,5 +168,56 @@ pub(crate) fn request(root: &Path, mut request: Value) -> Result<Value, ForgeErr
     BufReader::new(stream)
         .read_line(&mut line)
         .map_err(|error| ForgeError::io("read server response", error))?;
-    serde_json::from_str(line.trim()).map_err(ForgeError::from)
+    Ok(line)
+}
+
+/// Windows: open the server's named pipe, verify the server runs as this user
+/// before sending anything, then exchange one request line and one response.
+///
+/// Limitation: a synchronous named-pipe handle has no read timeout and no
+/// half-close, so the request is delimited by its newline alone.
+#[cfg(windows)]
+fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
+    let pipe_name = sea_forge_core::pipe_name_for(socket_path)
+        .map_err(|error| ForgeError::io("derive server pipe name", error))?;
+    let mut pipe = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&pipe_name)
+        .map_err(|error| ForgeError::io("connect to sea-forge-server", error))?;
+    let server = sea_forge_os::pipe_server_sid(&pipe)
+        .map_err(|error| ForgeError::io("read server pipe identity", error))?;
+    let me = sea_forge_os::current_sid()
+        .map_err(|error| ForgeError::io("read current user identity", error))?;
+    if !server_identity_matches(&server, &me) {
+        return Err(ForgeError::Input(format!(
+            "refusing pipe {pipe_name}: its server runs as {server}, not this user ({me})"
+        )));
+    }
+    pipe.write_all(format!("{}\n", serde_json::to_string(request)?).as_bytes())
+        .map_err(|error| ForgeError::io("write server request", error))?;
+    let mut line = String::new();
+    BufReader::new(pipe)
+        .read_line(&mut line)
+        .map_err(|error| ForgeError::io("read server response", error))?;
+    Ok(line)
+}
+
+/// The pipe's server SID must be exactly the expected principal. A squatted
+/// pipe owned by another user fails this comparison before any request leaves.
+#[cfg(any(windows, test))]
+fn server_identity_matches(server_sid: &str, expected_sid: &str) -> bool {
+    !server_sid.is_empty() && server_sid == expected_sid
+}
+
+#[cfg(all(test, windows))]
+mod pipe_identity_tests {
+    use super::server_identity_matches;
+
+    #[test]
+    fn a_different_server_sid_is_refused() {
+        assert!(!server_identity_matches("S-1-5-21-1-2-3-1001", "S-1-5-21-1-2-3-1002"));
+        assert!(!server_identity_matches("", "S-1-5-21-1-2-3-1002"));
+        assert!(server_identity_matches("S-1-5-21-1-2-3-1002", "S-1-5-21-1-2-3-1002"));
+    }
 }

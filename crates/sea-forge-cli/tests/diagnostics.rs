@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use std::{
     env, fs,
     process::Command,

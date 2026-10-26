@@ -1683,3 +1683,64 @@ mod tests {
         ));
     }
 }
+
+#[cfg(all(test, windows))]
+mod windows_identity_tests {
+    use super::*;
+
+    fn sid_binding(sid: &str, actor: &str) -> IdentityBinding {
+        IdentityBinding {
+            uid: None,
+            sid: Some(sid.into()),
+            actor_id: actor.into(),
+            roles: vec![ActorRole::Operator],
+        }
+    }
+
+    #[test]
+    fn sid_bindings_are_one_principal_one_actor() {
+        let distinct = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1002", "op-b"),
+            ],
+        };
+        assert!(distinct.validate().is_ok());
+
+        let shared_sid = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1001", "op-b"),
+            ],
+        };
+        let error = shared_sid.validate().expect_err("two actors on one SID");
+        assert!(error.contains("SID S-1-5-21-1-2-3-1001"), "{error}");
+
+        let two_sids_one_actor = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1002", "op-a"),
+            ],
+        };
+        assert!(two_sids_one_actor.validate().is_err());
+    }
+
+    #[test]
+    fn a_connection_matches_by_sid_only() {
+        let bindings = IdentityBindings {
+            bindings: vec![sid_binding("S-1-5-21-1-2-3-1001", "op-a")],
+        };
+        let claim = ActorClaim {
+            actor_id: "op-a".into(),
+            role: ActorRole::Operator,
+        };
+        let bound = PeerIdentity {
+            sid: "S-1-5-21-1-2-3-1001".into(),
+        };
+        assert!(bindings.resolve(Some(&claim), Some(bound)).is_ok());
+        let stranger = PeerIdentity {
+            sid: "S-1-5-21-1-2-3-9999".into(),
+        };
+        assert!(bindings.resolve(Some(&claim), Some(stranger)).is_err());
+    }
+}

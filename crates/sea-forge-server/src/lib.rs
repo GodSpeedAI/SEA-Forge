@@ -4268,6 +4268,7 @@ mod lifecycle_contract_tests {
 mod notify_tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn fire_notify_chatty_hook_does_not_deadlock() {
         // F-07 regression: a hook that writes far more than a pipe capacity to
@@ -4281,6 +4282,7 @@ mod notify_tests {
         assert!(result.is_ok(), "chatty hook must complete: {result:?}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn fire_notify_hung_hook_times_out() {
         // F-07 regression: a hook that sleeps forever must be killed by the
@@ -4457,5 +4459,50 @@ mod continuation_key_tests {
         });
         assert!(matches!(result, Err(ForgeError::Input(_))));
         assert!(!asked.get(), "entropy must not be requested for bad config");
+    }
+}
+
+#[cfg(all(test, windows))]
+mod pipe_transport_tests {
+    use super::*;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::windows::named_pipe::ClientOptions;
+
+    fn unique_pipe_name(tag: &str) -> String {
+        format!(
+            r"\\.\pipe\sea-forge-test-{tag}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        )
+    }
+
+    #[tokio::test]
+    async fn named_pipe_round_trip_resolves_the_client_sid() {
+        let name = unique_pipe_name("sid");
+        let me = sea_forge_os::current_sid().expect("current sid");
+        let security = sea_forge_os::PipeSecurity::new(std::slice::from_ref(&me)).expect("dacl");
+        let server = sea_forge_os::create_pipe_server(&name, &security, true).expect("server");
+        let client_name = name.clone();
+        let client = tokio::spawn(async move {
+            let mut pipe = ClientOptions::new().open(&client_name).expect("open pipe");
+            pipe.write_all(b"{}\n").await.expect("write");
+            pipe
+        });
+        server.connect().await.expect("connect");
+        let (_reader, peer) = identify_pipe_client(server).await;
+        assert_eq!(peer.map(|p| p.sid), Some(me));
+        drop(client.await.expect("client task"));
+    }
+
+    #[tokio::test]
+    async fn a_second_first_instance_is_refused() {
+        let name = unique_pipe_name("squat");
+        let security = sea_forge_os::PipeSecurity::new(&[]).expect("dacl");
+        let first = sea_forge_os::create_pipe_server(&name, &security, true).expect("first");
+        assert!(sea_forge_os::create_pipe_server(&name, &security, true).is_err());
+        drop(first);
     }
 }
