@@ -10,8 +10,10 @@ repository.workspace = true
 description = "SEA Forge OS bindings (Windows FFI): the only crate in the workspace that may contain unsafe code."
 
 [features]
-# Tokio named-pipe server constructor. Only sea-forge-server enables it, so
-# kernel crates that use the Job wrapper do not pull tokio into their graph.
+# Tokio named-pipe server constructor, enabled only by sea-forge-server. Cargo
+# unifies features per build, so in a Windows server build the kernel crates'
+# copy of this crate also links tokio (their code never calls it). Open: review
+# pass 3 F33; the fix is an edge-only adapter outside the kernel graph.
 tokio-pipes = ["dep:tokio"]
 
 [target.'cfg(windows)'.dependencies]
