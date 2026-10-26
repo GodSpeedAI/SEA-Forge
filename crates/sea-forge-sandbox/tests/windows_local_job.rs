@@ -105,6 +105,11 @@ fn minimal_env() -> BTreeMap<String, String> {
     ])
 }
 
+/// PID written by the parent script after it spawned the grandchild.
+fn spawned_pid(path: &PathBuf) -> Option<u32> {
+    fs::read_to_string(path).ok()?.trim().parse().ok()
+}
+
 /// Child stdout and stderr, for assertion messages.
 fn child_output(dirs: &Dirs) -> String {
     let read = |name: &str| {
@@ -237,7 +242,7 @@ fn timeout_kills_whole_process_tree() {
     // Parent starts a grandchild with Start-Process (inherits the job), writes
     // a "spawned" marker, then sleeps far longer than the timeout.
     let script = format!(
-        "Start-Process -FilePath {cmd} -ArgumentList {args}; Set-Content -LiteralPath {sp} -Value x; Start-Sleep -Seconds 60",
+        "$p = Start-Process -FilePath {cmd} -ArgumentList {args} -PassThru; Set-Content -LiteralPath {sp} -Value $p.Id; Start-Sleep -Seconds 60",
         cmd = ps_single(&cmd_exe()),
         args = ps_single(&grandchild_args(&token, &marker)),
         sp = ps_single(&spawned.display().to_string()),
@@ -246,7 +251,7 @@ fn timeout_kills_whole_process_tree() {
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert_eq!(result.exit_code, None);
     assert!(
-        spawned.exists(),
+        spawned_pid(&spawned).is_some_and(|pid| pid > 0),
         "grandchild was never spawned before the timeout; the test would be vacuous\n{}",
         child_output(&dirs)
     );
@@ -278,15 +283,23 @@ fn wmi_created_process_cannot_escape_timeout_kill() {
 
     let command_line = format!("{} {}", cmd_exe(), grandchild_args(&token, &marker));
     let script = format!(
-        "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{{ CommandLine = {cl} }}; Set-Content -LiteralPath {sp} -Value $r.ReturnValue; Start-Sleep -Seconds 60",
+        "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{{ CommandLine = {cl} }}; Set-Content -LiteralPath {sp} -Value (\"{{0}} {{1}}\" -f $r.ReturnValue, $r.ProcessId); Start-Sleep -Seconds 60",
         cl = ps_single(&command_line),
         sp = ps_single(&spawned.display().to_string()),
     );
     let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
     assert_eq!(result.status, ExecutionStatus::TimedOut);
+    // Win32_Process.Create must succeed (ReturnValue 0) with a real PID, or
+    // the test would pass without ever creating a process.
+    let created = fs::read_to_string(&spawned).unwrap_or_default();
     assert!(
-        spawned.exists(),
-        "WMI create never ran before the timeout; the test would be vacuous\n{}",
+        created.split_whitespace().next() == Some("0")
+            && created
+                .split_whitespace()
+                .nth(1)
+                .and_then(|p| p.parse::<u32>().ok())
+                .is_some_and(|pid| pid > 0),
+        "Win32_Process.Create did not succeed before the timeout ({created:?}); the test would be vacuous\n{}",
         child_output(&dirs)
     );
 
