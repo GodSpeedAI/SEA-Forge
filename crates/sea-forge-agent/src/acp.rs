@@ -206,6 +206,10 @@ pub struct AcpSession {
 enum ChildGuard {
     Tokio(Child),
     Std(StdChildGuard),
+    /// Windows spawn: the child and its kill-on-close job. The child is killed
+    /// first, then the job reaps any descendants.
+    #[cfg(windows)]
+    Job(StdChildGuard, sea_forge_os::Job),
 }
 
 struct StdChildGuard(std::process::Child);
@@ -336,24 +340,66 @@ impl AcpSession {
         cmd.kill_on_drop(true);
         #[cfg(unix)]
         cmd.process_group(0);
-        let mut child = cmd.spawn().map_err(|e| format!("acp spawn failed: {e}"))?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| "acp child stdout unavailable".to_string())?;
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| "acp child stdin unavailable".to_string())?;
+        #[cfg(unix)]
+        let (stdout, stdin, stderr, guard, process_group) = {
+            let mut child = cmd.spawn().map_err(|e| format!("acp spawn failed: {e}"))?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or_else(|| "acp child stdout unavailable".to_string())?;
+            let stdin = child
+                .stdin
+                .take()
+                .ok_or_else(|| "acp child stdin unavailable".to_string())?;
+            let stderr = child.stderr.take();
+            let process_group = child.id();
+            (
+                stdout,
+                stdin,
+                stderr,
+                ChildGuard::Tokio(child),
+                process_group,
+            )
+        };
+        // Windows: the child starts suspended and joins a kill-on-close job
+        // before it runs, so a grandchild created at startup is reaped with it.
+        #[cfg(windows)]
+        let (stdout, stdin, stderr, guard, process_group) = {
+            let (mut child, job) = sea_forge_os::spawn_in_job(cmd.as_std_mut())
+                .map_err(|e| format!("acp spawn failed: {e}"))?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or_else(|| "acp child stdout unavailable".to_string())?;
+            let stdin = child
+                .stdin
+                .take()
+                .ok_or_else(|| "acp child stdin unavailable".to_string())?;
+            let stderr = child.stderr.take();
+            let stdout = tokio::process::ChildStdout::from_std(stdout)
+                .map_err(|e| format!("adopt acp child stdout: {e}"))?;
+            let stdin = tokio::process::ChildStdin::from_std(stdin)
+                .map_err(|e| format!("adopt acp child stdin: {e}"))?;
+            let stderr = stderr
+                .map(tokio::process::ChildStderr::from_std)
+                .transpose()
+                .map_err(|e| format!("adopt acp child stderr: {e}"))?;
+            (
+                stdout,
+                stdin,
+                stderr,
+                ChildGuard::Job(StdChildGuard(child), job),
+                None,
+            )
+        };
         // Drain untrusted stderr without logging or unbounded allocation.
-        if let Some(stderr) = child.stderr.take() {
+        if let Some(stderr) = stderr {
             drain_stderr(stderr);
         }
-        let process_group = child.id();
         let session = Self::over_streams(
             Box::new(stdout),
             Box::new(stdin),
-            Some(ChildGuard::Tokio(child)),
+            Some(guard),
             session_cwd,
             process_group,
             spawn.max_response_bytes,

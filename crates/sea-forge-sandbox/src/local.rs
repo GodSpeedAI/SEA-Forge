@@ -103,30 +103,31 @@ impl ExecutionSandbox for LocalSandbox {
             use std::os::unix::process::CommandExt;
             command.process_group(0);
         }
-        #[cfg(windows)]
-        let job = sea_forge_os::Job::kill_on_close()
-            .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
         for (k, v) in &req.env {
             command.env(k, v);
         }
+        let spawn_failed = || ExecutionResult {
+            status: ExecutionStatus::SpawnFailed,
+            exit_code: None,
+            stdout_path: "artifacts/stdout.txt".into(),
+            stderr_path: "artifacts/stderr.txt".into(),
+            started_at: started_at.clone(),
+            finished_at: chrono::Utc::now().to_rfc3339(),
+        };
+        // Windows: the child starts suspended and is in its kill-on-close job
+        // before it runs, so no grandchild can escape the timeout kill.
+        // Any failure here (job creation, spawn, assignment) means nothing
+        // ran; it is reported as a spawn failure.
+        #[cfg(windows)]
+        let (mut child, job) = match sea_forge_os::spawn_in_job(&mut command) {
+            Ok(pair) => pair,
+            Err(_) => return Ok(spawn_failed()),
+        };
+        #[cfg(unix)]
         let mut child = match command.spawn() {
             Ok(child) => child,
-            Err(_) => {
-                return Ok(ExecutionResult {
-                    status: ExecutionStatus::SpawnFailed,
-                    exit_code: None,
-                    stdout_path: "artifacts/stdout.txt".into(),
-                    stderr_path: "artifacts/stderr.txt".into(),
-                    started_at,
-                    finished_at: chrono::Utc::now().to_rfc3339(),
-                })
-            }
+            Err(_) => return Ok(spawn_failed()),
         };
-        #[cfg(windows)]
-        if let Err(e) = job.assign(&child) {
-            let _ = child.kill();
-            return Err(SandboxError::new("internal_error", e.to_string()));
-        }
         let status = child
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
