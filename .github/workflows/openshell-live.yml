@@ -175,15 +175,21 @@ jobs:
           set -euo pipefail
           owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
           echo "${GH_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          # The guest image prep accepts OCI manifests only (a Docker v2 manifest
+          # fails "not implemented: application/vnd.docker.distribution.manifest.v2+json"),
+          # so BuildKit pushes OCI media types and no provenance attestation.
+          docker buildx create --use --name live-oci >/dev/null
           build() {
-            local base="$1" name="$2" var="$3" ref digest
+            local base="$1" name="$2" var="$3" ref digest base_digest
             ref="ghcr.io/${owner}/sea-forge-live-${name}:${{ github.run_id }}"
-            printf 'FROM %s\nRUN mkdir -p /sandbox/workspace && chmod 0755 /sandbox /sandbox/workspace\n' "$base" \
-              | docker build --pull -t "$ref" -
-            docker push "$ref" >/dev/null
-            digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$ref")"
-            echo "$var=$digest" >> "$GITHUB_ENV"
-            echo "$name: base $base ($(docker inspect --format '{{index .RepoDigests 0}}' "$base")) -> $digest" | tee -a evidence/images.txt
+            base_digest="$(docker buildx imagetools inspect "$base" --format '{{.Manifest.Digest}}')"
+            printf 'FROM %s@%s\nRUN mkdir -p /sandbox/workspace && chmod 0755 /sandbox /sandbox/workspace\n' "${base%%:*}" "$base_digest" \
+              | docker buildx build --platform linux/amd64 --provenance=false --sbom=false \
+                  --output "type=registry,name=$ref,oci-mediatypes=true" \
+                  --metadata-file "$RUNNER_TEMP/$name-meta.json" -
+            digest="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["containerimage.digest"])' "$RUNNER_TEMP/$name-meta.json")"
+            echo "$var=${ref%%:*}@$digest" >> "$GITHUB_ENV"
+            echo "$name: base $base@$base_digest -> ${ref%%:*}@$digest ($(docker buildx imagetools inspect "${ref%%:*}@$digest" --format '{{.Manifest.MediaType}}'))" | tee -a evidence/images.txt
           }
           build docker.io/library/ubuntu:24.04 ubuntu LIVE_IMAGE
           build docker.io/library/python:3.13-slim python LIVE_SECOND_IMAGE
