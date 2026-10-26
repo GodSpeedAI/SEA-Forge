@@ -79,14 +79,6 @@ impl GatewayConfig {
         #[cfg(windows)]
         return self.sid.clone();
     }
-
-    /// Operator-facing `uid N` / `SID S` label of the gateway principal.
-    pub fn principal_label(&self) -> String {
-        #[cfg(unix)]
-        return format!("uid {}", self.uid);
-        #[cfg(windows)]
-        return format!("SID {}", self.sid);
-    }
 }
 
 fn default_gateway_actor() -> String {
