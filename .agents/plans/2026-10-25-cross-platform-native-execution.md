@@ -291,7 +291,7 @@ added scenario.
 
 | Measure | Baseline v0.2.0 | After | Change |
 |---|---|---|---|
-| Production LOC (non-blank, non-comment, excl. `#[cfg(test)]`) | 55,801 | 58,104 (after consolidation) | +2,303 (+4.1%) |
+| Production LOC (non-blank, non-comment, excl. `#[cfg(test)]`) | 55,801 | 58,975 (after review passes 1–3 fixes; 58,104 after consolidation) | +3,174 (+5.7%) |
 | `sea-forge` (linux x86_64) | 26,864,824 B | 26,758,344 B | -0.4% |
 | `sea-forge-server` (linux x86_64) | 31,751,208 B | 31,649,504 B | -0.3% |
 | Linux tarball | 17,697,486 B | 17,647,409 B | -0.3% |
@@ -396,3 +396,34 @@ refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
   - F16 confirmed, fixed: the host reads A's token via `sandbox exec` before B starts and after B ends;
     ordering asserted. Live 9/9 run 40306124770.
   - F17: test renamed `live_network_egress_is_not_observed`; scenario 4 on OpenShell vm stays BLK.
+
+### Pass 3 (2026-10-26, final; the three-pass limit is reached)
+
+- Reviewer: `codex exec -s read-only`, model `gpt-6.1-sol`, session 01a177d6-efcc-7902-b90e-01f5a9f23c6d,
+  exit 0. Frozen SHA d28e00dc. Output: `~/projects/_wt/containers/review/pass3/pass3-findings.md`.
+- Counts: critical 0, high 3, medium 7, low 0. Pass-2 fixes judged correct: F04, F26, F28, F29, F30, F16, F25.
+- Resolutions (fixes below were not re-reviewed by an independent pass; they are builder-verified only):
+  - F31 (high, new) fixed: Unix `safe_write_within` now walks from the canonical root with
+    `openat(O_DIRECTORY|O_NOFOLLOW)` per component, so a symlink ancestor is refused; test
+    `ancestor_symlink_substitution_is_refused` (external dir unchanged). Residual: an open directory moved
+    by a concurrent writer is not excluded.
+  - F32 (medium, new) mitigated, not prevented: after `renameat`, the entry must match the written inode
+    (dev, ino, regular file) or the write fails with `UnsafePath`. The substituted bytes may already be
+    visible at that moment. No synchronized race test.
+  - F27 (medium) fixed: a refused `prepare` with a failed delete, and an execution/download failure with a
+    failed destroy, both return `openshell_cleanup_failed` naming the sandbox and stating its lifetime is
+    unverified. Tests `failed_cleanup_after_refused_policy_is_reported` and routing case (e).
+  - F18 (medium) fixed: no backend meets the 12-scenario bar; counts and counting rule stated in the matrix.
+  - F24 (medium) fixed: the probing skill requires a detached-descendant delayed-marker case; group-only
+    queries are reported as group-only.
+  - F05 (high) OPEN: a Windows pinned directory opened with `FILE_SHARE_WRITE` can get reparse data set
+    after validation. Needs exclusion of writer handles and an NTFS race test.
+  - F08 (high) OPEN: `setsid` descendants survive completion and timeout on Local and both Jails. These
+    backends must not be used where adversarial lifecycle containment is required.
+  - F15 (medium) OPEN in part: outside the CI lanes that require the prerequisites, missing Landlock network
+    or link privilege still prints a skip and counts as a libtest pass.
+  - F17 (medium) OPEN: OpenShell network denial has no reachable controlled endpoint; scenario 4 stays BLK.
+  - F33 (medium, new) OPEN: on Windows, the server's `tokio-pipes` feature unifies into the `sea-forge-os`
+    copy used by sandbox/ledger/settlement, so tokio is linked into kernel dependency paths (kernel code
+    does not call it). Moving the adapter needs a second crate allowed to use `unsafe`, which conflicts with
+    the single-unsafe-crate rule; left for an operator decision. The manifest comment now states this.
