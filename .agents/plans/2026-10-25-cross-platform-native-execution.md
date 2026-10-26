@@ -211,3 +211,49 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
   needs host paths. Phase 2's capability table already refuses what MXC cannot
   enforce (Landlock hard requirement, Linux process identity). Least-cost
   remedy upstream: an MXC exec/transfer surface plus a label resolver.
+
+## Capability matrix (2026-10-26)
+
+| Backend | Host | Status | Evidence |
+|---|---|---|---|
+| Local (Landlock + seccomp) | Linux | Passing | ci.yml `test (ubuntu)`, kernel-security socket gates (22.04/24.04 VMs) |
+| Jail (Landlock, no net / port allowlist) | Linux | Passing | `tests/conformance_m1.rs` in ci.yml |
+| OpenShell `vm` (KVM microVM) | Linux | Passing, live | openshell-live runs 40268910844 + repetitions; 6/6 `cell_episode_live` with Docker stopped |
+| Local (Seatbelt) | macOS | Built, untested by scenario | no scenario tests (gap) |
+| Jail (App Sandbox) | macOS | Passing | portability.yml `macos`, `tests/macos_app_sandbox_jail.rs` 7/7 |
+| OpenShell `vm` (HVF) | macOS | **Blocked** | hosted runners report `kern.hv_support=0`; `krun_start_enter failed: -22`. Needs a bare-metal Apple Silicon runner |
+| Local (Job Object only) | Windows | Passing for lifecycle only; **no FS/network containment** | portability.yml `windows`: `windows_local_job.rs` 5/5 |
+| Control plane (named pipe, SID identity) | Windows | Passing | `scripts/windows/identity-e2e.ps1` 10/10 |
+| OpenShell `mxc` (AppContainer) | Windows | Upstream driver works; **SEA-Forge Blocked** | Phase 4 section |
+| WSLc | Windows | **Blocked** | Phase 5 section |
+| Isolated (Firecracker-class microVM, no OpenShell) | Linux | Unchanged; refuses off Linux | — |
+
+## Conformance matrix (Phase 8 scenarios)
+
+`L` = live on the real mechanism, `S` = stub CLI (sequence and refusal logic only),
+`—` = not applicable to the backend's claimed guarantees, `GAP` = applicable, no test,
+`BLK` = backend blocked. A `GAP` or `BLK` is never a pass.
+
+| # | Scenario | Linux Local | Linux Jail | Linux OpenShell vm | macOS Jail | Windows Local | Windows pipe CP |
+|---|---|---|---|---|---|---|---|
+| 1 | authorized workspace r/w | L | L | L (`live_authorized_episode_runs_in_a_microvm`) | L | L (exit/stdout) | — |
+| 2 | unauthorized FS write blocked | L | L | L (`live_host_filesystem_is_not_visible`) | L | — (not contained) | — |
+| 3 | symlink/reparse/junction escape | L | GAP | GAP | L | — | L (`changeset_windows.rs`) |
+| 4 | unauthorized network blocked | L | L | L (`live_network_egress_is_denied`) | L | — (not contained) | — |
+| 5 | authorized network restricted | L(?) | L | GAP (no live allowed-endpoint test) | — (AllowTcpPorts refused) | — | — |
+| 6 | modified executable rejected | GAP | GAP | S (native hash pin) | GAP | GAP | — |
+| 7 | provider credentials inaccessible | GAP | GAP | S (host env not forwarded) | L (`$HOME` secret read denied) | L (env cleared) | — |
+| 8 | exfiltration to unauthorized endpoint | via 4 | via 4 | via 4 | via 4 | — | — |
+| 9 | projection / lock tampering | — | — | S (tampered policy, mapping) | — | — | — |
+| 10 | frozen-run authority widening | GAP (sandbox side) | GAP | GAP | GAP | GAP | — |
+| 11 | process-tree cancellation | L | GAP | L (`live_timeout_cancels_the_command`) | L | L (tree + WMI) | — |
+| 12 | no host fallback on failure | L | L | S | L (`jail_unavailable`) | — | L (second server, squatting) |
+| 13 | concurrent sandboxes isolated | L | GAP | GAP | GAP | GAP | L (second-user DACL denial) |
+| 14 | restart leaves no orphans | L (partial) | GAP | L (cleanup) + S (destroy idempotent); gateway restart GAP | GAP | L (kill-on-close) | — |
+| 15 | evidence attributable | — | — | L (execution.json, effective-policy.yaml, denials.log) | — | — | — |
+| 16 | transfer cannot escape paths | L | L | L (flat upload / download into run dir) | — | — | L |
+
+Per applicable backend, the stretch bar of 12 exercised scenarios is met by
+Linux Local only. Linux OpenShell vm has 9 live, 3 stub, 4 GAP; macOS Jail 9;
+Windows Local covers lifecycle and environment only, because it claims no
+filesystem or network containment.
