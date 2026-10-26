@@ -217,6 +217,7 @@ impl Drop for StdChildGuard {
     }
 }
 
+#[cfg_attr(not(unix), allow(dead_code))]
 struct ProcessGroupGuard(Option<u32>);
 
 impl Drop for ProcessGroupGuard {

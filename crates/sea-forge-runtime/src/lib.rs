@@ -274,6 +274,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fs;
     use std::process::Command;
+    #[cfg_attr(not(unix), allow(unused_imports))]
     use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     fn directories(name: &str) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {

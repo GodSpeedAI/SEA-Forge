@@ -393,7 +393,39 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
     Ok(())
 }
 
-#[cfg(not(unix))]
+/// Windows: open the entry itself (`FILE_FLAG_OPEN_REPARSE_POINT`, the analogue
+/// of `O_NOFOLLOW`) and refuse if it is a reparse point (symlink, junction).
+/// Truncation happens only after that check.
+#[cfg(windows)]
+pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    use std::io::Write;
+    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(destination)
+        .map_err(|e| ForgeError::io(format!("open planned file {}", destination.display()), e))?;
+    let attributes = file
+        .metadata()
+        .map_err(|e| ForgeError::io("inspect planned file", e))?
+        .file_attributes();
+    if attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(ForgeError::UnsafePath(format!(
+            "destination {} is a reparse point (symlink or junction)",
+            destination.display()
+        )));
+    }
+    file.set_len(0)
+        .map_err(|e| ForgeError::io("truncate planned file", e))?;
+    file.write_all(bytes)
+        .map_err(|e| ForgeError::io("write planned file", e))?;
+    Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
     fs::write(destination, bytes).map_err(|e| ForgeError::io("write planned file", e))
 }
@@ -423,6 +455,7 @@ pub fn materialize(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use std::time::{SystemTime, UNIX_EPOCH};
     #[test]
     fn lexical_escape_is_rejected() {

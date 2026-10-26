@@ -22,6 +22,9 @@ wait-timeout.workspace = true
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+sea-forge-os = { path = "../sea-forge-os", version = "0.2.0" }
+
 # Descriptor-relative workspace observation (observation.rs) on other Unix.
 [target.'cfg(all(unix, not(target_os = "linux")))'.dependencies]
 rustix = { version = "1", features = ["fs"] }
