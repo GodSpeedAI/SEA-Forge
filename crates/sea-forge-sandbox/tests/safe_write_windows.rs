@@ -61,9 +61,10 @@ fn junction_destination_is_refused_and_its_target_untouched() {
     if !make_junction(&link, outside.path()) {
         return;
     }
-    let checked = safe_join(root, "dest.txt").expect("join");
-
-    let result = safe_write_within(root, &checked, b"through the junction");
+    // Rust reports a junction as a symlink, so `safe_join` may refuse it
+    // first. Either refusal is correct; the write must not happen.
+    let result = safe_join(root, "dest.txt")
+        .and_then(|checked| safe_write_within(root, &checked, b"through the junction"));
     assert!(result.is_err(), "a junction destination was written");
     assert_eq!(
         std::fs::read_dir(outside.path())
