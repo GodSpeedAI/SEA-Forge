@@ -4245,6 +4245,7 @@ mod lifecycle_contract_tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_notify_command_on_path_preflights_clean() {
         // `sh` is mandated by POSIX and is on PATH wherever this test runs.
         let argv = ["sh".to_string(), "-c".to_string(), "true".to_string()];
@@ -4470,8 +4471,6 @@ mod continuation_key_tests {
 #[cfg(all(test, windows))]
 mod pipe_transport_tests {
     use super::*;
-    use tokio::io::AsyncWriteExt;
-    use tokio::net::windows::named_pipe::ClientOptions;
 
     fn unique_pipe_name(tag: &str) -> String {
         format!(
@@ -4490,16 +4489,24 @@ mod pipe_transport_tests {
         let me = sea_forge_os::current_sid().expect("current sid");
         let security = sea_forge_os::PipeSecurity::new(std::slice::from_ref(&me)).expect("dacl");
         let server = sea_forge_os::create_pipe_server(&name, &security, true).expect("server");
+        // A std client, as the CLI opens it: its default impersonation level
+        // lets the server impersonate it. (tokio's ClientOptions defaults to
+        // SECURITY_IDENTIFICATION, which correctly cannot be impersonated.)
         let client_name = name.clone();
-        let client = tokio::spawn(async move {
-            let mut pipe = ClientOptions::new().open(&client_name).expect("open pipe");
-            pipe.write_all(b"{}\n").await.expect("write");
+        let client = std::thread::spawn(move || {
+            use std::io::Write;
+            let mut pipe = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&client_name)
+                .expect("open pipe");
+            pipe.write_all(b"{}\n").expect("write");
             pipe
         });
         server.connect().await.expect("connect");
         let (_reader, peer) = identify_pipe_client(server).await;
         assert_eq!(peer.map(|p| p.sid), Some(me));
-        drop(client.await.expect("client task"));
+        drop(client.join().expect("client thread"));
     }
 
     #[tokio::test]

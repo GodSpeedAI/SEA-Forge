@@ -206,7 +206,7 @@ fn exchange(socket_path: &Path, request: &Value) -> Result<String, ForgeError> {
 
 /// The pipe's server SID must be exactly the expected principal. A squatted
 /// pipe owned by another user fails this comparison before any request leaves.
-#[cfg(any(windows, test))]
+#[cfg(windows)]
 fn server_identity_matches(server_sid: &str, expected_sid: &str) -> bool {
     !server_sid.is_empty() && server_sid == expected_sid
 }

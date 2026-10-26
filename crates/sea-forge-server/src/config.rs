@@ -656,6 +656,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn relative_socket_path_composes_under_root() {
         let config = ServerConfig {
             root: PathBuf::from("/tmp/cell"),
@@ -669,6 +670,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn absolute_socket_path_is_honored_verbatim() {
         let config = ServerConfig {
             root: PathBuf::from("/tmp/cell"),
