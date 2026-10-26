@@ -63,6 +63,9 @@ evidence.
 - Reviewing a different revision than the one shipped: the packet SHA must
   equal the merged head.
 - Summarizing the diff for the reviewer: give the full patch.
+- Running `codex exec` with an open stdin (e.g. backgrounded from a shell):
+  it waits on "Reading additional input from stdin" until the timeout.
+  Redirect `< /dev/null`.
 - Treating "reviewer found nothing" from a truncated or failed run as clean:
   require exit status 0 and the per-severity count line.
 - Claiming independence when the same session reviewed its own work.

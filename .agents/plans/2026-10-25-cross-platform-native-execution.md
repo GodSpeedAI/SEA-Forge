@@ -221,7 +221,7 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
 | Isolated (per-run UID, Landlock, seccomp, namespaces) | Linux | Passing | `workload_boundary.rs`, `workload_isolation.rs`, `unix_socket_reach.rs`, `state_tree.rs` in ci.yml; kernel-security socket gates |
 | Jail (Landlock FS + **TCP-only** network rules) | Linux | Passing for FS and TCP; **UDP/DNS not restricted** | `conformance_m1.rs` |
 | OpenShell `vm` (KVM microVM) | Linux | Passing, live | openshell-live runs 40268910844, 40269436237, 40269901711, 40269528859 (6/6), 40275738307 (9/9); Docker stopped |
-| Jail (App Sandbox) | macOS | Passing for FS and network (no network entitlement blocks TCP, UDP, DNS) | portability.yml `macos`, `macos_app_sandbox_jail.rs` |
+| Jail (App Sandbox) | macOS | Passing for FS and TCP in the suite; UDP/DNS blocking seen in the probe run only; `setsid` descendants outlive the run (F08) | portability.yml `macos`, `macos_app_sandbox_jail.rs` |
 | OpenShell `vm` (HVF) | macOS | **Blocked** | hosted runners report `kern.hv_support=0`; needs bare-metal Apple Silicon |
 | Control plane (named pipe, SID identity) | Windows | Passing (see review fixes) | `scripts/windows/identity-e2e.ps1` |
 | OpenShell `mxc` (AppContainer) | Windows | Upstream driver works; **SEA-Forge Blocked** | Phase 4 section |
@@ -238,7 +238,7 @@ applicable, no test that exercises it, `BLK` = backend blocked. Only `L` counts.
 | 1 | authorized workspace r/w | L | L | L `live_authorized_episode_runs_in_a_microvm` | L | L exit code + stdout | — |
 | 2 | unauthorized FS write blocked | L | L | GAP (`live_host_filesystem_is_not_visible` only reads) | L | — | — |
 | 3 | symlink/reparse/junction escape | L | GAP | L `live_workspace_symlink_cannot_reach_host_files` | L | — | L `changeset_windows.rs` |
-| 4 | unauthorized network blocked | L | L TCP only; UDP/DNS GAP | no egress observed; no positive control, no denial record (F17) | L TCP+UDP+DNS | — | — |
+| 4 | unauthorized network blocked | L | L TCP only; UDP/DNS GAP | BLK no reachable controlled endpoint, no denial record (F17) | L TCP (`nc -z`); UDP/DNS seen only in probe run 40254192454 | — | — |
 | 5 | authorized network restricted | GAP | L TCP ports | GAP | — (AllowTcpPorts refused) | — | — |
 | 6 | modified executable rejected | GAP | GAP | GAP (native pin is MXC-only; stub) | GAP | — | — |
 | 7 | provider credentials inaccessible | GAP | GAP | S host env not forwarded | L `$HOME` secret unreadable | L env cleared | — |
@@ -248,13 +248,13 @@ applicable, no test that exercises it, `BLK` = backend blocked. Only `L` counts.
 | 11 | process-tree cancellation | L | GAP | L `live_timeout_cancels_the_command` | L (same pgid only; `setsid` escapes) | L cooperative tree only; WMI-created processes are outside the job | — |
 | 12 | no host fallback on failure | L | L | S | L `jail_unavailable` | — | L second server, squatting |
 | 13 | concurrent sandboxes isolated | L | GAP | L `live_concurrent_sandboxes_are_isolated` (control token, overlap checked) | GAP | — | L second-user DACL denial |
-| 14 | restart leaves no orphans | L (launcher death) | GAP | L cleanup after run; gateway/driver restart GAP | GAP | L kill-on-close | — |
+| 14 | restart leaves no orphans | L (launcher death) | GAP | GAP (gateway/driver restart untested; normal cleanup only) | GAP | L kill-on-close | — |
 | 15 | evidence attributable | — | — | L execution.json, effective-policy.yaml, denials.log | — | — | — |
 | 16 | transfer cannot escape paths | L | L | GAP (no malicious-archive test) | — | — | L |
 
 Windows Local claims lifecycle and environment only, so most rows are `—`.
 The stretch bar (12 exercised scenarios per applicable backend) is met by
-Linux Isolated only; it is not met by Linux OpenShell vm (7 L: 1, 3, 9, 11, 13, 14, 15), Linux Jail or
+Linux Isolated only; it is not met by Linux OpenShell vm (6 L: 1, 3, 9, 11, 13, 15), Linux Jail or
 macOS Jail.
 
 ## Phase 3 — Linux live proof result (2026-10-26)
