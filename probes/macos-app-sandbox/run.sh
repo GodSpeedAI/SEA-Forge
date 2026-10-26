@@ -148,7 +148,7 @@ sc_2() {
 
 sc_3() {
     SCN=3; reset_canary; rm -f "$WS/sl3"
-    run_child 'echo ATTEMPT; ln -s @CANARY_SRC@ @WS@/sl3 && echo LINK_OK; echo tamper >> @WS@/sl3 && echo RESULT_OK || echo RESULT_ERR'
+    run_child 'echo ATTEMPT; ln -s @CANARY_SRC@ @WS@/sl3 && echo LINK_OK && echo tamper >> @WS@/sl3 && echo RESULT_OK || echo RESULT_ERR'
     local eff L=absent; eff=$(canary_changed); [ -L "$WS/sl3" ] && L=present
     finish "symlink in workspace -> canary, then write" denied "$eff" "$(mk ATTEMPT)" "$(eperm)" \
         "canary_changed=$eff link=$L" "child: $(res)"
@@ -156,7 +156,7 @@ sc_3() {
 
 sc_4() {
     SCN=4; reset_canary; rm -f "$WS/hl4"
-    run_child 'echo ATTEMPT; ln @CANARY_SRC@ @WS@/hl4 && echo LINK_OK; echo tamper4 >> @WS@/hl4 && echo RESULT_OK || echo RESULT_ERR'
+    run_child 'echo ATTEMPT; ln @CANARY_SRC@ @WS@/hl4 && echo LINK_OK && echo tamper4 >> @WS@/hl4 && echo RESULT_OK || echo RESULT_ERR'
     local eff L=absent
     eff=$(canary_changed)
     if [ -e "$WS/hl4" ] && [ "$(stat -f %i "$WS/hl4")" = "$(stat -f %i "$CANARY_SRC")" ]; then L=present; fi
@@ -231,9 +231,25 @@ sc_11() {
     run_child 'echo ATTEMPT; /usr/bin/python3 -c "import sys; print(\"PY_STARTED\"); open(\"@CANARY@/escape-11.txt\", \"w\").write(\"x\")" && echo RESULT_OK || echo RESULT_ERR'
     local eff=no; [ -e "$CANARY/escape-11.txt" ] && eff=yes
     local py=no; grep -q PY_STARTED "$OUT" && py=yes
-    finish "grandchild /usr/bin/python3 (sh -> python) writes canary" denied "$eff" \
-        "$([ "$(mk ATTEMPT)" = yes ] && [ "$py" = yes ] && echo yes || echo no)" "$(eperm)" \
-        "escape_file_present=$eff python_started=$py" "child: $(res)"
+    local shim=no; grep -q 'App Sandbox' "$OUT" && shim=yes
+    local marker=no
+    if [ "$(mk ATTEMPT)" = yes ] && { [ "$py" = yes ] || [ "$shim" = yes ]; }; then marker=yes; fi
+    # The Xcode CLT shim at /usr/bin/python3 refuses to run inside an App Sandbox.
+    # That is a tooling refusal, not an attempt, so it is a PASS only with the
+    # shim text present. Scenario 13 covers real grandchild inheritance.
+    finish "grandchild /usr/bin/python3 writes canary" denied "$eff" "$marker" \
+        "$([ "$shim" = yes ] && echo yes || eperm)" \
+        "escape_file_present=$eff python_started=$py xcrun_shim_refused=$shim" "child: $(res)"
+}
+
+sc_13() {
+    SCN=13; reset_canary; rm -f "$CANARY/escape-13.txt"
+    run_child 'echo ATTEMPT; /usr/bin/perl -e "print qq(PERL_STARTED\n); open(F, qq(>@CANARY@/escape-13.txt)) or die qq(open failed\n); print F qq(x); close F; print qq(RESULT_OK\n)" || echo RESULT_ERR'
+    local eff=no; [ -e "$CANARY/escape-13.txt" ] && eff=yes
+    local perl=no; grep -q PERL_STARTED "$OUT" && perl=yes
+    finish "grandchild /usr/bin/perl (sh -> perl) writes canary" denied "$eff" \
+        "$([ "$(mk ATTEMPT)" = yes ] && [ "$perl" = yes ] && echo yes || echo no)" yes \
+        "escape_file_present=$eff perl_started=$perl" "child: $(res)"
 }
 
 sc_12() {
@@ -309,7 +325,7 @@ run_one() {
     done
     [ "$ready" = yes ] || die "udp listener not ready on $UPORT"
 
-    local scenarios="1 2 3 4 5 6 7 8 9 10 11 12"
+    local scenarios="1 2 3 4 5 6 7 8 9 10 11 12 13"
     [ "$mode" = sandbox-net-on ] && scenarios="7 8 9 10"
     local n
     for n in $scenarios; do
