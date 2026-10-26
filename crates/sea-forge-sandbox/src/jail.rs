@@ -541,7 +541,7 @@ mod macos {
     use crate::{local::kill_timed_out_group, NetworkPosture, SandboxError, SandboxHandle};
     use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
     use std::{
-        fs::{self, File},
+        fs,
         os::unix::process::CommandExt,
         path::{Path, PathBuf},
         process::{Command, Stdio},
