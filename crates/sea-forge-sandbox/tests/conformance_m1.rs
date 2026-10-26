@@ -437,6 +437,17 @@ impl Drop for FixtureServer {
     }
 }
 
+/// The network jail cannot be enforced on this host. Skipping is not a pass,
+/// so when `SEA_FORGE_REQUIRE_LANDLOCK_NET=1` (required CI lanes) the test
+/// fails instead of returning as if the denial had been observed.
+#[cfg(target_os = "linux")]
+fn unavailable_network_jail(tag: &str, reason: &dyn std::fmt::Display) {
+    if std::env::var("SEA_FORGE_REQUIRE_LANDLOCK_NET").as_deref() == Ok("1") {
+        panic!("SEA_FORGE_REQUIRE_LANDLOCK_NET=1 but the network jail is unavailable ({tag}): {reason}");
+    }
+    eprintln!("Skipping network jail test ({tag}): {reason}");
+}
+
 /// Run one jailed probe with the given network posture and return the outcome
 /// string the helper wrote plus the execution status, or `None` if the host
 /// could not enforce the jail (so the test skips rather than falsely passes).
@@ -456,8 +467,8 @@ fn run_probe(
     let jail = match JailSandbox::new() {
         Ok(j) => j,
         Err(e) => {
-            eprintln!("Skipping network jail test ({tag}): {e}");
             fs::remove_dir_all(&parent).ok();
+            unavailable_network_jail(tag, &e);
             return None;
         }
     };
@@ -485,8 +496,8 @@ fn run_probe(
                 "jail must fail closed, not fall back to local (got {})",
                 e.class
             );
-            eprintln!("Skipping network jail test ({tag}): {e}");
             fs::remove_dir_all(&parent).ok();
+            unavailable_network_jail(tag, &e);
             return None;
         }
     };

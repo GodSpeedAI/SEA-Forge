@@ -94,13 +94,30 @@ case "$1" in
             exit 0
             ;;
         esac
-        if [ -f "$CTL/deleted" ]; then exit 1; fi
+        if [ -f "$CTL/gateway_down" ]; then
+          echo "Error: transport error: connection refused" >&2
+          exit 1
+        fi
+        if [ -f "$CTL/deleted" ]; then
+          # The 0.1.3 CLI prints tonic's Status display for a missing sandbox.
+          echo 'Error: status: NotFound, message: "sandbox not found", details: [], metadata: MetadataMap { headers: {} }' >&2
+          exit 1
+        fi
         exit 0
         ;;
       delete)
-        if [ -f "$CTL/delete_fail" ]; then
-          echo "not found" >&2
+        if [ -f "$CTL/gateway_down" ]; then
+          echo "Error: transport error: connection refused" >&2
           exit 1
+        fi
+        if [ -f "$CTL/delete_fail" ]; then
+          echo 'Error: status: PermissionDenied, message: "forbidden", details: [], metadata: MetadataMap { headers: {} }' >&2
+          exit 1
+        fi
+        if [ -f "$CTL/deleted" ]; then
+          # 0.1.3 deletes with allow_missing: an absent sandbox exits 0 (AlreadyAbsent).
+          echo "✓ Sandbox $3 already deleted"
+          exit 0
         fi
         : > "$CTL/deleted"
         exit 0
@@ -375,6 +392,36 @@ fn prepare_execute_download_destroy_happy_path() {
 
     sandbox.destroy(handle).expect("destroy");
     assert!(h.root.join("ctl/deleted").exists());
+}
+
+/// Delete and the follow-up get both fail with "connection refused": the
+/// gateway is unreachable, so the sandbox's state is unverified and cleanup
+/// must not be reported as success.
+#[test]
+fn unreachable_gateway_during_destroy_is_a_cleanup_failure() {
+    let h = harness();
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let handle = sandbox.prepare(&h.spec).expect("prepare");
+    ctl(&h, "gateway_down", "");
+
+    let result = sandbox.destroy(handle);
+    let Err(e) = result else {
+        panic!("destroy must not report success when the gateway is unreachable");
+    };
+    assert_eq!(e.class, "openshell_cleanup_failed");
+    let name = calls(&h)
+        .iter()
+        .rev()
+        .find(|l| l.contains(" sandbox delete "))
+        .and_then(|l| l.split_whitespace().last().map(str::to_string))
+        .expect("a delete call was recorded");
+    assert!(name.starts_with("sf-"), "unexpected sandbox name {name}");
+    assert!(
+        e.message.contains(&name),
+        "message must keep the sandbox name: {}",
+        e.message
+    );
+    assert!(!h.root.join("ctl/deleted").exists());
 }
 
 #[test]
@@ -804,28 +851,33 @@ fn an_oci_image_on_mxc_is_refused_before_anything_runs() {
     assert!(calls(&h).is_empty());
 }
 
+/// A native pin is a hash of a local path, which the gateway resolves again
+/// at run time. OpenShell 0.1.3 offers no digest-bound execution, so a native
+/// workload is refused before anything is created, even when the pin matches.
 #[test]
-fn a_native_executable_whose_hash_differs_from_the_pin_is_refused() {
+fn a_matching_native_image_is_refused_as_identity_unbound_before_create() {
     let mut h = harness();
     let image = bind_native(&mut h, b"tool");
-    // The pin names other bytes than the file holds.
-    let pinned = image.replace(
-        &hex::encode(Sha256::digest(b"tool")),
-        &hex::encode(Sha256::digest(b"other")),
-    );
     reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    ctl(&h, "gateway_driver", "mxc");
     let mut binding = h.binding.clone();
-    binding.image = Some(pinned);
+    binding.image = Some(image);
     let sandbox = OpenShellSandbox::new(binding);
-    assert_eq!(
-        error_class(sandbox.prepare(&h.spec)),
-        "openshell_executable_identity_mismatch"
+    let result = sandbox.prepare(&h.spec);
+    let message = match &result {
+        Err(e) => e.message.clone(),
+        Ok(_) => panic!("a native workload must not be prepared"),
+    };
+    assert_eq!(error_class(result), "openshell_native_identity_unbound");
+    assert!(
+        message.contains("offers no digest-bound execution"),
+        "{message}"
     );
     assert!(!has_prefix(&calls(&h), "openshell sandbox create "));
 }
 
 #[test]
-fn a_native_image_for_another_platform_is_refused() {
+fn a_native_image_for_another_platform_is_refused_as_identity_unbound() {
     let mut h = harness();
     let image = bind_native(&mut h, b"tool").replace(
         &format!("@{}-{}", std::env::consts::OS, std::env::consts::ARCH),
@@ -837,41 +889,9 @@ fn a_native_image_for_another_platform_is_refused() {
     let sandbox = OpenShellSandbox::new(binding);
     assert_eq!(
         error_class(sandbox.prepare(&h.spec)),
-        "openshell_executable_identity_mismatch"
+        "openshell_native_identity_unbound"
     );
-}
-
-#[test]
-fn a_matching_native_image_is_created_without_an_image_and_runs_only_its_executable() {
-    let mut h = harness();
-    let image = bind_native(&mut h, b"tool");
-    reproject(&h, &sandbox_json_for("mxc"), POLICY);
-    ctl(&h, "gateway_driver", "mxc");
-    let exe = h
-        .binding
-        .native_executable
-        .clone()
-        .expect("native executable");
-    let mut binding = h.binding.clone();
-    binding.image = Some(image);
-    let sandbox = OpenShellSandbox::new(binding);
-    let handle = sandbox.prepare(&h.spec).expect("prepare");
-    let lines = calls(&h);
-    let create = find_after(&lines, 0, "sandbox create", |l| {
-        l.starts_with("openshell sandbox create ")
-    });
-    assert!(!lines[create].contains("--from"), "{}", lines[create]);
-
-    let exe_text = exe.display().to_string();
-    let result = sandbox
-        .execute(&handle, &request(&[exe_text.as_str(), "x"], 30, &[]))
-        .expect("execute the pinned executable");
-    assert_eq!(result.status, ExecutionStatus::Completed);
-    let refused = sandbox.execute(&handle, &request(&["/bin/sh", "-c", "true"], 30, &[]));
-    assert_eq!(
-        error_class(refused),
-        "openshell_executable_identity_mismatch"
-    );
+    assert!(!has_prefix(&calls(&h), "openshell sandbox create "));
 }
 
 #[test]

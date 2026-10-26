@@ -15,7 +15,8 @@
 //!    requirement, Linux process identity, egress proxy). This is the
 //!    enforcement capability; it is separate from the policy proof below,
 //! 4. the workload image must match the driver's kind (OCI for `vm`, native
-//!    executable for `mxc`), and a native executable must hash to its pin,
+//!    executable for `mxc`); native executables are refused because the
+//!    gateway offers no digest-bound execution (`openshell_native_identity_unbound`),
 //! 5. the gateway must answer,
 //! 6. the policy the gateway actually composed, including provider rules, must
 //!    be within the projected policy according to `openshell-prover`, with
@@ -182,6 +183,13 @@ pub struct ProjectionIdentity {
 
 fn err(class: &'static str, message: impl Into<String>) -> SandboxError {
     SandboxError::new(class, message)
+}
+
+/// True only for the gRPC `NotFound` status the 0.1.3 CLI prints for
+/// `sandbox get` on a missing sandbox (tonic's `Status` display):
+/// `status: NotFound, message: "sandbox not found", ...`.
+fn is_sandbox_not_found(output: &str) -> bool {
+    output.contains("status: NotFound") && output.contains("message: \"sandbox not found\"")
 }
 
 fn sha256_file(path: &Path) -> Result<String, SandboxError> {
@@ -675,37 +683,6 @@ impl OpenShellSandbox {
         WorkloadImage::parse(image).map_err(|e| err("openshell_image_invalid", e.to_string()))
     }
 
-    /// A native image pins the executable's sha256 and the platform it runs
-    /// on. The file is hashed here, before creation. The gateway later opens
-    /// the same path itself, so this check is not a snapshot of what runs.
-    fn verify_native_identity(&self, workload: &WorkloadImage) -> Result<(), SandboxError> {
-        let WorkloadImage::Native { sha256, platform } = workload else {
-            return Ok(());
-        };
-        let mismatch = |message: String| err("openshell_executable_identity_mismatch", message);
-        let host = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
-        if *platform != host {
-            return Err(mismatch(format!(
-                "the native image is for {platform}, and this host is {host}"
-            )));
-        }
-        let executable = self
-            .binding
-            .native_executable
-            .as_ref()
-            .ok_or_else(|| mismatch("the native image declares no native_executable".into()))?;
-        let bytes =
-            fs::read(executable).map_err(|e| mismatch(format!("{}: {e}", executable.display())))?;
-        let actual = hex::encode(Sha256::digest(&bytes));
-        if actual != *sha256 {
-            return Err(mismatch(format!(
-                "{} hashes to sha256:{actual}, but the image pins sha256:{sha256}",
-                executable.display()
-            )));
-        }
-        Ok(())
-    }
-
     fn cli(&self, args: &[String], timeout: Duration) -> Result<Output, SandboxError> {
         self.cli_in(args, None, timeout)
     }
@@ -899,17 +876,27 @@ impl OpenShellSandbox {
         if out.code == Some(0) {
             return Ok(());
         }
-        // Deleting twice must succeed: a sandbox that is already gone is the goal.
+        // Only a positively identified not-found from a reachable gateway proves
+        // the sandbox is gone. Transport, authentication and unknown failures
+        // leave the workload's state unverified, so they are cleanup failures.
+        // (A delete of an absent sandbox exits 0 with AlreadyAbsent in 0.1.3,
+        // which takes the success path above.)
         let gone = self
             .cli(&strings(&["sandbox", "get", name]), CONTROL_TIMEOUT)
-            .map(|probe| probe.code != Some(0))
+            .map(|probe| {
+                probe.code != Some(0)
+                    && is_sandbox_not_found(&format!("{}{}", probe.stdout, probe.stderr))
+            })
             .unwrap_or(false);
         if gone {
             Ok(())
         } else {
             Err(err(
                 "openshell_cleanup_failed",
-                format!("could not delete sandbox {name}: {}", out.stderr.trim()),
+                format!(
+                    "could not delete sandbox {name}; cleanup is unverified: {}",
+                    out.stderr.trim()
+                ),
             ))
         }
     }
@@ -1100,6 +1087,15 @@ impl ExecutionSandbox for OpenShellSandbox {
         let enforcement =
             check_enforcement(identity.compute_driver, &snapshot.join("policy.yaml"))?;
         check_workload_kind(identity.compute_driver, &workload)?;
+        // A native pin hashes a local path, but the gateway later runs whatever
+        // that path resolves to. OpenShell 0.1.3 offers no digest-bound
+        // execution, so native executables are refused before anything exists.
+        if let WorkloadImage::Native { .. } = workload {
+            return Err(err(
+                "openshell_native_identity_unbound",
+                "native executables cannot be bound to the bytes the gateway runs: the OpenShell gateway offers no digest-bound execution; refusing before the sandbox is created",
+            ));
+        }
 
         let version = run(
             &self.binding.cli,
@@ -1120,7 +1116,6 @@ impl ExecutionSandbox for OpenShellSandbox {
         if self.binding.local_microvm_gateway {
             probe_local_driver(identity.compute_driver)?;
         }
-        self.verify_native_identity(&workload)?;
         let status = self.cli(&strings(&["status"]), CONTROL_TIMEOUT)?;
         if status.code != Some(0) {
             return Err(err(
