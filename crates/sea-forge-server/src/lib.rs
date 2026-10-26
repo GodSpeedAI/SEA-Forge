@@ -4566,7 +4566,9 @@ mod pipe_transport_tests {
             pipe
         });
         server.connect().await.expect("connect");
-        let (_reader, peer) = identify_pipe_client(server).await;
+        let Some((_reader, peer)) = identify_pipe_client(server).await else {
+            panic!("an identified client was dropped before admission");
+        };
         assert_eq!(peer.map(|p| p.sid), Some(me));
         drop(client.join().expect("client thread"));
     }
