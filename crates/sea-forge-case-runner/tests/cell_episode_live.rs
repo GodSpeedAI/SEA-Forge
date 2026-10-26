@@ -104,6 +104,27 @@ impl Live {
             .status
             .success()
     }
+
+    /// Runs `argv` inside a running sandbox from the host with
+    /// `openshell sandbox exec`, returning stdout only on success.
+    fn exec_in(&self, name: &str, argv: &[&str]) -> Option<String> {
+        let out = Command::new(&self.cli)
+            .args([
+                "--gateway",
+                &self.gateway,
+                "sandbox",
+                "exec",
+                "--name",
+                name,
+            ])
+            .args(["--no-tty", "--timeout", "60", "--"])
+            .args(argv)
+            .output()
+            .expect("openshell must run");
+        out.status
+            .success()
+            .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    }
 }
 
 fn git(dir: &Path, args: &[&str]) -> String {
@@ -398,16 +419,17 @@ fn live_authorized_episode_runs_in_a_microvm() {
 // ── 2. Egress to a host outside the policy is denied ──
 
 /// Claim (narrowed): an outbound connection to 203.0.113.10:443 did not
-/// succeed, and no `CONNECTED` was observed. No egress observed.
+/// succeed, and no `CONNECTED` was observed. No egress was observed.
 ///
-/// This does not show that the sandbox's network enforcement refused the
-/// connection. OpenShell 0.1.3 logged no `DENIED` record for that destination in
-/// live run 40281322154 (`denials.log` was empty), so the cause (policy, missing
-/// route or no listener) is not attributed. The denial record is printed below
-/// as evidence.
+/// No positive control exists in this environment: there is no reachable
+/// allowed endpoint, and OpenShell 0.1.3 logs no denial for the probe (live run
+/// 40281322154 left `denials.log` empty). The connection could fail for any
+/// reason (policy, missing route, or no listener at a documentation address),
+/// so this is not enforcement evidence and proves no network denial. The
+/// denial record is printed below for the record only.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
-fn live_network_egress_is_denied() {
+fn live_network_egress_is_not_observed() {
     let live = live();
     let root = new_root();
     // 203.0.113.0/24 is documentation space; the policy names no such host.
@@ -764,7 +786,11 @@ fn live_concurrent_sandboxes_are_isolated() {
     let control = format!("sf-control-b-{}", nanos());
     // B gets the token reversed, so its own argv never holds the literal.
     let reversed: String = token.chars().rev().collect();
-    let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 90; cat a-token.txt");
+    // A writes its token, then holds it until the host has finished B and
+    // releases it (`a-release.txt`). The 240s cap only stops a lost release.
+    let writer = format!(
+        "printf '%s' '{token}' > a-token.txt; i=0; while [ ! -f a-release.txt ] && [ $i -lt 240 ]; do sleep 1; i=$((i+1)); done; cat a-token.txt"
+    );
     let searcher = format!(
         "printf '%s' '{control}' > /tmp/b-control.txt; T=$(printf '%s' '{reversed}' | rev); \
          TREES=' /sandbox /tmp'; echo \"trees=$TREES\"; \
@@ -781,32 +807,65 @@ fn live_concurrent_sandboxes_are_isolated() {
             .join("artifacts"),
     );
 
-    let ((stdout_a, _), (stdout_b, result_b)) = std::thread::scope(|scope| {
-        let a =
-            scope.spawn(|| run_completed(&root_a, &live, "run_live_iso_a", &["sh", "-c", &writer]));
-        let deadline = Instant::now() + Duration::from_secs(600);
-        while !live.sandbox_exists(&name_a) {
+    const A_TOKEN: &str = "/sandbox/workspace/a-token.txt";
+    const A_RELEASE: &str = "/sandbox/workspace/a-release.txt";
+    let ((stdout_a, result_a, a_end), (stdout_b, result_b, b_start, b_end), token_ready) =
+        std::thread::scope(|scope| {
+            let a = scope.spawn(|| {
+                let (out, dir) =
+                    run_completed(&root_a, &live, "run_live_iso_a", &["sh", "-c", &writer]);
+                (out, dir, Instant::now())
+            });
+            // Host-observed readiness: A's token must be readable from inside
+            // A's sandbox while A is running. Creation alone proves nothing.
+            let deadline = Instant::now() + Duration::from_secs(600);
+            let token_ready = loop {
+                if live
+                    .exec_in(&name_a, &["cat", A_TOKEN])
+                    .is_some_and(|text| text.contains(&token))
+                {
+                    break Instant::now();
+                }
+                assert!(
+                    !a.is_finished() && Instant::now() < deadline,
+                    "episode A never wrote its token inside its sandbox"
+                );
+                std::thread::sleep(Duration::from_secs(2));
+            };
+            let b = scope.spawn(|| {
+                let started = Instant::now();
+                let (out, dir) =
+                    run_completed(&root_b, &live, "run_live_iso_b", &["sh", "-c", &searcher]);
+                (out, dir, started, Instant::now())
+            });
+            let (stdout_b, result_b, b_start, b_end) = b.join().expect("episode B");
+            // A is still holding the token: it is readable after B finished.
             assert!(
-                !a.is_finished() && Instant::now() < deadline,
-                "episode A never came up"
+                live.exec_in(&name_a, &["cat", A_TOKEN])
+                    .is_some_and(|text| text.contains(&token)),
+                "A's token was not readable after B finished, so A had already ended"
             );
-            std::thread::sleep(Duration::from_secs(2));
-        }
-        // Settle delay: A's upload and token write happen after creation.
-        std::thread::sleep(Duration::from_secs(30));
-        assert!(
-            !a.is_finished(),
-            "episode A finished before B could overlap it"
-        );
-        let b = scope
-            .spawn(|| run_completed(&root_b, &live, "run_live_iso_b", &["sh", "-c", &searcher]));
-        let b_result = b.join().expect("episode B");
-        assert!(
-            live.sandbox_exists(&name_a),
-            "A's sandbox was gone before B finished, so the episodes did not overlap"
-        );
-        (a.join().expect("episode A"), b_result)
-    });
+            assert!(
+                live.exec_in(&name_a, &["sh", "-c", &format!("touch {A_RELEASE}")])
+                    .is_some(),
+                "could not release episode A"
+            );
+            let (stdout_a, result_a, a_end) = a.join().expect("episode A");
+            (
+                (stdout_a, result_a, a_end),
+                (stdout_b, result_b, b_start, b_end),
+                token_ready,
+            )
+        });
+    assert!(
+        token_ready < b_start,
+        "B started before A's token was observed inside A's sandbox"
+    );
+    assert!(b_end < a_end, "B must finish while A still holds its token");
+    println!(
+        "ordering: token_ready < B_start < B_end < A_end; A result {}",
+        result_a.display()
+    );
 
     // A really held its token: its own sandbox echoed it back.
     assert!(
