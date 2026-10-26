@@ -38,12 +38,66 @@ fn hard_link_to_outside_file_keeps_its_bytes() {
     let planned = safe_join(workspace.path(), "planned.txt").expect("join");
     std::fs::hard_link(&outside, &planned).expect("hard link into workspace");
 
-    let result = safe_write(&planned, b"overwritten");
-    assert!(result.is_err(), "hard-linked destination was written");
+    // The write replaces the workspace entry with a fresh file. The outside
+    // hard-link target keeps its bytes, and the destination gets the new ones.
+    safe_write(&planned, b"overwritten").expect("replace the linked entry");
     assert_eq!(
         std::fs::read(&outside).expect("read outside"),
         b"outside original",
         "the outside hard-link target was truncated or rewritten"
+    );
+    assert_eq!(
+        std::fs::read(&planned).expect("read planned"),
+        b"overwritten"
+    );
+}
+
+#[test]
+fn junction_destination_is_refused_and_its_target_untouched() {
+    let outside = tempfile::tempdir().expect("outside");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let root = workspace.path();
+    let link = root.join("dest.txt");
+    if !make_junction(&link, outside.path()) {
+        return;
+    }
+    let checked = safe_join(root, "dest.txt").expect("join");
+
+    let result = safe_write_within(root, &checked, b"through the junction");
+    assert!(result.is_err(), "a junction destination was written");
+    assert_eq!(
+        std::fs::read_dir(outside.path())
+            .expect("read outside")
+            .count(),
+        0,
+        "a file was created inside the junction target"
+    );
+}
+
+#[test]
+fn missing_directories_under_a_swapped_junction_create_nothing_outside() {
+    let outside = tempfile::tempdir().expect("outside");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let root = workspace.path();
+    std::fs::create_dir(root.join("sub")).expect("sub");
+    std::fs::rename(root.join("sub"), root.join("sub_moved")).expect("move sub");
+    if !make_junction(&root.join("sub"), outside.path()) {
+        return;
+    }
+
+    // The walker must refuse the junction, and must not create `deeper`
+    // through it in the outside directory.
+    let result = safe_join(root, "sub/deeper/file.txt");
+    assert!(
+        result.is_err(),
+        "a directory was created through the junction"
+    );
+    assert_eq!(
+        std::fs::read_dir(outside.path())
+            .expect("read outside")
+            .count(),
+        0,
+        "a directory was created in the outside target"
     );
 }
 

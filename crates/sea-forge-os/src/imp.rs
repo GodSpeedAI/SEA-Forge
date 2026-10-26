@@ -1,6 +1,6 @@
 //! Windows implementation. Each `unsafe` block names the invariant it relies on.
 
-use std::ffi::c_void;
+use std::ffi::{c_void, OsStr};
 use std::io;
 use std::mem;
 use std::os::windows::ffi::OsStrExt;
@@ -12,7 +12,8 @@ use std::ptr::{null, null_mut};
 use std::time::{Duration, Instant};
 
 use windows_sys::Win32::Foundation::{
-    LocalFree, ERROR_ALREADY_EXISTS, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+    LocalFree, ERROR_ALREADY_EXISTS, ERROR_FILE_EXISTS, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
+    GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
@@ -22,11 +23,12 @@ use windows_sys::Win32::Security::{
     PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FileDispositionInfo, GetFileInformationByHandle, GetFinalPathNameByHandleW,
-    SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
-    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
-    FILE_DISPOSITION_INFO, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_DELETE, FILE_SHARE_READ,
-    FILE_SHARE_WRITE, OPEN_ALWAYS, VOLUME_NAME_DOS,
+    CreateDirectoryW, CreateFileW, FileDispositionInfo, FileRenameInfo, GetFileInformationByHandle,
+    GetFinalPathNameByHandleW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW,
+    DELETE, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
+    FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
+    FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ,
+    FILE_SHARE_WRITE, OPEN_EXISTING, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -372,152 +374,292 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> io::Result<()> {
     file.sync_all()
 }
 
-/// A file opened for a planned write by [`open_planned_file`].
-///
-/// Every fact below comes from the open handle, not from the path, so it
-/// describes the entry the write would actually touch even if a parent
-/// directory was swapped after the caller validated the path.
-pub struct PlannedFile {
-    file: std::fs::File,
-    created: bool,
-    links: u32,
-    reparse_point: bool,
-    directory: bool,
-    final_path: PathBuf,
+/// Why a pinned directory step was refused.
+#[derive(Debug)]
+pub enum PinError {
+    /// The entry is a symlink or junction. It is never followed.
+    ReparsePoint(PathBuf),
+    /// The entry exists but is not a directory.
+    NotDirectory(PathBuf),
+    /// The entry does not exist (only reported as an error by `open`; `entry_state` reports `Missing`).
+    Missing(PathBuf),
+    /// The resolved path is not a direct child of the pinned parent.
+    Escaped(PathBuf),
+    /// Any other OS failure.
+    Io(io::Error),
 }
 
-impl PlannedFile {
-    /// The open handle. Writes go through it.
-    pub fn file(&mut self) -> &mut std::fs::File {
-        &mut self.file
-    }
+/// What an entry under a pinned directory is. Read from an open handle that
+/// does not follow reparse points.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntryState {
+    Missing,
+    File,
+    Directory,
+    ReparsePoint,
+}
 
-    /// True when this open created the entry (it did not exist before).
-    pub fn created(&self) -> bool {
-        self.created
-    }
+/// A directory opened for a containment-checked write.
+///
+/// The handle is opened without `FILE_SHARE_DELETE`, so while it is held no
+/// other handle can rename, delete, or replace this directory. The path
+/// recorded at open time therefore keeps naming the same directory for the
+/// lifetime of the handle. Every step below the pinned directory is opened
+/// with `FILE_FLAG_OPEN_REPARSE_POINT`, refused if it is a reparse point, and
+/// checked to be a direct child of its pinned parent.
+pub struct PinnedDir {
+    handle: OwnedHandle,
+    path: PathBuf,
+}
 
-    /// Hard-link count of the entry (`nNumberOfLinks`).
-    pub fn links(&self) -> u32 {
-        self.links
-    }
+/// Monotonic counter so temp-sibling names do not collide within a process.
+static TEMP_SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-    /// True when the entry itself is a symlink or junction.
-    pub fn is_reparse_point(&self) -> bool {
-        self.reparse_point
-    }
+const PINNED_DIR_ACCESS: u32 = GENERIC_READ | GENERIC_WRITE;
+const DIRECTORY_FLAGS: u32 = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT;
 
-    /// True when the entry is a directory.
-    pub fn is_directory(&self) -> bool {
-        self.directory
-    }
+fn is_not_found(error: &io::Error) -> bool {
+    matches!(
+        error.raw_os_error(),
+        Some(code) if code == ERROR_FILE_NOT_FOUND as i32 || code == ERROR_PATH_NOT_FOUND as i32
+    )
+}
 
-    /// The entry's resolved path (`GetFinalPathNameByHandleW`, `VOLUME_NAME_DOS`).
-    pub fn final_path(&self) -> &Path {
-        &self.final_path
+fn handle_attributes(handle: HANDLE) -> io::Result<u32> {
+    // SAFETY: `info` is a plain out-struct of the layout the call writes; the handle is live and owned by the caller.
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { mem::zeroed() };
+    // SAFETY: the handle is live and `info` is a valid out-pointer.
+    if unsafe { GetFileInformationByHandle(handle, &mut info) } == FALSE {
+        return Err(last_error());
     }
+    Ok(info.dwFileAttributes)
+}
 
-    /// Deletes the entry through this handle. Used to undo a file that this
-    /// open created when the write is then refused.
-    pub fn delete(&self) -> io::Result<()> {
-        let info = FILE_DISPOSITION_INFO { DeleteFile: true };
-        // SAFETY: the handle is live and owned by `self.file` (opened with DELETE access); `info` is a live struct of the size passed for FileDispositionInfo.
-        let ok = unsafe {
-            SetFileInformationByHandle(
-                self.file.as_raw_handle() as HANDLE,
-                FileDispositionInfo,
-                (&info as *const FILE_DISPOSITION_INFO).cast(),
-                mem::size_of::<FILE_DISPOSITION_INFO>() as u32,
+fn handle_final_path(handle: HANDLE) -> io::Result<PathBuf> {
+    let mut buffer = vec![0u16; 1024];
+    loop {
+        // SAFETY: `buffer` is writable for `buffer.len()` UTF-16 units and the handle is live.
+        let needed = unsafe {
+            GetFinalPathNameByHandleW(
+                handle,
+                buffer.as_mut_ptr(),
+                buffer.len() as u32,
+                VOLUME_NAME_DOS,
             )
-        };
-        if ok == FALSE {
+        } as usize;
+        if needed == 0 {
             return Err(last_error());
         }
-        Ok(())
-    }
-
-    fn inspect(&mut self) -> io::Result<()> {
-        let handle = self.file.as_raw_handle() as HANDLE;
-        // SAFETY: `info` is a plain out-struct of the layout the call writes; the handle is live.
-        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { mem::zeroed() };
-        // SAFETY: the handle is live and `info` is a valid out-pointer.
-        if unsafe { GetFileInformationByHandle(handle, &mut info) } == FALSE {
-            return Err(last_error());
+        if needed < buffer.len() {
+            buffer.truncate(needed);
+            return Ok(PathBuf::from(std::ffi::OsString::from_wide(&buffer)));
         }
-        self.links = info.nNumberOfLinks;
-        self.reparse_point = info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0;
-        self.directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0;
-        let mut buffer = vec![0u16; 1024];
-        loop {
-            // SAFETY: `buffer` is writable for `buffer.len()` UTF-16 units and the handle is live.
-            let needed = unsafe {
-                GetFinalPathNameByHandleW(
-                    handle,
-                    buffer.as_mut_ptr(),
-                    buffer.len() as u32,
-                    VOLUME_NAME_DOS,
-                )
-            } as usize;
-            if needed == 0 {
-                return Err(last_error());
-            }
-            if needed < buffer.len() {
-                buffer.truncate(needed);
-                break;
-            }
-            // The buffer was too small: `needed` is the size including the NUL.
-            buffer.resize(needed + 1, 0);
-        }
-        self.final_path = PathBuf::from(std::ffi::OsString::from_wide(&buffer));
-        Ok(())
+        // The buffer was too small: `needed` is the size including the NUL.
+        buffer.resize(needed + 1, 0);
     }
 }
 
-/// Opens `path` for a planned write without following or truncating it.
-///
-/// `OPEN_ALWAYS` opens an existing entry without truncating it, and
-/// `FILE_FLAG_OPEN_REPARSE_POINT` opens a final-component reparse point as
-/// itself rather than its target. The caller must check the returned facts
-/// before writing. If the entry was created by this call and the facts are
-/// unacceptable, the caller should call [`PlannedFile::delete`].
-pub fn open_planned_file(path: &Path) -> io::Result<PlannedFile> {
+/// Opens `path` with the given access, share mode, disposition and flags.
+fn open_entry(
+    path: &Path,
+    access: u32,
+    share: u32,
+    disposition: u32,
+    flags: u32,
+) -> io::Result<OwnedHandle> {
     let wide = to_wide(path);
     // SAFETY: `wide` is NUL-terminated and outlives the call; null security attributes and template handle are valid.
     let raw = unsafe {
         CreateFileW(
             wide.as_ptr(),
-            GENERIC_READ | GENERIC_WRITE | DELETE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            access,
+            share,
             null(),
-            OPEN_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT,
+            disposition,
+            flags,
             null_mut(),
         )
     };
     if raw == INVALID_HANDLE_VALUE {
         return Err(last_error());
     }
-    // Read before any other call: OPEN_ALWAYS reports an existing entry as ERROR_ALREADY_EXISTS.
-    let created = last_error().raw_os_error() != Some(ERROR_ALREADY_EXISTS as i32);
     // SAFETY: CreateFileW succeeded, so `raw` is a fresh handle we own.
-    let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
-    let mut planned = PlannedFile {
-        file: std::fs::File::from(handle),
-        created,
-        links: 0,
-        reparse_point: false,
-        directory: false,
-        final_path: PathBuf::new(),
-    };
-    match planned.inspect() {
-        Ok(()) => Ok(planned),
-        Err(error) => {
-            if created {
-                let _ = planned.delete();
+    Ok(unsafe { OwnedHandle::from_raw_handle(raw as _) })
+}
+
+impl PinnedDir {
+    /// Opens `path` as a pinned directory. Refuses a reparse point and a
+    /// non-directory. The returned path is the handle's resolved path.
+    pub fn open(path: &Path) -> Result<PinnedDir, PinError> {
+        let handle = open_entry(
+            path,
+            PINNED_DIR_ACCESS,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            OPEN_EXISTING,
+            DIRECTORY_FLAGS,
+        )
+        .map_err(|error| {
+            if is_not_found(&error) {
+                PinError::Missing(path.to_path_buf())
+            } else {
+                PinError::Io(error)
             }
-            Err(error)
+        })?;
+        let attributes =
+            handle_attributes(handle.as_raw_handle() as HANDLE).map_err(PinError::Io)?;
+        if attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            return Err(PinError::ReparsePoint(path.to_path_buf()));
         }
+        if attributes & FILE_ATTRIBUTE_DIRECTORY == 0 {
+            return Err(PinError::NotDirectory(path.to_path_buf()));
+        }
+        let resolved = handle_final_path(handle.as_raw_handle() as HANDLE).map_err(PinError::Io)?;
+        Ok(PinnedDir {
+            handle,
+            path: resolved,
+        })
     }
+
+    /// The resolved path of the pinned directory (`VOLUME_NAME_DOS`).
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Opens the direct child `name` of this directory as a pinned directory.
+    /// With `create`, a missing child is created first, under this pinned
+    /// parent only. Nothing is created outside this directory.
+    pub fn child_dir(&self, name: &OsStr, create: bool) -> Result<PinnedDir, PinError> {
+        let child = self.path.join(name);
+        if create {
+            let wide = to_wide(&child);
+            // SAFETY: `wide` is NUL-terminated and outlives the call; null security attributes are valid.
+            if unsafe { CreateDirectoryW(wide.as_ptr(), null()) } == FALSE {
+                let error = last_error();
+                if error.raw_os_error() != Some(ERROR_ALREADY_EXISTS as i32) {
+                    return Err(PinError::Io(error));
+                }
+            }
+        }
+        let dir = PinnedDir::open(&child)?;
+        if dir.path.parent() != Some(self.path.as_path()) {
+            return Err(PinError::Escaped(dir.path));
+        }
+        Ok(dir)
+    }
+
+    /// Reports what `name` is, without following a reparse point.
+    pub fn entry_state(&self, name: &OsStr) -> Result<EntryState, PinError> {
+        let child = self.path.join(name);
+        let handle = match open_entry(
+            &child,
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            OPEN_EXISTING,
+            DIRECTORY_FLAGS,
+        ) {
+            Ok(handle) => handle,
+            Err(error) if is_not_found(&error) => return Ok(EntryState::Missing),
+            Err(error) => return Err(PinError::Io(error)),
+        };
+        let attributes =
+            handle_attributes(handle.as_raw_handle() as HANDLE).map_err(PinError::Io)?;
+        Ok(if attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            EntryState::ReparsePoint
+        } else if attributes & FILE_ATTRIBUTE_DIRECTORY != 0 {
+            EntryState::Directory
+        } else {
+            EntryState::File
+        })
+    }
+
+    /// Replaces the entry `name` in this directory with `bytes`, without
+    /// touching any existing inode.
+    ///
+    /// The bytes go to a fresh temp sibling created with `CREATE_NEW`, which
+    /// is flushed and then renamed onto `name` with `ReplaceIfExists`, using
+    /// this pinned directory as the rename root. An existing hard link to the
+    /// old entry keeps the old bytes: only the directory entry changes. On
+    /// failure the temp sibling is marked delete-on-close.
+    pub fn write_replacing(&self, name: &OsStr, bytes: &[u8]) -> io::Result<()> {
+        use std::io::Write;
+        use std::sync::atomic::Ordering;
+        let mut attempts = 0;
+        let handle = loop {
+            let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+            let mut temp_name = std::ffi::OsString::from(".");
+            temp_name.push(name);
+            temp_name.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
+            let temp_path = self.path.join(&temp_name);
+            match open_entry(
+                &temp_path,
+                GENERIC_WRITE | DELETE,
+                FILE_SHARE_READ,
+                CREATE_NEW,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT,
+            ) {
+                Ok(handle) => break handle,
+                Err(error)
+                    if error.raw_os_error() == Some(ERROR_FILE_EXISTS as i32) && attempts < 16 =>
+                {
+                    attempts += 1;
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        let mut file = std::fs::File::from(handle);
+        let outcome = file
+            .write_all(bytes)
+            .and_then(|()| file.sync_all())
+            .and_then(|()| {
+                rename_handle_into(
+                    file.as_raw_handle() as HANDLE,
+                    self.handle.as_raw_handle() as HANDLE,
+                    name,
+                )
+            });
+        if outcome.is_err() {
+            let info = FILE_DISPOSITION_INFO { DeleteFile: true };
+            // SAFETY: the handle is live and was opened with DELETE access; `info` is a live struct of the size passed.
+            unsafe {
+                SetFileInformationByHandle(
+                    file.as_raw_handle() as HANDLE,
+                    FileDispositionInfo,
+                    (&info as *const FILE_DISPOSITION_INFO).cast(),
+                    mem::size_of::<FILE_DISPOSITION_INFO>() as u32,
+                )
+            };
+        }
+        outcome
+    }
+}
+
+/// Renames the open file `file` to `name` inside the directory `root_dir`,
+/// replacing an existing entry. `name` must be a single relative component.
+fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Result<()> {
+    let name_wide: Vec<u16> = name.encode_wide().collect();
+    let name_bytes = name_wide.len() * mem::size_of::<u16>();
+    // FILE_RENAME_INFO already holds one UTF-16 unit in `FileName`, so the
+    // header plus `name_bytes` is always large enough for the name.
+    let size = mem::size_of::<FILE_RENAME_INFO>() + name_bytes;
+    // u64 storage keeps the buffer aligned for the FILE_RENAME_INFO header.
+    let mut buffer = vec![0u64; size.div_ceil(mem::size_of::<u64>())];
+    let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
+    // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `name_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
+    unsafe {
+        (*info).Anonymous = FILE_RENAME_INFO_0 {
+            ReplaceIfExists: true,
+        };
+        (*info).RootDirectory = root_dir;
+        (*info).FileNameLength = name_bytes as u32;
+        let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
+        std::ptr::copy_nonoverlapping(name_wide.as_ptr(), destination, name_wide.len());
+    }
+    // SAFETY: `file` is a live handle opened with DELETE access; `info` points at `size` initialized bytes that outlive the call.
+    let ok = unsafe { SetFileInformationByHandle(file, FileRenameInfo, info.cast(), size as u32) };
+    if ok == FALSE {
+        return Err(last_error());
+    }
+    Ok(())
 }
 
 /// Resumes every thread of `pid`. Fails if none was resumed.
@@ -858,25 +1000,24 @@ mod tests {
     }
 
     #[test]
-    fn planned_file_reports_hard_links_and_creation() {
-        let dir = std::env::temp_dir().join(format!("sf-os-planned-{}", std::process::id()));
+    fn pinned_dir_replaces_a_hard_linked_entry_without_touching_the_link() {
+        let dir = std::env::temp_dir().join(format!("sf-os-pinned-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("dir");
-        let fresh = dir.join("fresh.txt");
-        let planned = open_planned_file(&fresh).expect("open fresh");
-        assert!(planned.created());
-        assert_eq!(planned.links(), 1);
-        assert!(!planned.is_reparse_point());
-        drop(planned);
-
         let outside = dir.join("outside.txt");
         std::fs::write(&outside, b"keep").expect("seed");
         let linked = dir.join("linked.txt");
         std::fs::hard_link(&outside, &linked).expect("hard link");
-        let planned = open_planned_file(&linked).expect("open linked");
-        assert!(!planned.created());
-        assert_eq!(planned.links(), 2);
-        drop(planned);
+        let pinned = PinnedDir::open(&dir).expect("open pinned");
+        assert_eq!(
+            pinned.entry_state(OsStr::new("linked.txt")).expect("state"),
+            EntryState::File
+        );
+        pinned
+            .write_replacing(OsStr::new("linked.txt"), b"new")
+            .expect("replace");
         assert_eq!(std::fs::read(&outside).expect("read"), b"keep");
+        assert_eq!(std::fs::read(&linked).expect("read"), b"new");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

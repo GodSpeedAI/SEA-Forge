@@ -317,6 +317,34 @@ pub fn safe_existing(root: &Path, rel: &str) -> Result<PathBuf, ForgeError> {
     }
     Ok(canonical)
 }
+/// Windows: every parent component is walked through pinned directory
+/// handles (`sea_forge_os::PinnedDir`). Reparse points are refused, and each
+/// step is checked to stay inside `canonical_root`. With `create_missing`, a
+/// missing component is created under its pinned parent, one at a time. The
+/// previous pathname-based `create_dir` could follow a junction swapped in
+/// after validation, so it is not used on Windows.
+#[cfg(windows)]
+fn checked_parent(
+    canonical_root: &Path,
+    relative: &Path,
+    original: &str,
+    create_missing: bool,
+) -> Result<PathBuf, ForgeError> {
+    let parent = relative
+        .parent()
+        .ok_or_else(|| ForgeError::UnsafePath(original.into()))?;
+    let names: Vec<&std::ffi::OsStr> = parent
+        .components()
+        .filter_map(|component| match component {
+            Component::Normal(name) => Some(name),
+            _ => None,
+        })
+        .collect();
+    pinned_walk(canonical_root, &names, create_missing)?;
+    Ok(canonical_root.join(parent))
+}
+
+#[cfg(not(windows))]
 fn checked_parent(
     canonical_root: &Path,
     relative: &Path,
@@ -359,60 +387,157 @@ fn checked_parent(
     }
     Ok(safe_parent)
 }
-/// F-25.i: write-through after `safe_join` without reopening the
-/// check-then-use window. The destination is opened with `O_NOFOLLOW`, so a
-/// symlink swapped in between validation and open fails with `ELOOP` (mapped
-/// to a typed unsafe-path error) instead of writing through the link. The
-/// flag and errno come from `libc`: their values differ per OS and
-/// architecture (macOS, aarch64 Linux), so a hardcoded literal silently
-/// disables the guard off x86 Linux.
-/// Residual parent-component races remain until `openat2(RESOLVE_BENEATH)`
-/// stabilizes; per-component re-validation in `safe_join` keeps them narrow.
+/// F-25.i / F04: replaces the destination entry, never writing an existing
+/// inode. The bytes go to a fresh temp sibling created with
+/// `O_CREAT|O_EXCL|O_NOFOLLOW` in the destination's parent, which is opened
+/// with `O_DIRECTORY|O_NOFOLLOW`. The temp file is fsynced and then renamed
+/// over the destination with `renameat`, relative to that directory
+/// descriptor. An existing hard link to the old entry therefore keeps its
+/// bytes, because only the directory entry changes. A symlink at the
+/// destination is refused before anything is written, and a directory fails
+/// with `EISDIR`.
+///
+/// Residual race: the parent is opened by path, so a parent component swapped
+/// to a symlink between validation and open is not detected here. Per-component
+/// re-validation in `safe_join` keeps that window narrow until
+/// `openat2(RESOLVE_BENEATH)` stabilizes. A concurrent hard link created after
+/// the check is harmless: the rename replaces the entry, and the link keeps
+/// the old inode, so no race can make this write reach a shared inode.
 #[cfg(unix)]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
+    use rustix::fs::{AtFlags, Mode, OFlags};
+    use rustix::io::Errno;
     use std::io::Write;
-    use std::os::unix::fs::OpenOptionsExt;
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .custom_flags(libc::O_NOFOLLOW)
-        .open(destination)
-        .map_err(|e| {
-            if e.raw_os_error() == Some(libc::ELOOP) {
-                ForgeError::UnsafePath(format!(
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+    let parent = destination.parent().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination has no parent: {}",
+            destination.display()
+        ))
+    })?;
+    let name = destination.file_name().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination has no file name: {}",
+            destination.display()
+        ))
+    })?;
+    let open_error = |error: Errno| {
+        ForgeError::io(
+            format!("open planned file {}", destination.display()),
+            std::io::Error::from(error),
+        )
+    };
+    let dir = rustix::fs::open(
+        parent,
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+        Mode::empty(),
+    )
+    .map_err(open_error)?;
+    // The mode of an existing entry is kept; a new file gets 0666 minus the umask.
+    let mode = match rustix::fs::statat(&dir, name, AtFlags::SYMLINK_NOFOLLOW) {
+        Ok(stat) => match stat.st_mode & libc::S_IFMT {
+            libc::S_IFLNK => {
+                return Err(ForgeError::UnsafePath(format!(
                     "destination {} was swapped to a symlink during materialization",
                     destination.display()
-                ))
-            } else {
-                ForgeError::io(format!("open planned file {}", destination.display()), e)
+                )))
             }
-        })?;
-    file.write_all(bytes)
-        .map_err(|e| ForgeError::io("write planned file", e))?;
+            libc::S_IFDIR => {
+                return Err(open_error(Errno::ISDIR));
+            }
+            _ => stat.st_mode & 0o7777,
+        },
+        Err(Errno::NOENT) => 0o666,
+        Err(error) => return Err(open_error(error)),
+    };
+    let mut attempts = 0;
+    let (temp_name, fd) = loop {
+        let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let mut candidate = std::ffi::OsString::from(".");
+        candidate.push(name);
+        candidate.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
+        match rustix::fs::openat(
+            &dir,
+            candidate.as_os_str(),
+            OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::from_raw_mode(mode),
+        ) {
+            Ok(fd) => break (candidate, fd),
+            Err(Errno::EXIST) if attempts < 16 => attempts += 1,
+            Err(error) => return Err(open_error(error)),
+        }
+    };
+    let mut file = std::fs::File::from(fd);
+    let outcome = file
+        .write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .and_then(|()| {
+            rustix::fs::renameat(&dir, temp_name.as_os_str(), &dir, name)
+                .map_err(std::io::Error::from)
+        });
+    if let Err(error) = outcome {
+        let _ = rustix::fs::unlinkat(&dir, temp_name.as_os_str(), AtFlags::empty());
+        return Err(ForgeError::io("write planned file", error));
+    }
+    let _ = rustix::fs::fsync(&dir);
     Ok(())
 }
 
-/// Windows: `safe_write` without an authorized root. It refuses reparse
-/// points and hard-linked entries and never truncates an entry it has not
-/// vetted. Parent-directory substitution is caught only by
-/// [`safe_write_within`], which knows the root to compare against.
+/// Windows: `safe_write` without an authorized root. The destination's parent
+/// is pinned (see `sea_forge_os::PinnedDir`), and the entry is replaced
+/// atomically through that pinned directory. No containment check runs,
+/// because no root is given.
 #[cfg(windows)]
 pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
-    write_planned_windows(None, destination, bytes)
+    let parent = destination.parent().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination has no parent: {}",
+            destination.display()
+        ))
+    })?;
+    let name = destination.file_name().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination has no file name: {}",
+            destination.display()
+        ))
+    })?;
+    let dir = pin_path(parent)?;
+    write_entry_windows(&dir, destination, name, bytes)
 }
 
 /// Writes `bytes` to `destination`, which must resolve inside `root`.
 ///
-/// Windows: the entry is opened without truncation and with
-/// `FILE_FLAG_OPEN_REPARSE_POINT`. Before any truncation the handle must show
-/// a regular entry (not a reparse point or directory), a single hard link,
-/// and a resolved path inside the canonical `root`. The resolved path is
-/// taken from the handle, so a junction swapped into a parent directory is
-/// caught too. A file this call created is deleted again on refusal.
+/// Windows: the destination's parent chain is walked from the canonical root
+/// with every directory pinned (no `FILE_SHARE_DELETE`), reparse points
+/// refused, and each resolved path checked to stay inside `root`. The entry
+/// is then replaced atomically inside the pinned parent. A hard link to the
+/// old entry is never written. A destination that is a symlink or junction,
+/// or a directory, is refused before anything is written.
 #[cfg(windows)]
 pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
-    write_planned_windows(Some(root), destination, bytes)
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|e| ForgeError::io("canonicalize workspace", e))?;
+    let relative = destination
+        .strip_prefix(&canonical_root)
+        .or_else(|_| destination.strip_prefix(root))
+        .map_err(|_| {
+            ForgeError::UnsafePath(format!(
+                "destination {} resolves outside the workspace",
+                destination.display()
+            ))
+        })?;
+    let names = normal_components(relative, destination)?;
+    let (file_name, parents) = names.split_last().ok_or_else(|| {
+        ForgeError::UnsafePath(format!(
+            "destination is not a file: {}",
+            destination.display()
+        ))
+    })?;
+    let dir = pinned_walk(&canonical_root, parents, false)?;
+    write_entry_windows(&dir, destination, file_name, bytes)
 }
 
 /// Non-Windows: parent-directory containment is not checked here (see the
@@ -423,71 +548,110 @@ pub fn safe_write_within(_root: &Path, destination: &Path, bytes: &[u8]) -> Resu
 }
 
 #[cfg(windows)]
-fn write_planned_windows(
-    root: Option<&Path>,
+fn normal_components<'a>(
+    relative: &'a Path,
     destination: &Path,
-    bytes: &[u8],
-) -> Result<(), ForgeError> {
-    use std::io::Write;
-    let canonical_root = root
-        .map(|root| {
-            root.canonicalize()
-                .map_err(|e| ForgeError::io("canonicalize workspace", e))
+) -> Result<Vec<&'a std::ffi::OsStr>, ForgeError> {
+    relative
+        .components()
+        .map(|component| match component {
+            Component::Normal(name) => Ok(name),
+            _ => Err(ForgeError::UnsafePath(format!(
+                "unsafe destination {}",
+                destination.display()
+            ))),
         })
-        .transpose()?;
-    let mut planned = sea_forge_os::open_planned_file(destination)
-        .map_err(|e| ForgeError::io(format!("open planned file {}", destination.display()), e))?;
-    if let Err(error) = vet_planned_windows(&planned, destination, canonical_root.as_deref()) {
-        if planned.created() {
-            let _ = planned.delete();
-        }
-        return Err(error);
-    }
-    planned
-        .file()
-        .set_len(0)
-        .map_err(|e| ForgeError::io("truncate planned file", e))?;
-    planned
-        .file()
-        .write_all(bytes)
-        .map_err(|e| ForgeError::io("write planned file", e))?;
-    Ok(())
+        .collect()
 }
 
 #[cfg(windows)]
-fn vet_planned_windows(
-    planned: &sea_forge_os::PlannedFile,
-    destination: &Path,
-    root: Option<&Path>,
-) -> Result<(), ForgeError> {
-    if planned.is_reparse_point() {
+fn pin_error(error: sea_forge_os::PinError, path: &Path) -> ForgeError {
+    use sea_forge_os::PinError;
+    match error {
+        PinError::ReparsePoint(_) => ForgeError::UnsafePath(format!(
+            "parent is a symlink or junction: {}",
+            path.display()
+        )),
+        PinError::NotDirectory(_) => {
+            ForgeError::UnsafePath(format!("parent is not a directory: {}", path.display()))
+        }
+        PinError::Missing(_) => {
+            ForgeError::UnsafePath(format!("parent does not exist: {}", path.display()))
+        }
+        PinError::Escaped(_) => ForgeError::UnsafePath(format!(
+            "parent resolves outside the workspace: {}",
+            path.display()
+        )),
+        PinError::Io(error) => ForgeError::io(format!("pin directory {}", path.display()), error),
+    }
+}
+
+/// Opens `path` as a pinned directory with no containment check.
+#[cfg(windows)]
+fn pin_path(path: &Path) -> Result<sea_forge_os::PinnedDir, ForgeError> {
+    sea_forge_os::PinnedDir::open(path).map_err(|error| pin_error(error, path))
+}
+
+/// Pins `canonical_root`, then each of `names` below it, one component at a
+/// time. Each pinned parent is checked to stay inside `canonical_root`
+/// before any child is opened. With `create`, a missing component is created
+/// under its pinned parent. Nothing is created outside the pinned chain.
+#[cfg(windows)]
+fn pinned_walk(
+    canonical_root: &Path,
+    names: &[&std::ffi::OsStr],
+    create: bool,
+) -> Result<sea_forge_os::PinnedDir, ForgeError> {
+    let mut dir = pin_path(canonical_root)?;
+    if !dir.path().starts_with(canonical_root) {
         return Err(ForgeError::UnsafePath(format!(
-            "destination {} is a reparse point (symlink or junction)",
-            destination.display()
+            "workspace root resolves outside the workspace: {}",
+            canonical_root.display()
         )));
     }
-    if planned.is_directory() {
-        return Err(ForgeError::UnsafePath(format!(
-            "destination {} is a directory",
-            destination.display()
-        )));
-    }
-    if planned.links() != 1 {
-        return Err(ForgeError::UnsafePath(format!(
-            "destination {} has {} hard links; refusing to truncate a shared file",
-            destination.display(),
-            planned.links()
-        )));
-    }
-    if let Some(root) = root {
-        if !planned.final_path().starts_with(root) {
+    for name in names {
+        let child_path = dir.path().join(name);
+        dir = dir
+            .child_dir(name, create)
+            .map_err(|error| pin_error(error, &child_path))?;
+        if !dir.path().starts_with(canonical_root) {
             return Err(ForgeError::UnsafePath(format!(
-                "destination {} resolves outside the workspace",
-                destination.display()
+                "parent resolves outside the workspace: {}",
+                child_path.display()
             )));
         }
     }
-    Ok(())
+    Ok(dir)
+}
+
+/// Replaces the entry `name` inside the pinned `dir`, after refusing a
+/// destination that is a reparse point or a directory.
+#[cfg(windows)]
+fn write_entry_windows(
+    dir: &sea_forge_os::PinnedDir,
+    destination: &Path,
+    name: &std::ffi::OsStr,
+    bytes: &[u8],
+) -> Result<(), ForgeError> {
+    use sea_forge_os::EntryState;
+    match dir.entry_state(name) {
+        Ok(EntryState::Missing | EntryState::File) => {}
+        Ok(EntryState::ReparsePoint) => {
+            return Err(ForgeError::UnsafePath(format!(
+                "destination {} is a reparse point (symlink or junction)",
+                destination.display()
+            )))
+        }
+        Ok(EntryState::Directory) => {
+            return Err(ForgeError::UnsafePath(format!(
+                "destination {} is a directory",
+                destination.display()
+            )))
+        }
+        Err(error) => return Err(pin_error(error, destination)),
+    }
+    dir.write_replacing(name, bytes)
+        .map_err(|e| ForgeError::io(format!("write planned file {}", destination.display()), e))
 }
 
 #[cfg(not(any(unix, windows)))]
@@ -567,6 +731,55 @@ mod tests {
         assert!(!outside.join("escape.txt").exists());
         symlink(outside.join("file.txt"), root.join("file.txt")).unwrap();
         assert!(safe_join(&root, "file.txt").is_err());
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// Creates `<tmp>/sea-forge-<tag>-<nonce>/{workspace, outside.txt}`.
+    #[cfg(unix)]
+    fn unix_write_fixture(tag: &str) -> (PathBuf, PathBuf, PathBuf) {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let parent = std::env::temp_dir().join(format!("sea-forge-{tag}-{nonce}"));
+        let root = parent.join("workspace");
+        let outside = parent.join("outside.txt");
+        fs::create_dir_all(&root).unwrap();
+        fs::write(&outside, b"outside original").unwrap();
+        (parent, root, outside)
+    }
+
+    /// F04 regression: a pre-planted hard link to an outside file must keep
+    /// its bytes. The old `O_TRUNC` open rewrote the shared inode.
+    #[cfg(unix)]
+    #[test]
+    fn hard_linked_destination_keeps_outside_bytes() {
+        let (parent, root, outside) = unix_write_fixture("hardlink");
+        let destination = root.join("planned.txt");
+        fs::hard_link(&outside, &destination).unwrap();
+
+        safe_write(&destination, b"overwritten").unwrap();
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        assert_eq!(fs::read(&destination).unwrap(), b"overwritten");
+
+        safe_write_within(&root, &destination, b"again").unwrap();
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        assert_eq!(fs::read(&destination).unwrap(), b"again");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// A symlink at the destination is refused and its target is untouched.
+    #[cfg(unix)]
+    #[test]
+    fn symlink_destination_is_refused_and_its_target_untouched() {
+        use std::os::unix::fs::symlink;
+        let (parent, root, outside) = unix_write_fixture("symlink-dest");
+        let destination = root.join("planned.txt");
+        symlink(&outside, &destination).unwrap();
+
+        let result = safe_write(&destination, b"captured");
+        assert!(matches!(result, Err(ForgeError::UnsafePath(_))));
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
         fs::remove_dir_all(parent).unwrap();
     }
 }

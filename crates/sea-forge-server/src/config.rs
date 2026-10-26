@@ -598,6 +598,36 @@ impl ServerConfig {
     }
 }
 
+/// Error class for a reload refused because it would change the SIDs the
+/// Windows server pipe admits (F30). The pipe's security descriptor is built
+/// once at startup, so the transport cannot enforce the change until restart.
+pub const IDENTITY_RELOAD_REQUIRES_RESTART: &str = "identity_reload_requires_restart";
+
+/// The SIDs the Windows server pipe admits for `config`: every identity
+/// binding's SID, plus the gateway's SID. Sorted and deduplicated, so the
+/// comparison does not depend on declaration order.
+#[cfg(any(windows, test))]
+pub fn pipe_admitted_sids(config: &ServerConfig) -> Vec<String> {
+    let mut sids: Vec<String> = config
+        .identity
+        .bindings
+        .iter()
+        .filter_map(|binding| binding.sid.clone())
+        .collect();
+    #[cfg(windows)]
+    sids.extend(config.gateway.as_ref().map(|gateway| gateway.sid.clone()));
+    sids.sort();
+    sids.dedup();
+    sids
+}
+
+/// Whether reloading from `active` to `next` changes the SIDs the Windows
+/// pipe admits. A change of that set needs a restart, so the reload is refused.
+#[cfg(any(windows, test))]
+pub fn reload_changes_pipe_admission(active: &ServerConfig, next: &ServerConfig) -> bool {
+    pipe_admitted_sids(active) != pipe_admitted_sids(next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1135,5 +1165,80 @@ mod cep_prior_identity_config_tests {
             .collect();
         let refs: Vec<&str> = many.iter().map(String::as_str).collect();
         assert!(load_with_priors(&refs).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod pipe_sid_reload_tests {
+    use super::*;
+    use crate::identity::{IdentityBinding, IdentityBindings};
+
+    fn bound(sid: &str) -> IdentityBinding {
+        IdentityBinding {
+            uid: None,
+            sid: Some(sid.to_string()),
+            actor_id: format!("actor-{sid}"),
+            roles: Vec::new(),
+        }
+    }
+
+    fn with_sids(sids: &[&str]) -> ServerConfig {
+        ServerConfig {
+            identity: IdentityBindings {
+                bindings: sids.iter().map(|sid| bound(sid)).collect(),
+            },
+            ..ServerConfig::default()
+        }
+    }
+
+    #[test]
+    fn adding_a_distinct_sid_changes_pipe_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        let next = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        assert!(reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn removing_a_sid_changes_pipe_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        let next = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        assert!(reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn the_same_sid_set_in_another_order_does_not_change_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        let next = with_sids(&[
+            "S-1-5-21-1-1-1-1002",
+            "S-1-5-21-1-1-1-1001",
+            "S-1-5-21-1-1-1-1001",
+        ]);
+        assert!(!reload_changes_pipe_admission(&active, &next));
+        assert_eq!(pipe_admitted_sids(&next).len(), 2);
+    }
+
+    #[test]
+    fn a_change_that_touches_no_sid_does_not_change_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        let next = ServerConfig {
+            max_concurrent_runs: 9,
+            ..with_sids(&["S-1-5-21-1-1-1-1001"])
+        };
+        assert!(!reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn a_binding_without_a_sid_is_not_admitted_by_the_pipe() {
+        let mut next = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        next.identity.bindings.push(IdentityBinding {
+            uid: Some(1000),
+            sid: None,
+            actor_id: "uid-only".to_string(),
+            roles: Vec::new(),
+        });
+        assert_eq!(
+            pipe_admitted_sids(&next),
+            vec!["S-1-5-21-1-1-1-1001".to_string()]
+        );
     }
 }

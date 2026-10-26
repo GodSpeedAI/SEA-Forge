@@ -166,6 +166,34 @@ fn state_for(root: &Path) -> ServerState {
     .expect("failed to build server state")
 }
 
+/// F30: on Windows the server pipe's DACL is fixed at startup, so a reload
+/// that admits a new SID is refused with the restart-required class, and the
+/// previous snapshot stays live.
+#[cfg(windows)]
+#[test]
+fn a_reload_that_admits_a_new_sid_is_refused_and_keeps_the_old_config() {
+    let root = tempfile::tempdir().unwrap();
+    let state = state_for(root.path());
+    fs::write(
+        root.path().join("server.yaml"),
+        "max_concurrent_runs: 9\nidentity:\n  bindings:\n    - sid: \"S-1-5-21-1-1-1-1002\"\n      actor_id: second_operator\n",
+    )
+    .unwrap();
+
+    let refusal = state
+        .reload_config()
+        .expect_err("a reload that admits a new SID must be refused on Windows");
+    assert_eq!(
+        refusal.error_class,
+        Some(sea_forge_server::config::IDENTITY_RELOAD_REQUIRES_RESTART)
+    );
+    assert_eq!(
+        state.config().max_concurrent_runs,
+        4,
+        "a refused identity reload must leave the previous snapshot active"
+    );
+}
+
 #[test]
 fn a_valid_reload_replaces_the_live_snapshot() {
     let root = tempfile::tempdir().unwrap();
@@ -202,7 +230,7 @@ fn an_invalid_reload_keeps_the_last_known_good() {
         .expect_err("a malformed reload must be rejected");
 
     assert!(
-        error.contains("parse"),
+        error.message.contains("parse"),
         "expected a typed parse error: {error}"
     );
     assert_eq!(
