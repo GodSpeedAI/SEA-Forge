@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Live plan-template wiring (plan casework-live-wiring-production T03,
 //! resolves GAP-D): real `PlanTemplate` YAMLs, loaded through the real
 //! loader, proven over the real Unix-socket server on a temp cell seeded the

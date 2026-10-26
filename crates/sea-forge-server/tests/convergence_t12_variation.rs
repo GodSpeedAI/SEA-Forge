@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Convergence T12 — Variation Battery: Canonical Runtime Under Variation (Rust side)
 //!
 //! Covers the 7 frozen variation classes through SEA-Forge's REAL production gates

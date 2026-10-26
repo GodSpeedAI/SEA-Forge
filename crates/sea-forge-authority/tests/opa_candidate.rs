@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! OPA candidate: a real `opa` 1.21.1 evaluation over the DomainForge Rego
 //! bundle, and stub-binary tests proving every evaluation failure fails closed.
 //!

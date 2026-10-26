@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Obligation settlement from RealityTrace's own ledger (Horizon HORIZON-001 1.1.0, REQ-NAV-011/012): the
 //! request's claims are recorded with the decision; the closure's C is SEA-Forge's own read of RealityTrace's
 //! head, stamped by SEA-Forge's clock; only admissible, known results decide, by the REQ-NAV-012 table.

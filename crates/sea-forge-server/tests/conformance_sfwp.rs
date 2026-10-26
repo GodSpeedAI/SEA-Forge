@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SFWP transport conformance tests (Task 3).
 //!
 //! These talk over a real Unix socket with real `ServerConfig`/`ServerState`,

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! M6 federation conformance (spec-full §7.4, §14.8).
 //!
 //! Teeth (per plan): flipping one byte in an imported run file fails the

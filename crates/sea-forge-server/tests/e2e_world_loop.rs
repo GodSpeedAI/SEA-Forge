@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! End-to-end world loop, SEA-Forge's hop (driven by `scripts/e2e-world-loop.sh`).
 //!
 //! Reads the real E4 (SWE_SEED) and E3 (Context Kernel) from `E2E_DIR`, accepts

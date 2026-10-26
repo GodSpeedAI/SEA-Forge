@@ -45,3 +45,20 @@ jobs:
         with:
           name: windows-check-log
           path: check.log
+
+      - name: Control-plane unit tests (OS identity, pipes, jobs)
+        shell: bash
+        run: cargo test --locked -p sea-forge-os -p sea-forge-core -p sea-forge-changeset -p sea-forge-server --lib
+
+      - name: Release binaries
+        shell: bash
+        run: cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+
+      - name: Upload Windows binaries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-binaries
+          path: |
+            target/release/sea-forge.exe
+            target/release/sea-forge-server.exe
+          if-no-files-found: error

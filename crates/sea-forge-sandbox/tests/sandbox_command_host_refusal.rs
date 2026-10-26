@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! A sandbox command is authorized only for OpenShell. The host-side backends
 //! (local and jail) must refuse it before anything is spawned.
 

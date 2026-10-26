@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-09/SEC-10/SEC-11 at the real MCP forwarding boundary.
 //!
 //! A context that genuinely received classified plaintext (observed by the

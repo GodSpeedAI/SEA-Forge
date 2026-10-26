@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
 use sea_forge_sandbox::{ExecutionSandbox, JailSandbox, NetworkPosture, SandboxClass, SandboxSpec};
 use std::{

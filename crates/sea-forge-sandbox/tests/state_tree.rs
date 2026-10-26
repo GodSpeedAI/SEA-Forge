@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-06 owner-only control-plane state, independent of Landlock.
 //!
 //! ADV-A07 found the state tree world-readable (0755/0644), protected only

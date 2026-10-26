@@ -9,6 +9,50 @@ use wait_timeout::ChildExt;
 
 pub struct LocalSandbox;
 
+/// Kills the timed-out child's process group (Unix). The group id is the child pid.
+#[cfg(unix)]
+fn kill_timed_out_group(child: &std::process::Child) -> Result<(), SandboxError> {
+    let group = format!("-{}", child.id());
+    let group_kill = Command::new("/bin/kill")
+        .args(["-KILL", "--", &group])
+        .env_clear()
+        .output()
+        .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
+    if !group_kill.status.success() {
+        let group_still_exists = Command::new("/bin/kill")
+            .args(["-0", "--", &group])
+            .env_clear()
+            .output()
+            .map_err(|e| SandboxError::new("io_error", e.to_string()))?
+            .status
+            .success();
+        if group_still_exists {
+            return Err(SandboxError::new(
+                "internal_error",
+                "timed out process group survived termination",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Terminates the timed-out child's job (Windows) and verifies it is empty.
+#[cfg(windows)]
+fn kill_timed_out_job(job: &sea_forge_os::Job) -> Result<(), SandboxError> {
+    job.terminate()
+        .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
+    let survivors = job
+        .active_processes()
+        .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
+    if survivors != 0 {
+        return Err(SandboxError::new(
+            "internal_error",
+            "timed out process group survived termination",
+        ));
+    }
+    Ok(())
+}
+
 impl ExecutionSandbox for LocalSandbox {
     fn class(&self) -> SandboxClass {
         SandboxClass::Local
@@ -27,8 +71,6 @@ impl ExecutionSandbox for LocalSandbox {
         req: &ExecutionRequest,
     ) -> Result<ExecutionResult, SandboxError> {
         use sea_forge_core::types::Operation;
-        use std::os::unix::process::CommandExt;
-
         let started_at = chrono::Utc::now().to_rfc3339();
         fs::create_dir_all(&h.spec.artifacts_root)
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
@@ -56,7 +98,14 @@ impl ExecutionSandbox for LocalSandbox {
             .env_clear()
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
-        command.process_group(0);
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        #[cfg(windows)]
+        let job = sea_forge_os::Job::kill_on_close()
+            .map_err(|e| SandboxError::new("internal_error", e.to_string()))?;
         for (k, v) in &req.env {
             command.env(k, v);
         }
@@ -73,33 +122,21 @@ impl ExecutionSandbox for LocalSandbox {
                 })
             }
         };
+        #[cfg(windows)]
+        if let Err(e) = job.assign(&child) {
+            let _ = child.kill();
+            return Err(SandboxError::new("internal_error", e.to_string()));
+        }
         let status = child
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
         let (state, code) = if let Some(status) = status {
             (ExecutionStatus::Completed, status.code().map(i64::from))
         } else {
-            let group = format!("-{}", child.id());
-            let group_kill = Command::new("/bin/kill")
-                .args(["-KILL", "--", &group])
-                .env_clear()
-                .output()
-                .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-            if !group_kill.status.success() {
-                let group_still_exists = Command::new("/bin/kill")
-                    .args(["-0", "--", &group])
-                    .env_clear()
-                    .output()
-                    .map_err(|e| SandboxError::new("io_error", e.to_string()))?
-                    .status
-                    .success();
-                if group_still_exists {
-                    return Err(SandboxError::new(
-                        "internal_error",
-                        "timed out process group survived termination",
-                    ));
-                }
-            }
+            #[cfg(unix)]
+            kill_timed_out_group(&child)?;
+            #[cfg(windows)]
+            kill_timed_out_job(&job)?;
             child
                 .wait()
                 .map_err(|e| SandboxError::new("io_error", e.to_string()))?;

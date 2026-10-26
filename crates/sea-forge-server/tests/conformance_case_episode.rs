@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Canonical episode pipeline conformance (SF-003, AUTH-01, §10.6).
 //!
 //! Three properties of a sandboxed case episode, each of which the dispatcher

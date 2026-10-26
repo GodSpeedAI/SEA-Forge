@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-06 pathname Unix-socket containment (ADR-014).
 //!
 //! The test creates its own listening sockets (it never looks for host

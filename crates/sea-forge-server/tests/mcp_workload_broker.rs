@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Lifecycle of the per-workload MCP broker socket (SEC-01/SEC-03/SEC-08).
 //!
 //! Observations come from the upstream itself: a wrapper records every

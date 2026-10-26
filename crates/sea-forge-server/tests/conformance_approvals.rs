@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Approval conformance tests (Task 7, ADR-003 additive): `approval.list` and
 //! the `approval.decide` envelope.
 //!

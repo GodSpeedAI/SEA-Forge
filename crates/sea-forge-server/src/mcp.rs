@@ -515,6 +515,7 @@ impl Drop for McpListenerGuard {
 /// anything else is refused and recorded without reaching an upstream. Each
 /// accepted connection is a fresh broker session with its own upstream
 /// process, so reconnection never inherits another session's state.
+#[cfg(unix)]
 #[allow(clippy::too_many_arguments)]
 pub fn serve_workload(
     listener: std::os::unix::net::UnixListener,
@@ -540,6 +541,7 @@ pub fn serve_workload(
 }
 
 /// [`serve_workload`] with an exposure transition gate.
+#[cfg(unix)]
 #[allow(clippy::too_many_arguments)]
 pub fn serve_workload_gated(
     listener: std::os::unix::net::UnixListener,
@@ -627,6 +629,7 @@ pub fn serve_workload_gated(
     })
 }
 
+#[cfg(unix)]
 impl Broker {
     async fn serve_stream(
         &mut self,
@@ -654,7 +657,7 @@ impl Broker {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::McpServerConfig;
 

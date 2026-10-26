@@ -189,6 +189,13 @@ pub fn projection_identity(projection_dir: &Path) -> Result<ProjectionIdentity, 
 
 /// Whether this host can run the MicroVM driver. Linux needs KVM.
 pub fn probe_host_virtualization() -> Result<(), SandboxError> {
+    // Windows has no KVM path here: refuse rather than report a host as capable.
+    if cfg!(windows) {
+        return Err(SandboxError::new(
+            "workload_isolation_unavailable",
+            "MicroVM virtualization is not available on Windows hosts",
+        ));
+    }
     if !cfg!(target_os = "linux") {
         return Ok(());
     }

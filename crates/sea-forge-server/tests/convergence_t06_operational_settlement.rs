@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Convergence plan T06 — operational settlement return at the SEA-Forge
 //! boundary (frozen edge E6, invariants I6/I7).
 //!

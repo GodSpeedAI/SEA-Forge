@@ -2445,6 +2445,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
+ "winapi-util",
 ]
 
 [[package]]
@@ -2465,6 +2466,7 @@ dependencies = [
  "sea-forge-evidence",
  "sea-forge-extension",
  "sea-forge-ledger",
+ "sea-forge-os",
  "sea-forge-planner",
  "sea-forge-runtime",
  "sea-forge-sandbox",
@@ -2563,6 +2565,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sea-forge-os"
+version = "0.2.0"
+dependencies = [
+ "tokio",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "sea-forge-planner"
 version = "0.2.0"
 dependencies = [
@@ -2621,6 +2631,7 @@ dependencies = [
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-evidence",
+ "sea-forge-os",
  "sea-forge-settlement",
  "seccompiler",
  "serde",
@@ -2664,6 +2675,7 @@ dependencies = [
  "sea-forge-evidence",
  "sea-forge-extension",
  "sea-forge-ledger",
+ "sea-forge-os",
  "sea-forge-planner",
  "sea-forge-runtime",
  "sea-forge-sandbox",
@@ -2689,6 +2701,7 @@ dependencies = [
  "chrono",
  "sea-forge-core",
  "sea-forge-ledger",
+ "sea-forge-os",
  "sea-forge-sandbox",
  "serde",
  "serde_json",

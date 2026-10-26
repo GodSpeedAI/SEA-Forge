@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! One run locator across both layouts (SF-004, K-04, DATA-02).
 //!
 //! Two run layouts exist in a cell and both are permanent:

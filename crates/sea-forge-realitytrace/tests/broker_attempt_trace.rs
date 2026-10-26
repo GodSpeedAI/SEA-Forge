@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! RealityTrace Phase 3: brokered MCP and exposure records as audit evidence.
 //!
 //! A real broker session (allowed, classified, denied and unknown-tool

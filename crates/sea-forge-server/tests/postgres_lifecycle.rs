@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-02/SEC-08/SEC-09 live-connection lifecycle against a real PostgreSQL
 //! cluster and a real isolated workload that resists: every connection
 //! first disables the per-session timeouts a role can carry

@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Sandbox-command authority: `execute_sandbox_command` is a typed action that
 //! is authorized only for its own rule and only for an OpenShell sandbox. It
 //! never widens host command execution, and host commands never reach it.

@@ -53,16 +53,73 @@ pub fn role_wire_name(role: &ActorRole) -> String {
 /// `None` means the credential could not be read. That is treated as *no
 /// identity*, never as a wildcard: a connection whose peer cannot be
 /// identified may still use inspect verbs and is refused every protected one.
+#[cfg(unix)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PeerIdentity {
     pub uid: u32,
 }
 
+#[cfg(unix)]
 impl PeerIdentity {
     /// Read `SO_PEERCRED` off an accepted Unix stream.
     pub fn of(stream: &tokio::net::UnixStream) -> Option<Self> {
         stream.peer_cred().ok().map(|cred| Self { uid: cred.uid() })
     }
+
+    /// The native principal key the bindings are matched on (uid).
+    pub fn key(&self) -> PrincipalKey {
+        self.uid
+    }
+
+    /// Operator-facing name of the principal in refusal messages.
+    pub fn label(&self) -> String {
+        format!("uid {}", self.uid)
+    }
+}
+
+/// The OS identity of the process on the other end of a named pipe, read
+/// from the kernel token after the client has written its first request.
+///
+/// `None` from [`PeerIdentity::of_pipe`] means the SID could not be read,
+/// which is refused exactly like an unreadable uid.
+#[cfg(windows)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PeerIdentity {
+    pub sid: String,
+}
+
+#[cfg(windows)]
+impl PeerIdentity {
+    /// Resolve the connecting client's SID off an impersonated pipe handle.
+    pub fn of_pipe(pipe: &impl std::os::windows::io::AsRawHandle) -> Option<Self> {
+        sea_forge_os::pipe_client_sid(pipe).ok().map(|sid| Self { sid })
+    }
+
+    /// The native principal key the bindings are matched on (SID).
+    pub fn key(&self) -> PrincipalKey {
+        self.sid.clone()
+    }
+
+    /// Operator-facing name of the principal in refusal messages.
+    pub fn label(&self) -> String {
+        format!("SID {}", self.sid)
+    }
+}
+
+/// The native OS principal a connection presents: a uid on Unix, a SID on
+/// Windows. Only this key authenticates on a given OS.
+#[cfg(unix)]
+pub type PrincipalKey = u32;
+/// The native OS principal a connection presents: a SID on Windows.
+#[cfg(windows)]
+pub type PrincipalKey = String;
+
+/// The native principal of *this* process: its uid on Unix, its user SID on Windows.
+pub fn current_principal() -> Option<PrincipalKey> {
+    #[cfg(unix)]
+    return current_uid();
+    #[cfg(windows)]
+    return sea_forge_os::current_sid().ok();
 }
 
 /// The effective uid of *this* process.
@@ -74,6 +131,7 @@ impl PeerIdentity {
 /// because `getuid` would mean taking a direct `libc` dependency and
 /// dependency changes are ask-first here. Swap for `libc::geteuid()` if that
 /// is ever authorized — it is the same answer, without the syscall round trip.
+#[cfg(unix)]
 pub fn current_uid() -> Option<u32> {
     use std::os::unix::fs::MetadataExt;
     let probe = std::env::temp_dir().join(format!("sea-forge-uid-probe-{}", std::process::id()));
@@ -146,7 +204,7 @@ impl ActorClaim {
 pub struct ResolvedActor {
     actor_id: String,
     role: ActorRole,
-    uid: u32,
+    principal: PrincipalKey,
     delegation: Option<DelegationProvenance>,
 }
 
@@ -154,7 +212,7 @@ pub struct ResolvedActor {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DelegationProvenance {
     gateway_actor_id: String,
-    gateway_uid: u32,
+    gateway_principal: PrincipalKey,
 }
 
 impl ResolvedActor {
@@ -170,8 +228,16 @@ impl ResolvedActor {
     /// is the gateway's, not the end user's. [`Self::actor_id`] and
     /// [`Self::role`] are the end user's; [`Self::delegation`] names the
     /// gateway principal that spoke for them.
+    #[cfg(unix)]
     pub fn uid(&self) -> u32 {
-        self.uid
+        self.principal
+    }
+    /// Operator-facing name of the connection's principal ("uid N" or "SID S").
+    pub fn principal_label(&self) -> String {
+        #[cfg(unix)]
+        return format!("uid {}", self.principal);
+        #[cfg(windows)]
+        return format!("SID {}", self.principal);
     }
     /// The gateway principal that presented `on_behalf_of`, if this request
     /// was delegated. `None` on direct (non-delegated) resolutions.
@@ -188,8 +254,20 @@ impl DelegationProvenance {
     pub fn gateway_actor_id(&self) -> &str {
         &self.gateway_actor_id
     }
+    #[cfg(unix)]
     pub fn gateway_uid(&self) -> u32 {
-        self.gateway_uid
+        self.gateway_principal
+    }
+    /// The gateway's native principal key.
+    pub fn gateway_principal(&self) -> &PrincipalKey {
+        &self.gateway_principal
+    }
+    /// Operator-facing name of the gateway principal ("uid N" or "SID S").
+    pub fn gateway_label(&self) -> String {
+        #[cfg(unix)]
+        return format!("uid {}", self.gateway_principal);
+        #[cfg(windows)]
+        return format!("SID {}", self.gateway_principal);
     }
 }
 
@@ -208,7 +286,8 @@ pub enum IdentityRefusal {
     /// The claimed actor is not bound to this uid.
     NotBound {
         actor_id: String,
-        uid: u32,
+        /// Operator-facing principal label ("uid N" or "SID S").
+        principal: String,
     },
     /// The actor is bound to this uid but not in the role it claimed.
     RoleNotHeld {
@@ -276,8 +355,8 @@ impl IdentityRefusal {
                  `identity.bindings` to server.yaml mapping a uid to an actor \
                  before running protected verbs"
                 .into(),
-            Self::NotBound { actor_id, uid } => {
-                format!("actor `{actor_id}` is not bound to uid {uid} in this cell")
+            Self::NotBound { actor_id, principal } => {
+                format!("actor `{actor_id}` is not bound to {principal} in this cell")
             }
             Self::RoleNotHeld { actor_id, role } => {
                 format!("actor `{actor_id}` does not hold the role {role:?} it claimed")
@@ -351,6 +430,10 @@ impl IdentityRefusal {
 pub struct IdentityBinding {
     #[serde(default)]
     pub uid: Option<u32>,
+    /// The Windows user SID this actor acts as directly. Configured on every
+    /// OS; only the native key (SID on Windows) is ever matched.
+    #[serde(default)]
+    pub sid: Option<String>,
     pub actor_id: String,
     /// Every role this actor may claim. A binding with an empty list can hold
     /// no role and therefore authorizes nothing — which is a usable way to
@@ -372,6 +455,16 @@ pub struct IdentityBindings {
     pub bindings: Vec<IdentityBinding>,
 }
 
+impl IdentityBinding {
+    /// The native principal this binding authenticates: uid on Unix, SID on Windows.
+    pub fn principal(&self) -> Option<PrincipalKey> {
+        #[cfg(unix)]
+        return self.uid;
+        #[cfg(windows)]
+        return self.sid.clone();
+    }
+}
+
 impl IdentityBindings {
     /// Refuse a binding set that cannot be enforced as written.
     ///
@@ -383,6 +476,18 @@ impl IdentityBindings {
     /// - one actor has one binding, so an `actor_id` may not appear twice.
     pub fn validate(&self) -> Result<(), String> {
         for (index, binding) in self.bindings.iter().enumerate() {
+            if let Some(sid) = &binding.sid {
+                if let Some(earlier) = self.bindings[..index]
+                    .iter()
+                    .find(|other| other.sid.as_deref() == Some(sid.as_str()))
+                {
+                    return Err(format!(
+                        "identity.bindings maps SID {sid} to both actor {:?} and actor {:?}: \
+                         one operating-system user maps to exactly one actor",
+                        earlier.actor_id, binding.actor_id
+                    ));
+                }
+            }
             if let Some(uid) = binding.uid {
                 if let Some(earlier) = self.bindings[..index]
                     .iter()
@@ -421,7 +526,7 @@ impl IdentityBindings {
             .find(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
-                uid: peer.uid,
+                principal: peer.label(),
             })?;
         if !binding.roles.contains(&claim.role) {
             return Err(IdentityRefusal::RoleNotHeld {
@@ -432,7 +537,7 @@ impl IdentityBindings {
         Ok(ResolvedActor {
             actor_id: claim.actor_id.clone(),
             role: claim.role.clone(),
-            uid: peer.uid,
+            principal: peer.key(),
             delegation: None,
         })
     }
@@ -452,9 +557,16 @@ impl IdentityBindings {
     /// cannot be determined.
     pub fn local_operator(actor_id: &str) -> Self {
         Self {
-            bindings: current_uid()
-                .map(|uid| IdentityBinding {
-                    uid: Some(uid),
+            bindings: current_principal()
+                .map(|key| IdentityBinding {
+                    #[cfg(unix)]
+                    uid: Some(key),
+                    #[cfg(unix)]
+                    sid: None,
+                    #[cfg(windows)]
+                    uid: None,
+                    #[cfg(windows)]
+                    sid: Some(key),
                     actor_id: actor_id.into(),
                     roles: vec![ActorRole::Operator],
                 })
@@ -482,7 +594,10 @@ impl IdentityBindings {
 
         let Some(peer) = peer else {
             return IdentityView {
+                #[cfg(unix)]
                 uid: None,
+                #[cfg(windows)]
+                sid: None,
                 configured: !self.is_empty(),
                 available: Vec::new(),
                 effective_actor: None,
@@ -492,7 +607,10 @@ impl IdentityBindings {
 
         if self.is_empty() {
             return IdentityView {
+                #[cfg(unix)]
                 uid: Some(peer.uid),
+                #[cfg(windows)]
+                sid: Some(peer.sid.clone()),
                 configured: false,
                 available: Vec::new(),
                 effective_actor: None,
@@ -503,7 +621,7 @@ impl IdentityBindings {
         let available: Vec<AvailableActor> = self
             .bindings
             .iter()
-            .filter(|binding| binding.uid == Some(peer.uid))
+            .filter(|binding| binding.principal() == Some(peer.key()))
             .map(|binding| AvailableActor {
                 actor_id: binding.actor_id.clone(),
                 roles: binding.roles.iter().map(role_wire_name).collect(),
@@ -515,13 +633,16 @@ impl IdentityBindings {
         // the caller never named — there is no claim here to echo back.
         let refusal = available.is_empty().then(|| RefusalView {
             error_class: "identity_not_bound".into(),
-            message: format!("no actor is bound to uid {} in this cell", peer.uid),
+            message: format!("no actor is bound to {} in this cell", peer.label()),
             no_side_effect: Some(true),
             next_lawful_action: Some("Use an actor bound to this operating-system user".into()),
         });
 
         IdentityView {
+            #[cfg(unix)]
             uid: Some(peer.uid),
+            #[cfg(windows)]
+            sid: Some(peer.sid.clone()),
             configured: true,
             available,
             effective_actor: None,
@@ -539,6 +660,7 @@ impl IdentityBindings {
     /// client can show why delegation will fail before attempting it. The
     /// connection's own `available` set is reported either way: the gateway is
     /// still entitled to act as itself directly.
+    #[allow(clippy::clone_on_copy)]
     pub fn describe_delegated(
         &self,
         claim: Option<&ActorClaim>,
@@ -546,7 +668,7 @@ impl IdentityBindings {
         gateway: Option<&GatewayConfig>,
         peer: Option<PeerIdentity>,
     ) -> IdentityView {
-        let mut view = self.describe(peer);
+        let mut view = self.describe(peer.clone());
         if on_behalf_of.is_none() {
             return view;
         }
@@ -622,14 +744,14 @@ impl IdentityBindings {
         let Some(gateway) = gateway else {
             return Err(delegation_refused(format!(
                 "this cell configures no `gateway` principal, so no connection may send \
-                 `on_behalf_of` (uid {} did)",
-                peer.uid
+                 `on_behalf_of` ({} did)",
+                peer.label()
             )));
         };
-        if peer.uid != gateway.uid {
+        if peer.key() != gateway.principal() {
             return Err(delegation_refused(format!(
-                "uid {} is not the configured gateway uid {}, so it may not send `on_behalf_of`",
-                peer.uid, gateway.uid
+                "{} is not the configured gateway {}, so it may not send `on_behalf_of`",
+                peer.label(), gateway.principal_label()
             )));
         }
         if claim.actor_id != gateway.actor {
@@ -645,11 +767,11 @@ impl IdentityBindings {
         let Some(gateway_binding) = self
             .bindings
             .iter()
-            .find(|binding| binding.uid == Some(gateway.uid) && binding.actor_id == gateway.actor)
+            .find(|binding| binding.principal() == Some(gateway.principal()) && binding.actor_id == gateway.actor)
         else {
             return Err(delegation_refused(format!(
-                "the configured gateway principal `{}` has no binding for uid {}",
-                gateway.actor, gateway.uid
+                "the configured gateway principal `{}` has no binding for {}",
+                gateway.actor, gateway.principal_label()
             )));
         };
         if !gateway_binding.roles.contains(&claim.role) {
@@ -697,10 +819,10 @@ impl IdentityBindings {
         Ok(ResolvedActor {
             actor_id: target.actor_id.clone(),
             role: target.role.clone(),
-            uid: peer.uid,
+            principal: peer.key(),
             delegation: Some(DelegationProvenance {
                 gateway_actor_id: gateway.actor.clone(),
-                gateway_uid: gateway.uid,
+                gateway_principal: peer.key(),
             }),
         })
     }
@@ -719,11 +841,11 @@ impl IdentityBindings {
         let bound = self
             .bindings
             .iter()
-            .find(|binding| binding.uid == Some(peer.uid))
+            .find(|binding| binding.principal() == Some(peer.key()))
             .filter(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
-                uid: peer.uid,
+                principal: peer.label(),
             })?;
         if !bound.roles.contains(&claim.role) {
             return Err(IdentityRefusal::RoleNotHeld {
@@ -734,7 +856,7 @@ impl IdentityBindings {
         Ok(ResolvedActor {
             actor_id: bound.actor_id.clone(),
             role: claim.role.clone(),
-            uid: peer.uid,
+            principal: peer.key(),
             delegation: None,
         })
     }
@@ -828,7 +950,10 @@ pub struct EffectiveActorView {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 pub struct DelegatedByView {
     pub actor_id: String,
+    #[cfg(unix)]
     pub uid: u32,
+    #[cfg(windows)]
+    pub sid: String,
 }
 
 impl EffectiveActorView {
@@ -840,7 +965,10 @@ impl EffectiveActorView {
             role: role_wire_name(actor.role()),
             delegated_by: DelegatedByView {
                 actor_id: provenance.gateway_actor_id().into(),
+                #[cfg(unix)]
                 uid: provenance.gateway_uid(),
+                #[cfg(windows)]
+                sid: provenance.gateway_principal().clone(),
             },
         })
     }
@@ -873,8 +1001,13 @@ pub struct RefusalView {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, JsonSchema)]
 pub struct IdentityView {
     /// The uid the kernel reported for this connection, when readable.
+    #[cfg(unix)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uid: Option<u32>,
+    /// The SID the kernel reported for this connection, when readable.
+    #[cfg(windows)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
     /// Whether this cell configures any bindings at all. False means every
     /// protected verb will be refused regardless of what is claimed.
     pub configured: bool,
@@ -954,7 +1087,7 @@ pub fn is_protected(request: &Request) -> bool {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
@@ -963,11 +1096,13 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(1000),
+                    sid: None,
                     actor_id: "operator_local".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: Some(1001),
+                    sid: None,
                     actor_id: "reviewer_local".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1088,21 +1223,25 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(2000),
+                    sid: None,
                     actor_id: "gateway".into(),
                     roles: vec![ActorRole::Service],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "operator_a".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "operator_b".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: Some(4244),
+                    sid: None,
                     actor_id: "security_officer".into(),
                     roles: vec![ActorRole::SecurityOfficer],
                 },
@@ -1305,6 +1444,7 @@ mod tests {
         let suspended = IdentityBindings {
             bindings: vec![IdentityBinding {
                 uid: Some(1000),
+                sid: None,
                 actor_id: "operator_local".into(),
                 roles: vec![],
             }],
@@ -1400,11 +1540,13 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(1000),
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: Some(1000),
+                    sid: None,
                     actor_id: "op-bob".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1429,11 +1571,13 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(1000),
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: Some(1001),
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1452,16 +1596,19 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(2000),
+                    sid: None,
                     actor_id: "gateway".into(),
                     roles: vec![ActorRole::Service],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "op-bob".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1475,6 +1622,7 @@ mod tests {
         let (mut bindings, gateway) = gateway_cell();
         bindings.bindings.push(IdentityBinding {
             uid: None,
+            sid: None,
             actor_id: "op_carol".into(),
             roles: vec![ActorRole::Operator],
         });
@@ -1507,11 +1655,13 @@ mod tests {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(1000),
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "op-bob".into(),
                     roles: vec![ActorRole::Operator],
                 },
@@ -1532,5 +1682,66 @@ mod tests {
             ),
             Err(IdentityRefusal::NotBound { .. })
         ));
+    }
+}
+
+#[cfg(all(test, windows))]
+mod windows_identity_tests {
+    use super::*;
+
+    fn sid_binding(sid: &str, actor: &str) -> IdentityBinding {
+        IdentityBinding {
+            uid: None,
+            sid: Some(sid.into()),
+            actor_id: actor.into(),
+            roles: vec![ActorRole::Operator],
+        }
+    }
+
+    #[test]
+    fn sid_bindings_are_one_principal_one_actor() {
+        let distinct = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1002", "op-b"),
+            ],
+        };
+        assert!(distinct.validate().is_ok());
+
+        let shared_sid = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1001", "op-b"),
+            ],
+        };
+        let error = shared_sid.validate().expect_err("two actors on one SID");
+        assert!(error.contains("SID S-1-5-21-1-2-3-1001"), "{error}");
+
+        let two_sids_one_actor = IdentityBindings {
+            bindings: vec![
+                sid_binding("S-1-5-21-1-2-3-1001", "op-a"),
+                sid_binding("S-1-5-21-1-2-3-1002", "op-a"),
+            ],
+        };
+        assert!(two_sids_one_actor.validate().is_err());
+    }
+
+    #[test]
+    fn a_connection_matches_by_sid_only() {
+        let bindings = IdentityBindings {
+            bindings: vec![sid_binding("S-1-5-21-1-2-3-1001", "op-a")],
+        };
+        let claim = ActorClaim {
+            actor_id: "op-a".into(),
+            role: ActorRole::Operator,
+        };
+        let bound = PeerIdentity {
+            sid: "S-1-5-21-1-2-3-1001".into(),
+        };
+        assert!(bindings.resolve(Some(&claim), Some(bound)).is_ok());
+        let stranger = PeerIdentity {
+            sid: "S-1-5-21-1-2-3-9999".into(),
+        };
+        assert!(bindings.resolve(Some(&claim), Some(stranger)).is_err());
     }
 }

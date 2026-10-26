@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Convergence plan T04 — governed work submission at the SEA-Forge boundary
 //! (frozen edge E4).
 //!

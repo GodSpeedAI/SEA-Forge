@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Frozen behavioral acceptance probes. RED is an unmet contract, never a stub.
 //! Reuses conformance_identity and convergence_t05/t06 public entry points.
 #![cfg(unix)]
@@ -78,11 +79,13 @@ async fn security_v1_a_sec01_same_uid_cannot_claim_another_approver() {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(uid),
+                    sid: None,
                     actor_id: "operator_a".into(),
                     roles: vec![ActorRole::Operator],
                 },
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "operator_b".into(),
                     roles: vec![ActorRole::Operator],
                 },

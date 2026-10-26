@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SFWP case mutation and execution verbs over a real socket (T04, P2).
 //!
 //! Every test here drives the real server over its Unix socket on a temp
@@ -76,11 +77,13 @@ fn two_actors() -> IdentityBindings {
         bindings: vec![
             IdentityBinding {
                 uid: Some(uid),
+                sid: None,
                 actor_id: "operator_a".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
             },
             IdentityBinding {
                 uid: None,
+                sid: None,
                 actor_id: "operator_b".into(),
                 roles: vec![sea_forge_core::types::ActorRole::Operator],
             },

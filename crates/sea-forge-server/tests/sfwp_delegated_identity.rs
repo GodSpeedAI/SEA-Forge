@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Delegated actor identity for the gateway principal (plan
 //! casework-live-wiring-production T02, resolves GAP-B; operator decision D-2).
 //!

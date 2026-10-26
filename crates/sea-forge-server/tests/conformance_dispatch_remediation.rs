@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Regression tests for the deep-audit dispatch findings (F-02, F-03).
 //! These convert the retained audit-harness reproductions into permanent
 //! conformance tests asserting the *corrected* invariant.

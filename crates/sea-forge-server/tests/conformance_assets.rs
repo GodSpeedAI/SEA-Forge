@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Asset-catalog conformance tests (Task 9, ADR-003 additive): `asset.list`.
 //!
 //! Fixtures are raw JSON/YAML on disk rather than constructed structs, so a
