@@ -11,8 +11,8 @@
 
 use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
 use sea_forge_sandbox::{
-    select_openshell, select_sandbox, ExecutionSandbox, NetworkPosture, OpenShellBinding,
-    OpenShellSandbox, SandboxClass, SandboxError, SandboxHandle, SandboxSpec,
+    select_openshell, select_sandbox, ApprovedProjection, ExecutionSandbox, NetworkPosture,
+    OpenShellBinding, OpenShellSandbox, SandboxClass, SandboxError, SandboxHandle, SandboxSpec,
 };
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -24,7 +24,7 @@ use std::{
 };
 
 const POLICY: &str = "version: 1\n";
-const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
+const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","compute_driver":"vm","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
 const MAPPING_REPORT: &str = r#"{"schema":"domainforge.openshell.mapping/v1","unmapped":[]}"#;
 /// The sandbox image the authorized binding names. Every test binds it.
 const IMAGE: &str = "registry.example/cell:1";
@@ -38,8 +38,26 @@ if [ "$1" = "--gateway" ]; then
 fi
 case "$1" in
   --version)
+    # Swap the projection's policy and lock while the CLI is being probed.
+    if [ -f "$CTL/swap_on_version" ]; then
+      P=$(cat "$CTL/swap_on_version")
+      cp "$CTL/swap/policy.yaml" "$P/policy.yaml"
+      cp "$CTL/swap/openshell.lock" "$P/openshell.lock"
+    fi
     if [ -f "$CTL/version" ]; then cat "$CTL/version"; else echo "openshell 0.1.3"; fi
     exit 0
+    ;;
+  gateway)
+    if [ "$2" = "info" ]; then
+      if [ -f "$CTL/gateway_info_fail" ]; then
+        echo "gateway info requires admin privileges" >&2
+        exit 1
+      fi
+      DRIVER=vm
+      if [ -f "$CTL/gateway_driver" ]; then DRIVER=$(cat "$CTL/gateway_driver"); fi
+      echo "{\"gateway\":\"stub\",\"server\":\"stub\",\"auth\":null,\"status\":\"Connected\",\"version\":\"0.1.3\",\"compute_drivers\":[{\"name\":\"$DRIVER\",\"capabilities\":{\"driver_name\":\"$DRIVER\",\"driver_version\":\"0.1.3\"}}],\"extensions\":[]}"
+      exit 0
+    fi
     ;;
   status)
     if [ -f "$CTL/gateway_down" ]; then
@@ -76,18 +94,37 @@ case "$1" in
             exit 0
             ;;
         esac
-        if [ -f "$CTL/deleted" ]; then exit 1; fi
+        if [ -f "$CTL/gateway_down" ]; then
+          echo "Error: transport error: connection refused" >&2
+          exit 1
+        fi
+        if [ -f "$CTL/deleted" ]; then
+          # The 0.1.3 CLI prints tonic's Status display for a missing sandbox.
+          echo 'Error: status: NotFound, message: "sandbox not found", details: [], metadata: MetadataMap { headers: {} }' >&2
+          exit 1
+        fi
         exit 0
         ;;
       delete)
-        if [ -f "$CTL/delete_fail" ]; then
-          echo "not found" >&2
+        if [ -f "$CTL/gateway_down" ]; then
+          echo "Error: transport error: connection refused" >&2
           exit 1
+        fi
+        if [ -f "$CTL/delete_fail" ]; then
+          echo 'Error: status: PermissionDenied, message: "forbidden", details: [], metadata: MetadataMap { headers: {} }' >&2
+          exit 1
+        fi
+        if [ -f "$CTL/deleted" ]; then
+          # 0.1.3 deletes with allow_missing: an absent sandbox exits 0 (AlreadyAbsent).
+          echo "✓ Sandbox $3 already deleted"
+          exit 0
         fi
         : > "$CTL/deleted"
         exit 0
         ;;
       upload)
+        printf '%s\n' "$4" > "$CTL/upload_src"
+        pwd -P > "$CTL/upload_cwd"
         exit 0
         ;;
       download)
@@ -189,6 +226,7 @@ fn harness() -> Harness {
         cli: bin.join("openshell"),
         prover: bin.join("openshell-prover"),
         local_microvm_gateway: false,
+        native_executable: None,
     };
     let spec = SandboxSpec {
         workspace_root: workspace,
@@ -296,6 +334,25 @@ fn prepare_execute_download_destroy_happy_path() {
     find_after(&lines, policy_get + 1, "sandbox upload", |l| {
         l.starts_with("openshell sandbox upload ") && l.contains("--no-git-ignore")
     });
+    // Contents land flat in the sandbox workspace: the CLI runs inside the
+    // workspace and uploads `.` (a named directory would nest as
+    // `<dest>/<dirname>/...`).
+    let ctl_dir = h.root.join("ctl");
+    assert_eq!(
+        fs::read_to_string(ctl_dir.join("upload_src")).expect("upload_src"),
+        ".\n"
+    );
+    assert_eq!(
+        fs::read_to_string(ctl_dir.join("upload_cwd"))
+            .expect("upload_cwd")
+            .trim(),
+        h.spec
+            .workspace_root
+            .canonicalize()
+            .expect("workspace")
+            .display()
+            .to_string()
+    );
 
     let record = read_record(&h);
     assert_eq!(record["cell_id"], "cell_test");
@@ -304,6 +361,9 @@ fn prepare_execute_download_destroy_happy_path() {
     assert_eq!(record["effective_policy"]["version"], 3);
     assert_eq!(record["effective_policy"]["config_revision"], "r7");
     assert_eq!(record["prover"]["effective"]["result"], "within_boundary");
+    assert_eq!(record["enforcement"]["driver"], "vm");
+    assert_eq!(record["enforcement"]["provides"]["landlock_hard"], true);
+    assert_eq!(record["enforcement"]["requires"]["egress_proxy"], false);
 
     let result = sandbox
         .execute(&handle, &request(&["echo", "hi"], 30, &[("FOO", "bar")]))
@@ -332,6 +392,36 @@ fn prepare_execute_download_destroy_happy_path() {
 
     sandbox.destroy(handle).expect("destroy");
     assert!(h.root.join("ctl/deleted").exists());
+}
+
+/// Delete and the follow-up get both fail with "connection refused": the
+/// gateway is unreachable, so the sandbox's state is unverified and cleanup
+/// must not be reported as success.
+#[test]
+fn unreachable_gateway_during_destroy_is_a_cleanup_failure() {
+    let h = harness();
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let handle = sandbox.prepare(&h.spec).expect("prepare");
+    ctl(&h, "gateway_down", "");
+
+    let result = sandbox.destroy(handle);
+    let Err(e) = result else {
+        panic!("destroy must not report success when the gateway is unreachable");
+    };
+    assert_eq!(e.class, "openshell_cleanup_failed");
+    let name = calls(&h)
+        .iter()
+        .rev()
+        .find(|l| l.contains(" sandbox delete "))
+        .and_then(|l| l.split_whitespace().last().map(str::to_string))
+        .expect("a delete call was recorded");
+    assert!(name.starts_with("sf-"), "unexpected sandbox name {name}");
+    assert!(
+        e.message.contains(&name),
+        "message must keep the sandbox name: {}",
+        e.message
+    );
+    assert!(!h.root.join("ctl/deleted").exists());
 }
 
 #[test]
@@ -437,6 +527,24 @@ fn provider_expanded_effective_policy_is_refused_and_cleaned_up() {
     });
     assert!(!has_prefix(&lines, "openshell sandbox upload "));
     assert!(!has_prefix(&lines, "openshell sandbox exec "));
+}
+
+#[test]
+fn failed_cleanup_after_refused_policy_is_reported() {
+    let h = harness();
+    ctl(
+        &h,
+        "prover_effective_json",
+        r#"{"schema_version":1,"result":"exceeds_boundary","exit_code":1,"coverage":{"domains":["filesystem","network_l4","network_rest","process","landlock"]},"counterexample":{"host":"evil.example.com","port":443},"reason":"provider rule widens egress"}"#,
+    );
+    ctl(&h, "delete_fail", "");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let error = sandbox.prepare(&h.spec).expect_err("prepare must fail");
+    assert_eq!(error.class, "openshell_cleanup_failed");
+    assert!(error
+        .message
+        .contains("openshell_effective_policy_exceeds_boundary"));
+    assert!(error.message.contains("lifetime unverified"));
 }
 
 #[test]
@@ -655,4 +763,285 @@ fn gateway_name_is_passed_through() {
             "gateway not passed through: {line}"
         );
     }
+}
+
+const HARD_LANDLOCK_POLICY: &str = "version: 1\nlandlock:\n  compatibility: hard_requirement\n";
+
+/// Rewrites the projection's `sandbox.json` and `policy.yaml` and re-locks
+/// them, so the projection still verifies. Used to vary the driver and policy.
+fn reproject(h: &Harness, sandbox_json: &str, policy: &str) {
+    let dir = &h.binding.projection_dir;
+    fs::write(dir.join("policy.yaml"), policy).expect("write policy.yaml");
+    fs::write(dir.join("sandbox.json"), sandbox_json).expect("write sandbox.json");
+    let mut lock: Value =
+        serde_json::from_str(&fs::read_to_string(dir.join("openshell.lock")).expect("lock"))
+            .expect("parse lock");
+    lock["policy_digest"] = json!(digest(policy.as_bytes()));
+    lock["files"]["policy.yaml"] = json!(digest(policy.as_bytes()));
+    lock["files"]["sandbox.json"] = json!(digest(sandbox_json.as_bytes()));
+    fs::write(dir.join("openshell.lock"), lock.to_string()).expect("write lock");
+}
+
+fn sandbox_json_for(driver: &str) -> String {
+    SANDBOX_JSON.replace(
+        "\"compute_driver\":\"vm\"",
+        &format!("\"compute_driver\":\"{driver}\""),
+    )
+}
+
+/// Writes `bytes` as the native executable and returns the native image that
+/// pins it on this host, with the binding pointing at the file.
+fn bind_native(h: &mut Harness, bytes: &[u8]) -> String {
+    let exe = h.root.join("native-tool");
+    fs::write(&exe, bytes).expect("write native executable");
+    h.binding.native_executable = Some(exe);
+    format!(
+        "native:sha256:{}@{}-{}",
+        hex::encode(Sha256::digest(bytes)),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    )
+}
+
+#[test]
+fn compute_driver_is_read_from_the_lock_and_refused_when_unsupported() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("docker"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_unsupported"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn unknown_compute_driver_is_a_projection_error() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("firecracker"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_projection_error"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn mxc_cannot_enforce_a_landlock_hard_requirement_and_nothing_is_created() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("mxc"), HARD_LANDLOCK_POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let error = match sandbox.prepare(&h.spec) {
+        Ok(_) => panic!("mxc must not enforce a hard Landlock requirement"),
+        Err(error) => error,
+    };
+    assert_eq!(error.class, "openshell_enforcement_unavailable");
+    assert!(error.message.contains("Landlock"), "{}", error.message);
+    let lines = calls(&h);
+    assert!(!has_prefix(&lines, "openshell sandbox create "));
+    assert!(!has_prefix(&lines, "openshell-prover "));
+}
+
+#[test]
+fn a_native_image_on_vm_is_refused_before_anything_runs() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool");
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_workload_kind_mismatch"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+#[test]
+fn an_oci_image_on_mxc_is_refused_before_anything_runs() {
+    let h = harness();
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_workload_kind_mismatch"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+/// A native pin is a hash of a local path, which the gateway resolves again
+/// at run time. OpenShell 0.1.3 offers no digest-bound execution, so a native
+/// workload is refused before anything is created, even when the pin matches.
+#[test]
+fn a_matching_native_image_is_refused_as_identity_unbound_before_create() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool");
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    ctl(&h, "gateway_driver", "mxc");
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    let result = sandbox.prepare(&h.spec);
+    let message = match &result {
+        Err(e) => e.message.clone(),
+        Ok(_) => panic!("a native workload must not be prepared"),
+    };
+    assert_eq!(error_class(result), "openshell_native_identity_unbound");
+    assert!(
+        message.contains("offers no digest-bound execution"),
+        "{message}"
+    );
+    assert!(!has_prefix(&calls(&h), "openshell sandbox create "));
+}
+
+#[test]
+fn a_native_image_for_another_platform_is_refused_as_identity_unbound() {
+    let mut h = harness();
+    let image = bind_native(&mut h, b"tool").replace(
+        &format!("@{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        "@plan9-riscv64",
+    );
+    reproject(&h, &sandbox_json_for("mxc"), POLICY);
+    let mut binding = h.binding.clone();
+    binding.image = Some(image);
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_native_identity_unbound"
+    );
+    assert!(!has_prefix(&calls(&h), "openshell sandbox create "));
+}
+
+#[test]
+fn an_unparseable_image_is_refused() {
+    let h = harness();
+    let mut binding = h.binding.clone();
+    binding.image = Some("has a space".into());
+    let sandbox = OpenShellSandbox::new(binding);
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_image_invalid"
+    );
+    assert!(calls(&h).is_empty());
+}
+
+/// A self-consistent projection lock for `policy`, as `openshell.lock` writes it.
+fn lock_for(policy: &str) -> String {
+    json!({
+        "cell_id": "cell_test",
+        "openshell_version": "0.1.3",
+        "model": { "hash": "sha256:model" },
+        "policy_digest": digest(policy.as_bytes()),
+        "files": {
+            "mapping-report.json": digest(MAPPING_REPORT.as_bytes()),
+            "policy.yaml": digest(policy.as_bytes()),
+            "sandbox.json": digest(SANDBOX_JSON.as_bytes()),
+        },
+    })
+    .to_string()
+}
+
+const SWAPPED_POLICY: &str = "version: 1\n# swapped after the grant\n";
+
+fn approved_original() -> ApprovedProjection {
+    ApprovedProjection {
+        cell_id: "cell_test".into(),
+        model_hash: "sha256:model".into(),
+        policy_digest: digest(POLICY.as_bytes()),
+    }
+}
+
+#[test]
+fn projection_swapped_during_the_cli_version_call_is_not_used() {
+    let h = harness();
+    let swap = h.root.join("ctl/swap");
+    fs::create_dir_all(&swap).expect("swap dir");
+    fs::write(swap.join("policy.yaml"), SWAPPED_POLICY).expect("swap policy");
+    fs::write(swap.join("openshell.lock"), lock_for(SWAPPED_POLICY)).expect("swap lock");
+    ctl(
+        &h,
+        "swap_on_version",
+        &h.binding.projection_dir.display().to_string(),
+    );
+
+    let sandbox = OpenShellSandbox::new(h.binding.clone()).approving(approved_original());
+    let handle = sandbox.prepare(&h.spec).expect("prepare uses the snapshot");
+
+    // The source really was swapped, so the snapshot is the only reason this passes.
+    assert_eq!(
+        fs::read_to_string(h.binding.projection_dir.join("policy.yaml")).unwrap(),
+        SWAPPED_POLICY
+    );
+    let snapshot = h.root.join("artifacts/openshell/projection");
+    assert_eq!(
+        fs::read_to_string(snapshot.join("policy.yaml")).unwrap(),
+        POLICY
+    );
+    let lines = calls(&h);
+    let create = find_after(&lines, 0, "sandbox create", |l| {
+        l.starts_with("openshell sandbox create ")
+    });
+    assert!(
+        lines[create].contains(&snapshot.join("policy.yaml").display().to_string()),
+        "{}",
+        lines[create]
+    );
+    assert!(
+        lines.iter().any(|l| l.contains(&format!(
+            "--boundary {}",
+            snapshot.join("policy.yaml").display()
+        ))),
+        "prover must read the snapshot boundary: {lines:#?}"
+    );
+    let record = read_record(&h);
+    assert_eq!(
+        record["projected_policy_digest"],
+        json!(digest(POLICY.as_bytes()))
+    );
+    assert_eq!(record["compute_driver"]["driver"], "vm");
+    assert_eq!(record["compute_driver"]["source"], "gateway_info");
+    sandbox.destroy(handle).expect("destroy");
+}
+
+#[test]
+fn projection_that_differs_from_the_authorized_identity_is_refused_before_create() {
+    let h = harness();
+    reproject(&h, SANDBOX_JSON, SWAPPED_POLICY);
+
+    let sandbox = OpenShellSandbox::new(h.binding.clone()).approving(approved_original());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_projection_tampered"
+    );
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
+}
+
+#[test]
+fn gateway_driver_that_differs_from_the_projection_is_refused_before_create() {
+    let h = harness();
+    ctl(&h, "gateway_driver", "docker");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_mismatch"
+    );
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
+}
+
+#[test]
+fn gateway_that_cannot_report_its_driver_is_refused_before_create() {
+    let h = harness();
+    ctl(&h, "gateway_info_fail", "1");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    assert_eq!(
+        error_class(sandbox.prepare(&h.spec)),
+        "openshell_driver_unverified"
+    );
+    assert!(calls(&h)
+        .iter()
+        .all(|l| !l.starts_with("openshell sandbox create")));
 }

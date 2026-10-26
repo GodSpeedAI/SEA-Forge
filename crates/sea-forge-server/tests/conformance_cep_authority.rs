@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Stage 6 over a real Unix socket: the `authority_request` verb returns CEP
 //! `authority_decision` envelopes from the real policy engine, commits them to
 //! the cell's append-only ledger, and fails closed.
@@ -97,6 +98,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
             bindings: vec![
                 IdentityBinding {
                     uid: Some(uid),
+                    sid: None,
                     actor_id: "cognate-service".into(),
                     roles: vec![ActorRole::Service],
                 },
@@ -104,6 +106,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
                 // with separate authority-issued private capabilities.
                 IdentityBinding {
                     uid: None,
+                    sid: None,
                     actor_id: "op-alice".into(),
                     roles: vec![ActorRole::Operator],
                 },

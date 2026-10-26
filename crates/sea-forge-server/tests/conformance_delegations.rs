@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Delegation roster conformance tests (Task 11, ADR-003 additive):
 //! `delegation.list`.
 //!

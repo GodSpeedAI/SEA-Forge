@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Delegation job-contract conformance tests (Task 10, ADR-003 additive):
 //! `delegation.preview`.
 //!

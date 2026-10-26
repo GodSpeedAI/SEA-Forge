@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Case-navigation conformance tests (Task 7, ADR-003 additive):
 //! `case.list`, `case.get_overview`, `case.get_horizon`.
 //!

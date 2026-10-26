@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! The opt-in case-advance supervisor over a real socket (plan T04 step 5,
 //! operator decision D-3, unit C).
 //!

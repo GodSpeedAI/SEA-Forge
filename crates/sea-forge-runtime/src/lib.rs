@@ -249,7 +249,14 @@ pub fn execute_openshell(
     )?;
 
     use sea_forge_sandbox::ExecutionSandbox as _;
-    let sandbox = sea_forge_sandbox::OpenShellSandbox::new(binding);
+    // The sandbox must run the projection the checks above authorized.
+    let sandbox = sea_forge_sandbox::OpenShellSandbox::new(binding).approving(
+        sea_forge_sandbox::ApprovedProjection {
+            cell_id: cell_id.clone(),
+            model_hash: model_hash.clone(),
+            policy_digest: policy_digest.clone(),
+        },
+    );
     let spec = SandboxSpec {
         workspace_root: workspace.to_path_buf(),
         artifacts_root: artifacts.to_path_buf(),
@@ -262,10 +269,19 @@ pub fn execute_openshell(
         sandbox.download_workspace(&handle, result_dir)?;
         Ok(result)
     });
-    let destroyed = sandbox.destroy(handle);
-    let result = outcome.map_err(|e| config(e.class, e.message))?;
-    destroyed.map_err(|e| config(e.class, e.message))?;
-    Ok(result)
+    // A failed destroy is never hidden behind the execution outcome: the
+    // sandbox lifetime is then unverified, and both failures are reported.
+    match (outcome, sandbox.destroy(handle)) {
+        (Ok(result), Ok(())) => Ok(result),
+        (Err(e), Ok(())) | (Ok(_), Err(e)) => Err(config(e.class, e.message)),
+        (Err(primary), Err(cleanup)) => Err(config(
+            cleanup.class,
+            format!(
+                "sandbox lifetime unverified after {}: {}; cleanup failed: {}",
+                primary.class, primary.message, cleanup.message
+            ),
+        )),
+    }
 }
 
 #[cfg(test)]
@@ -274,6 +290,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::fs;
     use std::process::Command;
+    #[cfg_attr(not(unix), allow(unused_imports))]
     use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
     fn directories(name: &str) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {

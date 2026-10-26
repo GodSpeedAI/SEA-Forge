@@ -47,7 +47,6 @@ EXPECTED_VERSION="0.1.3"
 TEST_FILE="$REPO_ROOT/crates/sea-forge-case-runner/tests/cell_episode_live.rs"
 
 GATEWAY_PID=""
-GATEWAY_REGISTERED=0
 
 blocked() {
     echo "BLOCKED: $*" >&2
@@ -64,11 +63,6 @@ cleanup() {
     if [[ -n "$GATEWAY_PID" ]]; then
         kill "$GATEWAY_PID" 2>/dev/null || true
         wait "$GATEWAY_PID" 2>/dev/null || true
-    fi
-    # Remove only a registration this run added; an earlier exit must not
-    # delete an operator's existing gateway of the same name.
-    if [[ "$GATEWAY_REGISTERED" == 1 ]]; then
-        openshell gateway remove "$GATEWAY_NAME" >/dev/null 2>&1 || true
     fi
     exit "$rc"
 }
@@ -184,19 +178,52 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Gateway configuration.
+# Gateway configuration. The gateway runs with mTLS, the shape upstream's e2e
+# harness uses at OpenShell v0.1.3: an ephemeral CA, server and client
+# certificates from `openshell-gateway generate-certs`, and Ed25519 sandbox
+# launch-signing keys for the VM driver. Every credential is generated under
+# STATE_DIR, and the CLI config lives under STATE_DIR too (XDG_CONFIG_HOME), so
+# the operator's own OpenShell configuration is never read or written.
 # ---------------------------------------------------------------------------
 
 mkdir -p "$STATE_DIR"
+export XDG_CONFIG_HOME="$STATE_DIR/config"
+mkdir -p "$XDG_CONFIG_HOME"
+PKI_DIR="$STATE_DIR/pki"
+JWT_DIR="$STATE_DIR/jwt"
 CONFIG="$STATE_DIR/gateway.toml"
-python3 -I - "$PROJECTION_ABS/sandbox.json" "$CONFIG" "$PORT" "$DRIVER_DIR" "$STATE_DIR/vm-driver" "$IMAGE" <<'PY' \
+
+# generate-certs writes to $XDG_CONFIG_HOME/openshell/gateways/openshell/mtls
+# as well; its stderr goes to a file that is not uploaded.
+if ! "$GATEWAY_BIN" generate-certs --output-dir "$PKI_DIR" --server-san host.openshell.internal \
+    >/dev/null 2>"$STATE_DIR/certgen.err"; then
+    fail "openshell-gateway generate-certs failed (see $STATE_DIR/certgen.err)"
+fi
+
+mkdir -p "$JWT_DIR"
+openssl genpkey -algorithm Ed25519 -out "$JWT_DIR/signing.pem" >/dev/null 2>&1 \
+    || fail "could not generate the sandbox launch signing key"
+openssl pkey -in "$JWT_DIR/signing.pem" -pubout -out "$JWT_DIR/public.pem" >/dev/null 2>&1 \
+    || fail "could not derive the sandbox launch public key"
+openssl rand -hex 16 >"$JWT_DIR/kid" || fail "could not write the sandbox launch kid"
+chmod 600 "$JWT_DIR/signing.pem"
+
+python3 -I - "$PROJECTION_ABS/sandbox.json" "$CONFIG" "$PORT" "$DRIVER_DIR" "$STATE_DIR/vm-driver" "$IMAGE" \
+    "$PKI_DIR" "$JWT_DIR" "$GATEWAY_NAME" <<'PY' \
     || fail "could not generate $CONFIG from sandbox.json"
 import json
 import sys
 
-sandbox_path, out_path, port, driver_dir, state_dir, image = sys.argv[1:7]
+(sandbox_path, out_path, port, driver_dir, state_dir, image,
+ pki_dir, jwt_dir, gateway_name) = sys.argv[1:10]
 with open(sandbox_path, encoding="utf-8") as handle:
     shape = json.load(handle)["vm_shape"]
+
+
+def s(value):
+    # JSON string escaping is valid TOML basic-string escaping for these values.
+    return json.dumps(value)
+
 
 lines = [
     "[openshell]",
@@ -204,15 +231,29 @@ lines = [
     "",
     "[openshell.gateway]",
     'compute_driver = "vm"',
-    "disable_tls = true",
+    f"guest_tls_ca = {s(pki_dir + '/ca.crt')}",
+    "",
+    "[openshell.gateway.tls]",
+    f"cert_path = {s(pki_dir + '/server/tls.crt')}",
+    f"key_path = {s(pki_dir + '/server/tls.key')}",
+    f"client_ca_path = {s(pki_dir + '/ca.crt')}",
+    "",
+    "[openshell.gateway.mtls_auth]",
+    "enabled = true",
+    "",
+    "[openshell.gateway.gateway_jwt]",
+    f"signing_key_path = {s(jwt_dir + '/signing.pem')}",
+    f"public_key_path = {s(jwt_dir + '/public.pem')}",
+    f"kid_path = {s(jwt_dir + '/kid')}",
+    f"gateway_id = {s(gateway_name)}",
     "",
     "[openshell.drivers.vm]",
-    f'grpc_endpoint = "http://127.0.0.1:{port}"',
-    f'driver_dir = "{driver_dir}"',
-    f'state_dir = "{state_dir}"',
+    f"grpc_endpoint = {s('https://host.openshell.internal:' + port)}",
+    f"driver_dir = {s(driver_dir)}",
+    f"state_dir = {s(state_dir)}",
 ]
 if image:
-    lines.append(f'default_image = "{image}"')
+    lines.append(f"default_image = {s(image)}")
 lines += [
     f"vcpus = {int(shape['vcpus'])}",
     f"mem_mib = {int(shape['mem_mib'])}",
@@ -229,7 +270,7 @@ fi
 echo "OK: gateway config preflight passed ($CONFIG)"
 
 # ---------------------------------------------------------------------------
-# Start the gateway and register it.
+# Start the gateway and register it for the CLI (mTLS client bundle).
 # ---------------------------------------------------------------------------
 
 openshell-gateway --config "$CONFIG" --port "$PORT" \
@@ -237,12 +278,31 @@ openshell-gateway --config "$CONFIG" --port "$PORT" \
     >"$STATE_DIR/gateway.log" 2>&1 &
 GATEWAY_PID=$!
 
+# Registration mirrors upstream's e2e_register_mtls_gateway: the CLI finds the
+# gateway by name under XDG_CONFIG_HOME, with the CA and client certificate in
+# mtls/. The sandbox adapter passes XDG_CONFIG_HOME through, so the live tests
+# reach the gateway the same way.
+GW_CFG="$XDG_CONFIG_HOME/openshell/gateways/$GATEWAY_NAME"
+mkdir -p "$GW_CFG/mtls"
+cp "$PKI_DIR/ca.crt" "$GW_CFG/mtls/ca.crt"
+cp "$PKI_DIR/client/tls.crt" "$GW_CFG/mtls/tls.crt"
+cp "$PKI_DIR/client/tls.key" "$GW_CFG/mtls/tls.key"
+cat >"$GW_CFG/metadata.json" <<EOF
+{
+  "name": "$GATEWAY_NAME",
+  "gateway_endpoint": "https://127.0.0.1:$PORT",
+  "is_remote": false,
+  "gateway_port": $PORT
+}
+EOF
+printf '%s' "$GATEWAY_NAME" >"$XDG_CONFIG_HOME/openshell/active_gateway"
+
 ready=0
 for _ in $(seq 1 60); do
     if ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
         break
     fi
-    if openshell --gateway-endpoint "http://127.0.0.1:$PORT" status >/dev/null 2>&1; then
+    if openshell --gateway "$GATEWAY_NAME" status >/dev/null 2>&1; then
         ready=1
         break
     fi
@@ -251,13 +311,9 @@ done
 if (( ready == 0 )); then
     echo "--- last 40 lines of $STATE_DIR/gateway.log ---" >&2
     tail -n 40 "$STATE_DIR/gateway.log" >&2 || true
-    fail "gateway did not answer on http://127.0.0.1:$PORT within 60 s"
+    fail "gateway did not answer on https://127.0.0.1:$PORT (mTLS) within 60 s"
 fi
-echo "OK: gateway answered on http://127.0.0.1:$PORT"
-
-openshell gateway add "http://127.0.0.1:$PORT" --local --name "$GATEWAY_NAME" \
-    || fail "could not register gateway $GATEWAY_NAME"
-GATEWAY_REGISTERED=1
+echo "OK: gateway answered on https://127.0.0.1:$PORT (mTLS, registered as $GATEWAY_NAME)"
 
 # ---------------------------------------------------------------------------
 # Live tests. Only cargo's exit status decides success.

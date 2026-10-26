@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SUP-09b: `migrate` must refuse symlinked legacy trees and over-deep
 //! nesting before creating key material or any migration side effect.
 

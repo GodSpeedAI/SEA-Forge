@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-01/SEC-06 boundaries found by the 2026-10-17 adversarial review.
 //!
 //! - ADV-A05/A06/A07: an isolated workload could read every world-readable

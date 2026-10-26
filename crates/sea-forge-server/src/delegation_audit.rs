@@ -47,7 +47,11 @@ pub struct DelegatedRequestRecord {
     /// The principal that spoke: the configured gateway actor.
     pub gateway_actor_id: String,
     /// The gateway's uid, as `SO_PEERCRED` reported it on this connection.
+    #[cfg(unix)]
     pub gateway_uid: u32,
+    /// The gateway's SID, as the pipe token reported it on this connection.
+    #[cfg(windows)]
+    pub gateway_sid: String,
     /// The end user every other record from this request names.
     pub effective_actor_id: String,
     /// The wire spelling of the role claimed for that end user.
@@ -98,7 +102,10 @@ impl DelegatedRequestRecord {
             verb: verb_of(raw_line),
             request_id: request_id.map(str::to_owned),
             gateway_actor_id: provenance.gateway_actor_id().into(),
+            #[cfg(unix)]
             gateway_uid: provenance.gateway_uid(),
+            #[cfg(windows)]
+            gateway_sid: provenance.gateway_principal().clone(),
             effective_actor_id: actor.actor_id().into(),
             effective_role: crate::identity::role_wire_name(actor.role()),
         })

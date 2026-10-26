@@ -94,6 +94,10 @@ jobs:
         run: devbox run -- just setup
 
       - name: test
+        env:
+          # Hosted ubuntu kernels support Landlock network rules; a missing ABI
+          # must fail the Linux Jail network cases, not skip them (review F15).
+          SEA_FORGE_REQUIRE_LANDLOCK_NET: "1"
         run: devbox run -- just test
 
       - name: build

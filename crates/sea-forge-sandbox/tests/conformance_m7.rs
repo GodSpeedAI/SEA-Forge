@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! M7 environment + evaluator conformance (spec-full §7.6, §12 M7, §17.1 M7).
 //!
 //! All test names contain "environment" so `cargo test -p sea-forge-sandbox environment`

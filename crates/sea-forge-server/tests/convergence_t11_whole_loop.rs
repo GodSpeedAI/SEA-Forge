@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Convergence T11 — Whole-Loop Causality, Replay, and Recovery (Rust side)
 //!
 //! Complements the primary Python harness (godspeed_agent/tests/test_convergence_t11_whole_loop.py)

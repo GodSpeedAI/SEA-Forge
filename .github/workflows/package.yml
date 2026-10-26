@@ -1,0 +1,522 @@
+name: Package
+
+# Native install packages for sea-forge (CLI) and sea-forge-server (daemon):
+#   linux   sea-forge_<ver>_amd64.deb, plus the existing linux tar.gz
+#   macos   sea-forge-<ver>-macos-universal.pkg / .dmg (arm64-only if the x86_64 cross-build fails)
+#   windows sea-forge-<ver>-x86_64-pc-windows-msvc-setup.exe and .zip
+#
+# Reusable (workflow_call, called by release-please.yml) and runnable on push or
+# from the Actions UI for validation. Every package is INSTALLED (or mounted) on the
+# runner that built it and checked before it is offered as an artifact.
+#
+# All packages are UNSIGNED: no Apple Developer ID and no Authenticode certificate.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build, e.g. a release tag. Empty builds the caller's commit."
+        type: string
+        required: false
+        default: ""
+      version:
+        description: "Version to package, with or without a leading v. Empty reads the workspace version."
+        type: string
+        required: false
+        default: ""
+      upload:
+        description: "Upload the packages as workflow artifacts so the caller can publish them."
+        type: boolean
+        required: false
+        default: false
+  push:
+    branches: [feat/native-packages, feat/cross-platform-native]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # In a called workflow github.event_name is the CALLER's event, so the inputs
+  # (empty on direct push/dispatch runs) are used directly.
+  group: package-${{ github.ref }}-${{ inputs.ref || 'direct' }}
+  cancel-in-progress: ${{ !inputs.upload }}
+
+jobs:
+  linux:
+    name: package (linux amd64)
+    runs-on: ubuntu-22.04  # oldest supported glibc (2.35) widens the .deb audience
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || '' }}
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
+          requested="${REQUESTED#v}"
+          if [ -z "$requested" ]; then requested="$workspace"; fi
+          if [ "$requested" != "$workspace" ]; then
+            echo "::error::requested version ${requested} differs from workspace version ${workspace}"
+            exit 1
+          fi
+          echo "version=$requested" >> "$GITHUB_OUTPUT"
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: release-check (manifest versions vs version)
+        run: devbox run -- just release-check "${{ steps.version.outputs.version }}"
+
+      - name: Build release binaries
+        run: |
+          devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked -p sea-forge-sandbox --bin sea-forge-workload-exec --bin sea-forge-mcp-connect
+
+      # The Devbox (Nix) toolchain links the Nix loader and a /nix/store RUNPATH
+      # into the binaries; they would not start on a host without Nix. Point
+      # them at the system loader and drop the RUNPATH, then refuse any
+      # remaining /nix/store reference.
+      - name: Detach binaries from the Nix toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y patchelf >/dev/null
+          for b in target/release/sea-forge target/release/sea-forge-server \
+                   target/release/sea-forge-workload-exec target/release/sea-forge-mcp-connect; do
+            patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath "$b"
+            readelf -l "$b" | grep -F '[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]'
+            if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
+            if readelf -d "$b" | grep -F /nix/store; then echo "::error::$b references /nix/store"; exit 1; fi
+          done
+
+      - name: Package deb and tarball
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y dpkg-dev >/dev/null
+          mkdir -p dist
+          sh packaging/deb/build.sh "$VERSION" target/release dist
+          stage="sea-forge-${VERSION}-x86_64-unknown-linux-gnu"
+          rm -rf "dist-stage"
+          mkdir -p "dist-stage/${stage}"
+          cp target/release/sea-forge target/release/sea-forge-server target/release/sea-forge-workload-exec \
+             target/release/sea-forge-mcp-connect LICENSE "dist-stage/${stage}/"
+          tar -C dist-stage -czf "dist/${stage}.tar.gz" "${stage}"
+          rm -rf dist-stage
+          ls -l dist
+
+      - name: Install test (apt, from the built .deb)
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          deb="dist/sea-forge_${VERSION}_amd64.deb"
+          sudo apt-get install -y "./${deb}"
+          command -v sea-forge
+          test "$(sea-forge --version)" = "sea-forge ${VERSION}"
+          echo "install test: sea-forge --version -> $(sea-forge --version)"
+          # Deliberate deviation from the brief: sea-forge-server takes no arguments by design
+          # (it refuses them with exit 2 and points to SEA_FORGE_ROOT), so --help is refused.
+          set +e
+          server_help=$(sea-forge-server --help 2>&1)
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$server_help" | grep -q "takes no arguments"
+          echo "install test: sea-forge-server --help -> refused, exit $rc: $server_help"
+          dpkg -L sea-forge
+          for helper in sea-forge-workload-exec sea-forge-mcp-connect; do
+            test -x "/usr/bin/$helper" || { echo "::error::$helper not installed beside sea-forge-server"; exit 1; }
+          done
+          dpkg -s sea-forge | sed -n '1,12p'
+          # The runner has Nix; prove the package also runs where it does not.
+          for image in ubuntu:22.04 debian:12; do
+            docker run --rm -v "$PWD/dist:/dist:ro" "$image" sh -ec \
+              "apt-get update -qq >/dev/null && apt-get install -y -qq /dist/${deb##*/} >/dev/null && test \"\$(sea-forge --version)\" = 'sea-forge ${VERSION}' && echo \"clean $image: \$(sea-forge --version)\""
+          done
+          sudo apt-get remove -y sea-forge
+          if command -v sea-forge >/dev/null 2>&1; then echo "sea-forge still on PATH"; exit 1; fi
+          test ! -e /usr/bin/sea-forge
+          test ! -e /usr/bin/sea-forge-server
+          test ! -e /usr/bin/sea-forge-workload-exec
+          test ! -e /usr/bin/sea-forge-mcp-connect
+          echo "install test: removed; /usr/bin/sea-forge* gone"
+
+      - name: Install test (functional smoke from a re-installed package)
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./dist/sea-forge_${VERSION}_amd64.deb"
+          sh packaging/smoke-cell.sh /usr/bin/sea-forge /usr/bin/sea-forge-server
+          sudo apt-get remove -y sea-forge
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-linux.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pkg-linux
+          path: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/built-from-linux.txt
+          if-no-files-found: error
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### linux amd64"
+            echo "- .deb installed with apt, --version checked, removed (see the install test step)"
+            echo "- functional smoke: see the smoke step; unsigned package"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  macos:
+    name: package (macos universal)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || '' }}
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
+          requested="${REQUESTED#v}"
+          if [ -z "$requested" ]; then requested="$workspace"; fi
+          if [ "$requested" != "$workspace" ]; then
+            echo "::error::requested version ${requested} differs from workspace version ${workspace}"
+            exit 1
+          fi
+          echo "version=$requested" >> "$GITHUB_OUTPUT"
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: release-check (manifest versions vs version)
+        run: devbox run -- just release-check "${{ steps.version.outputs.version }}"
+
+      - name: Build arm64 binaries
+        run: |
+          devbox run -- cargo build --release --locked --target aarch64-apple-darwin -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked --target aarch64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
+
+      - name: Build x86_64 binaries (cross)
+        id: x86
+        # A failure here does not fail the job: the package then ships arm64-only (see next step).
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          devbox run -- rustup target add x86_64-apple-darwin
+          devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-cli -p sea-forge-server
+          devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
+
+      # The Devbox (Nix) toolchain links /nix/store/...-libiconv/lib/libiconv.2.dylib;
+      # such a binary would not load on a Mac without Nix. macOS ships the same
+      # library as /usr/lib/libiconv.2.dylib, so rewrite the load path, re-sign
+      # (arm64 requires a valid signature), then refuse any /nix/store reference.
+      - name: Binaries load only system libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for b in target/*-apple-darwin/release/sea-forge target/*-apple-darwin/release/sea-forge-server \
+                   target/*-apple-darwin/release/sea-forge-jail-launcher; do
+            changed=0
+            for lib in $(otool -L "$b" | tail -n +2 | awk '{print $1}' | grep '^/nix/store/' || true); do
+              case "$lib" in
+                */lib/libiconv.2.dylib) install_name_tool -change "$lib" /usr/lib/libiconv.2.dylib "$b"; changed=1 ;;
+                *) echo "::error::$b links unexpected Nix library $lib"; exit 1 ;;
+              esac
+            done
+            if [ "$changed" = 1 ]; then codesign --force --sign - "$b"; fi
+          done
+          bad=0
+          for b in target/*-apple-darwin/release/sea-forge target/*-apple-darwin/release/sea-forge-server \
+                   target/*-apple-darwin/release/sea-forge-jail-launcher; do
+            otool -L "$b"
+            if otool -L "$b" | tail -n +2 | grep -F /nix/store; then echo "::error::$b links /nix/store"; bad=1; fi
+            if otool -l "$b" | grep -A2 LC_RPATH | grep -F /nix/store; then echo "::error::$b has a /nix/store rpath"; bad=1; fi
+          done
+          exit "$bad"
+
+      - name: Choose package variant
+        id: variant
+        shell: bash
+        env:
+          X86_OUTCOME: ${{ steps.x86.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$X86_OUTCOME" = "success" ]; then
+            echo "x86dir=target/x86_64-apple-darwin/release" >> "$GITHUB_OUTPUT"
+            echo "label=universal" >> "$GITHUB_OUTPUT"
+            echo "expect=arm64 x86_64" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::x86_64 cross-build outcome was ${X86_OUTCOME}; shipping arm64-only (-macos-arm64)"
+            echo "x86dir=" >> "$GITHUB_OUTPUT"
+            echo "label=arm64" >> "$GITHUB_OUTPUT"
+            echo "expect=arm64" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package pkg and dmg
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          X86DIR: ${{ steps.variant.outputs.x86dir }}
+        run: |
+          set -euo pipefail
+          sh packaging/macos/build.sh "$VERSION" target/aarch64-apple-darwin/release "$X86DIR" dist
+          ls -l dist
+
+      - name: Install test (pkg, installer(8))
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LABEL: ${{ steps.variant.outputs.label }}
+          EXPECT: ${{ steps.variant.outputs.expect }}
+        run: |
+          set -euo pipefail
+          pkg="dist/sea-forge-${VERSION}-macos-${LABEL}.pkg"
+          sha_built=$(shasum -a 256 "$pkg" | cut -d' ' -f1)
+          echo "built pkg sha256: $sha_built"
+          sudo installer -pkg "$pkg" -target /
+          test "$(/usr/local/bin/sea-forge --version)" = "sea-forge ${VERSION}"
+          echo "install test: /usr/local/bin/sea-forge --version -> $(/usr/local/bin/sea-forge --version)"
+          otool -s __TEXT __info_plist /usr/local/bin/sea-forge-jail-launcher | grep -q . || { echo "::error::jail launcher lacks its embedded Info.plist"; exit 1; }
+          echo "install test: sea-forge-jail-launcher carries an embedded Info.plist"
+          for bin in sea-forge sea-forge-server sea-forge-jail-launcher; do
+            archs=$(lipo -archs "/usr/local/bin/${bin}")
+            echo "install test: lipo -archs ${bin} -> ${archs}"
+            for want in $EXPECT; do
+              case " $archs " in *" $want "*) ;; *) echo "::error::${bin} lacks ${want}"; exit 1 ;; esac
+            done
+          done
+          set +e
+          server_help=$(/usr/local/bin/sea-forge-server --help 2>&1)
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          printf '%s\n' "$server_help" | grep -q "takes no arguments"
+          echo "install test: sea-forge-server --help -> refused, exit $rc (by design)"
+          pkgutil --pkg-info ai.godspeed.sea-forge
+
+      - name: Functional smoke (installed binaries)
+        shell: bash
+        run: sh packaging/smoke-cell.sh /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server
+
+      - name: Install test (dmg contains the same pkg)
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LABEL: ${{ steps.variant.outputs.label }}
+        run: |
+          set -euo pipefail
+          pkg="dist/sea-forge-${VERSION}-macos-${LABEL}.pkg"
+          dmg="dist/sea-forge-${VERSION}-macos-${LABEL}.dmg"
+          built=$(shasum -a 256 "$pkg" | cut -d' ' -f1)
+          mnt=$(mktemp -d /tmp/sfdmg.XXXXXX)
+          hdiutil attach -nobrowse -readonly -noverify -noautoopen -mountpoint "$mnt" "$dmg"
+          inside=$(shasum -a 256 "$mnt/sea-forge-${VERSION}-macos-${LABEL}.pkg" | cut -d' ' -f1)
+          ls "$mnt"
+          hdiutil detach "$mnt"
+          rmdir "$mnt" || true
+          echo "built pkg sha256:  $built"
+          echo "dmg pkg sha256:    $inside"
+          test "$built" = "$inside"
+          echo "install test: dmg payload pkg matches the built pkg"
+
+      - name: Uninstall installed binaries
+        if: always()
+        shell: bash
+        run: |
+          sudo rm -f /usr/local/bin/sea-forge /usr/local/bin/sea-forge-server /usr/local/bin/sea-forge-jail-launcher
+          sudo pkgutil --forget ai.godspeed.sea-forge >/dev/null 2>&1 || true
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-macos.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pkg-macos
+          path: |
+            dist/*.pkg
+            dist/*.dmg
+            dist/built-from-macos.txt
+          if-no-files-found: error
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        env:
+          LABEL: ${{ steps.variant.outputs.label }}
+        run: |
+          {
+            echo "### macOS (${LABEL})"
+            echo "- Packages are UNSIGNED and not notarized (no Apple Developer ID)."
+            echo "- Functional smoke: ran on the installed binaries; see the smoke step."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  windows:
+    name: package (windows x86_64)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || '' }}
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version || '' }}
+        run: |
+          set -euo pipefail
+          workspace=$(awk '/^\[workspace\.package\]/{f=1} f&&/^version/{gsub(/[ "=]/,"",$0); print substr($0,8); exit}' Cargo.toml)
+          requested="${REQUESTED#v}"
+          if [ -z "$requested" ]; then requested="$workspace"; fi
+          if [ "$requested" != "$workspace" ]; then
+            echo "::error::requested version ${requested} differs from workspace version ${workspace}"
+            exit 1
+          fi
+          echo "version=$requested" >> "$GITHUB_OUTPUT"
+
+      - name: Pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          rustc -Vv
+
+      - name: Build release binaries
+        shell: bash
+        run: cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+
+      - name: Package zip and setup.exe
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & "$PWD\packaging\windows\build.ps1" $env:VERSION "$PWD\target\release" "$PWD\dist"
+          if ($LASTEXITCODE -ne 0) { throw "build.ps1 failed" }
+
+      - name: Install test (setup.exe, per user, silent)
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = "sea-forge-$($env:VERSION)-x86_64-pc-windows-msvc"
+          $setup = Join-Path $PWD "dist\$base-setup.exe"
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\SEA-Forge'
+          $log = Join-Path $env:RUNNER_TEMP 'install.log'
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', "/LOG=$log") -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            if (Test-Path $log) { Get-Content $log | Select-Object -Last 40 }
+            throw "setup.exe exited $($p.ExitCode)"
+          }
+          foreach ($f in 'sea-forge.exe', 'sea-forge-server.exe', 'LICENSE') {
+            if (-not (Test-Path (Join-Path $app $f))) { throw "missing $f in $app" }
+          }
+          Write-Host "installed to $app"
+
+          # Fresh process: rebuild PATH from the registry, not from this shell's environment.
+          $check = Join-Path $env:RUNNER_TEMP 'check-path.ps1'
+          @'
+          $ErrorActionPreference = 'Stop'
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          $cmd = Get-Command sea-forge.exe
+          Write-Output "resolved: $($cmd.Source)"
+          $out = (& sea-forge.exe --version) | Out-String
+          Write-Output "version output: $($out.Trim())"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($out.Trim() -ne "sea-forge $($env:VERSION)") { exit 1 }
+          exit 0
+          '@ | Set-Content -Path $check -Encoding ASCII
+          & pwsh -NoProfile -File $check
+          if ($LASTEXITCODE -ne 0) { throw "PATH/version check failed in a new process" }
+
+          $help = (& "$app\sea-forge-server.exe" --help 2>&1) | Out-String
+          if ($LASTEXITCODE -ne 2 -or $help -notmatch 'takes no arguments') { throw "unexpected sea-forge-server --help result: $help" }
+          Write-Host "sea-forge-server --help refused with exit 2 (by design)"
+
+          $unins = Get-ChildItem -Path $app -Filter 'unins*.exe' | Select-Object -First 1
+          if (-not $unins) { throw "uninstaller not found in $app" }
+          $u = Start-Process -FilePath $unins.FullName -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES') -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "uninstaller exited $($u.ExitCode)" }
+          if (Test-Path (Join-Path $app 'sea-forge.exe')) { throw 'sea-forge.exe still present after uninstall' }
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (($userPath -split ';') -contains $app) { throw 'user PATH still contains the install dir' }
+          Write-Host 'uninstall: binaries removed and user PATH entry removed'
+          exit 0
+
+      - name: Functional smoke
+        shell: bash
+        run: |
+          {
+            echo "### windows x86_64"
+            echo "- Functional smoke (CLI + daemon cell): NOT RUN, not yet supported on Windows (native port pending)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record the built commit
+        shell: bash
+        run: git rev-parse HEAD > dist/built-from-windows.txt
+
+      - name: Upload packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pkg-windows
+          path: |
+            dist/*-setup.exe
+            dist/*.zip
+            dist/built-from-windows.txt
+          if-no-files-found: error

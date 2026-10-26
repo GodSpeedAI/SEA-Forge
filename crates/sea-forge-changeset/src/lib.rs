@@ -375,7 +375,6 @@ pub fn export_base(repo: &Path, base: &BaseIdentity, staging: &Path, dest: &Path
 /// Refuse anything Git would not record faithfully or that could alias state
 /// outside the workspace.
 fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
-    use std::os::unix::fs::{FileTypeExt, MetadataExt};
     let entries = fs::read_dir(dir)
         .map_err(|e| ChangesetError::new("workspace_unavailable", e.to_string()))?;
     for entry in entries {
@@ -400,19 +399,29 @@ fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
                 class: "git_metadata".into(),
                 message: "the workspace contains Git metadata".into(),
             });
+        } else if is_link_or_reparse(&meta) {
+            // Windows: a symlink is a reparse point too, and Git there would
+            // record its target's content as a plain file, so both are refused
+            // here. Unix keeps the `symlink` class the validator also uses.
+            findings.push(Finding {
+                path: relative,
+                class: if cfg!(windows) {
+                    "reparse_point"
+                } else {
+                    "symlink"
+                }
+                .into(),
+                message: "symbolic links and reparse points cannot be part of a changeset".into(),
+            });
         } else if file_type.is_dir() {
             scan(root, &path, findings)?;
-        } else if file_type.is_fifo()
-            || file_type.is_socket()
-            || file_type.is_block_device()
-            || file_type.is_char_device()
-        {
+        } else if is_special_file(file_type) {
             findings.push(Finding {
                 path: relative,
                 class: "unsafe_file_type".into(),
                 message: "devices, sockets and FIFOs cannot be part of a changeset".into(),
             });
-        } else if file_type.is_file() && meta.nlink() > 1 {
+        } else if file_type.is_file() && link_count(&path, &meta)? > 1 {
             findings.push(Finding {
                 path: relative,
                 class: "hard_link".into(),
@@ -421,6 +430,51 @@ fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// FIFOs, sockets and device nodes: only Unix has them as file types.
+#[cfg(unix)]
+fn is_special_file(file_type: fs::FileType) -> bool {
+    use std::os::unix::fs::FileTypeExt;
+    file_type.is_fifo()
+        || file_type.is_socket()
+        || file_type.is_block_device()
+        || file_type.is_char_device()
+}
+
+#[cfg(windows)]
+fn is_special_file(_file_type: fs::FileType) -> bool {
+    false
+}
+
+/// Symlinks on Unix; every reparse point on Windows (symlinks, junctions,
+/// mount points, other tags). Walking into one would leave the workspace.
+#[cfg(windows)]
+fn is_link_or_reparse(meta: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+    meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
+#[cfg(unix)]
+fn is_link_or_reparse(meta: &fs::Metadata) -> bool {
+    meta.file_type().is_symlink()
+}
+
+/// Number of hard links to a regular file.
+#[cfg(unix)]
+fn link_count(_path: &Path, meta: &fs::Metadata) -> Result<u64> {
+    use std::os::unix::fs::MetadataExt;
+    Ok(meta.nlink())
+}
+
+#[cfg(windows)]
+fn link_count(path: &Path, _meta: &fs::Metadata) -> Result<u64> {
+    let file = fs::File::open(path)
+        .map_err(|e| ChangesetError::new("workspace_unavailable", e.to_string()))?;
+    let info = winapi_util::file::information(&file)
+        .map_err(|e| ChangesetError::new("workspace_unavailable", e.to_string()))?;
+    Ok(info.number_of_links())
 }
 
 fn unsafe_path(path: &str) -> Option<&'static str> {

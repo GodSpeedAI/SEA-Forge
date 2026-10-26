@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! PromoteChangeset: the authority to move an authoritative Git reference to
 //! one exact proposed changeset. It must always escalate for human approval
 //! and be grantable only through `grant_after_approval`.

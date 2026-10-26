@@ -21,6 +21,17 @@ Logging follows Rust's `RUST_LOG` filter (default `info`). The server emits JSON
 
 There are no `SEA_FORGE_CONFIG`, `SEA_FORGE_LOG`, or `SEA_FORGE_TIMEOUT` variables. Do not script against them.
 
+### Windows CLI: `SEA_FORGE_SERVER_SID`
+
+The Windows CLI connects to the cell's named pipe and refuses any server whose process runs under a different SID than the expected server principal. The expected principal is:
+
+| Setting | Expected server SID |
+|---|---|
+| `SEA_FORGE_SERVER_SID` unset or empty (default) | The calling user. The server must run as the same user. |
+| `SEA_FORGE_SERVER_SID=S-1-5-21-...` | That SID. Use it when the server runs under a service account that this user is admitted to through `identity.bindings`. |
+
+A value that does not start with `S-1-` is refused. The CLI opens the pipe with identification-only security QoS, so a server cannot impersonate the caller, and with explicit pipe rights that exclude `FILE_CREATE_PIPE_INSTANCE`. This variable only changes which server the CLI accepts. It grants no authority to the server.
+
 ---
 
 ## 2. Startup and Reload Semantics
@@ -29,6 +40,7 @@ There are no `SEA_FORGE_CONFIG`, `SEA_FORGE_LOG`, or `SEA_FORGE_TIMEOUT` variabl
 * **Present but invalid:** startup fails before the socket is bound or cell records are created. Unknown fields are rejected (`deny_unknown_fields`); this is not a permissive schema.
 * **Reload trigger:** the running server re-reads `server.yaml` on case submission (`submit` / case commit), not on every request.
 * **Invalid reload:** the previous validated snapshot remains live, and the server publishes an `invalid_reload_error` operator event. It does not half-apply a configuration.
+* **Identity reload on Windows:** the server pipe's security descriptor admits the SIDs bound in `identity` (and the gateway SID), and it is built once at startup. On Windows, a reload that adds or removes any such SID is refused with error class `identity_reload_requires_restart`, and the previous snapshot stays live. The refusal is published as an `invalid_reload_error` event whose `error_class` is that value. Restart the server to apply a SID change. Role changes and other non-SID settings still reload. On Unix, identity is matched by uid on the socket, so identity reloads apply live.
 * **Deleted file:** a reload with no file is a no-op. It does not reset the process to defaults.
 * **Fixed root and socket:** a reload cannot move the cell root or socket. Those are process-lifetime properties.
 * **Immutable supervisor:** supervisor settings are read when the task is spawned at startup. Changing them requires a restart.

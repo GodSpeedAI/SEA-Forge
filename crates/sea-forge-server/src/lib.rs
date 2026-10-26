@@ -27,7 +27,118 @@ use std::sync::{
     Arc,
 };
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncWrite};
+#[cfg(windows)]
+use tokio::net::windows::named_pipe::NamedPipeServer;
+#[cfg(unix)]
 use tokio::net::{UnixListener, UnixStream};
+
+/// The accepted client connection: a Unix stream, or a named-pipe server end.
+#[cfg(unix)]
+type Transport = UnixStream;
+/// The accepted client connection: a Unix stream, or a named-pipe server end.
+#[cfg(windows)]
+type Transport = NamedPipeServer;
+
+/// Accepts client connections on the control-plane endpoint.
+///
+/// Unix: a bound `UnixListener`. Windows: a named pipe. Each accept connects
+/// the current instance and creates the next one before handing the connected
+/// instance off, so there is never a moment without a listening instance.
+#[cfg(unix)]
+struct Acceptor(UnixListener);
+
+#[cfg(unix)]
+impl Acceptor {
+    async fn accept(&mut self) -> std::io::Result<Transport> {
+        self.0.accept().await.map(|(stream, _)| stream)
+    }
+}
+
+#[cfg(windows)]
+struct Acceptor {
+    name: String,
+    security: sea_forge_os::PipeSecurity,
+    next: NamedPipeServer,
+}
+
+#[cfg(windows)]
+impl Acceptor {
+    async fn accept(&mut self) -> std::io::Result<Transport> {
+        self.next.connect().await?;
+        let successor = sea_forge_os::create_pipe_server(&self.name, &self.security, false)?;
+        Ok(std::mem::replace(&mut self.next, successor))
+    }
+}
+
+/// Waits for the first bytes of a connection, at most `limit`.
+///
+/// `Err(())` means the peer sent nothing within the limit. `Ok(false)` means
+/// end of stream or a read error, which the caller treats as "no bytes".
+#[cfg(any(windows, test))]
+async fn first_bytes_within<R>(reader: &mut R, limit: std::time::Duration) -> Result<bool, ()>
+where
+    R: tokio::io::AsyncBufRead + Unpin,
+{
+    use tokio::io::AsyncBufReadExt;
+    match tokio::time::timeout(limit, reader.fill_buf()).await {
+        Err(_) => Err(()),
+        Ok(Ok(bytes)) => Ok(!bytes.is_empty()),
+        Ok(Err(_)) => Ok(false),
+    }
+}
+
+/// Windows: the peer SID is only available once the client has written, so
+/// the first bytes are buffered here and the SID is read from the pipe token.
+/// The buffered bytes stay in the returned reader.
+///
+/// A client that connects and never writes is dropped after the request
+/// deadline (`REQUEST_TIMEOUT`), so it cannot hold an admission permit
+/// indefinitely. `None` means the connection was closed.
+#[cfg(windows)]
+async fn identify_pipe_client(
+    pipe: NamedPipeServer,
+) -> Option<(
+    tokio::io::BufReader<NamedPipeServer>,
+    Option<crate::identity::PeerIdentity>,
+)> {
+    let mut buffered = tokio::io::BufReader::new(pipe);
+    match first_bytes_within(&mut buffered, REQUEST_TIMEOUT).await {
+        Err(()) => {
+            tracing::warn!("pipe client sent no request within the 10s server timeout; closing it");
+            None
+        }
+        Ok(false) => Some((buffered, None)),
+        Ok(true) => {
+            let peer = crate::identity::PeerIdentity::of_pipe(buffered.get_ref());
+            Some((buffered, peer))
+        }
+    }
+}
+
+#[cfg(test)]
+mod first_bytes_tests {
+    use super::first_bytes_within;
+    use std::time::Duration;
+    use tokio::io::{AsyncWriteExt, BufReader};
+
+    #[tokio::test]
+    async fn idle_connection_times_out_instead_of_waiting_forever() {
+        let (_client, server) = tokio::io::duplex(64);
+        let mut reader = BufReader::new(server);
+        let outcome = first_bytes_within(&mut reader, Duration::from_millis(50)).await;
+        assert!(outcome.is_err(), "an idle pipe was not bounded");
+    }
+
+    #[tokio::test]
+    async fn a_client_that_writes_is_admitted() {
+        let (mut client, server) = tokio::io::duplex(64);
+        client.write_all(b"{}\n").await.expect("write");
+        let mut reader = BufReader::new(server);
+        let outcome = first_bytes_within(&mut reader, Duration::from_secs(5)).await;
+        assert_eq!(outcome, Ok(true));
+    }
+}
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 
 use sfwp::correlation::RequestCorrelationStore;
@@ -71,6 +182,31 @@ pub struct CaseEntry {
     pub state: String,
     pub exit_code: Option<i32>,
     pub run_dir: Option<String>,
+}
+
+/// Why `ServerState::reload_config` refused a reload. The previous snapshot
+/// stays live in every case.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReloadError {
+    /// The error class, when the refusal has one. `None` for an ordinary invalid file.
+    pub error_class: Option<&'static str>,
+    /// The operator-facing reason.
+    pub message: String,
+}
+
+impl ReloadError {
+    fn invalid(message: String) -> Self {
+        Self {
+            error_class: None,
+            message,
+        }
+    }
+}
+
+impl std::fmt::Display for ReloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
 }
 
 /// Shared server state.
@@ -324,7 +460,7 @@ impl ServerState {
     /// running cell silently reverted every setting to its default, which is a
     /// fail-open of exactly the kind §8.4 exists to prevent. Nothing to re-read
     /// means nothing to change.
-    pub fn reload_config(&self) -> Result<Arc<ServerConfig>, String> {
+    pub fn reload_config(&self) -> Result<Arc<ServerConfig>, ReloadError> {
         let config_path = self.root.join("server.yaml");
         if !config_path.exists() {
             tracing::debug!(
@@ -333,12 +469,27 @@ impl ServerState {
             );
             return Ok(self.config());
         }
-        let mut next = ServerConfig::load(&config_path)?;
+        let mut next = ServerConfig::load(&config_path).map_err(ReloadError::invalid)?;
         // The cell is fixed at startup. A `root:` or `socket_path:` key that
         // drifted into the file cannot move a running server's records or
         // socket out from under its own connections and in-flight runs.
         next.root = self.root.clone();
         next.socket_path = self.config().socket_path.clone();
+        // F30: the Windows server pipe's DACL admits the SIDs it was built with
+        // at startup and cannot be rebuilt live. A reload that changes that set
+        // would half-apply the identity bindings, so it is refused instead. The
+        // active snapshot keeps the startup set (every change is refused), so
+        // comparing against it is the same as comparing against startup.
+        #[cfg(windows)]
+        if crate::config::reload_changes_pipe_admission(&self.config(), &next) {
+            return Err(ReloadError {
+                error_class: Some(crate::config::IDENTITY_RELOAD_REQUIRES_RESTART),
+                message: "server.yaml changes the identity SIDs admitted by the Windows \
+                          server pipe, which is fixed at startup; restart the server to apply \
+                          this identity change. The previous configuration stays active."
+                    .to_string(),
+            });
+        }
 
         let next = Arc::new(next);
         *self.config.write().unwrap_or_else(|e| e.into_inner()) = Arc::clone(&next);
@@ -1350,6 +1501,15 @@ async fn run_inner(
     let supervisor_settings = config.supervisor.clone();
     // SEC-02/08: database session expiry is enforced by the trusted server
     // for its whole lifetime, independent of episodes and issuance.
+    // Windows has no Postgres broker: a configured database must refuse startup,
+    // never run without its session supervisor.
+    #[cfg(windows)]
+    if !config.postgres.is_empty() {
+        return Err(ForgeError::Input(
+            "postgres resources require the Linux database broker; this host cannot supervise them (workload_isolation_unavailable)".into(),
+        )
+        .into());
+    }
     #[cfg(target_os = "linux")]
     let _database_supervisors = config
         .postgres
@@ -1360,6 +1520,9 @@ async fn run_inner(
                 .map_err(|e| ForgeError::Input(e.to_string()))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    // Windows: the SIDs the pipe DACL must admit, read before `config` moves.
+    #[cfg(windows)]
+    let pipe_bound_sids: Vec<String> = crate::config::pipe_admitted_sids(&config);
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -1370,18 +1533,45 @@ async fn run_inner(
     // replaces any stale socket a crashed server left behind — which is why
     // no unlink of the live path is needed. `forbid(unsafe_code)` at the crate
     // root rules out setting `umask` around the bind instead.
-    let staging_path = suffixed(&socket_path, ".binding")?;
-    let _ = std::fs::remove_file(&staging_path);
-    let listener = UnixListener::bind(&staging_path)?;
     #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
-    }
-    std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
-        // Leave no orphaned staging socket behind on a failed publish.
+    let mut acceptor = {
+        let staging_path = suffixed(&socket_path, ".binding")?;
         let _ = std::fs::remove_file(&staging_path);
-    })?;
+        let listener = UnixListener::bind(&staging_path)?;
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
+        }
+        std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
+            // Leave no orphaned staging socket behind on a failed publish.
+            let _ = std::fs::remove_file(&staging_path);
+        })?;
+        Acceptor(listener)
+    };
+    // Windows: a named pipe derived from the socket path. The first instance
+    // is refused if the name already exists, so a squatter cannot be joined.
+    // The DACL admits SYSTEM, this user, and each SID the cell binds.
+    #[cfg(windows)]
+    let mut acceptor = {
+        let name = sea_forge_core::pipe_name_for(&socket_path)
+            .map_err(|e| ForgeError::io("derive server pipe name", e))?;
+        let mut sids: Vec<String> = pipe_bound_sids.clone();
+        sids.sort();
+        sids.dedup();
+        let security = sea_forge_os::PipeSecurity::new(&sids)
+            .map_err(|e| ForgeError::io("build server pipe security", e))?;
+        let first = sea_forge_os::create_pipe_server(&name, &security, true).map_err(|e| {
+            ForgeError::Input(format!(
+                "server pipe {name} already exists or cannot be created \
+                 (another server may be running): {e}"
+            ))
+        })?;
+        Acceptor {
+            name,
+            security,
+            next: first,
+        }
+    };
 
     tracing::info!("server listening on {}", socket_path.display());
 
@@ -1400,14 +1590,14 @@ async fn run_inner(
     loop {
         let incoming = if let Some(receiver) = authenticated.as_mut() {
             tokio::select! {
-                accepted = listener.accept() => accepted.map(|(stream, _)| (stream, None)),
+                accepted = acceptor.accept() => accepted.map(|stream| (stream, None)),
                 connection = receiver.recv() => match connection {
                     Some(connection) => Ok((connection.stream, Some(connection.identity))),
                     None => return Err("trusted workload issuer disconnected".into()),
                 }
             }
         } else {
-            listener.accept().await.map(|(stream, _)| (stream, None))
+            acceptor.accept().await.map(|stream| (stream, None))
         };
         let (stream, workload_identity) = match incoming {
             Ok(accepted) => accepted,
@@ -1430,7 +1620,9 @@ async fn run_inner(
         // accepted stream is still whole. It is the one fact about the caller
         // that cannot be asserted (SF-005, U-07), and `into_split` inside
         // `handle_connection` would put it out of reach.
+        #[cfg(unix)]
         let peer = crate::identity::PeerIdentity::of(&stream);
+        #[cfg(unix)]
         if peer.is_none() {
             // Not fatal: inspect verbs stay available. Every protected verb on
             // this connection will be refused as `identity_unverifiable`.
@@ -1447,6 +1639,12 @@ async fn run_inner(
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             let _permit = permit;
+            // Windows reads the client SID only after the first bytes arrive.
+            #[cfg(windows)]
+            let Some((stream, peer)) = identify_pipe_client(stream).await
+            else {
+                return;
+            };
             if let Err(e) = handle_connection(
                 stream,
                 state,
@@ -1462,14 +1660,20 @@ async fn run_inner(
     }
 }
 
-async fn handle_connection(
-    stream: UnixStream,
+// `PeerIdentity` is Copy on Unix and Clone-only on Windows, so `peer.clone()`
+// is needed for the Windows build and is a no-op copy on Unix.
+#[allow(clippy::clone_on_copy)]
+async fn handle_connection<S>(
+    stream: S,
     state: Arc<ServerState>,
     peer: Option<crate::identity::PeerIdentity>,
     mut workload_identity: Option<workload_connection::WorkloadIdentity>,
     require_workload_auth: bool,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let (reader, mut writer) = stream.into_split();
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+where
+    S: AsyncRead + AsyncWrite + Send + Unpin + 'static,
+{
+    let (reader, mut writer) = tokio::io::split(stream);
     let mut reader = BufReader::new(reader);
     let mut line = String::new();
 
@@ -1569,7 +1773,7 @@ async fn handle_connection(
                     other,
                     &state,
                     line.trim(),
-                    peer,
+                    peer.clone(),
                     &mut connection_principal,
                     workload_identity.as_mut(),
                     require_workload_auth,
@@ -1823,6 +2027,8 @@ async fn dispatch_admitted(
 /// Run one request under [`REQUEST_TIMEOUT`], admitting side-effecting work
 /// through a finite active pool and a finite waiting room. Read-only requests
 /// retain the normal bounded wrapper and never consume admission capacity.
+// See `handle_connection`: `PeerIdentity` is Copy on Unix only.
+#[allow(clippy::clone_on_copy)]
 async fn dispatch_bounded(
     request: Request,
     state: &Arc<ServerState>,
@@ -1843,7 +2049,7 @@ async fn dispatch_bounded(
             crate::identity::ActorClaim::parse(raw_line).as_ref(),
             crate::identity::ActorClaim::parse_on_behalf_of(raw_line).as_ref(),
             state.config().gateway.as_ref(),
-            peer,
+            peer.clone(),
         );
         return serde_json::to_value(view)
             .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
@@ -1858,7 +2064,7 @@ async fn dispatch_bounded(
         let claim = crate::identity::ActorClaim::parse(raw_line);
         let on_behalf_of = crate::identity::ActorClaim::parse_on_behalf_of(raw_line);
         let resolution = if let Some(identity) = workload_identity {
-            identity.resolve(raw_line, &state.config().identity, peer)
+            identity.resolve(raw_line, &state.config().identity, peer.clone())
         } else if require_workload_auth {
             Err(crate::identity::IdentityRefusal::AuthenticationRefused {
                 reason: "protected requests require an authority-issued private connection".into(),
@@ -1868,7 +2074,7 @@ async fn dispatch_bounded(
                 claim.as_ref(),
                 on_behalf_of.as_ref(),
                 state.config().gateway.as_ref(),
-                peer,
+                peer.clone(),
             )
         };
         match resolution {
@@ -1890,7 +2096,7 @@ async fn dispatch_bounded(
                 }
                 tracing::debug!(
                     actor_id = actor.actor_id(),
-                    uid = actor.uid(),
+                    principal = %actor.principal_label(),
                     "protected request attributed"
                 );
                 // Authentication proves an attempted request, including one
@@ -1909,7 +2115,7 @@ async fn dispatch_bounded(
                 if let Some(provenance) = actor.delegation() {
                     tracing::debug!(
                         gateway_actor_id = provenance.gateway_actor_id(),
-                        gateway_uid = provenance.gateway_uid(),
+                        gateway = %provenance.gateway_label(),
                         effective_actor_id = actor.actor_id(),
                         "delegated request admitted under the gateway principal"
                     );
@@ -3256,7 +3462,8 @@ async fn commit_plan(
     // below runs on the reloaded snapshot. An invalid file keeps the previous
     // one and is reported to the operator — a silent log line would let a cell
     // run for days on a configuration its `server.yaml` no longer describes.
-    if let Err(message) = state.reload_config() {
+    if let Err(refusal) = state.reload_config() {
+        let message = refusal.message;
         tracing::warn!("invalid config reload — keeping last-known-good: {message}");
         let _ = state
             .publish_event(
@@ -3266,6 +3473,7 @@ async fn commit_plan(
                 serde_json::json!({
                     "config_path": state.root.join("server.yaml").display().to_string(),
                     "message": message,
+                    "error_class": refusal.error_class,
                 }),
             )
             .await;
@@ -4135,6 +4343,7 @@ mod lifecycle_contract_tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn a_notify_command_on_path_preflights_clean() {
         // `sh` is mandated by POSIX and is on PATH wherever this test runs.
         let argv = ["sh".to_string(), "-c".to_string(), "true".to_string()];
@@ -4163,6 +4372,7 @@ mod lifecycle_contract_tests {
 mod notify_tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn fire_notify_chatty_hook_does_not_deadlock() {
         // F-07 regression: a hook that writes far more than a pipe capacity to
@@ -4176,6 +4386,7 @@ mod notify_tests {
         assert!(result.is_ok(), "chatty hook must complete: {result:?}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn fire_notify_hung_hook_times_out() {
         // F-07 regression: a hook that sleeps forever must be killed by the
@@ -4352,5 +4563,58 @@ mod continuation_key_tests {
         });
         assert!(matches!(result, Err(ForgeError::Input(_))));
         assert!(!asked.get(), "entropy must not be requested for bad config");
+    }
+}
+
+#[cfg(all(test, windows))]
+mod pipe_transport_tests {
+    use super::*;
+
+    fn unique_pipe_name(tag: &str) -> String {
+        format!(
+            r"\\.\pipe\sea-forge-test-{tag}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        )
+    }
+
+    #[tokio::test]
+    async fn named_pipe_round_trip_resolves_the_client_sid() {
+        let name = unique_pipe_name("sid");
+        let me = sea_forge_os::current_sid().expect("current sid");
+        let security = sea_forge_os::PipeSecurity::new(std::slice::from_ref(&me)).expect("dacl");
+        let server = sea_forge_os::create_pipe_server(&name, &security, true).expect("server");
+        // A std client, as the CLI opens it: its default impersonation level
+        // lets the server impersonate it. (tokio's ClientOptions defaults to
+        // SECURITY_IDENTIFICATION, which correctly cannot be impersonated.)
+        let client_name = name.clone();
+        let client = std::thread::spawn(move || {
+            use std::io::Write;
+            let mut pipe = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&client_name)
+                .expect("open pipe");
+            pipe.write_all(b"{}\n").expect("write");
+            pipe
+        });
+        server.connect().await.expect("connect");
+        let Some((_reader, peer)) = identify_pipe_client(server).await else {
+            panic!("an identified client was dropped before admission");
+        };
+        assert_eq!(peer.map(|p| p.sid), Some(me));
+        drop(client.join().expect("client thread"));
+    }
+
+    #[tokio::test]
+    async fn a_second_first_instance_is_refused() {
+        let name = unique_pipe_name("squat");
+        let security = sea_forge_os::PipeSecurity::new(&[]).expect("dacl");
+        let first = sea_forge_os::create_pipe_server(&name, &security, true).expect("first");
+        assert!(sea_forge_os::create_pipe_server(&name, &security, true).is_err());
+        drop(first);
     }
 }

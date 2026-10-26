@@ -114,38 +114,46 @@ is safe: `gh release upload --clobber` replaces assets with the same name.
 
 | Asset | Contents |
 | --- | --- |
+| `sea-forge_X.Y.Z_amd64.deb` | Debian package: `/usr/bin/sea-forge`, `/usr/bin/sea-forge-server`, `/usr/share/doc/sea-forge/copyright`. `Depends` is computed from the binaries with `dpkg-shlibdeps` |
 | `sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | `sea-forge` (CLI), `sea-forge-server` (daemon), `LICENSE`, under a top-level `sea-forge-X.Y.Z-x86_64-unknown-linux-gnu/` directory |
-| `SHA256SUMS` | SHA-256 line for the tarball above |
+| `sea-forge-X.Y.Z-macos-universal.pkg` / `.dmg` | Installs `sea-forge` and `sea-forge-server` to `/usr/local/bin`. Universal (arm64 + x86_64); the name is `-macos-arm64` if the x86_64 cross-build failed. Unsigned |
+| `sea-forge-X.Y.Z-x86_64-pc-windows-msvc-setup.exe` | Per-user Inno Setup installer to `%LOCALAPPDATA%\Programs\SEA-Forge`; appends it to the user PATH and removes it on uninstall. Unsigned |
+| `sea-forge-X.Y.Z-x86_64-pc-windows-msvc.zip` | `sea-forge.exe`, `sea-forge-server.exe`, `LICENSE` |
+| `SHA256SUMS` | SHA-256 lines for every asset above |
 
-Only x86_64 Linux (glibc) is built. Other platforms have no asset yet.
+Packages are built and install-tested by `.github/workflows/package.yml`, called
+from the `release-binaries` job. Each package is installed (or mounted) on the
+runner that built it before the release is published. Nothing is signed: there
+is no Apple Developer ID and no Authenticode certificate. The Windows functional
+smoke (cell + daemon) is not yet supported; its install test covers install,
+PATH, `--version` and uninstall only.
 
 To verify a download:
 
 ```sh
-gh release download vX.Y.Z --repo GodSpeedAI/SEA-Forge \
-  -p 'sea-forge-*-x86_64-unknown-linux-gnu.tar.gz' -p SHA256SUMS
-sha256sum -c SHA256SUMS
-# expected: sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz: OK
-tar -xzf sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz
+gh release download vX.Y.Z --repo GodSpeedAI/SEA-Forge -p 'sea-forge*' -p SHA256SUMS
+sha256sum -c SHA256SUMS            # macOS: shasum -a 256 -c SHA256SUMS
+# expected: every listed asset: OK
 ```
 
-The checksum file is produced in the same job that uploads it, so on its own it
-protects against a corrupted or truncated download, not against a compromised
-release. The tarball also carries a signed build-provenance attestation
-(Sigstore, keyless; step "Attest build provenance") when the job builds the
-commit its run is for, which is the case for every release Release Please
-creates. It binds the tarball's digest to this workflow and to the commit it
-was built from. Verify both before installing:
+The checksum file is produced in the same workflow that uploads it, so on its own
+it protects against a corrupted or truncated download, not against a compromised
+release. Every asset also carries a signed build-provenance attestation
+(Sigstore, keyless; step "Attest build provenance" in `publish-release`) when the
+run builds the commit it is for, which is the case for every release Release
+Please creates. It binds each asset's digest to this workflow and to the commit
+it was built from. Verify before installing:
 
 ```sh
-gh attestation verify sea-forge-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
+gh attestation verify sea-forge_X.Y.Z_amd64.deb \
   --repo GodSpeedAI/SEA-Forge \
   --signer-workflow GodSpeedAI/SEA-Forge/.github/workflows/release-please.yml \
   --source-digest "$(git rev-parse 'vX.Y.Z^{commit}')"
 ```
 
-A tarball replaced on the release page by anything other than that workflow,
-or built from a different commit than the tag, fails this check. A re-attach
+Replace the asset name for any other file. An asset replaced on the release page
+by anything other than that workflow, or built from a different commit than the
+tag, fails this check. A re-attach
 (§5) dispatched from `main` for an older tag builds the tag's commit while the
 run is for `main`'s head; the job then attaches the tarball without an
 attestation and logs a warning rather than attest the wrong source. Releases

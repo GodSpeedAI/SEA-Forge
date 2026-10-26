@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use std::fs;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};

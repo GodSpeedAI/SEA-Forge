@@ -25,7 +25,7 @@ const MODEL: &str = "sha256:model";
 const IMAGE: &str = "registry.example/cell:1";
 const RUN_ID: &str = "run_sandbox_command";
 const POLICY: &str = "version: 1\n";
-const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
+const SANDBOX_JSON: &str = r#"{"schema":"domainforge.openshell.sandbox/v1","compute_driver":"vm","workspaces":[{"name":"workspace","sandbox_path":"/sandbox/workspace"}]}"#;
 const MAPPING_REPORT: &str = r#"{"schema":"domainforge.openshell.mapping/v1","unmapped":[]}"#;
 
 const OPENSHELL_STUB: &str = r##"#!/bin/sh
@@ -37,13 +37,15 @@ fi
 case "$1" in
   --version) echo "openshell 0.1.3"; exit 0 ;;
   status) exit 0 ;;
+  gateway) echo '{"compute_drivers":[{"name":"vm","capabilities":{"driver_name":"vm","driver_version":"0.1.3"}}]}'; exit 0 ;;
   logs) exit 0 ;;
   policy) echo '{"hash":"h1","version":3,"config_revision":"r7","policy_source":"sandbox"}'; exit 0 ;;
   sandbox)
     case "$2" in
-      create|delete|upload) exit 0 ;;
+      create|upload) exit 0 ;;
+      delete) [ -f "$LOG.delete_fail" ] && exit 1; exit 0 ;;
       get) echo "version: 1"; exit 0 ;;
-      download) mkdir -p "$5" && echo done > "$5/result.txt"; exit $? ;;
+      download) [ -f "$LOG.download_fail" ] && exit 1; mkdir -p "$5" && echo done > "$5/result.txt"; exit $? ;;
       exec) echo "stub-stdout"; exit 0 ;;
     esac
     ;;
@@ -143,6 +145,7 @@ fn binding(fx: &Fixture, image: Option<&str>) -> OpenShellBinding {
         cli: fx.cli.clone(),
         prover: fx.prover.clone(),
         local_microvm_gateway: false,
+        native_executable: None,
     }
 }
 
@@ -387,4 +390,66 @@ fn openshell_execution_requires_the_authorized_projection() {
         lines[exec]
     );
     assert!(fx.result_dir.join("result.txt").exists());
+
+    // (e) The download fails and so does the delete: the cleanup failure is
+    // reported with the primary failure, never hidden behind it.
+    fs::write(fx.log.with_extension("log.download_fail"), "").expect("ctl");
+    fs::write(fx.log.with_extension("log.delete_fail"), "").expect("ctl");
+    let operation = sandbox_op(&["/bin/sh", "-c", "true"], &digest, IMAGE);
+    let action = AuthorityAction::from(&operation);
+    let grant = grant_for(&fx, &digest, IMAGE, &action);
+    let error = sea_forge_runtime::execute_openshell(
+        grant,
+        &request_for(operation),
+        RUN_ID,
+        &fx.workspace,
+        &fx.artifacts,
+        binding(&fx, Some(IMAGE)),
+        &fx.result_dir,
+    )
+    .expect_err("a failed download with a failed cleanup must fail");
+    assert_eq!(error.class(), "openshell_cleanup_failed", "(e)");
+    assert!(
+        error.to_string().contains("lifetime unverified"),
+        "(e) {error}"
+    );
+}
+
+#[test]
+fn an_oci_grant_and_a_native_binding_never_match_across_kinds() {
+    let fx = fixture();
+    let digest = projection_digest();
+    let native = format!(
+        "native:sha256:{}@{}-{}",
+        "a".repeat(64),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+    // Each direction: the grant names one kind of image and the binding the other.
+    for (granted, bound) in [(native.as_str(), IMAGE), (IMAGE, native.as_str())] {
+        let operation = sandbox_op(&["/bin/sh", "-c", "true"], &digest, granted);
+        let action = AuthorityAction::from(&operation);
+        let grant = grant_for(&fx, &digest, granted, &action);
+        let error = sea_forge_runtime::execute_openshell(
+            grant,
+            &request_for(operation),
+            RUN_ID,
+            &fx.workspace,
+            &fx.artifacts,
+            binding(&fx, Some(bound)),
+            &fx.result_dir,
+        )
+        .expect_err("an OCI image and a native identity must never match each other");
+        assert_eq!(
+            error.class(),
+            "openshell_binding_mismatch",
+            "{granted} vs {bound}"
+        );
+    }
+    assert!(
+        !calls(&fx)
+            .iter()
+            .any(|c| c.starts_with("openshell sandbox create")),
+        "a cross-kind mismatch must create nothing"
+    );
 }

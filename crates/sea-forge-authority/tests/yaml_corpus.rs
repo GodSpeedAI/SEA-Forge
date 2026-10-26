@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Corpus proof for the YAML parser migration (serde_yaml 0.9 -> serde-saphyr).
 //!
 //! `fixtures/yaml-corpus/reference.json` holds records produced by SEA-Forge

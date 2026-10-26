@@ -1,3 +1,4 @@
+#![cfg(unix)]
 #![cfg(target_os = "linux")]
 
 //! SEC-01/SEC-06 on the planned-command path: an `execute_command` granted

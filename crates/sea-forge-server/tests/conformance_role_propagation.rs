@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! F-08 regression: the server must evaluate authority for the role the
 //! identity gate actually verified, not a hardcoded `ActorRole::Operator`.
 //!
@@ -118,6 +119,7 @@ fn resolved_security_officer() -> sea_forge_server::identity::ResolvedActor {
     let bindings = IdentityBindings {
         bindings: vec![sea_forge_server::identity::IdentityBinding {
             uid: Some(PEER_UID),
+            sid: None,
             actor_id: ACTOR.into(),
             roles: vec![ActorRole::SecurityOfficer],
         }],

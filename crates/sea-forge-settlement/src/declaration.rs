@@ -295,8 +295,6 @@ impl CommandSweSeedTransport {
 
 impl SweSeedTransport for CommandSweSeedTransport {
     fn submit(&self, req: &SettlementDeclarationRequest) -> Result<SweSeedResponse, ForgeError> {
-        use std::os::unix::process::CommandExt;
-
         let mut command = Command::new(&self.argv[0]);
         command
             .args(&self.argv[1..])
@@ -304,9 +302,13 @@ impl SweSeedTransport for CommandSweSeedTransport {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        // Own process group so timeout can terminate the full tree.
-        command.process_group(0);
-        let mut child = command.spawn().map_err(settlement_authority_unavailable)?;
+        // Own process group (Unix) or a suspended-start job object (Windows) so timeout can terminate the full tree.
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        let (mut child, tree) = ProcessTree::spawn(&mut command)?;
         let mut stdin = child
             .stdin
             .take()
@@ -345,7 +347,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
                 break status;
             }
             if Instant::now() >= deadline {
-                terminate_process_tree(&child)?;
+                tree.terminate(&child)?;
                 let _ = child.wait();
                 return Err(settlement_authority_unavailable(
                     "SWE_SEED command timed out",
@@ -356,7 +358,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
         // Require stdin completion within remaining timeout before accepting response.
         while !stdin_done.load(Ordering::SeqCst) {
             if Instant::now() >= deadline {
-                terminate_process_tree(&child)?;
+                tree.terminate(&child)?;
                 let _ = child.wait();
                 return Err(settlement_authority_unavailable(
                     "SWE_SEED command timed out",
@@ -381,7 +383,51 @@ impl SweSeedTransport for CommandSweSeedTransport {
     }
 }
 
-fn terminate_process_tree(child: &std::process::Child) -> Result<(), ForgeError> {
+/// Process-tree containment for the SWE_SEED command. Unix: a process group
+/// killed with `/bin/kill`. Windows: a kill-on-close Job Object.
+#[cfg(unix)]
+struct ProcessTree;
+
+#[cfg(unix)]
+impl ProcessTree {
+    fn spawn(command: &mut Command) -> Result<(std::process::Child, Self), ForgeError> {
+        let child = command.spawn().map_err(settlement_authority_unavailable)?;
+        Ok((child, Self))
+    }
+
+    fn terminate(&self, child: &std::process::Child) -> Result<(), ForgeError> {
+        terminate_process_tree_unix(child)
+    }
+}
+
+#[cfg(windows)]
+struct ProcessTree(sea_forge_os::Job);
+
+#[cfg(windows)]
+impl ProcessTree {
+    /// The child is created suspended and assigned to the job before it runs.
+    fn spawn(command: &mut Command) -> Result<(std::process::Child, Self), ForgeError> {
+        let (child, job) =
+            sea_forge_os::spawn_in_job(command).map_err(settlement_authority_unavailable)?;
+        Ok((child, Self(job)))
+    }
+
+    fn terminate(&self, _child: &std::process::Child) -> Result<(), ForgeError> {
+        // Termination is asynchronous: wait for the job to empty before
+        // reporting survivors, so a busy child is not a false failure.
+        self.0
+            .terminate_and_wait(std::time::Duration::from_secs(5))
+            .map_err(|error| match error.kind() {
+                std::io::ErrorKind::TimedOut => {
+                    settlement_authority_unavailable("timed out process group survived termination")
+                }
+                _ => settlement_authority_unavailable(error),
+            })
+    }
+}
+
+#[cfg(unix)]
+fn terminate_process_tree_unix(child: &std::process::Child) -> Result<(), ForgeError> {
     let group = format!("-{}", child.id());
     let group_kill = Command::new("/bin/kill")
         .args(["-KILL", "--", &group])

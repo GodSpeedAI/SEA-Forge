@@ -3,6 +3,7 @@
 filesystem_policy:
   include_workdir: false
   read_only:
+  - /app
   - /bin
   - /dev/urandom
   - /etc
@@ -12,6 +13,7 @@ filesystem_policy:
   - /sandbox
   - /sbin
   - /usr
+  - /var/log
   read_write:
   - /dev/null
   - /sandbox/workspace

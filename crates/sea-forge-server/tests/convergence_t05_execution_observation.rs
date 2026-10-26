@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Convergence plan T05 — execution observation adjudication at the SEA-Forge
 //! boundary (frozen edge E5B, invariant I5).
 //!

@@ -75,10 +75,8 @@ impl ExecutionSandbox for IsolatedSandbox {
         fs::create_dir_all(&h.spec.workspace_root).map_err(map_err)?;
         fs::create_dir_all(&h.spec.artifacts_root).map_err(map_err)?;
         // Launcher-owned output files, opened before the workload exists.
-        let stdout_path = h.spec.artifacts_root.join("stdout.txt");
         let stderr_path = h.spec.artifacts_root.join("stderr.txt");
-        let stdout = File::create(&stdout_path).map_err(map_err)?;
-        let stderr = File::create(&stderr_path).map_err(map_err)?;
+        let (stdout, stderr) = launcher_output_files(&h.spec.artifacts_root).map_err(map_err)?;
 
         let identity = self.pool.acquire()?;
         let trees = [&h.spec.workspace_root, &h.spec.artifacts_root];
@@ -148,14 +146,9 @@ impl ExecutionSandbox for IsolatedSandbox {
                 status = ExecutionStatus::SuspectedSandboxViolation;
             }
         }
-        Ok(ExecutionResult {
-            status,
-            exit_code,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at,
-            finished_at: chrono::Utc::now().to_rfc3339(),
-        })
+        Ok(crate::local::execution_result(
+            status, exit_code, started_at,
+        ))
     }
 
     fn collect_artifacts(
@@ -171,5 +164,60 @@ impl ExecutionSandbox for IsolatedSandbox {
 
     fn destroy(&self, _h: SandboxHandle) -> Result<(), SandboxError> {
         Ok(())
+    }
+}
+
+/// Launcher-owned `stdout.txt`/`stderr.txt`, created through the no-follow
+/// helper before any subordinate identity is acquired. The workload controls
+/// the entries under `artifacts/` between executions, so a planted link there
+/// must not redirect a privileged write.
+fn launcher_output_files(
+    artifacts_root: &std::path::Path,
+) -> std::io::Result<(std::fs::File, std::fs::File)> {
+    let stdout = crate::artifact_output::create_output_file(&artifacts_root.join("stdout.txt"))?;
+    let stderr = crate::artifact_output::create_output_file(&artifacts_root.join("stderr.txt"))?;
+    Ok((stdout, stderr))
+}
+
+#[cfg(all(test, unix))]
+mod output_no_follow_tests {
+    //! Lowest level that creates the Isolated backend's output files. The
+    //! `isolated` backend itself needs setuid subordinate-ID mappers that the
+    //! CI and local hosts do not provide, so `execute` cannot be reached here.
+    use super::launcher_output_files;
+    use std::{fs, os::unix::fs::symlink};
+
+    const CANARY: &str = "host canary: must not change\n";
+
+    #[test]
+    fn planted_symlink_is_not_followed_by_isolated_outputs() {
+        let root = tempfile::tempdir().expect("temp root");
+        let artifacts = root.path().join("artifacts");
+        fs::create_dir_all(&artifacts).expect("artifacts");
+        let canary = root.path().join("outside-canary.txt");
+        fs::write(&canary, CANARY).expect("canary");
+        symlink(&canary, artifacts.join("stdout.txt")).expect("plant symlink");
+
+        let (mut out, _err) = launcher_output_files(&artifacts).expect("outputs");
+        use std::io::Write;
+        out.write_all(b"workload-output\n").expect("write");
+        drop(out);
+        assert_eq!(fs::read_to_string(&canary).unwrap(), CANARY);
+    }
+
+    #[test]
+    fn planted_hard_link_is_not_truncated_by_isolated_outputs() {
+        let root = tempfile::tempdir().expect("temp root");
+        let artifacts = root.path().join("artifacts");
+        fs::create_dir_all(&artifacts).expect("artifacts");
+        let canary = root.path().join("outside-canary.txt");
+        fs::write(&canary, CANARY).expect("canary");
+        fs::hard_link(&canary, artifacts.join("stderr.txt")).expect("plant hard link");
+
+        let (_out, mut err) = launcher_output_files(&artifacts).expect("outputs");
+        use std::io::Write;
+        err.write_all(b"workload-error\n").expect("write");
+        drop(err);
+        assert_eq!(fs::read_to_string(&canary).unwrap(), CANARY);
     }
 }

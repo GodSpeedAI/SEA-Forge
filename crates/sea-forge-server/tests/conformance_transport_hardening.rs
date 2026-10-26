@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Transport hardening conformance (§11.1 socket ownership and permissions).
 //!
 //! These talk over a real Unix socket with a real `ServerConfig`/`ServerState`,

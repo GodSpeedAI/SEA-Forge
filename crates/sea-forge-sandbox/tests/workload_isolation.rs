@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! SEC-01/SEC-06 cross-workload isolation against a real kernel boundary.
 //!
 //! A victim workload holds a secret open on fd 9; an attacker workload with a

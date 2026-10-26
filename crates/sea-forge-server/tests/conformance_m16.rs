@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use chrono::Utc;
 use sea_forge_agent::{acp::KNOWN_TOOL_KINDS, AgentConfig, AgentEndpointConfig, ProviderKind};
 use sea_forge_core::{

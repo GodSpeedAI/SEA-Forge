@@ -140,7 +140,7 @@ pub fn capture_file(
         // at the artifact path cannot redirect the capture.
         let bytes = std::fs::read(source)
             .map_err(|e| ForgeError::io(format!("read artifact source {name}"), e))?;
-        sea_forge_sandbox::safe_write(&destination, &bytes)
+        sea_forge_sandbox::safe_write_within(artifacts, &destination, &bytes)
             .map_err(|e| ForgeError::Internal(format!("copy artifact {name}: {e}")))?;
     }
     let digest = sha256_file(&destination)?;

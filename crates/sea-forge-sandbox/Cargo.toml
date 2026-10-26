@@ -22,6 +22,9 @@ wait-timeout.workspace = true
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+sea-forge-os = { path = "../sea-forge-os", version = "0.2.0" }
+
 # Descriptor-relative workspace observation (observation.rs) on other Unix.
 [target.'cfg(all(unix, not(target_os = "linux")))'.dependencies]
 rustix = { version = "1", features = ["fs"] }
@@ -38,6 +41,10 @@ path = "src/bin/sea-forge-workload-exec.rs"
 [[bin]]
 name = "sea-forge-mcp-connect"
 path = "src/bin/sea-forge-mcp-connect.rs"
+
+[[bin]]
+name = "sea-forge-jail-launcher"
+path = "src/bin/sea-forge-jail-launcher.rs"
 
 [dev-dependencies]
 sea-forge-authority = { path = "../sea-forge-authority", version = "0.2.0" }

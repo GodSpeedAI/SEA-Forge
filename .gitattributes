@@ -1,0 +1,3 @@
+# Model sources are hashed; keep their bytes identical on every checkout
+# (Windows runners would otherwise convert line endings and drift the hash).
+models/*.sea text eol=lf

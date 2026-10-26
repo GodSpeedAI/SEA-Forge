@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Implementation tests for the resource witness; v1 remains immutable.
 use sea_forge_core::types::SettlementStatus;
 use sea_forge_server::governed_execution_boundary::InvocationLedger;

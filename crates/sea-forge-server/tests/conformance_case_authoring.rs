@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Case-authoring conformance tests (Task 6, ADR-003 additive):
 //! `case.entry_options`, `case.preflight`, `case.commit`.
 //!

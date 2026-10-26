@@ -1,0 +1,128 @@
+name: Portability
+
+# Native Windows and macOS build/test lanes. The Linux sweep runs in ci.yml;
+# this workflow covers the Windows MSVC target (no devbox) and the macOS App
+# Sandbox jail (sea-forge-sandbox on a real macOS runner).
+on:
+  pull_request:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portability-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  windows:
+    name: verify (windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      # Link-creation prerequisites that are missing fail the test instead of
+      # printing SKIPPED. The hosted runner is elevated, so symlinks must work.
+      SEA_FORGE_REQUIRE_LINK_PRIVILEGE: "1"
+      CARGO_TERM_COLOR: never
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          rustc -Vv
+
+      - name: Workspace check (keep going, all errors)
+        shell: bash
+        run: cargo check --workspace --all-targets --locked --keep-going 2>&1 | tee check.log
+
+      - name: Upload check log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-check-log
+          path: check.log
+
+      - name: Control-plane unit tests (OS identity, pipes, jobs)
+        shell: bash
+        run: cargo test --locked -p sea-forge-os -p sea-forge-core -p sea-forge-changeset -p sea-forge-server --lib
+
+      - name: Release binaries
+        shell: bash
+        run: cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+
+      - name: Upload Windows binaries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-binaries
+          path: |
+            target/release/sea-forge.exe
+            target/release/sea-forge-server.exe
+          if-no-files-found: error
+
+      - name: Changeset reparse-point and hard-link tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-changeset --test changeset_windows -- --nocapture
+
+      - name: Safe-write hard-link and junction tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-sandbox --test safe_write_windows -- --nocapture
+
+      - name: Local sandbox job-object tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-sandbox --test windows_local_job -- --test-threads=1 --nocapture
+
+      - name: Identity E2E (real OS identity, pipe DACL, squatting)
+        shell: pwsh
+        run: |
+          $server = (Resolve-Path target/release/sea-forge-server.exe).Path
+          & (Resolve-Path scripts/windows/identity-e2e.ps1).Path -ServerExe $server -Work 'C:\sfe2e'
+          exit $LASTEXITCODE
+
+      - name: Upload identity E2E log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-identity-e2e-log
+          path: |
+            C:\sfe2e\identity-e2e.log
+            C:\sfe2e\*.log
+          if-no-files-found: warn
+
+  macos:
+    name: verify (macos app sandbox jail)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pinned toolchain
+        shell: bash
+        run: |
+          rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          rustc -Vv
+
+      - name: Build sandbox binaries (incl. sea-forge-jail-launcher)
+        shell: bash
+        run: cargo build --locked -p sea-forge-sandbox --bins
+
+      - name: App Sandbox jail escape tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-sandbox --test macos_app_sandbox_jail -- --test-threads=1 --nocapture
+
+      - name: Sandbox unit tests
+        shell: bash
+        run: cargo test --locked -p sea-forge-sandbox --lib

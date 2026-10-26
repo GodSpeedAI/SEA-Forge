@@ -1,3 +1,4 @@
+use crate::identity::PrincipalKey;
 use sea_forge_agent::AgentConfig;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -27,6 +28,13 @@ const MAX_SUPERVISOR_ACTOR_LEN: usize = 128;
 const MAX_GATEWAY_ACTOR_LEN: usize = 128;
 const MAX_GATEWAY_DELEGABLE_ACTORS: usize = 256;
 
+/// The config key that names the gateway's native principal.
+#[cfg(unix)]
+const GATEWAY_KEY_NAME: &str = "uid";
+/// The config key that names the gateway's native principal.
+#[cfg(windows)]
+const GATEWAY_KEY_NAME: &str = "sid";
+
 /// Which OS uid is the multi-user gateway, and which end-user actors it
 /// may speak for (plan T02, operator decision D-2).
 ///
@@ -38,8 +46,13 @@ const MAX_GATEWAY_DELEGABLE_ACTORS: usize = 256;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GatewayConfig {
-    /// The OS uid of the gateway process, as `SO_PEERCRED` reports it.
+    /// The OS uid of the gateway process, as `SO_PEERCRED` reports it. Required on Unix.
+    #[cfg(unix)]
     pub uid: u32,
+    /// The Windows user SID of the gateway process, as the pipe token reports it.
+    /// Required on Windows.
+    #[cfg(windows)]
+    pub sid: String,
     /// The gateway principal's own actor id (bound to `uid` with the
     /// gateway role). Defaults to `"gateway"`.
     #[serde(default = "default_gateway_actor")]
@@ -48,6 +61,24 @@ pub struct GatewayConfig {
     /// default — a gateway with no allowlist delegates nothing.
     #[serde(default)]
     pub delegable_actors: Vec<String>,
+}
+
+impl GatewayConfig {
+    /// The gateway's native principal key (uid on Unix, SID on Windows).
+    pub fn principal(&self) -> PrincipalKey {
+        #[cfg(unix)]
+        return self.uid;
+        #[cfg(windows)]
+        return self.sid.clone();
+    }
+
+    /// The bare key value as written in config (uid number or SID string).
+    pub fn raw_key(&self) -> String {
+        #[cfg(unix)]
+        return self.uid.to_string();
+        #[cfg(windows)]
+        return self.sid.clone();
+    }
 }
 
 fn default_gateway_actor() -> String {
@@ -515,13 +546,19 @@ impl ServerConfig {
             // rather than discovered as a runtime refusal at the first
             // delegated request in production.
             if !self.identity.bindings.iter().any(|binding| {
-                binding.uid == Some(gateway.uid) && binding.actor_id == gateway.actor
+                binding.principal() == Some(gateway.principal())
+                    && binding.actor_id == gateway.actor
             }) {
                 return Err(format!(
-                    "gateway.uid {} must be bound to the gateway actor {:?} in `identity.bindings` \
-                     (expected `- uid: {}, actor_id: {}, roles: [...]`), or the gateway can never \
+                    "gateway.{} {} must be bound to the gateway actor {:?} in `identity.bindings` \
+                     (expected `- {}: {}, actor_id: {}, roles: [...]`), or the gateway can never \
                      present its own claim",
-                    gateway.uid, gateway.actor, gateway.uid, gateway.actor
+                    GATEWAY_KEY_NAME,
+                    gateway.raw_key(),
+                    gateway.actor,
+                    GATEWAY_KEY_NAME,
+                    gateway.raw_key(),
+                    gateway.actor
                 ));
             }
             for actor in &gateway.delegable_actors {
@@ -559,6 +596,36 @@ impl ServerConfig {
         }
         absolutize(self.root.join(&self.socket_path))
     }
+}
+
+/// Error class for a reload refused because it would change the SIDs the
+/// Windows server pipe admits (F30). The pipe's security descriptor is built
+/// once at startup, so the transport cannot enforce the change until restart.
+pub const IDENTITY_RELOAD_REQUIRES_RESTART: &str = "identity_reload_requires_restart";
+
+/// The SIDs the Windows server pipe admits for `config`: every identity
+/// binding's SID, plus the gateway's SID. Sorted and deduplicated, so the
+/// comparison does not depend on declaration order.
+#[cfg(any(windows, test))]
+pub fn pipe_admitted_sids(config: &ServerConfig) -> Vec<String> {
+    let mut sids: Vec<String> = config
+        .identity
+        .bindings
+        .iter()
+        .filter_map(|binding| binding.sid.clone())
+        .collect();
+    #[cfg(windows)]
+    sids.extend(config.gateway.as_ref().map(|gateway| gateway.sid.clone()));
+    sids.sort();
+    sids.dedup();
+    sids
+}
+
+/// Whether reloading from `active` to `next` changes the SIDs the Windows
+/// pipe admits. A change of that set needs a restart, so the reload is refused.
+#[cfg(any(windows, test))]
+pub fn reload_changes_pipe_admission(active: &ServerConfig, next: &ServerConfig) -> bool {
+    pipe_admitted_sids(active) != pipe_admitted_sids(next)
 }
 
 #[cfg(test)]
@@ -615,6 +682,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn relative_socket_path_composes_under_root() {
         let config = ServerConfig {
             root: PathBuf::from("/tmp/cell"),
@@ -628,6 +696,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn absolute_socket_path_is_honored_verbatim() {
         let config = ServerConfig {
             root: PathBuf::from("/tmp/cell"),
@@ -744,6 +813,7 @@ mod tests {
         assert!(error.contains("unknown field"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn load_rejects_out_of_range_supervisor_settings() {
         let dir = tempfile::tempdir().unwrap();
@@ -793,6 +863,7 @@ mod tests {
         ServerConfig::load(&path)
     }
 
+    #[cfg(unix)]
     #[test]
     fn two_actors_on_one_uid_fail_to_load() {
         // The regression guard: this config used to load, and every binding
@@ -813,6 +884,7 @@ mod tests {
         assert!(error.contains("on_behalf_of"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_same_actor_bound_twice_fails_to_load() {
         let error = load_yaml(
@@ -823,6 +895,7 @@ mod tests {
         assert!(error.contains("more than once"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn many_uid_less_actors_and_one_direct_principal_load() {
         let config = load_yaml(
@@ -833,6 +906,7 @@ mod tests {
         assert_eq!(config.identity.bindings[2].uid, None);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_binding_without_a_uid_parses_as_none() {
         let config = load_yaml(
@@ -859,6 +933,7 @@ mod tests {
         assert!(default.gateway.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn an_explicit_gateway_section_parses_field_by_field() {
         let dir = tempfile::tempdir().unwrap();
@@ -876,6 +951,7 @@ mod tests {
         assert_eq!(gateway.delegable_actors, vec!["operator_a", "operator_b"]);
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_gateway_actor_defaults_to_gateway() {
         let dir = tempfile::tempdir().unwrap();
@@ -895,6 +971,7 @@ mod tests {
     /// A gateway section that names a uid no binding covers is a cell where
     /// delegation could never resolve. Refused at load: an operator who wrote
     /// the section meant it to work.
+    #[cfg(unix)]
     #[test]
     fn load_rejects_a_gateway_uid_with_no_binding() {
         let dir = tempfile::tempdir().unwrap();
@@ -914,6 +991,7 @@ mod tests {
 
     /// ... and an allowlisted actor no binding covers, for the same reason on
     /// the other side of the delegation.
+    #[cfg(unix)]
     #[test]
     fn load_rejects_a_delegable_actor_with_no_binding() {
         let dir = tempfile::tempdir().unwrap();
@@ -946,6 +1024,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn an_unknown_gateway_field_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
@@ -956,6 +1035,7 @@ mod tests {
         assert!(error.contains("unknown field"), "{error}");
     }
 
+    #[cfg(unix)]
     #[test]
     fn load_rejects_invalid_gateway_settings() {
         let dir = tempfile::tempdir().unwrap();
@@ -1085,5 +1165,80 @@ mod cep_prior_identity_config_tests {
             .collect();
         let refs: Vec<&str> = many.iter().map(String::as_str).collect();
         assert!(load_with_priors(&refs).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod pipe_sid_reload_tests {
+    use super::*;
+    use crate::identity::{IdentityBinding, IdentityBindings};
+
+    fn bound(sid: &str) -> IdentityBinding {
+        IdentityBinding {
+            uid: None,
+            sid: Some(sid.to_string()),
+            actor_id: format!("actor-{sid}"),
+            roles: Vec::new(),
+        }
+    }
+
+    fn with_sids(sids: &[&str]) -> ServerConfig {
+        ServerConfig {
+            identity: IdentityBindings {
+                bindings: sids.iter().map(|sid| bound(sid)).collect(),
+            },
+            ..ServerConfig::default()
+        }
+    }
+
+    #[test]
+    fn adding_a_distinct_sid_changes_pipe_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        let next = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        assert!(reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn removing_a_sid_changes_pipe_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        let next = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        assert!(reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn the_same_sid_set_in_another_order_does_not_change_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001", "S-1-5-21-1-1-1-1002"]);
+        let next = with_sids(&[
+            "S-1-5-21-1-1-1-1002",
+            "S-1-5-21-1-1-1-1001",
+            "S-1-5-21-1-1-1-1001",
+        ]);
+        assert!(!reload_changes_pipe_admission(&active, &next));
+        assert_eq!(pipe_admitted_sids(&next).len(), 2);
+    }
+
+    #[test]
+    fn a_change_that_touches_no_sid_does_not_change_admission() {
+        let active = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        let next = ServerConfig {
+            max_concurrent_runs: 9,
+            ..with_sids(&["S-1-5-21-1-1-1-1001"])
+        };
+        assert!(!reload_changes_pipe_admission(&active, &next));
+    }
+
+    #[test]
+    fn a_binding_without_a_sid_is_not_admitted_by_the_pipe() {
+        let mut next = with_sids(&["S-1-5-21-1-1-1-1001"]);
+        next.identity.bindings.push(IdentityBinding {
+            uid: Some(1000),
+            sid: None,
+            actor_id: "uid-only".to_string(),
+            roles: Vec::new(),
+        });
+        assert_eq!(
+            pipe_admitted_sids(&next),
+            vec!["S-1-5-21-1-1-1-1001".to_string()]
+        );
     }
 }

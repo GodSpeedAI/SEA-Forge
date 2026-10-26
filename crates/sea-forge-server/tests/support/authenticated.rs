@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! Trusted integration-test driver for the production private-channel API.
 //!
 //! Only this driver holds the issuer. A returned client holds one endpoint and

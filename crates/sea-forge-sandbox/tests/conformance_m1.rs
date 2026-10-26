@@ -1,3 +1,4 @@
+#![cfg(unix)]
 use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
 use sea_forge_sandbox::{ExecutionSandbox, JailSandbox, NetworkPosture, SandboxClass, SandboxSpec};
 use std::{
@@ -106,16 +107,17 @@ fn jail_class_is_jail() {
 
 #[test]
 fn jail_unavailable_on_unsupported_platform_returns_error() {
-    // On non-Linux, JailSandbox::new() must return an error.
-    #[cfg(not(target_os = "linux"))]
+    // Off Linux and macOS, JailSandbox::new() must return an error.
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let result = JailSandbox::new();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().class, "unsupported_sandbox_class_error");
     }
     // On Linux, if Landlock is not supported by the kernel, the error is
-    // detected at execute time rather than at construction time.
-    #[cfg(target_os = "linux")]
+    // detected at execute time rather than at construction time. On macOS the
+    // App Sandbox preflight runs here; macos_app_sandbox_jail covers the rest.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         let _ = JailSandbox::new();
     }
@@ -435,6 +437,17 @@ impl Drop for FixtureServer {
     }
 }
 
+/// The network jail cannot be enforced on this host. Skipping is not a pass,
+/// so when `SEA_FORGE_REQUIRE_LANDLOCK_NET=1` (required CI lanes) the test
+/// fails instead of returning as if the denial had been observed.
+#[cfg(target_os = "linux")]
+fn unavailable_network_jail(tag: &str, reason: &dyn std::fmt::Display) {
+    if std::env::var("SEA_FORGE_REQUIRE_LANDLOCK_NET").as_deref() == Ok("1") {
+        panic!("SEA_FORGE_REQUIRE_LANDLOCK_NET=1 but the network jail is unavailable ({tag}): {reason}");
+    }
+    eprintln!("Skipping network jail test ({tag}): {reason}");
+}
+
 /// Run one jailed probe with the given network posture and return the outcome
 /// string the helper wrote plus the execution status, or `None` if the host
 /// could not enforce the jail (so the test skips rather than falsely passes).
@@ -454,8 +467,8 @@ fn run_probe(
     let jail = match JailSandbox::new() {
         Ok(j) => j,
         Err(e) => {
-            eprintln!("Skipping network jail test ({tag}): {e}");
             fs::remove_dir_all(&parent).ok();
+            unavailable_network_jail(tag, &e);
             return None;
         }
     };
@@ -483,8 +496,8 @@ fn run_probe(
                 "jail must fail closed, not fall back to local (got {})",
                 e.class
             );
-            eprintln!("Skipping network jail test ({tag}): {e}");
             fs::remove_dir_all(&parent).ok();
+            unavailable_network_jail(tag, &e);
             return None;
         }
     };
@@ -645,15 +658,22 @@ fn jail_network_setup_fails_closed_never_local() {
     }
 }
 
-/// macOS (and any non-Linux) skip-not-pass contract.
+/// Skip-not-pass contract for platforms without a jail backend.
 ///
-/// The jail backend has no Seatbelt implementation; off Linux it must return
+/// Linux uses Landlock and macOS uses the App Sandbox (its network cases are
+/// in `tests/macos_app_sandbox_jail.rs`). Anywhere else the jail must return
 /// `unsupported_sandbox_class_error` at construction and never count as a pass.
-/// This test asserts that fail-closed behavior on non-Linux and is inert (a
-/// skip) on Linux, so an unsupported platform is reported as skipped.
 #[test]
 fn jail_network_on_non_linux_is_skip_not_pass() {
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "macos")]
+    {
+        // The preflight (codesign + launcher) must succeed on a supported host;
+        // a refusal here would silently turn every macOS jail case into a skip.
+        if let Err(e) = JailSandbox::new() {
+            panic!("macOS jail preflight refused: {} {}", e.class, e.message);
+        }
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let result = JailSandbox::new();
         assert!(
