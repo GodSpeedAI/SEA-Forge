@@ -492,8 +492,16 @@ struct Output {
 }
 
 /// Run a control command with a clean environment and a deadline.
-fn run(program: &Path, args: &[String], timeout: Duration) -> Result<Output, SandboxError> {
+fn run(
+    program: &Path,
+    args: &[String],
+    cwd: Option<&Path>,
+    timeout: Duration,
+) -> Result<Output, SandboxError> {
     let mut command = Command::new(program);
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
+    }
     command
         .args(args)
         .env_clear()
@@ -629,13 +637,22 @@ impl OpenShellSandbox {
     }
 
     fn cli(&self, args: &[String], timeout: Duration) -> Result<Output, SandboxError> {
+        self.cli_in(args, None, timeout)
+    }
+
+    fn cli_in(
+        &self,
+        args: &[String],
+        cwd: Option<&Path>,
+        timeout: Duration,
+    ) -> Result<Output, SandboxError> {
         let mut full = Vec::new();
         if let Some(gateway) = &self.binding.gateway {
             full.push("--gateway".to_string());
             full.push(gateway.clone());
         }
         full.extend_from_slice(args);
-        run(&self.binding.cli, &full, timeout)
+        run(&self.binding.cli, &full, cwd, timeout)
     }
 
     fn cli_ok(
@@ -644,7 +661,17 @@ impl OpenShellSandbox {
         args: &[String],
         timeout: Duration,
     ) -> Result<Output, SandboxError> {
-        let out = self.cli(args, timeout)?;
+        self.cli_ok_in(class, args, None, timeout)
+    }
+
+    fn cli_ok_in(
+        &self,
+        class: &'static str,
+        args: &[String],
+        cwd: Option<&Path>,
+        timeout: Duration,
+    ) -> Result<Output, SandboxError> {
+        let out = self.cli_in(args, cwd, timeout)?;
         if out.code != Some(0) {
             return Err(err(
                 class,
@@ -694,6 +721,7 @@ impl OpenShellSandbox {
                 "--output".to_string(),
                 "json".to_string(),
             ],
+            None,
             CONTROL_TIMEOUT,
         )?;
         let envelope: Value = serde_json::from_str(&out.stdout).map_err(|e| {
@@ -847,16 +875,20 @@ impl OpenShellSandbox {
             )
         })?;
 
-        self.cli_ok(
+        // A named directory uploads as `<dest>/<dirname>/...` (like `scp -r`);
+        // only `.` extracts flat. So the CLI runs inside the workspace and
+        // uploads `.`, matching the flat `tar -C <path> .` of the download.
+        self.cli_ok_in(
             "openshell_transfer_failed",
             &[
                 "sandbox".to_string(),
                 "upload".to_string(),
                 name.to_string(),
-                spec.workspace_root.display().to_string(),
+                ".".to_string(),
                 self.workspace_path()?,
                 "--no-git-ignore".to_string(),
             ],
+            Some(&spec.workspace_root),
             TRANSFER_TIMEOUT,
         )?;
 
@@ -909,7 +941,12 @@ impl ExecutionSandbox for OpenShellSandbox {
         )?;
         check_workload_kind(identity.compute_driver, &workload)?;
 
-        let version = run(&self.binding.cli, &strings(&["--version"]), CONTROL_TIMEOUT)?;
+        let version = run(
+            &self.binding.cli,
+            &strings(&["--version"]),
+            None,
+            CONTROL_TIMEOUT,
+        )?;
         let expected = format!("openshell {}", identity.openshell_version);
         if version.stdout.trim() != expected {
             return Err(err(

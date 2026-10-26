@@ -88,6 +88,8 @@ case "$1" in
         exit 0
         ;;
       upload)
+        printf '%s\n' "$4" > "$CTL/upload_src"
+        pwd -P > "$CTL/upload_cwd"
         exit 0
         ;;
       download)
@@ -297,6 +299,25 @@ fn prepare_execute_download_destroy_happy_path() {
     find_after(&lines, policy_get + 1, "sandbox upload", |l| {
         l.starts_with("openshell sandbox upload ") && l.contains("--no-git-ignore")
     });
+    // Contents land flat in the sandbox workspace: the CLI runs inside the
+    // workspace and uploads `.` (a named directory would nest as
+    // `<dest>/<dirname>/...`).
+    let ctl_dir = h.root.join("ctl");
+    assert_eq!(
+        fs::read_to_string(ctl_dir.join("upload_src")).expect("upload_src"),
+        ".\n"
+    );
+    assert_eq!(
+        fs::read_to_string(ctl_dir.join("upload_cwd"))
+            .expect("upload_cwd")
+            .trim(),
+        h.spec
+            .workspace_root
+            .canonicalize()
+            .expect("workspace")
+            .display()
+            .to_string()
+    );
 
     let record = read_record(&h);
     assert_eq!(record["cell_id"], "cell_test");

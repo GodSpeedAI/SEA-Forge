@@ -1,0 +1,488 @@
+name: OpenShell live proof
+
+# Runs SEA-Forge's live OpenShell MicroVM proof (scripts/openshell/live-proof.sh)
+# on real hardware: a KVM-enabled Linux runner and an Apple Silicon macOS VM.
+# The proof exits 0 only when the live tests ran and passed. 3 means BLOCKED
+# (a prerequisite is missing) and 1 means FAIL. Both fail the linux job.
+#
+# This lane is not a required PR check. It runs on pushes to ci/openshell-live
+# and on manual dispatch.
+
+on:
+  push:
+    branches: [ci/openshell-live]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Push the two derived live-test images to GHCR; the VM driver pulls them with the job token.
+  packages: write
+
+concurrency:
+  # One gateway port (18081) per runner; never run two live proofs at once.
+  group: openshell-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-microvm:
+    name: linux-microvm (KVM, Docker-free)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Record host facts
+        run: |
+          mkdir -p evidence
+          {
+            echo "== uname -a"
+            uname -a
+            echo "== cpu virtualization flags"
+            echo "vmx lines: $(grep -c -w vmx /proc/cpuinfo || true)"
+            echo "svm lines: $(grep -c -w svm /proc/cpuinfo || true)"
+            echo "== /dev/kvm (before)"
+            ls -l /dev/kvm 2>&1 || true
+            echo "== container engines"
+            echo "docker: $(command -v docker || echo absent)"
+            echo "podman: $(command -v podman || echo absent)"
+            ls -l /var/run/docker.sock 2>&1 || true
+            echo "DOCKER_HOST=${DOCKER_HOST:-<unset>}"
+          } > evidence/host.txt 2>&1
+          cat evidence/host.txt
+
+      - name: Enable KVM for the runner user
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          echo "== /dev/kvm (after)" | tee -a evidence/host.txt
+          ls -l /dev/kvm | tee -a evidence/host.txt
+          test -r /dev/kvm && test -w /dev/kvm
+
+      - name: Install OpenShell 0.1.3 (verified release assets)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REL=v0.1.3
+          REPO=NVIDIA/OpenShell
+          DL="$RUNNER_TEMP/openshell-dl"
+          BIN="$HOME/.local/bin"
+          LIBEXEC="$HOME/.local/libexec/openshell"
+          EVID="$GITHUB_WORKSPACE/evidence/install.txt"
+          rm -rf "$DL"; mkdir -p "$DL/ck" "$DL/x" "$BIN" "$LIBEXEC" "$GITHUB_WORKSPACE/evidence"
+
+          sha256_of() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+          asset_digest() { gh release view "$REL" -R "$REPO" --json assets -q ".assets[] | select(.name == \"$1\") | .digest"; }
+
+          # fetch_verified ASSET CHECKSUMS_FILE|"" : download, then require the
+          # GitHub asset digest to match, and the published checksums entry to
+          # match when a checksums file exists for the asset.
+          fetch_verified() {
+            local asset="$1" ck="$2" actual digest expected
+            gh release download "$REL" -R "$REPO" -p "$asset" -D "$DL" --clobber
+            actual="$(sha256_of "$DL/$asset")"
+            digest="$(asset_digest "$asset")"
+            if [ -n "$digest" ] && [ "$digest" != "sha256:$actual" ]; then
+              echo "FAIL: $asset digest $digest does not match sha256:$actual" >&2; exit 1
+            fi
+            if [ -n "$ck" ]; then
+              expected="$(awk -v n="$asset" '$2 == n || $2 == "*" n { print $1; exit }' "$DL/ck/$ck")"
+              if [ -z "$expected" ]; then echo "FAIL: no entry for $asset in $ck" >&2; exit 1; fi
+              if [ "$expected" != "$actual" ]; then echo "FAIL: $asset checksum $actual != $ck entry $expected" >&2; exit 1; fi
+              echo "verified $asset: sha256 matches $ck and GitHub digest=${digest:-absent}" | tee -a "$EVID"
+            else
+              if [ -z "$digest" ]; then echo "FAIL: $asset has no checksums file and no digest" >&2; exit 1; fi
+              echo "verified $asset: sha256 matches GitHub asset digest (no checksums file published for this asset)" | tee -a "$EVID"
+            fi
+          }
+          # install_named DIR NAME DEST: first regular file called NAME in DIR.
+          install_named() {
+            local src
+            src="$(find "$1" -type f -name "$2" | head -n 1)"
+            if [ -z "$src" ]; then echo "FAIL: $2 not found in archive" >&2; exit 1; fi
+            install -m 0755 "$src" "$3/$2"
+          }
+
+          for ck in openshell-checksums-sha256.txt openshell-gateway-checksums-sha256.txt \
+                    openshell-prover-checksums-sha256.txt openshell-sandbox-checksums-sha256.txt \
+                    openshell-supervisor-checksums-sha256.txt; do
+            gh release download "$REL" -R "$REPO" -p "$ck" -D "$DL/ck" --clobber
+          done
+
+          CLI=openshell-x86_64-unknown-linux-musl.tar.gz
+          GW=openshell-gateway-x86_64-unknown-linux-gnu.tar.gz
+          PROVER=openshell-prover-x86_64-unknown-linux-musl.tar.gz
+          DRIVER=openshell-driver-vm-x86_64-unknown-linux-gnu.tar.gz
+          SANDBOX=openshell-sandbox-x86_64-unknown-linux-musl.tar.gz
+          SUPERVISOR=openshell-supervisor-x86_64-unknown-linux-gnu.tar.gz
+
+          fetch_verified "$CLI" openshell-checksums-sha256.txt
+          fetch_verified "$GW" openshell-gateway-checksums-sha256.txt
+          fetch_verified "$PROVER" openshell-prover-checksums-sha256.txt
+          fetch_verified "$DRIVER" ""
+          fetch_verified "$SANDBOX" openshell-sandbox-checksums-sha256.txt
+          fetch_verified "$SUPERVISOR" openshell-supervisor-checksums-sha256.txt
+
+          mkdir -p "$DL/x/cli" "$DL/x/gw" "$DL/x/prover" "$DL/x/driver" "$DL/x/sb" "$DL/x/sup"
+          tar -xzf "$DL/$CLI" -C "$DL/x/cli"
+          tar -xzf "$DL/$GW" -C "$DL/x/gw"
+          tar -xzf "$DL/$PROVER" -C "$DL/x/prover"
+          tar -xzf "$DL/$DRIVER" -C "$DL/x/driver"
+          tar -xzf "$DL/$SANDBOX" -C "$DL/x/sb"
+          tar -xzf "$DL/$SUPERVISOR" -C "$DL/x/sup"
+
+          install_named "$DL/x/cli" openshell "$BIN"
+          install_named "$DL/x/gw" openshell-gateway "$BIN"
+          install_named "$DL/x/prover" openshell-prover "$BIN"
+
+          # The VM driver is installed as its whole archive tree, so any
+          # libraries shipped beside it come along.
+          drv="$(find "$DL/x/driver" -type f -name openshell-driver-vm | head -n 1)"
+          if [ -z "$drv" ]; then echo "FAIL: openshell-driver-vm not in archive" >&2; exit 1; fi
+          cp -R "$(dirname "$drv")"/. "$LIBEXEC"/
+          chmod 0755 "$LIBEXEC/openshell-driver-vm"
+
+          # Sandbox and supervisor runtime assets, beside the driver.
+          cp -R "$DL/x/sb"/. "$LIBEXEC"/
+          cp -R "$DL/x/sup"/. "$LIBEXEC"/
+          find "$LIBEXEC" -maxdepth 1 -type f -name 'openshell-*' -exec chmod 0755 {} +
+
+          {
+            echo "== archive listings"
+            for d in cli gw prover driver sb sup; do echo "-- $d"; find "$DL/x/$d" -type f | sed "s#$DL/x/##"; done
+          } >> "$EVID"
+
+          for pair in "openshell:$BIN/openshell" "openshell-gateway:$BIN/openshell-gateway" \
+                      "openshell-prover:$BIN/openshell-prover" "openshell-driver-vm:$LIBEXEC/openshell-driver-vm"; do
+            name="${pair%%:*}"; path="${pair#*:}"
+            v="$("$path" --version 2>&1 | head -n 1 || true)"
+            if [ "$v" != "$name 0.1.3" ]; then echo "FAIL: $path reports '$v'" >&2; exit 1; fi
+            echo "version ok: $v" | tee -a "$EVID"
+          done
+
+          echo "$BIN" >> "$GITHUB_PATH"
+
+      - name: Build and push live-test images (before Docker stops)
+        # The projected policy keeps /sandbox read-only and grants /sandbox/workspace
+        # read-write, so the workload image must already contain that directory
+        # (the VM driver creates only /sandbox). Stock images do not, so each live
+        # image is the public base plus one owned, empty /sandbox/workspace.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          # The guest image prep accepts OCI manifests only (a Docker v2 manifest
+          # fails "not implemented: application/vnd.docker.distribution.manifest.v2+json"),
+          # so BuildKit pushes OCI media types and no provenance attestation.
+          docker buildx create --use --name live-oci >/dev/null
+          build() {
+            local base="$1" name="$2" var="$3" ref digest base_digest
+            ref="ghcr.io/${owner}/sea-forge-live-${name}:${{ github.run_id }}"
+            base_digest="$(docker buildx imagetools inspect "$base" --format '{{.Manifest.Digest}}')"
+            printf 'FROM %s@%s\nRUN mkdir -p /sandbox/workspace && chmod 0755 /sandbox /sandbox/workspace\n' "${base%%:*}" "$base_digest" \
+              | docker buildx build --platform linux/amd64 --provenance=false --sbom=false \
+                  --output "type=registry,name=$ref,oci-mediatypes=true" \
+                  --metadata-file "$RUNNER_TEMP/$name-meta.json" -
+            digest="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["containerimage.digest"])' "$RUNNER_TEMP/$name-meta.json")"
+            echo "$var=${ref%%:*}@$digest" >> "$GITHUB_ENV"
+            echo "$name: base $base@$base_digest -> ${ref%%:*}@$digest ($(docker buildx imagetools inspect "${ref%%:*}@$digest" --format '{{.Manifest.MediaType}}'))" | tee -a evidence/images.txt
+          }
+          build docker.io/library/ubuntu:24.04 ubuntu LIVE_IMAGE
+          build docker.io/library/python:3.13-slim python LIVE_SECOND_IMAGE
+          docker logout ghcr.io
+
+      - name: Stop Docker (Docker-free claim)
+        run: |
+          set -uo pipefail
+          sudo systemctl stop docker.socket docker containerd || true
+          # Remove the stale socket only if systemd left it behind.
+          sudo rm -f /var/run/docker.sock
+          {
+            echo "== after stopping docker"
+            echo "docker.service: $(systemctl is-active docker 2>&1 || true)"
+            echo "containerd: $(systemctl is-active containerd 2>&1 || true)"
+            echo "DOCKER_HOST=${DOCKER_HOST:-<unset>}"
+          } | tee evidence/docker-free.txt
+          if [ -e /var/run/docker.sock ]; then echo "FAIL: /var/run/docker.sock still exists" >&2; exit 1; fi
+          if [ -n "${DOCKER_HOST:-}" ]; then echo "FAIL: DOCKER_HOST is set" >&2; exit 1; fi
+          echo "OK: /var/run/docker.sock absent, DOCKER_HOST unset" | tee -a evidence/docker-free.txt
+
+      - name: Install proof tools (ssh git python3 e2fsprogs)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq e2fsprogs
+          for t in ssh git python3 mke2fs debugfs e2fsck; do
+            p="$(command -v "$t" || command -v "/usr/sbin/$t" || command -v "/sbin/$t" || true)"
+            echo "$t: ${p:-MISSING}" | tee -a evidence/tools.txt
+          done
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Live proof
+        env:
+          STATE_DIR: ${{ runner.temp }}/openshell-state
+          # Digest-pinned images from the build step (public bases + /sandbox/workspace).
+          IMAGE: ${{ env.LIVE_IMAGE }}
+          SECOND_IMAGE: ${{ env.LIVE_SECOND_IMAGE }}
+          # Registry auth for the VM driver's GHCR pull (job-scoped token, ghcr uses __token__).
+          OPENSHELL_REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          devbox run -- bash scripts/openshell/live-proof.sh 2>&1 | tee evidence/live-proof.log
+          echo "exit=${PIPESTATUS[0]}" >> evidence/live-proof.log
+          echo "STATE_DIR=$STATE_DIR" >> evidence/live-proof.log
+          exit 0
+
+      - name: Collect gateway state and logs
+        if: always()
+        run: |
+          mkdir -p evidence/state
+          STATE="${RUNNER_TEMP}/openshell-state"
+          if [ -d "$STATE" ]; then
+            find "$STATE" -maxdepth 2 -type f \( -name '*.log' -o -name '*.toml' -o -name '*.db' \) -exec cp {} evidence/state/ \;
+          fi
+          ls -la evidence/state | tee evidence/state/listing.txt
+
+      - name: Summarize
+        if: always()
+        run: |
+          rc="$(sed -n 's/^exit=//p' evidence/live-proof.log 2>/dev/null | tail -n 1)"
+          reason="$(grep -E '^(BLOCKED|FAIL): ' evidence/live-proof.log 2>/dev/null | tail -n 1)"
+          {
+            echo "## OpenShell live proof: linux-microvm"
+            if [ "$rc" = "0" ]; then
+              echo "**PASS** (live-proof.sh exit 0)"
+            else
+              echo "**NOT PASSING** (live-proof.sh exit ${rc:-missing})"
+              echo ""
+              echo "${reason:-no BLOCKED or FAIL line was printed}"
+            fi
+            echo ""
+            echo '```'
+            grep -E '^(OK: |WARNING: |test |test result)' evidence/live-proof.log 2>/dev/null || true
+            echo '```'
+            echo ""
+            echo "Bootstrap image: docker.io/library/ubuntu:24.04 (IMAGE override). The script default nvcr.io/nvidia/base/ubuntu:24.04 needs registry auth on hosted runners."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Gate on proof exit status
+        run: |
+          rc="$(sed -n 's/^exit=//p' evidence/live-proof.log | tail -n 1)"
+          if [ "$rc" != "0" ]; then
+            echo "::error::live-proof.sh exit=${rc:-missing}"
+            exit 1
+          fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: openshell-live-linux
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  macos-hvf-probe:
+    name: macos-hvf-probe (Apple Silicon, non-gating)
+    # Hosted macOS runners may not expose nested virtualization or
+    # Hypervisor.framework. A failure here is recorded, not treated as a
+    # product regression, so the job never fails the workflow.
+    continue-on-error: true
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Record host facts
+        run: |
+          mkdir -p evidence
+          {
+            echo "== sw_vers"
+            sw_vers 2>&1 || true
+            echo "== uname -m: $(uname -m)"
+            echo "== kern.hv_support: $(sysctl -n kern.hv_support 2>&1 || echo unavailable)"
+            echo "== kern.hv_vmm_present: $(sysctl -n kern.hv_vmm_present 2>&1 || echo unavailable)"
+          } > evidence/host.txt 2>&1
+          cat evidence/host.txt
+
+      - name: Install OpenShell 0.1.3 (verified release assets)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REL=v0.1.3
+          REPO=NVIDIA/OpenShell
+          DL="$RUNNER_TEMP/openshell-dl"
+          BIN="$HOME/.local/bin"
+          LIBEXEC="$HOME/.local/libexec/openshell"
+          EVID="$GITHUB_WORKSPACE/evidence/install.txt"
+          rm -rf "$DL"; mkdir -p "$DL/ck" "$DL/x" "$BIN" "$LIBEXEC" "$GITHUB_WORKSPACE/evidence"
+
+          sha256_of() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+          asset_digest() { gh release view "$REL" -R "$REPO" --json assets -q ".assets[] | select(.name == \"$1\") | .digest"; }
+
+          fetch_verified() {
+            local asset="$1" ck="$2" actual digest expected
+            gh release download "$REL" -R "$REPO" -p "$asset" -D "$DL" --clobber
+            actual="$(sha256_of "$DL/$asset")"
+            digest="$(asset_digest "$asset")"
+            if [ -n "$digest" ] && [ "$digest" != "sha256:$actual" ]; then
+              echo "FAIL: $asset digest $digest does not match sha256:$actual" >&2; exit 1
+            fi
+            if [ -n "$ck" ]; then
+              expected="$(awk -v n="$asset" '$2 == n || $2 == "*" n { print $1; exit }' "$DL/ck/$ck")"
+              if [ -z "$expected" ]; then echo "FAIL: no entry for $asset in $ck" >&2; exit 1; fi
+              if [ "$expected" != "$actual" ]; then echo "FAIL: $asset checksum $actual != $ck entry $expected" >&2; exit 1; fi
+              echo "verified $asset: sha256 matches $ck and GitHub digest=${digest:-absent}" | tee -a "$EVID"
+            else
+              if [ -z "$digest" ]; then echo "FAIL: $asset has no checksums file and no digest" >&2; exit 1; fi
+              echo "verified $asset: sha256 matches GitHub asset digest (no checksums file published for this asset)" | tee -a "$EVID"
+            fi
+          }
+          install_named() {
+            local src
+            src="$(find "$1" -type f -name "$2" | head -n 1)"
+            if [ -z "$src" ]; then echo "FAIL: $2 not found in archive" >&2; exit 1; fi
+            install -m 0755 "$src" "$3/$2"
+          }
+
+          for ck in openshell-checksums-sha256.txt openshell-gateway-checksums-sha256.txt \
+                    openshell-prover-checksums-sha256.txt; do
+            gh release download "$REL" -R "$REPO" -p "$ck" -D "$DL/ck" --clobber
+          done
+
+          CLI=openshell-aarch64-apple-darwin.tar.gz
+          GW=openshell-gateway-aarch64-apple-darwin.tar.gz
+          PROVER=openshell-prover-aarch64-apple-darwin.tar.gz
+          DRIVER=openshell-driver-vm-aarch64-apple-darwin.tar.gz
+
+          fetch_verified "$CLI" openshell-checksums-sha256.txt
+          fetch_verified "$GW" openshell-gateway-checksums-sha256.txt
+          fetch_verified "$PROVER" openshell-prover-checksums-sha256.txt
+          fetch_verified "$DRIVER" ""
+
+          mkdir -p "$DL/x/cli" "$DL/x/gw" "$DL/x/prover" "$DL/x/driver"
+          tar -xzf "$DL/$CLI" -C "$DL/x/cli"
+          tar -xzf "$DL/$GW" -C "$DL/x/gw"
+          tar -xzf "$DL/$PROVER" -C "$DL/x/prover"
+          tar -xzf "$DL/$DRIVER" -C "$DL/x/driver"
+
+          install_named "$DL/x/cli" openshell "$BIN"
+          install_named "$DL/x/gw" openshell-gateway "$BIN"
+          install_named "$DL/x/prover" openshell-prover "$BIN"
+          drv="$(find "$DL/x/driver" -type f -name openshell-driver-vm | head -n 1)"
+          if [ -z "$drv" ]; then echo "FAIL: openshell-driver-vm not in archive" >&2; exit 1; fi
+          cp -R "$(dirname "$drv")"/. "$LIBEXEC"/
+          chmod 0755 "$LIBEXEC/openshell-driver-vm"
+
+          for pair in "openshell:$BIN/openshell" "openshell-gateway:$BIN/openshell-gateway" \
+                      "openshell-prover:$BIN/openshell-prover" "openshell-driver-vm:$LIBEXEC/openshell-driver-vm"; do
+            name="${pair%%:*}"; path="${pair#*:}"
+            v="$("$path" --version 2>&1 | head -n 1 || true)"
+            if [ "$v" != "$name 0.1.3" ]; then echo "FAIL: $path reports '$v'" >&2; exit 1; fi
+            echo "version ok: $v" | tee -a "$EVID"
+          done
+
+          echo "$BIN" >> "$GITHUB_PATH"
+
+      - name: Codesign openshell-driver-vm with the Hypervisor entitlement
+        # Upstream e2e-vm.sh (v0.1.3) does this on Darwin before launching the
+        # VM driver. Without it, libkrun fails at VmCreate (krun_start_enter -22).
+        run: |
+          set -euo pipefail
+          ENT="$RUNNER_TEMP/driver-entitlements.plist"
+          cat >"$ENT" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>com.apple.security.hypervisor</key>
+              <true/>
+          </dict>
+          </plist>
+          PLIST
+          codesign --entitlements "$ENT" --force -s - "$HOME/.local/libexec/openshell/openshell-driver-vm"
+          codesign -d --entitlements - "$HOME/.local/libexec/openshell/openshell-driver-vm" 2>&1 | tee -a evidence/install.txt
+
+      - name: Install proof tools (e2fsprogs)
+        run: |
+          brew install e2fsprogs
+          for d in "$(brew --prefix e2fsprogs)/sbin" "$(brew --prefix e2fsprogs)/bin"; do
+            [ -d "$d" ] && echo "$d" >> "$GITHUB_PATH"
+          done
+          for t in ssh git python3 mke2fs debugfs e2fsck; do
+            echo "$t: $(command -v "$t" || echo MISSING)" | tee -a evidence/tools.txt
+          done
+
+      - name: Install Devbox
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      - name: Setup pinned toolchain
+        run: devbox run -- just setup
+
+      - name: Live proof (macOS probe)
+        env:
+          STATE_DIR: ${{ runner.temp }}/openshell-state
+          # The script's NGC default (nvcr.io/nvidia/base/ubuntu:24.04) needs registry
+          # auth, which hosted runners do not have. A public bootstrap image is used.
+          IMAGE: docker.io/library/ubuntu:24.04
+        run: |
+          set +e
+          devbox run -- bash scripts/openshell/live-proof.sh 2>&1 | tee evidence/live-proof.log
+          echo "exit=${PIPESTATUS[0]}" >> evidence/live-proof.log
+          echo "STATE_DIR=$STATE_DIR" >> evidence/live-proof.log
+          exit 0
+
+      - name: Collect gateway state and logs
+        if: always()
+        run: |
+          mkdir -p evidence/state
+          STATE="${RUNNER_TEMP}/openshell-state"
+          if [ -d "$STATE" ]; then
+            find "$STATE" -maxdepth 2 -type f \( -name '*.log' -o -name '*.toml' -o -name '*.db' \) -exec cp {} evidence/state/ \;
+          fi
+          ls -la evidence/state | tee evidence/state/listing.txt
+
+      - name: Summarize
+        if: always()
+        run: |
+          rc="$(sed -n 's/^exit=//p' evidence/live-proof.log 2>/dev/null | tail -n 1)"
+          reason="$(grep -E '^(BLOCKED|FAIL): ' evidence/live-proof.log 2>/dev/null | tail -n 1)"
+          {
+            echo "## OpenShell live proof: macos-hvf-probe"
+            if [ "$rc" = "0" ]; then
+              echo "**PASS** (live-proof.sh exit 0)"
+            else
+              echo "**BLOCKED or FAILED** (live-proof.sh exit ${rc:-missing}); not a pass"
+              echo ""
+              echo "${reason:-no BLOCKED or FAIL line was printed}"
+            fi
+            echo ""
+            echo '```'
+            grep -E '^(OK: |WARNING: |test |test result)' evidence/live-proof.log 2>/dev/null || true
+            echo '```'
+            echo ""
+            echo "Bootstrap image: docker.io/library/ubuntu:24.04 (IMAGE override). The script default nvcr.io/nvidia/base/ubuntu:24.04 needs registry auth on hosted runners."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: openshell-live-macos
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
