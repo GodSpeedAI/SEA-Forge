@@ -2674,6 +2674,7 @@ dependencies = [
  "sea-forge-evidence",
  "sea-forge-extension",
  "sea-forge-ledger",
+ "sea-forge-os",
  "sea-forge-planner",
  "sea-forge-runtime",
  "sea-forge-sandbox",
