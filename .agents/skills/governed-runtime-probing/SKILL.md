@@ -30,12 +30,22 @@ in separate result columns.
    - kill/cancel → no surviving descendant (process list by job/cgroup/pgid)
    - backend failure (stop gateway, remove binary) → SEA-Forge refuses; no
      host process ran (check a host-side marker)
-5. Classify each scenario: `PASS` (attempt observed blocked), `FAIL`
-   (side effect observed), `BLOCKED` (prerequisite missing), `N/A` (backend
-   does not claim the property, with the reason). A skip is never `PASS`.
-6. Repeat the essential scenarios (fs write, network, credential, lifecycle)
+5. Pair every denial probe with a positive control that uses the same
+   payload, binary and target and shows the effect happens when it is
+   allowed: the same write lands in the workspace, the same connect reaches
+   an allowed listener, the same read succeeds on a planted readable file.
+   Without a working control, an absent effect may mean a broken probe.
+   Check the probe itself ran to completion (exit status, a marker it prints
+   after the attempt); a probe error or timeout is `BLOCKED`, not `PASS`.
+6. Classify each scenario: `PASS` (control succeeded, attempt observed
+   blocked, ideally with the mechanism's own denial record), `FAIL` (side
+   effect observed), `BLOCKED` (prerequisite missing, control failed, or
+   probe error), `N/A` (backend does not claim the property, with the
+   reason). A skip is never `PASS`; a test harness that returns success on a
+   missing prerequisite must be made to fail in CI.
+7. Repeat the essential scenarios (fs write, network, credential, lifecycle)
    at least three times with a different workspace, principal or policy.
-7. Save raw stdout/stderr and exit codes per attempt as JSON lines; publish
+8. Save raw stdout/stderr and exit codes per attempt as JSON lines; publish
    them as CI artifacts or under `~/projects/_wt/containers/evidence/`.
 
 ## Failure modes
@@ -46,6 +56,10 @@ in separate result columns.
   every attempt must prove it ran inside (print a backend-specific marker).
 - Reusing one workspace across repetitions, hiding state leaks.
 - Counting mock-driver runs as enforcement evidence.
+- Citing a test for a scenario it does not attempt (a read probe is not
+  write evidence; normal cleanup is not a restart test).
+- An unreachable target (documentation IP, no listener) "proving" egress
+  denial: with no positive control it proves nothing.
 
 ## Verify
 

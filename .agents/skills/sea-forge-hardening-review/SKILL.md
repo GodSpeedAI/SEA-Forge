@@ -11,8 +11,11 @@ evidence.
 
 ## Steps
 
-1. Freeze the build. Commit everything, push, and record the commit SHA and
-   `git diff --stat <base>...HEAD`. Never review an uncommitted tree.
+1. Freeze the build. Commit only the change under review (leave unrelated
+   work untouched), record the commit SHA and `git diff --stat <base>...HEAD`,
+   and check that SHA out read-only (`git worktree add --detach`). Do not
+   push or publish for the review; that needs the operator's separate intent.
+   Never review an uncommitted tree.
 2. Build the review packet in a scratch directory (not the repo):
    - `diff.patch`: `git diff <base>...HEAD` (complete, not truncated).
    - `spec.md`: the outcome, hard constraints and invariants being claimed,
@@ -20,10 +23,13 @@ evidence.
    - `evidence/`: the capability matrix, conformance results with CI run URLs,
      footprint measurements, and every changed `.agents/skills/*/SKILL.md`.
    - `prompt.md`: the attacker prompt below plus the packet file list.
-3. Pick the reviewer:
-   - `codex exec` (read-only sandbox) when `codex --version` works.
+3. Pick the reviewer, which must be a different model from the builder:
+   - `codex exec -s read-only` when `codex --version` works; record the
+     model it reports in its session header.
    - Otherwise `claude -p --model <a model other than the builder's>` started
      in the packet directory with no session resume.
+   - If only the builder's model is available, run a fresh session and record
+     the review as "same model, fresh session", never as independent.
    Never pass the builder's transcript, notes or conclusions.
 4. Attacker prompt (keep its substance):
    "Attempt to falsify the claim in spec.md. Find correctness failures, unsafe
@@ -38,7 +44,10 @@ evidence.
    concrete failure mechanism, smallest correction. Do not accept the
    builder's statements as proof."
 5. Run it non-interactively with the repo checked out read-only at the frozen
-   SHA; save raw output as `review-pass-N.md` next to the packet.
+   SHA. Save the exact command, reviewer model, exit status, raw log and
+   final output as `review-pass-N.*` next to the packet. A non-zero exit, a
+   timeout, or output without a per-severity count is an incomplete pass:
+   rerun it; never read it as "no findings".
 6. Triage each finding:
    - Confirmed → fix in a new commit with a test that fails before the fix.
    - Disputed → attach a reproducible command and its output that refutes it.
@@ -55,11 +64,13 @@ evidence.
   equal the merged head.
 - Summarizing the diff for the reviewer: give the full patch.
 - Treating "reviewer found nothing" from a truncated or failed run as clean:
-  check the output names files from the diff.
+  require exit status 0 and the per-severity count line.
 - Claiming independence when the same session reviewed its own work.
 
 ## Verify
 
-Confirm `review-pass-N.md` files exist for every pass, each references the
-frozen SHA, and the record lists zero unresolved high/medium findings or
-states plainly that the three-pass limit was reached with findings open.
+For every pass, confirm the saved command, reviewer model (different from
+the builder, or labelled "same model, fresh session"), exit status 0, the
+frozen SHA, and a per-severity count. The record lists each finding's
+resolution and either zero unresolved high/medium findings or states plainly
+that the three-pass limit was reached with findings open.
