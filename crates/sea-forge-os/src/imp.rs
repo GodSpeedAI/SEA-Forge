@@ -4,21 +4,29 @@ use std::ffi::c_void;
 use std::io;
 use std::mem;
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::ffi::OsStringExt;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::ptr::{null, null_mut};
+use std::time::{Duration, Instant};
 
-use windows_sys::Win32::Foundation::{LocalFree, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE};
+use windows_sys::Win32::Foundation::{
+    LocalFree, ERROR_ALREADY_EXISTS, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
+};
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
 };
 use windows_sys::Win32::Security::{
-    GetTokenInformation, RevertToSelf, SecurityImpersonation, TokenImpersonationLevel, TokenUser,
+    GetTokenInformation, RevertToSelf, SecurityIdentification, TokenImpersonationLevel, TokenUser,
     PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, FILE_FLAG_OPEN_REPARSE_POINT,
+    CreateFileW, FileDispositionInfo, GetFileInformationByHandle, GetFinalPathNameByHandleW,
+    SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
+    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
+    FILE_DISPOSITION_INFO, FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_DELETE, FILE_SHARE_READ,
+    FILE_SHARE_WRITE, OPEN_ALWAYS, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -181,10 +189,13 @@ pub fn pipe_client_sid(pipe: &impl AsRawHandle) -> io::Result<String> {
     if ok == FALSE {
         return Err(last_error());
     }
-    if level < SecurityImpersonation {
+    // Identification is enough to read TokenUser, which is all the server
+    // needs. Admitting identification-only clients adds no authority: they
+    // cannot be impersonated into the client's own access rights.
+    if level < SecurityIdentification {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
-            "pipe client did not grant impersonation",
+            "pipe client did not grant identification",
         ));
     }
     token_user_sid(token.as_raw_handle() as HANDLE)
@@ -217,8 +228,15 @@ pub fn current_sid() -> io::Result<String> {
     token_user_sid(token.as_raw_handle() as HANDLE)
 }
 
+/// Rights granted to each bound client SID on the pipe: `FILE_GENERIC_READ`
+/// (includes SYNCHRONIZE) plus `FILE_WRITE_DATA` and `FILE_WRITE_ATTRIBUTES`.
+/// `GENERIC_WRITE` is deliberately not used: its file mapping includes
+/// `FILE_APPEND_DATA`, which is `FILE_CREATE_PIPE_INSTANCE` on a named pipe,
+/// and would let a bound client start a competing server instance.
+pub const CLIENT_PIPE_RIGHTS: u32 = 0x0012_018B;
+
 /// Pipe DACL: SYSTEM and the current user get full control; each bound SID
-/// gets read and write only. Everyone else is denied by omission.
+/// gets `CLIENT_PIPE_RIGHTS` only. Everyone else is denied by omission.
 pub struct PipeSecurity {
     _descriptor: LocalDescriptor,
     attributes: SECURITY_ATTRIBUTES,
@@ -231,7 +249,7 @@ impl PipeSecurity {
         let mut sddl = format!("D:P(A;;GA;;;SY)(A;;GA;;;{current})");
         for sid in sids {
             check_sid_grammar(sid)?;
-            sddl.push_str(&format!("(A;;GRGW;;;{sid})"));
+            sddl.push_str(&format!("(A;;0x{CLIENT_PIPE_RIGHTS:X};;;{sid})"));
         }
         let descriptor = LocalDescriptor::from_sddl(&sddl)?;
         Ok(Self {
@@ -352,6 +370,154 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut file = std::fs::File::from(handle);
     file.write_all(bytes)?;
     file.sync_all()
+}
+
+/// A file opened for a planned write by [`open_planned_file`].
+///
+/// Every fact below comes from the open handle, not from the path, so it
+/// describes the entry the write would actually touch even if a parent
+/// directory was swapped after the caller validated the path.
+pub struct PlannedFile {
+    file: std::fs::File,
+    created: bool,
+    links: u32,
+    reparse_point: bool,
+    directory: bool,
+    final_path: PathBuf,
+}
+
+impl PlannedFile {
+    /// The open handle. Writes go through it.
+    pub fn file(&mut self) -> &mut std::fs::File {
+        &mut self.file
+    }
+
+    /// True when this open created the entry (it did not exist before).
+    pub fn created(&self) -> bool {
+        self.created
+    }
+
+    /// Hard-link count of the entry (`nNumberOfLinks`).
+    pub fn links(&self) -> u32 {
+        self.links
+    }
+
+    /// True when the entry itself is a symlink or junction.
+    pub fn is_reparse_point(&self) -> bool {
+        self.reparse_point
+    }
+
+    /// True when the entry is a directory.
+    pub fn is_directory(&self) -> bool {
+        self.directory
+    }
+
+    /// The entry's resolved path (`GetFinalPathNameByHandleW`, `VOLUME_NAME_DOS`).
+    pub fn final_path(&self) -> &Path {
+        &self.final_path
+    }
+
+    /// Deletes the entry through this handle. Used to undo a file that this
+    /// open created when the write is then refused.
+    pub fn delete(&self) -> io::Result<()> {
+        let info = FILE_DISPOSITION_INFO { DeleteFile: true };
+        // SAFETY: the handle is live and owned by `self.file` (opened with DELETE access); `info` is a live struct of the size passed for FileDispositionInfo.
+        let ok = unsafe {
+            SetFileInformationByHandle(
+                self.file.as_raw_handle() as HANDLE,
+                FileDispositionInfo,
+                (&info as *const FILE_DISPOSITION_INFO).cast(),
+                mem::size_of::<FILE_DISPOSITION_INFO>() as u32,
+            )
+        };
+        if ok == FALSE {
+            return Err(last_error());
+        }
+        Ok(())
+    }
+
+    fn inspect(&mut self) -> io::Result<()> {
+        let handle = self.file.as_raw_handle() as HANDLE;
+        // SAFETY: `info` is a plain out-struct of the layout the call writes; the handle is live.
+        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { mem::zeroed() };
+        // SAFETY: the handle is live and `info` is a valid out-pointer.
+        if unsafe { GetFileInformationByHandle(handle, &mut info) } == FALSE {
+            return Err(last_error());
+        }
+        self.links = info.nNumberOfLinks;
+        self.reparse_point = info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0;
+        self.directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0;
+        let mut buffer = vec![0u16; 1024];
+        loop {
+            // SAFETY: `buffer` is writable for `buffer.len()` UTF-16 units and the handle is live.
+            let needed = unsafe {
+                GetFinalPathNameByHandleW(
+                    handle,
+                    buffer.as_mut_ptr(),
+                    buffer.len() as u32,
+                    VOLUME_NAME_DOS,
+                )
+            } as usize;
+            if needed == 0 {
+                return Err(last_error());
+            }
+            if needed < buffer.len() {
+                buffer.truncate(needed);
+                break;
+            }
+            // The buffer was too small: `needed` is the size including the NUL.
+            buffer.resize(needed + 1, 0);
+        }
+        self.final_path = PathBuf::from(std::ffi::OsString::from_wide(&buffer));
+        Ok(())
+    }
+}
+
+/// Opens `path` for a planned write without following or truncating it.
+///
+/// `OPEN_ALWAYS` opens an existing entry without truncating it, and
+/// `FILE_FLAG_OPEN_REPARSE_POINT` opens a final-component reparse point as
+/// itself rather than its target. The caller must check the returned facts
+/// before writing. If the entry was created by this call and the facts are
+/// unacceptable, the caller should call [`PlannedFile::delete`].
+pub fn open_planned_file(path: &Path) -> io::Result<PlannedFile> {
+    let wide = to_wide(path);
+    // SAFETY: `wide` is NUL-terminated and outlives the call; null security attributes and template handle are valid.
+    let raw = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            GENERIC_READ | GENERIC_WRITE | DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            null(),
+            OPEN_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT,
+            null_mut(),
+        )
+    };
+    if raw == INVALID_HANDLE_VALUE {
+        return Err(last_error());
+    }
+    // Read before any other call: OPEN_ALWAYS reports an existing entry as ERROR_ALREADY_EXISTS.
+    let created = last_error().raw_os_error() != Some(ERROR_ALREADY_EXISTS as i32);
+    // SAFETY: CreateFileW succeeded, so `raw` is a fresh handle we own.
+    let handle = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+    let mut planned = PlannedFile {
+        file: std::fs::File::from(handle),
+        created,
+        links: 0,
+        reparse_point: false,
+        directory: false,
+        final_path: PathBuf::new(),
+    };
+    match planned.inspect() {
+        Ok(()) => Ok(planned),
+        Err(error) => {
+            if created {
+                let _ = planned.delete();
+            }
+            Err(error)
+        }
+    }
 }
 
 /// Resumes every thread of `pid`. Fails if none was resumed.
@@ -481,6 +647,28 @@ impl Job {
         Ok(())
     }
 
+    /// Terminates every process in the job, then waits until the job is empty
+    /// or `deadline` passes. Termination is asynchronous, so a count read
+    /// right after `terminate` can still be non-zero. Survivors are reported
+    /// only after the deadline.
+    pub fn terminate_and_wait(&self, deadline: Duration) -> io::Result<()> {
+        self.terminate()?;
+        let until = Instant::now() + deadline;
+        loop {
+            let remaining = self.active_processes()?;
+            if remaining == 0 {
+                return Ok(());
+            }
+            if Instant::now() >= until {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    format!("{remaining} job process(es) survived termination"),
+                ));
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
     /// Number of processes still active in the job.
     pub fn active_processes(&self) -> io::Result<u32> {
         // SAFETY: plain data struct; all-zero is valid and overwritten on success.
@@ -507,7 +695,6 @@ mod tests {
     use super::*;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::process::{Command, Stdio};
-    use std::time::{Duration, Instant};
     use windows_sys::Win32::Security::Authorization::{
         ConvertSecurityDescriptorToStringSecurityDescriptorW, GetNamedSecurityInfoW, SE_FILE_OBJECT,
     };
@@ -659,9 +846,54 @@ mod tests {
                 assert!(write_private(&planted, b"new").is_err(), "symlink followed");
                 assert_eq!(std::fs::read(&target).expect("read"), b"target");
             }
-            Err(error) => println!("SKIPPED: symlink creation needs privilege ({error})"),
+            Err(error) => {
+                let reason = format!("symlink creation needs privilege ({error})");
+                if std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1") {
+                    panic!("BLOCKED prerequisite, not a pass: {reason}");
+                }
+                println!("SKIPPED: {reason}");
+            }
         }
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn planned_file_reports_hard_links_and_creation() {
+        let dir = std::env::temp_dir().join(format!("sf-os-planned-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let fresh = dir.join("fresh.txt");
+        let planned = open_planned_file(&fresh).expect("open fresh");
+        assert!(planned.created());
+        assert_eq!(planned.links(), 1);
+        assert!(!planned.is_reparse_point());
+        drop(planned);
+
+        let outside = dir.join("outside.txt");
+        std::fs::write(&outside, b"keep").expect("seed");
+        let linked = dir.join("linked.txt");
+        std::fs::hard_link(&outside, &linked).expect("hard link");
+        let planned = open_planned_file(&linked).expect("open linked");
+        assert!(!planned.created());
+        assert_eq!(planned.links(), 2);
+        drop(planned);
+        assert_eq!(std::fs::read(&outside).expect("read"), b"keep");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn terminate_and_wait_returns_once_the_job_is_empty() {
+        let job = Job::kill_on_close().expect("job");
+        let mut child = Command::new("cmd")
+            .args(["/c", "ping", "-n", "30", "127.0.0.1"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("spawn");
+        job.assign(&child).expect("assign");
+        job.terminate_and_wait(Duration::from_secs(5))
+            .expect("job emptied within the deadline");
+        assert_eq!(job.active_processes().expect("count"), 0);
+        let _ = child.wait();
     }
 
     #[test]

@@ -9,6 +9,9 @@
 #   (e) a second server on the same socket refuses to start
 #   (f) a process that pre-creates the derived pipe name makes the server
 #       refuse to start (squatting)
+#   (h) sfprobe, bound in its own cell, is admitted over an identification-
+#       level client (CreateFile with SECURITY_IDENTIFICATION), and cannot
+#       create a competing pipe instance under the live name (F11 DACL)
 #   (g) sfprobe is removed at the end, whatever happened
 #
 # The pipe name is derived here the same way as sea_forge_core::pipe_name_for:
@@ -132,6 +135,44 @@ try {
 $probePath = Join-Path $Work 'probe.ps1'
 Set-Content -Path $probePath -Value $ProbeScript -Encoding utf8
 
+# Explicit pipe rights (0x12018B, no FILE_CREATE_PIPE_INSTANCE) and
+# identification-level QoS (0x110000 = SECURITY_SQOS_PRESENT |
+# SECURITY_IDENTIFICATION), as the shipped CLI opens the pipe. Admission
+# must succeed for an admitted distinct user.
+$AdmittedProbe = @'
+param([string] $PipeName)
+$ErrorActionPreference = 'Stop'
+$request = '{"verb":"reject","case_id":"e2e-case","approval_id":"e2e-approval","actor":{"actor_id":"operator_local","role":"operator"}}'
+try {
+    Add-Type -Namespace SfProbe -Name Win -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern System.IntPtr CreateFileW(string name, uint access, uint share, System.IntPtr security, uint disposition, uint flags, System.IntPtr template);'
+    $h = [SfProbe.Win]::CreateFileW('\\.\pipe\' + $PipeName, 0x12018B, 0, [IntPtr]::Zero, 3, 0x110000, [IntPtr]::Zero)
+    if ($h.ToInt64() -eq -1) { throw ('CreateFile failed, Win32 error ' + [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()) }
+    $handle = New-Object Microsoft.Win32.SafeHandles.SafeFileHandle($h, $true)
+    $stream = New-Object System.IO.FileStream($handle, [System.IO.FileAccess]::ReadWrite, 4096, $false)
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($request + "`n")
+    $stream.Write($bytes, 0, $bytes.Length)
+    $stream.Flush()
+    $reader = New-Object System.IO.StreamReader($stream)
+    Write-Output ('RESULT ' + $reader.ReadLine())
+} catch {
+    Write-Output ('DENIED ' + $_.Exception.GetType().FullName + ': ' + $_.Exception.Message)
+}
+'@
+
+# An admitted distinct user tries to start a competing server instance under
+# the live pipe name. The DACL must refuse FILE_CREATE_PIPE_INSTANCE.
+$CreateProbe = @'
+param([string] $PipeName)
+$ErrorActionPreference = 'Stop'
+try {
+    # 255 = PIPE_UNLIMITED_INSTANCES, so a busy-instance error cannot stand in for the DACL refusal.
+    $instance = New-Object System.IO.Pipes.NamedPipeServerStream($PipeName, [System.IO.Pipes.PipeDirection]::InOut, 255)
+    Write-Output 'CREATED'
+} catch {
+    Write-Output ('DENIED ' + $_.Exception.GetType().FullName + ': ' + $_.Exception.Message)
+}
+'@
+
 $runnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 Say "runner SID: $runnerSid"
 Say "server: $ServerExe"
@@ -141,20 +182,40 @@ $servers = @()
 $squatter = $null
 $created = $false
 
-function New-Cell([string] $Name) {
+function New-Cell([string] $Name, [string[]] $ExtraSids = @()) {
     $root = Join-Path $Work $Name
     New-Item -ItemType Directory -Force -Path $root | Out-Null
     $socket = Join-Path $root 'server.sock'
+    $extra = ''
+    foreach ($sid in $ExtraSids) {
+        $extra += "`n    - sid: '$sid'`n      actor_id: operator_local`n      roles: [operator]"
+    }
     $yaml = @"
 socket_path: '$socket'
 identity:
   bindings:
     - sid: '$runnerSid'
       actor_id: operator_local
-      roles: [operator]
+      roles: [operator]$extra
 "@
     Set-Content -Path (Join-Path $root 'server.yaml') -Value $yaml -Encoding utf8
     return [pscustomobject] @{ Root = $root; Socket = $socket; Pipe = (Get-PipeName $socket) }
+}
+
+# Runs a probe script as sfprobe against a pipe and returns its last output line.
+function Invoke-ProbeAs([string] $ScriptPath, [string] $PipeName) {
+    $stem = [System.IO.Path]::GetFileNameWithoutExtension($ScriptPath)
+    $out = Join-Path $Work "$stem.out.log"
+    $err = Join-Path $Work "$stem.err.log"
+    Remove-Item -LiteralPath $out -ErrorAction SilentlyContinue
+    $cred = New-Object System.Management.Automation.PSCredential(".\$probeUser", $secure)
+    $run = Start-Process -FilePath 'powershell.exe' -Credential $cred -LoadUserProfile `
+        -WorkingDirectory $Work -WindowStyle Hidden -Wait -PassThru `
+        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $ScriptPath, '-PipeName', $PipeName) `
+        -RedirectStandardOutput $out -RedirectStandardError $err
+    $line = (Get-Content -Path $out -ErrorAction SilentlyContinue | Select-Object -Last 1)
+    if (-not $line) { return "no output (exit=$($run.ExitCode))" }
+    return [string] $line
 }
 
 function Start-Server([pscustomobject] $Cell, [string] $Tag) {
@@ -236,6 +297,33 @@ try {
 
     Stop-Process -Id $serverA.Id -Force -ErrorAction SilentlyContinue
     Wait-Until { -not (Test-PipeExists $cellA.Pipe) } 20 | Out-Null
+
+    # (h) An admitted distinct user (sfprobe bound in its own cell) exchanges a
+    # request over an identification-level client, and cannot create a
+    # competing server instance under the live pipe name.
+    $probeSid = (Get-LocalUser -Name $probeUser).SID.Value
+    $cellC = New-Cell 'cell-c' @($probeSid)
+    $serverC = Start-Server $cellC 'server-c'
+    $servers += $serverC
+    $upC = Wait-Until { Test-PipeExists $cellC.Pipe } 60
+    Check $upC 'server C published its pipe' "($($cellC.Pipe))"
+    if (-not $upC) { throw 'server C did not start; see server-c logs' }
+    $admittedPath = Join-Path $Work 'probe-admitted.ps1'
+    Set-Content -Path $admittedPath -Value $AdmittedProbe -Encoding utf8
+    $admittedOut = Invoke-ProbeAs $admittedPath $cellC.Pipe
+    if ($admittedOut -match '^RESULT (.*)$') {
+        $ar = $Matches[1] | ConvertFrom-Json
+        $ac = if ($ar.PSObject.Properties.Name -contains 'error_class') { [string] $ar.error_class } else { '' }
+        Check (-not $ac.StartsWith('identity_')) 'admitted distinct user exchanges a request over an identification-level client' "(error_class='$ac')"
+    } else {
+        Check $false 'admitted distinct user exchanges a request over an identification-level client' "(output='$admittedOut')"
+    }
+    $createPath = Join-Path $Work 'probe-create.ps1'
+    Set-Content -Path $createPath -Value $CreateProbe -Encoding utf8
+    $createOut = Invoke-ProbeAs $createPath $cellC.Pipe
+    Check ($createOut.StartsWith('DENIED')) 'admitted distinct user cannot create a competing pipe instance' "($($createOut.Substring(0, [Math]::Min(160, $createOut.Length))))"
+    Stop-Process -Id $serverC.Id -Force -ErrorAction SilentlyContinue
+    Wait-Until { -not (Test-PipeExists $cellC.Pipe) } 20 | Out-Null
 
     # (f) Squatting: another process owns the derived pipe name before the
     # server starts, so the server must refuse to start.

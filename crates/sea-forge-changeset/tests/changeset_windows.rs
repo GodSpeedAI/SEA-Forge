@@ -1,7 +1,9 @@
 //! Windows reparse-point and hard-link refusal. The Unix equivalents live in
 //! `changeset.rs`. A check that cannot run (for example, symlink creation
-//! without Developer Mode or elevation) prints `SKIPPED: <reason>` and returns;
-//! it never passes silently.
+//! without Developer Mode or elevation) prints `SKIPPED: <reason>` and returns
+//! when `SEA_FORGE_REQUIRE_LINK_PRIVILEGE` is unset. When that variable is `1`
+//! (the Portability workflow sets it), the same condition fails the test, so a
+//! blocked prerequisite can never count as a pass.
 #![cfg(windows)]
 
 use sea_forge_changeset::{
@@ -13,6 +15,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const WHEN: &str = "2026-01-02T00:00:00Z";
+
+/// Reports a link-creation prerequisite that is missing. Fails under
+/// `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1`; otherwise prints and lets the test return.
+fn blocked(reason: &str) {
+    if std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1") {
+        panic!("BLOCKED prerequisite, not a pass: {reason}");
+    }
+    println!("SKIPPED: {reason}");
+}
 
 fn git(dir: &Path, args: &[&str]) -> String {
     let out = Command::new("git")
@@ -86,7 +97,9 @@ fn symlink_in_result_is_refused() {
     if let Err(error) =
         std::os::windows::fs::symlink_file(work.join("README.md"), work.join("link.md"))
     {
-        println!("SKIPPED: symlink creation needs Developer Mode or elevation: {error}");
+        blocked(&format!(
+            "symlink creation needs Developer Mode or elevation: {error}"
+        ));
         return;
     }
     let (cs, findings) = collect(&repo, &base, &work, &staging, WHEN).expect("collect");
@@ -107,14 +120,14 @@ fn junction_in_result_is_refused() {
     match status {
         Ok(out) if out.status.success() => {}
         Ok(out) => {
-            println!(
-                "SKIPPED: mklink /J failed: {}",
+            blocked(&format!(
+                "mklink /J failed: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
-            );
+            ));
             return;
         }
         Err(error) => {
-            println!("SKIPPED: cmd could not run mklink: {error}");
+            blocked(&format!("cmd could not run mklink: {error}"));
             return;
         }
     }

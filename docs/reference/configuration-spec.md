@@ -21,6 +21,17 @@ Logging follows Rust's `RUST_LOG` filter (default `info`). The server emits JSON
 
 There are no `SEA_FORGE_CONFIG`, `SEA_FORGE_LOG`, or `SEA_FORGE_TIMEOUT` variables. Do not script against them.
 
+### Windows CLI: `SEA_FORGE_SERVER_SID`
+
+The Windows CLI connects to the cell's named pipe and refuses any server whose process runs under a different SID than the expected server principal. The expected principal is:
+
+| Setting | Expected server SID |
+|---|---|
+| `SEA_FORGE_SERVER_SID` unset or empty (default) | The calling user. The server must run as the same user. |
+| `SEA_FORGE_SERVER_SID=S-1-5-21-...` | That SID. Use it when the server runs under a service account that this user is admitted to through `identity.bindings`. |
+
+A value that does not start with `S-1-` is refused. The CLI opens the pipe with identification-only security QoS, so a server cannot impersonate the caller, and with explicit pipe rights that exclude `FILE_CREATE_PIPE_INSTANCE`. This variable only changes which server the CLI accepts. It grants no authority to the server.
+
 ---
 
 ## 2. Startup and Reload Semantics
