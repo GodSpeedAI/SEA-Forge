@@ -171,4 +171,3 @@ rules:\n\
         root.display()
     );
 }
-

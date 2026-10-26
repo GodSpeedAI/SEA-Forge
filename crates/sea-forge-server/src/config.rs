@@ -561,8 +561,12 @@ impl ServerConfig {
                     "gateway.{} {} must be bound to the gateway actor {:?} in `identity.bindings` \
                      (expected `- {}: {}, actor_id: {}, roles: [...]`), or the gateway can never \
                      present its own claim",
-                    GATEWAY_KEY_NAME, gateway.raw_key(), gateway.actor, GATEWAY_KEY_NAME,
-                    gateway.raw_key(), gateway.actor
+                    GATEWAY_KEY_NAME,
+                    gateway.raw_key(),
+                    gateway.actor,
+                    GATEWAY_KEY_NAME,
+                    gateway.raw_key(),
+                    gateway.actor
                 ));
             }
             for actor in &gateway.delegable_actors {

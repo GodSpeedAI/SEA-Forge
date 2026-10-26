@@ -4,12 +4,12 @@
 //! private endpoint, never the issuer or another workload's grant. Deployment
 //! must prevent descriptor theft; this module does not isolate same-UID hosts.
 use crate::identity::{ActorClaim, IdentityBindings, IdentityRefusal, PeerIdentity, ResolvedActor};
+use crate::Transport;
 use sea_forge_authority::ActionGrant;
 use sea_forge_core::types::{Actor, AuthorityAction};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::path::Path;
-use crate::Transport;
 
 fn request_digest(request: &Value) -> String {
     hex::encode(Sha256::digest(request.to_string().as_bytes()))

@@ -413,7 +413,9 @@ impl ProcessTree {
     }
 
     fn terminate(&self, _child: &std::process::Child) -> Result<(), ForgeError> {
-        self.0.terminate().map_err(settlement_authority_unavailable)?;
+        self.0
+            .terminate()
+            .map_err(settlement_authority_unavailable)?;
         if self
             .0
             .active_processes()

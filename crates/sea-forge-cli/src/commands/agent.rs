@@ -234,8 +234,14 @@ mod pipe_identity_tests {
 
     #[test]
     fn a_different_server_sid_is_refused() {
-        assert!(!server_identity_matches("S-1-5-21-1-2-3-1001", "S-1-5-21-1-2-3-1002"));
+        assert!(!server_identity_matches(
+            "S-1-5-21-1-2-3-1001",
+            "S-1-5-21-1-2-3-1002"
+        ));
         assert!(!server_identity_matches("", "S-1-5-21-1-2-3-1002"));
-        assert!(server_identity_matches("S-1-5-21-1-2-3-1002", "S-1-5-21-1-2-3-1002"));
+        assert!(server_identity_matches(
+            "S-1-5-21-1-2-3-1002",
+            "S-1-5-21-1-2-3-1002"
+        ));
     }
 }

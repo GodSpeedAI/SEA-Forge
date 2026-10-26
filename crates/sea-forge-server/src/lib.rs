@@ -27,11 +27,11 @@ use std::sync::{
     Arc,
 };
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-#[cfg(unix)]
-use tokio::net::{UnixListener, UnixStream};
+use tokio::io::{AsyncRead, AsyncWrite};
 #[cfg(windows)]
 use tokio::net::windows::named_pipe::NamedPipeServer;
-use tokio::io::{AsyncRead, AsyncWrite};
+#[cfg(unix)]
+use tokio::net::{UnixListener, UnixStream};
 
 /// The accepted client connection: a Unix stream, or a named-pipe server end.
 #[cfg(unix)]
@@ -83,7 +83,12 @@ async fn identify_pipe_client(
 ) {
     use tokio::io::AsyncBufReadExt;
     let mut buffered = tokio::io::BufReader::new(pipe);
-    if buffered.fill_buf().await.map(|bytes| bytes.is_empty()).unwrap_or(true) {
+    if buffered
+        .fill_buf()
+        .await
+        .map(|bytes| bytes.is_empty())
+        .unwrap_or(true)
+    {
         return (buffered, None);
     }
     let peer = crate::identity::PeerIdentity::of_pipe(buffered.get_ref());

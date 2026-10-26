@@ -92,7 +92,9 @@ pub struct PeerIdentity {
 impl PeerIdentity {
     /// Resolve the connecting client's SID off an impersonated pipe handle.
     pub fn of_pipe(pipe: &impl std::os::windows::io::AsRawHandle) -> Option<Self> {
-        sea_forge_os::pipe_client_sid(pipe).ok().map(|sid| Self { sid })
+        sea_forge_os::pipe_client_sid(pipe)
+            .ok()
+            .map(|sid| Self { sid })
     }
 
     /// The native principal key the bindings are matched on (SID).
@@ -355,7 +357,10 @@ impl IdentityRefusal {
                  `identity.bindings` to server.yaml mapping a uid to an actor \
                  before running protected verbs"
                 .into(),
-            Self::NotBound { actor_id, principal } => {
+            Self::NotBound {
+                actor_id,
+                principal,
+            } => {
                 format!("actor `{actor_id}` is not bound to {principal} in this cell")
             }
             Self::RoleNotHeld { actor_id, role } => {
@@ -751,7 +756,8 @@ impl IdentityBindings {
         if peer.key() != gateway.principal() {
             return Err(delegation_refused(format!(
                 "{} is not the configured gateway {}, so it may not send `on_behalf_of`",
-                peer.label(), gateway.principal_label()
+                peer.label(),
+                gateway.principal_label()
             )));
         }
         if claim.actor_id != gateway.actor {
@@ -764,14 +770,13 @@ impl IdentityBindings {
         // The gateway is a governed principal too: its own claim must name the
         // configured gateway actor at the configured uid, holding the role it
         // claims, before anything it delegates is considered at all.
-        let Some(gateway_binding) = self
-            .bindings
-            .iter()
-            .find(|binding| binding.principal() == Some(gateway.principal()) && binding.actor_id == gateway.actor)
-        else {
+        let Some(gateway_binding) = self.bindings.iter().find(|binding| {
+            binding.principal() == Some(gateway.principal()) && binding.actor_id == gateway.actor
+        }) else {
             return Err(delegation_refused(format!(
                 "the configured gateway principal `{}` has no binding for {}",
-                gateway.actor, gateway.principal_label()
+                gateway.actor,
+                gateway.principal_label()
             )));
         };
         if !gateway_binding.roles.contains(&claim.role) {
