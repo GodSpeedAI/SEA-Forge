@@ -54,7 +54,7 @@ CI logs) and the GitHub Actions runs named below.
 - Phase 0: done (this record, baseline in `~/projects/_wt/containers/baseline/BASELINE.md`).
 - Phase 1: done (Windows control plane; portability run 40260946741).
 - Phase 2: done (enforcement capability, workload identity).
-- Phase 3: Linux live proof in progress; macOS Blocked (no nested virt on hosted runners).
+- Phase 3: Linux live proof passing (6/6, four runs); macOS Blocked (no nested virt on hosted runners).
 - Phase 4: MXC probed; see Phase 4 section.
 - Phase 5: WSLc Blocked.
 - Phase 6: done.
@@ -257,3 +257,57 @@ Per applicable backend, the stretch bar of 12 exercised scenarios is met by
 Linux Local only. Linux OpenShell vm has 9 live, 3 stub, 4 GAP; macOS Jail 9;
 Windows Local covers lifecycle and environment only, because it claims no
 filesystem or network containment.
+
+## Phase 3 — Linux live proof result (2026-10-26)
+
+- DomainForge v0.21.2 (PR GodSpeedAI/DomainForge#162) adds the OpenShell 0.1.3
+  supervisor baseline (`/app`, `/var/log`) to the projected read-only set; the
+  RepairAgent fixture was regenerated with that CLI (only `policy.yaml`,
+  `mapping-report.json`, `openshell.lock` changed). SEA-Forge's
+  `domainforge-core = "=0.21.1"` crate pin is unchanged (follow-up), and the
+  fixture's `rego/` projection still comes from 0.21.1.
+- Bug found live and fixed: `openshell sandbox upload <dir> <dest>` nests a
+  named directory as `<dest>/<dirname>/`; only `.` extracts flat, while
+  download is flat. SEA-Forge now runs the upload inside the workspace with
+  source `.` (`crates/sea-forge-sandbox/src/openshell.rs`, stub test asserts
+  source and cwd).
+- Workload image contract: the projection keeps `/sandbox` read-only and
+  grants `/sandbox/workspace`, so the image must contain that directory (the
+  VM driver creates only `/sandbox`). The live job builds public base +
+  `/sandbox/workspace`, pushes OCI-manifest images to GHCR (the guest image
+  prep rejects Docker v2 manifests), pins them by digest, then stops Docker.
+- Result: `cell_episode_live` 6/6 on four runs with Docker stopped and the
+  `vm` driver on KVM: 40268910844, 40269436237, 40269901711
+  (`ci/openshell-live`) and 40269528859 (integration branch, includes the
+  Phase 2 enforcement checks). Variation across the six tests: two images,
+  write / read-back / timeout / egress / host-FS probes, fresh workspaces and
+  run ids per test and per run.
+
+## Footprint (after, 2026-10-26; baseline in `~/projects/_wt/containers/baseline/BASELINE.md`)
+
+| Measure | Baseline v0.2.0 | After | Change |
+|---|---|---|---|
+| Production LOC (non-blank, non-comment, excl. `#[cfg(test)]`) | 55,801 | 58,104 (after consolidation) | +2,303 (+4.1%) |
+| `sea-forge` (linux x86_64) | 26,864,824 B | 26,758,344 B | -0.4% |
+| `sea-forge-server` (linux x86_64) | 31,751,208 B | 31,649,504 B | -0.3% |
+| Linux tarball | 17,697,486 B | 17,647,409 B | -0.3% |
+| `sea-forge --version` | 0.00 s, 5.8-6.0 MB RSS | 0.00-0.02 s, 5.7-6.0 MB RSS | none |
+| New runtime dependencies | — | none (Windows: `windows-sys` already locked) | — |
+
+LOC growth is the Windows control plane (`sea-forge-os` +402, server identity
+and pipe transport), the OpenShell enforcement capability, and the macOS jail.
+The consolidation pass removed 68 lines; further cuts would merge Unix and
+Windows paths whose security semantics differ, which the spec forbids. Package
+sizes: `.deb` 12.4 MB, Windows setup `.exe` 11.9 MB, macOS universal `.pkg`
+31.8 MB / `.dmg` 32.2 MB.
+
+## Packaging defect found (pre-existing in v0.2.0)
+
+The Devbox (Nix) toolchain linked `/nix/store/...-glibc-2.42/lib/ld-linux-x86-64.so.2`
+as the program interpreter and a `/nix/store` RUNPATH into the Linux binaries,
+and Nix's `libiconv.2.dylib` into the macOS binaries. The released v0.2.0
+tarball cannot start on a host without Nix. Install tests passed because the
+runners have Nix. `package.yml` now patches the Linux interpreter and RUNPATH,
+rewrites the macOS libiconv path to `/usr/lib/libiconv.2.dylib` and re-signs,
+refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
+`ubuntu:22.04` and `debian:12` containers (run 40270037897: both pass).
