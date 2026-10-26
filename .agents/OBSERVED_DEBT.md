@@ -1207,6 +1207,15 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - Next move: green-light the ci.yml lane run; if the preflight falls back to
   REQUIRE_CGROUP=0, treat the lane as BLOCKED-tallied, not proven, until a
   delegated runner (or local sudo setup per the test module docs) exists.
+- Round-3 update (2026-10-26, capability-harvest): the round-2 ci.yml run
+  proved the pre-exec join works under the root-level cgroup.procs delegation,
+  but the teardown `cgroup.kill` write returned EACCES — kernel delegation
+  containment applies to the kill file beyond what the directory/procs
+  delegation grants. `kill_verified` now degrades the *mechanism* on any
+  `cgroup.kill` write failure (one-line stderr notice naming file+errno) and
+  drains via the existing membership-scoped pidfd sweep; the verified-empty
+  contract is unchanged. The lane must re-run to prove the sweep drains a real
+  delegated leaf within the deadline.
 
 ## Resolved (2026-10-26, W3b): containment outcome carried in ExecutionResult
 
@@ -1276,14 +1285,28 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
      handle's final path does not name the requested path, so a parent chain that resolves
      through an alias/junction is refused in `safe_write` (no-root variant) instead of
      silently writing to the real location.
-  3. D6 spike: production create/rename moved to RootDirectory-anchored `NtCreateFile` /
-     `NtSetInformationFile(FileRenameInformationEx)`. The previously failing Win32
-     `SetFileInformationByHandle(FileRenameInfo)` relative form is re-probed (not asserted) by
-     `relative_root_anchored_create_and_rename_spike` (`#[ignore]`; lane must run
-     `cargo test -p sea-forge-os --lib -- --include-ignored`).
-- Impact: if the anchored path regresses on a build (ERROR_INVALID_PARAMETER again), the
-  failure is loud (io error naming the operation); per-use revalidation (FileAttributeTagInfo +
-  FILE_ID_INFO before every child op) remains the load-bearing backstop.
+  3. D6 spike: production create moved to RootDirectory-anchored `NtCreateFile`;
+     the replace rename moved to `NtSetInformationFile(FileRenameInformationEx,
+     FILE_RENAME_FLAG_REPLACE_IF_EXISTS)` with an ABSOLUTE `\??\` target and no
+     `RootDirectory` (round-2 verdict: Server 2025 x64 rejects BOTH
+     RootDirectory-relative forms — class-10 Win32 `FileRenameInformation` and
+     class-65 NT `FileRenameInformationEx` — with ERROR_INVALID_PARAMETER, so
+     the relative-target rename is unsupported on the upstream platform). The
+     F05 invariant is intact on the absolute form: the SOURCE is identified by
+     handle (nothing can substitute it by name) and the TARGET's directory is
+     the exclusively pinned, per-use-revalidated `PinnedDir` (revalidated again
+     immediately before the rename, so nothing can substitute the target's
+     directory during the write+rename window). The relative forms are
+     re-probed (verdict recorded, not asserted) by
+     `relative_target_rename_platform_verdict_spike` (`#[ignore]`; lane must
+     run `cargo test -p sea-forge-os --lib -- --include-ignored`).
+- Impact: residual risk = none identified beyond the pin itself (which
+  revalidates identity and reparse state before every child op, including
+  immediately before the rename). If the absolute form were ever refused
+  (ERROR_INVALID_PARAMETER again), the failure is loud and the returned error
+  prints the raw NTSTATUS plus the exact FILE_RENAME_INFO fields sent
+  (Flags/RootDirectory/FileNameLength/InputBufferLength/target), making a
+  recurrence byte-for-byte diagnosable.
 - Next move: portability.yml windows lane runs the spike plus
   `pinned_dir_open_fails_loud_when_a_writer_holds_the_directory`,
   `revalidation_refuses_a_swapped_directory_identity`,
@@ -1344,3 +1367,12 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   (crates/sea-forge-sandbox/src/jail.rs); the macOS-lane runtime proof of
   this entry (and the new `lifecycle_containment` assertions in
   macos_app_sandbox_jail.rs) remains open until that lane runs.
+- Round-3 update (2026-10-26, capability-harvest): the round-2 macOS lane
+  named the cage-persists failure the instrumentation was built for — the
+  copied test-binary helper links the runner's nix libiconv, which the App
+  Sandbox cage correctly refused to load (`dyld: Library not loaded ...
+  sandbox blocked open()`), so the helper never ran. The helper is now a
+  tiny generated C program compiled at test setup with `cc -O1` against
+  `/usr/lib/libSystem.B.dylib` only and gated by `otool -L` in the test
+  (any foreign dependency fails loudly); the protocol, markers, and every
+  assertion are unchanged.

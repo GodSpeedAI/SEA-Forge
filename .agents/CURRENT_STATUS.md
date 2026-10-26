@@ -1,24 +1,24 @@
 # Current status
 
-**Status revision:** 187
+**Status revision:** 188
 
-**Stage:** capability-harvest: round-1 root causes fixed — delegation containment, unmasked spawn errors, rmdir retry+probe, macOS payload instrumentation; pushing round 2
+**Stage:** capability-harvest: round-3 fixes committed — cgroup.kill pidfd degrade, absolute-target anchored rename, C cage helper, proxy-CONNECT egress control; pushing for CI round 3
 
-**Summary:** cgroup Active-path verdict: kernel delegation containment authorizes cgroup.procs writes via the common ancestor, and the runner sits outside the delegated subtree, so the pre-exec join was denied EACCES and the cleanup error masked the primary. Fixes: join_authorized probe converts the situation to typed cgroup_unavailable before any leaf exists; the preflight now also delegates the mount root's cgroup.procs; primary spawn errors lead and cleanup failures append as context with leaked leaves left to the destroy sweep; rmdir retries 3x with diagnostics naming the parent mode/uid. macOS verdict: payload-side (the helper's fallback budget collided with the execute deadline converting helper-never-recorded into a bare TimedOut); helper now writes a started marker with three-way discrimination (never-ran / setsid-denied / recorded) and polls strictly inside the execute budget with evidence-carrying asserts.
+**Summary:** Round 2 named every residual. Round 3: (1) cgroup.kill write failures degrade to the membership-scoped pidfd sweep (delegation containment applies to the kill file beyond procs delegation); (2) the Windows rename keeps the handle-identified source and switches to an absolute \??\ target with a revalidate() immediately before the rename — the relative-target form is recorded as a platform-verdict spike (both class-10-Win32 and class-65-NT rejected ERROR_INVALID_PARAMETER on Server 2025); (3) the macOS cage helper is now a C program compiled at test time against libSystem only (the nix-linked Rust helper was correctly blocked by the cage from loading /nix/store dylibs); (4) the F17 allow/deny pair discovers the guest egress proxy and tunnels HTTP CONNECT through it — a granting proxy must yield exactly one token arrival, a refusing proxy must yield a refusal marker with an unchanged arrival count, and no-proxy produces the honest BLOCKED evidence pack. All payloads were functionally simulated off-lane against a real CONNECT proxy.
 
 **Verified:**
 
-- sandbox lib 26 green; conformance_m5 4 passed locally (Unavailable path); clippy -D warnings green on linux and aarch64-apple-darwin targets; workspace check clean; fmt clean
-- CLI suites that failed on CI (m0_migrate, m4b, cli m5) pass locally
+- Full local sweep green: sandbox lib+all tests, case-runner non-ignored suites, openshell_stub 35, clippy -D warnings, windows-msvc and apple-darwin cross-targets, fmt
+- F17 payloads simulated end-to-end with a fake CONNECT proxy: allow grant path (200+arrival), deny refuse path (403, no arrival), deny leak path (asserts fire), no-proxy paths
 
 **Limits:**
 
-- The cgroup Active proof and the macOS cage-persists verdict are CI round 2's to deliver; the rmdir-EACCES mechanism may not reproduce once the join is authorized
-- F17 rest-grant raw-connect semantics await the openshell-live re-dispatch
+- All four fixes await their CI lanes: cgroup kill drain, windows rename verdict, macOS helper execution, KVM proxy discovery
 
-**Next move:** Commit round-2 fixes, push, re-dispatch openshell-live, collect CI round 2, then freeze for the codex review.
+**Next move:** Push, re-dispatch openshell-live, collect round 3, then freeze for the codex adversarial review.
 
 **Evidence:**
 
-- gh run 40369591334 logs
 - .tmp/harvest/
+- .agents/OBSERVED_DEBT.md
+- gh runs 40369591334 / 40384807768 / 40384823244

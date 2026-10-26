@@ -417,7 +417,8 @@ pub enum EntryState {
 /// Legitimate writers: only SEA-Forge's materialization writes go through a
 /// `PinnedDir`. Workload file writes open files, not pinned directories, and
 /// the sandbox's own child operations below the pin are handle-anchored
-/// (`RootDirectory`-relative `NtCreateFile`/rename), so none of them needs a
+/// (`RootDirectory`-relative `NtCreateFile`; the replace rename is covered by
+/// the pin itself, see `rename_handle_into`), so none of them needs a
 /// second write-class open of the pinned directory. A workload `FILE_ADD_FILE`
 /// open of a pinned directory during the pin window would transiently fail
 /// with a sharing violation; that window is bounded to a single
@@ -871,10 +872,10 @@ impl PinnedDir {
     ///
     /// The bytes go to a fresh temp sibling created with `FILE_CREATE`
     /// anchored to this pinned handle, which is flushed and then renamed onto
-    /// `name` with a `RootDirectory`-relative
-    /// `FileRenameInformationEx` rename. An existing hard link to the old
-    /// entry keeps the old bytes: only the directory entry changes. On
-    /// failure the temp sibling is marked delete-on-close.
+    /// `name` (see [`rename_handle_into`] for the rename form and its
+    /// invariant). An existing hard link to the old entry keeps the old
+    /// bytes: only the directory entry changes. On failure the temp sibling
+    /// is marked delete-on-close.
     pub fn write_replacing(&self, name: &OsStr, bytes: &[u8]) -> io::Result<()> {
         use std::io::Write;
         use std::sync::atomic::Ordering;
@@ -901,16 +902,15 @@ impl PinnedDir {
             }
         };
         let mut file = std::fs::File::from(handle);
+        let target = absolute_rename_target(&self.path, name);
         let outcome = file
             .write_all(bytes)
             .and_then(|()| file.sync_all())
-            .and_then(|()| {
-                rename_handle_into(
-                    file.as_raw_handle() as HANDLE,
-                    self.handle.as_raw_handle() as HANDLE,
-                    name,
-                )
-            });
+            // The destination directory is re-validated immediately before the
+            // rename too: with the exclusive pin this brackets the whole
+            // write+rename window (see `rename_handle_into`).
+            .and_then(|()| self.revalidate().map_err(pin_error_into_io))
+            .and_then(|()| rename_handle_into(file.as_raw_handle() as HANDLE, &target));
         if outcome.is_err() {
             let info = FILE_DISPOSITION_INFO { DeleteFile: true };
             // SAFETY: the handle is live and was opened with DELETE access; `info` is a live struct of the size passed.
@@ -975,39 +975,78 @@ fn pin_error_into_io(error: PinError) -> io::Error {
     }
 }
 
-/// Renames the open file `file` to the single-component `name` inside the
-/// directory `root_dir`, replacing an existing entry. The rename is the NT
-/// class `FileRenameInformationEx` with `RootDirectory` set to the pinned
-/// directory handle, so the destination is resolved against the pinned
-/// directory object itself and no pathname lookup can redirect the target
-/// after the pin was validated.
+/// Builds the absolute NT rename target for `name` inside the pinned
+/// directory's resolved path: `\??\C:\dir\name` (local) or
+/// `\??\UNC\server\share\dir\name` (UNC).
 ///
-/// (A relative `RootDirectory` name through the Win32
-/// `SetFileInformationByHandle(FileRenameInfo)` form returned
-/// ERROR_INVALID_PARAMETER on the CI runner; `FileRenameInformationEx` is the
-/// NT-native class that honors `RootDirectory`. The
-/// `relative_root_anchored_create_and_rename_spike` test re-checks both
-/// forms on the windows lane.)
-fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Result<()> {
-    let name_wide: Vec<u16> = name.encode_wide().collect();
-    // FileNameLength is counted in BYTES of name (not characters), without
-    // the terminator.
-    let name_bytes = name_wide.len() * mem::size_of::<u16>();
+/// Platform contract: `GetFinalPathNameByHandleW(VOLUME_NAME_DOS)` emits the
+/// Win32 device namespace (`\\?\C:\...`, `\\?\UNC\...`), while the
+/// kernel-side absolute form `NtSetInformationFile(FileRenameInformationEx)`
+/// resolves is the object-manager namespace (`\??\...`) — the same string
+/// with the leading `\\?\` collapsed to `\??\`. No Win32 layer runs between
+/// this call and NTFS, so the rewrite happens here, unit-exactly.
+fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
+    const WIN32_DEVICE_PREFIX: [u16; 4] = [b'\\' as u16, b'\\' as u16, b'?' as u16, b'\\' as u16];
+    const NT_DEVICE_PREFIX: [u16; 4] = [b'\\' as u16, b'?' as u16, b'?' as u16, b'\\' as u16];
+    let dir: Vec<u16> = pinned.as_os_str().encode_wide().collect();
+    let mut target: Vec<u16> = Vec::with_capacity(dir.len() + 1 + name.len());
+    if dir.starts_with(&WIN32_DEVICE_PREFIX) {
+        target.extend_from_slice(&NT_DEVICE_PREFIX);
+        target.extend_from_slice(&dir[WIN32_DEVICE_PREFIX.len()..]);
+    } else {
+        // Not a resolved final path; passed through as-is so the rename
+        // fails loudly with the recorded layout instead of guessing a prefix.
+        target.extend_from_slice(&dir);
+    }
+    target.push(b'\\' as u16);
+    target.extend(name.encode_wide());
+    std::ffi::OsString::from_wide(&target)
+}
+
+/// Renames the open file `file` to the absolute NT path `target`, replacing
+/// an existing entry: `NtSetInformationFile(FileRenameInformationEx)` with
+/// `FILE_RENAME_FLAG_REPLACE_IF_EXISTS` and a `RootDirectory`-NULL,
+/// fully-qualified target.
+///
+/// The F05 invariant survives the move away from the `RootDirectory`-relative
+/// target (which this platform does not support; see the spike test) because
+/// it never depended on the target's name form:
+///
+/// 1. The *source* is identified by handle — the rename moves exactly the
+///    file this code created and wrote, so nothing can substitute the
+///    content by name between write and rename.
+/// 2. The *target's directory* is the exclusively pinned `PinnedDir`, whose
+///    share mode excludes every other write/delete handle and whose identity
+///    is revalidated immediately before the rename — so nothing can
+///    substitute the directory the target name resolves against during the
+///    window either.
+///
+/// Platform contract: `FileNameLength` is counted in BYTES of the target
+/// (terminator excluded), the buffer is exactly header + bytes, and a
+/// `RootDirectory`-relative name is refused by Server 2025 with
+/// ERROR_INVALID_PARAMETER for both the Win32 class (`FileRenameInformation`,
+/// class 10) and the NT class (`FileRenameInformationEx`, class 65) — hence
+/// the absolute form.
+fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
+    let target_wide: Vec<u16> = target.encode_wide().collect();
+    // FileNameLength is counted in BYTES of the target name (not characters),
+    // without the terminator.
+    let target_bytes = target_wide.len() * mem::size_of::<u16>();
     // FILE_RENAME_INFO already holds one UTF-16 unit in `FileName`, so the
-    // header plus `name_bytes` is always large enough for the name.
-    let size = mem::size_of::<FILE_RENAME_INFO>() + name_bytes;
+    // header plus `target_bytes` is always large enough for the name.
+    let size = mem::size_of::<FILE_RENAME_INFO>() + target_bytes;
     // u64 storage keeps the buffer aligned for the FILE_RENAME_INFO header.
     let mut buffer = vec![0u64; size.div_ceil(mem::size_of::<u64>())];
     let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
-    // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `name_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
+    // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
     unsafe {
         (*info).Anonymous = FILE_RENAME_INFO_0 {
             Flags: FILE_RENAME_FLAG_REPLACE_IF_EXISTS,
         };
-        (*info).RootDirectory = root_dir;
-        (*info).FileNameLength = name_bytes as u32;
+        (*info).RootDirectory = null_mut();
+        (*info).FileNameLength = target_bytes as u32;
         let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
-        std::ptr::copy_nonoverlapping(name_wide.as_ptr(), destination, name_wide.len());
+        std::ptr::copy_nonoverlapping(target_wide.as_ptr(), destination, target_wide.len());
     }
     // SAFETY: IO_STATUS_BLOCK is plain data; all-zero is a valid initial value.
     let mut status_block: IO_STATUS_BLOCK = unsafe { mem::zeroed() };
@@ -1022,16 +1061,23 @@ fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Resul
         )
     };
     if status < 0 {
-        // The mapped Win32 code loses NT-only failures of this class (the
-        // RootDirectory-relative form has a recorded history of refusing on
-        // some runners), so the raw status stays in the message.
+        // Decisive instrumentation for the recorded code-87 history on the
+        // windows lane: the raw NTSTATUS plus the exact struct fields as
+        // sent, so a recurrence of ERROR_INVALID_PARAMETER with the absolute
+        // form can be compared byte-for-byte against this layout.
         let mapped = nt_error(status);
         return Err(io::Error::new(
             mapped.kind(),
             format!(
                 "NtSetInformationFile(FileRenameInformationEx) rename failed: \
-                 {mapped} (NTSTATUS {:#010x})",
-                status as u32
+                 {mapped} (NTSTATUS {:#010x}); FileRenameInfo sent: class=\
+                 FileRenameInformationEx, Flags=FILE_RENAME_FLAG_REPLACE_IF_EXISTS \
+                 (0x1), RootDirectory=NULL, FileNameLength={target_bytes} bytes \
+                 ({} UTF-16 units, terminator excluded), InputBufferLength={size} \
+                 bytes, target={:?}",
+                status as u32,
+                target_wide.len(),
+                target.to_string_lossy(),
             ),
         ));
     }
@@ -1615,10 +1661,10 @@ mod tests {
         let _ = std::fs::remove_dir_all(&b_path);
     }
 
-    /// The Win32 `SetFileInformationByHandle(FileRenameInfo)` rename with a
-    /// `RootDirectory`-relative name: the form that returned
-    /// ERROR_INVALID_PARAMETER on the CI runner before the NT-class rename
-    /// shipped. Kept only as spike evidence.
+    /// The Win32 relative-target rename (`SetFileInformationByHandle` with
+    /// class `FileRenameInformation` — information class 10 — and a
+    /// `RootDirectory` handle). Spike-only: production renames with an
+    /// absolute `\??\` target (see `rename_handle_into`).
     fn set_rename_info_with_root(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Result<()> {
         let name_wide: Vec<u16> = name.encode_wide().collect();
         let name_bytes = name_wide.len() * mem::size_of::<u16>();
@@ -1644,23 +1690,75 @@ mod tests {
         Ok(())
     }
 
-    /// The F05 RootDirectory spike (prior dispute D6), for the windows
-    /// portability lane: `cargo test -p sea-forge-os --lib -- --include-ignored`.
-    /// Proves on real NTFS that creation and rename anchored to the pinned
-    /// handle work while the exclusive pin is held, and records whether the
-    /// previously failing Win32 relative form also works on that build.
+    /// The NT relative-target rename (`NtSetInformationFile` with class
+    /// `FileRenameInformationEx` — information class 65 — and a
+    /// `RootDirectory` handle). The form production shipped before the
+    /// round-2 verdict; spike-only.
+    fn set_rename_info_ex_with_root(
+        file: HANDLE,
+        root_dir: HANDLE,
+        name: &OsStr,
+    ) -> io::Result<()> {
+        let name_wide: Vec<u16> = name.encode_wide().collect();
+        let name_bytes = name_wide.len() * mem::size_of::<u16>();
+        let size = mem::size_of::<FILE_RENAME_INFO>() + name_bytes;
+        let mut buffer = vec![0u64; size.div_ceil(mem::size_of::<u64>())];
+        let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
+        // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `name_bytes` of FileName are in bounds and initialized.
+        unsafe {
+            (*info).Anonymous = FILE_RENAME_INFO_0 {
+                Flags: FILE_RENAME_FLAG_REPLACE_IF_EXISTS,
+            };
+            (*info).RootDirectory = root_dir;
+            (*info).FileNameLength = name_bytes as u32;
+            let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
+            std::ptr::copy_nonoverlapping(name_wide.as_ptr(), destination, name_wide.len());
+        }
+        // SAFETY: IO_STATUS_BLOCK is plain data; all-zero is a valid initial value.
+        let mut status_block: IO_STATUS_BLOCK = unsafe { mem::zeroed() };
+        // SAFETY: `file` is a live handle with DELETE access; `info` points at `size` initialized bytes that outlive the call; `status_block` is a live out-struct.
+        let status = unsafe {
+            NtSetInformationFile(
+                file,
+                &mut status_block,
+                info.cast(),
+                size as u32,
+                FileRenameInformationEx,
+            )
+        };
+        if status < 0 {
+            return Err(nt_error(status));
+        }
+        Ok(())
+    }
+
+    /// The relative-target rename verdict, for the windows portability lane:
+    /// `cargo test -p sea-forge-os --lib -- --include-ignored`.
+    ///
+    /// Recorded platform verdict (Server 2025 x64, capability-harvest CI
+    /// round 2): BOTH RootDirectory-relative target forms are rejected with
+    /// ERROR_INVALID_PARAMETER — the Win32 class
+    /// `SetFileInformationByHandle(FileRenameInformation)` (class 10) and the
+    /// NT class `NtSetInformationFile(FileRenameInformationEx)` (class 65).
+    /// Production therefore renames with an absolute `\??\` target and no
+    /// `RootDirectory` (see `rename_handle_into`). This spike re-probes both
+    /// relative forms on every lane run and RECORDS the verdict instead of
+    /// asserting success, so a platform that starts accepting the
+    /// race-free relative form is visible in the log rather than silently
+    /// unexercised.
     #[test]
-    #[ignore = "windows portability lane: real NTFS behavior (run with --include-ignored)"]
-    fn relative_root_anchored_create_and_rename_spike() {
+    #[ignore = "windows portability lane: relative-target rename verdict (Server 2025 x64 \
+                rejected both the class-10 Win32 and class-65 NT RootDirectory-relative forms \
+                with ERROR_INVALID_PARAMETER); run with --include-ignored"]
+    fn relative_target_rename_platform_verdict_spike() {
         let dir = std::env::temp_dir().join(format!("sf-os-spike-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("dir");
         let pinned = PinnedDir::open(&dir).expect("pin");
         let root = pinned.handle.as_raw_handle() as HANDLE;
 
-        // (a) anchored creation while pinned exclusively: the pin excludes
-        // write-class opens of the directory itself, and the anchored create
-        // must not need one.
+        // (a) anchored creation while pinned exclusively: production's temp
+        // path still relies on this.
         let file = open_anchored(
             root,
             OsStr::new("a.txt"),
@@ -1675,22 +1773,27 @@ mod tests {
         file.write_all(b"one").expect("write temp");
         file.sync_all().expect("sync temp");
 
-        // (b) anchored rename: FileRenameInformationEx with RootDirectory.
-        rename_handle_into(file.as_raw_handle() as HANDLE, root, OsStr::new("b.txt"))
-            .expect("anchored rename (FileRenameInformationEx + RootDirectory)");
+        // (b) class 65 relative form: verdict recorded, never asserted.
+        match set_rename_info_ex_with_root(
+            file.as_raw_handle() as HANDLE,
+            root,
+            OsStr::new("b.txt"),
+        ) {
+            Ok(()) => {
+                assert_eq!(
+                    std::fs::read(dir.join("b.txt")).expect("read renamed"),
+                    b"one",
+                    "the relative rename landed outside the pinned directory"
+                );
+                println!("VERDICT: FileRenameInformationEx + RootDirectory: ACCEPTED");
+            }
+            Err(error) => {
+                println!("VERDICT: FileRenameInformationEx + RootDirectory: REJECTED ({error})");
+            }
+        }
         drop(file);
-        assert_eq!(
-            std::fs::read(dir.join("b.txt")).expect("read renamed"),
-            b"one"
-        );
-        assert!(
-            !dir.join("a.txt").exists(),
-            "the source entry survived the anchored rename"
-        );
 
-        // (c) the Win32 FileRenameInfo + RootDirectory form: the shape that
-        // failed on CI. Its result is recorded, not asserted: the NT class
-        // above is the authoritative production form.
+        // (c) class 10 relative form: verdict recorded, never asserted.
         let file = open_anchored(
             root,
             OsStr::new("c.txt"),
@@ -1708,15 +1811,20 @@ mod tests {
                 assert_eq!(
                     std::fs::read(dir.join("d.txt")).expect("read renamed"),
                     b"two",
-                    "the Win32 relative rename landed outside the pinned directory"
+                    "the relative rename landed outside the pinned directory"
                 );
-                println!("SPIKE: SetFileInformationByHandle(FileRenameInfo) + RootDirectory: OK");
+                println!(
+                    "VERDICT: SetFileInformationByHandle(FileRenameInfo) + RootDirectory: ACCEPTED"
+                );
             }
-            Err(error) => println!(
-                "SPIKE: SetFileInformationByHandle(FileRenameInfo) + RootDirectory failed: \
-                 {error} (prior CI finding; FileRenameInformationEx is authoritative)"
-            ),
+            Err(error) => {
+                println!(
+                    "VERDICT: SetFileInformationByHandle(FileRenameInfo) + RootDirectory: \
+                     REJECTED ({error})"
+                );
+            }
         }
+        drop(file);
 
         // (d) the exclusive pin holds while the anchored operations ran: a
         // direct write-class open of the pinned directory is refused.

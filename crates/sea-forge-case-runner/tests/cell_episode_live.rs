@@ -1010,26 +1010,40 @@ fn second_image() -> String {
     required("SEA_FORGE_OPENSHELL_SECOND_IMAGE")
 }
 
-/// Claim: the flow the projection grants — `cell_live_egress_allow`, raw TCP
-/// to the fixture's `live-egress-control` endpoint, binaries including
-/// `/usr/local/bin/python` — connects from inside the sandbox, and the
-/// host-side arrival listener records exactly one arrival carrying this run's
-/// unique token.
+/// Claim (redesigned after round 2): the flow the projection grants —
+/// `cell_live_egress_allow`, endpoint `live-egress-control`
+/// (10.0.2.2:46244, protocol `rest`), binaries including
+/// `/usr/local/bin/python` — carries the run's token to the host-side arrival
+/// listener THROUGH OpenShell's governed egress proxy, and the log gains
+/// exactly one arrival carrying the token.
 ///
-/// The listener is host state the sandbox cannot reach except over the libkrun
-/// user network, so the arrival line is host-observed evidence that the
-/// granted flow was honored end to end: the guest sent the token, the host
-/// received it. Together with the guest route table printed below, this is
-/// the positive control that makes `live_network_denial_proven` a denial
-/// proof rather than a blackhole observation.
+/// Round-2 evidence: a raw connect to the granted endpoint exits 1 with no
+/// host arrival — OpenShell 0.1.x does not translate rest-endpoint grants
+/// into raw-socket permission; governed egress goes through its proxy. The
+/// payload therefore (a) prints every proxy-bearing environment variable,
+/// the route table and a `/proc/net/tcp` snapshot (the record of how the
+/// guest reaches the host), (b) attempts the raw connect and records the
+/// outcome — expected failure, deliberately sending no bytes so the token in
+/// the arrival log can only travel over the tunnel — and (c) discovers the
+/// egress proxy (environment variables, then config files under the sandbox
+/// paths; everything found is printed), issues an HTTP CONNECT to
+/// <egress-host>:<port> through it, and sends the token over the tunnel.
+///
+/// The listener is host state the sandbox cannot reach except over the
+/// libkrun user network, so the arrival line is host-observed evidence that
+/// the granted flow was honored end to end. Together with the deny variant
+/// this is the pair that makes the denial a proof rather than a blackhole
+/// observation. If no proxy is discoverable the test fails loudly printing
+/// everything discovered; that output plus the deny variant's refusal is the
+/// honest BLOCKED evidence pack.
 ///
 /// What this does not prove: that ungranted destinations are denied (that is
 /// the paired test's claim), that the pypi REST endpoint is usable, or
-/// anything about DNS-name endpoints — the control endpoint is an IP literal
-/// and the connect is a raw TCP probe. It also depends on the fixture's
-/// endpoint naming the address the guest can actually reach the host at
-/// (10.0.2.2, the libkrun user-networking host alias); a wrong address fails
-/// here loudly rather than passing anything that follows.
+/// anything about DNS-name endpoints — the control endpoint is an IP literal.
+/// It also depends on the fixture's endpoint naming the address the guest can
+/// actually reach the host at (10.0.2.2, the libkrun user-networking host
+/// alias); a wrong address fails here loudly rather than passing anything
+/// that follows.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_network_allow_control_connects() {
@@ -1038,15 +1052,115 @@ fn live_network_allow_control_connects() {
     let image = second_image();
     let root = new_root();
     let token = format!("sf-egress-allow-{}", nanos());
-    // The guest prints its route table first (the record of how it reaches
-    // the host), then connects and sends the token as the first bytes.
+    // The payload is spelled as juxtaposed literals ending in `\n` (never
+    // `\`-newline continuations): a Rust line continuation strips the next
+    // line's leading whitespace, which would destroy the python indentation.
     let connect = format!(
-        "import socket\n\
-         print(open('/proc/net/route').read(), end='')\n\
-         s = socket.create_connection(('{host}', {port}), timeout=15)\n\
-         s.sendall(b'{token}\\n')\n\
-         print('CONNECTED', s.recv(64).decode(errors='replace').strip())\n\
-         s.close()\n"
+        concat!(
+            "import os\n",
+            "import socket\n",
+            "import sys\n",
+            "from urllib.parse import urlparse\n",
+            "\n",
+            "TARGET = ('{host}', {port})\n",
+            "TOKEN = '{token}'\n",
+            "\n",
+            "print('=== proxy env ===')\n",
+            "for key in sorted(os.environ):\n",
+            "    if 'proxy' in key.lower():\n",
+            "        print(key + '=' + os.environ[key])\n",
+            "print('=== route table ===')\n",
+            "print(open('/proc/net/route').read(), end='')\n",
+            "print('=== /proc/net/tcp ===')\n",
+            "try:\n",
+            "    print(open('/proc/net/tcp').read(), end='')\n",
+            "except OSError as err:\n",
+            "    print('unavailable:', err)\n",
+            "# Raw connect to the granted endpoint: recorded, never asserted, and\n",
+            "# it sends no bytes, so the token below can only reach the host over\n",
+            "# the proxied tunnel.\n",
+            "try:\n",
+            "    raw = socket.create_connection(TARGET, timeout=10)\n",
+            "    print('RAW_CONNECT: connected (unexpected; closed without sending)')\n",
+            "    raw.close()\n",
+            "except OSError as err:\n",
+            "    print('RAW_CONNECT: failed:', err)\n",
+            "# Governed egress goes through the platform's proxy: discover it.\n",
+            "found = None\n",
+            "for key in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY',\n",
+            "            'http_proxy', 'https_proxy', 'all_proxy'):\n",
+            "    value = os.environ.get(key)\n",
+            "    if value:\n",
+            "        found = ('env:' + key, value)\n",
+            "        break\n",
+            "print('=== proxy config-file scan ===')\n",
+            "for path in ('/etc/openshell', '/etc/openshell.conf', '/etc/sandbox',\n",
+            "             '/run/openshell', '/etc/environment'):\n",
+            "    if not os.path.exists(path):\n",
+            "        print('absent:', path)\n",
+            "        continue\n",
+            "    print('present:', path)\n",
+            "    names = [path]\n",
+            "    if os.path.isdir(path):\n",
+            "        names = sorted(os.path.join(path, name) for name in os.listdir(path))\n",
+            "    for name in names:\n",
+            "        if not os.path.isfile(name):\n",
+            "            continue\n",
+            "        try:\n",
+            "            with open(name, errors='replace') as handle:\n",
+            "                text = handle.read(65536)\n",
+            "        except OSError as err:\n",
+            "            print('unreadable:', name, err)\n",
+            "            continue\n",
+            "        for line in text.splitlines():\n",
+            "            if 'proxy' not in line.lower():\n",
+            "                continue\n",
+            "            print('proxy line in ' + name + ': ' + line.strip())\n",
+            "            if found is None:\n",
+            "                for word in line.replace('=', ' ').split():\n",
+            "                    if '://' in word or word.count(':') == 1:\n",
+            "                        found = ('config:' + name, word)\n",
+            "                        break\n",
+            "if found is None:\n",
+            "    print('NO_PROXY_DISCOVERABLE: everything discovered is printed above')\n",
+            "    sys.exit(3)\n",
+            "source, url = found\n",
+            "parsed = urlparse(url if '://' in url else 'http://' + url)\n",
+            "proxy_host = parsed.hostname\n",
+            "proxy_port = parsed.port or 80\n",
+            "print('USING_PROXY source=' + source + ' ' + proxy_host + ':' + str(proxy_port))\n",
+            "# The tunnel: an HTTP CONNECT request to the proxy, then the token\n",
+            "# over the established tunnel. The request is written manually:\n",
+            "# http.client closes the connection after reading a CONNECT response\n",
+            "# on this python (a 200 with no Content-Length means read-until-close\n",
+            "# to it), so its conn.sock is already gone when the tunnel is needed.\n",
+            "sock = socket.create_connection((proxy_host, proxy_port), timeout=15)\n",
+            "request = 'CONNECT ' + TARGET[0] + ':' + str(TARGET[1]) + ' HTTP/1.1\\r\\n'\n",
+            "request += 'Host: ' + TARGET[0] + ':' + str(TARGET[1]) + '\\r\\n\\r\\n'\n",
+            "sock.sendall(request.encode())\n",
+            "status_line = b''\n",
+            "while not status_line.endswith(b'\\r\\n'):\n",
+            "    byte = sock.recv(1)\n",
+            "    if not byte:\n",
+            "        break\n",
+            "    status_line += byte\n",
+            "status = status_line.decode(errors='replace').strip()\n",
+            "print('PROXY_CONNECT ' + (status if status else '(no response from proxy)'))\n",
+            "if ' 200' not in status:\n",
+            "    print('TUNNEL_REFUSED')\n",
+            "    sys.exit(4)\n",
+            "# Drain the rest of the CONNECT response (its header terminator) so\n",
+            "# the reply read below sees only tunnel traffic.\n",
+            "while not status_line.endswith(b'\\r\\n\\r\\n'):\n",
+            "    status_line += sock.recv(1)\n",
+            "sock.sendall((TOKEN + chr(10)).encode())\n",
+            "print('TUNNEL_REPLY ' + sock.recv(64).decode(errors='replace').strip())\n",
+            "sock.close()\n",
+            "print('TUNNEL_OK')\n",
+        ),
+        host = host,
+        port = port,
+        token = token,
     );
     let run = "run_live_egress_allow";
     let (episode, stream) = run_live(
@@ -1062,17 +1176,22 @@ fn live_network_allow_control_connects() {
     assert_eq!(episode.decision.verdict, Verdict::Allow);
     let execution = episode.execution.as_ref().expect("execution");
     assert_eq!(execution.status, ExecutionStatus::Completed);
+    let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
+    let stderr = read_or_empty(&run_dir.join("artifacts/stderr.txt"));
     assert_eq!(
         execution.exit_code,
         Some(0),
-        "the granted connect must succeed inside the sandbox"
+        "the granted proxied tunnel must succeed inside the sandbox; stdout:\n{stdout}\nstderr:\n{stderr}"
     );
-    let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
     assert!(
-        stdout.contains("CONNECTED"),
-        "the guest did not observe the connection: {stdout:?}"
+        stdout.contains("PROXY_CONNECT 200"),
+        "the CONNECT tunnel through the discovered proxy did not succeed: {stdout:?}"
     );
-    println!("guest route table:\n{stdout}");
+    assert!(
+        stdout.contains("TUNNEL_OK"),
+        "the token did not traverse the tunnel: {stdout:?}"
+    );
+    println!("guest egress discovery dump:\n{stdout}");
 
     let arrivals: Vec<String> = arrival_lines(&log)
         .into_iter()
@@ -1087,24 +1206,32 @@ fn live_network_allow_control_connects() {
     stream.verify().expect("ledger verifies");
 }
 
-/// Claim: bash — a binary no network flow grants — cannot connect to the same
-/// control address that the allowed variant demonstrably reaches, and the
-/// host-side arrival listener records no arrival carrying this run's token.
+/// Claim (mirrored with the allow variant after round 2): bash — a binary no
+/// network flow grants — cannot establish the SAME proxied tunnel to the
+/// control endpoint that `live_network_allow_control_connects` demonstrably
+/// establishes from inside a sandbox on this gateway: the CONNECT through the
+/// discovered egress proxy is refused or never established, the host-side
+/// arrival listener records no new line, and OpenShell's own denial record is
+/// printed for the record.
 ///
 /// Attribution chain: the listener is proven alive from the host below (its
-/// own probe arrival is logged before the snapshot), the paired
-/// `live_network_allow_control_connects` proves the same address is reachable
-/// from inside a sandbox on this gateway, and this run's token appears nowhere
-/// in the arrival log while the line count is unchanged. The failed connect is
-/// therefore attributable to the policy, not to a blackhole or a dead
-/// listener. The pair only proves this when both of its tests run, which
-/// `live-proof.sh` enforces (`--include-ignored` plus a ladder check).
+/// own probe arrival is logged before the snapshot), the paired allow test
+/// proves the discovered proxy carries an allowed run's token to the same
+/// address, and this run's token appears nowhere in the arrival log while the
+/// line count is unchanged. The refusal is therefore attributable to the
+/// policy, not to a blackhole or a dead proxy. The pair only proves this when
+/// both of its tests run, which `live-proof.sh` enforces (`--include-ignored`
+/// plus a ladder check).
 ///
 /// What this does not prove: that OpenShell scopes L4 grants per binary rather
 /// than per sandbox — if a gateway widened a projected flow to every guest
-/// process, this test would fail and record that fact. OpenShell 0.1.3 also
-/// logs no denial event for the probe (denials.log is printed for the record
-/// only); the denial evidence is the arrival log, not a denial record.
+/// process, the tunnel would establish and both the `TUNNEL_ESTABLISHED`
+/// assertion and the arrival-log assert would fail, recording that fact. The
+/// guest records its own refusal reason (proxy unreachable, no proxy
+/// response, non-200 CONNECT, or no proxy discoverable) and every discovery
+/// print; `denials.log` is printed but not asserted non-empty (OpenShell 0.1.3
+/// logged nothing for a raw probe; the proxied attempt is the first attempt
+/// the proxy itself can see).
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_network_denial_proven() {
@@ -1135,27 +1262,89 @@ fn live_network_denial_proven() {
     let root = new_root();
     let token = format!("sf-egress-deny-{}", nanos());
     let before = arrival_lines(&log).len();
-    // The route table goes to stdout so the address the guest used is on the
-    // record. If the connect ever succeeded, the token would be logged and
-    // every assertion below would fail.
-    let connect = format!(
-        "cat /proc/net/route; exec 3<>/dev/tcp/{host}/{port} && printf '%s\\n' '{token}' >&3 && echo CONNECTED"
+    // The same mechanism as the allow variant: discovery dump, a raw connect
+    // that deliberately sends nothing, then the CONNECT tunnel to the same
+    // control endpoint through the discovered proxy. The token is sent only
+    // on an established tunnel — if enforcement ever leaks, the arrival-log
+    // assert below fails loudly. The exit is deliberately nonzero on every
+    // path: the workload's own success is not the point, its refusal record
+    // is.
+    // Same literal style as the allow payload: explicit `\n` per line, no
+    // `\`-newline continuations (they strip leading whitespace).
+    let connect = format!(concat!(
+        "echo '=== proxy env ==='\n",
+        "env | grep -i proxy || echo '(none)'\n",
+        "echo '=== route table ==='\n",
+        "cat /proc/net/route\n",
+        "echo '=== /proc/net/tcp ==='\n",
+        "cat /proc/net/tcp\n",
+        "echo '=== raw connect attempt (expected to fail; sends nothing) ==='\n",
+        "(exec 3<>/dev/tcp/{host}/{port}) 2>/dev/null && echo 'RAW_CONNECT: connected (unexpected)' || echo \"RAW_CONNECT: failed rc=$?\"\n",
+        "echo '=== proxy discovery ==='\n",
+        "P=$(env | grep -iE '^(https?_proxy|all_proxy)=' | head -n 1 | cut -d= -f2-)\n",
+        "if [ -z \"$P\" ]; then\n",
+        "    echo 'NO_PROXY_DISCOVERABLE'\n",
+        "else\n",
+        "    A=$(printf '%s' \"$P\" | sed 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#/.*##')\n",
+        "    PH=${{A%%:*}}\n",
+        "    PP=${{A##*:}}\n",
+        "    [ \"$PP\" = \"$A\" ] && PP=80\n",
+        "    echo \"USING_PROXY $PH:$PP\"\n",
+        "    if ! exec 4<>\"/dev/tcp/$PH/$PP\" 2>/dev/null; then\n",
+        "        echo 'PROXY_UNREACHABLE'\n",
+        "    else\n",
+        "        printf 'CONNECT {host}:{port} HTTP/1.1\\r\\nHost: {host}:{port}\\r\\n\\r\\n' >&4\n",
+        "        if IFS= read -r -u 4 -t 10 STATUS; then\n",
+        "            echo \"PROXY_CONNECT: $STATUS\"\n",
+        "            case $STATUS in\n",
+        "                *' 200'*)\n",
+        "                    IFS= read -r -u 4 -t 10 || true\n",
+        "                    printf '%s\\n' '{token}' >&4\n",
+        "                    IFS= read -r -u 4 -t 10 REPLY || REPLY='(no reply)'\n",
+        "                    echo \"TUNNEL_REPLY: $REPLY\"\n",
+        "                    echo 'TUNNEL_ESTABLISHED'\n",
+        "                    ;;\n",
+        "                *)\n",
+        "                    echo 'TUNNEL_REFUSED'\n",
+        "                    ;;\n",
+        "            esac\n",
+        "        else\n",
+        "            echo 'PROXY_NO_RESPONSE'\n",
+        "        fi\n",
+        "    fi\n",
+        "fi\n",
+        "echo '=== done (workload exit is deliberately nonzero) ==='\n",
+        "exit 7\n",
+        ),
+        host = host,
+        port = port,
+        token = token,
     );
     let run = "run_live_egress_deny";
     let (episode, stream) =
         try_run_live(&root, &live, &image, "bash", run, &["bash", "-c", &connect])
-            .expect("the denied episode itself must run; the connect inside it must fail");
+            .expect("the denied episode itself must run; the tunnel inside it must be refused");
     let run_dir = root.path().join("runs").join(run);
 
     let execution = episode.execution.as_ref().expect("execution");
     assert_ne!(
         execution.exit_code,
         Some(0),
-        "a connect from a binary no flow grants must not succeed"
+        "a proxied tunnel from a binary no flow grants must not succeed cleanly"
     );
     let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
-    assert!(!stdout.contains("CONNECTED"), "stdout: {stdout}");
-    println!("guest route table:\n{stdout}");
+    assert!(
+        !stdout.contains("TUNNEL_ESTABLISHED"),
+        "the proxied tunnel was established from a binary no flow grants: {stdout:?}"
+    );
+    assert!(
+        stdout.contains("TUNNEL_REFUSED")
+            || stdout.contains("PROXY_UNREACHABLE")
+            || stdout.contains("PROXY_NO_RESPONSE")
+            || stdout.contains("NO_PROXY_DISCOVERABLE"),
+        "the guest must record why the tunnel never established: {stdout:?}"
+    );
+    println!("guest egress discovery dump:\n{stdout}");
 
     let after = arrival_lines(&log);
     assert_eq!(

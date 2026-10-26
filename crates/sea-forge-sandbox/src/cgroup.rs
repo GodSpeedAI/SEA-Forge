@@ -23,12 +23,19 @@
 //!   [`std::os::unix::process::CommandExt::pre_exec`]. The child writes its
 //!   own pid into the leaf between fork and exec, so it cannot run any
 //!   workload-controlled code before it is contained.
-//! - **Kill**: `cgroup.kill` (kernel >= 5.14) is atomic and reaches every
-//!   descendant regardless of session. On older kernels the fallback sweeps
-//!   the leaf's `cgroup.procs`, pinning each pid with `pidfd_open` and
-//!   re-confirming membership after pinning before `pidfd_send_signal` — a
-//!   pid that was recycled between reads is no longer a member and is never
-//!   signalled. A raw `kill(2)` on a bare pid is refused by construction.
+//! - **Kill**: `cgroup.kill` (kernel >= 5.14) is the primary path — atomic,
+//!   reaching every descendant regardless of session. Two triggers fall back
+//!   to the pidfd sweep: the control file missing (kernel < 5.14), and its
+//!   write failing for any other reason — delegation containment applies to
+//!   `cgroup.kill` beyond what the delegation of the directory and
+//!   `cgroup.procs` grants (observed on the CI runner: the pre-exec join and
+//!   teardown both authorized, but the `cgroup.kill` write returned EACCES),
+//!   and the mechanism that drains the leaf is an implementation detail. The
+//!   sweep lists `cgroup.procs` (which delegation does keep readable),
+//!   pinning each pid with `pidfd_open` and re-confirming membership after
+//!   pinning before `pidfd_send_signal` — a pid that was recycled between
+//!   reads is no longer a member and is never signalled. A raw `kill(2)` on
+//!   a bare pid is refused by construction.
 //! - **Verified teardown**: emptiness is read back from `cgroup.procs`
 //!   (bounded), and `rmdir` succeeds only for an empty cgroup — the kernel
 //!   enforces the check.
@@ -228,18 +235,31 @@ impl CgroupLease {
     /// Kill every member of the leaf and verify the leaf drains.
     ///
     /// Primary: write `1` to `cgroup.kill` (atomic, whole subtree — reaches
-    /// setsid descendants). Fallback on kernels without the control file:
-    /// the pidfd sweep, which is still membership-scoped and PID-reuse-safe.
-    /// Either way the leaf must read back empty within `deadline`.
+    /// setsid descendants). Two triggers fall back to the pidfd sweep, which
+    /// is still membership-scoped and PID-reuse-safe: the control file does
+    /// not exist (kernel < 5.14), and the write fails for any other reason —
+    /// delegation containment can deny the kill file even where the leaf and
+    /// its `cgroup.procs` are delegated (the round-2 CI runner), which is a
+    /// degrade of the kill *mechanism*, never of the containment contract.
+    /// The sweep is announced on stderr; either path must leave the leaf
+    /// reading back empty within `deadline` or the kill fails.
     pub fn kill_verified(&self, deadline: Duration) -> Result<(), KillError> {
         match fs::write(self.leaf.join("cgroup.kill"), b"1") {
             Ok(()) => {}
-            // Kernel < 5.14: the control file does not exist. The fallback
-            // is the pidfd sweep — never a raw kill on bare pids, and never
-            // a silent downgrade (callers see the same verified-empty
-            // contract either way).
             Err(e) if e.kind() == io::ErrorKind::NotFound => self.pidfd_sweep(deadline)?,
-            Err(e) => return Err(KillError::Io(e)),
+            Err(e) => {
+                // Kernel >= 5.14 but the write is refused (EACCES/EPERM from
+                // delegation containment, or any other failure): degrade the
+                // mechanism, not the contract — the pidfd sweep below is
+                // membership-scoped and PID-reuse-safe, and only a leaf that
+                // is still non-empty after the deadline is an error.
+                eprintln!(
+                    "sea-forge-sandbox: cgroup.kill write on leaf {} failed ({e}); \
+                     draining via the membership-scoped pidfd sweep instead",
+                    self.leaf.display()
+                );
+                self.pidfd_sweep(deadline)?
+            }
         }
         let start = Instant::now();
         loop {
