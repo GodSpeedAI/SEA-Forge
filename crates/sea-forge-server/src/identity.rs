@@ -660,6 +660,7 @@ impl IdentityBindings {
     /// client can show why delegation will fail before attempting it. The
     /// connection's own `available` set is reported either way: the gateway is
     /// still entitled to act as itself directly.
+    #[allow(clippy::clone_on_copy)]
     pub fn describe_delegated(
         &self,
         claim: Option<&ActorClaim>,
@@ -667,7 +668,7 @@ impl IdentityBindings {
         gateway: Option<&GatewayConfig>,
         peer: Option<PeerIdentity>,
     ) -> IdentityView {
-        let mut view = self.describe(peer);
+        let mut view = self.describe(peer.clone());
         if on_behalf_of.is_none() {
             return view;
         }

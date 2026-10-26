@@ -1564,6 +1564,9 @@ async fn run_inner(
     }
 }
 
+// `PeerIdentity` is Copy on Unix and Clone-only on Windows, so `peer.clone()`
+// is needed for the Windows build and is a no-op copy on Unix.
+#[allow(clippy::clone_on_copy)]
 async fn handle_connection<S>(
     stream: S,
     state: Arc<ServerState>,
@@ -1674,7 +1677,7 @@ where
                     other,
                     &state,
                     line.trim(),
-                    peer,
+                    peer.clone(),
                     &mut connection_principal,
                     workload_identity.as_mut(),
                     require_workload_auth,
@@ -1928,6 +1931,8 @@ async fn dispatch_admitted(
 /// Run one request under [`REQUEST_TIMEOUT`], admitting side-effecting work
 /// through a finite active pool and a finite waiting room. Read-only requests
 /// retain the normal bounded wrapper and never consume admission capacity.
+// See `handle_connection`: `PeerIdentity` is Copy on Unix only.
+#[allow(clippy::clone_on_copy)]
 async fn dispatch_bounded(
     request: Request,
     state: &Arc<ServerState>,
@@ -1948,7 +1953,7 @@ async fn dispatch_bounded(
             crate::identity::ActorClaim::parse(raw_line).as_ref(),
             crate::identity::ActorClaim::parse_on_behalf_of(raw_line).as_ref(),
             state.config().gateway.as_ref(),
-            peer,
+            peer.clone(),
         );
         return serde_json::to_value(view)
             .unwrap_or_else(|_| serde_json::json!({"error": "identity serialization failed"}));
@@ -1963,7 +1968,7 @@ async fn dispatch_bounded(
         let claim = crate::identity::ActorClaim::parse(raw_line);
         let on_behalf_of = crate::identity::ActorClaim::parse_on_behalf_of(raw_line);
         let resolution = if let Some(identity) = workload_identity {
-            identity.resolve(raw_line, &state.config().identity, peer)
+            identity.resolve(raw_line, &state.config().identity, peer.clone())
         } else if require_workload_auth {
             Err(crate::identity::IdentityRefusal::AuthenticationRefused {
                 reason: "protected requests require an authority-issued private connection".into(),
@@ -1973,7 +1978,7 @@ async fn dispatch_bounded(
                 claim.as_ref(),
                 on_behalf_of.as_ref(),
                 state.config().gateway.as_ref(),
-                peer,
+                peer.clone(),
             )
         };
         match resolution {
@@ -1995,7 +2000,7 @@ async fn dispatch_bounded(
                 }
                 tracing::debug!(
                     actor_id = actor.actor_id(),
-                    uid = actor.uid(),
+                    principal = %actor.principal_label(),
                     "protected request attributed"
                 );
                 // Authentication proves an attempted request, including one
@@ -2014,7 +2019,7 @@ async fn dispatch_bounded(
                 if let Some(provenance) = actor.delegation() {
                     tracing::debug!(
                         gateway_actor_id = provenance.gateway_actor_id(),
-                        gateway_uid = provenance.gateway_uid(),
+                        gateway = %provenance.gateway_label(),
                         effective_actor_id = actor.actor_id(),
                         "delegated request admitted under the gateway principal"
                     );

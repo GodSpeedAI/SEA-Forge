@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Write};
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::path::Path;
+#[cfg(unix)]
 use std::time::Duration;
 
 pub fn list(root: &Path) -> Result<(), ForgeError> {

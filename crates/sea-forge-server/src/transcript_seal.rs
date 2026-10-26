@@ -16,6 +16,7 @@ use chacha20poly1305::{
 };
 use sea_forge_core::errors::ForgeError;
 use sha2::{Digest, Sha256};
+#[cfg(unix)]
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
