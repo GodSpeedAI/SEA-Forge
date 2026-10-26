@@ -1,24 +1,24 @@
 # Current status
 
-**Status revision:** 186
+**Status revision:** 187
 
-**Stage:** capability-harvest: windows FFI round-1 failure fixed (UpdateProcThreadAttribute pointer fault, backup-intent opens); cgroup Active-path and macOS census fixes in progress
+**Stage:** capability-harvest: round-1 root causes fixed — delegation containment, unmasked spawn errors, rmdir retry+probe, macOS payload instrumentation; pushing round 2
 
-**Summary:** Windows lane forensics: the STATUS_ACCESS_VIOLATION was PROC_THREAD_ATTRIBUTE_PARENT_PROCESS being handed the handle VALUE where Windows requires a pointer TO the handle (deterministic kernel32 read fault); fixed, plus FILE_OPEN_FOR_BACKUP_INTENT added to the anchored directory opens (existing child dirs would have failed STATUS_FILE_IS_A_DIRECTORY) and the revalidation test made robust to the \\?\ device prefix. The hard-link test failure is instrumented to print the exact failing call and raw NTSTATUS on the next lane run. The coordinator's inline triage established the cgroup cleanup uses plain rmdir on an empty leaf and the userns mount repro is impossible on this host, so the cgroup/macOS triage continues via a subagent with CI-log mining.
+**Summary:** cgroup Active-path verdict: kernel delegation containment authorizes cgroup.procs writes via the common ancestor, and the runner sits outside the delegated subtree, so the pre-exec join was denied EACCES and the cleanup error masked the primary. Fixes: join_authorized probe converts the situation to typed cgroup_unavailable before any leaf exists; the preflight now also delegates the mount root's cgroup.procs; primary spawn errors lead and cleanup failures append as context with leaked leaves left to the destroy sweep; rmdir retries 3x with diagnostics naming the parent mode/uid. macOS verdict: payload-side (the helper's fallback budget collided with the execute deadline converting helper-never-recorded into a bare TimedOut); helper now writes a started marker with three-way discrimination (never-ran / setsid-denied / recorded) and polls strictly inside the execute budget with evidence-carrying asserts.
 
 **Verified:**
 
-- cargo check --target x86_64-pc-windows-msvc -p sea-forge-os --all-targets and clippy -D warnings green on the fix
-- sandbox windows-target check green (blast radius limited to sea-forge-os + safe_write_windows.rs)
+- sandbox lib 26 green; conformance_m5 4 passed locally (Unavailable path); clippy -D warnings green on linux and aarch64-apple-darwin targets; workspace check clean; fmt clean
+- CLI suites that failed on CI (m0_migrate, m4b, cli m5) pass locally
 
 **Limits:**
 
-- The hard-link replace failure is not yet reproduced; its instrumented failure output arrives with the next lane run
-- cgroup EACCES root cause and the macOS TimedOut remain under triage
+- The cgroup Active proof and the macOS cage-persists verdict are CI round 2's to deliver; the rmdir-EACCES mechanism may not reproduce once the join is authorized
+- F17 rest-grant raw-connect semantics await the openshell-live re-dispatch
 
-**Next move:** Land the cgroup/macOS triage fixes, commit both slices, push, re-dispatch openshell-live, collect round 2.
+**Next move:** Commit round-2 fixes, push, re-dispatch openshell-live, collect CI round 2, then freeze for the codex review.
 
 **Evidence:**
 
+- gh run 40369591334 logs
 - .tmp/harvest/
-- gh run 40369591283 / 40369591334 logs

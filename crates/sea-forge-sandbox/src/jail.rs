@@ -515,26 +515,32 @@ fn run_jailed(
     let started_at = chrono::Utc::now().to_rfc3339();
     let mut child = match command.spawn() {
         Ok(child) => child,
-        Err(_) => {
-            // A pre-exec join failure means nothing exec'd (fail closed);
-            // the leaf is empty and is removed before the spawn failure is
-            // reported. A removal failure is loud — a leaked leaf must not
-            // pass silently.
+        Err(spawn_error) => {
+            // A pre-exec join failure means nothing exec'd (fail closed).
+            // The PRIMARY spawn error is never masked by cleanup: it leads
+            // the surfaced report, and a leaf that cannot be removed is
+            // appended as context and left for the destroy-time sweep
+            // (`destroy_process_leaves` re-adopts leaked leaves by owner
+            // prefix) instead of failing the call — the spawn failure
+            // itself is the outcome, reported as SpawnFailed.
+            let mut report =
+                format!("jail spawn failed before exec (nothing ran uncontained): {spawn_error}");
             if let Some(lease) = lease {
-                lease.remove().map_err(|e| {
-                    SandboxError::new(
-                        "internal_error",
-                        format!("cgroup leaf cleanup after spawn failure failed: {e}"),
-                    )
-                })?;
+                if let Err(cleanup) = lease.remove() {
+                    report.push_str(&format!(
+                        "; cgroup leaf {} could not be removed after the failed spawn and \
+                         is left for the destroy-time leaf sweep: {cleanup}",
+                        lease.leaf().display()
+                    ));
+                }
             }
+            eprintln!("sea-forge-sandbox: {report}");
             return Ok(crate::local::execution_result(
                 ExecutionStatus::SpawnFailed,
                 None,
                 started_at,
                 // Nothing exec'd: there is no process tree whose lifecycle
-                // could have been contained (the leaf, if any, was removed
-                // above).
+                // could have been contained.
                 LifecycleContainment::NoProcess,
             ));
         }

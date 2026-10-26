@@ -265,11 +265,14 @@ fn background_child_does_not_outlive_completed_execution() {
 /// `SEA_FORGE_CAGE_WS`      absolute workspace path (sandbox-granted)
 /// `SEA_FORGE_CAGE_OUTSIDE` absolute directory outside the granted trees
 ///
-/// Sequence: `setsid(2)` out of the workload's process group (the F08
-/// escape), record the pid, attempt the outside write and record its
-/// outcome in the workspace, write `late.txt` into the workspace after a
-/// delay, then stay alive for the parent's survivor assertion. The parent
-/// test owns killing us.
+/// Sequence: mark the earliest reachable step (`helper_started.txt`), then
+/// `setsid(2)` out of the workload's process group (the F08 escape), record
+/// the pid, attempt the outside write and record its outcome in the
+/// workspace, write `late.txt` into the workspace after a delay, then stay
+/// alive for the parent's survivor assertion. The parent test owns killing
+/// us. The markers discriminate a helper that never ran at all (exec or
+/// test-harness failure: no `helper_started.txt`) from one that died at
+/// `setsid` (`helper-failed.txt`) from one that recorded (`detached.pid`).
 #[test]
 fn cage_persists_helper() {
     let (Ok(workspace), Ok(outside)) = (
@@ -278,6 +281,8 @@ fn cage_persists_helper() {
     ) else {
         return; // not running as the helper
     };
+
+    let _ = fs::write(format!("{workspace}/helper_started.txt"), "1");
 
     // setsid(2): a new session and process group that the workload's group
     // kill cannot reach. Fails (EPERM) only if this process were already a
@@ -363,7 +368,7 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
         operation: Operation::ExecuteCommand {
             argv: sh(&format!(
                 "'{helper}' --exact cage_persists_helper & \
-                 i=0; while [ ! -f '{ws}/detached.pid' ] && [ $i -lt 400 ]; do \
+                 i=0; while [ ! -f '{ws}/detached.pid' ] && [ $i -lt 200 ]; do \
                  i=$((i+1)); sleep 0.05; done; \
                  [ -f '{ws}/detached.pid' ] || {{ echo helper-never-recorded; exit 9; }}",
                 helper = helper.display(),
@@ -371,6 +376,12 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
             )),
             cwd: ".".into(),
         },
+        // The workload's own fallback budget is 200 × 50ms = 10s, strictly
+        // inside this execute timeout: a helper that never records makes the
+        // workload exit 9 with "helper-never-recorded" ~10s BEFORE the
+        // deadline, so the failure surfaces as Completed-with-exit-9 (the
+        // assertion below prints the artifacts) instead of a bare TimedOut
+        // whose evidence is masked by the timeout boundary.
         timeout_secs: 20,
         env,
         compensating_controls: vec![],
@@ -384,7 +395,17 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
     };
     let handle = jail.prepare(&spec).expect("prepare");
     let result = jail.execute(&handle, &request).expect("execute");
-    assert_eq!(result.status, ExecutionStatus::Completed);
+    assert_eq!(
+        result.status,
+        ExecutionStatus::Completed,
+        "the workload must complete before the execute timeout; helper markers: \
+         started={} failed={} pid_recorded={}; stdout: {}; stderr: {}",
+        fx.workspace.join("helper_started.txt").exists(),
+        fx.workspace.join("helper-failed.txt").exists(),
+        fx.workspace.join("detached.pid").exists(),
+        stdout_of(&fx),
+        fs::read_to_string(fx.artifacts.join("stderr.txt")).unwrap_or_default(),
+    );
     assert_eq!(
         result.exit_code,
         Some(0),

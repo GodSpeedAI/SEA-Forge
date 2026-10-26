@@ -212,20 +212,33 @@ impl ExecutionSandbox for LocalSandbox {
         #[cfg(unix)]
         let mut child = match command.spawn() {
             Ok(child) => child,
-            Err(_) => {
+            Err(spawn_error) => {
                 // A pre-exec join failure means nothing exec'd (fail
-                // closed); the leaf is empty and is removed before the
-                // spawn failure is reported. A removal failure is loud — a
-                // leaked leaf must not pass silently.
+                // closed). The PRIMARY spawn error is never masked by
+                // cleanup: it leads the surfaced report, and a leaf that
+                // cannot be removed is appended as context and left for
+                // the destroy-time sweep (`destroy_process_leaves`
+                // re-adopts leaked leaves by owner prefix) instead of
+                // failing the call — the spawn failure itself is the
+                // outcome, reported as SpawnFailed.
                 #[cfg(target_os = "linux")]
-                if let Some(lease) = lease {
-                    lease.remove().map_err(|e| {
-                        SandboxError::new(
-                            "internal_error",
-                            format!("cgroup leaf cleanup after spawn failure failed: {e}"),
-                        )
-                    })?;
-                }
+                let sweep_note = match lease {
+                    Some(lease) => match lease.remove() {
+                        Ok(()) => String::new(),
+                        Err(cleanup) => format!(
+                            "; cgroup leaf {} could not be removed after the failed spawn \
+                             and is left for the destroy-time leaf sweep: {cleanup}",
+                            lease.leaf().display()
+                        ),
+                    },
+                    None => String::new(),
+                };
+                #[cfg(not(target_os = "linux"))]
+                let sweep_note = String::new();
+                eprintln!(
+                    "sea-forge-sandbox: local spawn failed before exec (nothing ran \
+                     uncontained): {spawn_error}{sweep_note}"
+                );
                 return Ok(spawn_failed());
             }
         };

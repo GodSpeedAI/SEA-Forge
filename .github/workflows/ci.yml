@@ -117,6 +117,13 @@ jobs:
             && sudo chown -R "$(id -un):$(id -gn)" "$root" 2>/dev/null; then
             # Idempotent; a controller the kernel lacks must not fail the probe.
             sudo sh -c 'echo +memory +pids > /sys/fs/cgroup/cgroup.subtree_control' 2>/dev/null || true
+            # Delegation containment (kernel cgroup-v2 §2-5-2): a process
+            # outside the delegated subtree may only write into it if the
+            # common ancestor's cgroup.procs is also owned by the user. The
+            # runner lives at the mount root, so its cgroup.procs must be
+            # delegated too or the pre-exec join is denied EACCES. Safe on an
+            # ephemeral runner.
+            sudo chown "$(id -un):$(id -gn)" /sys/fs/cgroup/cgroup.procs 2>/dev/null || true
           fi
           if mkdir -p "$root/sea-forge-probe" 2>/dev/null && rmdir "$root/sea-forge-probe"; then
             echo "cgroup preflight: delegated subtree ready at $root"

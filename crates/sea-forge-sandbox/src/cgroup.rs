@@ -12,6 +12,12 @@
 //! - **Leaf per spawn**: the run gets `sea-forge-<owner pid>-<seq>` under the
 //!   delegated root. A single `mkdir` is the delegation gate — an
 //!   EACCES/EPERM there means the root is not delegated to this process.
+//!   The gate is followed by a join-authorization check: kernel delegation
+//!   containment (cgroup-v2 §2-5-2) authorizes a `cgroup.procs` write only
+//!   when the writer can write the common ancestor's `cgroup.procs`, so a
+//!   root across that boundary from the spawning process reports
+//!   [`CGroupContainment::Unavailable`] instead of failing every spawn
+//!   after leaf creation.
 //! - **Pre-exec join, no escape window**: the parent pre-opens the leaf's
 //!   `cgroup.procs` and hands a descriptor-owning closure to
 //!   [`std::os::unix::process::CommandExt::pre_exec`]. The child writes its
@@ -85,6 +91,21 @@ const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 /// Bounded wait for killed members to leave the leaf.
 const VERIFY_DEADLINE: Duration = Duration::from_secs(5);
+
+/// `rmdir` attempts before a leaf removal is declared failed. After the last
+/// member dies, the kernel releases the cgroup asynchronously — the css
+/// freeing is RCU-deferred and the final unpinning runs on the cgroup
+/// destroy workqueue — so an `rmdir(2)` that lands while the just-drained
+/// leaf is still being released can fail transiently. The verified
+/// teardown's empty read-back proves membership drained, not that the
+/// release completed; a short bounded retry absorbs that release race
+/// instead of failing an otherwise-clean teardown. Deliberately bounded
+/// (≤ 2 backoff sleeps on the unhappy path): a genuinely undeletable leaf
+/// must still surface as an error, not as a hang.
+const REMOVE_ATTEMPTS: u32 = 3;
+
+/// Sleep between [`CgroupLease::remove`] retry attempts.
+const REMOVE_RETRY_BACKOFF: Duration = Duration::from_millis(10);
 
 /// The typed availability of cgroup lifecycle containment on this host.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -291,18 +312,56 @@ impl CgroupLease {
 
     /// Remove the leaf. `rmdir` succeeds only for an empty cgroup — the
     /// kernel enforces the emptiness this module's verified teardown relies
-    /// on; a refusal names the remaining members.
+    /// on; a refusal names the remaining members, and — because the failing
+    /// syscall is the rmdir itself and its permission check runs against the
+    /// parent — the delegated parent's mode and owner as probe output, so
+    /// host-side evidence names the denied operation instead of guessing it.
     pub fn remove(&self) -> io::Result<()> {
-        fs::remove_dir(&self.leaf).map_err(|e| {
-            let members = self.procs().unwrap_or_default();
-            io::Error::new(
-                e.kind(),
-                format!(
-                    "cgroup leaf {}: {e}; remaining members: {members:?}",
-                    self.leaf.display()
-                ),
-            )
-        })
+        let mut last_err: Option<io::Error> = None;
+        for attempt in 0..REMOVE_ATTEMPTS {
+            match fs::remove_dir(&self.leaf) {
+                Ok(()) => return Ok(()),
+                Err(e) => {
+                    last_err = Some(e);
+                    if attempt + 1 < REMOVE_ATTEMPTS {
+                        std::thread::sleep(REMOVE_RETRY_BACKOFF);
+                    }
+                }
+            }
+        }
+        let err = last_err.expect("at least one rmdir attempt ran");
+        let kind = err.kind();
+        let members = self.procs().unwrap_or_default();
+        Err(io::Error::new(
+            kind,
+            format!(
+                "cgroup leaf {}: rmdir failed after {REMOVE_ATTEMPTS} attempts: {err}; \
+                 remaining members: {members:?}; {}",
+                self.leaf.display(),
+                parent_probe(&self.leaf),
+            ),
+        ))
+    }
+}
+
+/// Metadata probe of `leaf`'s parent (the delegated root) for error text: an
+/// `rmdir` permission failure is checked against the parent, so its mode and
+/// owner are the first facts CI evidence needs. A probe failure is reported
+/// honestly instead of guessed away.
+fn parent_probe(leaf: &Path) -> String {
+    let Some(parent) = leaf.parent() else {
+        return "leaf has no parent directory".to_owned();
+    };
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    match fs::metadata(parent) {
+        Ok(meta) => format!(
+            "parent dir {}: mode {:o} uid {} gid {}",
+            parent.display(),
+            meta.permissions().mode() & 0o7777,
+            meta.uid(),
+            meta.gid(),
+        ),
+        Err(e) => format!("parent dir {} could not be probed: {e}", parent.display()),
     }
 }
 
@@ -372,6 +431,12 @@ fn probe_root(root: PathBuf) -> CGroupContainment {
             ),
         };
     }
+    // The mkdir gate proves directory delegation; the join check proves the
+    // kernel will authorize the pre-exec migration itself (§2-5-2 containment
+    // rides on the common ancestor, not on the leaf's own file bits).
+    if let Err(reason) = join_authorized(&root) {
+        return CGroupContainment::Unavailable { reason };
+    }
     CGroupContainment::Active { root }
 }
 
@@ -384,6 +449,84 @@ fn self_cgroup_path() -> Option<String> {
         line.strip_prefix("0::")
             .map(|path| path.trim_start_matches('/').to_owned())
     })
+}
+
+/// The longest path shared by both inputs, component-wise. The cgroup-v2
+/// mount root is returned when the paths share nothing (different mounts).
+fn common_ancestor(a: &Path, b: &Path) -> PathBuf {
+    let mut common = PathBuf::new();
+    for (x, y) in a.components().zip(b.components()) {
+        if x != y {
+            break;
+        }
+        common.push(x);
+    }
+    if common.as_os_str().is_empty() {
+        common.push(CGROUP2_MOUNT);
+    }
+    common
+}
+
+/// Verify the kernel will authorize the pre-exec join before an Active
+/// verdict is claimed.
+///
+/// Kernel cgroup-v2 delegation containment (Documentation/admin-guide/
+/// cgroup-v2.rst §2-5-2, enforced by `cgroup_procs_write_permission`):
+/// writing a pid into a `cgroup.procs` requires write access to the
+/// `cgroup.procs` file of the COMMON ANCESTOR of the source (the joining
+/// process's current cgroup) and destination (the leaf) cgroups — a
+/// delegatee can migrate processes within the delegated subtree but can
+/// never pull in from outside it. The pre-exec join performs exactly such a
+/// write from this process's forked child, so a root that passes the mkdir
+/// delegation gate but sits across this boundary from the spawning process
+/// would fail every spawn with EACCES after the leaf was already created
+/// (the observed round-1 CI failure: job cgroup `/`, delegated root
+/// `/sys/fs/cgroup/sea-forge`, common ancestor `/`).
+fn join_authorized(root: &Path) -> Result<(), String> {
+    let self_rel = self_cgroup_path().ok_or_else(|| {
+        "this process has no cgroup-v2 membership line (0::) in /proc/self/cgroup, so the \
+         common ancestor the kernel checks for the pre-exec join cannot be determined"
+            .to_owned()
+    })?;
+    let self_abs = Path::new(CGROUP2_MOUNT).join(self_rel);
+    let ancestor = common_ancestor(root, &self_abs);
+    let procs = ancestor.join("cgroup.procs");
+    let meta = fs::metadata(&procs).map_err(|e| {
+        format!(
+            "cannot stat the pre-exec join's common-ancestor cgroup.procs {}: {e}",
+            procs.display()
+        )
+    })?;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let mode = meta.permissions().mode();
+    // The process's effective credentials, which the kernel's
+    // inode_permission consults for the DAC check below (safe rustix
+    // accessors; this module's unsafe budget stays on the pre-exec join).
+    let (euid, egid) = (
+        rustix::process::geteuid().as_raw(),
+        rustix::process::getegid().as_raw(),
+    );
+    // The kernel's inode_permission(MAY_WRITE) over DAC bits: owner, group,
+    // or other write bit for this process's effective credentials. Deliberately
+    // fails closed (an exotic ACL that grants access reads as unauthorized —
+    // a typed Unavailable, never a silently broken spawn).
+    let writable = (meta.uid() == euid && mode & 0o200 != 0)
+        || (meta.gid() == egid && mode & 0o020 != 0)
+        || mode & 0o002 != 0;
+    if writable {
+        return Ok(());
+    }
+    Err(format!(
+        "kernel cgroup-v2 delegation containment denies the pre-exec join: the common ancestor \
+         of this process's cgroup ({}) and the delegated root ({}) is {}, whose cgroup.procs \
+         is not writable by this user (owner uid {}, mode {mode:#o}) — a delegated subtree can \
+         only be joined from inside it, or when the common ancestor's cgroup.procs is itself \
+         delegated (cgroup-v2 §2-5-2 Delegation Containment)",
+        self_abs.display(),
+        root.display(),
+        ancestor.display(),
+        meta.uid()
+    ))
 }
 
 /// Acquire the spawn's containment leaf, honouring the required-lane
