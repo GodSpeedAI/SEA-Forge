@@ -530,6 +530,24 @@ fn provider_expanded_effective_policy_is_refused_and_cleaned_up() {
 }
 
 #[test]
+fn failed_cleanup_after_refused_policy_is_reported() {
+    let h = harness();
+    ctl(
+        &h,
+        "prover_effective_json",
+        r#"{"schema_version":1,"result":"exceeds_boundary","exit_code":1,"coverage":{"domains":["filesystem","network_l4","network_rest","process","landlock"]},"counterexample":{"host":"evil.example.com","port":443},"reason":"provider rule widens egress"}"#,
+    );
+    ctl(&h, "delete_fail", "");
+    let sandbox = OpenShellSandbox::new(h.binding.clone());
+    let error = sandbox.prepare(&h.spec).expect_err("prepare must fail");
+    assert_eq!(error.class, "openshell_cleanup_failed");
+    assert!(error
+        .message
+        .contains("openshell_effective_policy_exceeds_boundary"));
+    assert!(error.message.contains("lifetime unverified"));
+}
+
+#[test]
 fn create_failure_is_reported_and_cleaned_up() {
     let h = harness();
     ctl(&h, "create_fail", "");
