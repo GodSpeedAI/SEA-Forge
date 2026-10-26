@@ -647,15 +647,22 @@ fn jail_network_setup_fails_closed_never_local() {
     }
 }
 
-/// macOS (and any non-Linux) skip-not-pass contract.
+/// Skip-not-pass contract for platforms without a jail backend.
 ///
-/// The jail backend has no Seatbelt implementation; off Linux it must return
+/// Linux uses Landlock and macOS uses the App Sandbox (its network cases are
+/// in `tests/macos_app_sandbox_jail.rs`). Anywhere else the jail must return
 /// `unsupported_sandbox_class_error` at construction and never count as a pass.
-/// This test asserts that fail-closed behavior on non-Linux and is inert (a
-/// skip) on Linux, so an unsupported platform is reported as skipped.
 #[test]
 fn jail_network_on_non_linux_is_skip_not_pass() {
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "macos")]
+    {
+        // The preflight (codesign + launcher) must succeed on a supported host;
+        // a refusal here would silently turn every macOS jail case into a skip.
+        if let Err(e) = JailSandbox::new() {
+            panic!("macOS jail preflight refused: {} {}", e.class, e.message);
+        }
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let result = JailSandbox::new();
         assert!(
