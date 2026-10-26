@@ -321,7 +321,7 @@ impl ExecutionSandbox for LocalSandbox {
         // without containment there is nothing to verify and no leaf can
         // exist; failures propagate — destroy is not a silent no-op.
         #[cfg(target_os = "linux")]
-        crate::cgroup::destroy_process_leaves(std::process::id())?;
+        crate::cgroup::destroy_process_leaves()?;
         Ok(())
     }
 }

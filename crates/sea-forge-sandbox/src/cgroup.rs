@@ -243,7 +243,14 @@ impl CgroupLease {
     /// be addressed by pid from this namespace, so `0` is never returned as a
     /// signal target (the primary `cgroup.kill` path still reaches them).
     pub fn procs(&self) -> io::Result<Vec<libc::pid_t>> {
-        let text = fs::read_to_string(self.leaf.join("cgroup.procs"))?;
+        // A leaf that already vanished (concurrent verified teardown) has no
+        // members by definition; ENOENT reads as empty instead of failing the
+        // kill/cleanup path that raced it.
+        let text = match fs::read_to_string(self.leaf.join("cgroup.procs")) {
+            Ok(text) => text,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
         Ok(text
             .split_whitespace()
             .filter_map(|token| token.parse::<libc::pid_t>().ok())
@@ -368,7 +375,16 @@ impl CgroupLease {
         let mut last_err: Option<io::Error> = None;
         for attempt in 0..REMOVE_ATTEMPTS {
             match fs::remove_dir(&self.leaf) {
-                Ok(()) => return Ok(()),
+                Ok(()) => {
+                    unregister_leaf(&self.leaf);
+                    return Ok(());
+                }
+                // Already removed by a concurrent verified teardown of the
+                // same lease: cleanup is idempotent.
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    unregister_leaf(&self.leaf);
+                    return Ok(());
+                }
                 Err(e) => {
                     last_err = Some(e);
                     if attempt + 1 < REMOVE_ATTEMPTS {
@@ -614,7 +630,10 @@ pub fn acquire_spawn_lease(
 ) -> Result<Option<CgroupLease>, SandboxError> {
     match containment() {
         CGroupContainment::Active { root } => match CgroupLease::create(&root, owner_pid) {
-            Ok(lease) => Ok(Some(lease)),
+            Ok(lease) => {
+                register_leaf(lease.leaf());
+                Ok(Some(lease))
+            }
             Err(e) if require_requested() => Err(SandboxError::new(
                 "cgroup_unavailable",
                 format!(
@@ -691,30 +710,32 @@ pub fn report_degrade(backend: &str, reason: &str) {
 /// re-attempted and degrades the same way — printed, not an error — so a
 /// leaf the filesystem refuses to release can never fail `destroy`. Every
 /// other error propagates — `destroy` is never a silent no-op.
-pub fn destroy_process_leaves(owner_pid: u32) -> Result<(), SandboxError> {
-    let root = match containment() {
-        CGroupContainment::Active { root } => root,
-        // This process could not have created leaves on a host without
-        // containment; nothing to verify.
-        CGroupContainment::Unavailable { .. } => return Ok(()),
-    };
-    let prefix = format!("{LEAF_PREFIX}-{owner_pid}-");
-    let entries = fs::read_dir(&root).map_err(|e| {
-        SandboxError::new(
-            "internal_error",
-            format!("cannot scan cgroup root {}: {e}", root.display()),
-        )
-    })?;
-    let mut leaves = Vec::new();
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
-            continue;
-        };
-        if name.starts_with(&prefix) {
-            leaves.push(entry.path());
-        }
+/// Leaves created by this process that have not (yet) been removed. The
+/// destroy sweep verifies exactly these — never a filesystem glob by owner
+/// prefix, which would sweep the live leaves of unrelated sandboxes in the
+/// same process (one `destroy()` must not touch another sandbox's leaf).
+static REGISTERED_LEAVES: std::sync::Mutex<Vec<std::path::PathBuf>> =
+    std::sync::Mutex::new(Vec::new());
+
+fn register_leaf(leaf: &std::path::Path) {
+    // A poisoned lock is an already-panicking sweeper; the registry is
+    // hygiene, so recovery proceeds with the current (possibly stale) list.
+    if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
+        leaves.push(leaf.to_path_buf());
     }
+}
+
+fn unregister_leaf(leaf: &std::path::Path) {
+    if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
+        leaves.retain(|l| l != leaf);
+    }
+}
+
+pub fn destroy_process_leaves() -> Result<(), SandboxError> {
+    let leaves = match REGISTERED_LEAVES.lock() {
+        Ok(mut leaves) => std::mem::take(&mut *leaves),
+        Err(_) => return Ok(()),
+    };
     let mut first_error = None;
     for leaf in leaves {
         match CgroupLease::open_existing(leaf.clone()) {

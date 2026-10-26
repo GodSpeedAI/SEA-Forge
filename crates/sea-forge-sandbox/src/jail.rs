@@ -342,7 +342,7 @@ impl ExecutionSandbox for JailSandbox {
         // and no leaf can exist; failures propagate — destroy is not a
         // silent no-op.
         #[cfg(target_os = "linux")]
-        crate::cgroup::destroy_process_leaves(std::process::id())?;
+        crate::cgroup::destroy_process_leaves()?;
         // F08 (macOS): verified sweep of runs this process leaked mid-flight
         // (execute aborted between spawn and verified teardown), mirroring
         // the Linux leaf sweep; CagePersists survivors are reported loudly.

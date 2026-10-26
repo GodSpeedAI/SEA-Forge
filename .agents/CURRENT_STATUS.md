@@ -1,23 +1,23 @@
 # Current status
 
-**Status revision:** 189
+**Status revision:** 190
 
-**Stage:** capability-harvest: round-4 closures committed — pushing for the convergence round
+**Stage:** capability-harvest: round 4 verdicts in — macOS lane GREEN (SandboxCagePersists verified live), KVM lane GREEN (F17 BLOCKED-with-evidence + deny variant); round 5 fixes the cgroup destroy-sweep interference and the Windows temp creation
 
-**Summary:** cgroup: an empty leaf whose rmdir the kernel denies (6.17-azure delegation propagation limits; parent probe mode 755 uid 1001) now degrades to a logged destroy-sweep record instead of failing settled runs — non-empty leaves still error. macOS: the cage helper's parent holds 1.5s post-fork so the 100ms census observes the detached child (round-3 confirmed the census never sampled before reparenting). Windows: the final rename uses the years-proven SetFileInformationByHandle(FileRenameInfo) absolute-target call; three RootDirectory-relative/NT-absolute forms are recorded as INVALID_PARAMETER-rejected platform verdicts. F17: the allow-control is now an honest BLOCKED scenario (SEA_FORGE_REQUIRE_EGRESS_CONTROL flips it to a lane failure) with the full guest dump and the three-round upstream-requirement chain; the deny variant keeps its narrowed non-attribution claim.
+**Summary:** Round 4 on real runners: the macOS cage-persists test classifies SandboxCagePersists with a census-recorded setsid survivor (F08-macOS verified); the KVM ladder exits 0 with the honest egress BLOCKED evidence pack and the passing deny variant (F17 disposition final). Two residues named and fixed in round 5: (1) destroy_process_leaves globbed the cgroup root by pid prefix, so one sandbox's destroy() removed a sibling sandbox's live leaf in same-process parallel tests (kill ENOENT, rmdir ENOENT) — the sweep is now registry-scoped (only this process's registered leaves) and double-teardown is idempotent (ENOENT reads as empty/gone); (2) the Windows anchored NtCreateFile FILE_CREATE temp rejects STATUS_INVALID_PARAMETER on Server 2025 (anchored opens of existing entries work; three rename forms and now the anchored create are recorded platform verdicts) — the temp returns to the years-proven std create_new under the exclusive pin (visible name is not a substitution window while the pin holds) with access_mode(GENERIC_WRITE|DELETE) so the handle-identified rename keeps DELETE access.
 
 **Verified:**
 
-- Full local sweep green: sandbox all targets, case-runner non-ignored, clippy -D warnings host + windows-msvc + aarch64-apple-darwin, fmt
-- graft build run; diff reviewed; 6 files changed +313/-135
+- gh run 40406879337: verify(macos), lint, MSRV, workbench, authority-opa all success; KVM run 40406886571 success
+- Local: sandbox suite 23 test-targets green, runtime lib 5/5, conformance_m5 4, clippy -D warnings host+windows clean, fmt clean
 
 **Limits:**
 
-- All four closures await their CI lanes (round 4)
+- Round-5 lanes must confirm: ubuntu cgroup tests green under parallelism, windows hard-link replace green
 
-**Next move:** Push, re-dispatch openshell-live, collect round 4; if green, freeze for the codex adversarial review and fill the record.
+**Next move:** Push round 5; when CI+portability are green, freeze and run the codex adversarial review.
 
 **Evidence:**
 
+- gh runs 40406879337 / 40406886571 / 40406874861
 - .agents/OBSERVED_DEBT.md
-- gh runs 40400357003 / 40400356837 / 40400369301

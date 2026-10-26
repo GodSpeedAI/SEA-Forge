@@ -13,13 +13,12 @@ use std::time::{Duration, Instant};
 
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
-    NtCreateFile, FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
-    FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
+    NtCreateFile, FILE_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
 };
 use windows_sys::Win32::Foundation::{
-    LocalFree, RtlNtStatusToDosError, ERROR_ALREADY_EXISTS, ERROR_FILE_EXISTS,
-    ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND, ERROR_SHARING_VIOLATION, GENERIC_READ,
-    GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE, NTSTATUS, OBJ_CASE_INSENSITIVE, UNICODE_STRING,
+    LocalFree, RtlNtStatusToDosError, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
+    ERROR_SHARING_VIOLATION, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE, NTSTATUS,
+    OBJ_CASE_INSENSITIVE, UNICODE_STRING,
 };
 use windows_sys::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
@@ -503,14 +502,6 @@ fn nt_error(status: NTSTATUS) -> io::Error {
 }
 
 /// `FILE_CREATE` against an existing entry (`STATUS_OBJECT_NAME_COLLISION`
-/// mapped by `RtlNtStatusToDosError` to either Win32 exists-error).
-fn is_name_collision(error: &io::Error) -> bool {
-    matches!(
-        error.raw_os_error(),
-        Some(code) if code == ERROR_FILE_EXISTS as i32 || code == ERROR_ALREADY_EXISTS as i32
-    )
-}
-
 /// Reparse tag and attribute word of an open handle (`FileAttributeTagInfo`).
 fn handle_attribute_tag(handle: HANDLE) -> io::Result<FILE_ATTRIBUTE_TAG_INFO> {
     // SAFETY: FILE_ATTRIBUTE_TAG_INFO is plain data; all-zero is a valid initial value.
@@ -873,30 +864,41 @@ impl PinnedDir {
     /// is marked delete-on-close.
     pub fn write_replacing(&self, name: &OsStr, bytes: &[u8]) -> io::Result<()> {
         use std::io::Write;
+        use std::os::windows::fs::OpenOptionsExt;
         use std::sync::atomic::Ordering;
         self.revalidate().map_err(pin_error_into_io)?;
+        // The temp is created through the directory's own path, not an
+        // anchored NtCreateFile: Server 2025 rejects the anchored FILE_CREATE
+        // with STATUS_INVALID_PARAMETER even though anchored opens of existing
+        // entries succeed (recorded in the relative-target spike verdict).
+        // This is safe under the exclusive pin — the pin already excludes
+        // every concurrent directory writer for the whole window, so the
+        // short-lived visible temp name is not a substitution window; the
+        // rename that publishes it identifies the SOURCE by handle.
         let mut attempts = 0;
-        let handle = loop {
+        let (mut file, _temp_path) = loop {
             let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let mut temp_name = std::ffi::OsString::from(".");
             temp_name.push(name);
             temp_name.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
-            match open_anchored(
-                self.handle.as_raw_handle() as HANDLE,
-                &temp_name,
-                GENERIC_WRITE | DELETE,
-                FILE_SHARE_READ,
-                FILE_CREATE,
-                FILE_NON_DIRECTORY_FILE | FILE_FLAG_OPEN_REPARSE_POINT,
-            ) {
-                Ok(handle) => break handle,
-                Err(error) if is_name_collision(&error) && attempts < 16 => {
+            let temp_path = self.path.join(&temp_name);
+            match std::fs::OpenOptions::new()
+                // The rename-by-handle below requires DELETE access on the
+                // source handle, which std's `write(true)` alone omits.
+                .access_mode(GENERIC_WRITE | DELETE)
+                .write(true)
+                .create_new(true)
+                .share_mode(FILE_SHARE_READ)
+                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+                .open(&temp_path)
+            {
+                Ok(file) => break (file, temp_path),
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists && attempts < 16 => {
                     attempts += 1;
                 }
                 Err(error) => return Err(error),
             }
         };
-        let mut file = std::fs::File::from(handle);
         let target = absolute_rename_target(&self.path, name);
         let outcome = file
             .write_all(bytes)
@@ -1290,6 +1292,7 @@ mod tests {
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::process::{Command, Stdio};
     use windows_sys::Wdk::Storage::FileSystem::{FileRenameInformationEx, NtSetInformationFile};
+    use windows_sys::Wdk::Storage::FileSystem::{FILE_CREATE, FILE_NON_DIRECTORY_FILE};
     use windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED;
     use windows_sys::Win32::Security::Authorization::{
         ConvertSecurityDescriptorToStringSecurityDescriptorW, GetNamedSecurityInfoW, SE_FILE_OBJECT,
