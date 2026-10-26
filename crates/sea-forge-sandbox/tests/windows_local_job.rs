@@ -55,6 +55,17 @@ impl Drop for Dirs {
     }
 }
 
+/// Timeout for the workload. Long enough that PowerShell startup on a slow CI
+/// runner (about 2-3 s) finishes spawning before the kill. The grandchild must
+/// outlive the kill, so its marker delay is much longer than the timeout.
+const TIMEOUT_SECS: u64 = 15;
+/// `ping -n N` waits about N-1 seconds, so the grandchild writes its marker
+/// about 35 s after spawning, well after the kill.
+const GRANDCHILD_PINGS: u32 = 36;
+/// Wait after the kill. Must exceed the grandchild's marker time (about
+/// 5 s of spawn lag plus 35 s) so a surviving grandchild would be caught.
+const POST_KILL_WAIT_SECS: u64 = 40;
+
 fn system_root() -> String {
     std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into())
 }
@@ -119,7 +130,7 @@ fn unique_token(tag: &str) -> String {
 /// `marker`. The token sits in the command line so the process can be found.
 fn grandchild_args(token: &str, marker: &PathBuf) -> String {
     format!(
-        "/d /c ping -n 6 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
+        "/d /c ping -n {GRANDCHILD_PINGS} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
         marker.display()
     )
 }
@@ -209,14 +220,14 @@ fn timeout_kills_whole_process_tree() {
     let spawned = dirs.outside.join("grandchild-spawned.txt");
 
     // Parent starts a grandchild with Start-Process (inherits the job), writes
-    // a "spawned" marker, then sleeps far longer than the 2 s timeout.
+    // a "spawned" marker, then sleeps far longer than the timeout.
     let script = format!(
         "Start-Process -FilePath {cmd} -ArgumentList {args}; Set-Content -LiteralPath {sp} -Value x; Start-Sleep -Seconds 60",
         cmd = ps_single(&cmd_exe()),
         args = ps_single(&grandchild_args(&token, &marker)),
         sp = ps_single(&spawned.display().to_string()),
     );
-    let result = run(&dirs, powershell_argv(&script), 2);
+    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert_eq!(result.exit_code, None);
     assert!(
@@ -225,7 +236,7 @@ fn timeout_kills_whole_process_tree() {
     );
 
     // The grandchild would write its marker about 5 s after spawning.
-    thread::sleep(Duration::from_secs(8));
+    thread::sleep(Duration::from_secs(POST_KILL_WAIT_SECS));
     let survivors = live_pids_with_token(&token);
     kill_tree(&survivors);
     assert!(
@@ -255,14 +266,14 @@ fn wmi_created_process_cannot_escape_timeout_kill() {
         cl = ps_single(&command_line),
         sp = ps_single(&spawned.display().to_string()),
     );
-    let result = run(&dirs, powershell_argv(&script), 2);
+    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert!(
         spawned.exists(),
         "WMI create never ran before the timeout; the test would be vacuous"
     );
 
-    thread::sleep(Duration::from_secs(8));
+    thread::sleep(Duration::from_secs(POST_KILL_WAIT_SECS));
     let survivors = live_pids_with_token(&token);
     kill_tree(&survivors);
     assert!(
