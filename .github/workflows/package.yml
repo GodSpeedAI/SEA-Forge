@@ -235,12 +235,25 @@ jobs:
           devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-cli -p sea-forge-server
           devbox run -- cargo build --release --locked --target x86_64-apple-darwin -p sea-forge-sandbox --bin sea-forge-jail-launcher
 
-      # Devbox (Nix) toolchains can link /nix/store dylibs (e.g. libiconv); such a
-      # binary would not load on a Mac without Nix. Refuse any such reference.
+      # The Devbox (Nix) toolchain links /nix/store/...-libiconv/lib/libiconv.2.dylib;
+      # such a binary would not load on a Mac without Nix. macOS ships the same
+      # library as /usr/lib/libiconv.2.dylib, so rewrite the load path, re-sign
+      # (arm64 requires a valid signature), then refuse any /nix/store reference.
       - name: Binaries load only system libraries
         shell: bash
         run: |
           set -euo pipefail
+          for b in target/*-apple-darwin/release/sea-forge target/*-apple-darwin/release/sea-forge-server \
+                   target/*-apple-darwin/release/sea-forge-jail-launcher; do
+            changed=0
+            for lib in $(otool -L "$b" | tail -n +2 | awk '{print $1}' | grep '^/nix/store/' || true); do
+              case "$lib" in
+                */lib/libiconv.2.dylib) install_name_tool -change "$lib" /usr/lib/libiconv.2.dylib "$b"; changed=1 ;;
+                *) echo "::error::$b links unexpected Nix library $lib"; exit 1 ;;
+              esac
+            done
+            if [ "$changed" = 1 ]; then codesign --force --sign - "$b"; fi
+          done
           bad=0
           for b in target/*-apple-darwin/release/sea-forge target/*-apple-darwin/release/sea-forge-server \
                    target/*-apple-darwin/release/sea-forge-jail-launcher; do
