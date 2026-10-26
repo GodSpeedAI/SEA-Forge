@@ -172,10 +172,13 @@ fn is_path_component(part: &str) -> bool {
         while i < bytes.len() && separator(bytes[i]) {
             i += 1;
         }
-        // Non-empty and bounded by alphanumerics because the component
-        // starts and ends with one.
+        // Bounded by alphanumerics because the component starts and ends
+        // with one. An empty run means a byte that is neither alphanumeric
+        // nor a separator (`+`, `!`, uppercase): reject it, or the loop
+        // would never advance.
         let run = &bytes[start..i];
-        let valid = run == b"." || run == b"_" || run == b"__" || run.iter().all(|&b| b == b'-');
+        let valid = !run.is_empty()
+            && (run == b"." || run == b"_" || run == b"__" || run.iter().all(|&b| b == b'-'));
         if !valid {
             return false;
         }
@@ -223,6 +226,12 @@ mod tests {
             "registry.example/a..b:1",
             "registry.example/a._b:1",
             "registry.example/a-.b:1",
+            // Interior bytes that are neither alphanumeric nor a separator
+            // (review F26: these used to loop forever).
+            "a+b",
+            "aBb",
+            "registry.example/a!b:1",
+            "registry.example/team/a%b:1",
             "native:",
             "native:sha256:abc@windows-x86_64",
             "native:sha256:0123@windows-x86_64",
