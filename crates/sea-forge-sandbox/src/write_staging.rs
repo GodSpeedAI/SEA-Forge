@@ -106,8 +106,10 @@ impl StagingDir {
     pub(crate) fn new_temp(
         &self,
         name: &OsStr,
-        mode: u32,
+        // RawMode is u32 on Linux, u16 on macOS; callers hold platform values.
+        mode: impl Into<u32>,
     ) -> io::Result<(std::fs::File, OsString)> {
+        let mode: u32 = mode.into();
         static SEQUENCE: AtomicU64 = AtomicU64::new(0);
         let mut attempts = 0;
         loop {

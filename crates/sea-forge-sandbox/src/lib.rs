@@ -511,7 +511,7 @@ fn write_entry_unix_inner(
             ))
         }
     };
-    let (mut file, temp_name) = staging.new_temp(name, u32::from(mode)).map_err(|error| {
+    let (mut file, temp_name) = staging.new_temp(name, mode).map_err(|error| {
         ForgeError::io(
             format!("open staged temp for {}", destination.display()),
             error,
