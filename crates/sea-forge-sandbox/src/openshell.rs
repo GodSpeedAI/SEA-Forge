@@ -396,18 +396,14 @@ fn present(value: Option<&Value>) -> bool {
 /// The guarantees `policy.yaml` demands. Only the three fields the enforcement
 /// check needs are read; the policy's meaning is OpenShell's and the prover's.
 fn policy_requires(policy: &Path) -> Result<Enforcement, SandboxError> {
-    let bytes = fs::read(policy).map_err(|e| {
+    let refuse = |e: String| {
         err(
             "openshell_projection_error",
             format!("{}: {e}", policy.display()),
         )
-    })?;
-    let doc: Value = sea_forge_core::yaml::from_slice(&bytes).map_err(|e| {
-        err(
-            "openshell_projection_error",
-            format!("{}: {e}", policy.display()),
-        )
-    })?;
+    };
+    let bytes = fs::read(policy).map_err(|e| refuse(e.to_string()))?;
+    let doc: Value = sea_forge_core::yaml::from_slice(&bytes).map_err(|e| refuse(e.to_string()))?;
     Ok(Enforcement {
         landlock_hard: doc
             .pointer("/landlock/compatibility")
@@ -1030,13 +1026,8 @@ impl ExecutionSandbox for OpenShellSandbox {
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
 
-        let result = |status, exit_code| ExecutionResult {
-            status,
-            exit_code,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at: started_at.clone(),
-            finished_at: chrono::Utc::now().to_rfc3339(),
+        let result = |status, exit_code| {
+            crate::local::execution_result(status, exit_code, started_at.clone())
         };
         let mut child = match command.spawn() {
             Ok(child) => child,

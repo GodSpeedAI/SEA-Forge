@@ -494,14 +494,11 @@ fn run_jailed(
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(_) => {
-            return Ok(ExecutionResult {
-                status: ExecutionStatus::SpawnFailed,
-                exit_code: None,
-                stdout_path: "artifacts/stdout.txt".into(),
-                stderr_path: "artifacts/stderr.txt".into(),
+            return Ok(crate::local::execution_result(
+                ExecutionStatus::SpawnFailed,
+                None,
                 started_at,
-                finished_at: chrono::Utc::now().to_rfc3339(),
-            });
+            ));
         }
     };
 
@@ -521,14 +518,7 @@ fn run_jailed(
         (ExecutionStatus::TimedOut, None)
     };
 
-    Ok(ExecutionResult {
-        status: state,
-        exit_code: code,
-        stdout_path: "artifacts/stdout.txt".into(),
-        stderr_path: "artifacts/stderr.txt".into(),
-        started_at,
-        finished_at: chrono::Utc::now().to_rfc3339(),
-    })
+    Ok(crate::local::execution_result(state, code, started_at))
 }
 
 /// macOS App Sandbox backend.
@@ -736,14 +726,11 @@ mod macos {
         let mut child = match command.spawn() {
             Ok(child) => child,
             Err(_) => {
-                return Ok(ExecutionResult {
-                    status: ExecutionStatus::SpawnFailed,
-                    exit_code: None,
-                    stdout_path: "artifacts/stdout.txt".into(),
-                    stderr_path: "artifacts/stderr.txt".into(),
+                return Ok(crate::local::execution_result(
+                    ExecutionStatus::SpawnFailed,
+                    None,
                     started_at,
-                    finished_at: chrono::Utc::now().to_rfc3339(),
-                })
+                ))
             }
         };
         let status = child
@@ -757,14 +744,7 @@ mod macos {
             (ExecutionStatus::TimedOut, None)
         };
 
-        let mut result = ExecutionResult {
-            status: state,
-            exit_code: code,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at,
-            finished_at: chrono::Utc::now().to_rfc3339(),
-        };
+        let mut result = crate::local::execution_result(state, code, started_at);
         // Same suspicion heuristic as the Linux jail, extended to the errno text
         // the App Sandbox produces. Child-written stderr is only evidence.
         if result.status == ExecutionStatus::Completed && result.exit_code != Some(0) {

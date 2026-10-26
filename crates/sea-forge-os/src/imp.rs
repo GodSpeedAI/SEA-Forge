@@ -43,6 +43,22 @@ fn last_error() -> io::Error {
     io::Error::last_os_error()
 }
 
+/// NUL-terminated UTF-16 copy of `s`, as the wide-string APIs expect.
+fn to_wide(s: impl AsRef<std::ffi::OsStr>) -> Vec<u16> {
+    s.as_ref().encode_wide().chain(std::iter::once(0)).collect()
+}
+
+/// Primary token of `process`, opened for query.
+fn process_token(process: HANDLE) -> io::Result<OwnedHandle> {
+    let mut raw: HANDLE = null_mut();
+    // SAFETY: `process` is a live process handle or pseudo-handle; `raw` is a valid out-pointer.
+    if unsafe { OpenProcessToken(process, TOKEN_QUERY, &mut raw) } == FALSE {
+        return Err(last_error());
+    }
+    // SAFETY: OpenProcessToken succeeded, so `raw` is a fresh handle we own.
+    Ok(unsafe { OwnedHandle::from_raw_handle(raw as _) })
+}
+
 /// Accepts only the `S-1-<digits>-<digits>...` grammar, so a SID can be
 /// spliced into SDDL without any possibility of injecting ACE or flag syntax.
 fn check_sid_grammar(sid: &str) -> io::Result<()> {
@@ -190,34 +206,21 @@ pub fn pipe_server_sid(pipe: &impl AsRawHandle) -> io::Result<String> {
     }
     // SAFETY: OpenProcess returned a fresh, non-null handle we own.
     let process = unsafe { OwnedHandle::from_raw_handle(process as _) };
-    let mut raw: HANDLE = null_mut();
-    // SAFETY: the process handle is live; `raw` is a valid out-pointer.
-    if unsafe { OpenProcessToken(process.as_raw_handle() as HANDLE, TOKEN_QUERY, &mut raw) }
-        == FALSE
-    {
-        return Err(last_error());
-    }
-    // SAFETY: OpenProcessToken succeeded, so `raw` is a fresh handle we own.
-    let token = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+    let token = process_token(process.as_raw_handle() as HANDLE)?;
     token_user_sid(token.as_raw_handle() as HANDLE)
 }
 
 /// SID of the user running this process.
 pub fn current_sid() -> io::Result<String> {
-    let mut raw: HANDLE = null_mut();
-    // SAFETY: GetCurrentProcess returns a pseudo-handle; `raw` is a valid out-pointer.
-    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut raw) } == FALSE {
-        return Err(last_error());
-    }
-    // SAFETY: OpenProcessToken succeeded, so `raw` is a fresh handle we own.
-    let token = unsafe { OwnedHandle::from_raw_handle(raw as _) };
+    // SAFETY: GetCurrentProcess returns a pseudo-handle that needs no close.
+    let token = process_token(unsafe { GetCurrentProcess() })?;
     token_user_sid(token.as_raw_handle() as HANDLE)
 }
 
 /// Pipe DACL: SYSTEM and the current user get full control; each bound SID
 /// gets read and write only. Everyone else is denied by omission.
 pub struct PipeSecurity {
-    descriptor: PSECURITY_DESCRIPTOR,
+    _descriptor: LocalDescriptor,
     attributes: SECURITY_ATTRIBUTES,
 }
 
@@ -230,30 +233,10 @@ impl PipeSecurity {
             check_sid_grammar(sid)?;
             sddl.push_str(&format!("(A;;GRGW;;;{sid})"));
         }
-        let wide: Vec<u16> = std::ffi::OsStr::new(&sddl)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
-        let mut descriptor: PSECURITY_DESCRIPTOR = null_mut();
-        // SAFETY: `wide` is NUL-terminated and outlives the call; `descriptor` is a valid out-pointer; the size out-pointer is optional and null here.
-        let ok = unsafe {
-            ConvertStringSecurityDescriptorToSecurityDescriptorW(
-                wide.as_ptr(),
-                SDDL_REVISION_1,
-                &mut descriptor,
-                null_mut(),
-            )
-        };
-        if ok == FALSE {
-            return Err(last_error());
-        }
+        let descriptor = LocalDescriptor::from_sddl(&sddl)?;
         Ok(Self {
-            descriptor,
-            attributes: SECURITY_ATTRIBUTES {
-                nLength: mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
-                lpSecurityDescriptor: descriptor,
-                bInheritHandle: FALSE,
-            },
+            attributes: descriptor.attributes(),
+            _descriptor: descriptor,
         })
     }
 
@@ -265,20 +248,11 @@ impl PipeSecurity {
     }
 }
 
-// SAFETY: the descriptor is an immutable, LocalAlloc'd self-relative security
-// descriptor written once in `new` and only read afterwards; it is freed once,
-// in `drop`. Nothing mutates it through a shared reference, so moving or sharing
-// `PipeSecurity` across threads cannot race.
+// SAFETY: `attributes` only holds a pointer to the immutable descriptor owned
+// by `_descriptor`; see the `LocalDescriptor` impls for why sharing is sound.
 unsafe impl Send for PipeSecurity {}
 // SAFETY: see the `Send` impl above; shared access is read-only.
 unsafe impl Sync for PipeSecurity {}
-
-impl Drop for PipeSecurity {
-    fn drop(&mut self) {
-        // SAFETY: the descriptor came from ConvertStringSecurityDescriptorToSecurityDescriptorW (LocalAlloc) and is freed exactly once.
-        unsafe { LocalFree(self.descriptor.cast()) };
-    }
-}
 
 /// Creates one named pipe server instance. `first` maps to
 /// `FILE_FLAG_FIRST_PIPE_INSTANCE`: an existing pipe of that name makes the
@@ -300,12 +274,17 @@ pub fn create_pipe_server(
 /// Owns a self-relative security descriptor built from SDDL.
 struct LocalDescriptor(PSECURITY_DESCRIPTOR);
 
+// SAFETY: the descriptor is an immutable, LocalAlloc'd self-relative security
+// descriptor written once in `from_sddl` and only read afterwards; it is freed
+// once, in `drop`. Nothing mutates it through a shared reference, so moving or
+// sharing it across threads cannot race.
+unsafe impl Send for LocalDescriptor {}
+// SAFETY: see the `Send` impl above; shared access is read-only.
+unsafe impl Sync for LocalDescriptor {}
+
 impl LocalDescriptor {
     fn from_sddl(sddl: &str) -> io::Result<Self> {
-        let wide: Vec<u16> = std::ffi::OsStr::new(sddl)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
+        let wide = to_wide(sddl);
         let mut descriptor: PSECURITY_DESCRIPTOR = null_mut();
         // SAFETY: `wide` is NUL-terminated and outlives the call; `descriptor` is a valid out-pointer; the size out-pointer is optional and null here.
         let ok = unsafe {
@@ -320,6 +299,15 @@ impl LocalDescriptor {
             return Err(last_error());
         }
         Ok(Self(descriptor))
+    }
+
+    /// Attributes naming this descriptor, valid while `self` is alive.
+    fn attributes(&self) -> SECURITY_ATTRIBUTES {
+        SECURITY_ATTRIBUTES {
+            nLength: mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: self.0,
+            bInheritHandle: FALSE,
+        }
     }
 }
 
@@ -342,16 +330,8 @@ pub fn write_private(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let user = current_sid()?;
     check_sid_grammar(&user)?;
     let descriptor = LocalDescriptor::from_sddl(&format!("D:P(A;;FA;;;SY)(A;;FA;;;{user})"))?;
-    let attributes = SECURITY_ATTRIBUTES {
-        nLength: mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
-        lpSecurityDescriptor: descriptor.0,
-        bInheritHandle: FALSE,
-    };
-    let wide: Vec<u16> = path
-        .as_os_str()
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
+    let attributes = descriptor.attributes();
+    let wide = to_wide(path);
     // SAFETY: `wide` is NUL-terminated and outlives the call; `attributes` and the descriptor it points at live until CreateFileW returns and the kernel copies them.
     let raw = unsafe {
         CreateFileW(

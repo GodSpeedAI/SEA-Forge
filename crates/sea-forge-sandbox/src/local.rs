@@ -9,6 +9,23 @@ use wait_timeout::ChildExt;
 
 pub struct LocalSandbox;
 
+/// The execution record for a run that reached the workload or failed to
+/// start, pointing at the standard artifact files.
+pub(crate) fn execution_result(
+    status: ExecutionStatus,
+    exit_code: Option<i64>,
+    started_at: String,
+) -> ExecutionResult {
+    ExecutionResult {
+        status,
+        exit_code,
+        stdout_path: "artifacts/stdout.txt".into(),
+        stderr_path: "artifacts/stderr.txt".into(),
+        started_at,
+        finished_at: chrono::Utc::now().to_rfc3339(),
+    }
+}
+
 /// Kills the timed-out child's process group (Unix). The group id is the child pid.
 #[cfg(unix)]
 pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), SandboxError> {
@@ -106,14 +123,8 @@ impl ExecutionSandbox for LocalSandbox {
         for (k, v) in &req.env {
             command.env(k, v);
         }
-        let spawn_failed = || ExecutionResult {
-            status: ExecutionStatus::SpawnFailed,
-            exit_code: None,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at: started_at.clone(),
-            finished_at: chrono::Utc::now().to_rfc3339(),
-        };
+        let spawn_failed =
+            || execution_result(ExecutionStatus::SpawnFailed, None, started_at.clone());
         // Windows: the child starts suspended and is in its kill-on-close job
         // before it runs, so no grandchild can escape the timeout kill.
         // Any failure here (job creation, spawn, assignment) means nothing
@@ -143,14 +154,7 @@ impl ExecutionSandbox for LocalSandbox {
                 .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
             (ExecutionStatus::TimedOut, None)
         };
-        Ok(ExecutionResult {
-            status: state,
-            exit_code: code,
-            stdout_path: "artifacts/stdout.txt".into(),
-            stderr_path: "artifacts/stderr.txt".into(),
-            started_at,
-            finished_at: chrono::Utc::now().to_rfc3339(),
-        })
+        Ok(execution_result(state, code, started_at))
     }
 
     // F-25.k: this backend does not implement artifact collection. Returning

@@ -70,11 +70,6 @@ impl PeerIdentity {
     pub fn key(&self) -> PrincipalKey {
         self.uid
     }
-
-    /// Operator-facing name of the principal in refusal messages.
-    pub fn label(&self) -> String {
-        format!("uid {}", self.uid)
-    }
 }
 
 /// The OS identity of the process on the other end of a named pipe, read
@@ -101,11 +96,6 @@ impl PeerIdentity {
     pub fn key(&self) -> PrincipalKey {
         self.sid.clone()
     }
-
-    /// Operator-facing name of the principal in refusal messages.
-    pub fn label(&self) -> String {
-        format!("SID {}", self.sid)
-    }
 }
 
 /// The native OS principal a connection presents: a uid on Unix, a SID on
@@ -122,6 +112,14 @@ pub fn current_principal() -> Option<PrincipalKey> {
     return current_uid();
     #[cfg(windows)]
     return sea_forge_os::current_sid().ok();
+}
+
+/// Operator-facing name of a native principal: `uid N` or `SID S`.
+pub fn principal_label(key: &PrincipalKey) -> String {
+    #[cfg(unix)]
+    return format!("uid {key}");
+    #[cfg(windows)]
+    return format!("SID {key}");
 }
 
 /// The effective uid of *this* process.
@@ -236,10 +234,7 @@ impl ResolvedActor {
     }
     /// Operator-facing name of the connection's principal ("uid N" or "SID S").
     pub fn principal_label(&self) -> String {
-        #[cfg(unix)]
-        return format!("uid {}", self.principal);
-        #[cfg(windows)]
-        return format!("SID {}", self.principal);
+        principal_label(&self.principal)
     }
     /// The gateway principal that presented `on_behalf_of`, if this request
     /// was delegated. `None` on direct (non-delegated) resolutions.
@@ -266,10 +261,7 @@ impl DelegationProvenance {
     }
     /// Operator-facing name of the gateway principal ("uid N" or "SID S").
     pub fn gateway_label(&self) -> String {
-        #[cfg(unix)]
-        return format!("uid {}", self.gateway_principal);
-        #[cfg(windows)]
-        return format!("SID {}", self.gateway_principal);
+        principal_label(&self.gateway_principal)
     }
 }
 
@@ -531,7 +523,7 @@ impl IdentityBindings {
             .find(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
-                principal: peer.label(),
+                principal: principal_label(&peer.key()),
             })?;
         if !binding.roles.contains(&claim.role) {
             return Err(IdentityRefusal::RoleNotHeld {
@@ -638,7 +630,10 @@ impl IdentityBindings {
         // the caller never named — there is no claim here to echo back.
         let refusal = available.is_empty().then(|| RefusalView {
             error_class: "identity_not_bound".into(),
-            message: format!("no actor is bound to {} in this cell", peer.label()),
+            message: format!(
+                "no actor is bound to {} in this cell",
+                principal_label(&peer.key())
+            ),
             no_side_effect: Some(true),
             next_lawful_action: Some("Use an actor bound to this operating-system user".into()),
         });
@@ -750,14 +745,14 @@ impl IdentityBindings {
             return Err(delegation_refused(format!(
                 "this cell configures no `gateway` principal, so no connection may send \
                  `on_behalf_of` ({} did)",
-                peer.label()
+                principal_label(&peer.key())
             )));
         };
         if peer.key() != gateway.principal() {
             return Err(delegation_refused(format!(
                 "{} is not the configured gateway {}, so it may not send `on_behalf_of`",
-                peer.label(),
-                gateway.principal_label()
+                principal_label(&peer.key()),
+                principal_label(&gateway.principal())
             )));
         }
         if claim.actor_id != gateway.actor {
@@ -776,7 +771,7 @@ impl IdentityBindings {
             return Err(delegation_refused(format!(
                 "the configured gateway principal `{}` has no binding for {}",
                 gateway.actor,
-                gateway.principal_label()
+                principal_label(&gateway.principal())
             )));
         };
         if !gateway_binding.roles.contains(&claim.role) {
@@ -850,7 +845,7 @@ impl IdentityBindings {
             .filter(|binding| binding.actor_id == claim.actor_id)
             .ok_or_else(|| IdentityRefusal::NotBound {
                 actor_id: claim.actor_id.clone(),
-                principal: peer.label(),
+                principal: principal_label(&peer.key()),
             })?;
         if !bound.roles.contains(&claim.role) {
             return Err(IdentityRefusal::RoleNotHeld {
