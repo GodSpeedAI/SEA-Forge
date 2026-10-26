@@ -2,8 +2,8 @@
   "cell_id": "9093569307216df6",
   "created_at": "2026-10-12T00:00:00Z",
   "files": {
-    "mapping-report.json": "sha256:851b145dd317e6391884db0cd0c4892c843df7c5850dd0d7a91c9501c9e82d3e",
-    "policy.yaml": "sha256:f32151bfe73fa77ef758c56bbd5eac3e697762afe59089304e8980df06547cf4",
+    "mapping-report.json": "sha256:e1160544016afd2b9c8b2ad7f44a4a0d3539bb8e27f4470d8690e24f70afbdf9",
+    "policy.yaml": "sha256:1b5751d0d54d37201ad6955ad58b90318422d6720fb0c5aa1162d4beb35784e4",
     "sandbox.json": "sha256:a49588d13b0f46d122cbbf3a044707a855dc0078d7d242845e77891f2ec6e655"
   },
   "model": {
@@ -15,7 +15,7 @@
     "hash": null,
     "present": false
   },
-  "policy_digest": "sha256:f32151bfe73fa77ef758c56bbd5eac3e697762afe59089304e8980df06547cf4",
+  "policy_digest": "sha256:1b5751d0d54d37201ad6955ad58b90318422d6720fb0c5aa1162d4beb35784e4",
   "profile": {
     "id": "python-agent-v1",
     "version": "1.0.0"

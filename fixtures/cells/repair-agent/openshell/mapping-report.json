@@ -103,6 +103,13 @@
       "note": "read-only system path needed to start a process",
       "phase": "startup",
       "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//app"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
       "target": "policy.yaml#/filesystem_policy/read_only//bin"
     },
     {
@@ -160,6 +167,13 @@
       "phase": "startup",
       "source": "profile:python-agent-v1@1.0.0",
       "target": "policy.yaml#/filesystem_policy/read_only//usr"
+    },
+    {
+      "class": "baseline",
+      "note": "read-only system path needed to start a process",
+      "phase": "startup",
+      "source": "profile:python-agent-v1@1.0.0",
+      "target": "policy.yaml#/filesystem_policy/read_only//var/log"
     },
     {
       "class": "baseline",
