@@ -311,3 +311,25 @@ runners have Nix. `package.yml` now patches the Linux interpreter and RUNPATH,
 rewrites the macOS libiconv path to `/usr/lib/libiconv.2.dylib` and re-signs,
 refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
 `ubuntu:22.04` and `debian:12` containers (run 40270037897: both pass).
+
+## Independent review
+
+### Pass 1 (2026-10-26)
+
+- Reviewer: `codex exec -s read-only` (codex-cli 0.163.0), model `gpt-6.1-sol`
+  (OpenAI; the builder is Claude Opus 5.5), session 01a176c5-403d-7462-bfd5-1edc26929d9c,
+  exit 0. Frozen SHA c78e7d5f, read-only worktree. Packet: spec excerpt, full
+  diff from 4e67dfca, this record, baseline, live log, MXC summary, test map, skills.
+  Output: `~/projects/_wt/containers/review/review-findings-c78e7d5.md`.
+- Counts: critical 0, high 10, medium 14, low 1.
+- Resolutions (fix commits listed as they land):
+  - F01 confirmed (pre-existing backend, wrong attribution in this record): matrices corrected.
+  - F07 confirmed as a claim error: Windows Local lifecycle is cooperative only; matrix corrected.
+  - F10 confirmed (pre-existing, documented TCP-only): matrix marks Linux Jail TCP-only, UDP/DNS GAP.
+  - F18 confirmed: cells limited to tests that attempt the scenario.
+  - F19 confirmed: package.yml uses inputs directly; publish verifies built commit = tag.
+  - F20 confirmed (pre-existing in the tarball): helpers shipped and install-checked.
+  - F22, F23, F24 confirmed: skills corrected.
+  - F25 confirmed: unsafe inventory corrected.
+  - F02, F03, F06, F08, F16, F17, F21: branch `fix/review1-sandbox`.
+  - F04, F05, F09, F11, F12, F13, F14, F15: branch `fix/review1-windows`.
