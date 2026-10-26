@@ -373,5 +373,21 @@ refuses any remaining `/nix/store` reference, and installs the `.deb` in clean
   - F08 confirmed, OPEN: `setsid` descendants escape group kill on Local and both Jails; needs a supervisor
     these backends do not have. Matrix and capability rows state it.
   - F25 confirmed: CURRENT_STATUS revision corrected (see final status revision).
-  - F04, F05, F30: branch `fix/review2-windows`.
-  - F27, F28, F29, F15, F16, F17: branch `fix/review2-sandbox`.
+  - F04 confirmed, fixed (both OSes): writes go to a fresh `O_EXCL|O_NOFOLLOW` / `CREATE_NEW` temp sibling,
+    fsync, then rename over the destination (Unix `renameat` via a directory fd; Windows
+    `FileRenameInfo` with ReplaceIfExists). An existing hard link keeps the old inode. Portability 40308234437.
+  - F05 confirmed, fixed: Windows `PinnedDir` walks from the canonical root with reparse traversal refused and
+    no `FILE_SHARE_DELETE`, creates missing components only under a pinned parent, and checks containment
+    before creating anything. Unix parent-path race remains as documented.
+  - F30 confirmed, fixed: on Windows a reload that changes the admitted SID set is refused with
+    `identity_reload_requires_restart`; the old snapshot stays active (documented in configuration-spec.md).
+  - F27 confirmed, fixed: `destroy` counts a sandbox gone only on `sandbox get` NotFound ("sandbox not
+    found"); anything else is `openshell_cleanup_failed`. Live 40306124770.
+  - F28 confirmed, fixed: Isolated creates stdout/stderr through the no-follow helper (unit test; Isolated
+    needs setuid subuid mappers absent in CI).
+  - F29 confirmed, fixed by refusal: native workloads are refused with `openshell_native_identity_unbound`.
+  - F15 fixed for Linux: `SEA_FORGE_REQUIRE_LANDLOCK_NET=1` in ci.yml `test (ubuntu)`, which passed, so the
+    Landlock network probe runs there; Windows link privilege required in Portability.
+  - F16 confirmed, fixed: the host reads A's token via `sandbox exec` before B starts and after B ends;
+    ordering asserted. Live 9/9 run 40306124770.
+  - F17: test renamed `live_network_egress_is_not_observed`; scenario 4 on OpenShell vm stays BLK.
