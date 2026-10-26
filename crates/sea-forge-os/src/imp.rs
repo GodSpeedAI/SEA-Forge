@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
     FileRenameInformationEx, NtCreateFile, NtSetInformationFile, FILE_CREATE, FILE_DIRECTORY_FILE,
-    FILE_NON_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_IF,
+    FILE_NON_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
 };
 use windows_sys::Win32::Foundation::{
     LocalFree, RtlNtStatusToDosError, ERROR_ALREADY_EXISTS, ERROR_FILE_EXISTS,
@@ -790,14 +790,19 @@ impl PinnedDir {
         self.revalidate()?;
         // `FILE_DIRECTORY_FILE` is required on the create branch (otherwise a
         // missing name would be created as a file) and omitted on the open
-        // branch so an existing plain file is reported as `NotDirectory`.
-        // `FILE_FLAG_OPEN_REPARSE_POINT` (the value of the NT create option
-        // `FILE_OPEN_REPARSE_POINT`) opens a junction as itself so the tag
-        // check below refuses it instead of traversing it.
+        // branch so an existing plain file is reported as `NotDirectory` by
+        // the tag check below instead of at the open. The open branch does
+        // carry `FILE_OPEN_FOR_BACKUP_INTENT` (the NT create option behind
+        // `FILE_FLAG_BACKUP_SEMANTICS`): without it or `FILE_DIRECTORY_FILE`
+        // `NtCreateFile` refuses an existing directory with
+        // `STATUS_FILE_IS_A_DIRECTORY`, making every existing child dir
+        // unopenable. `FILE_FLAG_OPEN_REPARSE_POINT` (equal to the NT create
+        // option `FILE_OPEN_REPARSE_POINT`) opens a junction as itself so
+        // the tag check refuses it instead of traversing it.
         let options = if create {
             FILE_DIRECTORY_FILE | FILE_FLAG_OPEN_REPARSE_POINT
         } else {
-            FILE_FLAG_OPEN_REPARSE_POINT
+            FILE_OPEN_FOR_BACKUP_INTENT | FILE_FLAG_OPEN_REPARSE_POINT
         };
         let handle = open_anchored(
             self.handle.as_raw_handle() as HANDLE,
@@ -833,13 +838,18 @@ impl PinnedDir {
     /// is opened anchored to this pinned handle.
     pub fn entry_state(&self, name: &OsStr) -> Result<EntryState, PinError> {
         self.revalidate()?;
+        // `FILE_OPEN_FOR_BACKUP_INTENT` is what lets `NtCreateFile` open a
+        // directory entry (the NT form of `FILE_FLAG_BACKUP_SEMANTICS`, which
+        // every pre-anchored open here relied on); a plain file opens the
+        // same as without it, and `FILE_FLAG_OPEN_REPARSE_POINT` opens a
+        // reparse point as itself so it is reported, not traversed.
         let handle = match open_anchored(
             self.handle.as_raw_handle() as HANDLE,
             name,
             FILE_READ_ATTRIBUTES,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             FILE_OPEN,
-            FILE_FLAG_OPEN_REPARSE_POINT,
+            FILE_OPEN_FOR_BACKUP_INTENT | FILE_FLAG_OPEN_REPARSE_POINT,
         ) {
             Ok(handle) => handle,
             Err(error) if is_not_found(&error) => return Ok(EntryState::Missing),
@@ -1012,7 +1022,18 @@ fn rename_handle_into(file: HANDLE, root_dir: HANDLE, name: &OsStr) -> io::Resul
         )
     };
     if status < 0 {
-        return Err(nt_error(status));
+        // The mapped Win32 code loses NT-only failures of this class (the
+        // RootDirectory-relative form has a recorded history of refusing on
+        // some runners), so the raw status stays in the message.
+        let mapped = nt_error(status);
+        return Err(io::Error::new(
+            mapped.kind(),
+            format!(
+                "NtSetInformationFile(FileRenameInformationEx) rename failed: \
+                 {mapped} (NTSTATUS {:#010x})",
+                status as u32
+            ),
+        ));
     }
     Ok(())
 }
@@ -1576,7 +1597,16 @@ mod tests {
         };
         match swapped.revalidate() {
             Err(PinError::IdentityChanged(path)) => {
-                assert_eq!(path, a_path, "the error names the validated path");
+                // The reported path is the pinned handle's resolved final
+                // path: it carries the `\\?\` device prefix and long-form
+                // components, so it names `a_path` up to the device prefix,
+                // case, separators and 8.3 expansion of `temp_dir` — never a
+                // different directory.
+                let expected = long_path(&a_path).unwrap_or(a_path.clone());
+                assert!(
+                    same_path(&strip_device_prefix(&path), &expected.to_string_lossy()),
+                    "the error names the validated path: {path:?} vs {a_path:?}"
+                );
             }
             other => panic!("expected IdentityChanged, got {other:?}"),
         }
@@ -1857,9 +1887,15 @@ mod tests {
             .stderr(Stdio::null());
         let (mut child, job) = spawn_in_job(&mut command).expect("child in job");
         let mut list = ProcThreadAttributeList::new(1).expect("attribute list");
+        // `UpdateProcThreadAttribute` copies `cbSize` bytes FROM `lpValue`:
+        // `PROC_THREAD_ATTRIBUTE_PARENT_PROCESS` takes a pointer to the
+        // handle value, so the handle must go through a local and only the
+        // local's address is passed. Passing the handle itself as the pointer
+        // dereferences a low, unmapped address (STATUS_ACCESS_VIOLATION).
+        let parent_handle: HANDLE = child.as_raw_handle() as HANDLE;
         list.set(
             PROC_THREAD_ATTRIBUTE_PARENT_PROCESS as usize,
-            child.as_raw_handle().cast(),
+            (&parent_handle as *const HANDLE).cast(),
         )
         .expect("set the parent-process attribute");
         match create_process_raw("cmd.exe /c exit 0", CREATE_BREAKAWAY_FROM_JOB, Some(&list)) {

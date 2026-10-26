@@ -52,7 +52,7 @@ jobs:
 
       - name: Control-plane unit tests (OS identity, pipes, jobs)
         shell: bash
-        run: cargo test --locked -p sea-forge-os -p sea-forge-core -p sea-forge-changeset -p sea-forge-server --lib
+        run: cargo test --locked -p sea-forge-os -p sea-forge-core -p sea-forge-changeset -p sea-forge-server --lib -- --nocapture
 
       - name: Release binaries
         shell: bash

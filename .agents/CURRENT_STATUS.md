@@ -1,28 +1,24 @@
 # Current status
 
-**Status revision:** 185
+**Status revision:** 186
 
-**Stage:** capability-harvest: CI round 1 triaged — F17 fixture rule reshaped to the provable vocabulary; windows pin failures under fix
+**Stage:** capability-harvest: windows FFI round-1 failure fixed (UpdateProcThreadAttribute pointer fault, backup-intent opens); cgroup Active-path and macOS census fixes in progress
 
-**Summary:** CI round 1: kernel-security green; portability windows job failed (two pin tests + an access violation in the new anchored FFI — fix subagent working); openshell-live failed because the prover refuses tcp-protocol endpoint rules. Local prober evidence (openshell-prover 0.1.3 AND 0.1.5): tcp rules are unsupported in candidate and boundary policies; IP-literal+rest parses and self-checks within_boundary. DomainForge model vocabulary has no L4-connect operation (only read/write map to access presets), so the F17 control endpoint now projects as a rest (http/read) rule on 10.0.2.2:46244 — the KVM lane will reveal whether enforcement permits a raw connect under a rest grant, which is precisely what the positive control exists to discover.
+**Summary:** Windows lane forensics: the STATUS_ACCESS_VIOLATION was PROC_THREAD_ATTRIBUTE_PARENT_PROCESS being handed the handle VALUE where Windows requires a pointer TO the handle (deterministic kernel32 read fault); fixed, plus FILE_OPEN_FOR_BACKUP_INTENT added to the anchored directory opens (existing child dirs would have failed STATUS_FILE_IS_A_DIRECTORY) and the revalidation test made robust to the \\?\ device prefix. The hard-link test failure is instrumented to print the exact failing call and raw NTSTATUS on the next lane run. The coordinator's inline triage established the cgroup cleanup uses plain rmdir on an empty leaf and the userns mount repro is impossible on this host, so the cgroup/macOS triage continues via a subagent with CI-log mining.
 
 **Verified:**
 
-- Prober probe: v0.1.3 and v0.1.5 both return 'unsupported' for tcp rules (candidate and boundary); ip+rest and host+rest parse; clean==clean control within_boundary
-- Regenerated fixture passes openshell-prover 0.1.3 self-check: within_boundary, full coverage domains
-- Fixture-consuming suites green after the regen: cell_episode 24, opa_candidate 29, openshell_stub 35
-- domainforge CLI installed at exactly 0.21.2 for regeneration (0.19.0 was stale in ~/.cargo)
+- cargo check --target x86_64-pc-windows-msvc -p sea-forge-os --all-targets and clippy -D warnings green on the fix
+- sandbox windows-target check green (blast radius limited to sea-forge-os + safe_write_windows.rs)
 
 **Limits:**
 
-- Whether OpenShell enforcement permits a raw TCP connect under a rest grant is unknown until the KVM lane runs
-- Windows pin failures and the access violation await the fix subagent and a lane re-run
-- CI (ubuntu test, macOS) and casework lanes were still running at triage time
+- The hard-link replace failure is not yet reproduced; its instrumented failure output arrives with the next lane run
+- cgroup EACCES root cause and the macOS TimedOut remain under triage
 
-**Next move:** Land the windows FFI fix, push both fixes, re-dispatch openshell-live, then footprint completion and the codex review.
+**Next move:** Land the cgroup/macOS triage fixes, commit both slices, push, re-dispatch openshell-live, collect round 2.
 
 **Evidence:**
 
-- /tmp/prover-probe (probe outputs)
 - .tmp/harvest/
-- .agents/OBSERVED_DEBT.md
+- gh run 40369591283 / 40369591334 logs
