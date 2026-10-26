@@ -238,23 +238,23 @@ Decision: implement SandboxClass::Jail on macOS via App Sandbox (Denied network 
 |---|---|---|---|---|---|---|---|
 | 1 | authorized workspace r/w | L | L | L (`live_authorized_episode_runs_in_a_microvm`) | L | L (exit/stdout) | — |
 | 2 | unauthorized FS write blocked | L | L | L (`live_host_filesystem_is_not_visible`) | L | — (not contained) | — |
-| 3 | symlink/reparse/junction escape | L | GAP | GAP | L | — | L (`changeset_windows.rs`) |
+| 3 | symlink/reparse/junction escape | L | GAP | L (`live_workspace_symlink_cannot_reach_host_files`: link dangles in the VM) | L | — | L (`changeset_windows.rs`) |
 | 4 | unauthorized network blocked | L | L | L (`live_network_egress_is_denied`) | L | — (not contained) | — |
 | 5 | authorized network restricted | L(?) | L | GAP (no live allowed-endpoint test) | — (AllowTcpPorts refused) | — | — |
 | 6 | modified executable rejected | GAP | GAP | S (native hash pin) | GAP | GAP | — |
 | 7 | provider credentials inaccessible | GAP | GAP | S (host env not forwarded) | L (`$HOME` secret read denied) | L (env cleared) | — |
 | 8 | exfiltration to unauthorized endpoint | via 4 | via 4 | via 4 | via 4 | — | — |
-| 9 | projection / lock tampering | — | — | S (tampered policy, mapping) | — | — | — |
+| 9 | projection / lock tampering | — | — | L (`live_tampered_projection_is_refused_before_create`: `openshell_projection_tampered`, no sandbox) + S | — | — | — |
 | 10 | frozen-run authority widening | GAP (sandbox side) | GAP | GAP | GAP | GAP | — |
 | 11 | process-tree cancellation | L | GAP | L (`live_timeout_cancels_the_command`) | L | L (tree + WMI) | — |
 | 12 | no host fallback on failure | L | L | S | L (`jail_unavailable`) | — | L (second server, squatting) |
-| 13 | concurrent sandboxes isolated | L | GAP | GAP | GAP | GAP | L (second-user DACL denial) |
+| 13 | concurrent sandboxes isolated | L | GAP | L (`live_concurrent_sandboxes_are_isolated`; search partial, timing-based overlap) | GAP | GAP | L (second-user DACL denial) |
 | 14 | restart leaves no orphans | L (partial) | GAP | L (cleanup) + S (destroy idempotent); gateway restart GAP | GAP | L (kill-on-close) | — |
 | 15 | evidence attributable | — | — | L (execution.json, effective-policy.yaml, denials.log) | — | — | — |
 | 16 | transfer cannot escape paths | L | L | L (flat upload / download into run dir) | — | — | L |
 
 Per applicable backend, the stretch bar of 12 exercised scenarios is met by
-Linux Local only. Linux OpenShell vm has 9 live, 3 stub, 4 GAP; macOS Jail 9;
+Linux Local only. Linux OpenShell vm has 12 live (run 40275738307, 9/9 tests), 2 stub-only, 2 GAP (5, 10); macOS Jail 9;
 Windows Local covers lifecycle and environment only, because it claims no
 filesystem or network containment.
 
