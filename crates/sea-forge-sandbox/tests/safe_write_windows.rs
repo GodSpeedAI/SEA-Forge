@@ -8,9 +8,15 @@ use std::process::Command;
 
 use sea_forge_sandbox::{safe_join, safe_write, safe_write_within};
 
+/// Process-wide tally of scenarios that could not run because a junction could
+/// not be created. A required lane (the REQUIRE variable set) must not skip;
+/// elsewhere the `BLOCKED:` label keeps the skip honest (F15).
+static BLOCKED_SCENARIOS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// Creates a junction `link` to `target` with `mklink /J`, which needs no
-/// elevation. Returns false only if the junction could not be made, and then
-/// fails the test when SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1.
+/// elevation. Returns false only if the junction could not be made; the
+/// scenario is then tallied and labeled `BLOCKED:`, and fails the test when
+/// SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1.
 fn make_junction(link: &Path, target: &Path) -> bool {
     let output = Command::new("cmd")
         .args(["/C", "mklink", "/J"])
@@ -22,10 +28,11 @@ fn make_junction(link: &Path, target: &Path) -> bool {
         return true;
     }
     let reason = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    BLOCKED_SCENARIOS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     if std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1") {
         panic!("BLOCKED prerequisite, not a pass: mklink /J failed: {reason}");
     }
-    println!("SKIPPED: mklink /J failed: {reason}");
+    eprintln!("BLOCKED: mklink /J failed: {reason}");
     false
 }
 
@@ -133,4 +140,72 @@ fn ordinary_rewrite_inside_the_workspace_still_replaces_contents() {
     safe_write_within(root, &path, b"first version, longer").expect("first write");
     safe_write_within(root, &path, b"second").expect("second write");
     assert_eq!(std::fs::read(&path).expect("read"), b"second");
+}
+
+/// Required-lane guard (F15): blocked scenarios must not survive a lane that
+/// requires the junction-creation prerequisite.
+#[test]
+fn no_blocked_scenarios_in_required_mode() {
+    let blocked_count = BLOCKED_SCENARIOS.load(std::sync::atomic::Ordering::SeqCst);
+    assert!(
+        !(blocked_count > 0
+            && std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1")),
+        "required lane (SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1) finished with \
+         {blocked_count} BLOCKED scenario(s); required lanes cannot skip"
+    );
+}
+
+/// While the workspace root is pinned (`PinnedDir::open` now takes an
+/// exclusive FILE_SHARE_READ-only pin), every write-class open of the pinned
+/// directory fails with a sharing violation. That is the same gate an
+/// FSCTL_SET_REPARSE_POINT junction planting would have to pass: the second
+/// handle cannot even be opened, so no reparse point can be set on the pinned
+/// directory mid-operation. The outside target must stay empty, and a
+/// contained write after the pin is released must land inside the workspace.
+#[test]
+fn junction_planting_in_a_pinned_directory_is_refused_and_the_target_stays_empty() {
+    let outside = tempfile::tempdir().expect("outside");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let root = workspace.path();
+
+    let pin = sea_forge_os::PinnedDir::open(root).expect("pin the workspace root");
+
+    // A direct entry creation inside the pinned directory (the kernel opens
+    // the parent for FILE_ADD_SUBDIRECTORY, a write-class access).
+    let planted = root.join("planted");
+    assert!(
+        std::fs::create_dir(&planted).is_err(),
+        "a directory was created inside the exclusively pinned directory"
+    );
+    // The junction flavor: `mklink /J` creates a reparse-point entry in the
+    // pinned directory. The refusal here is the asserted enforcement, not a
+    // blocked prerequisite, so the make_junction BLOCKED/REQUIRE tally does
+    // not apply; a junction that did get created fails the empty-outside
+    // check below.
+    let attempt = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(root.join("link"))
+        .arg(outside.path())
+        .output()
+        .expect("run cmd");
+    assert!(
+        !attempt.status.success(),
+        "a junction was planted inside the exclusively pinned directory"
+    );
+    assert_eq!(
+        std::fs::read_dir(outside.path())
+            .expect("read outside")
+            .count(),
+        0,
+        "the outside junction target received an entry from the refused planting"
+    );
+
+    drop(pin);
+    let path = safe_join(root, "file.txt").expect("join");
+    safe_write_within(root, &path, b"contained").expect("contained write after release");
+    assert_eq!(
+        std::fs::read(&path).expect("read"),
+        b"contained",
+        "the contained write did not land inside the workspace"
+    );
 }

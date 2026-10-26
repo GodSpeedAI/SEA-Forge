@@ -1,32 +1,30 @@
 # Current status
 
-**Status revision:** 181
+**Status revision:** 182
 
-**Stage:** Cross-platform native execution: integration ready for merge after review pass 3
+**Stage:** capability-harvest: F15/F17/F32/F33 and Windows F05+F08 code-complete on feat/hardening-capability-harvest; macOS F08 wave and lifecycle wiring in flight
 
-**Summary:** Linux OpenShell vm live proof 9/9 (KVM, Docker stopped); Windows Local job and named-pipe control plane; Linux/macOS Jail; native installers (.deb, .exe, .pkg, .dmg). Three independent review passes done; pass-3 F27, F31, F18, F24 fixed and F32 mitigated; F05, F08, F15, F17, F33 open.
+**Summary:** Harvest wave from Cageforge/Heel/ProcessKit recon (.tmp/harvest/): F15 prerequisite skips now BLOCKED-tally and hard-fail required lanes, ci.yml gains the cgroup-v2 delegation preflight; F33 resolved by moving the async pipe adapter to the server edge (tokio leaves the Windows kernel graph; no-async-kernel gained a unified-graph windows-target pass); F05 PinnedDir opens FILE_SHARE_READ-only with per-use reparse-tag and FILE_ID_INFO revalidation and anchored NtCreateFile/rename child ops; F08-Windows gains IsProcessInJob read-back and breakaway/grandchild containment tests; F32 safe writes stage in a 0700 host-owned sibling staging dir and publish by dirfd rename (destination-visible temp eliminated); F08-Linux adds cgroup-v2 leaf-per-spawn containment (pre-exec join, cgroup.kill, pidfd-pinned fallback) with typed degrade; F17 live ladder gains an allowed-control and a denial-proven test against one host-observed arrival listener; domainforge-core bumped =0.21.1 to =0.21.2 (fixture regenerates byte-identical).
 
 **Verified:**
 
-- Live run 40310712495 on d28e00dc: cell_episode_live 9 passed
-- Package run 40278790759 green on 3 OSes; clean ubuntu:22.04 and debian:12 .deb installs
-- Portability 40308234437 green (Windows, macOS jail)
-- sea-forge-sandbox, sea-forge-evidence, sea-forge-runtime tests pass locally after pass-3 fixes
+- cargo test -p sea-forge-sandbox: 26 lib + conformance_m1 19 + staging 2 + setsid suite green locally (Unavailable/BLOCKED paths; Active path deferred to the CI delegation lane)
+- cargo test -p sea-forge-case-runner: openshell_stub 35, cell_episode 24, opa_candidate 29, cep suites green after the 0.21.2 bump
+- just no-async-kernel: green on host and x86_64-pc-windows-msvc unified graphs
+- cargo check --target x86_64-pc-windows-msvc and aarch64-apple-darwin green for sea-forge-os and sea-forge-sandbox
+- F08 red evidence: deterministic setsid-descendant survival under group kill pinned in setsid_lifecycle.rs
 
 **Limits:**
 
-- F08: setsid descendants escape Local/Jail group kill; not for adversarial lifecycle containment
-- F05: Windows pinned directory reparse mutation after validation
-- F17: OpenShell network denial not distinguished from an unreachable target (scenario 4 BLK)
-- F33: tokio unifies into sea-forge-os on Windows server builds
-- F15: prerequisite skips count as libtest passes outside required CI lanes
-- macOS OpenShell vm, WSLc and SEA-Forge on MXC are Blocked
-- No backend meets the 12-scenario bar
+- F08 cgroup Active-path unproven until the ci.yml delegation lane runs (no sudo locally)
+- F17 denial proof unproven until the openshell-live KVM dispatch runs (10.0.2.2 host alias unverified)
+- F05 anchored-rename spike and NTFS/job tests need the portability windows lane
+- macOS F08 cage-persists wave and the ExecutionResult lifecycle-capability wiring are not yet landed
+- Local remains trusted-host execution on every OS
 
-**Next move:** Merge PR #67 once required checks are green; release via release-please; decide F33 crate split and F08 supervisor.
+**Next move:** Land the macOS wave and the lifecycle-capability wiring, commit the F08 jail/local lifecycle slice, push the branch, run ci.yml + portability.yml + the openshell-live dispatch, then the independent codex review.
 
 **Evidence:**
 
-- `.agents/plans/2026-10-25-cross-platform-native-execution.md`
-- `~/projects/_wt/containers/review/pass3/pass3-findings.md`
-- `~/projects/_wt/containers/evidence/oslive-linux-40310712495`
+- .tmp/harvest/
+- .agents/OBSERVED_DEBT.md
