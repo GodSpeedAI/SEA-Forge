@@ -5,7 +5,7 @@ use crate::{
 use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult};
 // Only the Linux jail classifies an execution outcome here; the macOS module imports its own.
 #[cfg(target_os = "linux")]
-use sea_forge_core::types::ExecutionStatus;
+use sea_forge_core::types::{ExecutionStatus, LifecycleContainment};
 
 /// Landlock ABI that first introduced network (TCP bind/connect) restriction.
 ///
@@ -532,6 +532,10 @@ fn run_jailed(
                 ExecutionStatus::SpawnFailed,
                 None,
                 started_at,
+                // Nothing exec'd: there is no process tree whose lifecycle
+                // could have been contained (the leaf, if any, was removed
+                // above).
+                LifecycleContainment::NoProcess,
             ));
         }
     };
@@ -540,19 +544,45 @@ fn run_jailed(
         .wait_timeout(Duration::from_secs(timeout_secs))
         .map_err(map_err)?;
 
-    let (state, code) = if let Some(status) = status {
+    // C1: the containment claim matches the mechanism that actually held. A
+    // cgroup-leaf teardown that failed already returned Err above, so a
+    // result produced while a lease existed always carried a verified kill.
+    let (state, code, containment) = if let Some(status) = status {
         // F08: leftover descendants must not outlive the run. Teardown
         // failures propagate (previously the result was discarded here), so
         // a survivor can never read as Completed.
+        let containment = if lease.is_some() {
+            LifecycleContainment::CgroupLeaf {
+                kill_verified: true,
+            }
+        } else {
+            LifecycleContainment::ProcessGroup
+        };
         crate::local::teardown_run(&child, lease)?;
-        (ExecutionStatus::Completed, status.code().map(i64::from))
+        (
+            ExecutionStatus::Completed,
+            status.code().map(i64::from),
+            containment,
+        )
     } else {
+        let containment = if lease.is_some() {
+            LifecycleContainment::CgroupLeaf {
+                kill_verified: true,
+            }
+        } else {
+            LifecycleContainment::ProcessGroup
+        };
         crate::local::teardown_run(&child, lease)?;
         child.wait().map_err(map_err)?;
-        (ExecutionStatus::TimedOut, None)
+        (ExecutionStatus::TimedOut, None, containment)
     };
 
-    Ok(crate::local::execution_result(state, code, started_at))
+    Ok(crate::local::execution_result(
+        state,
+        code,
+        started_at,
+        containment,
+    ))
 }
 
 /// macOS App Sandbox backend.
@@ -587,7 +617,9 @@ fn run_jailed(
 #[cfg(target_os = "macos")]
 mod macos {
     use crate::{local::kill_timed_out_group, NetworkPosture, SandboxError, SandboxHandle};
-    use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
+    use sea_forge_core::types::{
+        ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment, Operation,
+    };
     use std::{
         collections::{HashMap, HashSet},
         fs,
@@ -647,7 +679,7 @@ mod macos {
     const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
     /// Crate-private F08 teardown classification for the macOS backend.
-    /// W3b lifts this into `ExecutionResult.lifecycle_containment`:
+    /// Lifted into `ExecutionResult.lifecycle_containment`:
     /// [`MacTeardown::FullyTerminated`] maps to
     /// `LifecycleContainment::ProcessGroup`, [`MacTeardown::CagePersists`]
     /// maps to `LifecycleContainment::SandboxCagePersists`.
@@ -1194,7 +1226,10 @@ mod macos {
                     ExecutionStatus::SpawnFailed,
                     None,
                     started_at,
-                ))
+                    // Nothing exec'd: there is no process tree whose
+                    // lifecycle could have been contained.
+                    LifecycleContainment::NoProcess,
+                ));
             }
         };
         // F08: register the run so `destroy` can sweep it if this execute
@@ -1274,7 +1309,20 @@ mod macos {
         unregister_run(group);
         report_teardown(&teardown);
 
-        let mut result = crate::local::execution_result(state, code, started_at);
+        // C1: the containment claim is the verified teardown classification.
+        // A fully-reached group kill claims ProcessGroup; census survivors
+        // are reported as the documented cage-persists residual, never as a
+        // full lifecycle containment.
+        let containment = match teardown {
+            MacTeardown::FullyTerminated => LifecycleContainment::ProcessGroup,
+            MacTeardown::CagePersists { survivor_pids } => {
+                LifecycleContainment::SandboxCagePersists {
+                    survivor_count: survivor_pids.len() as u32,
+                }
+            }
+        };
+
+        let mut result = crate::local::execution_result(state, code, started_at, containment);
         // Same suspicion heuristic as the Linux jail, extended to the errno text
         // the App Sandbox produces. Child-written stderr is only evidence.
         if result.status == ExecutionStatus::Completed && result.exit_code != Some(0) {

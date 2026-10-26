@@ -1208,7 +1208,7 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   REQUIRE_CGROUP=0, treat the lane as BLOCKED-tallied, not proven, until a
   delegated runner (or local sudo setup per the test module docs) exists.
 
-## Open: containment outcome not yet carried in ExecutionResult (W3b wiring point)
+## Resolved (2026-10-26, W3b): containment outcome carried in ExecutionResult
 
 - Observed: 2026-10-26 (W3 capability-harvest F08 Linux).
 - Scope: crates/sea-forge-sandbox/src/{local.rs,jail.rs} teardown paths,
@@ -1229,6 +1229,19 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   local.rs/jail.rs, and decides Err-vs-field for teardown failures; the
   capability map must fail closed (report ProcessGroup, never CgroupLeaf,
   when containment was unavailable).
+- Resolved: 2026-10-26 (W3b composite). `sea-forge-core/types.rs` gains the
+  public `LifecycleContainment` enum (serde externally-tagged snake_case:
+  `CgroupLeaf { kill_verified }`, `JobObject`, `ProcessGroup`, `PidNamespace`,
+  `ExternalSandbox`, `SandboxCagePersists { survivor_count }`, `NoProcess`)
+  and the required `ExecutionResult.lifecycle_containment` field; every
+  constructor sets it explicitly (local/jail/isolated/openshell via the
+  shared `local::execution_result` helper, cli plan_pipeline write-only
+  item, test fixtures). Teardown failures remain `Err` (the field only ever
+  carries verified claims: a lease run that returns Ok always reports
+  `kill_verified: true`). Wire shape pinned by
+  `lifecycle_containment_uses_tagged_snake_case_json` (sea-forge-core);
+  Active-lane assertions (`CgroupLeaf`/`JobObject`/`SandboxCagePersists`)
+  are compile-gated and deferred to the cgroup/windows/macOS CI lanes.
 
 ## Pending: sea-forge-sandbox/src/lib.rs `pin_error` needs three match arms for the new PinError variants (W6 F05)
 
@@ -1325,3 +1338,9 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   W3b lifts `macos::MacTeardown` into the public
   `LifecycleContainment::{ProcessGroup, SandboxCagePersists}` mapping
   documented on the enum.
+- W3b update (2026-10-26): the mapping half is landed — `macos::execute`
+  sets `LifecycleContainment::ProcessGroup` on `FullyTerminated` and
+  `SandboxCagePersists { survivor_count }` on `CagePersists`
+  (crates/sea-forge-sandbox/src/jail.rs); the macOS-lane runtime proof of
+  this entry (and the new `lifecycle_containment` assertions in
+  macos_app_sandbox_jail.rs) remains open until that lane runs.

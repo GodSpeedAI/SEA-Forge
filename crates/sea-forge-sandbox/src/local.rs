@@ -1,5 +1,7 @@
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
-use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::types::{
+    ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment,
+};
 use std::{
     fs,
     process::{Command, Stdio},
@@ -10,11 +12,14 @@ use wait_timeout::ChildExt;
 pub struct LocalSandbox;
 
 /// The execution record for a run that reached the workload or failed to
-/// start, pointing at the standard artifact files.
+/// start, pointing at the standard artifact files. `lifecycle_containment`
+/// is the caller's F08 claim, set explicitly by every backend — a result
+/// never silently defaults its containment story.
 pub(crate) fn execution_result(
     status: ExecutionStatus,
     exit_code: Option<i64>,
     started_at: String,
+    lifecycle_containment: LifecycleContainment,
 ) -> ExecutionResult {
     ExecutionResult {
         status,
@@ -23,6 +28,7 @@ pub(crate) fn execution_result(
         stderr_path: "artifacts/stderr.txt".into(),
         started_at,
         finished_at: chrono::Utc::now().to_rfc3339(),
+        lifecycle_containment,
     }
 }
 
@@ -184,8 +190,16 @@ impl ExecutionSandbox for LocalSandbox {
         for (k, v) in &req.env {
             command.env(k, v);
         }
-        let spawn_failed =
-            || execution_result(ExecutionStatus::SpawnFailed, None, started_at.clone());
+        let spawn_failed = || {
+            execution_result(
+                ExecutionStatus::SpawnFailed,
+                None,
+                started_at.clone(),
+                // Nothing exec'd: there is no process tree whose lifecycle
+                // could have been contained.
+                LifecycleContainment::NoProcess,
+            )
+        };
         // Windows: the child starts suspended and is in its kill-on-close job
         // before it runs, so no grandchild can escape the timeout kill.
         // Any failure here (job creation, spawn, assignment) means nothing
@@ -218,28 +232,60 @@ impl ExecutionSandbox for LocalSandbox {
         let status = child
             .wait_timeout(Duration::from_secs(req.timeout_secs))
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-        let (state, code) = if let Some(status) = status {
+        // C1: the containment claim matches the mechanism that actually held.
+        // A cgroup-leaf teardown that failed already returned Err above, so a
+        // result produced while a lease existed always carried a verified
+        // kill (`kill_verified: true` — never claimed without verification).
+        let (state, code, containment) = if let Some(status) = status {
             // F08: leftover descendants must not outlive the run. Teardown
             // failures propagate (previously the completion-path result was
             // discarded here), so a survivor can never read as Completed.
             #[cfg(target_os = "linux")]
-            teardown_run(&child, lease)?;
-            #[cfg(all(unix, not(target_os = "linux")))]
-            teardown_run(&child)?;
-            (ExecutionStatus::Completed, status.code().map(i64::from))
-        } else {
+            let containment = if lease.is_some() {
+                LifecycleContainment::CgroupLeaf {
+                    kill_verified: true,
+                }
+            } else {
+                LifecycleContainment::ProcessGroup
+            };
             #[cfg(target_os = "linux")]
             teardown_run(&child, lease)?;
             #[cfg(all(unix, not(target_os = "linux")))]
+            let containment = LifecycleContainment::ProcessGroup;
+            #[cfg(all(unix, not(target_os = "linux")))]
             teardown_run(&child)?;
+            #[cfg(windows)]
+            let containment = LifecycleContainment::JobObject;
+            (
+                ExecutionStatus::Completed,
+                status.code().map(i64::from),
+                containment,
+            )
+        } else {
+            #[cfg(target_os = "linux")]
+            let containment = if lease.is_some() {
+                LifecycleContainment::CgroupLeaf {
+                    kill_verified: true,
+                }
+            } else {
+                LifecycleContainment::ProcessGroup
+            };
+            #[cfg(target_os = "linux")]
+            teardown_run(&child, lease)?;
+            #[cfg(all(unix, not(target_os = "linux")))]
+            let containment = LifecycleContainment::ProcessGroup;
+            #[cfg(all(unix, not(target_os = "linux")))]
+            teardown_run(&child)?;
+            #[cfg(windows)]
+            let containment = LifecycleContainment::JobObject;
             #[cfg(windows)]
             kill_timed_out_job(&job)?;
             child
                 .wait()
                 .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
-            (ExecutionStatus::TimedOut, None)
+            (ExecutionStatus::TimedOut, None, containment)
         };
-        Ok(execution_result(state, code, started_at))
+        Ok(execution_result(state, code, started_at, containment))
     }
 
     // F-25.k: this backend does not implement artifact collection. Returning

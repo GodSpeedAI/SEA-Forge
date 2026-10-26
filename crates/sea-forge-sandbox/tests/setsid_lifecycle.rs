@@ -16,7 +16,7 @@
 //! fails instead of skipping) — a blocked scenario can never count as a pass.
 #![cfg(target_os = "linux")]
 
-use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, Operation};
+use sea_forge_core::types::{ExecutionRequest, ExecutionStatus, LifecycleContainment, Operation};
 use sea_forge_sandbox::{
     cgroup, ExecutionSandbox, JailSandbox, LocalSandbox, NetworkPosture, SandboxSpec,
 };
@@ -316,6 +316,16 @@ fn assert_contained_completion(
         ExecutionStatus::Completed,
         "{what}: the run must complete; cleanup failures must be loud, not silently swallowed"
     );
+    // C1: the run lived in a cgroup leaf and the teardown's verified-empty
+    // kill completed (a failure would have returned Err instead), so the
+    // result must claim the leaf — never the weaker process group.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::CgroupLeaf {
+            kill_verified: true
+        },
+        "{what}: a contained run must claim the verified cgroup-leaf kill"
+    );
     let marker = workspace.join("detached.pid");
     assert!(
         wait_for_file(&marker, Duration::from_secs(2)),
@@ -396,6 +406,14 @@ fn setsid_descendant_does_not_outlive_timed_out_local_run() {
         .execute(&handle, &request(setsid_payload(&workspace, 3, 30), 1))
         .unwrap();
     assert_eq!(result.status, ExecutionStatus::TimedOut);
+    // C1: the leaf reached the setsid descendant on the timeout path too.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::CgroupLeaf {
+            kill_verified: true
+        },
+        "a contained timeout run must claim the verified cgroup-leaf kill"
+    );
     let marker = workspace.join("detached.pid");
     assert!(
         wait_for_file(&marker, Duration::from_secs(2)),
@@ -472,6 +490,14 @@ fn setsid_descendant_does_not_outlive_timed_out_jail_run() {
         .execute(&handle, &request(setsid_payload(&workspace, 3, 30), 1))
         .unwrap();
     assert_eq!(result.status, ExecutionStatus::TimedOut);
+    // C1: the leaf reached the setsid descendant on the timeout path too.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::CgroupLeaf {
+            kill_verified: true
+        },
+        "a contained timeout run must claim the verified cgroup-leaf kill"
+    );
     let marker = workspace.join("detached.pid");
     assert!(
         wait_for_file(&marker, Duration::from_secs(2)),
@@ -570,6 +596,14 @@ fn unavailable_containment_degrades_and_the_run_completes() {
         .execute(&handle, &request(vec!["/bin/echo".into(), "hi".into()], 5))
         .expect("a non-required run must proceed without containment");
     assert_eq!(result.status, ExecutionStatus::Completed);
+    // C1: the capability claim fails closed — an unavailable cgroup reports
+    // ProcessGroup, never CgroupLeaf (the typed degrade was surfaced on
+    // stderr separately).
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::ProcessGroup,
+        "an uncontained run must claim the process group, never the cgroup leaf"
+    );
     drop(forced);
     fs::remove_dir_all(parent).ok();
 }

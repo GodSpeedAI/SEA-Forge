@@ -1,28 +1,25 @@
 # Current status
 
-**Status revision:** 182
+**Status revision:** 184
 
-**Stage:** capability-harvest: F15/F17/F32/F33 and Windows F05+F08 code-complete on feat/hardening-capability-harvest; macOS F08 wave and lifecycle wiring in flight
+**Stage:** capability-harvest: all six findings implemented on feat/hardening-capability-harvest; lifecycle containment surfaced on ExecutionResult; ready for CI lanes and independent review
 
-**Summary:** Harvest wave from Cageforge/Heel/ProcessKit recon (.tmp/harvest/): F15 prerequisite skips now BLOCKED-tally and hard-fail required lanes, ci.yml gains the cgroup-v2 delegation preflight; F33 resolved by moving the async pipe adapter to the server edge (tokio leaves the Windows kernel graph; no-async-kernel gained a unified-graph windows-target pass); F05 PinnedDir opens FILE_SHARE_READ-only with per-use reparse-tag and FILE_ID_INFO revalidation and anchored NtCreateFile/rename child ops; F08-Windows gains IsProcessInJob read-back and breakaway/grandchild containment tests; F32 safe writes stage in a 0700 host-owned sibling staging dir and publish by dirfd rename (destination-visible temp eliminated); F08-Linux adds cgroup-v2 leaf-per-spawn containment (pre-exec join, cgroup.kill, pidfd-pinned fallback) with typed degrade; F17 live ladder gains an allowed-control and a denial-proven test against one host-observed arrival listener; domainforge-core bumped =0.21.1 to =0.21.2 (fixture regenerates byte-identical).
+**Summary:** F15 skip integrity + cgroup preflight; F05 exclusive pinned dirs with anchored ops and per-use revalidation; F08 cgroup-v2 containment (Linux), verified job membership (Windows), census+typed CagePersists (macOS); F32 staged-dir publishes; F33 edge pipe adapter with unified-graph gate; F17 host-observed arrival proof pair; domainforge-core 0.21.2; ExecutionResult.lifecycle_containment (CgroupLeaf/JobObject/ProcessGroup/PidNamespace/ExternalSandbox/SandboxCagePersists/NoProcess) populated truthfully per backend and flowing into evidence, traces, and settlement.
 
 **Verified:**
 
-- cargo test -p sea-forge-sandbox: 26 lib + conformance_m1 19 + staging 2 + setsid suite green locally (Unavailable/BLOCKED paths; Active path deferred to the CI delegation lane)
-- cargo test -p sea-forge-case-runner: openshell_stub 35, cell_episode 24, opa_candidate 29, cep suites green after the 0.21.2 bump
-- just no-async-kernel: green on host and x86_64-pc-windows-msvc unified graphs
-- cargo check --target x86_64-pc-windows-msvc and aarch64-apple-darwin green for sea-forge-os and sea-forge-sandbox
-- F08 red evidence: deterministic setsid-descendant survival under group kill pinned in setsid_lifecycle.rs
+- just check EXIT=0 on the full worktree before W3b; W3b gates green: sandbox/core/cli/settlement/runtime/case-runner/server clippy+tests, windows-msvc and apple-darwin checks, no-async-kernel, fmt
+- 8 commits landed through pre-commit (status coupling, fmt --all, gitleaks clean)
+- Unavailable->ProcessGroup containment assertion ran locally; Active/Windows/macOS assertions are placed for their CI lanes
 
 **Limits:**
 
-- F08 cgroup Active-path unproven until the ci.yml delegation lane runs (no sudo locally)
-- F17 denial proof unproven until the openshell-live KVM dispatch runs (10.0.2.2 host alias unverified)
-- F05 anchored-rename spike and NTFS/job tests need the portability windows lane
-- macOS F08 cage-persists wave and the ExecutionResult lifecycle-capability wiring are not yet landed
-- Local remains trusted-host execution on every OS
+- cgroup Active-path, windows JobObject, and macOS cage-persists assertions await their CI lanes
+- F17 denial proof awaits the openshell-live KVM dispatch
+- sea-forge-cli lifecycle post_start_internal_error_is_run_correlated_and_traced fails on pristine HEAD on this WSL2 host (stash-verified; likely host-specific; main CI is green)
+- F05 NTFS/junction and anchored-rename tests await the portability windows lane
 
-**Next move:** Land the macOS wave and the lifecycle-capability wiring, commit the F08 jail/local lifecycle slice, push the branch, run ci.yml + portability.yml + the openshell-live dispatch, then the independent codex review.
+**Next move:** Commit W3b, push feat/hardening-capability-harvest, open the PR for ci.yml+kernel-security lanes, dispatch openshell-live.yml, then footprint and the independent codex review.
 
 **Evidence:**
 

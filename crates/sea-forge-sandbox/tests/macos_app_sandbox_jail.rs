@@ -5,7 +5,9 @@
 //! not only the child's self-report. Runs only on macOS.
 #![cfg(target_os = "macos")]
 
-use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
+use sea_forge_core::types::{
+    ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment, Operation,
+};
 use sea_forge_sandbox::{ExecutionSandbox, JailSandbox, NetworkPosture, SandboxSpec};
 use std::{
     collections::BTreeMap,
@@ -234,6 +236,13 @@ fn background_child_does_not_outlive_completed_execution() {
     let fx = fixture();
     let result = run(&fx, "(sleep 3; echo late > late.txt) & exit 0");
     assert_eq!(result.status, ExecutionStatus::Completed);
+    // C1: no setsid escapee in the census, so the verified group kill claims
+    // ProcessGroup — the strongest mechanism this backend provides.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::ProcessGroup,
+        "a fully terminated macOS jail run must claim the verified group kill"
+    );
 
     thread::sleep(Duration::from_secs(5));
     assert!(
@@ -381,6 +390,18 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
         Some(0),
         "the workload itself must succeed; stderr: {}",
         fs::read_to_string(fx.artifacts.join("stderr.txt")).unwrap_or_default()
+    );
+    // C1: the result itself must carry the documented residual — the setsid
+    // survivor is claimed as SandboxCagePersists (at least the one recorded
+    // below), never as a full lifecycle containment.
+    assert!(
+        matches!(
+            result.lifecycle_containment,
+            LifecycleContainment::SandboxCagePersists { survivor_count } if survivor_count >= 1
+        ),
+        "the cage-persists run must claim SandboxCagePersists with at least one \
+         survivor, got {:?}",
+        result.lifecycle_containment
     );
 
     // INVARIANT 1 (documented limitation, asserted): the descendant survives

@@ -9,7 +9,9 @@
 //! cover process-tree lifetime and basic run/env behavior only.
 #![cfg(windows)]
 
-use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
+use sea_forge_core::types::{
+    ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment, Operation,
+};
 use sea_forge_sandbox::{ExecutionSandbox, LocalSandbox, NetworkPosture, SandboxSpec};
 use std::{
     collections::BTreeMap,
@@ -300,6 +302,14 @@ fn timeout_kills_whole_process_tree() {
     let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert_eq!(result.exit_code, None);
+    // C1: the run lived in the kill-on-close job — spawn_in_job verifies
+    // membership by IsProcessInJob read-back before the child runs, so any
+    // produced result claims JobObject, never a weaker mechanism.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::JobObject,
+        "a Windows Local result must claim the verified job object"
+    );
     assert!(
         spawned_pid(&spawned).is_some_and(|pid| pid > 0),
         "grandchild was never spawned before the timeout; the test would be vacuous\n{}",
@@ -383,6 +393,13 @@ fn normal_completion_propagates_exit_code_and_captures_stdout() {
     assert_eq!(result.status, ExecutionStatus::Completed);
     assert_eq!(result.exit_code, Some(7));
     assert_eq!(result.stdout_path, "artifacts/stdout.txt");
+    // C1: same claim on the completion path — membership was verified at
+    // spawn, and kill-on-close is the teardown.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::JobObject,
+        "a Windows Local completion must claim the verified job object"
+    );
     let stdout = fs::read_to_string(dirs.artifacts.join("stdout.txt")).expect("stdout.txt");
     assert!(
         stdout.contains("sf-win-stdout"),

@@ -12,7 +12,9 @@ use crate::workload::{
     WorkloadConfinement, WorkloadIdentityPool,
 };
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
-use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::types::{
+    ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment,
+};
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -100,20 +102,41 @@ impl ExecutionSandbox for IsolatedSandbox {
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
         let started_at = chrono::Utc::now().to_rfc3339();
+        // C1: the run's process tree is the PID namespace established by
+        // `unshare` before exec — membership is structural (inherited by
+        // every descendant) and kernel teardown is unconditional, so
+        // `PidNamespace` is the truthful claim; the parent performs no
+        // emptiness read-back, so no kill verification is asserted.
         let outcome = match command.spawn() {
-            Err(_) => Ok((ExecutionStatus::SpawnFailed, None)),
+            Err(_) => Ok((
+                ExecutionStatus::SpawnFailed,
+                None,
+                // Nothing exec'd: there is no process tree whose lifecycle
+                // could have been contained.
+                LifecycleContainment::NoProcess,
+            )),
             Ok(mut child) => match child
                 .wait_timeout(Duration::from_secs(req.timeout_secs))
                 .map_err(map_err)
             {
-                Ok(Some(status)) => Ok((ExecutionStatus::Completed, status.code().map(i64::from))),
+                Ok(Some(status)) => Ok((
+                    ExecutionStatus::Completed,
+                    status.code().map(i64::from),
+                    LifecycleContainment::PidNamespace,
+                )),
                 Ok(None) => {
                     // Killing `unshare` kills the pid namespace's init and
                     // with it every workload process.
                     let _ = child.kill();
                     child
                         .wait()
-                        .map(|_| (ExecutionStatus::TimedOut, None))
+                        .map(|_| {
+                            (
+                                ExecutionStatus::TimedOut,
+                                None,
+                                LifecycleContainment::PidNamespace,
+                            )
+                        })
                         .map_err(map_err)
                 }
                 Err(error) => {
@@ -130,7 +153,7 @@ impl ExecutionSandbox for IsolatedSandbox {
             revoke_exclusive_access(tree)?;
         }
         drop(identity);
-        let (mut status, exit_code) = outcome?;
+        let (mut status, exit_code, containment) = outcome?;
         // As for the jail: a nonzero exit plus a child-written denial is only
         // evidence of a confinement refusal, recorded as suspected.
         if status == ExecutionStatus::Completed && exit_code != Some(0) {
@@ -147,7 +170,10 @@ impl ExecutionSandbox for IsolatedSandbox {
             }
         }
         Ok(crate::local::execution_result(
-            status, exit_code, started_at,
+            status,
+            exit_code,
+            started_at,
+            containment,
         ))
     }
 
