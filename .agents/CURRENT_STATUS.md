@@ -1,28 +1,30 @@
 # Current status
 
-**Status revision:** 179
+**Status revision:** 180
 
-**Stage:** Cross-platform native execution: Windows control plane, OpenShell capability checks, macOS App Sandbox jail, native packages (integration)
+**Stage:** cross-platform native execution: review pass 2 fixes merged on feat/cross-platform-native (PR #67)
 
-**Summary:** feat/cross-platform-native integrates the Windows port (named pipes with kernel-backed SID identity, Job Objects, owner-only DACLs; all unsafe confined to the Windows-only sea-forge-os crate), OpenShell enforcement-capability and typed OCI/native workload identity checks driven by the locked projection's compute_driver, the jail class on macOS via App Sandbox, and .deb/.pkg/.dmg/.exe release packages.
+**Summary:** Windows control plane on named pipes with SID identity (Windows FFI unsafe in sea-forge-os; the two pre-existing Linux sandbox unsafe sites are unchanged), OpenShell driver verification from gateway info, projection snapshot bound to the approved identity, macOS Jail via App Sandbox, Linux microVM live proof (OpenShell 0.1.3 vm driver, 9/9), and .deb/.pkg/.dmg/.exe packages that run without Nix.
 
 **Verified:**
 
-- Portability windows lane: workspace check, sea-forge-os/core/changeset/server lib tests, release build, identity E2E 10/10 PASS (run 40260946741)
-- macOS App Sandbox jail escape tests 7/7 on macos-latest (run 40258556091)
-- package.yml linux/macos/windows install tests green (run 40257119484)
-- just no-async-kernel ok; only new lockfile package is sea-forge-os
+- PR #67 CI green on Linux, macOS, Windows incl. packaging
+- OpenShell live proof 9/9 (runs 40286201426, 40306124770)
+- upstream MXC e2e 4/4 on Windows 11 26300.9807
+- clean ubuntu:22.04 and debian:12 .deb install
 
 **Limits:**
 
-- Integration merge not yet CI-verified as a whole
-- WSLc blocked: no container-to-host route, no netns, no cap-drop flags
-- MXC native path needs a DomainForge mxc projection; OpenShell Windows build in progress
-- macOS MicroVM blocked on hosted runners (kern.hv_support=0)
-- Packages are unsigned
+- Local is trusted host execution on every OS
+- Linux Jail network rules are TCP-only
+- setsid descendants outlive Local/Jail runs (review F08 open)
+- macOS OpenShell vm blocked on hosted runners (no HVF)
+- SEA-Forge on MXC and WSLc blocked
+- no positive control for OpenShell egress denial
 
-**Next move:** Run the full CI on the integration PR, then the Linux live OpenShell proof with the regenerated projection, conformance matrix, independent review.
+**Next move:** independent review pass 3, then merge PR #67 and release
 
 **Evidence:**
 
 - `.agents/plans/2026-10-25-cross-platform-native-execution.md`
+- `~/projects/_wt/containers/review/`
