@@ -216,6 +216,9 @@ jobs:
       - name: Live proof
         env:
           STATE_DIR: ${{ runner.temp }}/openshell-state
+          # The script's NGC default (nvcr.io/nvidia/base/ubuntu:24.04) needs registry
+          # auth, which hosted runners do not have. A public bootstrap image is used.
+          IMAGE: docker.io/library/ubuntu:24.04
         run: |
           set +e
           devbox run -- bash scripts/openshell/live-proof.sh 2>&1 | tee evidence/live-proof.log
@@ -251,6 +254,8 @@ jobs:
             echo '```'
             grep -E '^(OK: |WARNING: |test |test result)' evidence/live-proof.log 2>/dev/null || true
             echo '```'
+            echo ""
+            echo "Bootstrap image: docker.io/library/ubuntu:24.04 (IMAGE override). The script default nvcr.io/nvidia/base/ubuntu:24.04 needs registry auth on hosted runners."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate on proof exit status
@@ -407,6 +412,9 @@ jobs:
       - name: Live proof (macOS probe)
         env:
           STATE_DIR: ${{ runner.temp }}/openshell-state
+          # The script's NGC default (nvcr.io/nvidia/base/ubuntu:24.04) needs registry
+          # auth, which hosted runners do not have. A public bootstrap image is used.
+          IMAGE: docker.io/library/ubuntu:24.04
         run: |
           set +e
           devbox run -- bash scripts/openshell/live-proof.sh 2>&1 | tee evidence/live-proof.log
@@ -442,6 +450,8 @@ jobs:
             echo '```'
             grep -E '^(OK: |WARNING: |test |test result)' evidence/live-proof.log 2>/dev/null || true
             echo '```'
+            echo ""
+            echo "Bootstrap image: docker.io/library/ubuntu:24.04 (IMAGE override). The script default nvcr.io/nvidia/base/ubuntu:24.04 needs registry auth on hosted runners."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload evidence
