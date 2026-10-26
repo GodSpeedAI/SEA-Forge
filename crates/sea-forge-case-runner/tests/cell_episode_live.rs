@@ -752,9 +752,10 @@ fn live_workspace_symlink_cannot_reach_host_files() {
 /// its own control token in `/tmp`, so a silent search cannot pass: the probe
 /// must exit 0 and find that control. A's sandbox must still exist when B has
 /// finished, which shows the two really overlapped.
-/// The searched trees are the ones the sandbox user can read: `/home` is
-/// refused with permission denied in the live VM (run 40282555261), so it is
-/// not searched.
+/// B searches `/sandbox` and `/tmp`, the only writable trees in the policy and
+/// so the only places A's token can exist. Other trees are refused by Landlock
+/// at open (`/home`, `/var`, `/opt` in run 40285510892), which would turn the
+/// probe into an error, not a result.
 #[test]
 #[ignore = "requires a live OpenShell MicroVM gateway (SEA_FORGE_OPENSHELL_LIVE=1)"]
 fn live_concurrent_sandboxes_are_isolated() {
@@ -766,7 +767,7 @@ fn live_concurrent_sandboxes_are_isolated() {
     let writer = format!("printf '%s' '{token}' > a-token.txt; sleep 90; cat a-token.txt");
     let searcher = format!(
         "printf '%s' '{control}' > /tmp/b-control.txt; T=$(printf '%s' '{reversed}' | rev); \
-         TREES=''; for d in /sandbox /tmp /home /var /opt; do if [ -r \"$d\" ] && [ -x \"$d\" ]; then TREES=\"$TREES $d\"; fi; done; echo \"trees=$TREES\"; \
+         TREES=' /sandbox /tmp'; echo \"trees=$TREES\"; \
          timeout 60 grep -rIa --exclude=found.txt --exclude=errors.txt -e \"$T\" -e '{control}' $TREES > found.txt 2> errors.txt; \
          echo \"grep_exit=$?\"; exit 0"
     );
