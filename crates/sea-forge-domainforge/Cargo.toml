@@ -11,7 +11,7 @@ description = "SEA Forge first-party DomainForge semantic adapter."
 
 [dependencies]
 domainforge-core = { version = "=0.21.1", default-features = false }
-sea-forge-core = { path = "../sea-forge-core", version = "0.2.0" }
+sea-forge-core = { path = "../sea-forge-core", version = "0.3.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

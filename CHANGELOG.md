@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.2.0...v0.3.0) (2026-10-26)
+
+
+### Features
+
+* **platform:** cross-platform native execution with OpenShell preserved ([#67](https://github.com/GodSpeedAI/SEA-Forge/issues/67)) ([0fc236f](https://github.com/GodSpeedAI/SEA-Forge/commit/0fc236f349a3616c302c0dbc8a75650f6ed5d8c2))
+
+
+### Bug Fixes
+
+* **authority:** refuse engine domainforge at bundle load; remove the stem-heuristic candidate (B-08) ([#66](https://github.com/GodSpeedAI/SEA-Forge/issues/66)) ([4e67dfc](https://github.com/GodSpeedAI/SEA-Forge/commit/4e67dfca734a2a172250b85eb0b512e2c81a3e46))
+* **ledger,authority:** distinct settlement-pending class; offline ledger repair that never cuts history ([#62](https://github.com/GodSpeedAI/SEA-Forge/issues/62)) ([7a344fc](https://github.com/GodSpeedAI/SEA-Forge/commit/7a344fc10e72f30b77f90a897e61191a6b4a3028))
+* **release:** restore signed build provenance reverted by [#62](https://github.com/GodSpeedAI/SEA-Forge/issues/62)'s squash ([#64](https://github.com/GodSpeedAI/SEA-Forge/issues/64)) ([d04be70](https://github.com/GodSpeedAI/SEA-Forge/commit/d04be7022f860bd01c35e764267b3ba858b55d92))
+* **seed:** seed-cell exits 0 and seeded cells stay restorable (B-12) ([#65](https://github.com/GodSpeedAI/SEA-Forge/issues/65)) ([7f4be4b](https://github.com/GodSpeedAI/SEA-Forge/commit/7f4be4b8e66158d44c62b8922efa62909061629e))
+
 ## [0.2.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.1.0...v0.2.0) (2026-10-24)
 
 
