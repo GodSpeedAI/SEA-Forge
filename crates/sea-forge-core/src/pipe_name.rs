@@ -24,8 +24,14 @@ pub fn pipe_name_for(socket_path: &Path) -> io::Result<String> {
     let key = canonical.to_str().ok_or_else(|| {
         io::Error::new(io::ErrorKind::InvalidData, "socket path is not valid UTF-8")
     })?;
+    Ok(pipe_name_for_canonical(key))
+}
+
+/// The pipe name for an already-canonical socket path. Split out so the
+/// derivation is pinned by a test that needs no file system.
+pub(crate) fn pipe_name_for_canonical(key: &str) -> String {
     let digest = hex::encode(Sha256::digest(key.as_bytes()));
-    Ok(format!(r"\\.\pipe\sea-forge-{}", &digest[..32]))
+    format!(r"\\.\pipe\sea-forge-{}", &digest[..32])
 }
 
 #[cfg(test)]
@@ -42,6 +48,17 @@ mod tests {
         let suffix = first.strip_prefix(r"\\.\pipe\sea-forge-").expect("prefix");
         assert_eq!(suffix.len(), 32);
         assert!(suffix.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
+
+    /// Pins the derivation the identity E2E script recomputes
+    /// (`scripts/windows/identity-e2e.ps1`): SHA-256 of the verbatim canonical
+    /// path, first 32 hex digits. The digest was computed independently.
+    #[test]
+    fn derivation_is_pinned_for_a_verbatim_path() {
+        assert_eq!(
+            pipe_name_for_canonical(r"\\?\C:\sfe2e\cell\server.sock"),
+            r"\\.\pipe\sea-forge-6b544457d9e2211fbc18db682120eec7"
+        );
     }
 
     #[test]
