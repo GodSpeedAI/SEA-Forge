@@ -647,7 +647,17 @@ mod tests {
         assert!(sddl.starts_with("D:P("), "DACL is not protected: {sddl}");
         assert_eq!(sddl.matches("(A;").count(), 2, "{sddl}");
         assert!(sddl.contains("(A;;FA;;;SY)"), "{sddl}");
-        assert!(sddl.contains(&format!("(A;;FA;;;{sid})")), "{sddl}");
+        // SDDL renders well-known SIDs as aliases. The runner is the local
+        // Administrator (RID 500), which the conversion prints as `LA`.
+        let others: Vec<&str> = sddl
+            .split('(')
+            .filter_map(|ace| ace.strip_prefix("A;;FA;;;"))
+            .map(|sid| sid.trim_end_matches(')'))
+            .filter(|sid| *sid != "SY")
+            .collect();
+        assert_eq!(others.len(), 1, "{sddl}");
+        let alias_ok = others[0] == "LA" && sid.ends_with("-500");
+        assert!(others[0] == sid || alias_ok, "{sddl}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
