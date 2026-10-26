@@ -195,24 +195,6 @@ jobs:
       - name: Setup pinned toolchain
         run: devbox run -- just setup
 
-      - name: Generate gateway sandbox-launch signing keys
-        # The v0.1.3 VM compute driver refuses CreateSandbox without launch
-        # signing keys (error: "requires sandbox launch signing"). The proof
-        # script writes no [openshell.gateway.gateway_jwt] section, so the keys
-        # come from OPENSHELL_LOCAL_TLS_DIR/jwt, the location the gateway's own
-        # error message names. Keys are ephemeral, generated per run, and kept
-        # outside STATE_DIR so they are never uploaded.
-        run: |
-          set -euo pipefail
-          TLS="$RUNNER_TEMP/openshell-tls"
-          rm -rf "$TLS"; mkdir -p "$TLS/jwt"
-          openssl genpkey -algorithm Ed25519 -out "$TLS/jwt/signing.pem"
-          openssl pkey -in "$TLS/jwt/signing.pem" -pubout -out "$TLS/jwt/public.pem"
-          openssl rand -hex 16 > "$TLS/jwt/kid"
-          chmod 600 "$TLS/jwt/signing.pem"
-          ls -l "$TLS/jwt" | awk '{print $NF}' | tr '\n' ' '; echo
-          echo "OPENSHELL_LOCAL_TLS_DIR=$TLS" >> "$GITHUB_ENV"
-
       - name: Live proof
         env:
           STATE_DIR: ${{ runner.temp }}/openshell-state
@@ -396,18 +378,6 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
-
-      - name: Generate gateway sandbox-launch signing keys
-        # Same launch-signing requirement as the linux job; see the note there.
-        run: |
-          set -euo pipefail
-          TLS="$RUNNER_TEMP/openshell-tls"
-          rm -rf "$TLS"; mkdir -p "$TLS/jwt"
-          openssl genpkey -algorithm Ed25519 -out "$TLS/jwt/signing.pem"
-          openssl pkey -in "$TLS/jwt/signing.pem" -pubout -out "$TLS/jwt/public.pem"
-          openssl rand -hex 16 > "$TLS/jwt/kid"
-          chmod 600 "$TLS/jwt/signing.pem"
-          echo "OPENSHELL_LOCAL_TLS_DIR=$TLS" >> "$GITHUB_ENV"
 
       - name: Live proof (macOS probe)
         env:
