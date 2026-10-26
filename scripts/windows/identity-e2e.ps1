@@ -58,8 +58,26 @@ function Get-PipeName([string] $SocketPath) {
     return 'sea-forge-' + $hex.Substring(0, 32)
 }
 
+# A pipe counts as present when it is listed or accepts a connection. Listing
+# alone is not reliable for every .NET runtime.
 function Test-PipeExists([string] $Name) {
-    return [System.IO.Directory]::GetFiles('\\.\pipe\') -contains $Name
+    if ([System.IO.Directory]::GetFiles('\\.\pipe\') -contains $Name) { return $true }
+    $probe = New-Object System.IO.Pipes.NamedPipeClientStream(
+        '.', $Name, [System.IO.Pipes.PipeDirection]::InOut,
+        [System.IO.Pipes.PipeOptions]::None,
+        [System.Security.Principal.TokenImpersonationLevel]::Impersonation)
+    try {
+        $probe.Connect(300)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $probe.Dispose()
+    }
+}
+
+function Get-SeaForgePipes {
+    return ([System.IO.Directory]::GetFiles('\\.\pipe\') | Where-Object { $_ -like 'sea-forge*' }) -join ', '
 }
 
 function Wait-Until([scriptblock] $Condition, [int] $Seconds) {
@@ -173,6 +191,7 @@ try {
     $servers += $serverA
     $up = Wait-Until { Test-PipeExists $cellA.Pipe } 60
     Check $up 'server A published its pipe' "($($cellA.Pipe))"
+    if (-not $up) { Say "pipes listed: [$(Get-SeaForgePipes)]" }
     if (-not $up) { throw 'server A did not start; see server-a logs' }
 
     # (c) The bound runner user is not refused for identity.
@@ -221,10 +240,14 @@ try {
     # (f) Squatting: another process owns the derived pipe name before the
     # server starts, so the server must refuse to start.
     $cellB = New-Cell 'cell-b'
-    $squatCmd = "`$p = New-Object System.IO.Pipes.NamedPipeServerStream('$($cellB.Pipe)', 'InOut', 1); Start-Sleep -Seconds 180"
+    # The squatter writes a marker only after its pipe exists, so the wait does
+    # not depend on how the runtime lists or connects to pipes.
+    $marker = Join-Path $Work 'squatter.ready'
+    Remove-Item -LiteralPath $marker -ErrorAction SilentlyContinue
+    $squatCmd = "`$p = New-Object System.IO.Pipes.NamedPipeServerStream('$($cellB.Pipe)', 'InOut', 1); Set-Content -LiteralPath '$marker' -Value ready; Start-Sleep -Seconds 180"
     $squatter = Start-Process -FilePath 'powershell.exe' -PassThru -WindowStyle Hidden `
         -ArgumentList @('-NoProfile', '-Command', $squatCmd)
-    $squatted = Wait-Until { Test-PipeExists $cellB.Pipe } 60
+    $squatted = Wait-Until { Test-Path -LiteralPath $marker } 60
     Check $squatted 'squatter holds the derived pipe name' "($($cellB.Pipe))"
     if ($squatted) {
         $victim = Start-Server $cellB 'server-b'
