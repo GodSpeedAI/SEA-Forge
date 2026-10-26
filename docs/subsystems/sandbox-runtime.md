@@ -121,6 +121,8 @@ Timeouts use `wait_timeout`. On expiry the implementation kills the process grou
 * **Identity is path equality, not content hashing.** This is the current boundary; do not market it as binary integrity verification.
 * **TCP-only network enforcement.** UDP and raw sockets are out of scope for the Landlock jail.
 * **`local` is not a security boundary.** Use it only for trusted workloads.
+* **Artifact outputs are launcher-owned.** `stdout.txt` and `stderr.txt` are unlinked without following and recreated exclusively before each run, so a planted symlink or hard link cannot redirect a host write.
+* **Process-group cleanup is not a containment boundary.** After completion or timeout the workload's process group is SIGKILLed, so ordinary background children cannot outlive the run. A descendant that calls `setsid()` leaves the group and is not reached; nothing filters `setsid()` on the macOS or Linux jails, so this escape is open and not fixed.
 
 ---
 

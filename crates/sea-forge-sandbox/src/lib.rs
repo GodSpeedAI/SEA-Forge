@@ -4,6 +4,7 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+mod artifact_output;
 pub mod environment;
 #[cfg(target_os = "linux")]
 pub mod isolated;

@@ -228,3 +228,16 @@ fn timeout_kills_the_process_tree() {
         thread::sleep(Duration::from_millis(100));
     }
 }
+
+#[test]
+fn background_child_does_not_outlive_completed_execution() {
+    let fx = fixture();
+    let result = run(&fx, "(sleep 3; echo late > late.txt) & exit 0");
+    assert_eq!(result.status, ExecutionStatus::Completed);
+
+    thread::sleep(Duration::from_secs(5));
+    assert!(
+        !fx.workspace.join("late.txt").exists(),
+        "background child wrote after the execution completed"
+    );
+}
