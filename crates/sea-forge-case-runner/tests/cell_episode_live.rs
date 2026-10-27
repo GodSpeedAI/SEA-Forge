@@ -1187,25 +1187,49 @@ fn live_network_allow_control_connects() {
             "# http.client closes the connection after reading a CONNECT response\n",
             "# on this python (a 200 with no Content-Length means read-until-close\n",
             "# to it), so its conn.sock is already gone when the tunnel is needed.\n",
+            "# The whole response head — status line plus headers, read byte-wise\n",
+            "# so no tunnel byte is swallowed — is read up to the blank-line\n",
+            "# terminator, bounded at 4 KiB. EOF or timeout before the terminator\n",
+            "# is a protocol failure and NO token is sent; the token goes out only\n",
+            "# after a complete 200 head. The parsed status code is normalized to\n",
+            "# a CONNECT_STATUS <code> marker line the host asserts on (the raw\n",
+            "# status line stays as evidence). This tunnel path is BLOCKED\n",
+            "# upstream on OpenShell 0.1.x — no proxy is discoverable — so the\n",
+            "# parsing is exercised by future platforms that expose one and by\n",
+            "# the off-lane simulation once fixed.\n",
             "sock = socket.create_connection((proxy_host, proxy_port), timeout=15)\n",
             "request = 'CONNECT ' + TARGET[0] + ':' + str(TARGET[1]) + ' HTTP/1.1\\r\\n'\n",
             "request += 'Host: ' + TARGET[0] + ':' + str(TARGET[1]) + '\\r\\n\\r\\n'\n",
             "sock.sendall(request.encode())\n",
-            "status_line = b''\n",
-            "while not status_line.endswith(b'\\r\\n'):\n",
-            "    byte = sock.recv(1)\n",
-            "    if not byte:\n",
-            "        break\n",
-            "    status_line += byte\n",
-            "status = status_line.decode(errors='replace').strip()\n",
-            "print('PROXY_CONNECT ' + (status if status else '(no response from proxy)'))\n",
-            "if ' 200' not in status:\n",
+            "def head_complete(buf):\n",
+            "    return buf.endswith(b'\\r\\n\\r\\n') or buf.endswith(b'\\n\\n')\n",
+            "head = b''\n",
+            "try:\n",
+            "    while len(head) < 4096 and not head_complete(head):\n",
+            "        byte = sock.recv(1)\n",
+            "        if not byte:\n",
+            "            break\n",
+            "        head += byte\n",
+            "except socket.timeout:\n",
+            "    print('PROXY_NO_RESPONSE (timed out reading the response head)')\n",
+            "    sys.exit(4)\n",
+            "if not head:\n",
+            "    print('PROXY_NO_RESPONSE (the proxy closed without answering)')\n",
+            "    sys.exit(4)\n",
+            "if not head_complete(head):\n",
+            "    print('TUNNEL_REFUSED (no blank line ended the response head within 4 KiB)')\n",
+            "    sys.exit(4)\n",
+            "status = head.split(b'\\n', 1)[0].rstrip(b'\\r').decode(errors='replace')\n",
+            "print('PROXY_CONNECT ' + status)\n",
+            "fields = status.split()\n",
+            "if len(fields) >= 2 and fields[1].isdigit():\n",
+            "    code = fields[1]\n",
+            "else:\n",
+            "    code = '(malformed status line)'\n",
+            "print('CONNECT_STATUS ' + code)\n",
+            "if code != '200':\n",
             "    print('TUNNEL_REFUSED')\n",
             "    sys.exit(4)\n",
-            "# Drain the rest of the CONNECT response (its header terminator) so\n",
-            "# the reply read below sees only tunnel traffic.\n",
-            "while not status_line.endswith(b'\\r\\n\\r\\n'):\n",
-            "    status_line += sock.recv(1)\n",
             "sock.sendall((TOKEN + chr(10)).encode())\n",
             "print('TUNNEL_REPLY ' + sock.recv(64).decode(errors='replace').strip())\n",
             "sock.close()\n",
@@ -1256,8 +1280,13 @@ fn live_network_allow_control_connects() {
         Some(0),
         "the granted proxied tunnel must succeed inside the sandbox; stdout:\n{stdout}\nstderr:\n{stderr}"
     );
+    // The payload normalizes the proxy's status line to a CONNECT_STATUS
+    // <code> marker; the raw "PROXY_CONNECT HTTP/1.1 200 ..." line is
+    // evidence only. This branch is BLOCKED upstream on OpenShell 0.1.x
+    // (no discoverable proxy): the parsing is exercised by future platforms
+    // and the off-lane simulation once fixed.
     assert!(
-        stdout.contains("PROXY_CONNECT 200"),
+        stdout.contains("CONNECT_STATUS 200"),
         "the CONNECT tunnel through the discovered proxy did not succeed: {stdout:?}"
     );
     assert!(
@@ -1304,7 +1333,8 @@ fn live_network_allow_control_connects() {
 /// process, the tunnel would establish and both the `TUNNEL_ESTABLISHED`
 /// assertion and the arrival-log assert would fail, recording that fact. The
 /// guest records its own refusal reason (proxy unreachable, no proxy
-/// response, non-200 CONNECT, or no proxy discoverable) and every discovery
+/// response, non-200 or truncated CONNECT head, or no proxy discoverable)
+/// and every discovery
 /// print; `denials.log` is printed but not asserted non-empty (OpenShell 0.1.3
 /// logged nothing for a raw probe; the proxied attempt is the first attempt
 /// the proxy itself can see).
@@ -1341,10 +1371,14 @@ fn live_network_denial_proven() {
     // The same mechanism as the allow variant: discovery dump, a raw connect
     // that deliberately sends nothing, then the CONNECT tunnel to the same
     // control endpoint through the discovered proxy. The token is sent only
-    // on an established tunnel — if enforcement ever leaks, the arrival-log
-    // assert below fails loudly. The exit is deliberately nonzero on every
-    // path: the workload's own success is not the point, its refusal record
-    // is.
+    // after a complete 200 response head (the allow variant's bounded read,
+    // mirrored with `while IFS= read -r` up to the blank line or a `read -t`
+    // timeout) — if enforcement ever leaks, the arrival-log assert below
+    // fails loudly. This tunnel path is likewise BLOCKED upstream on
+    // OpenShell 0.1.x: no proxy is discoverable, so the CONNECT parsing is
+    // exercised by future platforms and the off-lane simulation once fixed.
+    // The exit is deliberately nonzero on every path: the workload's own
+    // success is not the point, its refusal record is.
     // Same literal style as the allow payload: explicit `\n` per line, no
     // `\`-newline continuations (they strip leading whitespace).
     let connect = format!(concat!(
@@ -1371,14 +1405,28 @@ fn live_network_denial_proven() {
         "    else\n",
         "        printf 'CONNECT {host}:{port} HTTP/1.1\\r\\nHost: {host}:{port}\\r\\n\\r\\n' >&4\n",
         "        if IFS= read -r -u 4 -t 10 STATUS; then\n",
+        "            STATUS=${{STATUS%%$'\\r'}}\n",
         "            echo \"PROXY_CONNECT: $STATUS\"\n",
-        "            case $STATUS in\n",
-        "                *' 200'*)\n",
-        "                    IFS= read -r -u 4 -t 10 || true\n",
-        "                    printf '%s\\n' '{token}' >&4\n",
-        "                    IFS= read -r -u 4 -t 10 REPLY || REPLY='(no reply)'\n",
-        "                    echo \"TUNNEL_REPLY: $REPLY\"\n",
-        "                    echo 'TUNNEL_ESTABLISHED'\n",
+        "            set -- $STATUS\n",
+        "            echo \"CONNECT_STATUS ${{2:-}}\"\n",
+        "            case ${{2:-}} in\n",
+        "                200)\n",
+        "                    # Token only after the COMPLETE 200 head: read\n",
+        "                    # header lines until the blank one so a truncated\n",
+        "                    # or extra-header response cannot trigger the send.\n",
+        "                    COMPLETE=0\n",
+        "                    while IFS= read -r -u 4 -t 10 HLINE; do\n",
+        "                        HLINE=${{HLINE%%$'\\r'}}\n",
+        "                        if [ -z \"$HLINE\" ]; then COMPLETE=1; break; fi\n",
+        "                    done\n",
+        "                    if [ \"$COMPLETE\" = 1 ]; then\n",
+        "                        printf '%s\\n' '{token}' >&4\n",
+        "                        IFS= read -r -u 4 -t 10 REPLY || REPLY='(no reply)'\n",
+        "                        echo \"TUNNEL_REPLY: $REPLY\"\n",
+        "                        echo 'TUNNEL_ESTABLISHED'\n",
+        "                    else\n",
+        "                        echo 'TUNNEL_REFUSED (no blank line ended the response head)'\n",
+        "                    fi\n",
         "                    ;;\n",
         "                *)\n",
         "                    echo 'TUNNEL_REFUSED'\n",
@@ -1441,4 +1489,25 @@ fn live_network_denial_proven() {
     assert_ne!(episode.settlement.status, SettlementStatus::Accepted);
     assert!(episode.promotion_request.is_none());
     stream.verify().expect("ledger verifies");
+}
+
+/// Final F15 guard, mirroring `setsid_lifecycle::no_blocked_scenarios_in_required_mode`:
+/// a lane that sets [`REQUIRE_EGRESS_CONTROL`]`=1` must finish with zero
+/// BLOCKED scenarios. `blocked_or_require` already fails the blocking
+/// scenario itself under the require switch, so a nonzero tally here means
+/// some path tallied a block without honoring the switch — impossible today,
+/// which is exactly what this guard pins. The ladder runs this binary
+/// `--test-threads 1` with tests in name order, so both tally raisers
+/// (`live_network_*`) run before this guard. Unlike `setsid_lifecycle`, this
+/// file has no env-forcing tests (nothing here calls `std::env::set_var`),
+/// so no env-lock serialization is needed around the reads.
+#[test]
+fn no_blocked_scenarios_in_required_mode() {
+    let blocked = BLOCKED_SCENARIOS.load(std::sync::atomic::Ordering::SeqCst);
+    let require = std::env::var(REQUIRE_EGRESS_CONTROL).as_deref() == Ok("1");
+    assert!(
+        !(require && blocked > 0),
+        "required lane ({REQUIRE_EGRESS_CONTROL}=1) finished with {blocked} BLOCKED \
+         scenario(s); required lanes cannot skip enforcement scenarios"
+    );
 }

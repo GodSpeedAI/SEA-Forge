@@ -1245,6 +1245,7 @@ async fn run_acp_episode(
         max_transcript_bytes: snapshot
             .max_request_bytes
             .saturating_add(snapshot.max_response_bytes),
+        leaf_cleanup: None,
     };
     // Brokered MCP needs a kernel-distinct workload identity to bind the
     // broker socket to; shared-UID classes would let the agent reach the
@@ -1307,7 +1308,7 @@ async fn run_acp_episode(
             // F-24: the jail spawn blocks on process setup — run it on a
             // blocking thread instead of parking this tokio worker (the old
             // thread+mpsc shape blocked in recv() all the same).
-            let child = tokio::task::spawn_blocking(move || {
+            let mut child = tokio::task::spawn_blocking(move || {
                 // Jail-class ACP agents default to network denial (fail-closed).
                 // No scoped egress grant is plumbed to this path yet; the jail
                 // must not open ungranted outbound/listening TCP sockets.
@@ -1322,7 +1323,8 @@ async fn run_acp_episode(
             })
             .await
             .map_err(|error| ForgeError::Internal(format!("jail spawn task panic: {error}")))??;
-            AcpSession::from_std_child(
+            let leaf_cleanup = child.leaf_cleanup_hook();
+            AcpSession::from_std_child_with_cleanup(
                 child.child,
                 child.stdin,
                 child.stdout,
@@ -1332,6 +1334,7 @@ async fn run_acp_episode(
                 snapshot
                     .max_request_bytes
                     .saturating_add(snapshot.max_response_bytes),
+                leaf_cleanup,
             )
             .map_err(ForgeError::Internal)?
         }

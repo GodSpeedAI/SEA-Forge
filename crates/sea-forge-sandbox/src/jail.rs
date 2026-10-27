@@ -184,7 +184,15 @@ pub fn restrict_current_thread(
 }
 
 #[derive(Debug)]
-pub struct JailSandbox;
+pub struct JailSandbox {
+    /// Per-instance key scoping this sandbox's macOS live-run registry
+    /// (High-1): `destroy` sweeps only the runs THIS instance registered,
+    /// never another instance's — the registry used to be process-global,
+    /// so one sandbox's destroy killed every parallel run's group. The key
+    /// travels through `&self` (execute/destroy), not the handle.
+    #[cfg(target_os = "macos")]
+    sandbox_key: u64,
+}
 
 /// Interactive child spawned after Landlock restriction. The caller owns the
 /// stdio pipes and child lifecycle; no shell is involved.
@@ -196,12 +204,66 @@ pub struct InteractiveJailChild {
     /// Isolated workloads only: dropping it ends the workload's namespace.
     #[cfg(target_os = "linux")]
     pub lifeline: Option<crate::workload::Lifeline>,
+    /// Linux jail only (High-4): the run's cgroup-v2 lifecycle leaf,
+    /// acquired on the unrestricted thread before the Landlock restriction
+    /// and joined pre-exec, exactly as for `execute`. Callers that hold the
+    /// child for its lifetime (the ACP session) should run
+    /// [`Self::leaf_cleanup_hook`] on drop so the leaf's verified kill
+    /// reaches `setsid` descendants the process-group kill cannot.
+    #[cfg(target_os = "linux")]
+    pub cgroup_lease: Option<crate::cgroup::CgroupLease>,
+}
+
+impl InteractiveJailChild {
+    /// F08 (High-4): this child's cgroup-leaf teardown as a boxed closure,
+    /// so callers (the server's ACP wiring) need not name sandbox types.
+    /// `None` when no leaf exists (non-Linux, or a typed degrade already
+    /// reported by the cgroup module at spawn). Running it performs the
+    /// verified leaf kill first — reaching `setsid` descendants the group
+    /// kill cannot — then leaf removal under the same degrade rules as
+    /// `execute` (an empty-but-undeletable leaf degrades inside `remove`).
+    /// Failures are reported on stderr, never propagated (a teardown in a
+    /// Drop context cannot fail loudly), and the leaf stays registered for
+    /// the destroy-time sweep in that case.
+    pub fn leaf_cleanup_hook(&mut self) -> Option<Box<dyn FnOnce() + Send>> {
+        #[cfg(target_os = "linux")]
+        if let Some(lease) = self.cgroup_lease.take() {
+            return Some(Box::new(move || {
+                const LEAF_DEADLINE: std::time::Duration = std::time::Duration::from_secs(5);
+                if let Err(failure) = lease.kill_verified(LEAF_DEADLINE) {
+                    eprintln!(
+                        "sea-forge-sandbox: interactive jail cgroup-leaf kill failed; the leaf \
+                         stays registered for the destroy sweep: {failure:?}"
+                    );
+                    // Leave the lease unremoved: its Drop marks the leaf
+                    // sweepable for destroy_process_leaves.
+                    return;
+                }
+                if let Err(error) = lease.remove() {
+                    eprintln!(
+                        "sea-forge-sandbox: interactive jail cgroup-leaf removal failed; the \
+                         leaf stays registered for the destroy sweep: {error}"
+                    );
+                }
+            }));
+        }
+        None
+    }
 }
 
 /// Restrict the current thread with the same Landlock posture as `JailSandbox`
 /// and spawn an interactive child whose stdio remains connected to the caller.
 /// Call this from a dedicated thread: Landlock restriction is irreversible for
 /// that thread and inherited by the spawned child.
+///
+/// F08 (High-4): the child gets the same lifecycle-lease discipline as
+/// [`JailSandbox::execute`] — a cgroup-v2 leaf acquired on this thread
+/// BEFORE the Landlock restriction (the leaf mkdir under the delegated root
+/// is a write the jail's own domain would deny), joined pre-exec so nothing
+/// agent-controlled runs uncontained. Under `SEA_FORGE_REQUIRE_CGROUP=1` an
+/// unavailable cgroup refuses the spawn (fail closed); otherwise the typed
+/// degrade is reported and the process-group kill remains. The lease rides
+/// back on [`InteractiveJailChild::cgroup_lease`] for the caller's teardown.
 pub fn spawn_interactive(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
@@ -222,6 +284,10 @@ pub fn spawn_interactive(
         }
         std::fs::create_dir_all(workspace_root).map_err(map_err)?;
         std::fs::create_dir_all(artifacts_root).map_err(map_err)?;
+        // Acquire the cgroup leaf while this thread is still unrestricted
+        // (same ordering as execute_linux); the required-lane contract is
+        // enforced inside.
+        let lease = crate::cgroup::acquire_spawn_lease("jail-interactive", std::process::id())?;
         apply_landlock(workspace_root, artifacts_root, network, None)?;
         let mut command = std::process::Command::new(&argv[0]);
         command
@@ -232,10 +298,33 @@ pub fn spawn_interactive(
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .process_group(0);
+        // Pre-exec join: descriptor-level only (try_clone + fcntl), so the
+        // restricted thread may register it; a failed join fails the spawn
+        // and nothing execs uncontained.
+        let lease = crate::cgroup::attach_lease(&mut command, lease, "jail-interactive")?;
         for (key, value) in env {
             command.env(key, value);
         }
-        let mut child = command.spawn().map_err(map_err)?;
+        let mut child = match command.spawn() {
+            Ok(child) => child,
+            Err(error) => {
+                // Nothing exec'd. The PRIMARY spawn error leads the report;
+                // a leaf that cannot be removed here is left registered for
+                // the destroy-time sweep (mirroring execute_linux).
+                let mut report = format!("jail interactive spawn failed before exec: {error}");
+                if let Some(lease) = lease {
+                    if let Err(cleanup) = lease.remove() {
+                        report.push_str(&format!(
+                            "; cgroup leaf {} could not be removed after the failed spawn and \
+                             is left for the destroy-time leaf sweep: {cleanup}",
+                            lease.leaf().display()
+                        ));
+                    }
+                }
+                eprintln!("sea-forge-sandbox: {report}");
+                return Err(SandboxError::new("jail_unavailable", error.to_string()));
+            }
+        };
         let stdin = child
             .stdin
             .take()
@@ -254,6 +343,7 @@ pub fn spawn_interactive(
             stdout,
             stderr,
             lifeline: None,
+            cgroup_lease: lease,
         })
     }
     #[cfg(not(target_os = "linux"))]
@@ -270,12 +360,14 @@ impl JailSandbox {
     pub fn new() -> Result<Self, SandboxError> {
         #[cfg(target_os = "linux")]
         {
-            Ok(JailSandbox)
+            Ok(JailSandbox {})
         }
         #[cfg(target_os = "macos")]
         {
             macos::preflight()?;
-            Ok(JailSandbox)
+            Ok(JailSandbox {
+                sandbox_key: macos::next_sandbox_key(),
+            })
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
@@ -310,7 +402,7 @@ impl ExecutionSandbox for JailSandbox {
         }
         #[cfg(target_os = "macos")]
         {
-            macos::execute(h, req)
+            macos::execute(self.sandbox_key, h, req)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
@@ -343,11 +435,14 @@ impl ExecutionSandbox for JailSandbox {
         // silent no-op.
         #[cfg(target_os = "linux")]
         crate::cgroup::destroy_process_leaves()?;
-        // F08 (macOS): verified sweep of runs this process leaked mid-flight
-        // (execute aborted between spawn and verified teardown), mirroring
-        // the Linux leaf sweep; CagePersists survivors are reported loudly.
+        // F08 (macOS): verified sweep of the runs THIS sandbox instance
+        // leaked mid-flight (execute aborted between spawn and verified
+        // teardown), mirroring the Linux leaf sweep; CagePersists survivors
+        // are reported loudly. High-1: the sweep is scoped to this
+        // instance's registry key — a process-global sweep would kill every
+        // parallel sandbox's live runs.
         #[cfg(target_os = "macos")]
-        macos::destroy_sweep()?;
+        macos::destroy_sweep(self.sandbox_key)?;
         Ok(())
     }
 }
@@ -692,6 +787,18 @@ fn finish_jailed(
 /// classifies survivors from a descendant census sampled while the workload
 /// ran, reports `CagePersists` survivors loudly on stderr (not an error — the
 /// documented residual), and propagates real cleanup errors.
+///
+/// Verified vs best-effort (High-5, honest labeling): the process-group
+/// teardown is VERIFIED — the group must drain within the deadline or the
+/// teardown fails. Descendant COMPLETENESS, however, is best-effort census
+/// only: the census observes a descendant solely while its parent-pid chain
+/// leads back to the workload, so a double-fork+`setsid` daemon whose
+/// intermediate parent exits — reparenting it to launchd — before any census
+/// sample runs is invisible: never censused, hence neither killed on evidence
+/// nor reported as a survivor. It does remain inside the inherited App
+/// Sandbox cage (containment holds; lifecycle completeness does not). Faster
+/// polling cannot close this; only an admission-level lifecycle requirement
+/// on the workload can.
 #[cfg(target_os = "macos")]
 mod macos {
     use crate::{local::kill_timed_out_group, NetworkPosture, SandboxError, SandboxHandle};
@@ -704,13 +811,29 @@ mod macos {
         os::unix::process::CommandExt,
         path::{Path, PathBuf},
         process::{Command, Stdio},
-        sync::{Mutex, MutexGuard},
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Mutex, MutexGuard,
+        },
         time::{Duration, Instant},
     };
     use wait_timeout::ChildExt;
 
     const CODESIGN: &str = "/usr/bin/codesign";
     const LAUNCHER: &str = "sea-forge-jail-launcher";
+
+    /// Sequence for per-instance sandbox keys: every [`super::JailSandbox`]
+    /// takes the next one at construction, and the live-run registry below
+    /// keys every entry by it (High-1). One sandbox's `destroy` sweep
+    /// matches only its own key, so it can never sweep a parallel
+    /// instance's in-flight runs — the registry used to be process-global,
+    /// which made any destroy kill every live run's group.
+    static SANDBOX_SEQ: AtomicU64 = AtomicU64::new(0);
+
+    /// The next per-instance sandbox key (see [`SANDBOX_SEQ`]).
+    pub(super) fn next_sandbox_key() -> u64 {
+        SANDBOX_SEQ.fetch_add(1, Ordering::Relaxed)
+    }
 
     fn unavailable(message: impl std::fmt::Display) -> SandboxError {
         SandboxError::new("jail_unavailable", message.to_string())
@@ -745,8 +868,11 @@ mod macos {
     }
 
     /// Interval between descendant-census samples while the workload runs.
-    /// The census race window — a descendant that forks and `setsid`s in the
-    /// final interval before the workload exits — is bounded by this value.
+    /// A descendant whose entire observable life falls inside the final
+    /// interval before the workload exits can be missed by sampling, and a
+    /// double-fork+`setsid` daemon that reparents to launchd before ANY
+    /// sample is unobservable entirely (see the module doc: descendant
+    /// completeness is best-effort census, not a verified claim).
     const CENSUS_INTERVAL: Duration = Duration::from_millis(100);
 
     /// Bounded wait for killed members to die, mirroring the Linux
@@ -760,15 +886,22 @@ mod macos {
     /// Lifted into `ExecutionResult.lifecycle_containment`:
     /// [`MacTeardown::FullyTerminated`] maps to
     /// `LifecycleContainment::ProcessGroup`, [`MacTeardown::CagePersists`]
-    /// maps to `LifecycleContainment::SandboxCagePersists`.
+    /// maps to `LifecycleContainment::SandboxCagePersists`. In both cases
+    /// the verified part is the GROUP teardown; descendant completeness is
+    /// best-effort census only (module doc: a pre-reparent `setsid` daemon
+    /// is uncensused and unobservable).
     #[derive(Debug)]
     pub(crate) enum MacTeardown {
-        /// The group kill reached every censused descendant; nothing
-        /// survived the run's cancellation.
+        /// The group kill reached every CENSUSED descendant and the group
+        /// drained — a verified group teardown, not a verified descendant
+        /// census: descendants never sampled (module doc) are outside this
+        /// claim.
         FullyTerminated,
-        /// A `setsid` descendant escaped the kill sweep but remains inside
-        /// the App Sandbox cage — the documented F08 macOS residual, never
-        /// an error but always reported.
+        /// Census-observed `setsid` descendants escaped the kill sweep but
+        /// remain inside the App Sandbox cage — the documented F08 macOS
+        /// residual, never an error but always reported. Only CENSUSED
+        /// descendants can be reported; an uncensused escapee is silent
+        /// (module doc).
         CagePersists {
             /// Pids of the survivors, identity-verified against the census.
             survivor_pids: Vec<i32>,
@@ -785,11 +918,14 @@ mod macos {
     }
 
     /// A run this process spawned into the jail whose verified teardown has
-    /// not completed: the group id (the workload's pid — the launcher execs
-    /// in place) plus the process census. `destroy` sweeps whatever remains
-    /// here (an execute that errored or panicked between spawn and
-    /// verified teardown).
+    /// not completed: the owning sandbox instance's key, the group id (the
+    /// workload's pid — the launcher execs in place) plus the process
+    /// census. The instance's `destroy` sweeps whatever remains here (an
+    /// execute that errored or panicked between spawn and verified
+    /// teardown); another instance's entries are never touched (High-1).
     struct LiveRun {
+        /// The owning [`super::JailSandbox`] instance's registry key.
+        sandbox_key: u64,
         group: i32,
         census: Vec<RecordedPid>,
     }
@@ -921,27 +1057,33 @@ mod macos {
         }
     }
 
-    fn register_run(group: i32) {
+    fn register_run(sandbox_key: u64, group: i32) {
         // A stale entry under the same pgid (a leaked run whose pid the
         // kernel later recycled into this child) must not absorb this
-        // run's census publishes.
-        live_runs().retain(|run| run.group != group);
+        // run's census publishes. Scoped to THIS instance's entries:
+        // another sandbox's run under a recycled pgid is not ours to clear
+        // or to corrupt (High-1).
+        live_runs().retain(|run| !(run.sandbox_key == sandbox_key && run.group == group));
         live_runs().push(LiveRun {
+            sandbox_key,
             group,
             census: Vec::new(),
         });
     }
 
     /// Publishes the census so an aborted run still sweeps with identity.
-    fn publish_census(group: i32, census: &[RecordedPid]) {
-        if let Some(run) = live_runs().iter_mut().find(|run| run.group == group) {
+    fn publish_census(sandbox_key: u64, group: i32, census: &[RecordedPid]) {
+        if let Some(run) = live_runs()
+            .iter_mut()
+            .find(|run| run.sandbox_key == sandbox_key && run.group == group)
+        {
             run.census.clear();
             run.census.extend_from_slice(census);
         }
     }
 
-    fn unregister_run(group: i32) {
-        live_runs().retain(|run| run.group != group);
+    fn unregister_run(sandbox_key: u64, group: i32) {
+        live_runs().retain(|run| !(run.sandbox_key == sandbox_key && run.group == group));
     }
 
     /// Whether the recorded pid still runs. `kill(pid, 0)` succeeds while
@@ -1125,13 +1267,34 @@ mod macos {
         Ok(())
     }
 
-    /// F08 `destroy` sweep (macOS): verified teardown of every run this
-    /// process registered and never tore down, mirroring the Linux leaf
-    /// sweep — group kill, census survivor check, loud `CagePersists`
-    /// report, real errors propagate. Runs whose sweep errored stay
-    /// registered so a later `destroy` can retry.
-    pub(super) fn destroy_sweep() -> Result<(), SandboxError> {
-        let mut pending = std::mem::take(&mut *live_runs());
+    /// F08 `destroy` sweep (macOS): verified teardown of every run THIS
+    /// sandbox instance registered and never tore down, mirroring the
+    /// Linux leaf sweep — group kill, census survivor check, loud
+    /// `CagePersists` report, real errors propagate. Runs whose sweep
+    /// errored stay registered so a later `destroy` can retry.
+    ///
+    /// High-1: only entries carrying `sandbox_key` are swept. Other
+    /// instances' runs — parallel sandboxes in this same process — stay
+    /// registered untouched: their own destroy owns them, and a
+    /// process-global sweep is exactly the bug that killed unrelated live
+    /// runs.
+    pub(super) fn destroy_sweep(sandbox_key: u64) -> Result<(), SandboxError> {
+        // Split the registry under one lock, leaving every other
+        // instance's entries in place.
+        let mut pending = {
+            let mut runs = live_runs();
+            let mut mine = Vec::new();
+            let mut others = Vec::new();
+            for run in runs.drain(..) {
+                if run.sandbox_key == sandbox_key {
+                    mine.push(run);
+                } else {
+                    others.push(run);
+                }
+            }
+            runs.extend(others);
+            mine
+        };
         let mut first_error = None;
         let mut index = 0;
         while index < pending.len() {
@@ -1234,6 +1397,7 @@ mod macos {
     }
 
     pub(super) fn execute(
+        sandbox_key: u64,
         h: &SandboxHandle,
         req: &ExecutionRequest,
     ) -> Result<ExecutionResult, SandboxError> {
@@ -1310,11 +1474,12 @@ mod macos {
                 ));
             }
         };
-        // F08: register the run so `destroy` can sweep it if this execute
-        // aborts between spawn and verified teardown (an error return or a
-        // panic leaves the sandboxed group alive).
+        // F08: register the run (keyed to THIS sandbox instance, High-1) so
+        // `destroy` can sweep it if this execute aborts between spawn and
+        // verified teardown (an error return or a panic leaves the
+        // sandboxed group alive).
         let group = child.id() as i32;
-        register_run(group);
+        register_run(sandbox_key, group);
         // The group leader's identity anchors `destroy`'s recycle guard even
         // when no descendant sample ever runs.
         let mut census = Vec::new();
@@ -1324,7 +1489,7 @@ mod macos {
                 start: (info.pbi_start_tvsec, info.pbi_start_tvusec),
             });
         }
-        publish_census(group, &census);
+        publish_census(sandbox_key, group, &census);
 
         // Wait for the workload, sampling the descendant census while it is
         // alive: once the workload exits, its descendants are reparented to
@@ -1347,7 +1512,7 @@ mod macos {
                     match sample_descendants(group) {
                         Some(descendants) => {
                             merge_census(&mut census, descendants);
-                            publish_census(group, &census);
+                            publish_census(sandbox_key, group, &census);
                         }
                         None => census_failures += 1,
                     }
@@ -1384,13 +1549,16 @@ mod macos {
                 (ExecutionStatus::TimedOut, None, teardown)
             }
         };
-        unregister_run(group);
+        unregister_run(sandbox_key, group);
         report_teardown(&teardown);
 
         // C1: the containment claim is the verified teardown classification.
-        // A fully-reached group kill claims ProcessGroup; census survivors
-        // are reported as the documented cage-persists residual, never as a
-        // full lifecycle containment.
+        // A fully-reached group kill claims ProcessGroup — a VERIFIED GROUP
+        // TEARDOWN claim, not a descendant-completeness claim: the census is
+        // best-effort, and a pre-reparent `setsid` daemon is uncensused and
+        // unobservable (module doc). Census survivors are reported as the
+        // documented cage-persists residual, never as a full lifecycle
+        // containment.
         let containment = match teardown {
             MacTeardown::FullyTerminated => LifecycleContainment::ProcessGroup,
             MacTeardown::CagePersists { survivor_pids } => {
@@ -1413,5 +1581,40 @@ mod macos {
             }
         }
         Ok(result)
+    }
+
+    /// High-1 regression: `destroy_sweep` must touch only the calling
+    /// instance's registered runs. The groups used here are pids far above
+    /// the kernel's pid ceiling, so the sweep resolves them as long-gone
+    /// groups (waitpid ECHILD, kill ESRCH, empty census) without killing
+    /// anything — the assertion is purely about registry scoping.
+    #[cfg(test)]
+    mod registry_scoping_tests {
+        use super::{destroy_sweep, live_runs, next_sandbox_key, register_run};
+
+        #[test]
+        fn destroy_sweep_scopes_to_its_own_sandbox_instance() {
+            let key_a = next_sandbox_key();
+            let key_b = next_sandbox_key();
+            // 2_000_000_000 exceeds every macOS pid allocation: both entries
+            // sweep clean without touching a real process.
+            register_run(key_a, 2_000_000_001);
+            register_run(key_b, 2_000_000_002);
+
+            destroy_sweep(key_a).expect("a gone-group sweep must succeed");
+
+            let remaining: Vec<i32> = live_runs().iter().map(|run| run.group).collect();
+            assert_eq!(
+                remaining,
+                vec![2_000_000_002],
+                "instance A's destroy must leave instance B's run registered (High-1)"
+            );
+
+            destroy_sweep(key_b).expect("a gone-group sweep must succeed");
+            assert!(
+                live_runs().is_empty(),
+                "each instance's sweep clears exactly its own runs"
+            );
+        }
     }
 }

@@ -107,6 +107,12 @@ impl ExecutionSandbox for IsolatedSandbox {
         // every descendant) and kernel teardown is unconditional, so
         // `PidNamespace` is the truthful claim; the parent performs no
         // emptiness read-back, so no kill verification is asserted.
+        // The claim is reached only after a successful spawn of `unshare`:
+        // if the namespace setup itself fails, `unshare` exits nonzero
+        // without forking the workload (the helper is only ever pid 1 of a
+        // fresh namespace — see sea-forge-workload-exec's header), so a
+        // setup failure surfaces as a nonzero exit, never as a contained
+        // Completed run claiming this field.
         let outcome = match command.spawn() {
             Err(_) => Ok((
                 ExecutionStatus::SpawnFailed,

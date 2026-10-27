@@ -290,6 +290,13 @@ impl ExecutionSandbox for LocalSandbox {
             let containment = LifecycleContainment::ProcessGroup;
             #[cfg(all(unix, not(target_os = "linux")))]
             teardown_run(&child)?;
+            // Review pass 1 (Medium-14): completion must establish the same
+            // lifetime boundary as the timeout path — the job is verified
+            // empty (grandchildren included) before a Completed result
+            // exists; a non-empty job is a loud cleanup failure, not a
+            // silent reliance on kill-on-close at process exit.
+            #[cfg(windows)]
+            kill_timed_out_job(&job)?;
             #[cfg(windows)]
             let containment = LifecycleContainment::JobObject;
             // A child reaped with a signal death (no exit code) is not a

@@ -24,10 +24,13 @@
 //! isolated backend's subordinate uid) cannot traverse the staging directory
 //! at all, which turns the race into a prevention.
 //!
-//! The directory is created per call and removed after publish. A concurrent
-//! write from this process to the same destination directory shares the
-//! pid-suffixed name; the first removal fails with `ENOTEMPTY` (logged, not
-//! fatal) and the last writer removes it.
+//! The directory is created per call and removed after publish. The name is
+//! per-call (`.sf-staging-<pid>-<sequence>`), so concurrent writes from this
+//! process to the same destination directory never share one: a writer that
+//! has opened its staging dir but not yet created its temp can never have
+//! that dir removed under it (review pass 1, Medium-11). The `EEXIST` reuse
+//! branch covers only a recycled pid colliding with a genuine leftover;
+//! the identity check still proves the opened entry is the created one.
 
 use std::ffi::{OsStr, OsString};
 use std::io;
@@ -64,12 +67,21 @@ impl StagingDir {
     /// descriptor to it. The mode is re-applied on the descriptor so a umask
     /// cannot lower it.
     pub(crate) fn create(dir: &OwnedFd) -> Result<Self, StagingCreateError> {
-        let name = OsString::from(format!("{STAGING_PREFIX}{}", std::process::id()));
+        // Per-call name: two concurrent writers never share a staging dir,
+        // so one writer's post-publish removal can never delete the other's
+        // open staging directory (Medium-11). The sequence counter makes the
+        // collision window a recycled pid AND the same sequence.
+        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+        let name = OsString::from(format!(
+            "{STAGING_PREFIX}{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
         match rustix::fs::mkdirat(dir, &name, Mode::RUSR | Mode::WUSR | Mode::XUSR) {
             Ok(()) => {}
-            // A leftover from an earlier call in this process (or under a
-            // recycled pid) is reused; the identity check below proves that
-            // the entry at this name is the directory being opened.
+            // A leftover under a recycled pid with the same sequence: the
+            // identity check below proves that the entry at this name is the
+            // directory being opened, and remove() after publish clears it.
             Err(Errno::EXIST) => {}
             Err(error) => return Err(StagingCreateError::Io(io::Error::from(error))),
         }

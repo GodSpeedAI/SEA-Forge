@@ -397,6 +397,9 @@ echo "OK: egress arrival listener on 0.0.0.0:$EGRESS_PORT (log $EGRESS_ARRIVAL_L
 # ---------------------------------------------------------------------------
 
 cd "$REPO_ROOT"
+# The full ladder output is teed to a log: the BLOCKED NOTE below greps it,
+# and the log is next to the gateway log for evidence.
+LIVE_TESTS_LOG="$STATE_DIR/live-tests.log"
 set +e
 SEA_FORGE_OPENSHELL_LIVE=1 \
 SEA_FORGE_OPENSHELL_GATEWAY="$GATEWAY_NAME" \
@@ -404,12 +407,19 @@ SEA_FORGE_OPENSHELL_PROJECTION="$PROJECTION_ABS" \
 SEA_FORGE_OPENSHELL_IMAGE="$IMAGE" \
 SEA_FORGE_OPENSHELL_SECOND_IMAGE="$SECOND_IMAGE" \
 cargo test -p sea-forge-case-runner --test cell_episode_live -j 2 -- \
-    --include-ignored --test-threads 1 --nocapture
-test_rc=$?
+    --include-ignored --test-threads 1 --nocapture 2>&1 | tee "$LIVE_TESTS_LOG"
+test_rc=${PIPESTATUS[0]}
 set -e
 
 echo "--- gateway log (last 20 lines) ---"
 tail -n 20 "$STATE_DIR/gateway.log" || true
+
+# A BLOCKED egress allow-control is the honest upstream disposition and the
+# run stays green (BLOCKED is a labeled non-run, never a tested pass); when
+# its line appears in the ladder output, say so explicitly.
+if grep -q 'BLOCKED: the egress allow-control' "$LIVE_TESTS_LOG"; then
+    echo "NOTE: egress allow-control BLOCKED upstream (no L4/connect vocabulary, no guest proxy); F17 denial remains BLOCKED — see .agents/plans/2026-10-26-capability-harvest.md"
+fi
 
 if (( test_rc != 0 )); then
     fail "live tests exited with status $test_rc"

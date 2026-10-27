@@ -454,7 +454,35 @@ no-async-kernel:
             # on a forbidden dep is already caught by the per-crate pass above.
             # $target_args is intentionally unquoted: it is either empty or
             # exactly two words (--target <triple>).
-            output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1) || continue
+            #
+            # Fail-closed cargo-tree distinction (review Medium-13): a FAILED
+            # invocation must not read as "dependency absent". The only
+            # acceptable failure is the dependency being genuinely absent from
+            # this target's graph, which cargo reports as a package-ID match
+            # failure ("did not match any packages" / "package ID
+            # specification"). Any other failure — resolution error, lockfile
+            # drift, a broken cargo — prints its stderr and FAILS the gate:
+            # absence is proven only by cargo's own not-found text, never by
+            # an unexamined error status.
+            # `set -e` is active (`{{set}}`), so a failing command must be
+            # part of an `if` condition to be observable: a plain assignment
+            # with a nonzero status aborts the recipe silently. `if capture`
+            # both exempts the command from errexit and preserves its status
+            # in $? for the body — absence is then decided by cargo's own
+            # not-found text, and any OTHER failure fails the gate below.
+            tree_status=0
+            if ! output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1); then
+                tree_status=$?
+            fi
+            if [ "$tree_status" -ne 0 ]; then
+                if echo "$output" | grep -qE "did not match any packages|package ID specification"; then
+                    continue
+                fi
+                echo "fail: cargo tree -i $dep (unified graph, target: $target) exited $tree_status — treated as a gate failure, not as absence:" >&2
+                echo "$output" >&2
+                status=1
+                continue
+            fi
             for crate in "${kernel_crates[@]}"; do
                 if echo "$output" | grep -q "$crate v"; then
                     echo "fail: kernel crate $crate depends on $dep (unified workspace graph, target: $target)" >&2

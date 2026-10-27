@@ -466,7 +466,7 @@ fn write_entry_unix_inner(
     bytes: &[u8],
     pause: Option<&dyn Fn()>,
 ) -> Result<(), ForgeError> {
-    use rustix::fs::AtFlags;
+    use rustix::fs::{AtFlags, Mode, OFlags};
     use rustix::io::Errno;
     use std::io::Write;
 
@@ -557,6 +557,43 @@ fn write_entry_unix_inner(
         || (entry.st_mode & libc::S_IFMT) != libc::S_IFREG
     {
         return Err(substituted());
+    }
+    // Review pass 1 (Medium-6): a same-uid attacker that can traverse the
+    // staging dir can overwrite the temp IN PLACE (keeping dev/ino/type), so
+    // the identity check alone cannot prove the published bytes. Re-read the
+    // published entry and compare against the written bytes: a mismatch is a
+    // loud failure (detection after publication — the caller fails and the
+    // evidence records it — which closes the UNDETECTED variant the review
+    // named; byte-level prevention for a same-uid writer needs an identity
+    // the staging directory cannot provide, per the module residual).
+    let published = rustix::fs::openat(dir, name, OFlags::RDONLY | OFlags::CLOEXEC, Mode::empty())
+        .map_err(|_| substituted())?;
+    let mut published_bytes = Vec::with_capacity(bytes.len());
+    {
+        use std::io::Read;
+        let mut reader = std::fs::File::from(published);
+        reader
+            .read_to_end(&mut published_bytes)
+            .map_err(|error| ForgeError::io("read published file", error))?;
+    }
+    if published_bytes.len() != bytes.len() || {
+        use sha2::{Digest, Sha256};
+        Sha256::digest(&published_bytes)[..] != Sha256::digest(bytes)[..]
+    } {
+        // The published entry does not carry this write's bytes: it was
+        // replaced in place after staging (same-uid tamper) and then
+        // published by the rename before this check. Unlink it — this write
+        // has proven the entry is not its output, and leaving attacker
+        // bytes at the destination name would extend the tamper past this
+        // call. Removal failure is appended context, never a silent pass.
+        let removed = rustix::fs::unlinkat(dir, name, AtFlags::empty());
+        return Err(ForgeError::UnsafePath(format!(
+            "published bytes of {} differ from the bytes this write staged; the file was \
+             modified in place between staging and publication and has been removed \
+             (unlink: {:?})",
+            destination.display(),
+            removed.map(|_| "removed").map_err(|e| e.to_string()),
+        )));
     }
     let _ = rustix::fs::fsync(dir);
     Ok(())
@@ -997,6 +1034,72 @@ mod tests {
     /// the destination directory and the plant is inert.
     #[cfg(unix)]
     #[test]
+    fn in_place_temp_tampering_is_detected_at_publication() {
+        use std::sync::atomic::{AtomicU8, Ordering};
+        use std::sync::Arc;
+        let (parent, root, _) = unix_write_fixture("staged-tamper");
+        let destination = root.join("planned.txt");
+        // Same-uid attacker traverses the 0700 staging dir (the documented
+        // same-uid residual) and overwrites the temp IN PLACE — no unlink, no
+        // rename: dev/ino/type survive, so only content verification can
+        // catch this (review pass 1, Medium-6).
+        let attacked = Arc::new(AtomicU8::new(0));
+        let pause = {
+            let attacked = attacked.clone();
+            let watched = root.clone();
+            move || {
+                for entry in fs::read_dir(&watched).unwrap() {
+                    let staging = entry.unwrap().path();
+                    if staging
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.starts_with(".sf-staging-"))
+                    {
+                        for temp in fs::read_dir(&staging).unwrap().flatten() {
+                            let temp_name = temp.file_name().to_string_lossy().to_string();
+                            if temp_name.contains(".sf-tmp-") {
+                                fs::write(temp.path(), b"tampered bytes").unwrap();
+                                attacked.store(1, Ordering::SeqCst);
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        let dir = rustix::fs::open(
+            &root,
+            rustix::fs::OFlags::RDONLY
+                | rustix::fs::OFlags::DIRECTORY
+                | rustix::fs::OFlags::NOFOLLOW
+                | rustix::fs::OFlags::CLOEXEC,
+            rustix::fs::Mode::empty(),
+        )
+        .unwrap();
+        write_entry_unix_inner(
+            &dir,
+            &destination,
+            std::ffi::OsStr::new("planned.txt"),
+            b"staged bytes",
+            Some(&pause),
+        )
+        .expect_err(
+            "an in-place temp overwrite must fail the write loudly, not publish attacker bytes",
+        );
+        assert_eq!(
+            attacked.load(Ordering::SeqCst),
+            1,
+            "the attack must have run"
+        );
+        // The tampered entry is unlinked by the failed write: the attacker
+        // bytes must not survive at the destination name.
+        assert!(
+            fs::read(&destination).is_err(),
+            "the tampered entry must be removed, not left published"
+        );
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    #[test]
     fn substituted_temp_name_cannot_publish_attacker_bytes() {
         use std::os::unix::fs::PermissionsExt;
         use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
@@ -1075,16 +1178,21 @@ mod tests {
         use std::os::unix::fs::symlink;
         let (parent, root, outside) = unix_write_fixture("staging-rebind");
         let destination = root.join("planned.txt");
-        symlink(
-            &outside,
-            root.join(format!(".sf-staging-{}", std::process::id())),
-        )
-        .unwrap();
+        // Pre-plant a symlink at a staging-shaped name. Staging names are now
+        // per-call (pid + sequence), so a planted entry can never collide
+        // with the directory this write creates: the planted symlink must be
+        // ignored entirely (stronger than the old same-name rebind refusal —
+        // there is no shared name left to rebind).
+        symlink(&outside, root.join(".sf-staging-planted-not-real")).unwrap();
 
         let result = safe_write(&destination, b"captured");
-        assert!(matches!(result, Err(ForgeError::UnsafePath(_))));
+        result.expect("a planted staging-shaped symlink must not affect the write");
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"captured",
+            "the write must publish the written bytes"
+        );
         assert_eq!(fs::read(&outside).unwrap(), b"outside original");
-        assert!(!destination.exists());
         fs::remove_dir_all(parent).unwrap();
     }
 }

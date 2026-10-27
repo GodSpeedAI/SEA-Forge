@@ -564,6 +564,11 @@ pub enum LifecycleContainment {
     /// POSIX process-group kill verified; no stronger mechanism was active
     /// (Local/trusted, or cgroup unavailable with a typed degrade already
     /// reported), or the macOS jail's census found no surviving escapee.
+    /// Completeness caveat: the macOS census observes the workload's ppid
+    /// tree only while the workload lives, so a double-fork+setsid daemon
+    /// that reparents to launchd before any sample is unobservable — group
+    /// teardown is verified, descendant completeness is best-effort (see
+    /// `LifecycleContainment::SandboxCagePersists` for the observable case).
     ProcessGroup,
     /// Isolated: the run was the init of its own PID namespace
     /// (`unshare --pid`). Membership is structural — the namespace is

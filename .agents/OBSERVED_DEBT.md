@@ -1405,3 +1405,9 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   on the lane.
 - Scope: kernel-side behavior, not fixable from this repository; the
   degrade keeps containment claims independent of removal hygiene.
+
+## Open: lifecycle admission control for cgroup-degraded backends (review pass 1, High-3/High-5 partials)
+
+- **Evidence**: codex review pass 1 (`review-pass-1` in this session's log, severity Critical 0 / High 5 / Medium 10 / Low 1): without delegated cgroups and without `SEA_FORGE_REQUIRE_CGROUP=1`, Local/Jail/Linux execution continues with process-group-only cleanup, and a setsid/double-fork escapee survives (Local is trusted-host by contract; Jail degrades with a typed `ProcessGroup` claim). The macOS census cannot observe a double-fork daemon that reparents before any sample (group teardown verified; descendant completeness best-effort).
+- **Impact**: on such hosts, a workload's detached descendants outlive the run and can write inside granted trees after completion. This is the documented capability boundary, honestly labeled — not a silent downgrade — but it is a real boundary.
+- **Next move**: an admission-level lifecycle requirement: a workload/plan flag requiring verified descendant containment that makes `execute` fail closed (`lifecycle_containment_unavailable`) when the backend cannot provide it, instead of degrading. Owner: sea-forge-runtime admission + the sandbox capability declarations; spec change required (public contract).

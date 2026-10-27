@@ -707,6 +707,9 @@ pub fn spawn_interactive(
         stdout,
         stderr,
         lifeline: Some(lifeline),
+        // Lifecycle containment here is the pid namespace + lifeline, not a
+        // cgroup leaf (High-4 wired the lease for the jail path only).
+        cgroup_lease: None,
     })
 }
 
