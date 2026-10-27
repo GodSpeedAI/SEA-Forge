@@ -1,22 +1,21 @@
 # Current status
 
-**Status revision:** 197
+**Status revision:** 198
 
-**Stage:** capability-harvest: WINDOWS LANE GREEN (round 12 — self-exec breakaway probe worked); macOS cage census race made deterministic; pushing round 13
+**Stage:** capability-harvest: FULL SURFACE GREEN at fcea8c66 (portability windows+macos, CI gate, kernel-security 22.04); the 24.04 guard race fixed; codex pass 1 running
 
-**Summary:** Round 12: the entire Windows portability lane passes for the first time - the self-exec breakaway probe (test binary re-exec'd into the sandbox, CreateProcessW via the windows-sys dev-dependency) both proved the control create and the kernel's breakaway refusal. The one regression is the macOS cage-persists test flaking back to ProcessGroup: the census samples the workload's ppid tree only while the workload lives, and the sh exited within ~50-100ms of detached.pid appearing, leaving the descendant recording to a single race-prone slice (four green rounds were luck). The workload now sleeps one second after the marker appears, guaranteeing ~10 census slices; the helper parent's 1.5s linger and the 20s execute budget both still fit.
+**Summary:** Round 13 delivered the first simultaneously-green surface: portability windows AND macos success, CI gate success, KVM proof standing green. The kernel-security 24.04 red was the guard race W1 recorded in OBSERVED_DEBT, now with its precise trigger evidenced by the de-collided artifact: the guard read REQUIRE=1 inside required_lane's transient forced window plus a mid-run tally (the four Active scenarios honestly BLOCK on that VM - no delegation there - and only the unlocked read turned that into a failure). The guard now takes env_lock, serializing against every env-forcing test in the file. The codex adversarial review (pass 1, read-only) is running against the frozen fcea8c66 diff.
 
 **Verified:**
 
-- gh run 40504750501: verify (windows) success - every windows step green including job-object tests
-- apple-darwin check + clippy -D warnings green on the fix; fmt clean
+- gh runs 40507892357 (portability success), 40507892479 (CI success), 40406886571/40400369301-line KVM green; setsid suite 9/9 locally after the guard fix; fmt clean
 
 **Limits:**
 
-- Round 13 must confirm the macOS lane green again (windows unaffected)
+- kernel-security must re-run green on the guard fix; codex pass 1 findings pending
 
-**Next move:** Push round 13; on green, freeze and run the codex adversarial review.
+**Next move:** Push the guard fix, verify kernel-security green, process the codex findings, then record/report/handoff.
 
 **Evidence:**
 
-- gh run 40504750501 log
+- gh run 40507892410 artifact (ubuntu-24.04 de-collided evidence)

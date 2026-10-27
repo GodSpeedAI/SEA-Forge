@@ -64,6 +64,11 @@ fn blocked_or_require(require_env: &str, what: &str, why: &dyn std::fmt::Display
 
 #[test]
 fn no_blocked_scenarios_in_required_mode() {
+    // Serialize against this file's env-forcing tests: without the lock this
+    // guard can read REQUIRE=1 during `required_lane_refuses...`'s transient
+    // window together with a mid-run tally (the kernel-security 24.04 lane
+    // hit exactly that race; W1's debt note predicted it).
+    let _env = env_lock();
     let cgroup_blocks = CGROUP_BLOCKS.load(Ordering::SeqCst);
     let jail_blocks = JAIL_BLOCKS.load(Ordering::SeqCst);
     let require_cgroup = std::env::var(cgroup::REQUIRE_ENV).as_deref() == Ok("1");
