@@ -48,13 +48,19 @@ for bin in $bins; do
         exit 1
     fi
     # Architecture/anti-aliasing gate: the payload must BE the architecture
-    # the package metadata will claim. `file` prints the machine as a
-    # comma-separated field (ELF 64-bit LSB ..., x86-64, ...) / (..., AArch64,
-    # ...), so match the machine name directly in the full description.
-    if file -b "$bindir/$bin" | grep -Fq "$elf_machine"; then :; else
-        echo "error: $bindir/$bin is not '$elf_machine' (deb arch $deb_arch): $(file -b "$bindir/$bin" | head -c 160)" >&2
-        exit 2
-    fi
+    # the package metadata will claim. Read the machine from readelf's
+    # header (stable, version-independent output) rather than from `file`'s
+    # human description (whose machine spelling varies across file
+    # versions): "Machine:" is "Advanced Micro Devices X86-64" on amd64 and
+    # "AArch64" on arm64.
+    machine=$(readelf -h "$bindir/$bin" | awk '/Machine:/{gsub(/^ +/, ""); print substr($0, index($0, "Machine:") + 9)}')
+    case "$machine" in
+        "$elf_machine") ;;
+        *)
+            echo "error: $bindir/$bin ELF machine is '$machine', expected '$elf_machine' (deb arch $deb_arch)" >&2
+            exit 2
+            ;;
+    esac
 done
 
 work=$(mktemp -d)
