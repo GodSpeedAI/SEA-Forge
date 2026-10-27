@@ -123,10 +123,11 @@ jobs:
         run: |
           set -euo pipefail
           tag_commit="$(git rev-parse HEAD)"
-          for os in linux macos windows; do
-            built="$(cat "dist/built-from-${os}.txt")"
-            test "$built" = "$tag_commit" || { echo "::error::${os} packages built from ${built}, tag ${RELEASE_TAG} is ${tag_commit}"; exit 1; }
-            rm "dist/built-from-${os}.txt"
+          # Linux builds one marker per architecture (amd64, arm64).
+          for marker in built-from-linux-amd64.txt built-from-linux-arm64.txt built-from-macos.txt built-from-windows.txt; do
+            built="$(cat "dist/${marker}")"
+            test "$built" = "$tag_commit" || { echo "::error::${marker} says ${built}, tag ${RELEASE_TAG} is ${tag_commit}"; exit 1; }
+            rm "dist/${marker}"
           done
 
       - name: SHA256SUMS over every asset
@@ -136,7 +137,8 @@ jobs:
           ls -l
           version="${RELEASE_TAG#v}"
           # Every package family must be present for this version (macOS may be universal or arm64).
-          for pattern in "sea-forge_${version}_amd64.deb" "sea-forge-${version}-x86_64-unknown-linux-gnu.tar.gz" \
+          for pattern in "sea-forge_${version}_amd64.deb" "sea-forge_${version}_arm64.deb" \
+                         "sea-forge-${version}-x86_64-unknown-linux-gnu.tar.gz" "sea-forge-${version}-aarch64-unknown-linux-gnu.tar.gz" \
                          "sea-forge-${version}-macos-*.pkg" "sea-forge-${version}-macos-*.dmg" \
                          "sea-forge-${version}-x86_64-pc-windows-msvc-setup.exe" "sea-forge-${version}-x86_64-pc-windows-msvc.zip"; do
             found=$(compgen -G "$pattern" | wc -l)

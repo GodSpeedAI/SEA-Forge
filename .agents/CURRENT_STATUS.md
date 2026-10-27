@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 203
+**Status revision:** 204
 
-**Stage:** ARM64 Jetson packaging: probe workflow registration lag; push trigger added as the reliable trigger
+**Stage:** ARM64 Jetson packaging: implementation complete (build.sh arch param, matrix packaging job, per-arch markers, publisher contract); pushing for the packaging run
 
-**Summary:** GitHub registered the arm-probe workflow lazily; workflow_dispatch 404s until registration completes. The probe now also fires on push to the branch. Meanwhile the capability-harvest branch's cfg fix (2e83e508) and record reconciliation (5e2a3bb9) are pushed; their lanes re-run.
+**Summary:** Probe verified both hosted arm64 runners; ubuntu-22.04-arm has glibc 2.35 = the Jetson ABI, so the arm64 job builds natively (no cross-compilation, dpkg-shlibdeps derivation is payload-faithful). build.sh now takes a validated deb-arch parameter and gates every staged executable against the claimed ELF machine before packaging. The linux job is a matrix (amd64 ubuntu-22.04 / arm64 ubuntu-22.04-arm) with target-specific ELF interpreter handling (/lib/ld-linux-aarch64.so.1 for arm64), per-arch built-from markers, and per-arch artifacts. The release publisher requires both arm64 and amd64 artifacts, checks both markers, and extends SHA256SUMS.
 
 **Verified:**
 
-- arm-probe.yml present on the remote branch (contents API)
+- probe run 40591820969: ubuntu-22.04-arm aarch64 glibc 2.35; yaml parse ok; bash -n ok
 
 **Limits:**
 
-- Probe verdict pending
+- Packaging run pending; Jetson Milestone C is on-device
 
-**Next move:** Probe verdict -> implement the packaging generalization.
+**Next move:** Commit, push, trigger package.yml on the branch, collect artifacts and hashes.
 
 **Evidence:**
 
-- .github/workflows/arm-probe.yml
+- .github/workflows/arm-probe.yml run 40591820969

@@ -1,7 +1,7 @@
 name: Package
 
 # Native install packages for sea-forge (CLI) and sea-forge-server (daemon):
-#   linux   sea-forge_<ver>_amd64.deb, plus the existing linux tar.gz
+#   linux   sea-forge_<ver>_<arch>.deb (amd64 + arm64), plus per-target tar.gz
 #   macos   sea-forge-<ver>-macos-universal.pkg / .dmg (arm64-only if the x86_64 cross-build fails)
 #   windows sea-forge-<ver>-x86_64-pc-windows-msvc-setup.exe and .zip
 #
@@ -44,8 +44,27 @@ concurrency:
 
 jobs:
   linux:
-    name: package (linux amd64)
-    runs-on: ubuntu-22.04  # oldest supported glibc (2.35) widens the .deb audience
+    name: package (linux ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # amd64 on the x86_64 runner, arm64 on the hosted aarch64 runner:
+        # both are Ubuntu 22.04 images (glibc 2.35), the oldest supported
+        # target ABI (the Jetson AGX Orin deployment is Ubuntu 22.04 arm64).
+        # A native build on the matching runner keeps dpkg-shlibdeps's
+        # dependency derivation on a host that matches the payload.
+        include:
+          - arch: amd64
+            runs-on: ubuntu-22.04
+            target_triple: x86_64-unknown-linux-gnu
+            elf_interpreter: /lib64/ld-linux-x86-64.so.2
+            elf_machine: "Advanced Micro Devices X86-64"
+          - arch: arm64
+            runs-on: ubuntu-22.04-arm
+            target_triple: aarch64-unknown-linux-gnu
+            elf_interpreter: /lib/ld-linux-aarch64.so.1
+            elf_machine: AArch64
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -99,8 +118,15 @@ jobs:
           sudo apt-get install -y patchelf >/dev/null
           for b in target/release/sea-forge target/release/sea-forge-server \
                    target/release/sea-forge-workload-exec target/release/sea-forge-mcp-connect; do
-            patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath "$b"
-            readelf -l "$b" | grep -F '[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]'
+            # Target-specific loader (amd64: /lib64/ld-linux-x86-64.so.2,
+            # arm64: /lib/ld-linux-aarch64.so.1 — confirmed present on the
+            # ubuntu-22.04-arm runner image, matching the Jetson).
+            patchelf --set-interpreter "${{ matrix.elf_interpreter }}" --remove-rpath "$b"
+            readelf -l "$b" | grep -F "[Requesting program interpreter: ${{ matrix.elf_interpreter }}]"
+            # ELF machine must match the matrix architecture: an x86_64
+            # payload in an arm64 package (or vice versa) fails here, before
+            # packaging.
+            file -b "$b" | grep -F "${{ matrix.elf_machine }}"
             if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
             if readelf -d "$b" | grep -F /nix/store; then echo "::error::$b references /nix/store"; exit 1; fi
           done
@@ -113,8 +139,8 @@ jobs:
           set -euo pipefail
           sudo apt-get install -y dpkg-dev >/dev/null
           mkdir -p dist
-          sh packaging/deb/build.sh "$VERSION" target/release dist
-          stage="sea-forge-${VERSION}-x86_64-unknown-linux-gnu"
+          sh packaging/deb/build.sh "$VERSION" target/release dist "${{ matrix.arch }}"
+          stage="sea-forge-${VERSION}-${{ matrix.target_triple }}"
           rm -rf "dist-stage"
           mkdir -p "dist-stage/${stage}"
           cp target/release/sea-forge target/release/sea-forge-server target/release/sea-forge-workload-exec \
@@ -129,7 +155,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          deb="dist/sea-forge_${VERSION}_amd64.deb"
+          deb="dist/sea-forge_${VERSION}_${{ matrix.arch }}.deb"
           sudo apt-get install -y "./${deb}"
           command -v sea-forge
           test "$(sea-forge --version)" = "sea-forge ${VERSION}"
@@ -173,16 +199,16 @@ jobs:
 
       - name: Record the built commit
         shell: bash
-        run: git rev-parse HEAD > dist/built-from-linux.txt
+        run: git rev-parse HEAD > "dist/built-from-linux-${{ matrix.arch }}.txt"
 
       - name: Upload packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pkg-linux
+          name: pkg-linux-${{ matrix.arch }}
           path: |
             dist/*.deb
             dist/*.tar.gz
-            dist/built-from-linux.txt
+            dist/built-from-linux-*.txt
           if-no-files-found: error
 
       - name: Job summary
@@ -190,7 +216,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "### linux amd64"
+            echo "### linux ${{ matrix.arch }}"
             echo "- .deb installed with apt, --version checked, removed (see the install test step)"
             echo "- functional smoke: see the smoke step; unsigned package"
           } >> "$GITHUB_STEP_SUMMARY"
