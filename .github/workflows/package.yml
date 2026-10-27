@@ -127,7 +127,10 @@ jobs:
             # payload in an arm64 package (or vice versa) fails here, before
             # packaging. readelf -h's Machine field is stable output; file's
             # human description varies across versions.
-            machine="$(readelf -h "$b" | awk '/Machine:/{gsub(/^ +/, ""); print substr($0, index($0, "Machine:") + 9)}')"
+            # Trim BOTH sides: readelf right-aligns the Machine field, and
+            # the YAML-templated awk (vs build.sh's gsub) previously left the
+            # run of leading spaces in the captured value.
+            machine="$(readelf -h "$b" | awk '/Machine:/{v=substr($0, index($0, "Machine:") + 9); gsub(/^ +| +$/, "", v); print v}')"
             test "$machine" = "${{ matrix.elf_machine }}" || { echo "::error::$b ELF machine is '$machine', expected '${{ matrix.elf_machine }}'"; exit 1; }
             if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
             if readelf -d "$b" | grep -F /nix/store; then echo "::error::$b references /nix/store"; exit 1; fi

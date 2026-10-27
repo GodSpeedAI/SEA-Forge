@@ -1,14 +1,14 @@
 # Current status
 
-**Status revision:** 207
+**Status revision:** 208
 
-**Stage:** ARM64 packaging: the workflow's own file-based machine gate had the same version brittleness; switched to readelf; rerunning
+**Stage:** ARM64 packaging: root cause finally named by the gate's own error — leading spaces in the readelf Machine capture; both gates trim properly; rerunning
 
-**Summary:** Run 4 reproduced the identical signature because the workflow's detach step carries a SECOND machine check (my matrix edit added file -b | grep -F) alongside the build.sh one I had already fixed. Both gates now read readelf -h's stable Machine field. The build itself (native arm64 compile, interpreter patch, interpreter read-back) has passed on every run; only these duplicate verification gates failed.
+**Summary:** Run 5's error message showed the captured machine as '                          AArch64' (readelf right-aligns the field). The workflow gate's gsub trimmed the wrong expression stage; both gates now trim the captured value, verified locally against a real ELF.
 
 **Verified:**
 
-- yaml parse ok
+- local extraction: [Advanced Micro Devices X86-64] exact-match verified
 
 **Limits:**
 
@@ -18,4 +18,4 @@
 
 **Evidence:**
 
-- runs 40592500846 / 40596015564 / 40598734359 (same signature)
+- run 40600886499 error output

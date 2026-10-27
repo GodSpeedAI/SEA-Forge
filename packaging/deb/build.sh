@@ -53,7 +53,7 @@ for bin in $bins; do
     # human description (whose machine spelling varies across file
     # versions): "Machine:" is "Advanced Micro Devices X86-64" on amd64 and
     # "AArch64" on arm64.
-    machine=$(readelf -h "$bindir/$bin" | awk '/Machine:/{gsub(/^ +/, ""); print substr($0, index($0, "Machine:") + 9)}')
+    machine=$(readelf -h "$bindir/$bin" | awk '/Machine:/{v=substr($0, index($0, "Machine:") + 9); gsub(/^ +| +$/, "", v); print v}')
     case "$machine" in
         "$elf_machine") ;;
         *)
