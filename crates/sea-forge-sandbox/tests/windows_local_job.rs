@@ -191,15 +191,33 @@ public static class SfBreakaway {{
   }}
   [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
   public static extern bool CreateProcessW(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern bool CloseHandle(IntPtr hObject);
 }}
 '@
 Add-Type -TypeDefinition $def
-$si = New-Object SfBreakaway+STARTUPINFO
-$si.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
-$pi = New-Object SfBreakaway+PROCESS_INFORMATION
-$ok = [SfBreakaway]::CreateProcessW($null, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$si, [ref]$pi)
-$err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
-Set-Content -LiteralPath {result} -Value ("{{0}} {{1}}" -f $ok, $err)"#,
+# Positive control: creation WITHOUT the breakaway flag must succeed from
+# inside the job, attributing any refusal of the flagged attempt to the
+# job's flag omission rather than to the probe itself.
+$siC = New-Object SfBreakaway+STARTUPINFO
+$siC.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
+$piC = New-Object SfBreakaway+PROCESS_INFORMATION
+$okC = [SfBreakaway]::CreateProcessW($null, {control_cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0, [IntPtr]::Zero, $null, [ref]$siC, [ref]$piC)
+$errC = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+if ($okC) {{
+  [void][SfBreakaway]::TerminateProcess($piC.hProcess, 0)
+  [void][SfBreakaway]::CloseHandle($piC.hProcess)
+  [void][SfBreakaway]::CloseHandle($piC.hThread)
+}}
+$siB = New-Object SfBreakaway+STARTUPINFO
+$siB.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
+$piB = New-Object SfBreakaway+PROCESS_INFORMATION
+$okB = [SfBreakaway]::CreateProcessW($null, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$siB, [ref]$piB)
+$errB = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+Set-Content -LiteralPath {result} -Value ("{{0}} {{1}} {{2}} {{3}}" -f $okC, $errC, $okB, $errB)"#,
+        control_cmdline = ps_single("cmd /d /c exit 0"),
         cmdline = ps_single(&format!(
             "cmd /d /c ping -n 30 127.0.0.1 >nul & rem {token}"
         )),
@@ -526,21 +544,36 @@ fn breakaway_from_job_attempt_is_refused() {
         "\n{}",
         child_output(&dirs)
     );
+    // Outcome: "control_ok control_err breakaway_ok breakaway_err". The
+    // control attributes the refusal to the job's breakaway-flag omission:
+    // creation WITHOUT the flag must succeed from inside the job, and the
+    // flagged attempt must be refused. The kernel's error code is recorded,
+    // not asserted (Server 2025 returned 123 here, not the documented 5).
     let outcome = fs::read_to_string(&result_file).unwrap_or_default();
-    let mut parts = outcome.split_whitespace();
-    let created = parts.next().unwrap_or_default();
-    let last_error = parts.next().unwrap_or_default();
+    let parts: Vec<&str> = outcome.split_whitespace().collect();
+    let (control_created, _control_error, breakaway_created, breakaway_error) =
+        match parts.as_slice() {
+            [c, ce, b, be] => (*c, *ce, *b, *be),
+            _ => panic!(
+                "malformed probe outcome: {outcome}\n{}",
+                child_output(&dirs)
+            ),
+        };
     assert_eq!(
-        created,
+        control_created,
+        "True",
+        "the no-flag control create failed; the refusal below would not be \
+         attributable to the job\n{outcome}\n{}",
+        child_output(&dirs)
+    );
+    assert_eq!(
+        breakaway_created,
         "False",
         "CreateProcessW(CREATE_BREAKAWAY_FROM_JOB) succeeded: the workload \
          escaped the job\n{outcome}\n{}",
         child_output(&dirs)
     );
-    assert_eq!(
-        last_error, "5",
-        "breakaway must be refused with ERROR_ACCESS_DENIED (5), got {outcome}"
-    );
+    println!("breakaway refusal error code (recorded, not asserted): {breakaway_error}");
 
     // Nothing carrying the token may be running afterwards.
     let deadline = Instant::now() + Duration::from_secs(15);
