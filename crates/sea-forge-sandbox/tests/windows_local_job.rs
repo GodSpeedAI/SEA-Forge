@@ -204,7 +204,7 @@ Add-Type -TypeDefinition $def
 $siC = New-Object SfBreakaway+STARTUPINFO
 $siC.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
 $piC = New-Object SfBreakaway+PROCESS_INFORMATION
-$okC = [SfBreakaway]::CreateProcessW($null, {control_cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0, [IntPtr]::Zero, $null, [ref]$siC, [ref]$piC)
+$okC = [SfBreakaway]::CreateProcessW({app}, {control_cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0, [IntPtr]::Zero, $null, [ref]$siC, [ref]$piC)
 $errC = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
 if ($okC) {{
   [void][SfBreakaway]::TerminateProcess($piC.hProcess, 0)
@@ -214,12 +214,13 @@ if ($okC) {{
 $siB = New-Object SfBreakaway+STARTUPINFO
 $siB.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
 $piB = New-Object SfBreakaway+PROCESS_INFORMATION
-$okB = [SfBreakaway]::CreateProcessW($null, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$siB, [ref]$piB)
+$okB = [SfBreakaway]::CreateProcessW({app}, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$siB, [ref]$piB)
 $errB = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
 Set-Content -LiteralPath {result} -Value ("{{0}} {{1}} {{2}} {{3}}" -f $okC, $errC, $okB, $errB)"#,
-        control_cmdline = ps_single("cmd /d /c exit 0"),
+        app = ps_single("C:\\Windows\\System32\\cmd.exe"),
+        control_cmdline = ps_single("cmd.exe /d /c exit 0"),
         cmdline = ps_single(&format!(
-            "cmd /d /c ping -n 30 127.0.0.1 >nul & rem {token}"
+            "cmd.exe /d /c ping -n 30 127.0.0.1 >nul & rem {token}"
         )),
         result = ps_single(&result.display().to_string()),
     )
