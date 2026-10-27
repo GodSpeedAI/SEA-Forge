@@ -456,7 +456,8 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
                 "'{helper}' '{ws}' '{out}' & \
                  i=0; while [ ! -f '{ws}/detached.pid' ] && [ $i -lt 200 ]; do \
                  i=$((i+1)); sleep 0.05; done; \
-                 [ -f '{ws}/detached.pid' ] || {{ echo helper-never-recorded; exit 9; }}",
+                 [ -f '{ws}/detached.pid' ] || {{ echo helper-never-recorded; exit 9; }}; \
+                 sleep 1",
                 helper = helper.display(),
                 ws = fx.workspace.display(),
                 out = fx.outside.display(),
@@ -468,7 +469,12 @@ fn setsid_descendant_survives_the_sweep_but_stays_sandbox_caged() {
         // workload exit 9 with "helper-never-recorded" ~10s BEFORE the
         // deadline, so the failure surfaces as Completed-with-exit-9 (the
         // assertion below prints the artifacts) instead of a bare TimedOut
-        // whose evidence is masked by the timeout boundary.
+        // whose evidence is masked by the timeout boundary. The trailing
+        // `sleep 1` keeps the workload alive for ~10 census slices AFTER the
+        // marker appears: the census samples the workload's ppid tree only
+        // while the workload lives, and an exit within ~50-100ms of the
+        // marker left the recording to a single race-prone slice (round 12:
+        // four green rounds then ProcessGroup).
         timeout_secs: 20,
         env: BTreeMap::from([("PATH".to_string(), PATH_ENV.to_string())]),
         compensating_controls: vec![],
