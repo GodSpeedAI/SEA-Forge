@@ -1,22 +1,21 @@
 # Current status
 
-**Status revision:** 199
+**Status revision:** 201
 
-**Stage:** capability-harvest: codex pass-1 findings processed (fixes + disputes); pushing review round 2
+**Stage:** capability-harvest: windows cfg(unix) gate restored on the two F32 regression tests; ARM64 Jetson packaging mission accepted as the next workstream
 
-**Summary:** Codex pass 1 (Critical 0/High 5/Medium 10/Low 1) triaged. Fixed: H1 macOS destroy_sweep scoped per sandbox instance; H2 Windows publish rebuilt (temp handle held through the release window, by-handle rename with pin released, repin with directory-ID comparison, published-entry FileId + reparse checks); H4 interactive jail carries the cgroup lease through the ACP session (LeafCleanupGuard runs the verified leaf kill before the group kill); M6 staging content verification (in-place same-uid tamper now detected AND the tampered entry removed); M7 guard serialization for the egress tally; M9 CONNECT parsing (normalized CONNECT_STATUS marker, full header-block read before any token); M10 ci.yml authority narrowed (test process migrates into the delegated subtree; mount-root procs chown removed); M11 per-call staging directories (concurrent writers never share); M12 changeset scanner refuses .sf-staging leftovers; M13 no-async-kernel fail-closed (if-capture preserves cargo's status; absence only via cargo's own not-found text); M14 Windows completion verifies the job empty; M15 disputed (unshare --pid --fork establishes the namespace before the helper runs; a setup failure can never produce a contained Completed run). H3/H5 admission-level refusal disputed with the honest-degrade contract; recorded as the lifecycle-admission debt. L16 record staleness deferred to the final record rewrite.
+**Summary:** The record-push lane run caught a real mistake: my in-place tamper test consumed the neighbor test's #[cfg(unix)] attribute when it was inserted, breaking the windows-target build of sea-forge-sandbox (10 E0433 errors). Both tests are cfg-gated again; windows-target check is green and all 27 lib tests pass. A new operator mission (Linux ARM64 packaging for the Jetson AGX Orin) starts as a parallel workstream on its own branch.
 
 **Verified:**
 
-- Local: fmt clean, clippy -D warnings across sandbox/os/agent/server/core/changeset/case-runner, sandbox 23 targets green (27 lib incl. the in-place tamper test), agent/changeset/case-runner/server suites green, no-async-kernel green with the fail-closed capture
+- windows-msvc check green; sandbox lib 27 green; fmt clean
 
 **Limits:**
 
-- Lane rerun required for the review round 2 freeze; codex pass 2 after the record rewrite
+- Lanes for the cfg fix pending; ARM64 mission not started
 
-**Next move:** Commit, push, lanes green -> rewrite the record (L16), then codex pass 2.
+**Next move:** Push the cfg fix, confirm windows lane green, then scope and implement the ARM64 packaging mission on a separate branch.
 
 **Evidence:**
 
-- /tmp/zcode-bash-4BSlaa/.../call_b87c2fc9017141ef9ab89bed-stdout.log (pass-1 findings)
-- .agents/OBSERVED_DEBT.md
+- portability run on 5e2a3bb9 (10 E0433)

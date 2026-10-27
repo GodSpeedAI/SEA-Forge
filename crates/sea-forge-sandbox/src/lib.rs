@@ -1033,6 +1033,7 @@ mod tests {
     /// bytes under the same name. With staging, no such entry ever exists in
     /// the destination directory and the plant is inert.
     #[cfg(unix)]
+    #[cfg(unix)]
     #[test]
     fn in_place_temp_tampering_is_detected_at_publication() {
         use std::sync::atomic::{AtomicU8, Ordering};
@@ -1099,6 +1100,7 @@ mod tests {
         fs::remove_dir_all(parent).unwrap();
     }
 
+    #[cfg(unix)]
     #[test]
     fn substituted_temp_name_cannot_publish_attacker_bytes() {
         use std::os::unix::fs::PermissionsExt;
