@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 195
+**Status revision:** 196
 
-**Stage:** capability-harvest: round-10 control exposed the breakaway probe itself (error 123 for BOTH creates); explicit ApplicationName fixes it; pushing round 11
+**Stage:** capability-harvest: breakaway probe rewritten as a self-exec test binary (donor pattern) after the PowerShell probe proved unfixable; pushing round 12
 
-**Summary:** Round 10's positive control did its job: the no-flag create also failed ERROR_INVALID_NAME (123), proving the earlier breakaway 'refusal' was never attributable to the job — the probe's null ApplicationName made CreateProcessW treat the quoted command string as the executable path. Both probes now pass C:\\Windows\\System32\\cmd.exe explicitly with arguments in the command line. The server-side lifecycle panic in the same log line is a caught-and-reported test artifact (the test reports ok).
+**Summary:** Donor re-review verdict: ProcessKit exercises Windows workload behavior via interpreter-level Start-Process (which our grandchild test already covers) and has NO in-workload CreateProcessW probe at all - the os-level direct test (passing) is the donor-equivalent breakaway proof. The in-workload demonstration is retained but rebuilt on the repo's proven self-exec pattern: the test binary re-execs itself into the sandbox with --exact breakaway_probe_helper, activated by env vars, calling CreateProcessW via a windows-sys dev-dependency (same locked 0.61 the os crate uses - no new packages; test-only). The breakaway child carries the survivor-sweep token; the control create attributes the refusal to the job.
 
 **Verified:**
 
-- windows-target check + fmt green on the probe fix
+- windows-target check + clippy -D warnings + host clippy + fmt green; sandbox lib 26 green
 
 **Limits:**
 
-- Round 11 must confirm the windows lane end-to-end green
+- Round 12 must confirm the windows lane end-to-end green
 
-**Next move:** Push round 11; on green, freeze and run the codex adversarial review.
+**Next move:** Push round 12; on green, freeze and run the codex adversarial review.
 
 **Evidence:**
 
-- gh run 40446093616 log
+- gh runs 40459348653 / 40446093616 logs

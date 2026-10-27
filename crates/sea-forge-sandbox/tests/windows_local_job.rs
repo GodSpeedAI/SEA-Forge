@@ -8,6 +8,11 @@
 //! Scope: this backend has NO filesystem or network containment. These tests
 //! cover process-tree lifetime and basic run/env behavior only.
 #![cfg(windows)]
+// The breakaway probe re-execs this test binary as the workload and needs
+// raw CreateProcessW: the interpreter-based probes could not make that call
+// from inside a sandboxed workload, and routing test-only FFI through
+// sea-forge-os would widen its public surface for no production benefit.
+#![allow(unsafe_code)]
 
 use sea_forge_core::types::{
     ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment, Operation,
@@ -162,68 +167,113 @@ fn grandchild_args_with_pings(token: &str, marker: &Path, pings: u32) -> String 
 fn grandchild_args(token: &str, marker: &Path) -> String {
     grandchild_args_with_pings(token, marker, GRANDCHILD_PINGS)
 }
+/// The breakaway probe: this test binary re-execs ITSELF as the workload
+/// (activated by `PROBE_ENV` carrying the result-file path), so the probe
+/// code is plain Rust calling CreateProcessW through windows-sys - the same
+/// call shape as the passing sea-forge-os breakaway test, with no
+/// interpreter, no Add-Type, no C# marshaling, and no compiler dependency
+/// (the PowerShell probe failed both creates with ERROR_INVALID_NAME for
+/// three lane rounds). The runner's MSVC toolchain links the test binary
+/// against system components only, so it loads fine inside the job.
+const PROBE_ENV: &str = "SEA_FORGE_BREAKAWAY_PROBE_RESULT";
+const PROBE_TOKEN_ENV: &str = "SEA_FORGE_BREAKAWAY_PROBE_TOKEN";
 
-/// PowerShell body that attempts a `CreateProcessW` with
-/// `CREATE_BREAKAWAY_FROM_JOB` (0x01000000) for a cmd child carrying `token`,
-/// then writes "created lasterror" to `result`. The P/Invoke is the only way
-/// to pass the breakaway flag: Start-Process does not expose it.
-fn breakaway_script(token: &str, result: &Path) -> String {
-    format!(
-        r#"$def = @'
-using System;
-using System.Runtime.InteropServices;
-public static class SfBreakaway {{
-  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-  public struct STARTUPINFO {{
-    public uint cb;
-    public string lpReserved;
-    public string lpDesktop;
-    public string lpTitle;
-    public uint dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags;
-    public ushort wShowWindow, cbReserved2;
-    public IntPtr lpReserved2;
-    public IntPtr hStdInput, hStdOutput, hStdError;
-  }}
-  [StructLayout(LayoutKind.Sequential)]
-  public struct PROCESS_INFORMATION {{
-    public IntPtr hProcess, hThread;
-    public uint dwProcessId, dwThreadId;
-  }}
-  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-  public static extern bool CreateProcessW(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
-  [DllImport("kernel32.dll", SetLastError = true)]
-  public static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
-  [DllImport("kernel32.dll", SetLastError = true)]
-  public static extern bool CloseHandle(IntPtr hObject);
-}}
-'@
-Add-Type -TypeDefinition $def
-# Positive control: creation WITHOUT the breakaway flag must succeed from
-# inside the job, attributing any refusal of the flagged attempt to the
-# job's flag omission rather than to the probe itself.
-$siC = New-Object SfBreakaway+STARTUPINFO
-$siC.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
-$piC = New-Object SfBreakaway+PROCESS_INFORMATION
-$okC = [SfBreakaway]::CreateProcessW({app}, {control_cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0, [IntPtr]::Zero, $null, [ref]$siC, [ref]$piC)
-$errC = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
-if ($okC) {{
-  [void][SfBreakaway]::TerminateProcess($piC.hProcess, 0)
-  [void][SfBreakaway]::CloseHandle($piC.hProcess)
-  [void][SfBreakaway]::CloseHandle($piC.hThread)
-}}
-$siB = New-Object SfBreakaway+STARTUPINFO
-$siB.cb = [System.Runtime.InteropServices.Marshal]::SizeOf([type][SfBreakaway+STARTUPINFO])
-$piB = New-Object SfBreakaway+PROCESS_INFORMATION
-$okB = [SfBreakaway]::CreateProcessW({app}, {cmdline}, [IntPtr]::Zero, [IntPtr]::Zero, $false, 0x01000000, [IntPtr]::Zero, $null, [ref]$siB, [ref]$piB)
-$errB = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
-Set-Content -LiteralPath {result} -Value ("{{0}} {{1}} {{2}} {{3}}" -f $okC, $errC, $okB, $errB)"#,
-        app = ps_single("C:\\Windows\\System32\\cmd.exe"),
-        control_cmdline = ps_single("cmd.exe /d /c exit 0"),
-        cmdline = ps_single(&format!(
-            "cmd.exe /d /c ping -n 30 127.0.0.1 >nul & rem {token}"
-        )),
-        result = ps_single(&result.display().to_string()),
-    )
+/// Hidden helper: a no-op when the lane runs the suite normally (the env
+/// var is absent); when re-exec'd by `breakaway_from_job_attempt_is_refused`
+/// it performs the two CreateProcessW probes inside the job and writes
+/// `control_ok control_err breakaway_ok breakaway_err` to the result file.
+#[test]
+fn breakaway_probe_helper() {
+    let (Some(result), Some(token)) = (
+        std::env::var(PROBE_ENV).ok(),
+        std::env::var(PROBE_TOKEN_ENV).ok(),
+    ) else {
+        return;
+    };
+    use windows_sys::Win32::System::Threading::{
+        CreateProcessW, CREATE_BREAKAWAY_FROM_JOB, PROCESS_INFORMATION, STARTUPINFOW,
+    };
+
+    fn probe(cmdline_text: &str, creation_flags: u32) -> (i32, u32) {
+        let mut cmdline: Vec<u16> = cmdline_text.encode_utf16().collect();
+        cmdline.push(0);
+        let mut si: STARTUPINFOW = unsafe { std::mem::zeroed() };
+        si.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let mut pi: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+        // SAFETY: `cmdline` is NUL-terminated and outlives the call; `si`/`pi`
+        // are valid out-objects; every other parameter is null/false.
+        let ok = unsafe {
+            CreateProcessW(
+                std::ptr::null(),
+                cmdline.as_mut_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                0,
+                creation_flags,
+                std::ptr::null(),
+                std::ptr::null(),
+                &si,
+                &mut pi,
+            )
+        };
+        let err = unsafe { windows_sys::Win32::Foundation::GetLastError() };
+        if ok != 0 {
+            unsafe {
+                windows_sys::Win32::System::Threading::WaitForSingleObject(pi.hProcess, 5000);
+                windows_sys::Win32::System::Threading::TerminateProcess(pi.hProcess, 0);
+                windows_sys::Win32::Foundation::CloseHandle(pi.hProcess);
+                windows_sys::Win32::Foundation::CloseHandle(pi.hThread);
+            }
+        }
+        (ok, err)
+    }
+
+    let (control_ok, control_err) = probe("cmd.exe /d /c exit 0", 0);
+    // The breakaway child carries the token and lingers, so the parent
+    // test's survivor sweep is non-vacuous: if the kernel ever allowed the
+    // breakaway, a token-bearing process would exist outside the job after
+    // teardown.
+    let breakaway_cmdline = format!("cmd.exe /d /c ping -n 30 127.0.0.1 >nul & rem {token}");
+    let (breakaway_ok, breakaway_err) = probe(&breakaway_cmdline, CREATE_BREAKAWAY_FROM_JOB);
+    let _ = std::fs::write(
+        &result,
+        format!("{control_ok} {control_err} {breakaway_ok} {breakaway_err}"),
+    );
+}
+
+/// Copy this test binary into the workspace (the workload executes from
+/// the granted trees) and return its path.
+fn stage_breakaway_probe(workspace: &Path) -> std::path::PathBuf {
+    let exe = workspace.join("breakaway-probe.exe");
+    fs::copy(std::env::current_exe().expect("current exe"), &exe)
+        .expect("stage the breakaway probe");
+    exe
+}
+
+fn run_with_env(
+    dirs: &Dirs,
+    argv: Vec<String>,
+    env: BTreeMap<String, String>,
+    timeout_secs: u64,
+) -> ExecutionResult {
+    let spec = SandboxSpec {
+        workspace_root: dirs.workspace.clone(),
+        artifacts_root: dirs.artifacts.clone(),
+        network: NetworkPosture::Denied,
+    };
+    let sandbox = LocalSandbox;
+    let handle = sandbox.prepare(&spec).expect("prepare");
+    let req = ExecutionRequest {
+        plan_item_id: "windows-local-job".into(),
+        operation: Operation::ExecuteCommand {
+            argv,
+            cwd: ".".into(),
+        },
+        timeout_secs,
+        env,
+        compensating_controls: vec![],
+    };
+    sandbox.execute(&handle, &req).expect("execute")
 }
 
 fn run(dirs: &Dirs, argv: Vec<String>, timeout_secs: u64) -> ExecutionResult {
@@ -537,12 +587,27 @@ fn breakaway_from_job_attempt_is_refused() {
     let token = unique_token("brk");
     let result_file = dirs.artifacts.join("breakaway-result.txt");
 
-    let script = breakaway_script(&token, &result_file);
-    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
+    let probe = stage_breakaway_probe(&dirs.workspace);
+    let argv = vec![
+        probe.display().to_string(),
+        "--exact".into(),
+        "breakaway_probe_helper".into(),
+        "--test-threads=1".into(),
+    ];
+    let mut env = host_env();
+    env.insert(PROBE_ENV.to_string(), result_file.display().to_string());
+    env.insert(PROBE_TOKEN_ENV.to_string(), token.clone());
+    let result = run_with_env(&dirs, argv, env, TIMEOUT_SECS);
     assert_eq!(
         result.status,
         ExecutionStatus::Completed,
         "\n{}",
+        child_output(&dirs)
+    );
+    assert_eq!(
+        result.exit_code,
+        Some(0),
+        "the probe harness itself failed; its stdio:\n{}",
         child_output(&dirs)
     );
     // Outcome: "control_ok control_err breakaway_ok breakaway_err". The
@@ -562,14 +627,14 @@ fn breakaway_from_job_attempt_is_refused() {
         };
     assert_eq!(
         control_created,
-        "True",
+        "1",
         "the no-flag control create failed; the refusal below would not be \
          attributable to the job\n{outcome}\n{}",
         child_output(&dirs)
     );
     assert_eq!(
         breakaway_created,
-        "False",
+        "0",
         "CreateProcessW(CREATE_BREAKAWAY_FROM_JOB) succeeded: the workload \
          escaped the job\n{outcome}\n{}",
         child_output(&dirs)
