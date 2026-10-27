@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 204
+**Status revision:** 205
 
-**Stage:** ARM64 Jetson packaging: implementation complete (build.sh arch param, matrix packaging job, per-arch markers, publisher contract); pushing for the packaging run
+**Stage:** ARM64 packaging: first run diagnosed (file-format machine extraction bug), fixed; rerunning
 
-**Summary:** Probe verified both hosted arm64 runners; ubuntu-22.04-arm has glibc 2.35 = the Jetson ABI, so the arm64 job builds natively (no cross-compilation, dpkg-shlibdeps derivation is payload-faithful). build.sh now takes a validated deb-arch parameter and gates every staged executable against the claimed ELF machine before packaging. The linux job is a matrix (amd64 ubuntu-22.04 / arm64 ubuntu-22.04-arm) with target-specific ELF interpreter handling (/lib/ld-linux-aarch64.so.1 for arm64), per-arch built-from markers, and per-arch artifacts. The release publisher requires both arm64 and amd64 artifacts, checks both markers, and extends SHA256SUMS.
+**Summary:** Both linux jobs failed at the new machine gate: file prints the ELF machine as a comma-separated field (ELF 64-bit LSB ..., x86-64, ...), and the sed extraction returned the type text instead. The gate now greps the machine name in the full file output. Everything before it (native arm64 build, /lib/ld-linux-aarch64.so.1 interpreter patch, interpreter read-back) already passed on the arm64 runner.
 
 **Verified:**
 
-- probe run 40591820969: ubuntu-22.04-arm aarch64 glibc 2.35; yaml parse ok; bash -n ok
+- interpreter patch + read-back PASSED on arm64 (run 40592500846) — the loader handling is proven; only the machine gate was wrong
 
 **Limits:**
 
-- Packaging run pending; Jetson Milestone C is on-device
+- Rerun pending
 
-**Next move:** Commit, push, trigger package.yml on the branch, collect artifacts and hashes.
+**Next move:** Green packaging run -> collect artifacts + hashes -> Jetson instructions.
 
 **Evidence:**
 
-- .github/workflows/arm-probe.yml run 40591820969
+- run 40592500846 logs

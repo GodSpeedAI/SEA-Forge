@@ -48,15 +48,13 @@ for bin in $bins; do
         exit 1
     fi
     # Architecture/anti-aliasing gate: the payload must BE the architecture
-    # the package metadata will claim.
-    machine=$(file -b "$bindir/$bin" | sed -n 's/^ELF \([^,]*\).*/\1/p')
-    case "$machine" in
-        *"$elf_machine"*) ;;
-        *)
-            echo "error: $bindir/$bin is '$machine', not '$elf_machine' (deb arch $deb_arch)" >&2
-            exit 2
-            ;;
-    esac
+    # the package metadata will claim. `file` prints the machine as a
+    # comma-separated field (ELF 64-bit LSB ..., x86-64, ...) / (..., AArch64,
+    # ...), so match the machine name directly in the full description.
+    if file -b "$bindir/$bin" | grep -Fq "$elf_machine"; then :; else
+        echo "error: $bindir/$bin is not '$elf_machine' (deb arch $deb_arch): $(file -b "$bindir/$bin" | head -c 160)" >&2
+        exit 2
+    fi
 done
 
 work=$(mktemp -d)
