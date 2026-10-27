@@ -125,8 +125,10 @@ jobs:
             readelf -l "$b" | grep -F "[Requesting program interpreter: ${{ matrix.elf_interpreter }}]"
             # ELF machine must match the matrix architecture: an x86_64
             # payload in an arm64 package (or vice versa) fails here, before
-            # packaging.
-            file -b "$b" | grep -F "${{ matrix.elf_machine }}"
+            # packaging. readelf -h's Machine field is stable output; file's
+            # human description varies across versions.
+            machine="$(readelf -h "$b" | awk '/Machine:/{gsub(/^ +/, ""); print substr($0, index($0, "Machine:") + 9)}')"
+            test "$machine" = "${{ matrix.elf_machine }}" || { echo "::error::$b ELF machine is '$machine', expected '${{ matrix.elf_machine }}'"; exit 1; }
             if readelf -d "$b" | grep -E 'R(UN)?PATH'; then echo "::error::$b still has an rpath"; exit 1; fi
             if readelf -d "$b" | grep -F /nix/store; then echo "::error::$b references /nix/store"; exit 1; fi
           done
