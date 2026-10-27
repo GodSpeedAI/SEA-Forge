@@ -28,14 +28,13 @@ use windows_sys::Win32::Security::{
     PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, FileRenameInfo,
-    GetFileInformationByHandle, GetFileInformationByHandleEx, GetFinalPathNameByHandleW,
-    GetLongPathNameW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
+    CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, GetFileInformationByHandle,
+    GetFileInformationByHandleEx, GetFinalPathNameByHandleW, GetLongPathNameW,
+    SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
     FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
     FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-    FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
-    FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
-    VOLUME_NAME_DOS,
+    FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE,
+    FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -876,7 +875,7 @@ impl PinnedDir {
         // short-lived visible temp name is not a substitution window; the
         // rename that publishes it identifies the SOURCE by handle.
         let mut attempts = 0;
-        let (mut file, _temp_path) = loop {
+        let (mut file, temp_path) = loop {
             let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
             let mut temp_name = std::ffi::OsString::from(".");
             temp_name.push(name);
@@ -899,15 +898,13 @@ impl PinnedDir {
                 Err(error) => return Err(error),
             }
         };
-        let target = absolute_rename_target(&self.path, name);
         let outcome = file
             .write_all(bytes)
             .and_then(|()| file.sync_all())
             // The destination directory is re-validated immediately before the
             // rename too: with the exclusive pin this brackets the whole
-            // write+rename window (see `rename_handle_into`).
-            .and_then(|()| self.revalidate().map_err(pin_error_into_io))
-            .and_then(|()| rename_handle_into(file.as_raw_handle() as HANDLE, &target));
+            // write+rename window.
+            .and_then(|()| self.revalidate().map_err(pin_error_into_io));
         if outcome.is_err() {
             let info = FILE_DISPOSITION_INFO { DeleteFile: true };
             // SAFETY: the handle is live and was opened with DELETE access; `info` is a live struct of the size passed.
@@ -919,8 +916,20 @@ impl PinnedDir {
                     mem::size_of::<FILE_DISPOSITION_INFO>() as u32,
                 )
             };
+            return outcome;
         }
-        outcome
+        // The publish is a path-based rename while the exclusive pin is held:
+        // the kernel's rename takes a write-class open of the target's parent
+        // directory, which the pin's FILE_SHARE_READ-only share otherwise
+        // refuses (ERROR_SHARING_VIOLATION with the by-handle form, observed
+        // on Server 2025). Under the pin the temp's name is not a
+        // substitution window — no concurrent writer can even open this
+        // directory — and the rename's target resolution is DACL-checked,
+        // not share-blocked. The temp handle must be closed first: a rename
+        // of an open file conflicts with its own handle.
+        drop(file);
+        let destination = self.path.join(name);
+        std::fs::rename(&temp_path, &destination)
     }
 }
 
@@ -976,20 +985,6 @@ fn pin_error_into_io(error: PinError) -> io::Error {
 /// directory's resolved path: `\\?\C:\dir\name` (local) or
 /// `\\?\UNC\server\share\dir\name` (UNC).
 ///
-/// Platform contract: `GetFinalPathNameByHandleW(VOLUME_NAME_DOS)` emits
-/// exactly this namespace (`\\?\...`), and the years-proven rename call,
-/// `SetFileInformationByHandle` with information class `FileRenameInfo`
-/// (class 10), resolves the device-form path as-is — no namespace rewrite
-/// happens here, unit-exactly. (The round-3 experiments with
-/// `\??\`-namespace and class-65 forms are recorded in the spike test's
-/// verdict comment; every one of them was rejected on Server 2025 x64.)
-fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
-    let mut target: Vec<u16> = pinned.as_os_str().encode_wide().collect();
-    target.push(b'\\' as u16);
-    target.extend(name.encode_wide());
-    std::ffi::OsString::from_wide(&target)
-}
-
 /// Renames the open file `file` to the absolute `\\?\` path `target`,
 /// replacing an existing entry: `SetFileInformationByHandle` with information
 /// class `FileRenameInfo` (class 10), `ReplaceIfExists=TRUE`, and a
@@ -1018,54 +1013,6 @@ fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
 ///    substitute the directory the target name resolves against during the
 ///    window either.
 ///
-/// Platform contract: `FileNameLength` is counted in BYTES of the target
-/// (terminator excluded) and the buffer is exactly header + bytes.
-fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
-    let target_wide: Vec<u16> = target.encode_wide().collect();
-    // FileNameLength is counted in BYTES of the target name (not characters),
-    // without the terminator.
-    let target_bytes = target_wide.len() * mem::size_of::<u16>();
-    // FILE_RENAME_INFO already holds one UTF-16 unit in `FileName`, so the
-    // header plus `target_bytes` is always large enough for the name.
-    let size = mem::size_of::<FILE_RENAME_INFO>() + target_bytes;
-    // u64 storage keeps the buffer aligned for the FILE_RENAME_INFO header.
-    let mut buffer = vec![0u64; size.div_ceil(mem::size_of::<u64>())];
-    let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
-    // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
-    unsafe {
-        (*info).Anonymous = FILE_RENAME_INFO_0 {
-            ReplaceIfExists: true,
-        };
-        (*info).RootDirectory = null_mut();
-        (*info).FileNameLength = target_bytes as u32;
-        let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
-        std::ptr::copy_nonoverlapping(target_wide.as_ptr(), destination, target_wide.len());
-    }
-    // SAFETY: `file` is a live handle opened with DELETE access; `info` points at `size` initialized bytes that outlive the call.
-    let ok = unsafe { SetFileInformationByHandle(file, FileRenameInfo, info.cast(), size as u32) };
-    if ok == FALSE {
-        // Instrumentation for the recorded ERROR_INVALID_PARAMETER history on
-        // the windows lane: the raw Win32 error code plus the exact struct
-        // fields as sent, so a recurrence with any form can be compared
-        // byte-for-byte against this layout.
-        let error = last_error();
-        return Err(io::Error::new(
-            error.kind(),
-            format!(
-                "SetFileInformationByHandle(FileRenameInfo) rename failed: {error} \
-                 (os code {}); FileRenameInfo sent: class=FileRenameInformation (10), \
-                 ReplaceIfExists=TRUE, RootDirectory=NULL, FileNameLength={target_bytes} \
-                 bytes ({} UTF-16 units, terminator excluded), buffer={size} bytes, \
-                 target={:?}",
-                error.raw_os_error().unwrap_or(0),
-                target_wide.len(),
-                target.to_string_lossy(),
-            ),
-        ));
-    }
-    Ok(())
-}
-
 /// Resumes every thread of `pid`. Fails if none was resumed.
 fn resume_threads(pid: u32) -> io::Result<()> {
     // SAFETY: a thread snapshot takes no pointers; the handle is checked before it is owned.
@@ -1288,6 +1235,7 @@ impl Job {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use std::ffi::c_void;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::process::{Command, Stdio};
@@ -1299,6 +1247,7 @@ mod tests {
     };
     use windows_sys::Win32::Security::DACL_SECURITY_INFORMATION;
     use windows_sys::Win32::Storage::FileSystem::FileRenameInfo;
+    use windows_sys::Win32::Storage::FileSystem::{FILE_RENAME_INFO, FILE_RENAME_INFO_0};
     use windows_sys::Win32::System::Threading::{
         CreateProcessW, DeleteProcThreadAttributeList, InitializeProcThreadAttributeList,
         UpdateProcThreadAttribute, CREATE_BREAKAWAY_FROM_JOB, EXTENDED_STARTUPINFO_PRESENT,

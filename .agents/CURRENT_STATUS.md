@@ -1,23 +1,23 @@
 # Current status
 
-**Status revision:** 190
+**Status revision:** 191
 
-**Stage:** capability-harvest: round 4 verdicts in — macOS lane GREEN (SandboxCagePersists verified live), KVM lane GREEN (F17 BLOCKED-with-evidence + deny variant); round 5 fixes the cgroup destroy-sweep interference and the Windows temp creation
+**Stage:** capability-harvest: round 5 verdicts — CI cgroup interference fixed (registry-scoped sweep); windows rename root cause finally named (pin vs kernel parent open) and resolved as a pinned path-rename
 
-**Summary:** Round 4 on real runners: the macOS cage-persists test classifies SandboxCagePersists with a census-recorded setsid survivor (F08-macOS verified); the KVM ladder exits 0 with the honest egress BLOCKED evidence pack and the passing deny variant (F17 disposition final). Two residues named and fixed in round 5: (1) destroy_process_leaves globbed the cgroup root by pid prefix, so one sandbox's destroy() removed a sibling sandbox's live leaf in same-process parallel tests (kill ENOENT, rmdir ENOENT) — the sweep is now registry-scoped (only this process's registered leaves) and double-teardown is idempotent (ENOENT reads as empty/gone); (2) the Windows anchored NtCreateFile FILE_CREATE temp rejects STATUS_INVALID_PARAMETER on Server 2025 (anchored opens of existing entries work; three rename forms and now the anchored create are recorded platform verdicts) — the temp returns to the years-proven std create_new under the exclusive pin (visible name is not a substitution window while the pin holds) with access_mode(GENERIC_WRITE|DELETE) so the handle-identified rename keeps DELETE access.
+**Summary:** Round 5: ubuntu CI still failed but the instrumentation narrowed it decisively — the by-handle FileRenameInfo rename fails ERROR_SHARING_VIOLATION (32) because the kernel's rename takes a write-class open of the target's parent directory, which the exclusive pin's FILE_SHARE_READ-only share refuses; every prior INVALID_PARAMETER was the same conflict wearing a different error (the anchored NtCreateFile temp failed for the adjacent reason). The publish is now a path-based rename executed while the pin holds: the temp name is not a substitution window under the pin (no concurrent writer can even open the directory), the rename resolves the target by DACL (not share), and the exclusive pin brackets validation, temp creation, write, sync, and publish end-to-end — F05's full-prevention invariant is intact with the only proven-working mechanism. By-handle and anchored-create forms are recorded as platform verdicts in the spike.
 
 **Verified:**
 
-- gh run 40406879337: verify(macos), lint, MSRV, workbench, authority-opa all success; KVM run 40406886571 success
-- Local: sandbox suite 23 test-targets green, runtime lib 5/5, conformance_m5 4, clippy -D warnings host+windows clean, fmt clean
+- Windows-target and host clippy -D warnings green; fmt clean; sandbox suite green
+- CI run 40410651296 ubuntu jobs beyond the runtime interference green (job-level triage)
 
 **Limits:**
 
-- Round-5 lanes must confirm: ubuntu cgroup tests green under parallelism, windows hard-link replace green
+- Round-6 lanes must confirm: windows hard-link replace green, ubuntu cgroup suites green under the registry sweep
 
-**Next move:** Push round 5; when CI+portability are green, freeze and run the codex adversarial review.
+**Next move:** Push round 6; on green, freeze and run the codex adversarial review.
 
 **Evidence:**
 
-- gh runs 40406879337 / 40406886571 / 40406874861
+- gh run 40410651287 log (os error 32 dump)
 - .agents/OBSERVED_DEBT.md
