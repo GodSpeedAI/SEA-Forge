@@ -1,5 +1,7 @@
 name: ARM probe
 on:
+  push:
+    branches: [feat/arm64-jetson-packaging]
   workflow_dispatch:
 permissions:
   contents: read
