@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 208
+**Status revision:** 209
 
-**Stage:** ARM64 packaging: root cause finally named by the gate's own error — leading spaces in the readelf Machine capture; both gates trim properly; rerunning
+**Stage:** ARM64 packaging: run 6 diagnosed the real ABI finding — Nix glibc 2.39 becomes a strong GLIBC_2.39 requirement on aarch64; arm64 now builds on the runner's system glibc 2.35 with a GLIBC floor check
 
-**Summary:** Run 5's error message showed the captured machine as '                          AArch64' (readelf right-aligns the field). The workflow gate's gsub trimmed the wrong expression stage; both gates now trim the captured value, verified locally against a real ELF.
+**Summary:** Run 6: amd64 fully green (install, smoke, clean ubuntu:22.04 + debian:12 containers); arm64 progressed past all gates to the install test, which caught GLIBC_2.39 not found — the Devbox/Nix toolchain's glibc becomes a strong requirement on aarch64 (on amd64 it is weak-versioned, which is why that leg always ran). The arm64 leg now builds with the runner's native rustup toolchain (same pinned channel) and system gcc, binding glibc 2.35 so dpkg-shlibdeps derives the honest floor; a new GLIBC-floor check refuses any required version above 2.35 in the packaged binaries. amd64 keeps the Devbox path (its weak references pass; unification noted for later).
 
 **Verified:**
 
-- local extraction: [Advanced Micro Devices X86-64] exact-match verified
+- yaml parse ok; run 40602941845: amd64 clean ubuntu:22.04 + debian:12 installs pass
 
 **Limits:**
 
-- Rerun pending
+- Run 7 pending; Jetson Milestone C on-device
 
 **Next move:** Green run -> artifacts + hashes -> Jetson instructions.
 
 **Evidence:**
 
-- run 40600886499 error output
+- run 40602941845 logs
