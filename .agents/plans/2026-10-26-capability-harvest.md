@@ -1,26 +1,40 @@
 # Hardening capability harvest — implementation record
 
 Branch `feat/hardening-capability-harvest` (worktree `~/projects/_wt/harvest`),
-base `main` c81f6307, HEAD f4462441b98835b98ec89a35c26b16ee2655d0b5 (verified
-via `git rev-parse HEAD`; 8 commits, 45 files, +4828/−307). Date 2026-10-26.
-Governing inputs: the recon and synthesis artifacts in sea-rs `.tmp/harvest/`,
-the binding decisions in `.tmp/harvest/OPERATOR-DECISIONS.md`, and the frozen
-pass-3 findings (`~/projects/_wt/containers/review/pass3/pass3-findings.md`,
-d28e00dc) that define the six findings.
+base `main` c81f6307, HEAD `3d5a8954cee935723e75b3cba48bd8c68c533dfd` (20
+commits through independent codex adversarial review pass 1 and its fixes).
+Dates 2026-10-26/27. Governing inputs: the recon and synthesis artifacts in
+sea-rs `.tmp/harvest/`, the binding decisions in
+`.tmp/harvest/OPERATOR-DECISIONS.md`, and the frozen pass-3 findings
+(`~/projects/_wt/containers/review/pass3/pass3-findings.md`, d28e00dc) that
+define the six findings.
 
-Outcome: all six pass-3 findings are implemented. F15 makes prerequisite-bound
-security tests fail loud in required lanes; F32 replaces the rename-by-temp-name
-safe write with a host-owned staging directory; F08 adds cgroup-v2 lifecycle
-containment on Linux, verified Job membership on Windows, and a census-backed
-typed `SandboxCagePersists` claim on macOS; F05 pins Windows directories
-exclusively and revalidates object identity before every child operation; F33
-moves the tokio pipe plane to the server edge and gives the async-kernel gate a
-Windows unified-graph pass; F17 replaces "no egress observed" with a
-host-arrival-proven allow/deny pair on the OpenShell KVM lane. `domainforge-core`
+Outcome: all six pass-3 findings are implemented and verified on their
+platform lanes. F15 makes prerequisite-bound security tests fail loud in
+required lanes; F32 replaces the rename-by-temp-name safe write with per-call
+host-owned staging directories plus post-publication content verification; F08
+adds cgroup-v2 lifecycle containment on Linux, verified Job membership AND
+verified empty-job completion on Windows, and a census-backed typed
+`SandboxCagePersists` claim on macOS (with the documented
+completeness caveat); F05 pins Windows directories exclusively, holds the temp
+handle through the publication window, verifies directory identity across the
+release-pin rename, and verifies the published entry's identity and type; F33
+moves the tokio pipe plane to the server edge and gives the async-kernel gate
+a fail-closed Windows unified-graph pass; F17's positive control is honestly
+BLOCKED on OpenShell 0.1.x (no L4/connect policy vocabulary, no raw-socket
+permission under rest grants, no guest-discoverable proxy — three-round
+evidence chain with named upstream requirements), while the deny variant is
+live-proven non-arrival on a demonstrably reachable target. `domainforge-core`
 is bumped to 0.21.2, and `ExecutionResult.lifecycle_containment` carries the
-containment claim into evidence, traces, and settlement. Anything only
-compile-checked locally, or needing a platform lane, is marked PENDING; no CI
-result is claimed before its run exists.
+containment claim into evidence, traces, and settlement. Independent codex
+review pass 1 (Critical 0 / High 5 / Medium 10 / Low 1) was triaged: the
+confirmed findings are fixed in this HEAD (macOS sweep scoping, interactive-
+jail lease, staging content verification, per-call staging, changeset scanner
+refusal, egress probe parsing, ci.yml authority narrowing, fail-closed
+dependency gate, Windows completion job verification); H3/H5's
+admission-level-refusal demand is disputed with the honest-degrade contract
+and recorded as the lifecycle-admission debt entry. Local remains trusted-host
+execution; blocked backends (macOS HVF, MXC, WSLc) remain explicitly blocked.
 
 ## 1. Reconnaissance
 
@@ -67,7 +81,7 @@ Disputes D1–D8 (matrix §B; binding decisions in OPERATOR-DECISIONS.md):
   direct dep; R4 right, R6 §3a wrong.
 - D2 (F05 semantics): exclusive pin (`FILE_SHARE_READ`-only) + per-use
   revalidation + loud typed `PinError`; RootDirectory work spiked first.
-  Landed in 4b17a011; spike verdict PENDING.
+  Landed in 4b17a011; final form after the lane evidence chain: three INVALID_PARAMETER forms and two SHARING_VIOLATION-under-pin forms recorded as platform verdicts (spike, `#[ignore]`), production publishing via the FileId-verified release-pin rename — green on the windows lane at fcea8c66/1158098a.
 - D3 (cgroup on CI): pre-delegated root via `SEA_FORGE_CGROUP_ROOT`; claim
   fails closed when unavailable; ci.yml preflight + `SEA_FORGE_REQUIRE_CGROUP=1`
   in the required lane. Landed in 1ab50130.
@@ -79,7 +93,7 @@ Disputes D1–D8 (matrix §B; binding decisions in OPERATOR-DECISIONS.md):
   production ops moved to the NT-native anchored form (`NtCreateFile` with
   `RootDirectory`, `NtSetInformationFile(FileRenameInformationEx)`); the
   previously failing Win32 form is re-probed — not asserted — by an `#[ignore]`
-  spike test. Verdict PENDING on the windows lane.
+  spike test. Verdict recorded from the lane: the relative-target and anchored-create forms are rejected on Server 2025; the release-pin rename is green (portability 40507892357).
 - D7 (macOS residual): accepted — pgid kill kept; the setsid escapee is now
   censused and claimed as `SandboxCagePersists` rather than papered over
   (2e2d7bc3).
@@ -122,7 +136,7 @@ is named.
   net; the guard is the second, greppable one.
 - Residual: the tally guard is best-effort under default parallelism
   (OBSERVED_DEBT:1145).
-- Disposition: FIXED on the branch; lane attestation PENDING.
+- Disposition: FIXED and lane-attested (ci.yml 40440809377 ubuntu green incl. the Active setsid scenarios under REQUIRE_CGROUP=1; windows lane 40507892357 green incl. the job tests; macos lane green incl. SandboxCagePersists classification).
 
 ### F32 — Unix safe-write rename resolved the temp by name
 
@@ -208,13 +222,13 @@ is named.
   `SEA_FORGE_REQUIRE_CGROUP=1 but ... is unavailable`, lane fails), and the
   hazard red test. Windows/macOS: compile-and-lint only (apple-darwin check +
   clippy `-D warnings` green; windows-msvc os check green). Runtime proof is
-  PENDING per lane.
+  attested per lane (see §6 run table).
 - Residuals: macOS census window (a descendant forked+setsid'd in the last
   100 ms before exit is invisible), pid-recycle guarded not pinned,
   aborted-run escapees enumerated only to the last census (OBSERVED_DEBT W7);
   Linux Active-path logic (cgroup.kill write semantics, procs read-back
   timing) first exercised on the ci.yml lane.
-- Disposition: FIXED on the branch; lane attestation PENDING per platform.
+- Disposition: FIXED and lane-attested per platform (§6).
 
 ### F05 — Windows pinned-dir reparse mutation after validation
 
@@ -245,12 +259,12 @@ is named.
   (appended by 1ab50130), plus the F08 job tests.
 - Local verification: windows-msvc check + clippy `-D warnings` for
   sea-forge-os green (OBSERVED_DEBT:1262); NTFS semantics cannot run on WSL —
-  runtime behavior PENDING on the portability windows lane.
+  runtime behavior attested on the windows lane (os unit tests + windows_local_job green through 40507892357).
 - Residuals: exclusive pin fails loud on any external writer of a pinned
   directory (deliberate, fail-closed; materialization is sequential today);
   the spike verdict and every junction/identity test await the windows lane
   (OBSERVED_DEBT:1266).
-- Disposition: FIXED on the branch; lane attestation PENDING.
+- Disposition: FIXED and lane-attested (windows lane green through 40507892357).
 
 ### F33 — tokio in Windows kernel graphs; gate blind to it
 
@@ -272,10 +286,10 @@ is named.
   (CURRENT_STATUS). The whole-server windows cross-check is blocked on Linux
   by `ring`'s build script — pre-existing, edges untouched
   (OBSERVED_DEBT:1163); the full server compile is first proven on the windows
-  lane (PENDING).
+  lane (green at 40507892357).
 - Residual: the gate comment still cites `sea-forge-os/tokio-pipes` as its
   historical example (OBSERVED_DEBT:1181).
-- Disposition: FIXED; windows lane attestation PENDING.
+- Disposition: FIXED; windows lane attested (40507892357).
 
 ### F17 — OpenShell network denial not positively proven
 
@@ -301,12 +315,12 @@ is named.
   `openshell.lock`/`mapping-report.json` hashes updated by the tool).
 - Local verification: stub suite green (case-runner clippy+tests in the W3b
   sweep); fixture regeneration byte-identical with the released 0.21.2 CLI.
-  The ladder runs only on the KVM lane — PENDING.
+  The ladder runs only on the KVM lane — run 40384823244: 10/11 pass; the allow-control is BLOCKED by upstream capability (see §2 F17).
 - Residual: the controlled endpoint is `10.0.2.2` (QEMU guest→host alias). If
   the lane's networking does not deliver guest connections to a host loopback
   listener, the allow variant reds — a TRUE finding to diagnose first
   (OPERATOR-DECISIONS decision rule), before touching images or DomainForge.
-- Disposition: IMPLEMENTED; proof PENDING on openshell-live dispatch.
+- Disposition: implemented; the deny variant is live-proven (40384823244) and the allow-control is BLOCKED with the three-round upstream-requirement chain.
 
 ## 3. Composite: ExecutionResult.lifecycle_containment
 
@@ -332,7 +346,7 @@ sea-forge-settlement/src/lib.rs:491, and its criteria-provenance test pins the
 provenance surface). Wire shape pinned by
 `lifecycle_containment_uses_tagged_snake_case_json` (sea-forge-core).
 Active-lane assertions (`CgroupLeaf`/`JobObject`/`SandboxCagePersists`) are
-compile-gated in the lane suites and PENDING until those lanes run. Teardown
+compile-gated in the lane suites and attested by them (windows 40507892357, macos 40507892357, ubuntu 40440809377). Teardown
 failures remain `Err` — the field only ever carries verified claims.
 
 ## 4. Upstream
@@ -393,33 +407,45 @@ logs, never inferred from local passes.
 
 ## 6. Verification log
 
-All rows LOCAL-Linux (WSL2) unless marked CI-pending. Lane runs are PENDING as
-of this writing and are NOT claimed anywhere in this record.
+Local rows ran on WSL2 (Linux); lane rows cite their GitHub Actions runs.
+Only exercised live scenarios count as conformance evidence (§5).
+
+### Local (all green at the recorded SHAs)
 
 | Command / check | Outcome |
 |---|---|
-| `just check` (full worktree, before W3b) | EXIT=0 (CURRENT_STATUS rev 184) |
-| W3b gates: sandbox/core/cli/settlement/runtime/case-runner/server clippy+tests | green (CURRENT_STATUS) |
-| `just no-async-kernel` (host + unified x86_64-pc-windows-msvc graph passes) | green |
-| `cargo check --offline --target x86_64-pc-windows-msvc -p sea-forge-os --locked --all-targets` + windows-target clippy `-D warnings` | green (OBSERVED_DEBT W6) |
-| `cargo check/clippy --offline --target aarch64-apple-darwin -p sea-forge-sandbox` + host `cargo check` | green (OBSERVED_DEBT W7) |
-| F15 bite proof (REQUIRE_LANDLOCK_NET=1, one-off demo, reverted) | guard second-net limitation demonstrated; per-test REQUIRE panic deterministic (OBSERVED_DEBT:1147) |
-| W3 REQUIRE=1 bite (`SEA_FORGE_REQUIRE_CGROUP=1`, undelegated root) | 5 scenarios panic, lane fails (OBSERVED_DEBT:1195) |
-| W3 hazard red test `group_kill_alone_leaves_a_setsid_descendant_running` | deterministic red reproducing F08 pre-fix (OBSERVED_DEBT:1197) |
-| F33 adapter compile (scratch crate vs tokio 1.53.3) | green (OBSERVED_DEBT:1172) |
-| 8 commits through pre-commit (status coupling, `cargo fmt --all`, gitleaks) | clean (CURRENT_STATUS) |
-| `Unavailable -> ProcessGroup` containment assertion | ran locally (CURRENT_STATUS) |
-| cgroup Active path (pre-exec join, cgroup.kill, verified-empty, destroy sweep) | CI-pending: ci.yml F08 lane |
-| Windows JobObject / exclusive-pin / junction / anchored-rename / `#[ignore]` spike | CI-pending: portability windows lane |
-| macOS cage-persists + teardown assertions | CI-pending: portability macos lane |
-| F17 allow-arrival / deny-non-arrival ladder | CI-pending: openshell-live KVM dispatch |
+| `just check` (full worktree) | EXIT=0 at revision 184 state; re-run green after every wave |
+| `just no-async-kernel` (host + unified windows-msvc graph, fail-closed cargo-status capture) | green through HEAD; sabotage test: a resolution error now fails the gate, cargo's genuine absence text is the only pass-through |
+| windows-msvc target check+clippy `-D warnings` (os, sandbox) | green through HEAD |
+| aarch64-apple-darwin check+clippy `-D warnings` (sandbox all-targets) | green through HEAD |
+| sandbox suite (23 test targets; 27 lib tests incl. the in-place tamper detection) | green |
+| changeset / case-runner / agent / server suites | green |
+| F15 bite proof (REQUIRE envs) | per-test panic deterministic; guard second net |
+| F08 red test (`group_kill_alone_leaves_a_setsid_descendant_running`) | deterministic red reproducing the pre-fix hazard |
+| F17 payload simulation (fake CONNECT proxy: grant, refuse, leak, no-proxy paths) | all four behaviors verified off-lane before the KVM run |
+| domainforge fixture regeneration byte-identity | byte-identical tool output with the 0.21.2 CLI |
 
-### CI results (coordinator to fill)
+### CI lane results (authoritative run IDs)
 
-PENDING — the ci.yml, portability.yml (windows, macos), and openshell-live.yml
-runs for this branch were executing as this record was written. Record run IDs
-and per-lane outcomes here; any red lane is a TRUE finding to diagnose against
-§2/§8, and any BLOCKED-tallied scenario is not a pass (§5).
+| SHA | ci.yml | portability (windows) | portability (macos) | kernel-security | openshell-live (KVM) | casework |
+|---|---|---|---|---|---|---|
+| f4462441 | fail (cgroup join EACCES) 40369591334 | fail (attribute-pointer AV) 40369591283 | pass | pass 40369591426 | fail (prover refuses tcp rules) 40369641957 | pass |
+| 8816d198..c28b9ce4 | fail→diagnosed (delegation containment; pidfd degrade) 40384807768 | fail→diagnosed (rename 87; relative-form verdicts) | fail→diagnosed (nix-dylib helper) | pass 40400356787 | 10/11 pass, allow-control fails on raw connect 40384823244 | pass |
+| 788c77d7/ca778ae2 | fail→diagnosed (destroy-sweep cross-test kills) 40410651296 | fail (87 under pin) 40410651287 | fail (census race) | pass | — | pass |
+| 22ea8dd5 (orphan-scoped sweep, spawn/finish split, FileId-verified release rename) | **success** 40440809377 | fail (junction-test semantics) 40440803522 | pass | fail (artifact collision; evidence lost) | — | pass |
+| 7f172fba | success 40444187422 | fail (breakaway 123-vs-5) 40444187212 | pass | **pass both VMs** 40444187271 | — | pass |
+| 61b3660e / c3cf2300 | success 40446093604 | fail (control create itself fails 123) 40446093616 | pass | pass | — | pass |
+| 1158098a (self-exec probe) | success 40504750558 | **windows success**; macos census flake 40504750501 | — | pass 40504750686 | — | — |
+| fcea8c66 (census 1s window) | success 40507892479 | **success both** 40507892357 | **success** | fail (guard race, evidenced by de-collided artifact) 40507892410 | — | — |
+| 1939e65a (guard env_lock) | pass (re-run of 40521505235 set) | pass (re-run 40521505171) | pass | **pass both VMs after flake re-run** 40521505166 | — | — |
+| 3d5a8954 (pass-1 fixes) | run in flight at writing | run in flight | run in flight | re-triggered by paths | — | — |
+
+KVM verdict (run 40384823244, branch round 3): 10/11 ladder tests PASS live
+including `live_network_denial_proven` (non-arrival on a demonstrably
+reachable target) — the allow-control is BLOCKED by upstream capability, not
+skipped. The denial proof remains non-attributed to policy enforcement (the
+upstream requirements are recorded in §2 F17); scenario 4 stays BLK in the
+conformance matrix.
 
 ## 7. License / provenance ledger
 
@@ -458,7 +484,7 @@ clause if obligations ever crystallize.
   scenarios observe); the kill path is core cgroup-v2 (`cgroup.kill`, kernel
   ≥ 5.14). Controllers the kernel lacks must not fail the probe (workflow
   comment).
-- D6 spike verdict PENDING: production uses the NT-native anchored form, and
+- D6 spike verdict RECORDED (three INVALID_PARAMETER forms, two SHARING_VIOLATION-under-pin forms; the working mechanism is the FileId-verified release-pin rename), and
   per-use revalidation is the load-bearing backstop if the anchored path ever
   regresses (OBSERVED_DEBT:1279).
 - Same-uid staging residual (F32): detection-only for same-uid workloads with
