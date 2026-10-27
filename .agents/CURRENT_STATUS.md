@@ -1,22 +1,23 @@
 # Current status
 
-**Status revision:** 192
+**Status revision:** 193
 
-**Stage:** capability-harvest: round-7 root causes fixed — cross-test sweep kills, jail teardown on the restricted thread, cgroup.procs fd leak; pushing round 8
+**Stage:** capability-harvest: REQUIRED CI GATE GREEN (round 8) — windows junction-test semantics corrected for the release-pin reality; artifact-name collision fixed
 
-**Summary:** The jail 'network denial unexpectedly succeeded' was NOT a security regression: the process-wide destroy sweep killed sibling tests' live children mid-run (empty outcomes misread as Completed), which also explains the runtime env/timeout failures. Fixes: the destroy sweep now skips live leases (orphan-scoped; panicked runs still adopted); jail spawning split into spawn_jailed (Landlock-restricted thread) and finish_jailed (unrestricted teardown — the restricted domain was denying the jail's own cgroup.kill/rmdir, proven by log asymmetry); a reaped-but-signaled child is announced on stderr instead of silently reading Completed; the cgroup.procs fd gets FD_CLOEXEC (it previously leaked a write handle to the leaf into every workload); conformance deny-assert messages distinguish child-death from a denial break. Windows: the release-pin rename with FileId verification implemented exactly per design (pin brackets validate->write; release->rename; re-pin+full validation; published FileId must equal the captured temp id), with the two 32-under-pin forms added to the spike verdict.
+**Summary:** Round 8: the full ci.yml gate (lint, test, msrv, workbench, macos, authority-opa) is green, including the active-cgroup lane (conformance_m1 19 with the network-denial assertion, setsid_lifecycle 9, runtime 5) — the registry-scoped sweep and the spawn/finish jail split hold on real runners. Windows progressed to the safe_write step: sea-forge-os unit tests pass (the release-pin rename works, the hard-link replace is green); the one failure is the W6 junction test asserting path-based create_dir fails under the pin — on Server 2025 path-based entry creation is DACL-only, not share-gated (the same kernel distinction the rename conflict exposed), so the test is rewritten to assert the true load-bearing semantics: write-class HANDLES on the pinned anchor are refused (the FSCTL_SET_REPARSE_POINT gate), a planted junction entry must not redirect the contained write, and the outside target stays empty. kernel-security 22.04's sandbox-suite FAIL left no evidence because both matrix jobs uploaded artifacts under the same name (24.04 overwrote 22.04); the name now includes the matrix image; 24.04 passed and the suite exits 0 in the equivalent local configuration.
 
 **Verified:**
 
-- Local: 23 sandbox test-targets green, runtime lib 5/5, clippy -D warnings host+windows clean, fmt clean, workspace check clean
+- gh run 40440809377: gate success — every required job green
+- windows-target and host clippy -D warnings green on the rewritten test; fmt clean
 
 **Limits:**
 
-- Round-8 lanes must confirm: windows pinned-replace green; the active-cgroup lane green across runtime (5), conformance_m1 (19, incl. the network-denial zero-accepted-connections assertion), setsid_lifecycle (9, no jail EACCES degrades)
+- Round 9 must confirm: windows lane green end-to-end, and the 22.04 socket-gate verdict with retained evidence
 
-**Next move:** Push round 8; on green, freeze and run the codex adversarial review.
+**Next move:** Push round 9; on green, freeze and run the codex adversarial review.
 
 **Evidence:**
 
-- gh runs 40429484729 / 40429484788
+- gh runs 40440809377 / 40440803522 / 40440809219
 - .agents/OBSERVED_DEBT.md

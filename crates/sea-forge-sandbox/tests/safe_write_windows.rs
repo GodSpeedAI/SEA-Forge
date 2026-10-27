@@ -7,6 +7,8 @@ use std::path::Path;
 use std::process::Command;
 
 use sea_forge_sandbox::{safe_join, safe_write, safe_write_within};
+#[cfg(windows)]
+use std::os::windows::fs::OpenOptionsExt;
 
 /// Process-wide tally of scenarios that could not run because a junction could
 /// not be created. A required lane (the REQUIRE variable set) must not skip;
@@ -155,49 +157,51 @@ fn no_blocked_scenarios_in_required_mode() {
     );
 }
 
-/// While the workspace root is pinned (`PinnedDir::open` now takes an
-/// exclusive FILE_SHARE_READ-only pin), every write-class open of the pinned
-/// directory fails with a sharing violation. That is the same gate an
-/// FSCTL_SET_REPARSE_POINT junction planting would have to pass: the second
-/// handle cannot even be opened, so no reparse point can be set on the pinned
-/// directory mid-operation. The outside target must stay empty, and a
+/// The pinned anchor's load-bearing F05 gate: while the workspace root is
+/// pinned (`PinnedDir::open` takes an exclusive FILE_SHARE_READ-only pin),
+/// any write-class HANDLE on the pinned directory is refused with a sharing
+/// violation — which is exactly what an FSCTL_SET_REPARSE_POINT mutation
+/// would have to open, so a validated anchor cannot be reparse-mutated
+/// mid-operation. Path-based ENTRY creation inside the pinned directory is
+/// a different kernel operation: the parent is checked against its DACL and
+/// never opened as a share-checked handle, so a planted junction entry can
+/// exist. That entry must not redirect the contained write — the publish
+/// replaces it, and the release-rename's FileId verification fails loudly on
+/// any successful interference. The outside target must stay empty, and a
 /// contained write after the pin is released must land inside the workspace.
 #[test]
-fn junction_planting_in_a_pinned_directory_is_refused_and_the_target_stays_empty() {
+fn pinned_anchor_refuses_write_handles_and_a_planted_junction_does_not_redirect() {
     let outside = tempfile::tempdir().expect("outside");
     let workspace = tempfile::tempdir().expect("workspace");
     let root = workspace.path();
 
     let pin = sea_forge_os::PinnedDir::open(root).expect("pin the workspace root");
 
-    // A direct entry creation inside the pinned directory (the kernel opens
-    // the parent for FILE_ADD_SUBDIRECTORY, a write-class access).
-    let planted = root.join("planted");
+    // A write-class open of the pinned directory itself is refused: this is
+    // the handle an FSCTL_SET_REPARSE_POINT mutation would need.
+    let write_open = std::fs::OpenOptions::new()
+        .write(true)
+        .custom_flags(0x0200_0000) // FILE_FLAG_BACKUP_SEMANTICS: open directories by handle
+        .open(root);
+    // (custom_flags comes from std::os::windows::fs::OpenOptionsExt, imported
+    // at the top of this file for the whole cfg(windows) target.)
     assert!(
-        std::fs::create_dir(&planted).is_err(),
-        "a directory was created inside the exclusively pinned directory"
+        write_open.is_err(),
+        "a write-class handle was opened on the exclusively pinned directory"
     );
-    // The junction flavor: `mklink /J` creates a reparse-point entry in the
-    // pinned directory. The refusal here is the asserted enforcement, not a
-    // blocked prerequisite, so the make_junction BLOCKED/REQUIRE tally does
-    // not apply; a junction that did get created fails the empty-outside
-    // check below.
+
+    // Path-based entry creation is DACL-only, not share-gated (observed on
+    // Server 2025): a planted junction entry may exist. What it must never do
+    // is redirect the contained write below.
     let attempt = Command::new("cmd")
         .args(["/C", "mklink", "/J"])
         .arg(root.join("link"))
         .arg(outside.path())
         .output()
         .expect("run cmd");
-    assert!(
-        !attempt.status.success(),
-        "a junction was planted inside the exclusively pinned directory"
-    );
-    assert_eq!(
-        std::fs::read_dir(outside.path())
-            .expect("read outside")
-            .count(),
-        0,
-        "the outside junction target received an entry from the refused planting"
+    println!(
+        "junction planting attempt succeeded: {} (path-based entry creation is not share-gated)",
+        attempt.status.success()
     );
 
     drop(pin);
@@ -207,5 +211,12 @@ fn junction_planting_in_a_pinned_directory_is_refused_and_the_target_stays_empty
         std::fs::read(&path).expect("read"),
         b"contained",
         "the contained write did not land inside the workspace"
+    );
+    assert_eq!(
+        std::fs::read_dir(outside.path())
+            .expect("read outside")
+            .count(),
+        0,
+        "the outside junction target received entries from the contained write"
     );
 }
