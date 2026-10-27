@@ -466,7 +466,7 @@ fn write_entry_unix_inner(
     bytes: &[u8],
     pause: Option<&dyn Fn()>,
 ) -> Result<(), ForgeError> {
-    use rustix::fs::{AtFlags, Mode, OFlags};
+    use rustix::fs::AtFlags;
     use rustix::io::Errno;
     use std::io::Write;
 
@@ -560,21 +560,43 @@ fn write_entry_unix_inner(
     }
     // Review pass 1 (Medium-6): a same-uid attacker that can traverse the
     // staging dir can overwrite the temp IN PLACE (keeping dev/ino/type), so
-    // the identity check alone cannot prove the published bytes. Re-read the
-    // published entry and compare against the written bytes: a mismatch is a
-    // loud failure (detection after publication — the caller fails and the
-    // evidence records it — which closes the UNDETECTED variant the review
-    // named; byte-level prevention for a same-uid writer needs an identity
-    // the staging directory cannot provide, per the module residual).
-    let published = rustix::fs::openat(dir, name, OFlags::RDONLY | OFlags::CLOEXEC, Mode::empty())
-        .map_err(|_| substituted())?;
-    let mut published_bytes = Vec::with_capacity(bytes.len());
+    // the identity check alone cannot prove the published bytes. Review pass
+    // 2 (R1/R9): the content comparison reads through the RETAINED staging
+    // descriptor — the read-write handle that wrote the bytes, still open on
+    // the published inode after the rename — and never through a fresh
+    // pathname open of `name`. A pathname reopen would resolve the name anew
+    // inside this verifier, where a same-uid swap to a symlink (following it
+    // after the no-follow stat), a blocking FIFO, or an unbounded device
+    // would redirect or exhaust the read, and a mode-0200 destination would
+    // refuse a RDONLY reopen outright (R9). The dev/ino + regular-file match
+    // above pins the published entry to this descriptor's inode, so the read
+    // below IS the published content; it is bounded at exactly one byte
+    // beyond the expected length, so even the retained inode cannot grow the
+    // read or block it (regular-file pread, no unbounded buffering). The
+    // same-uid residual stays explicit: these checks cannot make a mutable
+    // same-uid destination permanently immutable once this call returns.
+    let limit = bytes.len() + 1;
+    let mut published_bytes = Vec::with_capacity(limit);
     {
-        use std::io::Read;
-        let mut reader = std::fs::File::from(published);
-        reader
-            .read_to_end(&mut published_bytes)
-            .map_err(|error| ForgeError::io("read published file", error))?;
+        use std::io::ErrorKind;
+        use std::os::unix::fs::FileExt;
+        let mut buffer = [0u8; 4096];
+        let mut offset = 0u64;
+        while published_bytes.len() < limit {
+            let want = (limit - published_bytes.len()).min(buffer.len());
+            match file.read_at(&mut buffer[..want], offset) {
+                // EOF: the inode is shorter than the write's bytes.
+                Ok(0) => break,
+                Ok(n) => {
+                    published_bytes.extend_from_slice(&buffer[..n]);
+                    offset += n as u64;
+                }
+                Err(error) if error.kind() == ErrorKind::Interrupted => {}
+                Err(error) => {
+                    return Err(ForgeError::io("read published file", error));
+                }
+            }
+        }
     }
     if published_bytes.len() != bytes.len() || {
         use sha2::{Digest, Sha256};
@@ -1096,6 +1118,68 @@ mod tests {
         assert!(
             fs::read(&destination).is_err(),
             "the tampered entry must be removed, not left published"
+        );
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// Root bypasses DAC, so a non-root permission path cannot be exercised
+    /// there. The euid source differs per platform: Linux's rustix build
+    /// carries the `process` feature; other Unix targets get one explicit
+    /// libc call (the workspace deny stays visible at the call site).
+    #[cfg(all(unix, target_os = "linux"))]
+    fn running_as_root() -> bool {
+        rustix::process::geteuid() == rustix::process::Uid::ROOT
+    }
+
+    #[cfg(all(unix, not(target_os = "linux")))]
+    fn running_as_root() -> bool {
+        // One libc call; the workspace's deny stays visible here.
+        #[allow(unsafe_code)]
+        let euid = unsafe { libc::geteuid() };
+        euid == 0
+    }
+
+    /// Review pass 2 (R9) regression: a destination whose preserved mode is
+    /// write-only (0200) must still materialize. The verifier reads the
+    /// published bytes through the retained staging descriptor (opened
+    /// read-write at creation), so the corrected-shape failure — a RDONLY
+    /// reopen refused EACCES on the freshly published 0200 file and reported
+    /// as substitution AFTER the replacement was already installed — cannot
+    /// recur. Root bypasses DAC and cannot exercise the permission path: on a
+    /// root run this scenario reports BLOCKED rather than passing as
+    /// verified.
+    #[cfg(unix)]
+    #[test]
+    fn write_only_destination_materializes_and_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        if running_as_root() {
+            // BLOCKED (tally note, not a pass): root bypasses DAC, so the
+            // EACCES regression this scenario guards cannot occur here.
+            eprintln!(
+                "BLOCKED: running as root; the mode-0200 materialization regression \
+                 needs a non-root identity"
+            );
+            return;
+        }
+        let (parent, root, _) = unix_write_fixture("write-only-dest");
+        let destination = root.join("planned.txt");
+        fs::write(&destination, b"secret-only").unwrap();
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o200)).unwrap();
+
+        safe_write(&destination, b"replaced bytes")
+            .expect("a write-only destination must materialize through the retained staging fd");
+        let mode = fs::metadata(&destination).unwrap().permissions().mode() & 0o7777;
+        assert_eq!(
+            mode, 0o200,
+            "the preserved write-only mode must survive the replacement"
+        );
+        // The owner cannot read a 0200 file; restore read access to assert
+        // the published bytes (this is the test's own file).
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"replaced bytes",
+            "the replacement must carry this write's bytes"
         );
         fs::remove_dir_all(parent).unwrap();
     }

@@ -428,8 +428,30 @@ no-async-kernel:
     status=0
     for crate in "${kernel_crates[@]}"; do
         for dep in "${forbidden_deps[@]}"; do
-            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1) \
-                && echo "$output" | grep -q "^$dep "; then
+            # Review pass 2 (R5): a failing cargo invocation must not read as
+            # "dependency absent" here either. The absence case IS a cargo
+            # failure (an inverted tree of a dep the crate lacks exits
+            # nonzero with the package-ID not-found text), so the failure
+            # status is captured in the `else` of a NON-negated if and
+            # classified by cargo's own text below — the negated
+            # `if ! output=$(...)` shape would set tree_status from the
+            # negation's success and swallow resolution errors.
+            tree_status=0
+            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1); then
+                :
+            else
+                tree_status=$?
+            fi
+            if [ "$tree_status" -ne 0 ]; then
+                if echo "$output" | grep -qE "did not match any packages|package ID specification"; then
+                    continue
+                fi
+                echo "fail: cargo tree -i $dep -p $crate exited $tree_status — treated as a gate failure, not as absence:" >&2
+                echo "$output" >&2
+                status=1
+                continue
+            fi
+            if echo "$output" | grep -q "^$dep "; then
                 echo "fail: kernel crate $crate depends on $dep" >&2
                 status=1
             fi
@@ -466,12 +488,17 @@ no-async-kernel:
             # an unexamined error status.
             # `set -e` is active (`{{set}}`), so a failing command must be
             # part of an `if` condition to be observable: a plain assignment
-            # with a nonzero status aborts the recipe silently. `if capture`
-            # both exempts the command from errexit and preserves its status
-            # in $? for the body — absence is then decided by cargo's own
-            # not-found text, and any OTHER failure fails the gate below.
+            # with a nonzero status aborts the recipe silently. The capture
+            # is a NON-negated if with the failure status taken in `else`
+            # (review pass 2, R5: `if ! output=$(...)` set tree_status from
+            # the negation's SUCCESS, so a resolution failure read as
+            # absence and the gate passed). Absence is then decided by
+            # cargo's own not-found text, and any OTHER failure fails the
+            # gate below.
             tree_status=0
-            if ! output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1); then
+            if output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1); then
+                :
+            else
                 tree_status=$?
             fi
             if [ "$tree_status" -ne 0 ]; then

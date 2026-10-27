@@ -1308,7 +1308,7 @@ async fn run_acp_episode(
             // F-24: the jail spawn blocks on process setup — run it on a
             // blocking thread instead of parking this tokio worker (the old
             // thread+mpsc shape blocked in recv() all the same).
-            let mut child = tokio::task::spawn_blocking(move || {
+            let child = tokio::task::spawn_blocking(move || {
                 // Jail-class ACP agents default to network denial (fail-closed).
                 // No scoped egress grant is plumbed to this path yet; the jail
                 // must not open ungranted outbound/listening TCP sockets.
@@ -1320,9 +1320,15 @@ async fn run_acp_episode(
                     &env,
                     &sea_forge_sandbox::NetworkPosture::Denied,
                 )
+                // Review pass 2 (R3): the result arms its own teardown while
+                // unadopted — cancelling this future or a failed adoption
+                // still performs the verified cleanup (leaf kill, child
+                // kill/reap) instead of dropping the child unowned.
+                .map(sea_forge_sandbox::jail::UnadoptedInteractiveJailChild::from_child)
             })
             .await
             .map_err(|error| ForgeError::Internal(format!("jail spawn task panic: {error}")))??;
+            let mut child = child.adopt();
             let leaf_cleanup = child.leaf_cleanup_hook();
             AcpSession::from_std_child_with_cleanup(
                 child.child,

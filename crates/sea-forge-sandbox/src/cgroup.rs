@@ -36,9 +36,13 @@
 //!   pinning before `pidfd_send_signal` — a pid that was recycled between
 //!   reads is no longer a member and is never signalled. A raw `kill(2)` on
 //!   a bare pid is refused by construction.
-//! - **Verified teardown**: emptiness is read back from `cgroup.procs`
-//!   (bounded), and `rmdir` succeeds only for an empty cgroup — the kernel
-//!   enforces the check. An empty leaf whose `rmdir` is nonetheless denied
+//! - **Verified teardown**: emptiness is read back hierarchically —
+//!   `cgroup.procs` (direct members, bounded) AND `cgroup.events`'s
+//!   hierarchical `populated` flag, which catches members a same-uid writer
+//!   migrated into child cgroups of the leaf (invisible to `cgroup.procs`;
+//!   review pass 2, R2) — and `rmdir` succeeds only for an empty cgroup —
+//!   the kernel enforces the check. An empty leaf whose `rmdir` is
+//!   nonetheless denied
 //!   (EACCES/EPERM/EBUSY) after the bounded retries is a typed degrade, not
 //!   an error: containment succeeded and removal is hygiene, so the removal
 //!   refusal is printed on stderr, the leaf is left in place under its
@@ -334,17 +338,45 @@ impl CgroupLease {
             .collect())
     }
 
+    /// Whether this cgroup or any cgroup DESCENDED from it still holds
+    /// processes: the `populated` flag of `cgroup.events`, which the kernel
+    /// documents hierarchically ("1 if the cgroup or its descendants contains
+    /// any processes"). `cgroup.procs` lists only DIRECT members — a process
+    /// migrated into a child cgroup of this leaf is invisible there (review
+    /// pass 2, R2) — so the verified-emptiness claim must consult the
+    /// hierarchical flag, not the direct census alone.
+    fn hierarchically_populated(&self) -> io::Result<bool> {
+        let text = match fs::read_to_string(self.leaf.join("cgroup.events")) {
+            Ok(text) => text,
+            // A leaf that already vanished (concurrent verified teardown) has
+            // no members by definition; same convention as `procs`.
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            // Fail closed: an unreadable events file cannot establish
+            // emptiness.
+            Err(e) => return Err(e),
+        };
+        Ok(text.lines().any(|line| {
+            let mut fields = line.split_whitespace();
+            fields.next() == Some("populated") && fields.next() == Some("1")
+        }))
+    }
+
     /// Kill every member of the leaf and verify the leaf drains.
     ///
     /// Primary: write `1` to `cgroup.kill` (atomic, whole subtree — reaches
-    /// setsid descendants). Two triggers fall back to the pidfd sweep, which
-    /// is still membership-scoped and PID-reuse-safe: the control file does
-    /// not exist (kernel < 5.14), and the write fails for any other reason —
+    /// setsid descendants AND members of descendant cgroups of this leaf).
+    /// Two triggers fall back to the pidfd sweep, which is still
+    /// membership-scoped and PID-reuse-safe: the control file does not exist
+    /// (kernel < 5.14), and the write fails for any other reason —
     /// delegation containment can deny the kill file even where the leaf and
     /// its `cgroup.procs` are delegated (the round-2 CI runner), which is a
     /// degrade of the kill *mechanism*, never of the containment contract.
     /// The sweep is announced on stderr; either path must leave the leaf
-    /// reading back empty within `deadline` or the kill fails.
+    /// hierarchically empty within `deadline` or the kill fails. Hierarchical
+    /// emptiness is `cgroup.procs` reading empty AND `cgroup.events` reading
+    /// `populated 0`: direct members can hide in child cgroups of the leaf
+    /// (review pass 2, R2), which the fallback sweep cannot address at all —
+    /// such a subtree is a survivor claim, never a verified kill.
     pub fn kill_verified(&self, deadline: Duration) -> Result<(), KillError> {
         match fs::write(self.leaf.join("cgroup.kill"), b"1") {
             Ok(()) => {}
@@ -366,10 +398,25 @@ impl CgroupLease {
         let start = Instant::now();
         loop {
             let procs = self.procs().map_err(KillError::Io)?;
-            if procs.is_empty() {
+            if procs.is_empty() && !self.hierarchically_populated().map_err(KillError::Io)? {
                 return Ok(());
             }
             if start.elapsed() >= deadline {
+                if procs.is_empty() {
+                    // Direct members drained but the hierarchical flag still
+                    // reads populated: a member sits in a CHILD cgroup of this
+                    // leaf, which `cgroup.procs` does not list. The primary
+                    // `cgroup.kill` reaches the whole subtree; the pidfd sweep
+                    // (this path's fallback) cannot address a migrated member
+                    // at all — either way this is a survivor claim, never a
+                    // verified kill.
+                    eprintln!(
+                        "sea-forge-sandbox: cgroup leaf {} drained of direct members but a \
+                         descendant cgroup still holds processes (cgroup.events populated=1); \
+                         the pidfd sweep cannot reach members of child cgroups",
+                        self.leaf.display()
+                    );
+                }
                 return Err(KillError::Survivors(procs));
             }
             std::thread::sleep(POLL_INTERVAL);
@@ -474,7 +521,14 @@ impl CgroupLease {
         let err = last_err.expect("at least one rmdir attempt ran");
         let kind = err.kind();
         let members = self.procs().unwrap_or_default();
-        if members.is_empty() && undeletable_denial(&err) {
+        // Review pass 2 (R2): the empty-leaf degrade must establish
+        // HIERARCHICAL emptiness. `cgroup.procs` lists only direct members —
+        // an EBUSY caused by a populated CHILD cgroup (cgroupfs refuses to
+        // remove a group that has one) must never read as the
+        // empty-but-undeletable refusal, so the populated flag is consulted
+        // and an unreadable one fails closed.
+        let populated = self.hierarchically_populated().unwrap_or(true);
+        if members.is_empty() && !populated && undeletable_denial(&err) {
             eprintln!(
                 "sea-forge-sandbox: cgroup leaf {} is empty but rmdir was denied ({err}); \
                  recorded for the destroy sweep",

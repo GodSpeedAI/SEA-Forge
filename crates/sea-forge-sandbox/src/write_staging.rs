@@ -132,7 +132,14 @@ impl StagingDir {
             match rustix::fs::openat(
                 &self.fd,
                 candidate.as_os_str(),
-                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+                // RDWR, not WRONLY (review pass 2, R9): the content verifier
+                // reads the published bytes back through this RETAINED
+                // descriptor, so a destination whose preserved mode denies
+                // read access (0200) still materializes, and the verifier
+                // performs no pathname reopen at all (R1). Creation grants
+                // the requested access regardless of the new file's mode; the
+                // mode only governs later openers.
+                OFlags::RDWR | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
                 // RawMode is u32 on Linux, u16 on macOS; callers hand us u32.
                 Mode::from_raw_mode(mode as _),
             ) {

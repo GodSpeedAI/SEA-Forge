@@ -75,7 +75,7 @@ fn spawn_workload(
         socket_paths: vec![socket_dir],
         ..dirs.clone()
     };
-    let (mut command, lifeline) = isolated_command(
+    let (mut command, lifeline, mut ack) = isolated_command(
         identity,
         helper,
         &dirs,
@@ -84,7 +84,7 @@ fn spawn_workload(
     .unwrap();
     // The launcher is treated as gone: nothing it holds may matter.
     std::mem::forget(lifeline);
-    command
+    let child = command
         .env(
             "PATH",
             format!("{}:/usr/bin:/bin", install.join("bin").display()),
@@ -93,7 +93,15 @@ fn spawn_workload(
         .env("PGCONN", conninfo)
         .stdin(Stdio::null())
         .spawn()
-        .unwrap()
+        .unwrap();
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
+    sea_forge_sandbox::workload::wait_for_isolation_ack(
+        &mut ack,
+        sea_forge_sandbox::workload::ISOLATION_ACK_TIMEOUT,
+    )
+    .expect("isolated launch acknowledged its setup");
+    child
 }
 
 fn wait_until(what: &str, limit: Duration, mut done: impl FnMut() -> bool) {

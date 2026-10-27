@@ -143,7 +143,7 @@ fn parse(out: std::process::Output) -> Value {
 /// The probe inside the full isolated launch (helper, Landlock, filter).
 fn isolated_probe(identity: &WorkloadIdentity, confinement: &WorkloadConfinement) -> Value {
     let workspace = confinement.workspace_root.display().to_string();
-    let (mut command, _lifeline) = isolated_command(
+    let (mut command, _lifeline, _ack) = isolated_command(
         identity,
         Path::new(HELPER),
         confinement,

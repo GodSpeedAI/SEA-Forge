@@ -415,7 +415,7 @@ Only exercised live scenarios count as conformance evidence (§5).
 | Command / check | Outcome |
 |---|---|
 | `just check` (full worktree) | EXIT=0 at revision 184 state; re-run green after every wave |
-| `just no-async-kernel` (host + unified windows-msvc graph, fail-closed cargo-status capture) | green through HEAD; sabotage test: a resolution error now fails the gate, cargo's genuine absence text is the only pass-through |
+| `just no-async-kernel` (host + unified windows-msvc graph, fail-closed cargo-status capture) | green through HEAD; sabotage test: a resolution error now fails the gate, cargo's genuine absence text is the only pass-through. Correction (pass-2 review R5, re-verified 2026-10-27): that sabotage claim was FALSE at the reviewed SHA — the negated `if ! output=$(cargo ...)` captured the negation's success, so a resolution failure read as absence in BOTH loops. Both loops now take the failure status in the `else` of a non-negated if; controls re-run at the pass-2 fix: genuine absence EXIT=0 (20 kernel crates, host + windows-msvc graphs), a PATH-shim cargo exiting 42 (resolution failure) FAILS the gate (EXIT=1, per-invocation `treated as a gate failure, not as absence` on stderr) |
 | windows-msvc target check+clippy `-D warnings` (os, sandbox) | green through HEAD |
 | aarch64-apple-darwin check+clippy `-D warnings` (sandbox all-targets) | green through HEAD |
 | sandbox suite (23 test targets; 27 lib tests incl. the in-place tamper detection) | green |

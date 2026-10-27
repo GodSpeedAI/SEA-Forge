@@ -178,6 +178,16 @@ impl LeafCleanupGuard {
     fn new(hook: Option<Box<dyn FnOnce() + Send>>) -> Self {
         Self(std::sync::Mutex::new(hook))
     }
+
+    /// Moves the hook back out for the successful adoption handoff into
+    /// `over_streams`. Every failure path that drops the guard early still
+    /// runs the hook through `Drop` (review pass 2, R3).
+    fn take_inner(&mut self) -> Option<Box<dyn FnOnce() + Send>> {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+    }
 }
 
 impl Drop for LeafCleanupGuard {
@@ -645,8 +655,16 @@ impl AcpSession {
         max_transcript_bytes: usize,
         leaf_cleanup: Option<Box<dyn FnOnce() + Send>>,
     ) -> Result<Self, String> {
-        let spawn_leaf_cleanup = leaf_cleanup;
         let process_group = Some(child.id());
+        // Review pass 2 (R3): both teardown guards are armed BEFORE the
+        // fallible stream adoption. A failed `from_std` conversion must drop
+        // into the armed teardown — the leaf hook runs first (drop order:
+        // declared later drops first), then the child kill/reap — instead of
+        // bare drops that release the child unowned. On success the guards
+        // are handed to the session unchanged (the hook is moved back out of
+        // its guard for the `over_streams` handoff).
+        let child_guard = StdChildGuard(child);
+        let mut leaf_guard = LeafCleanupGuard::new(leaf_cleanup);
         let stdin = tokio::process::ChildStdin::from_std(stdin)
             .map_err(|error| format!("adopt jailed ACP stdin: {error}"))?;
         let stdout = tokio::process::ChildStdout::from_std(stdout)
@@ -654,15 +672,16 @@ impl AcpSession {
         let stderr = tokio::process::ChildStderr::from_std(stderr)
             .map_err(|error| format!("adopt jailed ACP stderr: {error}"))?;
         drain_stderr(stderr);
+        let leaf_cleanup = leaf_guard.take_inner();
         Ok(Self::over_streams(
             Box::new(stdout),
             Box::new(stdin),
-            Some(ChildGuard::Std(StdChildGuard(child))),
+            Some(ChildGuard::Std(child_guard)),
             Some(cwd),
             process_group,
             max_response_bytes,
             max_transcript_bytes,
-            spawn_leaf_cleanup,
+            leaf_cleanup,
         ))
     }
 

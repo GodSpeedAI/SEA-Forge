@@ -251,6 +251,73 @@ impl InteractiveJailChild {
     }
 }
 
+/// An interactive child whose launch result has not yet been adopted by its
+/// owning session.
+///
+/// The interactive launch can run on a blocking thread (the server's jail
+/// wiring); cancelling the awaiting future does not stop that closure, and
+/// its eventual result would otherwise drop unowned — a plain `Child` is not
+/// killed on drop, and a cgroup lease dropped unremoved is merely marked
+/// sweepable (review pass 2, R3). A result in flight therefore carries this
+/// armed teardown: dropping an unadopted child performs the verified
+/// cgroup-leaf kill (Linux), ends the isolated-workload lifeline, and
+/// kills/reaps the child, reporting failures on stderr. Adoption via
+/// [`Self::adopt`] disarms it; the normal session path then keeps using
+/// [`InteractiveJailChild::leaf_cleanup_hook`], and the `Option::take`
+/// coordination means the armed teardown and the session's hook can never
+/// both run.
+pub struct UnadoptedInteractiveJailChild(Option<InteractiveJailChild>);
+
+impl UnadoptedInteractiveJailChild {
+    /// Arms the teardown over a freshly launched child.
+    pub fn from_child(child: InteractiveJailChild) -> Self {
+        Self(Some(child))
+    }
+
+    /// Disarms the teardown and returns the child for session adoption. The
+    /// wrapper drops empty afterwards; the session owns the full lifetime
+    /// from here (including [`InteractiveJailChild::leaf_cleanup_hook`] on
+    /// session drop).
+    pub fn adopt(mut self) -> InteractiveJailChild {
+        self.0
+            .take()
+            .expect("an unadopted child is present until its teardown runs")
+    }
+}
+
+impl Drop for UnadoptedInteractiveJailChild {
+    fn drop(&mut self) {
+        let Some(mut child) = self.0.take() else {
+            return; // adopted: the session owns the teardown
+        };
+        // The same teardown as `leaf_cleanup_hook`, plus the child
+        // kill/reap the session's guards would have performed: an unobserved
+        // launch result must not leave a detached child behind.
+        #[cfg(target_os = "linux")]
+        if let Some(lease) = child.cgroup_lease.take() {
+            const LEAF_DEADLINE: std::time::Duration = std::time::Duration::from_secs(5);
+            if let Err(failure) = lease.kill_verified(LEAF_DEADLINE) {
+                eprintln!(
+                    "sea-forge-sandbox: unadopted interactive jail child's cgroup-leaf kill \
+                     failed; the leaf stays registered for the destroy sweep: {failure:?}"
+                );
+                // The lease drops unremoved: its Drop marks the leaf
+                // sweepable for destroy_process_leaves.
+            } else if let Err(error) = lease.remove() {
+                eprintln!(
+                    "sea-forge-sandbox: unadopted interactive jail child's cgroup-leaf removal \
+                     failed; the leaf stays registered for the destroy sweep: {error}"
+                );
+            }
+        }
+        // An isolated workload's lifeline ends its pid namespace on drop.
+        #[cfg(target_os = "linux")]
+        drop(child.lifeline.take());
+        let _ = child.child.kill();
+        let _ = child.child.wait();
+    }
+}
+
 /// Restrict the current thread with the same Landlock posture as `JailSandbox`
 /// and spawn an interactive child whose stdio remains connected to the caller.
 /// Call this from a dedicated thread: Landlock restriction is irreversible for

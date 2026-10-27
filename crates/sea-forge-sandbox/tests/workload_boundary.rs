@@ -15,8 +15,8 @@
 #![cfg(target_os = "linux")]
 
 use sea_forge_sandbox::workload::{
-    grant_exclusive_access, isolated_command, processes_of, Lifeline, WorkloadConfinement,
-    WorkloadIdentity, WorkloadIdentityPool,
+    grant_exclusive_access, isolated_command, processes_of, wait_for_isolation_ack, IsolationAck,
+    Lifeline, WorkloadConfinement, WorkloadIdentity, WorkloadIdentityPool, ISOLATION_ACK_TIMEOUT,
 };
 use sea_forge_sandbox::NetworkPosture;
 use std::fs;
@@ -66,8 +66,8 @@ fn command(
     identity: &WorkloadIdentity,
     confinement: &WorkloadConfinement,
     script: &str,
-) -> (Command, Lifeline) {
-    let (mut command, lifeline) = isolated_command(
+) -> (Command, Lifeline, IsolationAck) {
+    let (mut command, lifeline, ack) = isolated_command(
         identity,
         Path::new(HELPER),
         confinement,
@@ -79,7 +79,7 @@ fn command(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    (command, lifeline)
+    (command, lifeline, ack)
 }
 
 fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
@@ -112,8 +112,12 @@ fn probe_reads(
             o = out.display()
         ));
     }
-    let (mut probe, _lifeline) = command(identity, confinement, &script);
+    let (mut probe, _lifeline, mut ack) = command(identity, confinement, &script);
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
     let status = probe.status().unwrap();
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     assert!(status.success());
     fs::read_to_string(&out)
         .unwrap()
@@ -228,7 +232,7 @@ fn launcher_fixture_child() {
     let dirs = confinement(&dir, &identity, Vec::new());
     let ready = dirs.workspace_root.join("ready");
     let script = format!("echo ready > '{}'; exec sleep 600", ready.display());
-    let (production, lifeline) = command(&identity, &dirs, &script);
+    let (production, lifeline, mut ack) = command(&identity, &dirs, &script);
     let mut launch = if std::env::var_os(MUTATION).is_some() {
         // Mutation control: the same launch without the lifeline.
         let args: Vec<_> = production.get_args().collect();
@@ -250,6 +254,10 @@ fn launcher_fixture_child() {
         production
     };
     let mut child = launch.spawn().unwrap();
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     wait_until("workload ready", || ready.exists());
     fs::write(
         dir.join("identity"),
@@ -366,8 +374,12 @@ fn probe_connects(
             o = out.display()
         ));
     }
-    let (mut probe, _lifeline) = command(identity, confinement, &script);
+    let (mut probe, _lifeline, mut ack) = command(identity, confinement, &script);
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
     assert!(probe.status().unwrap().success());
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     fs::read_to_string(&out)
         .unwrap()
         .lines()

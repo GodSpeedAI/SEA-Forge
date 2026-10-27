@@ -585,16 +585,110 @@ pub struct Lifeline {
     _read: std::os::fd::OwnedFd,
 }
 
-/// Build the launch command for `argv` under `identity`, and the lifeline
-/// that bounds it. The caller supplies stdio, environment (already cleared)
-/// and cwd, and must hold the [`Lifeline`] until the workload has exited.
-/// `helper` is the absolute path to the `sea-forge-workload-exec` binary.
+/// The launcher's end of the isolation-acknowledgement pipe (review pass 2,
+/// R4). The trusted in-namespace helper writes one `0x01` byte over it after
+/// its Landlock/socket-policy/seccomp posture is in force and BEFORE any
+/// workload code exists. Receiving that byte — not the fact that `unshare`
+/// spawned, and not the workload's exit status — is what makes a
+/// `PidNamespace` containment claimable: a namespace setup that fails inside
+/// `unshare` is indistinguishable from a failing workload by exit status
+/// alone. The launcher's copy of the write end exists only so the launch
+/// chain's fork inherits the pipe; [`wait_for_isolation_ack`] closes it
+/// before waiting, so EOF means the whole chain died unacknowledged.
+#[derive(Debug)]
+pub struct IsolationAck {
+    read: std::os::fd::OwnedFd,
+    _write: Option<std::os::fd::OwnedFd>,
+}
+
+/// How long the launcher waits for the helper's isolation acknowledgement.
+/// The helper's setup is a fixed sequence of local syscalls (identity
+/// mapping, Landlock, socket policy, seccomp); this bounds a wedged launch
+/// chain, never a running workload.
+pub const ISOLATION_ACK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// Bounded wait for the trusted setup acknowledgement. `Ok(())` means the
+/// helper confirmed its restrictions are in force; anything else is a setup
+/// failure that the caller must report WITHOUT a containment claim (after
+/// killing and reaping the launch chain).
+pub fn wait_for_isolation_ack(
+    ack: &mut IsolationAck,
+    timeout: std::time::Duration,
+) -> Result<(), SandboxError> {
+    use rustix::io::{read, Errno};
+    use std::time::{Duration, Instant};
+    let setup_failed =
+        |message: String| SandboxError::new("workload_isolation_setup_failed", message);
+    // The launcher never writes the acknowledgement. Its copy of the write
+    // end must not outlive the spawn, or EOF could never arrive when the
+    // chain dies before the helper confirms its setup.
+    drop(ack._write.take());
+    let mut byte = [0u8; 1];
+    let deadline = Instant::now() + timeout;
+    loop {
+        match read(&ack.read, &mut byte) {
+            // EOF: every write end is gone without a byte — the namespace
+            // chain exited before confirming its setup (`unshare` failed its
+            // namespace syscall, or the helper failed before the byte).
+            Ok(0) => {
+                return Err(setup_failed(
+                    "the workload launch chain closed the isolation acknowledgement pipe \
+                     before confirming its setup"
+                        .into(),
+                ))
+            }
+            // The trusted handshake byte (the buffer holds exactly one, so
+            // any positive count is the byte).
+            Ok(_) => return Ok(()),
+            Err(Errno::WOULDBLOCK) => {
+                if Instant::now() >= deadline {
+                    return Err(setup_failed(format!(
+                        "no isolation acknowledgement within {timeout:?}"
+                    )));
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Err(error) => {
+                return Err(setup_failed(format!(
+                    "isolation acknowledgement pipe read failed: {error}"
+                )))
+            }
+        }
+    }
+}
+
+/// The `unshare` binary the launch chain executes. Tests may point this at
+/// `/bin/false` (`SEA_FORGE_TEST_UNSHARE`) to replay a namespace setup that
+/// fails before the helper ever runs (review pass 2, R4); the override is
+/// compiled only into test builds and read once per process. The host probe
+/// keeps the real constant so an override cannot mask a probe result.
+#[cfg(test)]
+fn unshare_binary() -> &'static str {
+    static OVERRIDE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    OVERRIDE
+        .get_or_init(|| {
+            std::env::var("SEA_FORGE_TEST_UNSHARE").unwrap_or_else(|_| UNSHARE.to_string())
+        })
+        .as_str()
+}
+
+#[cfg(not(test))]
+fn unshare_binary() -> &'static str {
+    UNSHARE
+}
+
+/// Build the launch command for `argv` under `identity`, the lifeline that
+/// bounds it, and the isolation-acknowledgement pipe the caller must wait on
+/// after spawning ([`wait_for_isolation_ack`]). The caller supplies stdio,
+/// environment (already cleared) and cwd, and must hold the [`Lifeline`]
+/// until the workload has exited. `helper` is the absolute path to the
+/// `sea-forge-workload-exec` binary.
 pub fn isolated_command(
     identity: &WorkloadIdentity,
     helper: &Path,
     confinement: &WorkloadConfinement,
     argv: &[String],
-) -> Result<(Command, Lifeline), SandboxError> {
+) -> Result<(Command, Lifeline, IsolationAck), SandboxError> {
     use std::os::fd::AsRawFd;
     if argv.is_empty() {
         return Err(SandboxError::new("input_error", "workload argv is empty"));
@@ -614,7 +708,22 @@ pub fn isolated_command(
     // that would keep the pipe alive past the launcher.
     rustix::fs::fchmod(&read, rustix::fs::Mode::from_raw_mode(0o444))
         .map_err(|e| unavailable(format!("lifeline pipe: {e}")))?;
-    let mut command = Command::new(UNSHARE);
+    // Review pass 2 (R4): the trusted setup acknowledgement. Neither end is
+    // close-on-exec at creation — the WRITE end must cross both execs of the
+    // launch chain (into `unshare`, then into the helper) or the helper could
+    // never confirm its setup. The launcher's read end is nonblocking for the
+    // bounded handshake wait (and close-on-exec as launcher-side hygiene);
+    // the helper reopens the write end by path, which yields a close-on-exec
+    // descriptor the workload never inherits.
+    let (ack_read, ack_write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::empty())
+        .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
+    // NONBLOCK is a file-STATUS flag (fcntl_setfl), distinct from the
+    // descriptor flags that carry CLOEXEC.
+    rustix::fs::fcntl_setfl(&ack_read, rustix::fs::OFlags::NONBLOCK)
+        .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
+    rustix::io::fcntl_setfd(&ack_read, rustix::io::FdFlags::CLOEXEC)
+        .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
+    let mut command = Command::new(unshare_binary());
     command
         .env_clear()
         // The supervisor's decision audit is launcher-controlled and
@@ -665,6 +774,8 @@ pub fn isolated_command(
     command
         .arg("--lifeline")
         .arg(read.as_raw_fd().to_string())
+        .arg("--ack-fd")
+        .arg(ack_write.as_raw_fd().to_string())
         .arg("--")
         .args(argv);
     Ok((
@@ -672,6 +783,10 @@ pub fn isolated_command(
         Lifeline {
             _write: write,
             _read: read,
+        },
+        IsolationAck {
+            read: ack_read,
+            _write: Some(ack_write),
         },
     ))
 }
@@ -688,7 +803,7 @@ pub fn spawn_interactive(
 ) -> Result<crate::jail::InteractiveJailChild, SandboxError> {
     use std::os::unix::process::CommandExt;
     use std::process::Stdio;
-    let (mut command, lifeline) = isolated_command(identity, helper, confinement, argv)?;
+    let (mut command, lifeline, mut ack) = isolated_command(identity, helper, confinement, argv)?;
     command
         .current_dir(cwd)
         .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
@@ -697,6 +812,14 @@ pub fn spawn_interactive(
         .stderr(Stdio::piped())
         .process_group(0);
     let mut child = command.spawn().map_err(|e| unavailable(e.to_string()))?;
+    // Review pass 2 (R4): the same trusted handshake as the execution
+    // backend — a namespace setup that never completed must not hand out a
+    // child whose lifecycle claim would rest on `unshare`'s spawn alone.
+    if let Err(error) = wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(error);
+    }
     let missing = || unavailable("workload stdio unavailable");
     let stdin = child.stdin.take().ok_or_else(missing)?;
     let stdout = child.stdout.take().ok_or_else(missing)?;
@@ -877,5 +1000,78 @@ mod tests {
                 (ACL_OTHER, 0, ACL_UNDEFINED_ID),
             ]
         );
+    }
+
+    /// Review pass 2 (R4): an acknowledged helper satisfies the handshake.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn isolation_acknowledgement_byte_satisfies_the_handshake() {
+        let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC).unwrap();
+        rustix::fs::fcntl_setfl(&read, rustix::fs::OFlags::NONBLOCK).unwrap();
+        rustix::io::write(&write, &[0x01]).unwrap();
+        let mut ack = IsolationAck {
+            read,
+            _write: Some(write),
+        };
+        wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT).expect("acknowledged setup");
+    }
+
+    /// Review pass 2 (R4): a launch chain that never acknowledges is a
+    /// bounded setup failure, never a containment claim.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn unacknowledged_isolation_setup_times_out_as_a_setup_failure() {
+        let (read, write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC).unwrap();
+        rustix::fs::fcntl_setfl(&read, rustix::fs::OFlags::NONBLOCK).unwrap();
+        let mut ack = IsolationAck {
+            read,
+            _write: Some(write),
+        };
+        let error = wait_for_isolation_ack(&mut ack, std::time::Duration::from_millis(50))
+            .expect_err("no byte was ever written");
+        assert_eq!(error.class, "workload_isolation_setup_failed", "{error:?}");
+    }
+
+    /// Review pass 2 (R4) regression: a namespace setup that fails inside
+    /// `unshare` — replayed by pointing the launch chain at `/bin/false`,
+    /// which exits nonzero without ever confirming setup — surfaces as
+    /// `workload_isolation_setup_failed`. No `ExecutionResult` (and therefore
+    /// no `LifecycleContainment::PidNamespace` claim) can be produced from
+    /// this path: the handshake error is returned before any containment
+    /// classification runs. The full `IsolatedSandbox::execute` additionally
+    /// needs subordinate-ID delegation and ACL grants not every test host
+    /// provides, so the launch chain itself (spawn → acknowledgement wait →
+    /// setup failure → kill/reap) is exercised with the same handshake the
+    /// launcher runs.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn failed_namespace_setup_is_reported_without_containment() {
+        use std::fs::File;
+        std::env::set_var("SEA_FORGE_TEST_UNSHARE", "/bin/false");
+        let identity = WorkloadIdentity {
+            host_uid: 100_000,
+            host_gid: 100_000,
+            slot: 0,
+            _lock: File::open("/dev/null").unwrap(),
+        };
+        let helper = sibling_helper().expect("workload-exec helper built alongside the tests");
+        let confinement = WorkloadConfinement {
+            workspace_root: std::env::temp_dir(),
+            artifacts_root: std::env::temp_dir(),
+            read_paths: Vec::new(),
+            socket_paths: Vec::new(),
+            network: NetworkPosture::Denied,
+        };
+        let argv = vec!["/bin/true".to_string()];
+        let (mut command, _lifeline, mut ack) =
+            isolated_command(&identity, &helper, &confinement, &argv).unwrap();
+        let mut child = command.spawn().expect("the launch chain itself spawns");
+        let error = wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+            .expect_err("a failed namespace setup must never be acknowledged");
+        assert_eq!(error.class, "workload_isolation_setup_failed", "{error:?}");
+        // Nothing exec'd uncontained: the dead launch chain is killed and
+        // reaped by the launcher, exactly as the execute path does.
+        let _ = child.kill();
+        let _ = child.wait();
     }
 }

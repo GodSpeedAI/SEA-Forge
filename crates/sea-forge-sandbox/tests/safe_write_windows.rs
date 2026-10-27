@@ -204,6 +204,28 @@ fn pinned_anchor_refuses_write_handles_and_a_planted_junction_does_not_redirect(
         attempt.status.success()
     );
 
+    // Review pass 2 (R10): the planted junction must not redirect an
+    // operation that actually RUNS while it exists. The contained write below
+    // repins the root and resolves the destination through the planted
+    // directory with the junction entry live, so redirection of the write (or
+    // of its publication window) would show up here: the bytes must land
+    // inside, and the outside target must stay empty.
+    let while_pinned = safe_join(root, "pinned-write.txt").expect("join");
+    safe_write_within(root, &while_pinned, b"while pinned")
+        .expect("contained write with the planted junction present");
+    assert_eq!(
+        std::fs::read(&while_pinned).expect("read"),
+        b"while pinned",
+        "the contained write did not land inside the workspace while the junction existed"
+    );
+    assert_eq!(
+        std::fs::read_dir(outside.path())
+            .expect("read outside")
+            .count(),
+        0,
+        "the outside junction target received entries while the pin was active"
+    );
+
     drop(pin);
     let path = safe_join(root, "file.txt").expect("join");
     safe_write_within(root, &path, b"contained").expect("contained write after release");

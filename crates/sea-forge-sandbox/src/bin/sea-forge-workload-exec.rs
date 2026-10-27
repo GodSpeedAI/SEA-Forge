@@ -13,7 +13,7 @@
 //! does not rely on one.
 //!
 //! Usage: `sea-forge-workload-exec --workspace P --artifacts P
-//! [--read P]... [--tcp-port N]... [--lifeline FD] -- argv...`
+//! [--read P]... [--tcp-port N]... [--lifeline FD] [--ack-fd FD] -- argv...`
 // The workspace denies unsafe so it is always a stated choice; the one raw
 // close_range syscall below is that choice (inherited-descriptor hygiene).
 #![allow(unsafe_code)]
@@ -42,7 +42,7 @@ fn main() {
 
     let mut args = std::env::args_os().skip(1);
     let (mut workspace, mut artifacts, mut reads, mut ports) = (None, None, Vec::new(), Vec::new());
-    let (mut socket_grants, mut lifeline) = (Vec::new(), None);
+    let (mut socket_grants, mut lifeline, mut ack_fd) = (Vec::new(), None, None);
     loop {
         let flag = args.next().unwrap_or_else(|| fail("missing -- separator"));
         match flag.to_str() {
@@ -77,6 +77,13 @@ fn main() {
                     std::fs::File::open(format!("/proc/self/fd/{fd}"))
                         .unwrap_or_else(|e| fail(&format!("lifeline unavailable: {e}"))),
                 );
+            }
+            Some("--ack-fd") => {
+                let fd = args
+                    .next()
+                    .and_then(|p| p.to_str()?.parse::<u32>().ok())
+                    .unwrap_or_else(|| fail("invalid --ack-fd"));
+                ack_fd = Some(fd);
             }
             _ => fail("unknown argument"),
         }
@@ -150,6 +157,24 @@ fn main() {
     // After Landlock (which sets no_new_privs), before any workload code.
     if let Err(error) = sea_forge_sandbox::syscall_filter::restrict_current_thread() {
         fail(&error.to_string());
+    }
+    // Review pass 2 (R4): the trusted setup acknowledgement. One byte over
+    // the launcher's ack pipe, written ONLY here — after the Landlock
+    // posture, the socket policy and the syscall filter are in force, and
+    // before any workload code exists — so the launcher's containment claim
+    // rests on a confirmed setup, never on this process's exit status. The
+    // write end is reopened by path like the lifeline read end; the reopened
+    // description is close-on-exec, so the workload never inherits it. A
+    // failed write means the launcher is already gone: fail rather than run
+    // unacknowledged.
+    if let Some(fd) = ack_fd {
+        use std::io::Write;
+        let mut ack = std::fs::OpenOptions::new()
+            .write(true)
+            .open(format!("/proc/self/fd/{fd}"))
+            .unwrap_or_else(|e| fail(&format!("ack pipe unavailable: {e}")));
+        ack.write_all(&[0x01])
+            .unwrap_or_else(|e| fail(&format!("ack write failed: {e}")));
     }
     let mut command = std::process::Command::new(&argv[0]);
     command.args(&argv[1..]);
