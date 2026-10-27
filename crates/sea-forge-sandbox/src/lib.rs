@@ -581,7 +581,7 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
         ))
     })?;
     let dir = pin_path(parent)?;
-    write_entry_windows(&dir, destination, name, bytes)
+    write_entry_windows(dir, destination, name, bytes)
 }
 
 /// Writes `bytes` to `destination`, which must resolve inside `root`.
@@ -614,7 +614,7 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
         ))
     })?;
     let dir = pinned_walk(&canonical_root, parents, false)?;
-    write_entry_windows(&dir, destination, file_name, bytes)
+    write_entry_windows(dir, destination, file_name, bytes)
 }
 
 /// Unix: writes `bytes` to `destination`, which must resolve inside `root`.
@@ -779,7 +779,7 @@ fn pinned_walk(
 /// destination that is a reparse point or a directory.
 #[cfg(windows)]
 fn write_entry_windows(
-    dir: &sea_forge_os::PinnedDir,
+    dir: sea_forge_os::PinnedDir,
     destination: &Path,
     name: &std::ffi::OsStr,
     bytes: &[u8],

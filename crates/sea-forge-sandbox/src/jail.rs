@@ -419,8 +419,16 @@ fn execute_linux(
 
     // Landlock restrictions are per-thread and inherited by child processes.
     // We run the command on a dedicated thread that restricts itself before
-    // spawning the child, keeping the main thread unrestricted.
-    let (tx, rx) = mpsc::channel::<Result<ExecutionResult, SandboxError>>();
+    // spawning the child, keeping the main thread unrestricted. ONLY the
+    // spawn happens on that thread: the wait and the verified teardown run
+    // back on this unrestricted thread, because teardown acts on the run's
+    // cgroup leaf (kill write, rmdir) — writes outside the workspace and
+    // artifacts trees are exactly what the jail's own Landlock domain denies,
+    // so a teardown on the restricted thread degrades `cgroup.kill` to the
+    // pidfd sweep and strands the drained leaf (the round-6/7 runner
+    // observation). The unrestricted caller teardown keeps the leaf kill at
+    // full strength, identical to the local backend.
+    let (tx, rx) = mpsc::channel::<Result<Result<JailedSpawn, JailedSpawnFailure>, SandboxError>>();
 
     // F08: acquire the run's cgroup lifecycle leaf here, on the unrestricted
     // main thread — the Landlock-restricted runner thread could not create
@@ -431,24 +439,65 @@ fn execute_linux(
     let lease = crate::cgroup::acquire_spawn_lease("jail", std::process::id())?;
 
     thread::spawn(move || {
-        let result = run_jailed(
+        let _ = tx.send(spawn_jailed(
             &workspace_root,
             &artifacts_root,
             &network,
             &argv,
             &cwd,
             &env,
-            timeout_secs,
             stdout,
             stderr,
             lease,
-        );
-        let _ = tx.send(result);
+        ));
     });
 
-    let result = rx
+    // The outer Err propagates setup failures with their typed class (the
+    // fail-closed `jail_unavailable` / `cgroup_unavailable` contract — never
+    // a fallback); only the inner Err is a spawn failure, which reads as the
+    // SpawnFailed outcome.
+    let JailedSpawn {
+        mut child,
+        lease,
+        started_at,
+    } = match rx
         .recv()
-        .map_err(|e| SandboxError::new("internal_error", e.to_string()))??;
+        .map_err(|e| SandboxError::new("internal_error", e.to_string()))??
+    {
+        Ok(spawned) => spawned,
+        Err(failure) => {
+            // A spawn failure means nothing exec'd (fail closed). The
+            // PRIMARY spawn error is never masked by cleanup: it leads the
+            // surfaced report, and the leaf is removed HERE on the
+            // unrestricted thread (a failed spawn can never run uncontained;
+            // a leaf the restricted thread could not remove is not left
+            // behind either).
+            let mut report = format!(
+                "jail spawn failed before exec (nothing ran uncontained): {}",
+                failure.error.message
+            );
+            if let Some(lease) = failure.lease {
+                if let Err(cleanup) = lease.remove() {
+                    report.push_str(&format!(
+                        "; cgroup leaf {} could not be removed after the failed spawn and \
+                         is left for the destroy-time leaf sweep: {cleanup}",
+                        lease.leaf().display()
+                    ));
+                }
+            }
+            eprintln!("sea-forge-sandbox: {report}");
+            return Ok(crate::local::execution_result(
+                ExecutionStatus::SpawnFailed,
+                None,
+                failure.started_at,
+                // Nothing exec'd: there is no process tree whose lifecycle
+                // could have been contained.
+                LifecycleContainment::NoProcess,
+            ));
+        }
+    };
+
+    let result = finish_jailed(&mut child, lease, started_at, timeout_secs)?;
 
     // F-20: the jail does not *observe* this violation — a nonzero exit plus
     // a child-controlled stderr substring is only evidence of one. Recording
@@ -465,36 +514,61 @@ fn execute_linux(
     Ok(result)
 }
 
+/// A jail run that reached the spawn point: the child exists and the run's
+/// leaf (if any) travels with it for the caller's verified teardown.
+#[cfg(target_os = "linux")]
+struct JailedSpawn {
+    child: std::process::Child,
+    lease: Option<crate::cgroup::CgroupLease>,
+    started_at: String,
+}
+
+/// A spawn that failed before exec: nothing ran, and the leaf — if one was
+/// acquired — travels back so the unrestricted caller can remove it (the
+/// restricted thread's Landlock domain denies the rmdir).
+#[cfg(target_os = "linux")]
+struct JailedSpawnFailure {
+    error: SandboxError,
+    lease: Option<crate::cgroup::CgroupLease>,
+    started_at: String,
+}
+
+/// Apply the jail's Landlock posture and spawn the jailed child (Linux).
+///
+/// Runs on the dedicated restricted thread: the thread restricts itself with
+/// the run's Landlock posture and the child inherits that domain at exec.
+/// Registration of the pre-exec cgroup join rides along here so the child is
+/// contained before any workload-controlled code runs; a failed join fails
+/// the spawn (nothing execs uncontained). Waiting and teardown stay on the
+/// unrestricted caller ([`execute_linux`]) — see the note there.
+///
+/// The outer `Err` carries setup failures with their typed classes
+/// (`apply_landlock`'s `jail_unavailable`, the join registration's
+/// `cgroup_unavailable` under a required lane) and propagates — the jail
+/// fails closed, never falling back to a weaker posture. The inner `Err` is
+/// a spawn failure of an already-configured command: nothing exec'd, the
+/// leaf travels back for the caller to remove.
 #[cfg(target_os = "linux")]
 #[allow(clippy::too_many_arguments)]
-fn run_jailed(
+fn spawn_jailed(
     workspace_root: &std::path::Path,
     artifacts_root: &std::path::Path,
     network: &NetworkPosture,
     argv: &[String],
     cwd: &std::path::Path,
     env: &[(String, String)],
-    timeout_secs: u64,
     stdout: std::fs::File,
     stderr: std::fs::File,
     lease: Option<crate::cgroup::CgroupLease>,
-) -> Result<ExecutionResult, SandboxError> {
-    use std::{
-        os::unix::process::CommandExt,
-        process::{Command, Stdio},
-        time::Duration,
-    };
-    use wait_timeout::ChildExt;
-
-    fn map_err<E: std::fmt::Display>(e: E) -> SandboxError {
-        SandboxError::new("jail_unavailable", e.to_string())
-    }
+) -> Result<Result<JailedSpawn, JailedSpawnFailure>, SandboxError> {
+    use std::{os::unix::process::CommandExt, process::Command, process::Stdio};
 
     // Apply filesystem + network Landlock confinement to this thread (inherited
     // by the child). Fails closed with `jail_unavailable` when the requested
     // posture cannot be enforced — never a silent fallback to `local`.
     apply_landlock(workspace_root, artifacts_root, network, None)?;
 
+    let started_at = chrono::Utc::now().to_rfc3339();
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
@@ -512,43 +586,36 @@ fn run_jailed(
         command.env(k, v);
     }
 
-    let started_at = chrono::Utc::now().to_rfc3339();
-    let mut child = match command.spawn() {
-        Ok(child) => child,
-        Err(spawn_error) => {
-            // A pre-exec join failure means nothing exec'd (fail closed).
-            // The PRIMARY spawn error is never masked by cleanup: it leads
-            // the surfaced report, and a leaf that cannot be removed is
-            // appended as context and left for the destroy-time sweep
-            // (`destroy_process_leaves` re-adopts leaked leaves by owner
-            // prefix) instead of failing the call — the spawn failure
-            // itself is the outcome, reported as SpawnFailed.
-            let mut report =
-                format!("jail spawn failed before exec (nothing ran uncontained): {spawn_error}");
-            if let Some(lease) = lease {
-                if let Err(cleanup) = lease.remove() {
-                    report.push_str(&format!(
-                        "; cgroup leaf {} could not be removed after the failed spawn and \
-                         is left for the destroy-time leaf sweep: {cleanup}",
-                        lease.leaf().display()
-                    ));
-                }
-            }
-            eprintln!("sea-forge-sandbox: {report}");
-            return Ok(crate::local::execution_result(
-                ExecutionStatus::SpawnFailed,
-                None,
-                started_at,
-                // Nothing exec'd: there is no process tree whose lifecycle
-                // could have been contained.
-                LifecycleContainment::NoProcess,
-            ));
-        }
-    };
+    match command.spawn() {
+        Ok(child) => Ok(Ok(JailedSpawn {
+            child,
+            lease,
+            started_at,
+        })),
+        Err(error) => Ok(Err(JailedSpawnFailure {
+            error: SandboxError::new("jail_unavailable", error.to_string()),
+            lease,
+            started_at,
+        })),
+    }
+}
+
+/// Wait for the jailed child, run the verified teardown, and assemble the
+/// execution result. Runs on the unrestricted caller thread so the leaf
+/// kill write and rmdir are not denied by the jail's own Landlock domain.
+#[cfg(target_os = "linux")]
+fn finish_jailed(
+    child: &mut std::process::Child,
+    lease: Option<crate::cgroup::CgroupLease>,
+    started_at: String,
+    timeout_secs: u64,
+) -> Result<ExecutionResult, SandboxError> {
+    use std::time::Duration;
+    use wait_timeout::ChildExt;
 
     let status = child
         .wait_timeout(Duration::from_secs(timeout_secs))
-        .map_err(map_err)?;
+        .map_err(|e| SandboxError::new("jail_unavailable", e.to_string()))?;
 
     // C1: the containment claim matches the mechanism that actually held. A
     // cgroup-leaf teardown that failed already returned Err above, so a
@@ -564,7 +631,10 @@ fn run_jailed(
         } else {
             LifecycleContainment::ProcessGroup
         };
-        crate::local::teardown_run(&child, lease)?;
+        crate::local::teardown_run(child, lease)?;
+        if status.code().is_none() {
+            crate::local::report_signal_death("jail", status);
+        }
         (
             ExecutionStatus::Completed,
             status.code().map(i64::from),
@@ -578,8 +648,10 @@ fn run_jailed(
         } else {
             LifecycleContainment::ProcessGroup
         };
-        crate::local::teardown_run(&child, lease)?;
-        child.wait().map_err(map_err)?;
+        crate::local::teardown_run(child, lease)?;
+        child
+            .wait()
+            .map_err(|e| SandboxError::new("jail_unavailable", e.to_string()))?;
         (ExecutionStatus::TimedOut, None, containment)
     };
 

@@ -16,7 +16,7 @@ use windows_sys::Wdk::Storage::FileSystem::{
     NtCreateFile, FILE_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
 };
 use windows_sys::Win32::Foundation::{
-    LocalFree, RtlNtStatusToDosError, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
+    CloseHandle, LocalFree, RtlNtStatusToDosError, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
     ERROR_SHARING_VIOLATION, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE, NTSTATUS,
     OBJ_CASE_INSENSITIVE, UNICODE_STRING,
 };
@@ -415,13 +415,14 @@ pub enum EntryState {
 /// Legitimate writers: only SEA-Forge's materialization writes go through a
 /// `PinnedDir`. Workload file writes open files, not pinned directories, and
 /// the sandbox's own child operations below the pin are handle-anchored
-/// (`RootDirectory`-relative `NtCreateFile`; the replace rename is covered by
-/// the pin itself, see `rename_handle_into`), so none of them needs a
-/// second write-class open of the pinned directory. A workload `FILE_ADD_FILE`
+/// (`RootDirectory`-relative `NtCreateFile`), so none of them needs a second
+/// write-class open of the pinned directory — the publish rename in
+/// `write_replacing` is the one operation that does, and it releases the pin
+/// for exactly that call (see its invariant note). A workload `FILE_ADD_FILE`
 /// open of a pinned directory during the pin window would transiently fail
 /// with a sharing violation; that window is bounded to a single
-/// materialization write (the `PinnedDir` is dropped when the write returns)
-/// and does not overlap workload execution.
+/// materialization write (the pin ends when `write_replacing` returns) and
+/// does not overlap workload execution.
 ///
 /// The handle is also opened without `FILE_SHARE_DELETE`, so while it is held
 /// no other handle can rename, delete, or replace this directory. The path
@@ -751,6 +752,30 @@ impl PinnedDir {
         &self.path
     }
 
+    /// Ends the exclusive pin, consuming the pinned directory.
+    ///
+    /// Closing the handle is the release: while the handle exists no other
+    /// opener can take a write-class open of this directory (the pin's
+    /// `FILE_SHARE_READ`-only share refuses them), and the kernel's
+    /// replace-rename needs exactly such an open of the target's parent.
+    /// [`PinnedDir::write_replacing`] releases the pin around its rename for
+    /// that reason and re-opens a fresh pin immediately afterwards. A close
+    /// failure is reported instead of being silently dropped.
+    pub fn release(self) -> io::Result<()> {
+        // SAFETY: `raw` is owned by the consumed `PinnedDir`'s handle and is
+        // closed exactly once here; `forget` prevents the second close that
+        // `OwnedHandle`'s drop would perform.
+        let raw = self.handle.as_raw_handle();
+        let ok = unsafe { CloseHandle(raw as _) };
+        let result = if ok == FALSE {
+            Err(last_error())
+        } else {
+            Ok(())
+        };
+        std::mem::forget(self.handle);
+        result
+    }
+
     /// Re-checks the pinned handle before a child operation: the object must
     /// still be a non-reparse directory and must still be the object whose
     /// `FILE_ID_INFO` identity was recorded at open. This is the backstop
@@ -853,15 +878,45 @@ impl PinnedDir {
     }
 
     /// Replaces the entry `name` in this directory with `bytes`, without
-    /// touching any existing inode.
+    /// touching any existing inode. Consumes the pin.
     ///
-    /// The bytes go to a fresh temp sibling created with `FILE_CREATE`
-    /// anchored to this pinned handle, which is flushed and then renamed onto
-    /// `name` (see [`rename_handle_into`] for the rename form and its
-    /// invariant). An existing hard link to the old entry keeps the old
-    /// bytes: only the directory entry changes. On failure the temp sibling
-    /// is marked delete-on-close.
-    pub fn write_replacing(&self, name: &OsStr, bytes: &[u8]) -> io::Result<()> {
+    /// The bytes go to a fresh temp sibling created through this pinned
+    /// directory's path, which is flushed and then renamed onto `name`. An
+    /// existing hard link to the old entry keeps the old bytes: only the
+    /// directory entry changes. On failure the temp sibling is marked
+    /// delete-on-close (write/sync failure) or reported with the directory's
+    /// state (rename/verification failure) — nothing is deleted silently.
+    ///
+    /// Invariant (F05), in three brackets:
+    ///
+    /// 1. **Pinned window** — validation, temp creation, the byte write, the
+    ///    sync, and a final revalidation all happen under the exclusive pin:
+    ///    no other handle can open this directory for write or delete access,
+    ///    so the visible temp name is not a substitution window and the
+    ///    directory's identity is confirmed immediately before the pin drops.
+    /// 2. **Release window** — the rename runs with the pin released, because
+    ///    the kernel's replace takes a write-class open of the target's
+    ///    parent, which this pin's own `FILE_SHARE_READ`-only share refuses
+    ///    (the round-6/7 Windows lane: `ERROR_SHARING_VIOLATION` for the
+    ///    by-handle `FileRenameInfo` form, the raw-NT class-65 form, and the
+    ///    by-path `std::fs::rename` form alike). The window is bounded to the
+    ///    single rename call and covered: (i) `ReplaceIfExists` overwrites
+    ///    whatever an attacker plants at `name`, so planting gains nothing;
+    ///    (ii) an attacker-set reparse point at `name` is either replaced by
+    ///    the rename or fails it loudly; and (iii) the directory identity is
+    ///    re-verified by the immediate re-open below. The pin's mutual
+    ///    exclusion between two concurrent materialization writes narrows to
+    ///    this window too: a same-name collision there is never silently
+    ///    mixed — the loser's identity verification fails loudly, and the
+    ///    published bytes are always one writer's complete content.
+    /// 3. **Verification** — the pin is re-opened (the full open-time
+    ///    reparse/identity/path validation) and the published `name` is then
+    ///    opened anchored to that re-validated directory: it must be a plain
+    ///    entry carrying the temp's captured `FILE_ID_INFO` identity. A
+    ///    mismatch, a reparse point, or an open failure is a loud typed error
+    ///    that describes the target state — a successful substitution can
+    ///    never read as a completed write.
+    pub fn write_replacing(self, name: &OsStr, bytes: &[u8]) -> io::Result<()> {
         use std::io::Write;
         use std::os::windows::fs::OpenOptionsExt;
         use std::sync::atomic::Ordering;
@@ -872,8 +927,7 @@ impl PinnedDir {
         // entries succeed (recorded in the relative-target spike verdict).
         // This is safe under the exclusive pin — the pin already excludes
         // every concurrent directory writer for the whole window, so the
-        // short-lived visible temp name is not a substitution window; the
-        // rename that publishes it identifies the SOURCE by handle.
+        // short-lived visible temp name is not a substitution window.
         let mut attempts = 0;
         let (mut file, temp_path) = loop {
             let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
@@ -882,8 +936,9 @@ impl PinnedDir {
             temp_name.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
             let temp_path = self.path.join(&temp_name);
             match std::fs::OpenOptions::new()
-                // The rename-by-handle below requires DELETE access on the
-                // source handle, which std's `write(true)` alone omits.
+                // The failure path marks the temp delete-on-close, which
+                // requires DELETE access on the handle; std's `write(true)`
+                // alone omits it.
                 .access_mode(GENERIC_WRITE | DELETE)
                 .write(true)
                 .create_new(true)
@@ -898,12 +953,20 @@ impl PinnedDir {
                 Err(error) => return Err(error),
             }
         };
+        let mut temp_id: Option<FILE_ID_INFO> = None;
         let outcome = file
             .write_all(bytes)
             .and_then(|()| file.sync_all())
+            // Capture the temp's identity from its own open handle, while the
+            // pin still brackets the directory: this is the id the published
+            // entry must carry after the release-window rename.
+            .and_then(|()| {
+                temp_id = Some(handle_id(file.as_raw_handle() as HANDLE)?);
+                Ok(())
+            })
             // The destination directory is re-validated immediately before the
-            // rename too: with the exclusive pin this brackets the whole
-            // write+rename window.
+            // pin drops too: with the exclusive pin this brackets the whole
+            // write window.
             .and_then(|()| self.revalidate().map_err(pin_error_into_io));
         if outcome.is_err() {
             let info = FILE_DISPOSITION_INFO { DeleteFile: true };
@@ -918,18 +981,93 @@ impl PinnedDir {
             };
             return outcome;
         }
-        // The publish is a path-based rename while the exclusive pin is held:
-        // the kernel's rename takes a write-class open of the target's parent
-        // directory, which the pin's FILE_SHARE_READ-only share otherwise
-        // refuses (ERROR_SHARING_VIOLATION with the by-handle form, observed
-        // on Server 2025). Under the pin the temp's name is not a
-        // substitution window — no concurrent writer can even open this
-        // directory — and the rename's target resolution is DACL-checked,
-        // not share-blocked. The temp handle must be closed first: a rename
+        let temp_id = temp_id.expect("temp identity captured after the sync");
+        // The rename is path-based and needs the temp handle closed: a rename
         // of an open file conflicts with its own handle.
         drop(file);
-        let destination = self.path.join(name);
-        std::fs::rename(&temp_path, &destination)
+        let parent_path = self.path.clone();
+        self.release()?;
+
+        // The publish: a plain path rename with the pin released (see the
+        // invariant's release window above for why the pin cannot hold here).
+        let destination = parent_path.join(name);
+        let renamed = std::fs::rename(&temp_path, &destination);
+        // Immediately re-open the pin: the full open-time validation (final
+        // path, reparse tag, `FILE_ID_INFO` identity) re-establishes that the
+        // directory this verification anchors to is the object that was
+        // pinned, however the rename landed.
+        let repinned = match PinnedDir::open(&parent_path) {
+            Ok(repinned) => repinned,
+            Err(error) => {
+                return Err(io::Error::new(
+                    pin_error_into_io(error).kind(),
+                    format!(
+                        "published write to {} could not be verified: the pinned directory \
+                         could not be re-opened after the rename window (rename reported: \
+                         {renamed:?})",
+                        destination.display(),
+                    ),
+                ));
+            }
+        };
+        renamed?;
+        // Verify the published entry: open it anchored to the re-validated
+        // directory, refuse a reparse point, and require the temp's identity.
+        let published = open_anchored(
+            repinned.handle.as_raw_handle() as HANDLE,
+            name,
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            FILE_OPEN,
+            FILE_OPEN_FOR_BACKUP_INTENT | FILE_FLAG_OPEN_REPARSE_POINT,
+        )
+        .map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!(
+                    "published write to {} could not be verified: the renamed entry could \
+                     not be re-opened for identity verification: {error} (the rename \
+                     reported success; the temp sibling is consumed)",
+                    destination.display(),
+                ),
+            )
+        })?;
+        let tag = handle_attribute_tag(published.as_raw_handle() as HANDLE).map_err(|error| {
+            io::Error::new(
+                error.kind(),
+                format!(
+                    "published write to {} could not be verified: {error}",
+                    destination.display(),
+                ),
+            )
+        })?;
+        if tag.ReparseTag != 0 || tag.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "published write to {} failed verification: the renamed entry is a \
+                     reparse point, not the written file; the directory content must be \
+                     treated as unverified",
+                    destination.display(),
+                ),
+            ));
+        }
+        let published_id = handle_id(published.as_raw_handle() as HANDLE)?;
+        if published_id.VolumeSerialNumber != temp_id.VolumeSerialNumber
+            || published_id.FileId.Identifier != temp_id.FileId.Identifier
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "published write to {} failed verification: the entry at the destination \
+                     carries a different file identity than the written temp (substitution \
+                     during the release window); the directory content must be treated as \
+                     unverified",
+                    destination.display(),
+                ),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -981,38 +1119,6 @@ fn pin_error_into_io(error: PinError) -> io::Error {
     }
 }
 
-/// Builds the absolute Win32 rename target for `name` inside the pinned
-/// directory's resolved path: `\\?\C:\dir\name` (local) or
-/// `\\?\UNC\server\share\dir\name` (UNC).
-///
-/// Renames the open file `file` to the absolute `\\?\` path `target`,
-/// replacing an existing entry: `SetFileInformationByHandle` with information
-/// class `FileRenameInfo` (class 10), `ReplaceIfExists=TRUE`, and a
-/// `RootDirectory`-NULL, fully-qualified device-form target.
-///
-/// This is the years-proven form: the pre-anchored implementation (commit
-/// 53c3bd9a) shipped exactly this call with full absolute paths and passed on
-/// every Windows runner for the project's lifetime. Round 3 re-probed the
-/// alternatives on Server 2025 x64 and all three were rejected with
-/// ERROR_INVALID_PARAMETER — the Win32 class-10 `RootDirectory`-relative
-/// target, the NT class-65 (`FileRenameInformationEx`) `RootDirectory`-relative
-/// target, and the NT class-65 absolute `\??\` target — so class 10 with the
-/// absolute `\\?\` target is the form production ships (see the spike test's
-/// verdict comment).
-///
-/// The F05 invariant survives the move (it also held for every form tried in
-/// between) because it never depended on the target's name form:
-///
-/// 1. The *source* is identified by handle — the rename moves exactly the
-///    file this code created and wrote, so nothing can substitute the
-///    content by name between write and rename. The API renames the
-///    handle's file; no name resolution happens on the source at all.
-/// 2. The *target's directory* is the exclusively pinned `PinnedDir`, whose
-///    share mode excludes every other write/delete handle and whose identity
-///    is revalidated immediately before the rename — so nothing can
-///    substitute the directory the target name resolves against during the
-///    window either.
-///
 /// Resumes every thread of `pid`. Fails if none was resumed.
 fn resume_threads(pid: u32) -> io::Result<()> {
     // SAFETY: a thread snapshot takes no pointers; the handle is checked before it is owned.
@@ -1237,6 +1343,7 @@ mod tests {
     use super::*;
 
     use std::ffi::c_void;
+    use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
     use std::process::{Command, Stdio};
     use windows_sys::Wdk::Storage::FileSystem::{FileRenameInformationEx, NtSetInformationFile};
@@ -1675,51 +1782,77 @@ mod tests {
         Ok(())
     }
 
-    /// The relative-target rename verdict, for the windows portability lane:
+    /// The rename-form platform verdicts, for the windows portability lane:
     /// `cargo test -p sea-forge-os --lib -- --include-ignored`.
     ///
-    /// Recorded platform verdict (Server 2025 x64, capability-harvest CI
-    /// rounds 2-3): THREE forms are rejected with ERROR_INVALID_PARAMETER —
-    /// (1) the Win32 class-10 relative target,
+    /// Recorded platform verdicts (Server 2025 x64, capability-harvest CI
+    /// rounds 2-7). THREE rename forms are rejected with
+    /// ERROR_INVALID_PARAMETER — (1) the Win32 class-10 relative target,
     /// `SetFileInformationByHandle(FileRenameInformation)` + `RootDirectory`
     /// (the form the prior branch shipped until 53c3bd9a), (2) the NT
     /// class-65 relative target,
     /// `NtSetInformationFile(FileRenameInformationEx)` + `RootDirectory`, and
     /// (3) the NT class-65 absolute `\??\` target with `RootDirectory` NULL
-    /// (the round-3 production attempt). The working form — the one the
-    /// pre-anchored implementation used for the project's lifetime — is the
-    /// Win32 class-10 ABSOLUTE target via `SetFileInformationByHandle`
-    /// (`FileRenameInfo`, `ReplaceIfExists=TRUE`, `RootDirectory=NULL`,
-    /// `\\?\`-prefixed path), which production ships (see
-    /// `rename_handle_into`). This spike re-probes both relative forms on
-    /// every lane run and RECORDS the verdict instead of asserting success,
-    /// so a platform that starts accepting the race-free relative form is
-    /// visible in the log rather than silently unexercised.
+    /// (the round-3 production attempt). The anchored `NtCreateFile`
+    /// `FILE_CREATE` temp is rejected with `STATUS_INVALID_PARAMETER` on the
+    /// same platform (round 4), so the temp is created through the
+    /// directory's path.
+    ///
+    /// Round 6 added the decisive verdict for the publish step: with the
+    /// exclusive pin held, EVERY rename-onto-a-child is refused with
+    /// `ERROR_SHARING_VIOLATION` (32) — by-handle `FileRenameInfo` (absolute
+    /// `\\?\` target, round 6) AND by-path `std::fs::rename` (round 7) —
+    /// because the kernel's replace takes a write-class open of the target's
+    /// parent and the pin's `FILE_SHARE_READ`-only share refuses any new
+    /// write-access open of the directory. `write_replacing` therefore
+    /// releases the pin around the rename and re-verifies by file identity
+    /// (see its invariant note). This spike re-probes every recorded form on
+    /// each run and RECORDS the verdicts instead of asserting, so a platform
+    /// that starts accepting a rejected form is visible in the log rather
+    /// than silently unexercised.
     #[test]
-    #[ignore = "windows portability lane: relative-target rename verdict (Server 2025 x64 \
-                rejected the class-10 Win32 relative, class-65 NT relative, and class-65 NT \
-                absolute forms with ERROR_INVALID_PARAMETER; the working form is class-10 \
-                absolute via SetFileInformationByHandle); run with --include-ignored"]
+    #[ignore = "windows portability lane: rename-form verdicts (Server 2025 x64 rejected the \
+                class-10 Win32 relative, class-65 NT relative, and class-65 NT absolute rename \
+                forms with ERROR_INVALID_PARAMETER and the anchored FILE_CREATE temp with \
+                STATUS_INVALID_PARAMETER; with the exclusive pin held, renames onto a child are \
+                refused ERROR_SHARING_VIOLATION in both the by-handle FileRenameInfo and the \
+                by-path std::fs::rename forms); run with --include-ignored"]
     fn relative_target_rename_platform_verdict_spike() {
         let dir = std::env::temp_dir().join(format!("sf-os-spike-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("dir");
         let pinned = PinnedDir::open(&dir).expect("pin");
         let root = pinned.handle.as_raw_handle() as HANDLE;
+        use std::io::Write as _;
 
-        // (a) anchored creation while pinned exclusively: production's temp
-        // path still relies on this.
-        let file = open_anchored(
+        // (a) anchored creation while pinned exclusively: verdict recorded
+        // (Server 2025 rejects it), never asserted; the probes fall back to a
+        // path-created temp so the later verdicts stay reachable.
+        let anchored = open_anchored(
             root,
             OsStr::new("a.txt"),
             GENERIC_WRITE | DELETE,
             FILE_SHARE_READ,
             FILE_CREATE,
             FILE_NON_DIRECTORY_FILE | FILE_FLAG_OPEN_REPARSE_POINT,
-        )
-        .expect("anchored FILE_CREATE under the pinned directory");
-        let mut file = std::fs::File::from(file);
-        use std::io::Write as _;
+        );
+        let mut file = match anchored {
+            Ok(handle) => {
+                println!("VERDICT: anchored NtCreateFile FILE_CREATE: ACCEPTED");
+                std::fs::File::from(handle)
+            }
+            Err(error) => {
+                println!("VERDICT: anchored NtCreateFile FILE_CREATE: REJECTED ({error})");
+                std::fs::OpenOptions::new()
+                    .access_mode(GENERIC_WRITE | DELETE)
+                    .write(true)
+                    .create_new(true)
+                    .share_mode(FILE_SHARE_READ)
+                    .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+                    .open(dir.join("a.txt"))
+                    .expect("path-created temp a.txt")
+            }
+        };
         file.write_all(b"one").expect("write temp");
         file.sync_all().expect("sync temp");
 
@@ -1751,9 +1884,22 @@ mod tests {
             FILE_SHARE_READ,
             FILE_CREATE,
             FILE_NON_DIRECTORY_FILE | FILE_FLAG_OPEN_REPARSE_POINT,
-        )
-        .expect("second temp file");
-        let mut file = std::fs::File::from(file);
+        );
+        let file = match file {
+            Ok(handle) => std::fs::File::from(handle),
+            Err(error) => {
+                println!("VERDICT: anchored NtCreateFile FILE_CREATE (second): REJECTED ({error})");
+                std::fs::OpenOptions::new()
+                    .access_mode(GENERIC_WRITE | DELETE)
+                    .write(true)
+                    .create_new(true)
+                    .share_mode(FILE_SHARE_READ)
+                    .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+                    .open(dir.join("c.txt"))
+                    .expect("path-created temp c.txt")
+            }
+        };
+        let mut file = file;
         file.write_all(b"two").expect("write second temp");
         file.sync_all().expect("sync second temp");
         match set_rename_info_with_root(file.as_raw_handle() as HANDLE, root, OsStr::new("d.txt")) {
@@ -1776,7 +1922,66 @@ mod tests {
         }
         drop(file);
 
-        // (d) the exclusive pin holds while the anchored operations ran: a
+        // (e) by-handle rename onto a child with the pin still held: the
+        // shipped class-10 ABSOLUTE target form. Verdict recorded — the
+        // round-6 expectation is ERROR_SHARING_VIOLATION (the replace takes a
+        // write-class open of the pinned parent).
+        let file = std::fs::OpenOptions::new()
+            .access_mode(GENERIC_WRITE | DELETE)
+            .write(true)
+            .create_new(true)
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(dir.join("e.txt"))
+            .expect("temp e.txt");
+        let mut file = file;
+        file.write_all(b"five").expect("write e temp");
+        file.sync_all().expect("sync e temp");
+        let absolute_target = {
+            let mut target = dir.as_os_str().to_os_string();
+            target.push("\\e-dest.txt");
+            PathBuf::from(format!(r"\\?\{}", target.to_string_lossy()))
+        };
+        match set_rename_info_absolute(file.as_raw_handle() as HANDLE, &absolute_target) {
+            Ok(()) => {
+                assert_eq!(
+                    std::fs::read(dir.join("e-dest.txt")).expect("read renamed"),
+                    b"five",
+                    "the absolute rename landed outside the pinned directory"
+                );
+                println!(
+                    "VERDICT: SetFileInformationByHandle(FileRenameInfo) absolute under pin: \
+                     ACCEPTED"
+                );
+            }
+            Err(error) => {
+                println!(
+                    "VERDICT: SetFileInformationByHandle(FileRenameInfo) absolute under pin: \
+                     REJECTED ({error})"
+                );
+            }
+        }
+        drop(file);
+
+        // (f) by-path rename onto a child with the pin still held
+        // (`std::fs::rename`, the round-7 production publish form). Verdict
+        // recorded — the round-7 lane expectation is ERROR_SHARING_VIOLATION.
+        std::fs::write(dir.join("f.txt"), b"six").expect("temp f.txt");
+        match std::fs::rename(dir.join("f.txt"), dir.join("f-dest.txt")) {
+            Ok(()) => {
+                assert_eq!(
+                    std::fs::read(dir.join("f-dest.txt")).expect("read renamed"),
+                    b"six",
+                    "the by-path rename landed outside the pinned directory"
+                );
+                println!("VERDICT: std::fs::rename by path under pin: ACCEPTED");
+            }
+            Err(error) => {
+                println!("VERDICT: std::fs::rename by path under pin: REJECTED ({error})");
+            }
+        }
+
+        // (d) the exclusive pin holds while every probed operation ran: a
         // direct write-class open of the pinned directory is refused.
         match open_entry(
             &dir,
@@ -1792,7 +1997,39 @@ mod tests {
             ),
             Ok(_) => panic!("a write handle was opened on the exclusively pinned directory"),
         }
+        drop(pinned);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The by-handle absolute-target rename (`SetFileInformationByHandle`
+    /// with class `FileRenameInfo`, `ReplaceIfExists=TRUE`, `RootDirectory`
+    /// NULL, and a fully-qualified `\\?\` target). Spike-only: the form the
+    /// pre-anchored implementation shipped for the project's lifetime; under
+    /// the exclusive pin it is expected to be refused with
+    /// `ERROR_SHARING_VIOLATION` (see the spike's recorded verdicts).
+    fn set_rename_info_absolute(file: HANDLE, target: &Path) -> io::Result<()> {
+        let target_wide: Vec<u16> = target.as_os_str().encode_wide().collect();
+        let target_bytes = target_wide.len() * mem::size_of::<u16>();
+        let size = mem::size_of::<FILE_RENAME_INFO>() + target_bytes;
+        let mut buffer = vec![0u64; size.div_ceil(mem::size_of::<u64>())];
+        let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
+        // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized.
+        unsafe {
+            (*info).Anonymous = FILE_RENAME_INFO_0 {
+                ReplaceIfExists: true,
+            };
+            (*info).RootDirectory = std::ptr::null_mut();
+            (*info).FileNameLength = target_bytes as u32;
+            let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
+            std::ptr::copy_nonoverlapping(target_wide.as_ptr(), destination, target_wide.len());
+        }
+        // SAFETY: `file` is a live handle with DELETE access; `info` points at `size` initialized bytes that outlive the call.
+        let ok =
+            unsafe { SetFileInformationByHandle(file, FileRenameInfo, info.cast(), size as u32) };
+        if ok == FALSE {
+            return Err(last_error());
+        }
+        Ok(())
     }
 
     /// A one-attribute `PROC_THREAD_ATTRIBUTE_LIST` for direct

@@ -43,9 +43,16 @@
 //!   an error: containment succeeded and removal is hygiene, so the removal
 //!   refusal is printed on stderr, the leaf is left in place under its
 //!   owner-prefixed name — which is its registration for
-//!   [`destroy_process_leaves`]: the prefix scan re-adopts it and
-//!   re-attempts the removal under the same degrade rule — and the teardown
-//!   succeeds. A leaf that still lists members remains an error.
+//!   [`destroy_process_leaves`]: the registry re-adopts it and re-attempts
+//!   the removal under the same degrade rule — and the teardown succeeds. A
+//!   leaf that still lists members remains an error.
+//!
+//!   The sweep's scope is the ORPHANED leaves of this process: leaves whose
+//!   lease was dropped without its teardown. A live run's lease shields its
+//!   leaf — another sandbox's `destroy` in the same process (parallel test
+//!   threads) must never kill an in-flight run's members (the round-6/7
+//!   runner failure: a sibling's destroy swept a live leaf, the run's child
+//!   died mid-flight, and the run read as a silent empty-output `Completed`).
 //!
 //!   Kernel-behavior note (round-3 CI probe, kernel 6.17-azure): the drained
 //!   leaf read back empty, then `rmdir` failed EACCES on three attempts while
@@ -76,11 +83,13 @@
 //! (no-internal-process rule). Lifecycle containment needs no controllers.
 #![cfg(target_os = "linux")]
 // The workspace denies `unsafe_code` so that unsafe is a choice, not an
-// accident. This module is that choice, in exactly one place: the pre-exec
-// join registration (`CommandExt::pre_exec` has no safe wrapper). The
-// callback itself is written in safe Rust — a fixed stack buffer, no
-// allocation, one `write(2)` through `std` — and its safety argument is
-// stated inline.
+// accident. This module is that choice, in exactly two places: the pre-exec
+// join registration (`CommandExt::pre_exec` has no safe wrapper) and the
+// close-on-exec flag on the join's duplicated descriptor (`try_clone` dups
+// without it, and libc has no safe fcntl wrapper). Both callbacks/calls are
+// written in safe Rust around the raw call — a fixed stack buffer, no
+// allocation, one `write(2)`/`fcntl(2)` through the libc bindings — and
+// their safety arguments are stated inline.
 #![allow(unsafe_code)]
 
 use crate::SandboxError;
@@ -89,7 +98,10 @@ use std::{
     fs::{self, File, OpenOptions},
     io,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
@@ -160,12 +172,41 @@ pub enum KillError {
 }
 
 /// A run's cgroup-v2 leaf, from creation to verified removal.
+///
+/// The lease is the run's ownership of the leaf. While a lease is alive its
+/// run owns the teardown, and no other sandbox in this process may touch the
+/// leaf — `destroy_process_leaves` skips live leases (the round-7 finding: a
+/// process-global sweep killed the in-flight child of a parallel test the
+/// moment the other test's `destroy` ran). Only an ORPHANED lease — one
+/// dropped without its teardown (a panicked or aborted run) — marks its leaf
+/// for the destroy sweep.
 #[derive(Debug)]
 pub struct CgroupLease {
     leaf: PathBuf,
     /// The leaf's `cgroup.procs`, pre-opened write-only so the pre-exec join
     /// can move the child in without any path resolution after fork.
     procs: File,
+    /// Registry side of this lease: present while the leaf is registered,
+    /// shared with the [`REGISTERED_LEAVES`] entry. `true` means the run no
+    /// longer owns the leaf (dropped without `remove`), so the destroy sweep
+    /// may adopt it.
+    sweepable: Option<Arc<AtomicBool>>,
+    /// Set by a successful `remove` (or an idempotent NotFound one): the
+    /// registry entry is gone and the leaf needs no adoption on drop.
+    removed: Arc<AtomicBool>,
+}
+
+impl Drop for CgroupLease {
+    fn drop(&mut self) {
+        if !self.removed.load(Ordering::SeqCst) {
+            // The run that owned this lease ended without tearing it down.
+            // The leaf is a leak the destroy sweep must adopt; mark it while
+            // the registry entry (and its flag) still exists.
+            if let Some(sweepable) = &self.sweepable {
+                sweepable.store(true, Ordering::SeqCst);
+            }
+        }
+    }
 }
 
 impl CgroupLease {
@@ -182,16 +223,41 @@ impl CgroupLease {
         let procs = OpenOptions::new()
             .append(true)
             .open(leaf.join("cgroup.procs"))?;
-        Ok(Self { leaf, procs })
+        Ok(Self {
+            leaf,
+            procs,
+            sweepable: None,
+            removed: Arc::new(AtomicBool::new(false)),
+        })
+    }
+
+    /// Register this leaf with the process registry, sharing the sweepable
+    /// flag with the entry. Called by [`acquire_spawn_lease`]; a lease is
+    /// never swept while it (and its run) is alive.
+    fn register(&mut self) {
+        let sweepable = Arc::new(AtomicBool::new(false));
+        // A poisoned lock is an already-panicking sweeper; the registry is
+        // hygiene, so registration proceeds without it (an unregistered leaf
+        // can only leak for the destroy sweep to miss, never kill a sibling).
+        if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
+            leaves.push((self.leaf.clone(), Arc::clone(&sweepable)));
+        }
+        self.sweepable = Some(sweepable);
     }
 
     /// Re-adopt an existing leaf directory (verified teardown of a leaked
-    /// leaf during [`destroy_process_leaves`]).
+    /// leaf during [`destroy_process_leaves`]). The adoption is not a
+    /// registration: the sweep already owns this leaf.
     fn open_existing(leaf: PathBuf) -> io::Result<Self> {
         let procs = OpenOptions::new()
             .append(true)
             .open(leaf.join("cgroup.procs"))?;
-        Ok(Self { leaf, procs })
+        Ok(Self {
+            leaf,
+            procs,
+            sweepable: None,
+            removed: Arc::new(AtomicBool::new(false)),
+        })
     }
 
     /// The leaf's path (diagnostics, tests).
@@ -205,9 +271,19 @@ impl CgroupLease {
     /// fails the spawn (nothing execs uncontained).
     pub fn attach(command: &mut std::process::Command, lease: &CgroupLease) -> io::Result<()> {
         use std::io::Write;
+        use std::os::fd::AsRawFd;
         use std::os::unix::process::CommandExt;
 
         let mut procs = lease.procs.try_clone()?;
+        // The child execs right after the join, and `try_clone` dups the
+        // descriptor WITHOUT close-on-exec — the raw write handle to the
+        // leaf's `cgroup.procs` would leak into the workload and every
+        // descendant. Set the flag here, in the parent, before the spawn.
+        // SAFETY: `procs.as_raw_fd()` is an owned, open descriptor; F_SETFD
+        // with FD_CLOEXEC only touches that descriptor's flag word.
+        if unsafe { libc::fcntl(procs.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC) } == -1 {
+            return Err(io::Error::last_os_error());
+        }
         let join = move || {
             // Encode getpid() into a stack buffer: the pre-exec window must
             // not allocate (async-signal-safety discipline between fork and
@@ -376,12 +452,14 @@ impl CgroupLease {
         for attempt in 0..REMOVE_ATTEMPTS {
             match fs::remove_dir(&self.leaf) {
                 Ok(()) => {
+                    self.removed.store(true, Ordering::SeqCst);
                     unregister_leaf(&self.leaf);
                     return Ok(());
                 }
                 // Already removed by a concurrent verified teardown of the
                 // same lease: cleanup is idempotent.
                 Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    self.removed.store(true, Ordering::SeqCst);
                     unregister_leaf(&self.leaf);
                     return Ok(());
                 }
@@ -630,8 +708,8 @@ pub fn acquire_spawn_lease(
 ) -> Result<Option<CgroupLease>, SandboxError> {
     match containment() {
         CGroupContainment::Active { root } => match CgroupLease::create(&root, owner_pid) {
-            Ok(lease) => {
-                register_leaf(lease.leaf());
+            Ok(mut lease) => {
+                lease.register();
                 Ok(Some(lease))
             }
             Err(e) if require_requested() => Err(SandboxError::new(
@@ -710,34 +788,56 @@ pub fn report_degrade(backend: &str, reason: &str) {
 /// re-attempted and degrades the same way — printed, not an error — so a
 /// leaf the filesystem refuses to release can never fail `destroy`. Every
 /// other error propagates — `destroy` is never a silent no-op.
-/// Leaves created by this process that have not (yet) been removed. The
-/// destroy sweep verifies exactly these — never a filesystem glob by owner
-/// prefix, which would sweep the live leaves of unrelated sandboxes in the
-/// same process (one `destroy()` must not touch another sandbox's leaf).
-static REGISTERED_LEAVES: std::sync::Mutex<Vec<std::path::PathBuf>> =
+/// Leaves created by this process that have not (yet) been removed, each with
+/// its lease's shared `sweepable` flag. The destroy sweep verifies exactly
+/// these — never a filesystem glob by owner prefix, which would sweep the
+/// live leaves of unrelated sandboxes in the same process (one `destroy()`
+/// must not touch another sandbox's leaf) — and skips entries whose lease is
+/// STILL ALIVE (`sweepable == false`): a live lease's run owns its teardown,
+/// and killing its members from another sandbox's destroy is exactly the
+/// round-6/7 runner failure (a parallel test's child died mid-run with an
+/// empty-output `Completed` the moment a sibling test's `destroy` swept it).
+/// A lease dropped without `remove` (a panicked or aborted run) flips its
+/// flag in `Drop`, orphaning the leaf for the next sweep.
+static REGISTERED_LEAVES: std::sync::Mutex<Vec<(std::path::PathBuf, Arc<AtomicBool>)>> =
     std::sync::Mutex::new(Vec::new());
-
-fn register_leaf(leaf: &std::path::Path) {
-    // A poisoned lock is an already-panicking sweeper; the registry is
-    // hygiene, so recovery proceeds with the current (possibly stale) list.
-    if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
-        leaves.push(leaf.to_path_buf());
-    }
-}
 
 fn unregister_leaf(leaf: &std::path::Path) {
     if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
-        leaves.retain(|l| l != leaf);
+        leaves.retain(|(l, _)| l != leaf);
     }
 }
 
+/// Verified teardown of every ORPHANED leaf this process registered — a leaf
+/// whose lease was dropped without its teardown (a panicked or aborted run,
+/// or an empty-but-undeletable leaf recorded for the sweep by
+/// [`CgroupLease::remove`]'s degrade). Leaves whose lease is still alive
+/// belong to runs in flight in this process and are skipped: their own
+/// teardown owns them, and another sandbox's destroy must never kill an
+/// in-flight run's members (the round-6/7 runner finding). Empty leaves are
+/// removed; leaves that still hold members are killed first and required to
+/// drain. An empty leaf whose removal this kernel refuses (the same
+/// EACCES/EPERM/EBUSY class as at teardown) is re-attempted and degrades the
+/// same way — printed, not an error, and kept sweepable for the next destroy
+/// — so a leaf the filesystem refuses to release can never fail `destroy`.
+/// Every other error propagates — `destroy` is never a silent no-op.
 pub fn destroy_process_leaves() -> Result<(), SandboxError> {
-    let leaves = match REGISTERED_LEAVES.lock() {
+    let entries = match REGISTERED_LEAVES.lock() {
         Ok(mut leaves) => std::mem::take(&mut *leaves),
         Err(_) => return Ok(()),
     };
+    // A live lease's run owns its leaf; the sweep must not touch it. Entries
+    // whose flag is still false go back (a vanished leaf directory drops the
+    // stale entry instead of resurrecting it).
+    let mut live = Vec::new();
     let mut first_error = None;
-    for leaf in leaves {
+    for (leaf, sweepable) in entries {
+        if !sweepable.load(Ordering::SeqCst) {
+            if leaf.is_dir() {
+                live.push((leaf, sweepable));
+            }
+            continue;
+        }
         match CgroupLease::open_existing(leaf.clone()) {
             // The leaf vanished between the scan and the open: already clean.
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
@@ -766,7 +866,18 @@ pub fn destroy_process_leaves() -> Result<(), SandboxError> {
                         ),
                     });
                 }
+                // An empty-but-undeletable leaf degrades inside `remove` and
+                // stays on disk: keep it sweepable so the next destroy
+                // retries the removal under the same degrade rule.
+                if leaf.is_dir() {
+                    live.push((leaf, sweepable));
+                }
             }
+        }
+    }
+    if !live.is_empty() {
+        if let Ok(mut leaves) = REGISTERED_LEAVES.lock() {
+            leaves.extend(live);
         }
     }
     match first_error {

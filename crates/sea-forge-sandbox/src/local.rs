@@ -61,6 +61,29 @@ pub(crate) fn kill_timed_out_group(child: &std::process::Child) -> Result<(), Sa
     Ok(())
 }
 
+/// Observability for a reaped child that died by signal instead of exiting:
+/// the execution-result vocabulary has no signal-death status, so a signaled
+/// child currently reads as a completion with no exit code. That mapping must
+/// never be silent — a child that produces no output AND reads as Completed
+/// is exactly the shape of a run whose child was killed by something outside
+/// this module — so the fact (and the signal) is surfaced on stderr, the
+/// crate's observability channel.
+#[cfg(unix)]
+pub(crate) fn report_signal_death(backend: &str, status: std::process::ExitStatus) {
+    use std::os::unix::process::ExitStatusExt;
+    if let Some(signal) = status.signal() {
+        let core = if status.core_dumped() {
+            " (core dumped)"
+        } else {
+            ""
+        };
+        eprintln!(
+            "sea-forge-sandbox: {backend} run child was terminated by signal {signal}{core} \
+             instead of exiting on its own"
+        );
+    }
+}
+
 /// Bounded wait for teardown kills to take effect (mirrors the Windows
 /// `terminate_and_wait` deadline). Linux-only: it is consumed by the
 /// cgroup-leaf teardown; the other-Unix teardown is a bare group kill.
@@ -269,6 +292,13 @@ impl ExecutionSandbox for LocalSandbox {
             teardown_run(&child)?;
             #[cfg(windows)]
             let containment = LifecycleContainment::JobObject;
+            // A child reaped with a signal death (no exit code) is not a
+            // normal completion; surface the signal on the observability
+            // channel instead of letting it read as a clean run.
+            #[cfg(unix)]
+            if status.code().is_none() {
+                report_signal_death("local", status);
+            }
             (
                 ExecutionStatus::Completed,
                 status.code().map(i64::from),

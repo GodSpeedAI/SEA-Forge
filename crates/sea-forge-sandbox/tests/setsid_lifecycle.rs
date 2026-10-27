@@ -520,20 +520,36 @@ fn setsid_descendant_does_not_outlive_timed_out_jail_run() {
     fs::remove_dir_all(parent).ok();
 }
 
-/// Verified teardown of `destroy`: a leaked leaf (spawn-failure window or an
-/// earlier teardown error) must be found, required empty, and removed.
+/// Verified teardown of `destroy`: an ORPHANED leaf must be found by the
+/// registry-scoped sweep, required empty, and removed — while a live run's
+/// leaf stays untouchable.
+///
+/// The leak is a REAL registered lease — acquired and then dropped without
+/// teardown, the exact residue of a spawn-failure window (acquire succeeded,
+/// the run aborted before its teardown was wired). Dropping the lease marks
+/// it orphaned (the sweepable flag flips in `Drop`); `destroy` adopts exactly
+/// such leaves and never the leaves of runs still in flight. A directory
+/// merely named like a leaf is invisible to destroy by construction — the
+/// contract under test is "this process's ORPHANED registered leaves are
+/// swept", so the fixture registers one the way the runtime does.
 #[test]
 fn destroy_sweeps_a_leaked_leaf() {
     let _env = env_lock();
-    let Some(root) = require_active_root("destroy sweeps a leaked leaf") else {
+    let Some(_root) = require_active_root("destroy sweeps a leaked leaf") else {
         return;
     };
-    let leaked = root.join(format!(
-        "sea-forge-{}-{}",
-        std::process::id(),
-        990_042 // outside the runtime's sequence space
-    ));
-    fs::create_dir(&leaked).unwrap();
+    let lease = match cgroup::acquire_spawn_lease("destroy-sweep-test", std::process::id()) {
+        Ok(Some(lease)) => lease,
+        other => panic!("active containment must yield a lease, got {other:?}"),
+    };
+    let leaked = lease.leaf().to_path_buf();
+    assert!(
+        leaked.exists(),
+        "the acquired leaf must exist before the sweep"
+    );
+    // Orphan it: dropping the lease removes nothing (removal is explicit) and
+    // flips the sweepable flag, handing the leaf to the destroy sweep.
+    drop(lease);
     let parent = temp_dir("sweep");
     let sandbox = LocalSandbox;
     let handle = sandbox

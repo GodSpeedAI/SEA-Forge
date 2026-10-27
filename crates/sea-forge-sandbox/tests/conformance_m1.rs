@@ -551,7 +551,10 @@ fn jail_network_denies_outbound_connect_by_default() {
     // The child's connect must have failed …
     assert!(
         outcome.starts_with("err:"),
-        "default-denied outbound connect unexpectedly succeeded: {outcome:?}"
+        "default-denied outbound connect unexpectedly succeeded: {outcome:?} (an empty \
+         outcome means the jailed probe child terminated before it could write its verdict \
+         at all — a child-lifecycle event, not a network denial; check this run's log for \
+         the child's termination record before reading this as a denial failure)"
     );
     // … and the fixture server must have accepted zero connections. This is the
     // load-bearing assertion: denial is proven by the server observing nothing,
