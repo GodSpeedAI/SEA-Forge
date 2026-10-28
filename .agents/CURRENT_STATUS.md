@@ -1,26 +1,21 @@
 # Current status
 
-**Status revision:** 214
+**Status revision:** 215
 
-**Stage:** capability-harvest + ARM64: ARM64 packaging fully green (all four legs, run 40614104830); capability-harvest env-leak fix committed and pushed
+**Stage:** capability-harvest: R4 test reports BLOCKED on unreachable-helper hosts (22.04 layout); pushing
 
-**Summary:** ARM64 mission delivered: the arm64 .deb and tarball are built natively on ubuntu-22.04-arm (glibc 2.35), install-tested, smoke-tested on clean arm64 containers, independently verified (ELF AArch64, /lib/ld-linux-aarch64.so.1, max GLIBC_2.34, zero rpath/nix), and downloadable from run 40614104830 artifact pkg-linux-arm64. The release publisher now requires the arm64 assets. The capability-harvest 22.04 gate failure was the R4 test's process-wide unshare override leaking into parallel real-chain tests; the override is now mutex-scoped and removed after the test (034bbed8 lineage, push pending as the final commit).
+**Summary:** The 22.04 gate's R4 failure is a host-layout precondition: isolated_command's helper-reachability probe refuses a non-other-x /home/runner (every host identity is unmapped inside the namespace, so 'other' bits decide). The test now reports BLOCKED for that precondition class and asserts the full setup-failure path only where the chain is reachable (the 24.04 lane, which passed).
 
 **Verified:**
 
-- run 40614104830: all four legs success; arm64 install-test log lines captured verbatim
-- independent artifact verification on this workstation: built-from = run SHA, AArch64 ELF, correct interpreter, GLIBC<=2.34, zero rpath/nix
-- sandbox lib 31 green with the env-scoped R4 test; fmt clean
+- sandbox lib 31 green; fmt clean
 
 **Limits:**
 
-- Final capability-harvest lanes (env fix) pending; codex pass 3 after green
-- ARM64 Milestone C (governed E2E) is pending on-device execution on the Jetson
+- 22.04 lane rerun pending
 
-**Next move:** Push the env fix, lanes green -> codex pass 3 -> consolidated final report.
+**Next move:** Push; lanes green -> codex pass 3.
 
 **Evidence:**
 
-- .agents/plans/2026-10-27-arm64-jetson-packaging.md
-- run 40614104830
-- /tmp/arm64-artifacts
+- run 40616167976 22.04 artifact
