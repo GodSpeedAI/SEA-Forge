@@ -689,7 +689,6 @@ pub fn isolated_command(
     confinement: &WorkloadConfinement,
     argv: &[String],
 ) -> Result<(Command, Lifeline, IsolationAck), SandboxError> {
-    use std::os::fd::AsRawFd;
     if argv.is_empty() {
         return Err(SandboxError::new("input_error", "workload argv is empty"));
     }
@@ -708,20 +707,17 @@ pub fn isolated_command(
     // that would keep the pipe alive past the launcher.
     rustix::fs::fchmod(&read, rustix::fs::Mode::from_raw_mode(0o444))
         .map_err(|e| unavailable(format!("lifeline pipe: {e}")))?;
-    // Review pass 2 (R4): the trusted setup acknowledgement. Neither end is
-    // close-on-exec at creation — the WRITE end must cross both execs of the
-    // launch chain (into `unshare`, then into the helper) or the helper could
-    // never confirm its setup. The launcher's read end is nonblocking for the
-    // bounded handshake wait (and close-on-exec as launcher-side hygiene);
-    // the helper reopens the write end by path, which yields a close-on-exec
-    // descriptor the workload never inherits.
-    let (ack_read, ack_write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::empty())
+    // Review pass 2 (R4), reworked in pass 3: both ack ends are created
+    // close-on-exec — this launcher is multithreaded, and an inheritable
+    // write end could leak into ANY concurrently spawned process (a jail
+    // workload among them), which could then forge the setup acknowledgement.
+    // `isolated_command` re-admits the two fds in the forked child via
+    // pre_exec, so only the intended launch chain ever holds them.
+    let (ack_read, ack_write) = rustix::pipe::pipe_with(rustix::pipe::PipeFlags::CLOEXEC)
         .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
     // NONBLOCK is a file-STATUS flag (fcntl_setfl), distinct from the
-    // descriptor flags that carry CLOEXEC.
+    // descriptor flags that carry CLOEXEC; it does not undo the exec behavior.
     rustix::fs::fcntl_setfl(&ack_read, rustix::fs::OFlags::NONBLOCK)
-        .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
-    rustix::io::fcntl_setfd(&ack_read, rustix::io::FdFlags::CLOEXEC)
         .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
     let mut command = Command::new(unshare_binary());
     command
@@ -771,13 +767,55 @@ pub fn isolated_command(
     for port in confinement.network.granted_ports() {
         command.arg("--tcp-port").arg(port.to_string());
     }
-    command
-        .arg("--lifeline")
-        .arg(read.as_raw_fd().to_string())
-        .arg("--ack-fd")
-        .arg(ack_write.as_raw_fd().to_string())
-        .arg("--")
-        .args(argv);
+    {
+        use std::os::fd::AsRawFd;
+        command
+            .arg("--lifeline")
+            .arg(read.as_raw_fd().to_string())
+            .arg("--ack-fd")
+            .arg(ack_write.as_raw_fd().to_string())
+            .arg("--")
+            .args(argv);
+    }
+    // Re-admit the three pipe fds in the forked child (they were created
+    // close-on-exec so no concurrent launcher thread could leak them into an
+    // unrelated spawn): unshare, the helper, and the workload each inherit
+    // them across the chain, and the helper's reopen-by-path fallback is not
+    // available to the subordinate identity for the ack WRITE end (write
+    // permission cannot be granted by fchmod on a pipe without opening the
+    // whole chain to reads).
+    //
+    // SAFETY: raw fds come from the pipes this function created and still
+    // owns; the closure runs between fork and exec with no allocation.
+    {
+        use std::os::fd::AsRawFd;
+        use std::os::unix::process::CommandExt;
+        // The workspace denies unsafe_code; this is a deliberate, commented
+        // opt-out (same discipline as cgroup.rs's module-level allow).
+        // SAFETY: raw fds come from the pipes this function created and still
+        // owns; the closure runs between fork and exec with no allocation.
+        #[allow(unsafe_code)]
+        {
+            // Capture the raw fd NUMBERS, not the OwnedFds: the descriptors
+            // stay owned by this function (they are handed to the child via
+            // the exec inheritance of non-CLOEXEC descriptions, and remain
+            // valid in the forked child before exec).
+            let lifeline_fd = read.as_raw_fd();
+            let ack_fd = ack_write.as_raw_fd();
+            unsafe {
+                command.pre_exec(move || {
+                    for fd in [lifeline_fd, ack_fd] {
+                        rustix::io::fcntl_setfd(
+                            rustix::fd::BorrowedFd::borrow_raw(fd),
+                            rustix::io::FdFlags::empty(),
+                        )
+                        .map_err(std::io::Error::other)?;
+                    }
+                    Ok(())
+                });
+            }
+        }
+    }
     Ok((
         command,
         Lifeline {
