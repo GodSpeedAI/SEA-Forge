@@ -126,15 +126,14 @@ jobs:
           ldd --version | head -1
           just --version 2>/dev/null || true
 
+      # Both architectures build with the native rustup toolchain and the
+      # system gcc: the packaged binaries bind the RUNNER's glibc (2.35 on
+      # ubuntu-22.04 images — the deployment ABI), so dpkg-shlibdeps derives
+      # an honest floor on both legs. Devbox remains for the version checks.
       - name: Build release binaries
         run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            cargo build --release --locked -p sea-forge-cli -p sea-forge-server
-            cargo build --release --locked -p sea-forge-sandbox --bin sea-forge-workload-exec --bin sea-forge-mcp-connect
-          else
-            devbox run -- cargo build --release --locked -p sea-forge-cli -p sea-forge-server
-            devbox run -- cargo build --release --locked -p sea-forge-sandbox --bin sea-forge-workload-exec --bin sea-forge-mcp-connect
-          fi
+          cargo build --release --locked -p sea-forge-cli -p sea-forge-server
+          cargo build --release --locked -p sea-forge-sandbox --bin sea-forge-workload-exec --bin sea-forge-mcp-connect
 
       # The Devbox (Nix) toolchain links the Nix loader and a /nix/store RUNPATH
       # into the binaries; they would not start on a host without Nix. Point
