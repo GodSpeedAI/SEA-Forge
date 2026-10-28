@@ -237,7 +237,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          sudo apt-get install -y "./dist/sea-forge_${VERSION}_amd64.deb"
+          sudo apt-get install -y "./dist/sea-forge_${VERSION}_${{ matrix.arch }}.deb"
           sh packaging/smoke-cell.sh /usr/bin/sea-forge /usr/bin/sea-forge-server
           sudo apt-get remove -y sea-forge
 
