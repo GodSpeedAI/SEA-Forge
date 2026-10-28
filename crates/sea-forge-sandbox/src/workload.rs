@@ -719,6 +719,11 @@ pub fn isolated_command(
     // descriptor flags that carry CLOEXEC; it does not undo the exec behavior.
     rustix::fs::fcntl_setfl(&ack_read, rustix::fs::OFlags::NONBLOCK)
         .map_err(|e| unavailable(format!("isolation ack pipe: {e}")))?;
+    // Grant the subordinate identity write access via the /proc/self/fd
+    // reopen (the lifeline read end's proven pattern, with write bits): the
+    // mode bits on the pipe description are what the reopen checks.
+    rustix::fs::fchmod(&ack_write, rustix::fs::Mode::from_raw_mode(0o222))
+        .map_err(|e| unavailable(format!("isolation ack pipe mode: {e}")))?;
     let mut command = Command::new(unshare_binary());
     command
         .env_clear()
@@ -801,16 +806,13 @@ pub fn isolated_command(
             // the exec inheritance of non-CLOEXEC descriptions, and remain
             // valid in the forked child before exec).
             let lifeline_fd = read.as_raw_fd();
-            let ack_fd = ack_write.as_raw_fd();
             unsafe {
                 command.pre_exec(move || {
-                    for fd in [lifeline_fd, ack_fd] {
-                        rustix::io::fcntl_setfd(
-                            rustix::fd::BorrowedFd::borrow_raw(fd),
-                            rustix::io::FdFlags::empty(),
-                        )
-                        .map_err(std::io::Error::other)?;
-                    }
+                    rustix::io::fcntl_setfd(
+                        rustix::fd::BorrowedFd::borrow_raw(lifeline_fd),
+                        rustix::io::FdFlags::empty(),
+                    )
+                    .map_err(std::io::Error::other)?;
                     Ok(())
                 });
             }

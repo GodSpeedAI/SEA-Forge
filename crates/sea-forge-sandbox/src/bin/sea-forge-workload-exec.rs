@@ -169,27 +169,14 @@ fn main() {
     // unacknowledged.
     if let Some(fd) = ack_fd {
         use std::io::Write;
-        // The write end is inherited across the unshare→helper chain (it is
-        // not close-on-exec), so the descriptor is live right here — no
-        // reopen needed. A reopen-by-path would fail after --setuid dropped
-        // this process to the subordinate identity: /proc/self/fd/N of a
-        // launcher-owned pipe is not openable for write by the workload uid.
-        // Mark the descriptor close-on-exec so the workload never inherits
-        // it, then acknowledge.
-        let fd = i32::try_from(fd).unwrap_or_else(|_| fail("invalid --ack-fd"));
-        // SAFETY: `fd` came from the launcher's --ack-fd argument, which the
-        // launcher created and did not close; borrowing it is within its
-        // lifetime (this process still holds the description open).
-        // The same argument backs the two unsafe raw-fd uses below.
-        rustix::io::fcntl_setfd(
-            unsafe { rustix::fd::BorrowedFd::borrow_raw(fd) },
-            rustix::io::FdFlags::CLOEXEC,
-        )
-        .unwrap_or_else(|e| fail(&format!("ack fd flags: {e}")));
-        let mut ack = std::fs::File::from(
-            rustix::io::dup(unsafe { rustix::fd::BorrowedFd::borrow_raw(fd) })
-                .unwrap_or_else(|e| fail(&format!("ack dup failed: {e}"))),
-        );
+        // Reopen the ack write end BY PATH: the launcher fchmod'ed it 0222 so
+        // this (subordinate-identity) process may open it for write — the
+        // same mechanism as the lifeline's 0444 read reopen. The reopened
+        // descriptor is close-on-exec, so the workload never inherits it.
+        let mut ack = std::fs::OpenOptions::new()
+            .write(true)
+            .open(format!("/proc/self/fd/{fd}"))
+            .unwrap_or_else(|e| fail(&format!("ack pipe unavailable: {e}")));
         ack.write_all(&[0x01])
             .unwrap_or_else(|e| fail(&format!("ack write failed: {e}")));
     }

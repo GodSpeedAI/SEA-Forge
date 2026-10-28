@@ -1,22 +1,22 @@
 # Current status
 
-**Status revision:** 216
+**Status revision:** 217
 
-**Stage:** capability-harvest: codex pass-3 (independent Claude model) findings fixed — dedicated jail launch thread, CLOEXEC-at-creation ack/lifeline pipes with pre_exec re-admit, scoped unshare override; pushing final lanes
+**Stage:** capability-harvest: pass-3 R2 ack-path rework — mode-granted reopen-by-path (the lifeline's proven pattern) instead of inherited-fd dup; pushing for final lane verification
 
-**Summary:** Pass 3 (independent reviewer, different model family; codex rate-limited): Critical 0 High 0 Medium 2 Low 4. Fixed: (1) the interactive jail launch now runs on a dedicated OS thread nested in the blocking closure — pooled-thread Landlock poisoning (R3 cleanup denial + H4 leaf-creation failure) is structural gone; (2) the ack write end and lifeline read end are CLOEXEC at creation and re-admitted in the forked child via pre_exec — no concurrently spawned process (a jail workload among them) can inherit and forge the setup acknowledgement; (3) the R4 test's unshare override is mutex-scoped and removed after the test (the 22.04 gate caught the leak in the parallel real-chain suites); (4) stale reopen comments corrected. Disputes held: H3/H5 trusted-host contract, R7/R8 tally-vs-pass design.
+**Summary:** Run-6's 24.04 fixture failure showed the inherited-ack-fd dup breaks inside the real launch chain (helper exit before the handshake byte, EOF at the launcher). The ack now uses exactly the mechanism the lifeline proves works on every lane: the launcher fchmods the ack WRITE end 0222, the helper reopens it by /proc/self/fd path as the subordinate identity, and the reopened descriptor is close-on-exec so the workload never inherits it. The pre_exec re-admits only the lifeline read end. The concurrent-inheritance leak (pass-3 finding 2) stays closed: the pipe is CLOEXEC at creation and only the pre_exec path unsets it in the intended child.
 
 **Verified:**
 
-- sandbox lib 31 green; syscall_filter 1 + unix_socket_reach 8 green through the new pre_exec path; agent 3 suites green; clippy -D warnings across touched crates; fmt clean; no-async-kernel EXIT=0
-- kernel-security 22.04+24.04 green at c42b78ab (env-leak lineage)
+- sandbox lib 31 green; syscall_filter, unix_socket_reach (real launch chain), workload_isolation, workload_boundary all green locally; clippy -D warnings clean; fmt clean
 
 **Limits:**
 
-- Final lanes for 034bbed8..c42b78ab + the pass-3 fix commit pending
+- Final lane rerun (kernel 24.04 sandbox-suite + portability + ci) pending
 
-**Next move:** Push; lanes green -> consolidated final report + handoff (pass-3 result: pass with only Low findings remaining).
+**Next move:** Green lanes -> consolidated final report + handoff. Codex rate-limited; pass 3 ran on the independent Claude model (disclosed).
 
 **Evidence:**
 
 - /tmp/harvest-pass3-claude-review.md
+- run 40602941845 amd64-green evidence
