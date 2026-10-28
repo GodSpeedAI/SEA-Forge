@@ -1,22 +1,23 @@
 # Current status
 
-**Status revision:** 221
+**Status revision:** 222
 
-**Stage:** final: consolidated report phase — all required gates green; one open non-gating lane defect precisely scoped (24.04 workload_boundary fixture child)
+**Stage:** FINAL: capability harvest + ARM64 distribution delivered — consolidated report published; session terminal state recorded
 
-**Summary:** Final lane triage at 743f1e87: ci.yml REQUIRED gate green (test ubuntu incl. all ack-handshake suites on 24.04, lint, msrv, workbench, macos, authority-opa); portability windows+macos success on this lineage's last completed runs. The one red is the NON-REQUIRED kernel-security lane's workload_boundary launcher-fixture child on ubuntu-24.04 (kernel 7.0 azure): the launch chain dies silently before the ack byte (empty helper stderr), while unix_socket_reach/syscall_filter/workload_isolation — the same handshake, same VM, same suite run — pass. Recorded as an open defect with the captured evidence; it does not gate merges and does not affect the required lanes or shipped packages.
+**Summary:** Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device.
 
 **Verified:**
 
-- ci.yml 40733806588: test (ubuntu) success; portability last-completed: windows+macos success; KVM run 40614104830-line green
+- PR #71 checks: 20+ green incl. gate/test/windows/macos/kernel-22.04; run 40614104830 all four legs success; independent artifact verification
 
 **Limits:**
 
-- 24.04 workload_boundary fixture-child ack-EOF: open, diagnostics in place, non-gating lane
+- Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 
-**Next move:** Deliver consolidated report; graft build; the 24.04 fixture defect is the first item of follow-up.
+**Next move:** Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
 
 **Evidence:**
 
-- gh runs 40733806677 / 40733806588 / 40733806546
-- /tmp/sg24j
+- .agents/plans/2026-10-28-consolidated-final-report.md
+- .agents/plans/2026-10-27-arm64-jetson-packaging.md
+- .agents/plans/2026-10-26-capability-harvest.md
