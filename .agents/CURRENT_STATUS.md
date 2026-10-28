@@ -1,21 +1,21 @@
 # Current status
 
-**Status revision:** 218
+**Status revision:** 219
 
-**Stage:** capability-harvest: pass-3 R2 corrected — pre_exec re-admits BOTH pipe ends (lifeline read + ack write, the latter enabled by the 0222 mode grant); pushing for the final green
+**Stage:** capability-harvest: launcher fixture captures the helper's stderr — next 24.04 run names the ack-path failure; pushing
 
-**Summary:** The syscall_filter ENOENT was self-inflicted by the previous edit: the pre_exec re-admit list was cut to the lifeline fd only, so the ack write end closed at the first exec and the helper's fd number was invalid. The pre_exec now clears CLOEXEC on both fds in the intended child; the helper reopens the ack end by path under the 0222 grant. All launch-chain suites green locally.
+**Summary:** The 24.04 sandbox-suite's fixture child fails at the ack wait and its stdio is null, so the helper's fail() reason was unreachable. The launcher fixture now captures the launch stderr to a file and the assertion prints it. The failure first appeared with the pass-3 ack rework (CLOEXEC-at-creation + pre_exec re-admit + 0222-reopen) — syscall_filter's identical chain passes on the same VM, so the fixture's difference (sh -c script with exec sleep, spawned from a libtest process) is the variable the capture will explain.
 
 **Verified:**
 
-- sandbox lib 31 green; syscall_filter 1, unix_socket_reach 8, workload_isolation 3, workload_boundary 4 green; clippy -D warnings clean; fmt clean
+- workload_boundary 4/4 green locally; clippy/fmt clean; the capture path derived identically at both sites
 
 **Limits:**
 
-- Final lane rerun pending
+- 24.04 rerun pending
 
-**Next move:** Green lanes -> consolidated final report + handoff.
+**Next move:** Push; read the captured stderr; fix the named cause.
 
 **Evidence:**
 
-- run 40691041682 24.04 artifact
+- run 40694441440 log

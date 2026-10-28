@@ -256,8 +256,16 @@ fn launcher_fixture_child() {
     let mut child = launch.spawn().unwrap();
     // Review pass 2 (R4): consume the trusted setup acknowledgement; the
     // helper fails its launch when its launcher never reads the ack byte.
-    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
-        .expect("isolated launch acknowledged its setup");
+    // A failure prints the helper's captured stderr (its only voice — the
+    // launch itself runs with null stdio).
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT).unwrap_or_else(|error| {
+        let stderr_path = std::env::temp_dir().join(format!(
+            "launcher-fixture-stderr-{}.log",
+            std::process::id()
+        ));
+        let captured = fs::read_to_string(&stderr_path).unwrap_or_default();
+        panic!("isolated launch acknowledged its setup: {error}; helper stderr: {captured:?}");
+    });
     wait_until("workload ready", || ready.exists());
     fs::write(
         dir.join("identity"),
