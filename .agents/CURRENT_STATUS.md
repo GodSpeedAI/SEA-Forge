@@ -1,24 +1,22 @@
 # Current status
 
-**Status revision:** 220
+**Status revision:** 221
 
-**Stage:** capability-harvest: review protocol complete (3 passes, C0/H0); 24.04 fixture ack-failure recorded as open non-gating lane defect; final report phase
+**Stage:** final: consolidated report phase — all required gates green; one open non-gating lane defect precisely scoped (24.04 workload_boundary fixture child)
 
-**Summary:** Pass 3 (independent Claude model, disclosed; codex rate-limited): C0/H0/M2/L4. The two Mediums fixed (dedicated jail launch thread; CLOEXEC-at-creation ack/lifeline pipes with pre_exec re-admit). Pass-3's rework broke the 24.04 launcher fixture (silent chain death, empty helper stderr) — recorded as an open defect in the NON-REQUIRED kernel-security lane: it fails only there, only in the workload_boundary fixture; unix_socket_reach's identical handshake passes on the same VM, 22.04 passes, all local launch-chain suites pass, and the REQUIRED gates are green. The alternative (reverting R4's handshake) would restore the false-PidNamespace claim the reviewer reproduced — wrong trade. Remaining Lows (skip-accounting in two tests, stale comments, staging-reuse nuance) recorded.
+**Summary:** Final lane triage at 743f1e87: ci.yml REQUIRED gate green (test ubuntu incl. all ack-handshake suites on 24.04, lint, msrv, workbench, macos, authority-opa); portability windows+macos success on this lineage's last completed runs. The one red is the NON-REQUIRED kernel-security lane's workload_boundary launcher-fixture child on ubuntu-24.04 (kernel 7.0 azure): the launch chain dies silently before the ack byte (empty helper stderr), while unix_socket_reach/syscall_filter/workload_isolation — the same handshake, same VM, same suite run — pass. Recorded as an open defect with the captured evidence; it does not gate merges and does not affect the required lanes or shipped packages.
 
 **Verified:**
 
-- Pass-3 fix locally: sandbox lib 31, syscall_filter/unix_socket_reach/workload_isolation/workload_boundary green; clippy/fmt clean
-- Kernel lane: 22.04 green; 24.04 fails only the workload_boundary fixture (evidence retained in /tmp/sg24i)
+- ci.yml 40733806588: test (ubuntu) success; portability last-completed: windows+macos success; KVM run 40614104830-line green
 
 **Limits:**
 
-- 24.04 fixture ack-failure root cause open (silent chain death; capture in place); final lanes for fa7576b2/e7e998f5 lineage in flight
+- 24.04 workload_boundary fixture-child ack-EOF: open, diagnostics in place, non-gating lane
 
-**Next move:** Final consolidated report; graft build; handoff. The 24.04 defect stays open and honestly reported.
+**Next move:** Deliver consolidated report; graft build; the 24.04 fixture defect is the first item of follow-up.
 
 **Evidence:**
 
-- /tmp/harvest-pass3-claude-review.md
-- /tmp/sg24i
-- gh runs 40694441440 / 40732032144 / 40691041682
+- gh runs 40733806677 / 40733806588 / 40733806546
+- /tmp/sg24j
