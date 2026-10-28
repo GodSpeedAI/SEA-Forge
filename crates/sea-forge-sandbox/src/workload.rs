@@ -1047,6 +1047,13 @@ mod tests {
     #[test]
     fn failed_namespace_setup_is_reported_without_containment() {
         use std::fs::File;
+        // Scope the override to THIS test and restore it: the variable is
+        // process-wide, and libtest runs this file's tests (and the socket-
+        // policy suites' real launch chains) in the same process — a leaked
+        // override makes every later real launch fail (the 22.04 gate caught
+        // exactly that). The lock serializes against tests that read it.
+        static UNSHARE_OVERRIDE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _unshare_guard = UNSHARE_OVERRIDE.lock().unwrap();
         std::env::set_var("SEA_FORGE_TEST_UNSHARE", "/bin/false");
         let identity = WorkloadIdentity {
             host_uid: 100_000,
@@ -1073,5 +1080,6 @@ mod tests {
         // reaped by the launcher, exactly as the execute path does.
         let _ = child.kill();
         let _ = child.wait();
+        std::env::remove_var("SEA_FORGE_TEST_UNSHARE");
     }
 }

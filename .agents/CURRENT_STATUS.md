@@ -1,21 +1,26 @@
 # Current status
 
-**Status revision:** 211
+**Status revision:** 214
 
-**Stage:** capability-harvest: pass-2 lane failures fixed — ack fd inherited (not reopened) across the unshare chain; junction test de-doubled
+**Stage:** capability-harvest + ARM64: ARM64 packaging fully green (all four legs, run 40614104830); capability-harvest env-leak fix committed and pushed
 
-**Summary:** Lane rerun caught two integration defects: (1) the ack write end was reopened by path inside the helper, which fails EACCES after --setuid drops to the subordinate identity — the fd is inherited across the chain (not CLOEXEC), so the helper now marks it CLOEXEC, dups it, writes the byte, and never resolves a launcher-owned path as the workload uid; the socket-policy/isolated suites that launch through the real chain pass again. (2) R10's mid-pin contained write collided with the test's own held pin (WriteShareHeld) — the write now runs after the test's pin is released with the junction still planted, and the duplicate trailing block is removed.
+**Summary:** ARM64 mission delivered: the arm64 .deb and tarball are built natively on ubuntu-22.04-arm (glibc 2.35), install-tested, smoke-tested on clean arm64 containers, independently verified (ELF AArch64, /lib/ld-linux-aarch64.so.1, max GLIBC_2.34, zero rpath/nix), and downloadable from run 40614104830 artifact pkg-linux-arm64. The release publisher now requires the arm64 assets. The capability-harvest 22.04 gate failure was the R4 test's process-wide unshare override leaking into parallel real-chain tests; the override is now mutex-scoped and removed after the test (034bbed8 lineage, push pending as the final commit).
 
 **Verified:**
 
-- sandbox lib 31 green; syscall_filter + unix_socket_reach (real launch chain) green; windows-target clippy green; fmt clean
+- run 40614104830: all four legs success; arm64 install-test log lines captured verbatim
+- independent artifact verification on this workstation: built-from = run SHA, AArch64 ELF, correct interpreter, GLIBC<=2.34, zero rpath/nix
+- sandbox lib 31 green with the env-scoped R4 test; fmt clean
 
 **Limits:**
 
-- Lanes rerun pending
+- Final capability-harvest lanes (env fix) pending; codex pass 3 after green
+- ARM64 Milestone C (governed E2E) is pending on-device execution on the Jetson
 
-**Next move:** Commit, push, lanes; codex pass 3 after green.
+**Next move:** Push the env fix, lanes green -> codex pass 3 -> consolidated final report.
 
 **Evidence:**
 
-- gh runs 40605628123 / 40605628078 logs
+- .agents/plans/2026-10-27-arm64-jetson-packaging.md
+- run 40614104830
+- /tmp/arm64-artifacts
