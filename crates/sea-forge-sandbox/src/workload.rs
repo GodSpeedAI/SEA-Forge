@@ -782,40 +782,37 @@ pub fn isolated_command(
             .arg("--")
             .args(argv);
     }
-    // Re-admit the three pipe fds in the forked child (they were created
+    // Re-admit the two pipe fds in the forked child: they were created
     // close-on-exec so no concurrent launcher thread could leak them into an
-    // unrelated spawn): unshare, the helper, and the workload each inherit
-    // them across the chain, and the helper's reopen-by-path fallback is not
-    // available to the subordinate identity for the ack WRITE end (write
-    // permission cannot be granted by fchmod on a pipe without opening the
-    // whole chain to reads).
+    // unrelated spawn (review pass 3, finding 2), and this pre_exec clears
+    // the flag only in the intended child. The helper reopens the ack write
+    // end by path (the launcher fchmod'ed it 0222, granting the subordinate
+    // identity write access — the lifeline read end's proven mechanism).
     //
     // SAFETY: raw fds come from the pipes this function created and still
     // owns; the closure runs between fork and exec with no allocation.
     {
         use std::os::fd::AsRawFd;
         use std::os::unix::process::CommandExt;
+        let lifeline_fd = read.as_raw_fd();
+        let ack_fd = ack_write.as_raw_fd();
         // The workspace denies unsafe_code; this is a deliberate, commented
         // opt-out (same discipline as cgroup.rs's module-level allow).
-        // SAFETY: raw fds come from the pipes this function created and still
-        // owns; the closure runs between fork and exec with no allocation.
         #[allow(unsafe_code)]
-        {
-            // Capture the raw fd NUMBERS, not the OwnedFds: the descriptors
-            // stay owned by this function (they are handed to the child via
-            // the exec inheritance of non-CLOEXEC descriptions, and remain
-            // valid in the forked child before exec).
-            let lifeline_fd = read.as_raw_fd();
-            unsafe {
-                command.pre_exec(move || {
-                    rustix::io::fcntl_setfd(
-                        rustix::fd::BorrowedFd::borrow_raw(lifeline_fd),
-                        rustix::io::FdFlags::empty(),
-                    )
-                    .map_err(std::io::Error::other)?;
-                    Ok(())
-                });
-            }
+        unsafe {
+            command.pre_exec(move || {
+                rustix::io::fcntl_setfd(
+                    rustix::fd::BorrowedFd::borrow_raw(lifeline_fd),
+                    rustix::io::FdFlags::empty(),
+                )
+                .map_err(std::io::Error::other)?;
+                rustix::io::fcntl_setfd(
+                    rustix::fd::BorrowedFd::borrow_raw(ack_fd),
+                    rustix::io::FdFlags::empty(),
+                )
+                .map_err(std::io::Error::other)?;
+                Ok(())
+            });
         }
     }
     Ok((

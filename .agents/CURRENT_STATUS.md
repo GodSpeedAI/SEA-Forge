@@ -1,22 +1,21 @@
 # Current status
 
-**Status revision:** 217
+**Status revision:** 218
 
-**Stage:** capability-harvest: pass-3 R2 ack-path rework — mode-granted reopen-by-path (the lifeline's proven pattern) instead of inherited-fd dup; pushing for final lane verification
+**Stage:** capability-harvest: pass-3 R2 corrected — pre_exec re-admits BOTH pipe ends (lifeline read + ack write, the latter enabled by the 0222 mode grant); pushing for the final green
 
-**Summary:** Run-6's 24.04 fixture failure showed the inherited-ack-fd dup breaks inside the real launch chain (helper exit before the handshake byte, EOF at the launcher). The ack now uses exactly the mechanism the lifeline proves works on every lane: the launcher fchmods the ack WRITE end 0222, the helper reopens it by /proc/self/fd path as the subordinate identity, and the reopened descriptor is close-on-exec so the workload never inherits it. The pre_exec re-admits only the lifeline read end. The concurrent-inheritance leak (pass-3 finding 2) stays closed: the pipe is CLOEXEC at creation and only the pre_exec path unsets it in the intended child.
+**Summary:** The syscall_filter ENOENT was self-inflicted by the previous edit: the pre_exec re-admit list was cut to the lifeline fd only, so the ack write end closed at the first exec and the helper's fd number was invalid. The pre_exec now clears CLOEXEC on both fds in the intended child; the helper reopens the ack end by path under the 0222 grant. All launch-chain suites green locally.
 
 **Verified:**
 
-- sandbox lib 31 green; syscall_filter, unix_socket_reach (real launch chain), workload_isolation, workload_boundary all green locally; clippy -D warnings clean; fmt clean
+- sandbox lib 31 green; syscall_filter 1, unix_socket_reach 8, workload_isolation 3, workload_boundary 4 green; clippy -D warnings clean; fmt clean
 
 **Limits:**
 
-- Final lane rerun (kernel 24.04 sandbox-suite + portability + ci) pending
+- Final lane rerun pending
 
-**Next move:** Green lanes -> consolidated final report + handoff. Codex rate-limited; pass 3 ran on the independent Claude model (disclosed).
+**Next move:** Green lanes -> consolidated final report + handoff.
 
 **Evidence:**
 
-- /tmp/harvest-pass3-claude-review.md
-- run 40602941845 amd64-green evidence
+- run 40691041682 24.04 artifact
