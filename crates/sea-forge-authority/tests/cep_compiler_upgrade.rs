@@ -1,5 +1,5 @@
 //! `compiler_upgrade` is the one explicit, auditable move for a producer upgrade (for example DomainForge
-//! 0.21.0 to 0.21.1). SEA-Forge allows it only when every meaning-bearing identity field is equal and only
+//! 0.21.0 to 0.21.2). SEA-Forge allows it only when every meaning-bearing identity field is equal and only
 //! `producer_version` moved. A prior identity is a place to move work out of, never to act in.
 
 use sea_forge_authority::cep::{CepAuthorityError, CepAuthorityService, CepDecision};
@@ -15,7 +15,7 @@ const BASE: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const OLD_REF: &str =
     "world:demo@sha256:c2d3978a06cad4f44b8f50ef4a9e570c4800f1ba6b7e4ac76a0128337e0f3439";
 const NEW_REF: &str =
-    "world:demo@sha256:a71ff6d4d9941a937a2a2b7fd5ed1c1eabb2242b4e6919440927ca1772cbb6ca";
+    "world:demo@sha256:7ddedbcee1a7031c5af7b5ecd54d2eb3298f4d6149c0eb88fd2db191323351d3";
 /// A different model: a real semantic change, never an upgrade.
 const CHANGED: &str =
     "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\nentity \"Pump\" { key id: uuid }\n";
@@ -47,7 +47,7 @@ fn in_process(worlds: &mut WorldRegistry, src: &str) -> String {
         .to_string()
 }
 
-/// The 0.21.0 fixture as a prior identity, and the in-process (0.21.1) world for `BASE`.
+/// The 0.21.0 fixture as a prior identity, and the in-process (linked) world for `BASE`.
 fn upgrade_pair() -> (WorldRegistry, String, String) {
     let mut reg = WorldRegistry::new();
     let old = reg
@@ -142,7 +142,8 @@ fn the_recorded_0_21_0_and_the_0_21_1_refs_are_what_these_tests_assume() {
 }
 
 #[test]
-fn a_compiler_upgrade_from_0_21_0_to_0_21_1_is_allowed_and_recorded_with_both_producer_versions() {
+fn a_compiler_upgrade_from_0_21_0_to_the_linked_build_is_allowed_and_recorded_with_both_producer_versions(
+) {
     let root = tempfile::tempdir().unwrap();
     let (reg, old, new) = upgrade_pair();
     let d = with_worlds(root.path(), &reg, OPEN, |s| {
@@ -165,7 +166,7 @@ fn a_compiler_upgrade_from_0_21_0_to_0_21_1_is_allowed_and_recorded_with_both_pr
         rec["evidence_refs"],
         json!([
             "domainforge.producer_version.source:0.21.0",
-            "domainforge.producer_version.target:0.21.1"
+            "domainforge.producer_version.target:0.21.2"
         ])
     );
 }
@@ -239,7 +240,8 @@ fn a_compiler_upgrade_is_refused_when_any_meaning_bearing_field_differs() {
 fn a_compiler_upgrade_is_refused_when_the_producer_version_is_equal() {
     let root = tempfile::tempdir().unwrap();
     let mut doc: Value = serde_json::from_str(FIXTURE_0_21_0).unwrap();
-    doc["producer_version"] = json!("0.21.1");
+    // Equality is against the LINKED producer version, so the case survives pin bumps.
+    doc["producer_version"] = json!(sea_forge_domainforge::EXPECTED_DOMAINFORGE_VERSION);
     let mut reg = WorldRegistry::new();
     let old = reg
         .register_prior_identity_json("demo", &doc.to_string())
@@ -333,7 +335,7 @@ fn a_governed_action_in_a_prior_identity_is_refused_and_the_same_action_in_the_c
     assert_eq!(decision(&d), "allow");
 }
 
-/// Work decided in the 0.21.0 world can be cited in the 0.21.1 world only through the allowed upgrade.
+/// Work decided in the 0.21.0 world can be cited in the linked (0.21.2) world only through the allowed upgrade.
 #[test]
 fn lineage_crosses_the_upgrade_only_through_the_allowed_compiler_upgrade() {
     let root = tempfile::tempdir().unwrap();

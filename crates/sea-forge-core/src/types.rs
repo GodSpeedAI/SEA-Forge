@@ -542,6 +542,58 @@ pub enum ExecutionStatus {
     /// status records a suspected — never a definite — violation (F-20).
     SuspectedSandboxViolation,
 }
+/// The lifecycle containment that held for a run's process tree, claimed by
+/// the sandbox backend that executed it (F08). Every claim names the
+/// strongest mechanism actually active and what was verified about it; a
+/// backend never reports containment it did not provide or verify.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LifecycleContainment {
+    /// Linux: the run lived in a cgroup-v2 leaf; `cgroup.kill` was verified
+    /// to leave every descendant dead (`kill_verified: true`) or the
+    /// verified kill failed and the run's `execute` returned the error
+    /// instead of this result.
+    CgroupLeaf {
+        /// Whether the leaf's verified-empty teardown completed.
+        kill_verified: bool,
+    },
+    /// Windows Local: the run lived in a kill-on-close Job Object whose
+    /// membership was verified by an `IsProcessInJob` read-back at spawn;
+    /// the timeout teardown polls the job empty before a result is produced.
+    JobObject,
+    /// POSIX process-group kill verified; no stronger mechanism was active
+    /// (Local/trusted, or cgroup unavailable with a typed degrade already
+    /// reported), or the macOS jail's census found no surviving escapee.
+    /// Completeness caveat: the macOS census observes the workload's ppid
+    /// tree only while the workload lives, so a double-fork+setsid daemon
+    /// that reparents to launchd before any sample is unobservable — group
+    /// teardown is verified, descendant completeness is best-effort (see
+    /// `LifecycleContainment::SandboxCagePersists` for the observable case).
+    ProcessGroup,
+    /// Isolated: the run was the init of its own PID namespace
+    /// (`unshare --pid`). Membership is structural — the namespace is
+    /// established before exec and inherited by every descendant, and kernel
+    /// teardown is unconditional (the namespace, with every member, dies
+    /// when its init exits or is killed). The parent does not read
+    /// emptiness back, so no kill verification is claimed here.
+    PidNamespace,
+    /// The run's process tree lived inside an externally managed OpenShell
+    /// sandbox: this process neither performs nor verifies per-run
+    /// process-tree teardown — the gateway enforces the timeout inside the
+    /// sandbox, and sandbox deletion at `destroy` is the lifecycle boundary.
+    ExternalSandbox,
+    /// macOS: group kill verified, but census-observed descendants survive
+    /// as setsid escapees; the inherited App Sandbox cage remains their
+    /// enforcement boundary (F08 documented residual).
+    SandboxCagePersists {
+        /// How many censused descendants survived the kill sweep.
+        survivor_count: u32,
+    },
+    /// No process ran for this result (a spawn that never succeeded, or a
+    /// write-only plan item): there is no process tree whose lifecycle could
+    /// have been contained.
+    NoProcess,
+}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
     pub status: ExecutionStatus,
@@ -550,6 +602,9 @@ pub struct ExecutionResult {
     pub stderr_path: String,
     pub started_at: String,
     pub finished_at: String,
+    /// The lifecycle containment claimed for this run's process tree (F08).
+    /// Set explicitly by every backend — never defaulted into silence.
+    pub lifecycle_containment: LifecycleContainment,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1337,6 +1392,45 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<SettlementStatus>(&value).unwrap(),
             SettlementStatus::Escalated
+        );
+    }
+
+    #[test]
+    fn lifecycle_containment_uses_tagged_snake_case_json() {
+        // The execution record's containment claim is externally tagged and
+        // lowercase_snake, so a downstream reader can distinguish the
+        // verified leaf kill from the documented cage residual.
+        let value = serde_json::to_value(LifecycleContainment::CgroupLeaf {
+            kill_verified: true,
+        })
+        .unwrap();
+        assert_eq!(value["cgroup_leaf"]["kill_verified"], true);
+        let value =
+            serde_json::to_value(LifecycleContainment::SandboxCagePersists { survivor_count: 2 })
+                .unwrap();
+        assert_eq!(value["sandbox_cage_persists"]["survivor_count"], 2);
+        let value = serde_json::to_value(LifecycleContainment::ProcessGroup).unwrap();
+        assert_eq!(value, "process_group");
+        let result = ExecutionResult {
+            status: ExecutionStatus::Completed,
+            exit_code: Some(0),
+            stdout_path: "artifacts/stdout.txt".into(),
+            stderr_path: "artifacts/stderr.txt".into(),
+            started_at: "s".into(),
+            finished_at: "f".into(),
+            lifecycle_containment: LifecycleContainment::CgroupLeaf {
+                kill_verified: true,
+            },
+        };
+        let value = serde_json::to_value(&result).unwrap();
+        assert_eq!(
+            value["lifecycle_containment"],
+            serde_json::json!({ "cgroup_leaf": { "kill_verified": true } })
+        );
+        // Round-trips: the claim survives serialization unchanged.
+        assert_eq!(
+            serde_json::from_value::<ExecutionResult>(value).unwrap(),
+            result
         );
     }
 }

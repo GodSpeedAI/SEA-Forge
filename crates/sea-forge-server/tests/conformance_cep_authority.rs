@@ -703,9 +703,9 @@ const PRIOR_PATH: &str = "identities/demo.domainforge-0.21.0.json";
 const OLD_REF: &str =
     "world:demo@sha256:c2d3978a06cad4f44b8f50ef4a9e570c4800f1ba6b7e4ac76a0128337e0f3439";
 const NEW_REF: &str =
-    "world:demo@sha256:a71ff6d4d9941a937a2a2b7fd5ed1c1eabb2242b4e6919440927ca1772cbb6ca";
+    "world:demo@sha256:7ddedbcee1a7031c5af7b5ecd54d2eb3298f4d6149c0eb88fd2db191323351d3";
 
-/// The cell with one current world (`SRC`, DomainForge 0.21.1) and `prior_doc` written as its prior identity.
+/// The cell with one current world (`SRC`, DomainForge 0.21.2) and `prior_doc` written as its prior identity.
 fn upgrade_fixture(prior_doc: &str) -> (tempfile::TempDir, ServerConfig) {
     let (root, mut config) = fixture(true, TRANSITION_POLICY);
     std::fs::create_dir_all(root.path().join("identities")).unwrap();
@@ -726,7 +726,7 @@ async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and
     assert_eq!(
         world_ref(),
         NEW_REF,
-        "the current world is the 0.21.1 build"
+        "the current world is the linked 0.21.2 build"
     );
 
     // The prior ref resolves: it is the source of the transition.

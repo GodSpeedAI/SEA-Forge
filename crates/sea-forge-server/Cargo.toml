@@ -42,7 +42,7 @@ zeroize.workspace = true
 rustix = { version = "1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
-sea-forge-os = { path = "../sea-forge-os", version = "0.3.0", features = ["tokio-pipes"] }
+sea-forge-os = { path = "../sea-forge-os", version = "0.3.0" }
 
 [lints]
 workspace = true

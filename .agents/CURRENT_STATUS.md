@@ -1,32 +1,23 @@
 # Current status
 
-**Status revision:** 181
+**Status revision:** 222
 
-**Stage:** Cross-platform native execution: integration ready for merge after review pass 3
+**Stage:** FINAL: capability harvest + ARM64 distribution delivered — consolidated report published; session terminal state recorded
 
-**Summary:** Linux OpenShell vm live proof 9/9 (KVM, Docker stopped); Windows Local job and named-pipe control plane; Linux/macOS Jail; native installers (.deb, .exe, .pkg, .dmg). Three independent review passes done; pass-3 F27, F31, F18, F24 fixed and F32 mitigated; F05, F08, F15, F17, F33 open.
+**Summary:** Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device.
 
 **Verified:**
 
-- Live run 40310712495 on d28e00dc: cell_episode_live 9 passed
-- Package run 40278790759 green on 3 OSes; clean ubuntu:22.04 and debian:12 .deb installs
-- Portability 40308234437 green (Windows, macOS jail)
-- sea-forge-sandbox, sea-forge-evidence, sea-forge-runtime tests pass locally after pass-3 fixes
+- PR #71 checks: 20+ green incl. gate/test/windows/macos/kernel-22.04; run 40614104830 all four legs success; independent artifact verification
 
 **Limits:**
 
-- F08: setsid descendants escape Local/Jail group kill; not for adversarial lifecycle containment
-- F05: Windows pinned directory reparse mutation after validation
-- F17: OpenShell network denial not distinguished from an unreachable target (scenario 4 BLK)
-- F33: tokio unifies into sea-forge-os on Windows server builds
-- F15: prerequisite skips count as libtest passes outside required CI lanes
-- macOS OpenShell vm, WSLc and SEA-Forge on MXC are Blocked
-- No backend meets the 12-scenario bar
+- Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 
-**Next move:** Merge PR #67 once required checks are green; release via release-please; decide F33 crate split and F08 supervisor.
+**Next move:** Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
 
 **Evidence:**
 
-- `.agents/plans/2026-10-25-cross-platform-native-execution.md`
-- `~/projects/_wt/containers/review/pass3/pass3-findings.md`
-- `~/projects/_wt/containers/evidence/oslive-linux-40310712495`
+- .agents/plans/2026-10-28-consolidated-final-report.md
+- .agents/plans/2026-10-27-arm64-jetson-packaging.md
+- .agents/plans/2026-10-26-capability-harvest.md

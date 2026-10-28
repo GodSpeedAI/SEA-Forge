@@ -93,12 +93,62 @@ jobs:
       - name: Setup pinned toolchain
         run: devbox run -- just setup
 
+      - name: cgroup-v2 delegation preflight (F08 lane)
+        # The lifecycle-containment scenarios (review F08) need a cgroup-v2
+        # subtree the runner user can create leaves in. Probe as the runner
+        # user; if the root is not delegated, self-delegate a subtree with the
+        # controllers the scenarios observe (memory, pids — the kill path is
+        # core v2 via cgroup.kill) and re-probe. Exports the exact variable
+        # names the cgroup runtime consumes: SEA_FORGE_CGROUP_ROOT and
+        # SEA_FORGE_REQUIRE_CGROUP. When delegation is impossible the lane
+        # stays green but REQUIRE_CGROUP=0 makes the scenarios report BLOCKED
+        # instead of claiming containment.
+        run: |
+          set -euo pipefail
+          root=/sys/fs/cgroup/sea-forge
+          if mkdir -p /sys/fs/cgroup/sea-forge-probe 2>/dev/null && rmdir /sys/fs/cgroup/sea-forge-probe; then
+            mkdir -p "$root"
+            echo "cgroup preflight: root cgroup is delegated to the runner user"
+            echo "SEA_FORGE_CGROUP_ROOT=$root" >> "$GITHUB_ENV"
+            echo "SEA_FORGE_REQUIRE_CGROUP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if sudo mkdir -p "$root" 2>/dev/null \
+            && sudo chown -R "$(id -un):$(id -gn)" "$root" 2>/dev/null; then
+            # Idempotent; a controller the kernel lacks must not fail the probe.
+            sudo sh -c 'echo +memory +pids > /sys/fs/cgroup/cgroup.subtree_control' 2>/dev/null || true
+          fi
+          if mkdir -p "$root/sea-forge-probe" 2>/dev/null && rmdir "$root/sea-forge-probe"; then
+            echo "cgroup preflight: delegated subtree ready at $root"
+            echo "SEA_FORGE_CGROUP_ROOT=$root" >> "$GITHUB_ENV"
+            echo "SEA_FORGE_REQUIRE_CGROUP=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "::warning::cgroup-v2 delegation unavailable on this runner — F08 lifecycle scenarios will be BLOCKED, not passed"
+          echo "SEA_FORGE_REQUIRE_CGROUP=0" >> "$GITHUB_ENV"
+
       - name: test
         env:
           # Hosted ubuntu kernels support Landlock network rules; a missing ABI
           # must fail the Linux Jail network cases, not skip them (review F15).
           SEA_FORGE_REQUIRE_LANDLOCK_NET: "1"
-        run: devbox run -- just test
+        # Review pass 2 (R6, the M10 correction): when a delegated subtree was
+        # provisioned above, the test launcher migrates ITSELF into it with
+        # ONE privileged write and then execs the suite — the whole
+        # test-process tree runs inside the subtree, so the delegated root is
+        # the common ancestor of every pre-exec cgroup join (kernel cgroup-v2
+        # §2-5-2) and the joins authorize against the delegated root's
+        # user-owned cgroup.procs. The mount root's cgroup.procs chown that
+        # used to sit in the preflight was removed: it granted every same-uid
+        # process in the job migration authority at the hierarchy's common
+        # ancestor for the job's whole lifetime; the migration below grants
+        # nothing beyond what the suite already needs.
+        run: |
+          if [ -n "${SEA_FORGE_CGROUP_ROOT:-}" ]; then
+            bash -c 'echo $$ | sudo tee "$SEA_FORGE_CGROUP_ROOT/cgroup.procs" >/dev/null && exec devbox run -- just test'
+          else
+            exec devbox run -- just test
+          fi
 
       - name: build
         run: devbox run -- just build

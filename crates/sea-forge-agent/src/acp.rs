@@ -167,16 +167,56 @@ impl AcpTermination {
     }
 }
 
+/// Runs a launcher-provided teardown closure on drop, BEFORE the process
+/// group kill (field order in `AcpSession`): the verified cgroup-leaf kill
+/// for an interactive jail agent, which reaches `setsid` descendants the
+/// group kill cannot (review pass 1, High-4). The closure owns its own
+/// failure reporting; `None` for non-jail launches.
+pub struct LeafCleanupGuard(std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>);
+
+impl LeafCleanupGuard {
+    fn new(hook: Option<Box<dyn FnOnce() + Send>>) -> Self {
+        Self(std::sync::Mutex::new(hook))
+    }
+
+    /// Moves the hook back out for the successful adoption handoff into
+    /// `over_streams`. Every failure path that drops the guard early still
+    /// runs the hook through `Drop` (review pass 2, R3).
+    fn take_inner(&mut self) -> Option<Box<dyn FnOnce() + Send>> {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+    }
+}
+
+impl Drop for LeafCleanupGuard {
+    fn drop(&mut self) {
+        // A poisoned lock only means a panicking teardown; the closure may
+        // still be runnable, so recover it rather than skip the kill.
+        let mut guard = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(cleanup) = guard.take() {
+            cleanup();
+        }
+    }
+}
+
 /// How to launch the ACP agent child. argv is tokenized and exec'd directly —
 /// never through a shell (spec §15). `env` is a minimal explicit environment;
 /// the parent environment is never inherited.
-#[derive(Clone, Debug)]
 pub struct AcpSpawn {
     pub argv: Vec<String>,
     pub env: Vec<(String, String)>,
     pub cwd: Option<std::path::PathBuf>,
     pub max_response_bytes: usize,
     pub max_transcript_bytes: usize,
+    /// Launcher-provided lifecycle teardown (the jail leaf kill); run on
+    /// session drop before the process-group kill. `None` for ordinary
+    /// launches.
+    pub leaf_cleanup: Option<Box<dyn FnOnce() + Send>>,
 }
 
 /// A live ACP session over a transport. Drop closes the writer task; the child
@@ -194,6 +234,16 @@ pub struct AcpSession {
     mcp_servers: Vec<serde_json::Value>,
     max_response_bytes: usize,
     max_transcript_bytes: usize,
+    /// Launcher-provided lifecycle teardown that runs when the session
+    /// drops, BEFORE the process-group kill — e.g. the verified
+    /// cgroup-leaf kill for an interactive jail agent (F08/High-4),
+    /// which reaches `setsid` descendants the group kill cannot. A boxed
+    /// closure so this crate needs no sandbox types; the closure owns its
+    /// own failure reporting.
+    /// Runs on session drop before the group kill (see `LeafCleanupGuard`);
+    /// read only by the derived Drop of that guard.
+    #[allow(dead_code)]
+    leaf_cleanup: LeafCleanupGuard,
     #[allow(dead_code)]
     process_group: ProcessGroupGuard,
     /// Held for liveness: the child's `kill_on_drop` reaps its process tree
@@ -323,6 +373,7 @@ impl AcpSession {
             return Err("acp argv must be non-empty".into());
         }
         let session_cwd = spawn.cwd.clone();
+        let spawn_leaf_cleanup = spawn.leaf_cleanup;
         let mut cmd = Command::new(&spawn.argv[0]);
         cmd.args(&spawn.argv[1..]);
         cmd.env_clear();
@@ -404,6 +455,7 @@ impl AcpSession {
             process_group,
             spawn.max_response_bytes,
             spawn.max_transcript_bytes,
+            spawn_leaf_cleanup,
         );
         Ok((session, std::path::PathBuf::from(&spawn.argv[0])))
     }
@@ -411,6 +463,7 @@ impl AcpSession {
     /// Build a session over arbitrary async read/write byte streams. Used by
     /// `spawn` and by tests with in-memory transports. `child` is held for the
     /// session's lifetime so its `kill_on_drop` reaps the process tree.
+    #[allow(clippy::too_many_arguments)]
     fn over_streams(
         read: Box<dyn tokio::io::AsyncRead + Unpin + Send>,
         write: Box<dyn tokio::io::AsyncWrite + Unpin + Send>,
@@ -419,6 +472,7 @@ impl AcpSession {
         process_group: Option<u32>,
         max_response_bytes: usize,
         max_transcript_bytes: usize,
+        leaf_cleanup: Option<Box<dyn FnOnce() + Send>>,
     ) -> Self {
         let next_id = Arc::new(AtomicU64::new(1));
         let pending: Arc<Mutex<HashMap<u64, oneshot::Sender<RpcResult>>>> =
@@ -554,6 +608,7 @@ impl AcpSession {
             mcp_servers: Vec::new(),
             max_response_bytes,
             max_transcript_bytes,
+            leaf_cleanup: LeafCleanupGuard::new(leaf_cleanup),
             process_group: ProcessGroupGuard(process_group),
             child,
         }
@@ -575,7 +630,41 @@ impl AcpSession {
         max_response_bytes: usize,
         max_transcript_bytes: usize,
     ) -> Result<Self, String> {
+        Self::from_std_child_with_cleanup(
+            child,
+            stdin,
+            stdout,
+            stderr,
+            cwd,
+            max_response_bytes,
+            max_transcript_bytes,
+            None,
+        )
+    }
+
+    /// [`Self::from_std_child`] carrying a lifecycle teardown hook (the
+    /// jail leaf kill) that runs on session drop before the group kill.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_std_child_with_cleanup(
+        child: std::process::Child,
+        stdin: std::process::ChildStdin,
+        stdout: std::process::ChildStdout,
+        stderr: std::process::ChildStderr,
+        cwd: std::path::PathBuf,
+        max_response_bytes: usize,
+        max_transcript_bytes: usize,
+        leaf_cleanup: Option<Box<dyn FnOnce() + Send>>,
+    ) -> Result<Self, String> {
         let process_group = Some(child.id());
+        // Review pass 2 (R3): both teardown guards are armed BEFORE the
+        // fallible stream adoption. A failed `from_std` conversion must drop
+        // into the armed teardown — the leaf hook runs first (drop order:
+        // declared later drops first), then the child kill/reap — instead of
+        // bare drops that release the child unowned. On success the guards
+        // are handed to the session unchanged (the hook is moved back out of
+        // its guard for the `over_streams` handoff).
+        let child_guard = StdChildGuard(child);
+        let mut leaf_guard = LeafCleanupGuard::new(leaf_cleanup);
         let stdin = tokio::process::ChildStdin::from_std(stdin)
             .map_err(|error| format!("adopt jailed ACP stdin: {error}"))?;
         let stdout = tokio::process::ChildStdout::from_std(stdout)
@@ -583,14 +672,16 @@ impl AcpSession {
         let stderr = tokio::process::ChildStderr::from_std(stderr)
             .map_err(|error| format!("adopt jailed ACP stderr: {error}"))?;
         drain_stderr(stderr);
+        let leaf_cleanup = leaf_guard.take_inner();
         Ok(Self::over_streams(
             Box::new(stdout),
             Box::new(stdin),
-            Some(ChildGuard::Std(StdChildGuard(child))),
+            Some(ChildGuard::Std(child_guard)),
             Some(cwd),
             process_group,
             max_response_bytes,
             max_transcript_bytes,
+            leaf_cleanup,
         ))
     }
 
@@ -1410,6 +1501,7 @@ mod tests {
             None,
             4 * 1024 * 1024,
             8 * 1024 * 1024,
+            None,
         );
         (session, done_tx)
     }
@@ -1548,6 +1640,7 @@ mod tests {
     #[tokio::test]
     async fn spawn_rejects_empty_argv() {
         let err = AcpSession::spawn(AcpSpawn {
+            leaf_cleanup: None,
             argv: vec![],
             env: vec![],
             cwd: None,
@@ -1575,6 +1668,7 @@ mod tests {
             None,
             4 * 1024 * 1024,
             8 * 1024 * 1024,
+            None,
         );
         let outcome = session
             .run_episode(
@@ -1663,6 +1757,7 @@ mod tests {
             None,
             4 * 1024 * 1024,
             8 * 1024 * 1024,
+            None,
         )
     }
 

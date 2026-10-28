@@ -8,8 +8,15 @@
 //! Scope: this backend has NO filesystem or network containment. These tests
 //! cover process-tree lifetime and basic run/env behavior only.
 #![cfg(windows)]
+// The breakaway probe re-execs this test binary as the workload and needs
+// raw CreateProcessW: the interpreter-based probes could not make that call
+// from inside a sandboxed workload, and routing test-only FFI through
+// sea-forge-os would widen its public surface for no production benefit.
+#![allow(unsafe_code)]
 
-use sea_forge_core::types::{ExecutionRequest, ExecutionResult, ExecutionStatus, Operation};
+use sea_forge_core::types::{
+    ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment, Operation,
+};
 use sea_forge_sandbox::{ExecutionSandbox, LocalSandbox, NetworkPosture, SandboxSpec};
 use std::{
     collections::BTreeMap,
@@ -17,7 +24,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 /// Per-test temp tree: `workspace/`, `artifacts/`, and `outside/` (not granted).
@@ -146,13 +153,127 @@ fn unique_token(tag: &str) -> String {
     format!("sfjob{tag}{}x{nanos}", std::process::id())
 }
 
-/// cmd.exe arguments for a grandchild that waits about 5 s, then writes
-/// `marker`. The token sits in the command line so the process can be found.
-fn grandchild_args(token: &str, marker: &Path) -> String {
+/// cmd.exe arguments for a grandchild that waits about `pings - 1` seconds,
+/// then writes `marker`. The token sits in the command line so the process
+/// can be found.
+fn grandchild_args_with_pings(token: &str, marker: &Path, pings: u32) -> String {
     format!(
-        "/d /c ping -n {GRANDCHILD_PINGS} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
+        "/d /c ping -n {pings} 127.0.0.1 >nul & rem {token} & echo done > \"{}\"",
         marker.display()
     )
+}
+
+/// Same, with the suite-default grandchild lifetime (`GRANDCHILD_PINGS`).
+fn grandchild_args(token: &str, marker: &Path) -> String {
+    grandchild_args_with_pings(token, marker, GRANDCHILD_PINGS)
+}
+/// The breakaway probe: this test binary re-execs ITSELF as the workload
+/// (activated by `PROBE_ENV` carrying the result-file path), so the probe
+/// code is plain Rust calling CreateProcessW through windows-sys - the same
+/// call shape as the passing sea-forge-os breakaway test, with no
+/// interpreter, no Add-Type, no C# marshaling, and no compiler dependency
+/// (the PowerShell probe failed both creates with ERROR_INVALID_NAME for
+/// three lane rounds). The runner's MSVC toolchain links the test binary
+/// against system components only, so it loads fine inside the job.
+const PROBE_ENV: &str = "SEA_FORGE_BREAKAWAY_PROBE_RESULT";
+const PROBE_TOKEN_ENV: &str = "SEA_FORGE_BREAKAWAY_PROBE_TOKEN";
+
+/// Hidden helper: a no-op when the lane runs the suite normally (the env
+/// var is absent); when re-exec'd by `breakaway_from_job_attempt_is_refused`
+/// it performs the two CreateProcessW probes inside the job and writes
+/// `control_ok control_err breakaway_ok breakaway_err` to the result file.
+#[test]
+fn breakaway_probe_helper() {
+    let (Some(result), Some(token)) = (
+        std::env::var(PROBE_ENV).ok(),
+        std::env::var(PROBE_TOKEN_ENV).ok(),
+    ) else {
+        return;
+    };
+    use windows_sys::Win32::System::Threading::{
+        CreateProcessW, CREATE_BREAKAWAY_FROM_JOB, PROCESS_INFORMATION, STARTUPINFOW,
+    };
+
+    fn probe(cmdline_text: &str, creation_flags: u32) -> (i32, u32) {
+        let mut cmdline: Vec<u16> = cmdline_text.encode_utf16().collect();
+        cmdline.push(0);
+        let mut si: STARTUPINFOW = unsafe { std::mem::zeroed() };
+        si.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let mut pi: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
+        // SAFETY: `cmdline` is NUL-terminated and outlives the call; `si`/`pi`
+        // are valid out-objects; every other parameter is null/false.
+        let ok = unsafe {
+            CreateProcessW(
+                std::ptr::null(),
+                cmdline.as_mut_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                0,
+                creation_flags,
+                std::ptr::null(),
+                std::ptr::null(),
+                &si,
+                &mut pi,
+            )
+        };
+        let err = unsafe { windows_sys::Win32::Foundation::GetLastError() };
+        if ok != 0 {
+            unsafe {
+                windows_sys::Win32::System::Threading::WaitForSingleObject(pi.hProcess, 5000);
+                windows_sys::Win32::System::Threading::TerminateProcess(pi.hProcess, 0);
+                windows_sys::Win32::Foundation::CloseHandle(pi.hProcess);
+                windows_sys::Win32::Foundation::CloseHandle(pi.hThread);
+            }
+        }
+        (ok, err)
+    }
+
+    let (control_ok, control_err) = probe("cmd.exe /d /c exit 0", 0);
+    // The breakaway child carries the token and lingers, so the parent
+    // test's survivor sweep is non-vacuous: if the kernel ever allowed the
+    // breakaway, a token-bearing process would exist outside the job after
+    // teardown.
+    let breakaway_cmdline = format!("cmd.exe /d /c ping -n 30 127.0.0.1 >nul & rem {token}");
+    let (breakaway_ok, breakaway_err) = probe(&breakaway_cmdline, CREATE_BREAKAWAY_FROM_JOB);
+    let _ = std::fs::write(
+        &result,
+        format!("{control_ok} {control_err} {breakaway_ok} {breakaway_err}"),
+    );
+}
+
+/// Copy this test binary into the workspace (the workload executes from
+/// the granted trees) and return its path.
+fn stage_breakaway_probe(workspace: &Path) -> std::path::PathBuf {
+    let exe = workspace.join("breakaway-probe.exe");
+    fs::copy(std::env::current_exe().expect("current exe"), &exe)
+        .expect("stage the breakaway probe");
+    exe
+}
+
+fn run_with_env(
+    dirs: &Dirs,
+    argv: Vec<String>,
+    env: BTreeMap<String, String>,
+    timeout_secs: u64,
+) -> ExecutionResult {
+    let spec = SandboxSpec {
+        workspace_root: dirs.workspace.clone(),
+        artifacts_root: dirs.artifacts.clone(),
+        network: NetworkPosture::Denied,
+    };
+    let sandbox = LocalSandbox;
+    let handle = sandbox.prepare(&spec).expect("prepare");
+    let req = ExecutionRequest {
+        plan_item_id: "windows-local-job".into(),
+        operation: Operation::ExecuteCommand {
+            argv,
+            cwd: ".".into(),
+        },
+        timeout_secs,
+        env,
+        compensating_controls: vec![],
+    };
+    sandbox.execute(&handle, &req).expect("execute")
 }
 
 fn run(dirs: &Dirs, argv: Vec<String>, timeout_secs: u64) -> ExecutionResult {
@@ -250,6 +371,14 @@ fn timeout_kills_whole_process_tree() {
     let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
     assert_eq!(result.status, ExecutionStatus::TimedOut);
     assert_eq!(result.exit_code, None);
+    // C1: the run lived in the kill-on-close job — spawn_in_job verifies
+    // membership by IsProcessInJob read-back before the child runs, so any
+    // produced result claims JobObject, never a weaker mechanism.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::JobObject,
+        "a Windows Local result must claim the verified job object"
+    );
     assert!(
         spawned_pid(&spawned).is_some_and(|pid| pid > 0),
         "grandchild was never spawned before the timeout; the test would be vacuous\n{}",
@@ -333,6 +462,13 @@ fn normal_completion_propagates_exit_code_and_captures_stdout() {
     assert_eq!(result.status, ExecutionStatus::Completed);
     assert_eq!(result.exit_code, Some(7));
     assert_eq!(result.stdout_path, "artifacts/stdout.txt");
+    // C1: same claim on the completion path — membership was verified at
+    // spawn, and kill-on-close is the teardown.
+    assert_eq!(
+        result.lifecycle_containment,
+        LifecycleContainment::JobObject,
+        "a Windows Local completion must claim the verified job object"
+    );
     let stdout = fs::read_to_string(dirs.artifacts.join("stdout.txt")).expect("stdout.txt");
     assert!(
         stdout.contains("sf-win-stdout"),
@@ -381,4 +517,141 @@ fn child_sees_only_req_env() {
         stdout.contains("LEAK=%SF_WIN_HOST_LEAK_PROBE%"),
         "host env var leaked into the child: {stdout:?}"
     );
+}
+
+/// Normal completion must also stop the tree: the workload exits while its
+/// detached grandchild keeps running, and only the job's kill-on-close
+/// handle-drop (fired when `execute` returns) can reap it. This is the
+/// completion-path twin of `timeout_kills_whole_process_tree`, which covers
+/// the timeout path.
+#[test]
+fn completion_job_close_kills_a_running_grandchild() {
+    let dirs = Dirs::new("done");
+    let token = unique_token("done");
+    let marker = dirs.outside.join("grandchild-marker.txt");
+    let spawned = dirs.outside.join("grandchild-spawned.txt");
+
+    // The parent starts the grandchild (Start-Process: a separate process,
+    // which inherits the job), records its pid, and exits immediately, so the
+    // run completes normally while the grandchild is still alive.
+    let script = format!(
+        "$p = Start-Process -FilePath {cmd} -ArgumentList {args} -PassThru; Set-Content -LiteralPath {sp} -Value $p.Id",
+        cmd = ps_single(&cmd_exe()),
+        args = ps_single(&grandchild_args_with_pings(&token, &marker, 8)),
+        sp = ps_single(&spawned.display().to_string()),
+    );
+    let result = run(&dirs, powershell_argv(&script), TIMEOUT_SECS);
+    assert_eq!(result.status, ExecutionStatus::Completed);
+    let pid = spawned_pid(&spawned)
+        .filter(|pid| *pid > 0)
+        .unwrap_or_else(|| {
+            panic!(
+                "grandchild was never spawned before completion; the test would be vacuous\n{}",
+                child_output(&dirs)
+            )
+        });
+
+    // The grandchild would stay alive for about 7 s (ping -n 8) and write its
+    // marker only at the end. Once `execute` returned, the job handle is
+    // closed, so a contained grandchild is already dead: no live token
+    // process may remain and the marker may never appear.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let survivors = live_pids_with_token(&token);
+        if survivors.is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "grandchild (pid {pid}) survived normal completion: {survivors:?}"
+        );
+        thread::sleep(Duration::from_millis(500));
+    }
+    assert!(
+        !marker.exists(),
+        "grandchild outlived normal completion and wrote {}",
+        marker.display()
+    );
+}
+
+/// NT semantics: `CREATE_BREAKAWAY_FROM_JOB` fails at `CreateProcessW` with
+/// `ERROR_ACCESS_DENIED` unless the job sets
+/// `JOB_OBJECT_LIMIT_BREAKAWAY_OK`. The Local backend's job deliberately
+/// omits both breakaway flags, so a workload's breakaway attempt must be
+/// refused by the kernel. If `CreateProcessW` ever returned success, the new
+/// process would be OUTSIDE the job (a real escape) and the survivor check
+/// below would catch it.
+#[test]
+fn breakaway_from_job_attempt_is_refused() {
+    let dirs = Dirs::new("brk");
+    let token = unique_token("brk");
+    let result_file = dirs.artifacts.join("breakaway-result.txt");
+
+    let probe = stage_breakaway_probe(&dirs.workspace);
+    let argv = vec![
+        probe.display().to_string(),
+        "--exact".into(),
+        "breakaway_probe_helper".into(),
+        "--test-threads=1".into(),
+    ];
+    let mut env = host_env();
+    env.insert(PROBE_ENV.to_string(), result_file.display().to_string());
+    env.insert(PROBE_TOKEN_ENV.to_string(), token.clone());
+    let result = run_with_env(&dirs, argv, env, TIMEOUT_SECS);
+    assert_eq!(
+        result.status,
+        ExecutionStatus::Completed,
+        "\n{}",
+        child_output(&dirs)
+    );
+    assert_eq!(
+        result.exit_code,
+        Some(0),
+        "the probe harness itself failed; its stdio:\n{}",
+        child_output(&dirs)
+    );
+    // Outcome: "control_ok control_err breakaway_ok breakaway_err". The
+    // control attributes the refusal to the job's breakaway-flag omission:
+    // creation WITHOUT the flag must succeed from inside the job, and the
+    // flagged attempt must be refused. The kernel's error code is recorded,
+    // not asserted (Server 2025 returned 123 here, not the documented 5).
+    let outcome = fs::read_to_string(&result_file).unwrap_or_default();
+    let parts: Vec<&str> = outcome.split_whitespace().collect();
+    let (control_created, _control_error, breakaway_created, breakaway_error) =
+        match parts.as_slice() {
+            [c, ce, b, be] => (*c, *ce, *b, *be),
+            _ => panic!(
+                "malformed probe outcome: {outcome}\n{}",
+                child_output(&dirs)
+            ),
+        };
+    assert_eq!(
+        control_created,
+        "1",
+        "the no-flag control create failed; the refusal below would not be \
+         attributable to the job\n{outcome}\n{}",
+        child_output(&dirs)
+    );
+    assert_eq!(
+        breakaway_created,
+        "0",
+        "CreateProcessW(CREATE_BREAKAWAY_FROM_JOB) succeeded: the workload \
+         escaped the job\n{outcome}\n{}",
+        child_output(&dirs)
+    );
+    println!("breakaway refusal error code (recorded, not asserted): {breakaway_error}");
+
+    // Nothing carrying the token may be running afterwards.
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let survivors = live_pids_with_token(&token);
+        if survivors.is_empty() {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "processes with token {token} are alive after the refused breakaway: {survivors:?}"
+        );
+        thread::sleep(Duration::from_millis(500));
+    }
 }

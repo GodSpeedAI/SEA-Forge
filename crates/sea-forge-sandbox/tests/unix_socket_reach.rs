@@ -13,7 +13,8 @@
 #![allow(unsafe_code)]
 
 use sea_forge_sandbox::workload::{
-    grant_exclusive_access, isolated_command, WorkloadConfinement, WorkloadIdentityPool,
+    grant_exclusive_access, isolated_command, wait_for_isolation_ack, WorkloadConfinement,
+    WorkloadIdentityPool, ISOLATION_ACK_TIMEOUT,
 };
 use sea_forge_sandbox::NetworkPosture;
 use std::fs;
@@ -98,7 +99,7 @@ fn pathname_sockets_outside_declared_trees_are_unreachable() {
     ] {
         let path = dir.join("s.sock");
         let accepted = listener(&path);
-        let (mut command, _lifeline) = isolated_command(
+        let (mut command, _lifeline, mut ack) = isolated_command(
             &identity,
             Path::new(HELPER),
             &confinement,
@@ -116,6 +117,11 @@ fn pathname_sockets_outside_declared_trees_are_unreachable() {
             .stdin(Stdio::null())
             .output()
             .unwrap();
+        // Review pass 2 (R4): consume the trusted setup acknowledgement (the
+        // helper writes it during the run; the byte is buffered, and EOF
+        // here is a failed setup).
+        wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+            .expect("isolated launch acknowledged its setup");
         let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
         if stderr.contains("socket-supervisor") || stderr.contains("workload-exec") {
             eprintln!("[launch audit {name}] {}", stderr.trim());
@@ -185,7 +191,7 @@ fn scenario(read: Vec<PathBuf>, grants: Vec<PathBuf>) -> Option<Scenario> {
 
 impl Scenario {
     fn run(&self, program: &str, arg: &str) -> String {
-        let (mut command, _lifeline) = isolated_command(
+        let (mut command, _lifeline, mut ack) = isolated_command(
             &self.identity,
             Path::new(HELPER),
             &self.confinement,
@@ -203,6 +209,11 @@ impl Scenario {
             .stdin(Stdio::null())
             .output()
             .unwrap();
+        // Review pass 2 (R4): consume the trusted setup acknowledgement (the
+        // helper writes it during the run; the byte is buffered, and EOF
+        // here is a failed setup).
+        wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+            .expect("isolated launch acknowledged its setup");
         String::from_utf8_lossy(&out.stdout).trim().to_string()
     }
 }
@@ -392,7 +403,7 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
     let Some(case) = scenario(Vec::new(), Vec::new()) else {
         return;
     };
-    let (mut command, _lifeline) = isolated_command(
+    let (mut command, _lifeline, mut ack) = isolated_command(
         &case.identity,
         Path::new(HELPER),
         &case.confinement,
@@ -418,6 +429,11 @@ fn preconnected_descriptor_does_not_leak_into_the_workload() {
     }
     command.env("PATH", "/usr/bin:/bin");
     let out = command.stdin(Stdio::null()).output().unwrap();
+    // Review pass 2 (R4): consume the trusted setup acknowledgement (the
+    // helper writes it during the run; the byte is buffered, and EOF here is
+    // a failed setup).
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     let said = String::from_utf8_lossy(&out.stdout).trim().to_string();
     // Release the test's end of the pre-connected stream so the listener
     // thread's read-to-EOF can return before the join. The listener must

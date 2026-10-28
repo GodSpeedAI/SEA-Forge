@@ -621,9 +621,9 @@ dependencies = [
 
 [[package]]
 name = "domainforge-core"
-version = "0.21.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcf6cc1bbf86f1baae025d8ad8fe9b1b8e5ed560182bf9aaed0eca59a527ba8c"
+checksum = "1eab0724b50a17904dc66eeb0d6770da0dd872851e34996cf758060e89142835"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2570,7 +2570,6 @@ dependencies = [
 name = "sea-forge-os"
 version = "0.3.0"
 dependencies = [
- "tokio",
  "windows-sys 0.61.2",
 ]
 
@@ -2641,6 +2640,7 @@ dependencies = [
  "sha2 0.11.1",
  "tempfile",
  "wait-timeout",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

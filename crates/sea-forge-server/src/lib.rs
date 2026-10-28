@@ -1,4 +1,7 @@
-#![forbid(unsafe_code)]
+// `unsafe` is denied at the crate root (the workspace default). The single
+// opt-out is `pipe_edge` (Windows), the F33 pipe adapter, which mirrors the
+// `sea-forge-os` FFI discipline with a per-block `SAFETY` comment.
+#![deny(unsafe_code)]
 
 //! SEA Forge concurrent case server (spec-full §10.3, §11.1, M3).
 //!
@@ -66,7 +69,7 @@ struct Acceptor {
 impl Acceptor {
     async fn accept(&mut self) -> std::io::Result<Transport> {
         self.next.connect().await?;
-        let successor = sea_forge_os::create_pipe_server(&self.name, &self.security, false)?;
+        let successor = pipe_edge::create_pipe_server(&self.name, &self.security, false)?;
         Ok(std::mem::replace(&mut self.next, successor))
     }
 }
@@ -164,6 +167,8 @@ pub mod governed_work_ingress;
 pub mod identity;
 pub mod mcp;
 mod mcp_protocol;
+#[cfg(windows)]
+mod pipe_edge;
 pub mod postgres;
 mod realitytrace_source;
 pub mod sfwp;
@@ -1531,8 +1536,9 @@ async fn run_inner(
     // local users can already connect (§11.1). Renaming publishes a socket
     // that is 0600 from the first instant it is reachable, and atomically
     // replaces any stale socket a crashed server left behind — which is why
-    // no unlink of the live path is needed. `forbid(unsafe_code)` at the crate
-    // root rules out setting `umask` around the bind instead.
+    // no unlink of the live path is needed. `deny(unsafe_code)` at the crate
+    // root — with `pipe_edge` as the single documented opt-out — rules out
+    // setting `umask` around the bind instead.
     #[cfg(unix)]
     let mut acceptor = {
         let staging_path = suffixed(&socket_path, ".binding")?;
@@ -1560,7 +1566,7 @@ async fn run_inner(
         sids.dedup();
         let security = sea_forge_os::PipeSecurity::new(&sids)
             .map_err(|e| ForgeError::io("build server pipe security", e))?;
-        let first = sea_forge_os::create_pipe_server(&name, &security, true).map_err(|e| {
+        let first = pipe_edge::create_pipe_server(&name, &security, true).map_err(|e| {
             ForgeError::Input(format!(
                 "server pipe {name} already exists or cannot be created \
                  (another server may be running): {e}"
@@ -4586,7 +4592,7 @@ mod pipe_transport_tests {
         let name = unique_pipe_name("sid");
         let me = sea_forge_os::current_sid().expect("current sid");
         let security = sea_forge_os::PipeSecurity::new(std::slice::from_ref(&me)).expect("dacl");
-        let server = sea_forge_os::create_pipe_server(&name, &security, true).expect("server");
+        let server = pipe_edge::create_pipe_server(&name, &security, true).expect("server");
         // A std client, as the CLI opens it: its default impersonation level
         // lets the server impersonate it. (tokio's ClientOptions defaults to
         // SECURITY_IDENTIFICATION, which correctly cannot be impersonated.)
@@ -4613,8 +4619,8 @@ mod pipe_transport_tests {
     async fn a_second_first_instance_is_refused() {
         let name = unique_pipe_name("squat");
         let security = sea_forge_os::PipeSecurity::new(&[]).expect("dacl");
-        let first = sea_forge_os::create_pipe_server(&name, &security, true).expect("first");
-        assert!(sea_forge_os::create_pipe_server(&name, &security, true).is_err());
+        let first = pipe_edge::create_pipe_server(&name, &security, true).expect("first");
+        assert!(pipe_edge::create_pipe_server(&name, &security, true).is_err());
         drop(first);
     }
 }

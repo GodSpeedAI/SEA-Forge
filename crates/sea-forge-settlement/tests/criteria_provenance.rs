@@ -198,6 +198,7 @@ fn traversal_plan_item_id_cannot_escape_quarantine_dir() {
             stderr_path: "artifacts/stderr.txt".into(),
             started_at: "2026-01-01T00:00:00Z".into(),
             finished_at: "2026-01-01T00:00:01Z".into(),
+            lifecycle_containment: LifecycleContainment::NoProcess,
         }),
         authority_verdicts: vec![Verdict::Allow],
         evaluator_scores: BTreeMap::new(),

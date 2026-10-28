@@ -52,5 +52,14 @@ sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.3.0" }
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.3.0" }
 tempfile.workspace = true
 
+# Test-only, Windows-only, same locked version sea-forge-os uses: the
+# breakaway probe re-execs this test binary as the workload and needs the
+# raw CreateProcessW call the interpreter-based probes could not make.
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
 [lints]
 workspace = true

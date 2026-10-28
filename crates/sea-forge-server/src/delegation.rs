@@ -1245,6 +1245,7 @@ async fn run_acp_episode(
         max_transcript_bytes: snapshot
             .max_request_bytes
             .saturating_add(snapshot.max_response_bytes),
+        leaf_cleanup: None,
     };
     // Brokered MCP needs a kernel-distinct workload identity to bind the
     // broker socket to; shared-UID classes would let the agent reach the
@@ -1307,22 +1308,53 @@ async fn run_acp_episode(
             // F-24: the jail spawn blocks on process setup — run it on a
             // blocking thread instead of parking this tokio worker (the old
             // thread+mpsc shape blocked in recv() all the same).
+            // A DEDICATED thread, not tokio's spawn_blocking pool: the jail
+            // applies Landlock to the launching thread, which is irreversible
+            // and would poison a pooled thread for every later user (a second
+            // jail session could not create its cgroup leaf; the R3 cleanup
+            // running there would be denied its own cgroup writes). One
+            // thread per launch, joined by the await below.
             let child = tokio::task::spawn_blocking(move || {
                 // Jail-class ACP agents default to network denial (fail-closed).
                 // No scoped egress grant is plumbed to this path yet; the jail
                 // must not open ungranted outbound/listening TCP sockets.
-                sea_forge_sandbox::jail::spawn_interactive(
-                    &workspace_for_jail,
-                    &artifacts,
-                    &argv,
-                    &workspace_for_jail,
-                    &env,
-                    &sea_forge_sandbox::NetworkPosture::Denied,
-                )
+                //
+                // The launch itself runs on a DEDICATED OS thread (created and
+                // joined inside this blocking closure), never on a pooled
+                // worker: the jail applies Landlock to the launching thread,
+                // which is irreversible and would poison the pool — a second
+                // jail session could not create its cgroup leaf, and the R3
+                // unadopted-result cleanup running there would be denied its
+                // own cgroup writes.
+                std::thread::spawn(move || {
+                    sea_forge_sandbox::jail::spawn_interactive(
+                        &workspace_for_jail,
+                        &artifacts,
+                        &argv,
+                        &workspace_for_jail,
+                        &env,
+                        &sea_forge_sandbox::NetworkPosture::Denied,
+                    )
+                    // Review pass 2 (R3): the result arms its own teardown
+                    // while unadopted — cancelling this future or a failed
+                    // adoption still performs the verified cleanup (leaf
+                    // kill, child kill/reap) instead of dropping the child
+                    // unowned.
+                    .map(sea_forge_sandbox::jail::UnadoptedInteractiveJailChild::from_child)
+                })
+                .join()
+                .map_err(|_| {
+                    sea_forge_sandbox::SandboxError::new(
+                        "jail_unavailable",
+                        "jail launch thread panicked",
+                    )
+                })?
             })
             .await
             .map_err(|error| ForgeError::Internal(format!("jail spawn task panic: {error}")))??;
-            AcpSession::from_std_child(
+            let mut child = child.adopt();
+            let leaf_cleanup = child.leaf_cleanup_hook();
+            AcpSession::from_std_child_with_cleanup(
                 child.child,
                 child.stdin,
                 child.stdout,
@@ -1332,6 +1364,7 @@ async fn run_acp_episode(
                 snapshot
                     .max_request_bytes
                     .saturating_add(snapshot.max_response_bytes),
+                leaf_cleanup,
             )
             .map_err(ForgeError::Internal)?
         }

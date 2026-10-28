@@ -5,6 +5,8 @@ use std::{
 };
 
 mod artifact_output;
+#[cfg(target_os = "linux")]
+pub mod cgroup;
 pub mod environment;
 #[cfg(target_os = "linux")]
 pub mod isolated;
@@ -18,6 +20,8 @@ pub mod socket_policy;
 pub mod syscall_filter;
 #[cfg(target_os = "linux")]
 pub mod workload;
+#[cfg(unix)]
+mod write_staging;
 
 pub use observation::{open_observation_file, open_observation_root};
 
@@ -387,15 +391,16 @@ fn checked_parent(
     }
     Ok(safe_parent)
 }
-/// F-25.i / F04: replaces the destination entry, never writing an existing
-/// inode. The bytes go to a fresh temp sibling created with
-/// `O_CREAT|O_EXCL|O_NOFOLLOW` in the destination's parent, which is opened
-/// with `O_DIRECTORY|O_NOFOLLOW`. The temp file is fsynced and then renamed
-/// over the destination with `renameat`, relative to that directory
-/// descriptor. An existing hard link to the old entry therefore keeps its
-/// bytes, because only the directory entry changes. A symlink at the
-/// destination is refused before anything is written, and a directory fails
-/// with `EISDIR`.
+/// F-25.i / F04 / F32: replaces the destination entry, never writing an
+/// existing inode. The bytes go to a fresh temp file created with
+/// `O_CREAT|O_EXCL|O_NOFOLLOW` inside a protected 0700 staging directory
+/// (a child of the destination's parent, which is opened with
+/// `O_DIRECTORY|O_NOFOLLOW`). The temp file is fsynced and then renamed over
+/// the destination with `renameat`, with the staging descriptor as the
+/// rename source — a writer of the destination directory cannot substitute
+/// it. An existing hard link to the old entry therefore keeps its bytes,
+/// because only the directory entry changes. A symlink at the destination is
+/// refused before anything is written, and a directory fails with `EISDIR`.
 ///
 /// The parent is opened by path, and its containment is not checked here.
 /// Callers that need containment use `safe_write_within`. A concurrent hard
@@ -434,8 +439,11 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
 
 /// Unix: replaces the entry `name` inside the already-open directory `dir`.
 /// Shared by `safe_write` and `safe_write_within`. The bytes go to a fresh
-/// `O_CREAT|O_EXCL` temp sibling, which is fsynced and renamed over `name`.
-/// Afterwards the entry is checked against the written file (see below).
+/// `O_CREAT|O_EXCL` temp file inside a protected staging directory (see
+/// `write_staging`), which is fsynced and then renamed over `name` with the
+/// staging descriptor as the rename source — a writer of the destination
+/// directory therefore has no temp name it could substitute. Afterwards the
+/// entry is checked against the written file (see below).
 #[cfg(unix)]
 fn write_entry_unix(
     dir: &std::os::fd::OwnedFd,
@@ -443,11 +451,24 @@ fn write_entry_unix(
     name: &std::ffi::OsStr,
     bytes: &[u8],
 ) -> Result<(), ForgeError> {
-    use rustix::fs::{AtFlags, Mode, OFlags};
+    write_entry_unix_inner(dir, destination, name, bytes, None)
+}
+
+/// `pause` runs after the temp file is created and synced but before it is
+/// published — exactly the window a concurrent writer of the destination
+/// directory would race. Tests drive it to replay the substitution attack
+/// deterministically instead of racing a one-call API.
+#[cfg(unix)]
+fn write_entry_unix_inner(
+    dir: &std::os::fd::OwnedFd,
+    destination: &Path,
+    name: &std::ffi::OsStr,
+    bytes: &[u8],
+    pause: Option<&dyn Fn()>,
+) -> Result<(), ForgeError> {
+    use rustix::fs::AtFlags;
     use rustix::io::Errno;
     use std::io::Write;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
     let open_error = |error: Errno| {
         ForgeError::io(
@@ -472,38 +493,51 @@ fn write_entry_unix(
         Err(Errno::NOENT) => 0o666,
         Err(error) => return Err(open_error(error)),
     };
-    let mut attempts = 0;
-    let (temp_name, fd) = loop {
-        let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        let mut candidate = std::ffi::OsString::from(".");
-        candidate.push(name);
-        candidate.push(format!(".sf-tmp-{}-{sequence}", std::process::id()));
-        match rustix::fs::openat(
-            dir,
-            candidate.as_os_str(),
-            OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-            Mode::from_raw_mode(mode),
-        ) {
-            Ok(fd) => break (candidate, fd),
-            Err(Errno::EXIST) if attempts < 16 => attempts += 1,
-            Err(error) => return Err(open_error(error)),
+    let staging = match write_staging::StagingDir::create(dir) {
+        Ok(staging) => staging,
+        Err(write_staging::StagingCreateError::Rebind) => {
+            return Err(ForgeError::UnsafePath(format!(
+                "write staging directory for {} was substituted during materialization",
+                destination.display()
+            )))
+        }
+        Err(write_staging::StagingCreateError::Io(error)) => {
+            return Err(ForgeError::io(
+                format!(
+                    "create write staging directory for {}",
+                    destination.display()
+                ),
+                error,
+            ))
         }
     };
-    let mut file = std::fs::File::from(fd);
+    let (mut file, temp_name) = staging.new_temp(name, mode).map_err(|error| {
+        ForgeError::io(
+            format!("open staged temp for {}", destination.display()),
+            error,
+        )
+    })?;
     let outcome = file
         .write_all(bytes)
         .and_then(|()| file.sync_all())
         .and_then(|()| {
-            rustix::fs::renameat(dir, temp_name.as_os_str(), dir, name)
-                .map_err(std::io::Error::from)
+            if let Some(pause) = pause {
+                pause();
+            }
+            staging.publish(temp_name.as_os_str(), dir, name)
         });
-    if let Err(error) = outcome {
-        let _ = rustix::fs::unlinkat(dir, temp_name.as_os_str(), AtFlags::empty());
-        return Err(ForgeError::io("write planned file", error));
+    if outcome.is_err() {
+        staging.discard_temp(temp_name.as_os_str());
     }
+    staging.remove(dir);
+    // No fallback to a destination-directory temp: a staging or write
+    // failure is a failed write.
+    outcome.map_err(|error| ForgeError::io("write planned file", error))?;
     // F32: after the rename, the entry must be the regular file just written.
-    // This detects substitution of the entry; it does not prevent it. A
-    // mismatch is reported as an error, never as success.
+    // The staged rename source is unreachable from the destination directory,
+    // so a destination-side writer cannot substitute it; the check is kept as
+    // belt-and-suspenders for the destination entry itself. A mismatch is
+    // reported as an error, never as success.
     let substituted = || {
         ForgeError::UnsafePath(format!(
             "destination {} was substituted during materialization",
@@ -523,6 +557,65 @@ fn write_entry_unix(
         || (entry.st_mode & libc::S_IFMT) != libc::S_IFREG
     {
         return Err(substituted());
+    }
+    // Review pass 1 (Medium-6): a same-uid attacker that can traverse the
+    // staging dir can overwrite the temp IN PLACE (keeping dev/ino/type), so
+    // the identity check alone cannot prove the published bytes. Review pass
+    // 2 (R1/R9): the content comparison reads through the RETAINED staging
+    // descriptor — the read-write handle that wrote the bytes, still open on
+    // the published inode after the rename — and never through a fresh
+    // pathname open of `name`. A pathname reopen would resolve the name anew
+    // inside this verifier, where a same-uid swap to a symlink (following it
+    // after the no-follow stat), a blocking FIFO, or an unbounded device
+    // would redirect or exhaust the read, and a mode-0200 destination would
+    // refuse a RDONLY reopen outright (R9). The dev/ino + regular-file match
+    // above pins the published entry to this descriptor's inode, so the read
+    // below IS the published content; it is bounded at exactly one byte
+    // beyond the expected length, so even the retained inode cannot grow the
+    // read or block it (regular-file pread, no unbounded buffering). The
+    // same-uid residual stays explicit: these checks cannot make a mutable
+    // same-uid destination permanently immutable once this call returns.
+    let limit = bytes.len() + 1;
+    let mut published_bytes = Vec::with_capacity(limit);
+    {
+        use std::io::ErrorKind;
+        use std::os::unix::fs::FileExt;
+        let mut buffer = [0u8; 4096];
+        let mut offset = 0u64;
+        while published_bytes.len() < limit {
+            let want = (limit - published_bytes.len()).min(buffer.len());
+            match file.read_at(&mut buffer[..want], offset) {
+                // EOF: the inode is shorter than the write's bytes.
+                Ok(0) => break,
+                Ok(n) => {
+                    published_bytes.extend_from_slice(&buffer[..n]);
+                    offset += n as u64;
+                }
+                Err(error) if error.kind() == ErrorKind::Interrupted => {}
+                Err(error) => {
+                    return Err(ForgeError::io("read published file", error));
+                }
+            }
+        }
+    }
+    if published_bytes.len() != bytes.len() || {
+        use sha2::{Digest, Sha256};
+        Sha256::digest(&published_bytes)[..] != Sha256::digest(bytes)[..]
+    } {
+        // The published entry does not carry this write's bytes: it was
+        // replaced in place after staging (same-uid tamper) and then
+        // published by the rename before this check. Unlink it — this write
+        // has proven the entry is not its output, and leaving attacker
+        // bytes at the destination name would extend the tamper past this
+        // call. Removal failure is appended context, never a silent pass.
+        let removed = rustix::fs::unlinkat(dir, name, AtFlags::empty());
+        return Err(ForgeError::UnsafePath(format!(
+            "published bytes of {} differ from the bytes this write staged; the file was \
+             modified in place between staging and publication and has been removed \
+             (unlink: {:?})",
+            destination.display(),
+            removed.map(|_| "removed").map_err(|e| e.to_string()),
+        )));
     }
     let _ = rustix::fs::fsync(dir);
     Ok(())
@@ -547,7 +640,7 @@ pub fn safe_write(destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
         ))
     })?;
     let dir = pin_path(parent)?;
-    write_entry_windows(&dir, destination, name, bytes)
+    write_entry_windows(dir, destination, name, bytes)
 }
 
 /// Writes `bytes` to `destination`, which must resolve inside `root`.
@@ -580,7 +673,7 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
         ))
     })?;
     let dir = pinned_walk(&canonical_root, parents, false)?;
-    write_entry_windows(&dir, destination, file_name, bytes)
+    write_entry_windows(dir, destination, file_name, bytes)
 }
 
 /// Unix: writes `bytes` to `destination`, which must resolve inside `root`.
@@ -687,6 +780,18 @@ fn pin_error(error: sea_forge_os::PinError, path: &Path) -> ForgeError {
             "parent resolves outside the workspace: {}",
             path.display()
         )),
+        PinError::WriteShareHeld(_) => ForgeError::UnsafePath(format!(
+            "parent is held by another writer; exclusive pin refused: {}",
+            path.display()
+        )),
+        PinError::IdentityChanged(_) => ForgeError::UnsafePath(format!(
+            "parent was substituted after its pin was validated: {}",
+            path.display()
+        )),
+        PinError::FinalPathMismatch(_) => ForgeError::UnsafePath(format!(
+            "parent resolves to a different object than the path given: {}",
+            path.display()
+        )),
         PinError::Io(error) => ForgeError::io(format!("pin directory {}", path.display()), error),
     }
 }
@@ -733,7 +838,7 @@ fn pinned_walk(
 /// destination that is a reparse point or a directory.
 #[cfg(windows)]
 fn write_entry_windows(
-    dir: &sea_forge_os::PinnedDir,
+    dir: sea_forge_os::PinnedDir,
     destination: &Path,
     name: &std::ffi::OsStr,
     bytes: &[u8],
@@ -938,6 +1043,241 @@ mod tests {
             safe_write_within(&root, &escaped, b"captured"),
             Err(ForgeError::UnsafePath(_))
         ));
+        assert_eq!(fs::read(&outside).unwrap(), b"outside original");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// F32 regression: a process with write access to the destination
+    /// directory must not be able to make the published entry contain bytes
+    /// it chose. The pause hook replays the deterministic mid-write attack —
+    /// it scans the destination directory for a temp-name entry (the rename
+    /// source of the pre-staging scheme), unlinks it, and plants attacker
+    /// bytes under the same name. With staging, no such entry ever exists in
+    /// the destination directory and the plant is inert.
+    #[cfg(unix)]
+    #[cfg(unix)]
+    #[test]
+    fn in_place_temp_tampering_is_detected_at_publication() {
+        use std::sync::atomic::{AtomicU8, Ordering};
+        use std::sync::Arc;
+        let (parent, root, _) = unix_write_fixture("staged-tamper");
+        let destination = root.join("planned.txt");
+        // Same-uid attacker traverses the 0700 staging dir (the documented
+        // same-uid residual) and overwrites the temp IN PLACE — no unlink, no
+        // rename: dev/ino/type survive, so only content verification can
+        // catch this (review pass 1, Medium-6).
+        let attacked = Arc::new(AtomicU8::new(0));
+        let pause = {
+            let attacked = attacked.clone();
+            let watched = root.clone();
+            move || {
+                for entry in fs::read_dir(&watched).unwrap() {
+                    let staging = entry.unwrap().path();
+                    if staging
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.starts_with(".sf-staging-"))
+                    {
+                        for temp in fs::read_dir(&staging).unwrap().flatten() {
+                            let temp_name = temp.file_name().to_string_lossy().to_string();
+                            if temp_name.contains(".sf-tmp-") {
+                                fs::write(temp.path(), b"tampered bytes").unwrap();
+                                attacked.store(1, Ordering::SeqCst);
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        let dir = rustix::fs::open(
+            &root,
+            rustix::fs::OFlags::RDONLY
+                | rustix::fs::OFlags::DIRECTORY
+                | rustix::fs::OFlags::NOFOLLOW
+                | rustix::fs::OFlags::CLOEXEC,
+            rustix::fs::Mode::empty(),
+        )
+        .unwrap();
+        write_entry_unix_inner(
+            &dir,
+            &destination,
+            std::ffi::OsStr::new("planned.txt"),
+            b"staged bytes",
+            Some(&pause),
+        )
+        .expect_err(
+            "an in-place temp overwrite must fail the write loudly, not publish attacker bytes",
+        );
+        assert_eq!(
+            attacked.load(Ordering::SeqCst),
+            1,
+            "the attack must have run"
+        );
+        // The tampered entry is unlinked by the failed write: the attacker
+        // bytes must not survive at the destination name.
+        assert!(
+            fs::read(&destination).is_err(),
+            "the tampered entry must be removed, not left published"
+        );
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// Root bypasses DAC, so a non-root permission path cannot be exercised
+    /// there. The euid source differs per platform: Linux's rustix build
+    /// carries the `process` feature; other Unix targets get one explicit
+    /// libc call (the workspace deny stays visible at the call site).
+    #[cfg(all(unix, target_os = "linux"))]
+    fn running_as_root() -> bool {
+        rustix::process::geteuid() == rustix::process::Uid::ROOT
+    }
+
+    #[cfg(all(unix, not(target_os = "linux")))]
+    fn running_as_root() -> bool {
+        // One libc call; the workspace's deny stays visible here.
+        #[allow(unsafe_code)]
+        let euid = unsafe { libc::geteuid() };
+        euid == 0
+    }
+
+    /// Review pass 2 (R9) regression: a destination whose preserved mode is
+    /// write-only (0200) must still materialize. The verifier reads the
+    /// published bytes through the retained staging descriptor (opened
+    /// read-write at creation), so the corrected-shape failure — a RDONLY
+    /// reopen refused EACCES on the freshly published 0200 file and reported
+    /// as substitution AFTER the replacement was already installed — cannot
+    /// recur. Root bypasses DAC and cannot exercise the permission path: on a
+    /// root run this scenario reports BLOCKED rather than passing as
+    /// verified.
+    #[cfg(unix)]
+    #[test]
+    fn write_only_destination_materializes_and_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        if running_as_root() {
+            // BLOCKED (tally note, not a pass): root bypasses DAC, so the
+            // EACCES regression this scenario guards cannot occur here.
+            eprintln!(
+                "BLOCKED: running as root; the mode-0200 materialization regression \
+                 needs a non-root identity"
+            );
+            return;
+        }
+        let (parent, root, _) = unix_write_fixture("write-only-dest");
+        let destination = root.join("planned.txt");
+        fs::write(&destination, b"secret-only").unwrap();
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o200)).unwrap();
+
+        safe_write(&destination, b"replaced bytes")
+            .expect("a write-only destination must materialize through the retained staging fd");
+        let mode = fs::metadata(&destination).unwrap().permissions().mode() & 0o7777;
+        assert_eq!(
+            mode, 0o200,
+            "the preserved write-only mode must survive the replacement"
+        );
+        // The owner cannot read a 0200 file; restore read access to assert
+        // the published bytes (this is the test's own file).
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"replaced bytes",
+            "the replacement must carry this write's bytes"
+        );
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn substituted_temp_name_cannot_publish_attacker_bytes() {
+        use std::os::unix::fs::PermissionsExt;
+        use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+        use std::sync::Arc;
+        let (parent, root, _) = unix_write_fixture("staged-substitute");
+        let destination = root.join("planned.txt");
+        // 0: attacker found nothing to substitute; 1: substitution replayed.
+        let attack = Arc::new(AtomicU8::new(0));
+        let staging_mode = Arc::new(AtomicU32::new(u32::MAX));
+        let pause = {
+            let attack = attack.clone();
+            let staging_mode = staging_mode.clone();
+            let watched = root.clone();
+            move || {
+                for entry in fs::read_dir(&watched).unwrap() {
+                    let entry = entry.unwrap();
+                    let name = entry.file_name();
+                    let name = name.to_string_lossy();
+                    if name.contains(".sf-tmp-") {
+                        // The destination directory exposed the rename
+                        // source: unlink it and plant attacker bytes.
+                        attack.store(1, Ordering::SeqCst);
+                        fs::remove_file(entry.path()).unwrap();
+                        fs::write(entry.path(), b"attacker bytes").unwrap();
+                    } else if name.starts_with(".sf-staging-") {
+                        let mode = entry.metadata().unwrap().permissions().mode() & 0o777;
+                        staging_mode.store(mode, Ordering::SeqCst);
+                    }
+                }
+            }
+        };
+        let dir = rustix::fs::open(
+            &root,
+            rustix::fs::OFlags::RDONLY
+                | rustix::fs::OFlags::DIRECTORY
+                | rustix::fs::OFlags::NOFOLLOW
+                | rustix::fs::OFlags::CLOEXEC,
+            rustix::fs::Mode::empty(),
+        )
+        .unwrap();
+        write_entry_unix_inner(
+            &dir,
+            &destination,
+            std::ffi::OsStr::new("planned.txt"),
+            b"kernel bytes",
+            Some(&pause),
+        )
+        .unwrap();
+        assert_eq!(
+            attack.load(Ordering::SeqCst),
+            0,
+            "a temp name must never be resolvable in the destination directory"
+        );
+        assert_eq!(
+            staging_mode.load(Ordering::SeqCst),
+            0o700,
+            "the staging directory must be mode 0700"
+        );
+        let meta = fs::symlink_metadata(&destination).unwrap();
+        assert!(meta.is_file(), "published entry must be a regular file");
+        assert_eq!(fs::read(&destination).unwrap(), b"kernel bytes");
+        let leftovers: Vec<String> = fs::read_dir(&root)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with(".sf-staging-") || name.contains(".sf-tmp-"))
+            .collect();
+        assert!(leftovers.is_empty(), "leftover entries: {leftovers:?}");
+        fs::remove_dir_all(parent).unwrap();
+    }
+
+    /// F32: a staging directory swapped to a symlink before the write is
+    /// refused, and the symlink target is untouched.
+    #[cfg(unix)]
+    #[test]
+    fn staging_directory_rebind_is_refused() {
+        use std::os::unix::fs::symlink;
+        let (parent, root, outside) = unix_write_fixture("staging-rebind");
+        let destination = root.join("planned.txt");
+        // Pre-plant a symlink at a staging-shaped name. Staging names are now
+        // per-call (pid + sequence), so a planted entry can never collide
+        // with the directory this write creates: the planted symlink must be
+        // ignored entirely (stronger than the old same-name rebind refusal —
+        // there is no shared name left to rebind).
+        symlink(&outside, root.join(".sf-staging-planted-not-real")).unwrap();
+
+        let result = safe_write(&destination, b"captured");
+        result.expect("a planted staging-shaped symlink must not affect the write");
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"captured",
+            "the write must publish the written bytes"
+        );
         assert_eq!(fs::read(&outside).unwrap(), b"outside original");
         fs::remove_dir_all(parent).unwrap();
     }
