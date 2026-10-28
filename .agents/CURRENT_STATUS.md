@@ -1,22 +1,21 @@
 # Current status
 
-**Status revision:** 210
+**Status revision:** 211
 
-**Stage:** capability-harvest: codex pass-2 fixes landed (R1-R10); pushing for lanes
+**Stage:** capability-harvest: pass-2 lane failures fixed — ack fd inherited (not reopened) across the unshare chain; junction test de-doubled
 
-**Summary:** R1+R9: content verification reads through the retained staging fd (RDWR staged temp, pread bounded at len+1, no destination reopen) — kills the symlink-follow/FIFO-block/unbounded-read variants and the mode-0200 regression; R2 fixed not disputed (hierarchically_populated via cgroup.events; populated leaf = Survivors, not hygiene); R3: UnadoptedInteractiveJailChild Drop + guards armed before fallible stream adoption; R4 confirmed and fixed (trusted ack handshake: helper writes 0x01 after all restrictions are in force; no ack = workload_isolation_setup_failed with no containment claim; test-only unshare override regression); R5 fixed with both controls proven (negated-if bug: status captured in the else of a non-negated if; sabotage shim FAILS); R6 implemented (root chown deleted; test tree migrates into the delegated subtree); R7/R8 disputes recorded; R10 junction test now exercises redirection.
+**Summary:** Lane rerun caught two integration defects: (1) the ack write end was reopened by path inside the helper, which fails EACCES after --setuid drops to the subordinate identity — the fd is inherited across the chain (not CLOEXEC), so the helper now marks it CLOEXEC, dups it, writes the byte, and never resolves a launcher-owned path as the workload uid; the socket-policy/isolated suites that launch through the real chain pass again. (2) R10's mid-pin contained write collided with the test's own held pin (WriteShareHeld) — the write now runs after the test's pin is released with the junction still planted, and the duplicate trailing block is removed.
 
 **Verified:**
 
-- sandbox lib 31 green incl. 3 R4 tests + R9 regression; agent suite green; cross-targets green; no-async-kernel both controls; fmt clean; status-check pass
+- sandbox lib 31 green; syscall_filter + unix_socket_reach (real launch chain) green; windows-target clippy green; fmt clean
 
 **Limits:**
 
-- Lane rerun for the pass-2 commit pending; codex pass 3 after
+- Lanes rerun pending
 
-**Next move:** Commit, push, lanes, codex pass 3 (final).
+**Next move:** Commit, push, lanes; codex pass 3 after green.
 
 **Evidence:**
 
-- /tmp/harvest-pass2-review.md
-- .agents/OBSERVED_DEBT.md
+- gh runs 40605628123 / 40605628078 logs

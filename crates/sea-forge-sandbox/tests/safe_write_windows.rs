@@ -206,16 +206,18 @@ fn pinned_anchor_refuses_write_handles_and_a_planted_junction_does_not_redirect(
 
     // Review pass 2 (R10): the planted junction must not redirect an
     // operation that actually RUNS while it exists. The contained write below
-    // repins the root and resolves the destination through the planted
-    // directory with the junction entry live, so redirection of the write (or
-    // of its publication window) would show up here: the bytes must land
-    // inside, and the outside target must stay empty.
-    let while_pinned = safe_join(root, "pinned-write.txt").expect("join");
-    safe_write_within(root, &while_pinned, b"while pinned")
+    // runs with the junction entry live (this test's own handle pin is
+    // dropped first — the write's exclusive pin and this handle cannot
+    // coexist), so redirection of the write (or of its publication window)
+    // would show up here: the bytes must land inside, and the outside target
+    // must stay empty.
+    drop(pin);
+    let while_planted = safe_join(root, "pinned-write.txt").expect("join");
+    safe_write_within(root, &while_planted, b"while planted")
         .expect("contained write with the planted junction present");
     assert_eq!(
-        std::fs::read(&while_pinned).expect("read"),
-        b"while pinned",
+        std::fs::read(&while_planted).expect("read"),
+        b"while planted",
         "the contained write did not land inside the workspace while the junction existed"
     );
     assert_eq!(
@@ -224,21 +226,5 @@ fn pinned_anchor_refuses_write_handles_and_a_planted_junction_does_not_redirect(
             .count(),
         0,
         "the outside junction target received entries while the pin was active"
-    );
-
-    drop(pin);
-    let path = safe_join(root, "file.txt").expect("join");
-    safe_write_within(root, &path, b"contained").expect("contained write after release");
-    assert_eq!(
-        std::fs::read(&path).expect("read"),
-        b"contained",
-        "the contained write did not land inside the workspace"
-    );
-    assert_eq!(
-        std::fs::read_dir(outside.path())
-            .expect("read outside")
-            .count(),
-        0,
-        "the outside junction target received entries from the contained write"
     );
 }
