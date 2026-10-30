@@ -1027,6 +1027,35 @@ deny.toml                    # dependency policy
 
 ---
 
+## Subdirectories & System Boundaries (EGM contract index)
+
+Every code-bearing directory below carries an EGM-compliant `README.md` contract
+(documenting its interface, invariants, and side effects, grounded in code). Top-level
+boundaries:
+
+- [apps](./apps/README.md) - Standalone applications on top of the kernel: the Go casework gateway and the GodSpeed cognitive environment UI. Never the semantic authority.
+- [crates](./crates/README.md) - The 25 workspace crates of the governed capability-execution kernel (synchronous except the `sea-forge-server` / `sea-forge-agent` edges).
+- [docs](./docs/README.md) - Documentation tree; its execution journey tooling is contracted separately.
+- [packaging](./packaging/README.md) - Release packaging scripts for deb and macOS targets.
+- [scripts](./scripts/README.md) - Repository operational scripts (OpenShell setup, security tooling).
+- [workbench](./workbench/README.md) - Bun workspace for the Workbench frontend: React 19 renderer plus the four private `@sea-forge/*` packages.
+
+## Global Invariants
+
+- Governed lifecycle: every side effect is authorized before execution, then traced, evidenced, settled, and recorded; process exit is not success unless settlement accepts the declared outcome (see `AGENTS.md` and `.agents/specs/`).
+- Synchronous kernel boundary: only the two edge crates (`sea-forge-server`, `sea-forge-agent`) may be async; enforce with `just no-async-kernel`.
+- Normative specs in `.agents/specs/` override this README; this README's EGM index never weakens a spec.
+
+## Global Side Effects
+
+- Server mode, delegation, case management, and settlement write governed state under the SEA Forge root (`.sea-forge/` runtime output); specifics are contracted in the child blueprints above.
+
+## System Verification
+
+- Run: `just test` (Rust tests); `just check` (quality); `just ci` (current-platform CI union); `just proof` (minimum proofs P1-P4b); `just workbench-check` (Workbench).
+
+---
+
 ## Developer commands
 
 Run `just` with no arguments to see the complete command surface.

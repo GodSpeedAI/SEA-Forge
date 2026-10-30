@@ -1,32 +1,27 @@
 # Current status
 
-**Status revision:** 181
+**Status revision:** 182
 
-**Stage:** Cross-platform native execution: integration ready for merge after review pass 3
+**Stage:** EGM bootstrap: README.md contracts generated across the code tree, verified, committed on branch
 
-**Summary:** Linux OpenShell vm live proof 9/9 (KVM, Docker stopped); Windows Local job and named-pipe control plane; Linux/macOS Jail; native installers (.deb, .exe, .pkg, .dmg). Three independent review passes done; pass-3 F27, F31, F18, F24 fixed and F32 mitigated; F05, F08, F15, F17, F33 open.
+**Summary:** egm-bootstrap skill run produced 150 EGM contract README.md files (146 by 8 parallel sub-orchestrator workers, 3 intermediate blueprints crates/README.md + workbench/README.md + apps/README.md, root README.md extended with an EGM contract index preserving all existing prose). Verification: mechanical link check (all relative links resolve) plus 4 read-only verifier passes over all 150 files; 6 minor grounding/markdown nits found and fixed (hooks citation, contracts-gate attribution, planner summary truncation, bun test -> bun run test across 31 workbench files, table pipe escaping). 3 pre-existing READMEs (both apps, workbench/apps/desktop) corrected under the correction policy with original prose preserved.
 
 **Verified:**
 
-- Live run 40310712495 on d28e00dc: cell_episode_live 9 passed
-- Package run 40278790759 green on 3 OSes; clean ubuntu:22.04 and debian:12 .deb installs
-- Portability 40308234437 green (Windows, macOS jail)
-- sea-forge-sandbox, sea-forge-evidence, sea-forge-runtime tests pass locally after pass-3 fixes
+- All 150 relative links resolve on disk (mechanical check)
+- 4 read-only verifier passes: 150/150 files PASS after fixes; citations spot-checked against source, Go routes checked against mux registration
+- go test ./... green (casework-go, run by worker)
+- cargo test -p green for all 25 crates (run by workers)
+- Diff inspected: documentation only, no source touched
 
 **Limits:**
 
-- F08: setsid descendants escape Local/Jail group kill; not for adversarial lifecycle containment
-- F05: Windows pinned directory reparse mutation after validation
-- F17: OpenShell network denial not distinguished from an unreachable target (scenario 4 BLK)
-- F33: tokio unifies into sea-forge-os on Windows server builds
-- F15: prerequisite skips count as libtest passes outside required CI lanes
-- macOS OpenShell vm, WSLc and SEA-Forge on MXC are Blocked
-- No backend meets the 12-scenario bar
+- Workers ran cargo test per crate but just test / just check were not re-run repo-wide after the doc-only change
+- storybook-static/, e2e/, tests/ dirs intentionally excluded per skill rules; scripts/windows and scripts/tests hold no recognized source extensions
+- Drift report (egm-drift-report) offered but not yet run
 
-**Next move:** Merge PR #67 once required checks are green; release via release-please; decide F33 crate split and F08 supervisor.
+**Next move:** Push branch docs/egm-bootstrap-readmes; decide on drift report; merge via PR if desired.
 
 **Evidence:**
 
-- `.agents/plans/2026-10-25-cross-platform-native-execution.md`
-- `~/projects/_wt/containers/review/pass3/pass3-findings.md`
-- `~/projects/_wt/containers/evidence/oslive-linux-40310712495`
+- /tmp/egm-work (payloads lost to WSL restart; verifier reports in transcript)

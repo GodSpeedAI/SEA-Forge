@@ -4,6 +4,51 @@ The casework system front end for the GodSpeed casework environment (plan T01). 
 governed casework through application-owned ports and never becomes the semantic authority: SEA Forge
 owns case meaning and settlement, Gauntlet executes, and this application coordinates and projects.
 
+## Interface
+Go module `github.com/GodSpeedAI/SEA-Forge/apps/godspeed-casework-go` (go 1.27). Package contracts:
+
+- [./cmd/godspeed-casework/README.md](./cmd/godspeed-casework/README.md) - the entrypoint: flags, exit-code contract, live/fixture build gate
+- [./internal/ports/README.md](./internal/ports/README.md) - application-owned port interfaces (`CaseAuthorityPort` [internal/ports/ports.go:CaseAuthorityPort], `AskPort`, `RunTracePort`, `ArtifactStore`)
+- [./internal/adapters/sfwp/README.md](./internal/adapters/sfwp/README.md) - the live kernel adapter (`sfwp.Client` [internal/adapters/sfwp/client.go:Client], `sfwp.Authority` [internal/adapters/sfwp/authority.go:Authority])
+- [./internal/config/README.md](./internal/config/README.md) - the one configuration authority (`config.Load` [internal/config/config.go:Load])
+- [./internal/server/README.md](./internal/server/README.md) - the HTTP+SSE surface (live `Server` and fixture `FixtureServer`, registered routes)
+- [./internal/intents/README.md](./internal/intents/README.md), [./internal/projection/README.md](./internal/projection/README.md), [./internal/contract/README.md](./internal/contract/README.md), [./internal/auth/README.md](./internal/auth/README.md), [./internal/preflight/README.md](./internal/preflight/README.md), [./internal/metrics/README.md](./internal/metrics/README.md), [./internal/coordinator/README.md](./internal/coordinator/README.md), [./internal/artifactstore/README.md](./internal/artifactstore/README.md), [./internal/apperr/README.md](./internal/apperr/README.md), [./internal/adapters/fakeauthority/README.md](./internal/adapters/fakeauthority/README.md), [./internal/livetest/README.md](./internal/livetest/README.md), [./internal/livestack/README.md](./internal/livestack/README.md)
+
+## Invariants
+- The gateway never becomes the semantic authority: SEA Forge owns case meaning and settlement; every
+  consequential action crosses a governed port and the kernel re-verifies each delegation
+  [cmd/godspeed-casework/main.go:package doc].
+- Core packages (`ports`, `config`, `preflight`, `apperr`) never import an adapter or name provider
+  vocabulary; adapters translate INTO `ports` types [internal/ports/ports.go:package doc].
+- One configuration authority with one precedence order; credentials are indirections
+  (`env:NAME`/`file:/path`), never values, and secrets never travel with the document
+  [internal/config/config.go:Load].
+- Preflight gates all consequential work: a required capability that is unusable blocks startup
+  (exit 2); an optional one degrades only itself [internal/preflight/preflight.go:Check].
+- Revisions are keyed by the kernel's own event cursor — the gateway never mints cursors; retention
+  is bounded and evicted cursors answer `ErrUnknownCursor` [internal/projection/store.go:package doc].
+- Live serve requires a ready SFWP authority (preflight probes `system.hello`, `readiness.get`,
+  `identity.get`); the production build refuses fixture adapters and refuses to serve a fixture world
+  as governed truth [cmd/godspeed-casework/main.go:main] [internal/config/fixture_enabled.go:fixtureBuildEnabled].
+- Every live route except `GET /api/healthz`, `GET /api/readyz` and the auth entry points requires a
+  session; state-changing POSTs require a CSRF token before any kernel call
+  [internal/server/server.go:Handler].
+
+## Side Effects
+- Serve mode binds the loopback HTTP listener (plus an optional loopback metrics listener) and opens
+  the kernel's Unix socket through `sfwp.New` [cmd/godspeed-casework/main.go:serveLive].
+- The server serves HTTP+SSE (sessions, cookies, SSE streams with heartbeats), static UI files from
+  `serve.static_root`, and calls governed kernel verbs on intents [internal/server/README.md].
+- OIDC auth performs issuer discovery and token-exchange HTTP calls; local auth derives argon2id
+  hashes [internal/auth/oidc.go:NewOIDC] [internal/auth/argon2.go:HashPassword].
+- Live tests (`-tags live`) build the real kernel binary and boot `sea-forge-server` processes on
+  fresh temp cells [internal/livetest/harness.go:EnsureServerBinary].
+
+## Verification
+- Run: `go test ./...` (from apps/godspeed-casework-go/)
+- Canonical module gate: `just casework-go-check` (`gofmt -l`, `go vet ./...`, `go test ./...`);
+  live tests: `go test -p 1 ./... && go test -p 1 -tags live ./...` (needs a built kernel).
+
 ## Port ownership
 
 `internal/ports` declares the application's own interfaces and value types. Provider, transport and
@@ -152,7 +197,7 @@ These are the fixture routes (`FixtureServer`); shapes follow the same WIRE.md.
 | `GET /api/world` | `{ "snapshot": … }` at the live cursor; `?cursor=` serves that revision, unknown or malformed cursor → 404 typed error `{"error":{"kind":"invalid","note":"unknown cursor"}}` |
 | `GET /api/time` | `{ "positions": [{ "cursor", "at", "summary" }, …], "truncated": false }` — the full revision window, ascending; grows as lease-driven revisions append |
 | `GET /api/events?last=<cursor>` | SSE (`text/event-stream`): `hello`, replay of every revision with cursor > `last` (each `revision` event's `id:` field is its cursor), then live `revision` and `lease` events; a `: heartbeat` comment every 15 s; one flush per event; client disconnect cancels all server-side subscriptions |
-| `POST /api/intents` | Body `{ "id", "kind", "target", "parameters", "cursor" }`; refusals are NORMAL 200 outcomes `{"status":"refused","reason":"authority_denied|invalid|stale_projection","note":"…"}`; acceptances carry `{ "status": "accepted", "note": "…", "lease": { "id", "state", "summary" } }` (lease present only when one was minted) |
+| `POST /api/intents` | Body `{ "id", "kind", "target", "parameters", "cursor" }`; refusals are NORMAL 200 outcomes `{"status":"refused","reason":"authority_denied\|invalid\|stale_projection","note":"…"}`; acceptances carry `{ "status": "accepted", "note": "…", "lease": { "id", "state", "summary" } }` (lease present only when one was minted) |
 | `GET /api/artifacts` | `{ "descriptors": [{ "ref", "kind", "title", "boundObject" }, …] }` — the artifact catalog (fixture seed plus anything persisted at runtime) |
 | `POST /api/artifacts` | Body `{ "ref", "boundObject", "title" }` → `{"status":"accepted"}` or the refusal shape; fixture-scoped durability (see limitations) |
 | `GET /api/artifacts/{ref}?level=minimal\|summary\|source` | The level's bytes with its `mediaType` (default level `minimal`); unknown ref → 404 typed error, unknown level → 400 typed error |
