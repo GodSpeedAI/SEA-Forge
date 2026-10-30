@@ -1,7 +1,7 @@
 # sea-forge-os/src
 
 ## Overview
-Source for the `sea-forge-os` crate: operating-system bindings that have no safe `std` equivalent. This crate holds all of SEA Forge's Windows FFI `unsafe` code (named-pipe security and impersonation, owner-only private-file writes, reparse-point-refusing pinned directories, kill-on-close job objects). `lib.rs` is a thin platform gate; `imp.rs` is the Windows implementation. On non-Windows platforms the crate compiles to an empty library and other code paths never reference it.
+Source for the `sea-forge-os` crate: operating-system bindings that have no safe `std` equivalent. This crate holds SEA Forge's Windows FFI `unsafe` code (named-pipe security and impersonation, owner-only private-file writes, reparse-point-refusing pinned directories, kill-on-close job objects); narrow `#![allow(unsafe_code)]` scopes also exist in `sea-forge-sandbox`'s workload-exec helper and socket policy. `lib.rs` is a thin platform gate; `imp.rs` is the Windows implementation. On non-Windows platforms the crate compiles to an empty library and other code paths never reference it.
 
 ## Interface
 - Module gate: `imp` is compiled only under `#[cfg(windows)]` and re-exported via `pub use imp::*` [lib.rs:cfg attribute], [lib.rs:pub use]
@@ -14,7 +14,7 @@ Source for the `sea-forge-os` crate: operating-system bindings that have no safe
 - `spawn_in_job(cmd) -> (Child, Job)` and `Job` (with `Job::kill_on_close`) — spawn a child suspended into a kill-on-close job object, then resume its threads [imp.rs:spawn_in_job], [imp.rs:Job]
 
 ## Invariants
-- This is the only workspace crate permitted to contain `unsafe` code (crate description in Cargo.toml); every `unsafe` block states the invariant it relies on in a `SAFETY` comment [lib.rs:module doc], [imp.rs:SAFETY comments]
+- Every `unsafe` block states the invariant it relies on in a `SAFETY` comment [lib.rs:module doc], [imp.rs:SAFETY comments]
 - `#![deny(unsafe_op_in_unsafe_fn)]` [lib.rs:deny attribute]
 - SID strings are grammar-checked (`S-1-<digits>-...`) before being spliced into SDDL, so a SID cannot inject ACE or flag syntax [imp.rs:check_sid_grammar]
 - `GENERIC_WRITE` is deliberately not granted to pipe clients: its mapping includes `FILE_APPEND_DATA`, which is `FILE_CREATE_PIPE_INSTANCE` on a named pipe and would let a bound client start a competing server instance [imp.rs:CLIENT_PIPE_RIGHTS]

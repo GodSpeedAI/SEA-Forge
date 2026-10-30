@@ -15,7 +15,7 @@ All symbols live in [lib.rs]:
 - Lifecycle: `canonical_lifecycle_action`, `authorize_lifecycle`, `append_lifecycle`
 - Rights/attestation: `canonical_rights_action`, `authorize_rights_profile`, `authorize_attestation`, `attest`, `ArtifactAttestor`, `DefaultArtifactAttestor`, `append_rights_profile`, `store_gate_profile`, `resolve_gate_profile`, `read_gate_profile`
 - Evidence and references: `append_value_evidence`, `append_value_evidence_source`, `append_domain_model_ref`
-- Views: `rebuild`, `rebuild_with_lifecycle`, `rebuild_materialized_views`, `load_ledger_records`, `LedgerFacts`
+- Views: `rebuild`, `rebuild_with_lifecycle`, `rebuild_materialized_views`, `load_ledger_records`
 - Record version constant: `M8_RECORD_VERSION = "0.2"` [lib.rs:M8_RECORD_VERSION]
 
 ## Invariants
@@ -23,8 +23,8 @@ All symbols live in [lib.rs]:
 - Record schema version is pinned: `M8_RECORD_VERSION = "0.2"` [lib.rs:M8_RECORD_VERSION].
 - Artifact IDs must be safe single-segment filenames [lib.rs:register ("artifact_id must be a safe single-segment filename")].
 - Promotion transitions must preserve one artifact and content identity [lib.rs:validate_transition_shape].
-- Each value-evidence source must have at least one accepted parent establishing its `from_stage`; no omitted parent (§M8 multi-source invariant) [lib.rs:validate_ledger_references].
-- Required attestation must forbid degraded mode [lib.rs:authorize_attestation].
+- Each value-evidence source must have at least one accepted parent establishing its `from_stage`; no omitted parent (§M8 multi-source invariant) [lib.rs:validate_before_transform].
+- Required attestation must forbid degraded mode [lib.rs:attest].
 - A retry of an already-terminal transition case must reach the idempotent terminal path [lib.rs:commit_transition_terminal].
 
 ## Side Effects

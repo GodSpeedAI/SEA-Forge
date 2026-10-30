@@ -10,7 +10,7 @@ stores ([memory.rs]) and capability promotion from settled declarations
 - Module tree, declared in [lib.rs]: `memory` ([memory.rs]), `promotion` ([promotion.rs]).
 - Root-level API ([lib.rs]): `validate_extension_descriptor(&ExtensionDescriptor)` — validates authority surface membership and sha256 reference form.
 - Re-exports from [lib.rs]: `append_capability_record`, `build_capability_record`, `compute_policy_hash`, `default_v02_policy`, `format_fixed`, `load_declarations`, `load_envelopes`, `parse_fixed`, `rebuild_capability`, `require_proven`, `save_policy` [promotion.rs].
-- Memory API ([memory.rs]): `compute_dedup_key`, `extract_from_envelope`, `append_memory_items`, `load_memory_items`, `MemoryRecallQuery`, `recall_memory`, `rebuild_index`, `query_index`, `recall_with_fallback`, `MAX_RECALL_LIMIT = 50`, `MAX_STATEMENT_LEN = 1000`.
+- Memory API ([memory.rs]): `compute_dedup_key`, `extract_from_envelope`, `append_memory_items`, `load_memory_items`, `MemoryRecallQuery`, `recall_memory`, `rebuild_index`, `query_index`, `recall_with_fallback`, `MAX_RECALL_LIMIT = 50`.
 - Promotion API ([promotion.rs]): `parse_fixed`, `format_fixed` (6-decimal fixed point, i64 millionths, `SCALE = 1_000_000`), `default_v02_policy`, `compute_policy_hash`, `save_policy`, `load_policy`, `declaration_qualifies`, `load_envelopes`, `build_capability_record`, `rebuild_capability`, `require_proven`, `load_declarations`, `append_capability_record`.
 
 ## Invariants

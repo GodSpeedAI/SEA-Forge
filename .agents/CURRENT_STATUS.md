@@ -1,27 +1,23 @@
 # Current status
 
-**Status revision:** 182
+**Status revision:** 183
 
-**Stage:** EGM bootstrap: README.md contracts generated across the code tree, verified, committed on branch
+**Stage:** EGM drift report run over all 150 contracts; 10 mechanical drift items fixed, 3 items left for triage
 
-**Summary:** egm-bootstrap skill run produced 150 EGM contract README.md files (146 by 8 parallel sub-orchestrator workers, 3 intermediate blueprints crates/README.md + workbench/README.md + apps/README.md, root README.md extended with an EGM contract index preserving all existing prose). Verification: mechanical link check (all relative links resolve) plus 4 read-only verifier passes over all 150 files; 6 minor grounding/markdown nits found and fixed (hooks citation, contracts-gate attribution, planner summary truncation, bun test -> bun run test across 31 workbench files, table pipe escaping). 3 pre-existing READMEs (both apps, workbench/apps/desktop) corrected under the correction policy with original prose preserved.
+**Summary:** egm-drift-report executed over all 150 EGM contract READMEs (sequential subagents: 25 crate roots, 32 src contracts, 43 workbench, 46 apps/platform/root). 14 findings; 10 mechanical doc-side errors fixed in place (sea-forge-os unsafe-scope claim in 3 files, artifact-ip private symbol + 2 invariant attributions, capability private constant, hooks useCases/useRuns anchors, semantic-beat fabricated ThothInteractionPort, stories variant count, casework-go internal subdirectory notes, coordinator Intent anchor). Full findings in 2026-10-30_DRIFT_REPORT.md (committed).
 
 **Verified:**
 
-- All 150 relative links resolve on disk (mechanical check)
-- 4 read-only verifier passes: 150/150 files PASS after fixes; citations spot-checked against source, Go routes checked against mux registration
-- go test ./... green (casework-go, run by worker)
-- cargo test -p green for all 25 crates (run by workers)
-- Diff inspected: documentation only, no source touched
+- All drift-agent claims re-verified against source before editing (rg + file reads)
+- Mechanical link re-check on all 10 changed files: no broken links
+- One drift finding rejected after verification: normalizeUsername IS defined in auth.go:84 (drift agent misreported local.go)
 
 **Limits:**
 
-- Workers ran cargo test per crate but just test / just check were not re-run repo-wide after the doc-only change
-- storybook-static/, e2e/, tests/ dirs intentionally excluded per skill rules; scripts/windows and scripts/tests hold no recognized source extensions
-- Drift report (egm-drift-report) offered but not yet run
+- 3 items left for human triage: stale Vite boilerplate preserved by correction policy in workbench/apps/desktop/README.md; crates/AGENTS.md says 22 crates while Cargo.toml has 25 (stale governing doc, not edited); stray untracked empty directory apps/godspeed-casework-go/internal/sfwp/client.go/ (graft cache artifact, deletion needs approval)
 
-**Next move:** Push branch docs/egm-bootstrap-readmes; decide on drift report; merge via PR if desired.
+**Next move:** Commit drift fixes + report as follow-up commit and push; triage the 3 remaining items; optionally open PR for docs/egm-bootstrap-readmes.
 
 **Evidence:**
 
-- /tmp/egm-work (payloads lost to WSL restart; verifier reports in transcript)
+- 2026-10-30_DRIFT_REPORT.md

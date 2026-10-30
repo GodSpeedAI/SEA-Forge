@@ -24,3 +24,6 @@ live HTTP+SSE server, preflight, metrics, and the `-tags live` test harnesses. T
 - [./preflight/README.md](./preflight/README.md) - capability validation before consequential work (ready/degraded/blocking)
 - [./projection/README.md](./projection/README.md) - cognitive projection: live builder, revision stores, fixture dataset
 - [./server/README.md](./server/README.md) - the HTTP+SSE surface (live `Server` and fixture `FixtureServer`)
+- `boundary` - test-only package (`boundary_test.go`); enforces the kernel-boundary rules, no production source
+- `loadtest` - test-only package (`*_test.go`); load/budget rig, no production source
+- `sfwp` - no production source: contains only a stray empty `client.go/` directory artifact (untracked graft cache output), not a package

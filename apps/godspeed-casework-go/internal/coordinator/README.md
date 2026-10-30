@@ -11,7 +11,7 @@ refusal contract.
 
 ## Interface
 - `Coordinator` — owns the fixture intent pipeline: `New(proj, arts, opts)`, `Submit(Intent) Outcome` [coordinator.go:Coordinator]
-- `Intent` — the incoming intent (id, kind, target, parameters, cursor) [coordinator.go:Intents]
+- `Intent` — the incoming intent (id, kind, target, parameters, cursor) [coordinator.go:Intent]
 - `Outcome` — the typed result: accepted-with-lease or refused [coordinator.go:Outcome]
 - `LeaseView` — lease state projection; `Leases() []LeaseView`, `SubscribeLeases() (<-chan LeaseView, func())` [coordinator.go:LeaseView]
 - `Options` — tunable stage timing (stages 1/2, sleep hook) [coordinator.go:Options]

@@ -6,7 +6,7 @@ Storybook stories for the nine governed-UI components exported from `../index.ts
 
 ## Interface
 
-- `pillMeta: Meta<typeof GovernedStatusPill>` (default export, title `Semantic/GovernedStatusPill`) with stories `AllPillVariants` (all 13 `GovernedStatusVariant` inputs) [components.stories.tsx:AllPillVariants]
+- `pillMeta: Meta<typeof GovernedStatusPill>` (default export, title `Semantic/GovernedStatusPill`) with stories `AllPillVariants` (all 12 `GovernedStatusVariant` union members plus one out-of-union probe `"unrecognized_variant_xyz"`) [components.stories.tsx:AllPillVariants]
 - `DualStateSample: StoryObj<typeof DualStateIndicator>` [components.stories.tsx:DualStateSample]
 - `SourceFreshnessVariants: StoryObj<typeof SourceFreshnessBadge>` [components.stories.tsx:SourceFreshnessVariants]
 - `IntegrityVariants: StoryObj<typeof IntegrityIndicator>` [components.stories.tsx:IntegrityVariants]
