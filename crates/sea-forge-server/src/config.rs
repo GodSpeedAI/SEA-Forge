@@ -249,6 +249,14 @@ pub struct ServerConfig {
     pub max_concurrent_runs: usize,
     #[serde(default = "default_socket_path")]
     pub socket_path: PathBuf,
+    /// Opt-in group that may connect to the socket (a numeric gid, never root).
+    ///
+    /// Absent (the default), the socket is `0600`: only the gateway account
+    /// can connect. Set, the socket is published as `0660` with this group,
+    /// and the group is applied before the rename, so no user outside the
+    /// group can ever reach it.
+    #[serde(default)]
+    pub socket_gid: Option<u32>,
     #[serde(default)]
     pub notify_command: Option<Vec<String>>,
     #[serde(default = "default_approval_ttl")]
@@ -376,6 +384,7 @@ impl Default for ServerConfig {
         Self {
             max_concurrent_runs: default_max_concurrent(),
             socket_path: default_socket_path(),
+            socket_gid: None,
             notify_command: None,
             approval_ttl_hours: default_approval_ttl(),
             root: default_root(),
@@ -438,6 +447,7 @@ impl ServerConfig {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        validate_socket_gid(self.socket_gid)?;
         self.validate_cep_worlds()?;
         if let Some(rt) = &self.cep_authority.realitytrace {
             for (name, path) in [
@@ -626,6 +636,60 @@ pub fn pipe_admitted_sids(config: &ServerConfig) -> Vec<String> {
 #[cfg(any(windows, test))]
 pub fn reload_changes_pipe_admission(active: &ServerConfig, next: &ServerConfig) -> bool {
     pipe_admitted_sids(active) != pipe_admitted_sids(next)
+}
+
+/// Error class for a reload refused because it would change `socket_gid`. The
+/// group is applied when the socket is published, so a live reload cannot move it.
+pub const SOCKET_GID_RELOAD_REQUIRES_RESTART: &str = "socket_gid_reload_requires_restart";
+
+/// Whether reloading from `active` to `next` changes `socket_gid`. A changed
+/// group would leave the live socket with the old group, so the reload is refused.
+pub fn reload_changes_socket_gid(active: &ServerConfig, next: &ServerConfig) -> bool {
+    active.socket_gid != next.socket_gid
+}
+
+/// `socket_gid` is the group the socket is published to. Root is refused, and so is
+/// `u32::MAX`: `chown` reads that value as "leave the group unchanged", so a
+/// configured `4294967295` would silently publish the socket with no group.
+pub fn validate_socket_gid(socket_gid: Option<u32>) -> Result<(), String> {
+    match socket_gid {
+        Some(0) => Err("socket_gid must not be root (0)".into()),
+        Some(u32::MAX) => Err(
+            "socket_gid must be a real group id, not 4294967295 (chown treats that value as \"leave unchanged\")"
+                .into(),
+        ),
+        _ => Ok(()),
+    }
+}
+
+#[cfg(test)]
+mod socket_gid_tests {
+    use super::*;
+
+    #[test]
+    fn root_and_the_chown_sentinel_are_refused() {
+        assert!(validate_socket_gid(Some(0)).is_err());
+        assert!(validate_socket_gid(Some(u32::MAX)).is_err());
+        assert!(validate_socket_gid(Some(983)).is_ok());
+        assert!(validate_socket_gid(None).is_ok());
+    }
+
+    #[test]
+    fn any_change_to_the_group_is_a_restart_change() {
+        let active = ServerConfig::default();
+        let same = ServerConfig::default();
+        assert!(!reload_changes_socket_gid(&active, &same));
+        let granted = ServerConfig {
+            socket_gid: Some(983),
+            ..ServerConfig::default()
+        };
+        assert!(reload_changes_socket_gid(&active, &granted));
+        let moved = ServerConfig {
+            socket_gid: Some(984),
+            ..ServerConfig::default()
+        };
+        assert!(reload_changes_socket_gid(&granted, &moved));
+    }
 }
 
 #[cfg(test)]

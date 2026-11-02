@@ -491,6 +491,19 @@ impl ServerState {
             });
         }
 
+        // The socket's group is applied when the socket is published. A live
+        // change would leave the running socket with the old group (or none),
+        // so it is refused rather than half-applied.
+        if crate::config::reload_changes_socket_gid(&self.config(), &next) {
+            return Err(ReloadError {
+                error_class: Some(crate::config::SOCKET_GID_RELOAD_REQUIRES_RESTART),
+                message: "server.yaml changes socket_gid, which is applied when the socket is \
+                          published; restart the server to apply it. The previous configuration \
+                          stays active."
+                    .to_string(),
+            });
+        }
+
         let next = Arc::new(next);
         *self.config.write().unwrap_or_else(|e| e.into_inner()) = Arc::clone(&next);
         Ok(next)
@@ -1450,6 +1463,163 @@ pub async fn run_authenticated(
     run_inner(config, Some(connections)).await
 }
 
+/// The directories from the state root down to the socket's parent, in order.
+/// Empty when the socket is outside the state root or its path is not plain
+/// (`.` or `..` components), so no directory is marked traversable by mistake.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn socket_traverse_dirs(root: &Path, socket_path: &Path) -> Vec<PathBuf> {
+    let Some(parent) = socket_path.parent() else {
+        return Vec::new();
+    };
+    let Ok(relative) = parent.strip_prefix(root) else {
+        return Vec::new();
+    };
+    if !relative
+        .components()
+        .all(|part| matches!(part, std::path::Component::Normal(_)))
+    {
+        return Vec::new();
+    }
+    let mut dirs = vec![root.to_path_buf()];
+    let mut current = root.to_path_buf();
+    for part in relative.components() {
+        current.push(part);
+        dirs.push(current.clone());
+    }
+    dirs
+}
+
+/// Refuse a socket directory that other local users can write to, unless the sticky bit
+/// protects its entries. The socket is bound at a staging name and then chmod/chowned by
+/// that name. In a shared directory without the sticky bit, another user can swap the name
+/// between the bind and the chmod, so the refusal happens first. A directory that does not
+/// exist yet is created owner-only by the caller, so there is nothing to refuse.
+#[cfg(unix)]
+fn validate_socket_directory_not_shared(socket_path: &Path) -> Result<(), ForgeError> {
+    use std::os::unix::fs::PermissionsExt;
+    const GROUP_OR_OTHER_WRITE: u32 = 0o022;
+    const STICKY: u32 = 0o1000;
+    let parent = match socket_path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    let metadata = match std::fs::metadata(parent) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(ForgeError::io("inspect server socket directory", error)),
+    };
+    let mode = metadata.permissions().mode();
+    if mode & GROUP_OR_OTHER_WRITE != 0 && mode & STICKY == 0 {
+        return Err(ForgeError::Input(format!(
+            "refusing to publish the server socket in a directory other users can write \
+             (no sticky bit): {}",
+            parent.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Set the staging socket's group and mode before it is published (see `ServerConfig::socket_gid`).
+/// Owner-only unless a group was named. With a group, the group is applied first, so the socket is
+/// never reachable by anyone outside it.
+#[cfg(unix)]
+fn apply_socket_publication_mode(
+    path: &std::path::Path,
+    socket_gid: Option<u32>,
+) -> std::io::Result<()> {
+    use std::os::unix::fs::{chown, PermissionsExt};
+    let mode = match socket_gid {
+        None => 0o600,
+        Some(gid) => {
+            chown(path, None, Some(gid))?;
+            0o660
+        }
+    };
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+}
+
+#[cfg(all(test, unix))]
+mod socket_publication_tests {
+    use super::{
+        apply_socket_publication_mode, socket_traverse_dirs, validate_socket_directory_not_shared,
+    };
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn socket_group_reaches_the_socket_through_every_directory_on_its_path() {
+        let root = Path::new("/state/cell");
+        assert_eq!(
+            socket_traverse_dirs(root, Path::new("/state/cell/private/server.sock")),
+            vec![root.to_path_buf(), PathBuf::from("/state/cell/private")]
+        );
+        assert_eq!(
+            socket_traverse_dirs(root, Path::new("/state/cell/server.sock")),
+            vec![root.to_path_buf()]
+        );
+    }
+
+    #[test]
+    fn no_traversal_is_granted_outside_the_state_root_or_through_dot_dot() {
+        let root = Path::new("/state/cell");
+        assert!(socket_traverse_dirs(root, Path::new("/run/sea/server.sock")).is_empty());
+        assert!(
+            socket_traverse_dirs(root, Path::new("/state/cell/../other/server.sock")).is_empty()
+        );
+    }
+
+    #[test]
+    fn socket_in_a_directory_others_can_write_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let shared = dir.path().join("shared");
+        std::fs::create_dir(&shared).unwrap();
+        std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o777)).unwrap();
+        assert!(validate_socket_directory_not_shared(&shared.join("s.sock")).is_err());
+    }
+
+    #[test]
+    fn sticky_shared_directory_and_owner_only_directory_are_accepted() {
+        let dir = tempfile::tempdir().unwrap();
+        let sticky = dir.path().join("sticky");
+        std::fs::create_dir(&sticky).unwrap();
+        std::fs::set_permissions(&sticky, std::fs::Permissions::from_mode(0o1777)).unwrap();
+        assert!(validate_socket_directory_not_shared(&sticky.join("s.sock")).is_ok());
+
+        let private = dir.path().join("private");
+        std::fs::create_dir(&private).unwrap();
+        std::fs::set_permissions(&private, std::fs::Permissions::from_mode(0o711)).unwrap();
+        assert!(validate_socket_directory_not_shared(&private.join("s.sock")).is_ok());
+
+        // A directory that does not exist yet is created owner-only by the caller.
+        assert!(validate_socket_directory_not_shared(&dir.path().join("absent/s.sock")).is_ok());
+    }
+
+    #[test]
+    fn default_is_owner_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("s.binding");
+        std::fs::write(&path, b"").unwrap();
+        apply_socket_publication_mode(&path, None).unwrap();
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+
+    #[test]
+    fn named_group_gets_group_access_and_nothing_else() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("s.binding");
+        std::fs::write(&path, b"").unwrap();
+        // The test process is a member of its own primary group, so chown to that gid is allowed.
+        let own_gid = std::fs::metadata(dir.path()).unwrap().gid();
+        apply_socket_publication_mode(&path, Some(own_gid)).unwrap();
+        let meta = std::fs::metadata(&path).unwrap();
+        assert_eq!(meta.permissions().mode() & 0o777, 0o660);
+        assert_eq!(meta.gid(), own_gid);
+    }
+}
+
 async fn run_inner(
     config: ServerConfig,
     mut authenticated: Option<mpsc::Receiver<workload_connection::AuthenticatedConnection>>,
@@ -1468,18 +1638,26 @@ async fn run_inner(
     // Both locks live for the server lifetime. The root lock makes an explicit
     // socket override unable to create a second concurrent writer for one cell.
     let _cell_lock = lock_cell_root(&config.root)?;
+    let socket_gid = config.socket_gid;
     // SEC-06 independent of Landlock: everything the control plane creates
     // is owner-only, and an existing tree is remediated before use. Only the
-    // root and `runs/` stay traverse-only so isolated workloads can reach
-    // their own granted run trees by name.
+    // root, `runs/`, and (when a socket group is set) the directories on the
+    // socket's path stay traverse-only, so isolated workloads reach their run
+    // trees by name and the socket group reaches the socket.
     #[cfg(target_os = "linux")]
     {
         sea_forge_sandbox::workload::restrict_creation_mask();
-        let report = sea_forge_sandbox::workload::harden_state_tree(
-            &config.root,
-            &[config.root.clone(), config.root.join("runs")],
-        )
-        .map_err(ForgeError::from)?;
+        let mut traverse = vec![config.root.clone(), config.root.join("runs")];
+        if socket_gid.is_some() {
+            let dirs = socket_traverse_dirs(&config.root, &socket_path);
+            if let Some(parent) = dirs.last() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| ForgeError::io("create server socket directory", e))?;
+            }
+            traverse.extend(dirs);
+        }
+        let report = sea_forge_sandbox::workload::harden_state_tree(&config.root, &traverse)
+            .map_err(ForgeError::from)?;
         tracing::info!(
             directories = report.directories,
             files = report.files,
@@ -1493,6 +1671,9 @@ async fn run_inner(
             );
         }
     }
+    // After hardening, so an existing root that was group-writable is already owner-only.
+    #[cfg(unix)]
+    validate_socket_directory_not_shared(&socket_path)?;
     let _socket_lock = lock_socket_path(&socket_path)?;
     // The case-advance supervisor is opt-in (D-3): capture the startup
     // snapshot before `config` moves into the state. A config reload does
@@ -1538,10 +1719,7 @@ async fn run_inner(
         let staging_path = suffixed(&socket_path, ".binding")?;
         let _ = std::fs::remove_file(&staging_path);
         let listener = UnixListener::bind(&staging_path)?;
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
-        }
+        apply_socket_publication_mode(&staging_path, socket_gid)?;
         std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
             // Leave no orphaned staging socket behind on a failed publish.
             let _ = std::fs::remove_file(&staging_path);
