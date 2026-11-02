@@ -1,21 +1,22 @@
 # Current status
 
-**Status revision:** 182
+**Status revision:** 183
 
-**Stage:** Horizon gateway: runtime socket access (opt-in socket_gid)
+**Stage:** Horizon gateway: runtime socket access (opt-in socket_gid), review fixes
 
-**Summary:** Branch horizon/socket-group-access adds optional socket_gid to server.yaml. Unset keeps the 0600 owner-only socket. Set publishes the staging socket as 0660 with that group before the rename. Unit tests cover both modes.
+**Summary:** Addresses the four CodeRabbit threads on PR #73. socket_gid 0 and 4294967295 are refused in config validation. A reload that changes socket_gid is refused with socket_gid_reload_requires_restart. The socket directory must not be writable by others unless sticky, so the staging name cannot be swapped before the chmod/chown. With socket_gid set, directories on the socket path under the state root stay group-traversable, so the group can reach the socket.
 
 **Verified:**
-- cargo test -p sea-forge-server --lib: 168 pass
-- new socket_publication tests: 2 pass
+- cargo test -p sea-forge-server --lib: 174 pass (6 new: sentinel and root refusal, reload change, traversal chain, no traversal outside root or through .., shared-directory refusal, sticky and owner-only acceptance)
 - cargo clippy -p sea-forge-server --all-targets -D warnings: clean
-- full cargo test -p sea-forge-server: all pass except t16_8 in conformance_m16, which also fails on origin/main (pre-existing)
+- cargo fmt: applied
 
 **Limits:**
-- Not yet verified live: the Horizon gateway must run this binary with a socket_gid before the runtime can connect
-- PR not merged: merge is held until the live check passes
+- Refusal, not a private staging directory: a socket directory other users can write (without sticky) now fails startup, which a deployment on such a directory will notice
+- Traversal directories are 0711 (others may traverse, not list), matching the root's existing mode; the socket itself stays 0660 with the group
+- Not yet verified on a live gateway: redeploy is the owner's step
+- conformance_m16 t16_8 still fails on origin/main (pre-existing, needs sea-forge CLI binary)
 
-**Next:** Deploy the built binary to the Horizon gateway, check that the runtime connects, then merge the PR to main.
+**Next:** Commit, push horizon/socket-group-access, resolve the four threads on PR #73, then merge.
 
-**Recorded at:** 2026-11-02T20:19:13Z
+**Recorded at:** 2026-11-02T21:00:00Z
