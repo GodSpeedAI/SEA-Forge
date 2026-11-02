@@ -249,6 +249,14 @@ pub struct ServerConfig {
     pub max_concurrent_runs: usize,
     #[serde(default = "default_socket_path")]
     pub socket_path: PathBuf,
+    /// Opt-in group that may connect to the socket (a numeric gid, never root).
+    ///
+    /// Absent (the default), the socket is `0600`: only the gateway account
+    /// can connect. Set, the socket is published as `0660` with this group,
+    /// and the group is applied before the rename, so no user outside the
+    /// group can ever reach it.
+    #[serde(default)]
+    pub socket_gid: Option<u32>,
     #[serde(default)]
     pub notify_command: Option<Vec<String>>,
     #[serde(default = "default_approval_ttl")]
@@ -376,6 +384,7 @@ impl Default for ServerConfig {
         Self {
             max_concurrent_runs: default_max_concurrent(),
             socket_path: default_socket_path(),
+            socket_gid: None,
             notify_command: None,
             approval_ttl_hours: default_approval_ttl(),
             root: default_root(),

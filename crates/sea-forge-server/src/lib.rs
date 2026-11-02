@@ -1450,6 +1450,56 @@ pub async fn run_authenticated(
     run_inner(config, Some(connections)).await
 }
 
+/// Set the staging socket's group and mode before it is published (see `ServerConfig::socket_gid`).
+/// Owner-only unless a group was named. With a group, the group is applied first, so the socket is
+/// never reachable by anyone outside it.
+#[cfg(unix)]
+fn apply_socket_publication_mode(
+    path: &std::path::Path,
+    socket_gid: Option<u32>,
+) -> std::io::Result<()> {
+    use std::os::unix::fs::{chown, PermissionsExt};
+    let mode = match socket_gid {
+        None => 0o600,
+        Some(gid) => {
+            chown(path, None, Some(gid))?;
+            0o660
+        }
+    };
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+}
+
+#[cfg(all(test, unix))]
+mod socket_publication_tests {
+    use super::apply_socket_publication_mode;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    #[test]
+    fn default_is_owner_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("s.binding");
+        std::fs::write(&path, b"").unwrap();
+        apply_socket_publication_mode(&path, None).unwrap();
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+
+    #[test]
+    fn named_group_gets_group_access_and_nothing_else() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("s.binding");
+        std::fs::write(&path, b"").unwrap();
+        // The test process is a member of its own primary group, so chown to that gid is allowed.
+        let own_gid = std::fs::metadata(dir.path()).unwrap().gid();
+        apply_socket_publication_mode(&path, Some(own_gid)).unwrap();
+        let meta = std::fs::metadata(&path).unwrap();
+        assert_eq!(meta.permissions().mode() & 0o777, 0o660);
+        assert_eq!(meta.gid(), own_gid);
+    }
+}
+
 async fn run_inner(
     config: ServerConfig,
     mut authenticated: Option<mpsc::Receiver<workload_connection::AuthenticatedConnection>>,
@@ -1523,6 +1573,10 @@ async fn run_inner(
     // Windows: the SIDs the pipe DACL must admit, read before `config` moves.
     #[cfg(windows)]
     let pipe_bound_sids: Vec<String> = crate::config::pipe_admitted_sids(&config);
+    let socket_gid = config.socket_gid;
+    if socket_gid == Some(0) {
+        return Err("socket_gid must not be root (0)".into());
+    }
     let state = Arc::new(ServerState::new(config)?);
 
     // Bind on a staging path, restrict it to 0600, then rename into place.
@@ -1538,10 +1592,7 @@ async fn run_inner(
         let staging_path = suffixed(&socket_path, ".binding")?;
         let _ = std::fs::remove_file(&staging_path);
         let listener = UnixListener::bind(&staging_path)?;
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&staging_path, std::fs::Permissions::from_mode(0o600))?;
-        }
+        apply_socket_publication_mode(&staging_path, socket_gid)?;
         std::fs::rename(&staging_path, &socket_path).inspect_err(|_| {
             // Leave no orphaned staging socket behind on a failed publish.
             let _ = std::fs::remove_file(&staging_path);
