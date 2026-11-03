@@ -11,6 +11,7 @@
 - cep_settlement lease_and_fencing: 7 tests (live claim survives reconciliation, lease boundary at -1ms and exact, stale attempt fenced after release and reclaim, worker after reconciler, reconciler after completion, 8 concurrent reconcilers close once, two simultaneous resumes claim once); concurrent test run 12 times clean
 - cargo clippy --all-targets -D warnings on touched crates: clean
 - cargo fmt --all --check: clean
+- Merged F-A review fixes: directory-only ledger reads with a stray-file regression test; declaration_integrity is 11 tests (10 adversarial, 1 positive control)
 
 **Limits:**
 - Lease safety assumes the authority call is bounded by the descriptor timeout. Verified for the SWE_SEED command transport (deadline plus process-group kill). Other external adapters must meet the same bound.

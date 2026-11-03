@@ -2424,6 +2424,23 @@ mod declaration_integrity {
     }
 
     #[test]
+    fn a_stray_file_named_like_a_case_does_not_block_reads() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-ok"),
+        );
+        // A lock or temp file that matches the case-name prefix is not a ledger.
+        std::fs::write(root.path().join("ledgers").join("case-stray.lock"), b"x").unwrap();
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Authorized { pending_id }]
+        );
+    }
+
+    #[test]
     fn a_tampered_declaration_hash_is_an_integrity_failure_not_a_skip() {
         let root = tempfile::tempdir().unwrap();
         let (pending_id, record) = claimed(root.path());
