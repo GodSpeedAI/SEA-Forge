@@ -892,8 +892,45 @@ rules:
     assert!(!parked_entries.contains("\"record_kind\":\"settlement_declaration\""));
     // The requester cannot approve its own settlement, even with the approval rule in force.
     assert!(resolve_pending_settlement(&root, &policy_path, "operator_local").is_err());
-    // A distinct operator approves the settlement through the real resolution path; then resume completes it.
-    approve_pending_settlement(&root, &policy_path, SETTLEMENT_APPROVER);
+    // The same refusal holds through the CLI approve path, which resolves settlement approvals.
+    let settlement_pending = settlement_pending_records(&root).unwrap();
+    assert_eq!(
+        settlement_pending.len(),
+        1,
+        "one settlement awaits approval"
+    );
+    let settlement_approval = settlement_approval_id(&settlement_pending[0].pending_id);
+    let approve_args = |actor: &str| {
+        vec![
+            "approve".to_string(),
+            case_id.clone(),
+            settlement_approval.clone(),
+            "--root".to_string(),
+            root.to_str().unwrap().to_string(),
+            "--policy".to_string(),
+            policy_path.to_str().unwrap().to_string(),
+            "--actor".to_string(),
+            actor.to_string(),
+        ]
+    };
+    let requester = Command::new(&bin)
+        .args(approve_args("operator_local"))
+        .output()
+        .unwrap();
+    assert!(
+        !requester.status.success(),
+        "the requester approved its own settlement"
+    );
+    // A distinct operator approves the settlement through the CLI; then resume completes it.
+    let approved = Command::new(&bin)
+        .args(approve_args(SETTLEMENT_APPROVER))
+        .output()
+        .unwrap();
+    assert!(
+        approved.status.success(),
+        "{}",
+        String::from_utf8_lossy(&approved.stderr)
+    );
     let resumed = Command::new(&bin).args(resume_args).output().unwrap();
     assert!(
         resumed.status.success(),
