@@ -1,18 +1,19 @@
 # Current status
 
-**Status revision:** 201
+**Status revision:** 202
 
-**Stage:** Security: adversarial review F5 and F6 fixed (case-scoped verification and reconciliation)
+**Stage:** Security: adversarial review F1 fixed (capability promotion verifies external declarations)
 
-**Summary:** The declaration verifier now refuses a pending record that belongs to another case, and reconciliation settles only the claims of its own case and operation. A declaration in one case cannot complete a claim in another. F1 (capability promotion) and CLI approve remain open on this branch.
+**Summary:** Capability promotion now routes every settlement declaration through the shared verifier, verify_case_declarations. An external declaration with no approved, claimed authorisation is quarantined and cannot promote a capability. This adds the owner-approved dependency edge sea-forge-capability to sea-forge-authority. CLI approve for settlement approvals remains open.
 
 **Verified:**
-- F5/F6 red-to-green: a declaration in another case cannot complete a claim (server swe_seed_reconciliation: 14 passed)
-- Declaration verification refuses a pending record whose case differs from the declaration's case (authorization_mismatch)
-- Reconciliation settles only pending records of the same case and operation
+- F1 red-to-green: unauthorised external declaration refused at promotion (conformance_m4a: 22 passed, includes f1_unauthorised_external_declarations_are_refused_at_promotion)
+- sea-forge-capability depends on sea-forge-authority; rebuild_capability routes every declaration through verify_case_declarations (owner-approved edge)
+- just no-async-kernel: ok
 
 **Limits:**
-- F1 not yet addressed on this branch: capability promotion does not yet verify external declarations.
-- CLI approve cannot resolve settlement approvals yet (case-level only).
+- CLI approve cannot resolve settlement approvals yet (case-level only); m8 CLI tests resolve through CepAuthorityService::resolve_approval.
+- Live round-trip against a running gateway not performed; needs an owner runbook step.
+- Not pushed; no PR opened. PR body must call out the new sea-forge-capability to sea-forge-authority dependency edge.
 
-**Next:** Next: F1 capability dependency on sea-forge-authority and promotion through verify_case_declarations, then CLI approve for settlement approvals.
+**Next:** Next: CLI approve resolves settlement pending approvals through CepAuthorityService::resolve_approval, with a CLI approve-then-resume test.
