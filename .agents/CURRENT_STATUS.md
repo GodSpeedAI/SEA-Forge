@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 183
+**Status revision:** 184
 
-**Stage:** Horizon gateway: runtime socket access (opt-in socket_gid), review fixes
+**Stage:** Security: permission matrix enforced for every policy version
 
-**Summary:** Addresses the four CodeRabbit threads on PR #73. socket_gid 0 and 4294967295 are refused in config validation. A reload that changes socket_gid is refused with socket_gid_reload_requires_restart. The socket directory must not be writable by others unless sticky, so the staging name cannot be swapped before the chmod/chown. With socket_gid set, directories on the socket path under the state root stay group-traversable, so the group can reach the socket.
+**Summary:** A declared permissions matrix is always enforced. The legacy grant applies only to a 0.1 policy with no matrix (spec 8.2). Before, a 0.1 policy with a matrix granted every role every operation.
 
 **Verified:**
 - cargo test -p sea-forge-server --lib: 174 pass (6 new: sentinel and root refusal, reload change, traversal chain, no traversal outside root or through .., shared-directory refusal, sticky and owner-only acceptance)
@@ -19,4 +19,4 @@
 
 **Next:** Commit, push horizon/socket-group-access, resolve the four threads on PR #73, then merge.
 
-**Recorded at:** 2026-11-02T21:00:00Z
+**Recorded at:** 2026-11-03T00:00:00Z

@@ -470,6 +470,28 @@ pub struct PermissionGrant {
     pub operation_kind: String,
 }
 
+/// Whether `role` may perform `operation_kind` under the policy's permission matrix.
+///
+/// A declared matrix is always enforced, whatever the policy's `version`: a
+/// version-`0.1` policy that carries a matrix must not have it ignored. A
+/// version-`0.1` policy with no matrix predates RBAC and keeps the legacy grant
+/// (spec §8.2: `0.1` policies load with defaults). Any other policy with no
+/// matrix grants nothing.
+fn permission_granted(
+    version: &str,
+    permissions: &[PermissionGrant],
+    role: &str,
+    operation_kind: &str,
+) -> bool {
+    if permissions.is_empty() {
+        return version == RECORD_VERSION;
+    }
+    permissions.iter().any(|permission| {
+        permission.role == role
+            && (permission.operation_kind == "*" || permission.operation_kind == operation_kind)
+    })
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SodRule {
@@ -2436,12 +2458,12 @@ impl PolicyAuthorityEngine {
                 .as_str()
                 .unwrap_or_default()
                 .to_owned();
-            let has_permission = self.bundle.version == RECORD_VERSION
-                || self.bundle.permissions.iter().any(|permission| {
-                    permission.role == role_name
-                        && (permission.operation_kind == "*"
-                            || permission.operation_kind == rule.operation_kind)
-                });
+            let has_permission = permission_granted(
+                &self.bundle.version,
+                &self.bundle.permissions,
+                &role_name,
+                &rule.operation_kind,
+            );
             let matching_sod = matching_sod_rules(&self.bundle.sod_rules, &role_name, action);
             let sod_requires_approval = !matching_sod.is_empty();
             let effective_verdict = if !has_permission {
@@ -5375,5 +5397,101 @@ rules:
                 Path::new("/tmp/workspace"),
             )
             .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod permission_matrix_tests {
+    use super::{permission_granted, PermissionGrant, RECORD_VERSION};
+
+    fn grant(role: &str, operation_kind: &str) -> PermissionGrant {
+        PermissionGrant {
+            role: role.into(),
+            operation_kind: operation_kind.into(),
+        }
+    }
+
+    #[test]
+    fn legacy_0_1_policy_without_a_matrix_keeps_the_legacy_grant() {
+        assert!(permission_granted(
+            RECORD_VERSION,
+            &[],
+            "operator",
+            "write_file"
+        ));
+    }
+
+    #[test]
+    fn version_0_2_policy_without_a_matrix_grants_nothing() {
+        assert!(!permission_granted("0.2", &[], "operator", "write_file"));
+    }
+
+    #[test]
+    fn unknown_or_malformed_versions_without_a_matrix_grant_nothing() {
+        for version in ["0.1.0", "0.1 ", "0.10", "", "1.0"] {
+            assert!(
+                !permission_granted(version, &[], "operator", "write_file"),
+                "version {version:?}"
+            );
+        }
+    }
+
+    /// Regression: a version-0.1 policy with a matrix was granted everything.
+    #[test]
+    fn version_0_1_policy_with_a_matrix_is_enforced_not_ignored() {
+        let matrix = [grant("R-DS", "write_file")];
+        assert!(permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "R-DS",
+            "write_file"
+        ));
+        assert!(!permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "operator",
+            "write_file"
+        ));
+        assert!(!permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "R-DS",
+            "delete_file"
+        ));
+    }
+
+    #[test]
+    fn explicit_denial_is_the_default_when_the_matrix_names_no_grant() {
+        let matrix = [grant("R-DS", "read_file")];
+        assert!(!permission_granted("0.2", &matrix, "R-DS", "write_file"));
+        assert!(!permission_granted("0.2", &matrix, "R-AG", "read_file"));
+    }
+
+    #[test]
+    fn wildcard_grants_every_operation_for_that_role_only() {
+        let matrix = [grant("R-SO", "*")];
+        assert!(permission_granted(
+            "0.2",
+            &matrix,
+            "R-SO",
+            "settlement_declaration"
+        ));
+        assert!(!permission_granted(
+            "0.2",
+            &matrix,
+            "R-DS",
+            "settlement_declaration"
+        ));
+    }
+
+    #[test]
+    fn a_matrix_cannot_be_widened_by_the_version_string() {
+        let matrix = [grant("R-DS", "read_file")];
+        for version in ["0.1", "0.2", "0.3", "9.9", ""] {
+            assert!(
+                !permission_granted(version, &matrix, "operator", "read_file"),
+                "version {version:?}"
+            );
+        }
     }
 }
