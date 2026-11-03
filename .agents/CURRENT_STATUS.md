@@ -1,19 +1,20 @@
 # Current status
 
-**Status revision:** 196
+**Status revision:** 197
 
-**Stage:** Security: m8 CLI tests finish the external settlement approval step with a distinct approver
+**Stage:** Security: identical racing settlement requests re-read the winner's record on conflict
 
-**Summary:** Both conformance_m8 CLI tests pass with their original intent. An external settlement now needs approval: the m8 fixture adds an external settlement rule that requires approval, and an approval_resolution rule for an operator identity other than the requester (settlement_approver). The requester's own rules are unchanged, and the requester is refused as approver of its own settlement (asserted). The tests resolve the settlement approval through the real CEP resolution path. Before that approval, resume exits 5 with a settlement pending record and no declaration. The parks test keeps its outage check, which parks with exit 5 and declares nothing, then completes once the outage is removed.
+**Summary:** Identical racing requests for one settlement return one pending record. A conflicting commit (the loser's payload carries a different timestamp) now re-reads for the winner's record over a bounded interval (50 reads, 2 ms apart) before deciding it is absent. The race test was already green: 300 repeated runs of identical_racing_requests_yield_one_pending_id with zero failures, so its red state is the new re-read helper's tests, which failed to compile before the helper existed and pass after. The four-thread race test is unchanged.
 
 **Verified:**
-- cargo test -p sea-forge-cli --test conformance_m8_artifact -- conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records: both pass
-- cargo test -p sea-forge-cli --no-fail-fast: 89 pass, 0 fail (exit 0)
+- cargo test -p sea-forge-authority --lib race_read: 2 pass (red first: E0425 before implementation)
+- cargo test -p sea-forge-authority: 267 pass, 0 fail (cep_settlement includes identical_racing_requests_yield_one_pending_id)
+- stress: identical_racing_requests_yield_one_pending_id run 300 times, 0 failures
+- cargo test -p sea-forge-cli --test conformance_m8_artifact: both m8 CLI tests pass
 - cargo fmt --all -- --check: clean
 
 **Limits:**
-- The CLI approve command cannot resolve a settlement approval; the tests use the CEP resolution path directly, as the server does. An owner runbook for a live round-trip is still needed
-- race test not yet red-then-green (checkpoint e)
+- The race is not reproducible in-process without an injected fault; the bounded re-read is defence for a conflicting loser that reads before the winner's record is visible
 - adversarial review not done
 
-**Next:** Checkpoint e: make the racing identical-request test red, then fix the pending-record race read.
+**Next:** Run the independent adversarial review, fix material findings in this worktree, rerun the verification, and record the results.

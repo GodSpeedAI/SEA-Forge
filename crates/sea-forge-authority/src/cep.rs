@@ -2804,6 +2804,26 @@ pub fn reconcile_settlement_resume(
     settlement_status(root, pending_id)
 }
 
+/// Reads a conflicting racer makes for the record the winner wrote before it gives up.
+const RACE_READ_ATTEMPTS: u32 = 50;
+
+/// After a conflicting commit, look for the record the winner wrote. The winner's record can land a moment after
+/// the loser's conflict, so re-read for a bounded interval rather than decide the record is absent.
+fn existing_pending_after_conflict(
+    mut read: impl FnMut() -> Result<Option<SettlementPendingRecord>, CepAuthorityError>,
+    attempts: u32,
+) -> Result<Option<SettlementPendingRecord>, CepAuthorityError> {
+    for attempt in 0..attempts {
+        if let Some(existing) = read()? {
+            return Ok(Some(existing));
+        }
+        if attempt + 1 < attempts {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+    }
+    Ok(None)
+}
+
 /// Write the pending record once per canonical request. An identical request that races this one loses the
 /// typed-once commit on the payload (timestamps differ); it then returns the record the winner wrote.
 fn record_settlement_pending(
@@ -2844,7 +2864,10 @@ fn record_settlement_pending(
         vec![decision_ref.to_string()],
     ) {
         Ok(_) => Ok((record, false)),
-        Err(error) => match pending_record_in(&ledger.read_entries()?, &identity.pending_id)? {
+        Err(error) => match existing_pending_after_conflict(
+            || pending_record_in(&ledger.read_entries()?, &identity.pending_id),
+            RACE_READ_ATTEMPTS,
+        )? {
             Some(existing) => Ok((existing, true)),
             None => Err(error.into()),
         },
@@ -3031,4 +3054,64 @@ fn decision_envelope(
         out["constraints"] = Value::Array(constraints);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod race_read_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    fn record(pending_id: &str) -> SettlementPendingRecord {
+        SettlementPendingRecord {
+            pending_id: pending_id.into(),
+            request_sha256: "a".repeat(64),
+            operation_id: "run_a".into(),
+            operation_kind: SETTLEMENT_SURFACE.into(),
+            settlement_authority_class: "external".into(),
+            ingress: "swe_seed_declaration".into(),
+            actor_id: "cognate-service".into(),
+            actor_role: "service".into(),
+            identity_binding_hash: None,
+            evidence_refs: vec![],
+            approval_requirement: SETTLEMENT_APPROVAL_REQUIREMENT.into(),
+            decision_ref: "dec_a".into(),
+            created_at: "2026-11-03T00:00:00Z".into(),
+            expires_at: "2026-11-04T00:00:00Z".into(),
+        }
+    }
+
+    /// A conflicting racer can look before the winner's record is visible. Its re-read must find the record once
+    /// it lands, rather than deciding the record is absent.
+    #[test]
+    fn conflict_reread_finds_the_winners_record_once_it_is_visible() {
+        let reads = Cell::new(0);
+        let found = existing_pending_after_conflict(
+            || {
+                reads.set(reads.get() + 1);
+                Ok((reads.get() >= 3).then(|| record("settlement-pending-x")))
+            },
+            RACE_READ_ATTEMPTS,
+        )
+        .unwrap();
+        assert_eq!(
+            found.map(|r| r.pending_id),
+            Some("settlement-pending-x".into())
+        );
+        assert_eq!(reads.get(), 3);
+    }
+
+    #[test]
+    fn conflict_reread_gives_up_after_a_bounded_number_of_reads() {
+        let reads = Cell::new(0);
+        let found = existing_pending_after_conflict(
+            || {
+                reads.set(reads.get() + 1);
+                Ok(None)
+            },
+            RACE_READ_ATTEMPTS,
+        )
+        .unwrap();
+        assert!(found.is_none());
+        assert_eq!(reads.get(), RACE_READ_ATTEMPTS);
+    }
 }
