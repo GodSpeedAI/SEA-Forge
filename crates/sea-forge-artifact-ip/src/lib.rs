@@ -1013,6 +1013,8 @@ pub fn resume_pending_transition(
             source_evidence_refs: evidence_refs.clone(),
             authored_by: None,
         };
+        // The caller decides the class: the only caller, `resume` in sea-forge-cli, passes the SWE_SEED
+        // authority and must gate it as `External` (`authorize_settlement_declaration`) before calling here.
         let declaration = authority.declare(&request)?;
         append_declaration_ledgered_once(
             root,

@@ -1341,40 +1341,27 @@ fn matching_swe_seed_declaration(
     decl
 }
 
-/// Task 18, trigger 1: the server's own production ingress
-/// (`delegation::submit_swe_seed_declaration`) declares against the real
-/// configured `CommandSweSeedTransport` immediately after settlement, and
-/// the declaration correlates in the same call — no separate reconciliation
-/// step is needed for the ordinary path.
+/// Task 18, trigger 1 under the settlement gate: the server's ingress
+/// (`delegation::submit_swe_seed_declaration`) is an external declarer, so it
+/// must pass the `settlement_declaration` gate before `declare()`. This policy
+/// has no external rule, so the gate refuses, the SWE_SEED transport is never
+/// reached, and no declaration is recorded. The settlement itself is unaffected.
 #[tokio::test]
-async fn t16_8_server_owned_swe_seed_declaration_correlates_immediately() {
+async fn t16_8_server_owned_swe_seed_declaration_is_refused_without_an_external_gate() {
     let root = tempfile::tempdir().unwrap();
     write_policy_with_swe_seed_authority(root.path());
     let config = server_config(root.path(), "read", "swe_seed");
     let case = case_id().unwrap();
-    let (run, result) = execute_fixture(&config, &case).await;
+    let (_run, result) = execute_fixture(&config, &case).await;
     assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
 
     let records = entries(root.path(), &case);
-    let declaration = records
-        .iter()
-        .find(|entry| entry.record_kind == "settlement_declaration")
-        .unwrap_or_else(|| panic!("no settlement_declaration record; records: {records:#?}"));
-    assert_eq!(declaration.payload["run_id"], run);
-    assert_eq!(declaration.payload["status"], "accepted");
-    let declaration_id = declaration.payload["declaration_id"].as_str().unwrap();
-
-    let correlation = find_run_field(&records, "swe_seed_correlation", &run);
-    assert_eq!(
-        correlation["declaration_ids"],
-        json!([declaration_id]),
-        "immediate correlation must name the just-declared id"
+    assert!(
+        records
+            .iter()
+            .all(|entry| entry.record_kind != "settlement_declaration"),
+        "no external declaration may be recorded without a gate decision; records: {records:#?}"
     );
-
-    let completion =
-        swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
-    assert!(completion.harvested);
-    assert_eq!(completion.declaration_ids, vec![declaration_id.to_string()]);
 }
 
 /// Task 18, trigger 2 (startup): a declaration appended directly through

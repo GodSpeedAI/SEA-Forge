@@ -1489,8 +1489,8 @@ fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<Allo
 }
 
 impl CepAuthorityService<'_> {
-    /// Evaluate a governed surface (`evidence_mutation`, `settlement_declaration`) for `caller`. A refusal is
-    /// committed (it is governance-relevant) and returned as an error.
+    /// Evaluate the `evidence_mutation` surface for `caller`. A refusal is committed (it is governance-relevant)
+    /// and returned as an error.
     fn gate(
         &self,
         ledger: &LedgerStream,
@@ -1498,45 +1498,38 @@ impl CepAuthorityService<'_> {
         operation_id: &str,
         caller: &Actor,
     ) -> Result<(), CepAuthorityError> {
-        let action = AuthorityAction::Reserved {
-            resource_type: surface.to_string(),
-            resource_id: operation_id.to_string(),
-            parameters: json!({ "operation_id": operation_id, "surface": surface }),
-        };
-        let binding = self
-            .bundle
-            .resolve_identity(&caller.actor_id, caller.role.clone());
-        let decision = self.engine.evaluate(AuthorityEvaluation {
-            actor: caller,
-            binding,
-            run_id: operation_id,
-            case_id: "cognate",
-            plan_item_id: operation_id,
-            sequence: 1,
-            action: &action,
-            workspace_root: self.root,
-            evidence_refs: vec![format!("operation:{operation_id}")],
-            artifacts_root: None,
-            timeout_secs: None,
-            env_keys: Default::default(),
-            opa_candidate: None,
-            environment: None,
-        })?;
-        // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it
-        // is committed plainly rather than under an idempotency key.
-        ledger.commit_typed(
-            "authority_decision",
-            vec!["cognate".into(), operation_id.to_string()],
-            &decision,
-            vec![],
-        )?;
-        if decision.verdict != Verdict::Allow {
-            return Err(CepAuthorityError::Evidence(format!(
-                "{} may not use {surface} for {operation_id}: {}",
-                caller.actor_id, decision.reason
-            )));
-        }
-        Ok(())
+        let parameters = json!({ "operation_id": operation_id, "surface": surface });
+        commit_gate_decision(
+            self.engine,
+            self.bundle,
+            self.root,
+            ledger,
+            surface,
+            parameters,
+            operation_id,
+            caller,
+        )
+    }
+
+    /// The gate for a settlement declaration. `class` is the caller's own classification (see
+    /// [`SettlementAuthorityClass`]); it is never read from the declaration record.
+    fn gate_settlement_declaration(
+        &self,
+        ledger: &LedgerStream,
+        operation_id: &str,
+        class: SettlementAuthorityClass,
+        caller: &Actor,
+    ) -> Result<(), CepAuthorityError> {
+        commit_gate_decision(
+            self.engine,
+            self.bundle,
+            self.root,
+            ledger,
+            "settlement_declaration",
+            settlement_parameters(operation_id, class),
+            operation_id,
+            caller,
+        )
     }
 
     /// Accept a RealityTrace-derived `evidence_packet` for an operation SEA-Forge allowed. Evidence is recorded;
@@ -1725,7 +1718,14 @@ impl CepAuthorityService<'_> {
                 "no {what} has been submitted for {operation_id}; an execution alone cannot be settled"
             )));
         }
-        self.gate(&ledger, "settlement_declaration", operation_id, caller)?;
+        // Local: CEP settlement is SEA-Forge's own judgement over the evidence (no SettlementAuthority or
+        // SWE_SEED transport is invoked on this path; the record is attributed to `caller`).
+        self.gate_settlement_declaration(
+            &ledger,
+            operation_id,
+            SettlementAuthorityClass::Local,
+            caller,
+        )?;
 
         let mut items: Vec<EvidenceItem> = Vec::new();
         let mut questions: Vec<Value> = Vec::new();
@@ -1965,6 +1965,120 @@ struct ApprovalNote {
     approved_by: Option<String>,
     consumed: bool,
     lineage: Vec<String>,
+}
+
+/// Who is attesting a settlement declaration. Each caller passes this from its own code path; it is never
+/// derived from the declaration record. Parsed strictly: only the two exact spellings are accepted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettlementAuthorityClass {
+    /// Declared by an authority outside this process (the SWE_SEED transport). Escalates under a gated rule.
+    External,
+    /// Settled by SEA-Forge's own in-process judgement, with no external declarer.
+    Local,
+}
+
+impl SettlementAuthorityClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::External => "external",
+            Self::Local => "local",
+        }
+    }
+
+    pub fn parse(value: &str) -> Result<Self, CepAuthorityError> {
+        match value {
+            "external" => Ok(Self::External),
+            "local" => Ok(Self::Local),
+            _ => Err(CepAuthorityError::Malformed(
+                "settlement authority class must be external or local",
+            )),
+        }
+    }
+}
+
+fn settlement_parameters(operation_id: &str, class: SettlementAuthorityClass) -> Value {
+    json!({
+        "operation_id": operation_id,
+        "surface": "settlement_declaration",
+        "settlement_authority_class": class.as_str(),
+    })
+}
+
+/// Evaluate a governed surface against the policy and commit the decision. A refusal is an error and the
+/// caller must not proceed. Shared by the CEP settlement callers and every SWE_SEED declaration path, so
+/// no path reaches `declare()` without this decision.
+#[allow(clippy::too_many_arguments)]
+fn commit_gate_decision(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
+    root: &Path,
+    ledger: &LedgerStream,
+    surface: &str,
+    parameters: Value,
+    operation_id: &str,
+    caller: &Actor,
+) -> Result<(), CepAuthorityError> {
+    let action = AuthorityAction::Reserved {
+        resource_type: surface.to_string(),
+        resource_id: operation_id.to_string(),
+        parameters,
+    };
+    let binding = bundle.resolve_identity(&caller.actor_id, caller.role.clone());
+    let decision = engine.evaluate(AuthorityEvaluation {
+        actor: caller,
+        binding,
+        run_id: operation_id,
+        case_id: "cognate",
+        plan_item_id: operation_id,
+        sequence: 1,
+        action: &action,
+        workspace_root: root,
+        evidence_refs: vec![format!("operation:{operation_id}")],
+        artifacts_root: None,
+        timeout_secs: None,
+        env_keys: Default::default(),
+        opa_candidate: None,
+        environment: None,
+    })?;
+    // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it
+    // is committed plainly rather than under an idempotency key.
+    ledger.commit_typed(
+        "authority_decision",
+        vec!["cognate".into(), operation_id.to_string()],
+        &decision,
+        vec![],
+    )?;
+    if decision.verdict != Verdict::Allow {
+        return Err(CepAuthorityError::Evidence(format!(
+            "{} may not use {surface} for {operation_id}: {}",
+            caller.actor_id, decision.reason
+        )));
+    }
+    Ok(())
+}
+
+/// Gate a settlement declaration for `caller` with an explicit classification, from any code path that is
+/// about to call `declare()`. Refuses (and commits the refusal) unless the policy allows that class for this
+/// caller. Callers must not call `declare()` when this returns an error.
+pub fn authorize_settlement_declaration(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
+    root: &Path,
+    operation_id: &str,
+    class: SettlementAuthorityClass,
+    caller: &Actor,
+) -> Result<(), CepAuthorityError> {
+    let ledger = LedgerStream::open(root, LEDGER_ID, "sea-forge-cep-authority")?;
+    commit_gate_decision(
+        engine,
+        bundle,
+        root,
+        &ledger,
+        "settlement_declaration",
+        settlement_parameters(operation_id, class),
+        operation_id,
+        caller,
+    )
 }
 
 /// The CEP disposition a committed decision expresses.

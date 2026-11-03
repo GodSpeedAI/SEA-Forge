@@ -1,16 +1,17 @@
 # Current status
 
-**Status revision:** 188
+**Status revision:** 189
 
-**Stage:** Security: Dependabot alert 5 closed (go-jose/v4)
+**Stage:** Security: explicit settlement authority class WIP checkpoint (not complete)
 
-**Summary:** go-jose/v4 is bumped from v4.1.4 to v4.1.6 in the Casework Go module, which fixes Dependabot alert 5 (high, DoS when parsing JWKs that contain RSA keys, affects <= 4.1.5).
+**Summary:** Checkpoint of the in-progress settlement authority class work: a settlement_authority_class boundary on settlement_declaration rules and an authorize_settlement_declaration gate wired into the SWE_SEED delegation and CLI resume paths. The approval-resume lifecycle and reconciliation enforcement are not yet implemented, so the security model change is incomplete on this branch.
 
 **Verified:**
-- go build ./... in apps/godspeed-casework-go: pass
-- go test ./... in apps/godspeed-casework-go: pass
+- cargo check -p sea-forge-authority -p sea-forge-artifact-ip -p sea-forge-server -p sea-forge-cli --all-targets: pass
 
 **Limits:**
-- Other Dependabot alerts on the default branch not reviewed in this revision
+- No tests run on this checkpoint
+- Approval resume lifecycle and reconciliation bypass closure not implemented
+- CLI conformance tests conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 and conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records still failing
 
-**Next:** Continue with the settlement approval gate spec amendment.
+**Next:** Validate the settlement authority classification against the actual operation, then implement the durable pending state and resume state machine.

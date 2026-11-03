@@ -841,6 +841,10 @@ pub async fn execute_with_permission_broker(
             evidence_ref.entry_ulid(),
             &settlement.settlement_id,
             &execution_started_at,
+            &Actor {
+                actor_id: request.entity.into(),
+                role: request.actor_role.clone(),
+            },
         )
         .await
         {
@@ -888,6 +892,7 @@ async fn submit_swe_seed_declaration(
     evidence_entry_ulid: &str,
     settlement_id: &str,
     execution_started_at: &str,
+    caller: &Actor,
 ) -> Result<(), ForgeError> {
     let policy = resolve_policy_path(root, policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
@@ -901,6 +906,18 @@ async fn submit_swe_seed_declaration(
             path: policy.clone(),
             message: "strong settlement authority declares no permitted role".into(),
         })?;
+    // The SWE_SEED transport is an external declarer, so this declaration must pass the settlement gate
+    // (fail closed) before anything is sent to it. A refusal is committed by the gate and returned here.
+    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+    sea_forge_authority::cep::authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        run,
+        sea_forge_authority::cep::SettlementAuthorityClass::External,
+        caller,
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
 
     let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
         case,

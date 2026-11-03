@@ -1420,9 +1420,33 @@ impl AuthorityPolicyBundle {
                         | "db_resource"
                         | "db_scope"
                         | "permitted_exposure"
+                        | "settlement_authority_class"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
+            }
+            if let Some(classes) = rule.boundary_constraints.get("settlement_authority_class") {
+                // Only a settlement_declaration rule can name a class, and only the two known classes.
+                if rule.operation_kind != "settlement_declaration"
+                    || classes.is_empty()
+                    || classes
+                        .iter()
+                        .any(|class| !matches!(class.as_str(), "external" | "local"))
+                {
+                    return Err(schema(
+                        "settlement_authority_class applies only to settlement_declaration and names external or local"
+                            .into(),
+                    ));
+                }
+                // An external settlement is never allowed outright: it must escalate for approval.
+                if classes.iter().any(|class| class == "external")
+                    && rule.verdict == Verdict::Allow
+                    && rule.requires_approval != Some(true)
+                {
+                    return Err(schema(
+                        "external settlement_declaration requires approval".into(),
+                    ));
+                }
             }
             if rule.operation_kind == "transition_artifact_stage" {
                 let transition = rule.transition_kind.as_deref();
@@ -2959,6 +2983,9 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     "approval_resolution" => {
                         matches_approval_resolution_parameters(parameters, actor)
                     }
+                    "settlement_declaration" => {
+                        matches_settlement_authority_class(rule, parameters)
+                    }
                     "recall_memory" => matches_memory_scope(rule, parameters),
                     "cognate_action" | "cognate_capability" => {
                         rule.subjects.as_ref().is_none_or(|allowed| {
@@ -3029,6 +3056,23 @@ fn exposure_permitted(rule: &PolicyRule, parameters: &Value) -> bool {
 
 fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {
     parameters.get(name).and_then(Value::as_str)
+}
+
+/// A settlement_declaration action matches only when it carries a known class (fail closed: a missing or
+/// unknown class matches nothing). A rule without a class boundary reaches only `local` declarations; an
+/// `external` declaration needs a rule that names `external` explicitly.
+fn matches_settlement_authority_class(rule: &PolicyRule, parameters: &Value) -> bool {
+    match parameter_str(parameters, "settlement_authority_class") {
+        Some("local") => rule
+            .boundary_constraints
+            .get("settlement_authority_class")
+            .is_none_or(|allowed| allowed.iter().any(|class| class == "local")),
+        Some("external") => rule
+            .boundary_constraints
+            .get("settlement_authority_class")
+            .is_some_and(|allowed| allowed.iter().any(|class| class == "external")),
+        _ => false,
+    }
 }
 
 /// Check if a `memory_scope` rule value allows recalling the target entity.

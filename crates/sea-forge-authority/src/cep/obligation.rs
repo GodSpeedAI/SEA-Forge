@@ -27,7 +27,8 @@
 
 use super::{
     allowed_operation, committed_ref, settlement_status_of, Actor, CepAuthorityError,
-    CepAuthorityService, SettlementOutcome, PROFILE_VERSION, SETTLE_SUFFIX_FINAL,
+    CepAuthorityService, SettlementAuthorityClass, SettlementOutcome, PROFILE_VERSION,
+    SETTLE_SUFFIX_FINAL,
 };
 use chrono::{DateTime, Duration, Utc};
 use serde_json::{json, Map, Value};
@@ -356,7 +357,14 @@ impl CepAuthorityService<'_> {
                 "the window is still open; a closure is recorded once it closes".into(),
             ));
         }
-        self.gate(&ledger, "settlement_declaration", operation_id, caller)?;
+        // Local: obligation settlement is SEA-Forge's own judgement over RealityTrace's ledger; no external
+        // declarer is invoked on this path.
+        self.gate_settlement_declaration(
+            &ledger,
+            operation_id,
+            SettlementAuthorityClass::Local,
+            caller,
+        )?;
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {
@@ -437,7 +445,14 @@ impl CepAuthorityService<'_> {
                 "the closure has not been recorded yet; settlement is pending".into(),
             ));
         }
-        self.gate(&ledger, "settlement_declaration", operation_id, caller)?;
+        // Local: obligation settlement is SEA-Forge's own judgement over RealityTrace's ledger; no external
+        // declarer is invoked on this path.
+        self.gate_settlement_declaration(
+            &ledger,
+            operation_id,
+            SettlementAuthorityClass::Local,
+            caller,
+        )?;
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {

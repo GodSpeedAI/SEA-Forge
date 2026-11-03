@@ -1,9 +1,12 @@
 //! Stage 8, SEA-Forge half: evidence is recorded against an operation SEA-Forge allowed and settles nothing;
 //! settlement is SEA-Forge's own, judged against criteria bound into the allow decision.
 
-use sea_forge_authority::cep::{CepAuthorityError, CepAuthorityService, SettlementCriteria};
-use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_core::types::{Actor, ActorRole};
+use sea_forge_authority::cep::{
+    authorize_settlement_declaration, CepAuthorityError, CepAuthorityService,
+    SettlementAuthorityClass, SettlementCriteria,
+};
+use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, Verdict};
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -892,4 +895,136 @@ fn a_recorded_item_without_a_direction_cannot_be_corroborated() {
     )
     .unwrap_err();
     assert!(err.to_string().contains("has no direction"), "{err}");
+}
+
+// ---- Settlement authority class: the gate every settlement_declaration caller passes ----------------
+
+const SETTLE_OP: &str = "op-settle-class";
+
+/// An external declaration is gated: the rule names `external` and escalates for approval.
+const EXTERNAL_GATED: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n";
+/// A rule with no class boundary: reaches local declarations only.
+const UNCONSTRAINED: &str = "version: \"0.1\"\nrules:\n  - name: settle\n    verdict: allow\n    actor_role: service\n    operation_kind: settlement_declaration\n";
+
+fn class_policy_engine(policy_yaml: &str) -> (AuthorityPolicyBundle, PolicyAuthorityEngine) {
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(policy_yaml).unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    (bundle, engine)
+}
+
+/// Run the real gate entry point the SWE_SEED paths call, against a fresh ledger.
+fn authorize(policy_yaml: &str, class: SettlementAuthorityClass) -> Result<(), CepAuthorityError> {
+    let root = tempfile::tempdir().unwrap();
+    let (bundle, engine) = class_policy_engine(policy_yaml);
+    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, class, &svc())
+}
+
+/// Evaluate a raw `settlement_declaration` Reserved action, so the parameters themselves are under test.
+fn raw_verdict(policy_yaml: &str, parameters: Value) -> Verdict {
+    let root = tempfile::tempdir().unwrap();
+    let (bundle, engine) = class_policy_engine(policy_yaml);
+    let action = AuthorityAction::Reserved {
+        resource_type: "settlement_declaration".into(),
+        resource_id: SETTLE_OP.into(),
+        parameters,
+    };
+    let actor = svc();
+    let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
+    engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: SETTLE_OP,
+            case_id: "cognate",
+            plan_item_id: SETTLE_OP,
+            sequence: 1,
+            action: &action,
+            workspace_root: root.path(),
+            evidence_refs: vec![],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            opa_candidate: None,
+            environment: None,
+        })
+        .unwrap()
+        .verdict
+}
+
+fn class_params(class: &str) -> Value {
+    json!({
+        "operation_id": SETTLE_OP,
+        "surface": "settlement_declaration",
+        "settlement_authority_class": class,
+    })
+}
+
+#[test]
+fn an_external_settlement_declaration_escalates_under_its_gated_rule() {
+    let err = authorize(EXTERNAL_GATED, SettlementAuthorityClass::External).unwrap_err();
+    assert!(
+        matches!(&err, CepAuthorityError::Evidence(m) if m.contains("may not use settlement_declaration")),
+        "{err:?}"
+    );
+    assert_eq!(
+        raw_verdict(EXTERNAL_GATED, class_params("external")),
+        Verdict::Escalate
+    );
+}
+
+#[test]
+fn a_local_settlement_declaration_is_allowed_by_an_unconstrained_rule() {
+    authorize(UNCONSTRAINED, SettlementAuthorityClass::Local).unwrap();
+    assert_eq!(
+        raw_verdict(UNCONSTRAINED, class_params("local")),
+        Verdict::Allow
+    );
+}
+
+#[test]
+fn an_external_settlement_declaration_is_not_reached_by_an_unconstrained_allow_rule() {
+    // Fail closed: a plain allow never covers an external declarer.
+    assert!(authorize(UNCONSTRAINED, SettlementAuthorityClass::External).is_err());
+    assert_ne!(
+        raw_verdict(UNCONSTRAINED, class_params("external")),
+        Verdict::Allow
+    );
+}
+
+#[test]
+fn a_missing_or_unknown_settlement_authority_class_fails_closed_not_allow() {
+    // Missing class on the Reserved action: no rule matches, so the verdict is never Allow.
+    let missing = json!({"operation_id": SETTLE_OP, "surface": "settlement_declaration"});
+    assert_ne!(raw_verdict(UNCONSTRAINED, missing.clone()), Verdict::Allow);
+    assert_ne!(raw_verdict(EXTERNAL_GATED, missing), Verdict::Allow);
+    // Unknown and miscased values are refused too.
+    for unknown in ["internal", "External", "LOCAL", "", "local "] {
+        assert_ne!(
+            raw_verdict(UNCONSTRAINED, class_params(unknown)),
+            Verdict::Allow,
+            "class {unknown:?} must not be allowed"
+        );
+        assert!(
+            SettlementAuthorityClass::parse(unknown).is_err(),
+            "class {unknown:?} must not parse"
+        );
+    }
+    assert_eq!(
+        SettlementAuthorityClass::parse("external").unwrap(),
+        SettlementAuthorityClass::External
+    );
+}
+
+#[test]
+fn an_external_class_rule_that_is_a_plain_allow_is_refused_at_policy_load() {
+    let plain = "version: \"0.1\"\nrules:\n  - name: ext\n    verdict: allow\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n";
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(plain).unwrap();
+    assert!(PolicyAuthorityEngine::new(bundle).is_err());
+}
+
+#[test]
+fn a_settlement_authority_class_names_only_settlement_declarations() {
+    let elsewhere = "version: \"0.1\"\nrules:\n  - name: ext\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: cognate_action\n    boundary_constraints:\n      settlement_authority_class: [external]\n";
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(elsewhere).unwrap();
+    assert!(PolicyAuthorityEngine::new(bundle).is_err());
 }
