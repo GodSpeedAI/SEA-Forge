@@ -863,7 +863,7 @@ pub fn load_completed_transition(
         root,
         std::slice::from_ref(&declaration),
     )
-    .map_err(|error| m8_error("settlement_integrity_error", &error.to_string()))?;
+    .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
     if !matches!(
         verdict.first(),
         Some(
@@ -909,7 +909,6 @@ pub fn load_completed_transition(
     }))
 }
 
-#[allow(clippy::too_many_arguments)]
 /// The settlement pending record a declaration is made under: the gate's claim, bound to the request it approved.
 #[derive(Debug, Clone, Copy)]
 pub struct PendingAuthorization<'a> {
@@ -917,6 +916,7 @@ pub struct PendingAuthorization<'a> {
     pub request_sha256: &'a str,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn resume_pending_transition(
     root: &Path,
     actor: &str,
@@ -1019,7 +1019,7 @@ pub fn resume_pending_transition(
             root,
             std::slice::from_ref(&existing),
         )
-        .map_err(|error| m8_error("settlement_integrity_error", &error.to_string()))?;
+        .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
         if !matches!(
             verdict.first(),
             Some(

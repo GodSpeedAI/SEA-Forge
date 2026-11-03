@@ -1,20 +1,23 @@
 # Current status
 
-**Status revision:** 197
+**Status revision:** 198
 
-**Stage:** Security: identical racing settlement requests re-read the winner's record on conflict
+**Stage:** Security: post-review fixes for quarantine class mismatch, thoth view filter, and clippy
 
-**Summary:** Identical racing requests for one settlement return one pending record. A conflicting commit (the loser's payload carries a different timestamp) now re-reads for the winner's record over a bounded interval (50 reads, 2 ms apart) before deciding it is absent. The race test was already green: 300 repeated runs of identical_racing_requests_yield_one_pending_id with zero failures, so its red state is the new re-read helper's tests, which failed to compile before the helper existed and pass after. The four-thread race test is unchanged.
+**Summary:** Post-review fix pass. An External-classed declaration relabelled as Local is now quarantined (ClassMismatch) rather than correlated. The thoth capability view filters settlement/declarations.jsonl through verify_case_declarations. Clippy -D warnings is clean across the workspace (artifact-ip error borrows removed, resume_pending_transition marked too_many_arguments). Full server and CLI suites: 646 pass, 0 fail.
 
 **Verified:**
-- cargo test -p sea-forge-authority --lib race_read: 2 pass (red first: E0425 before implementation)
-- cargo test -p sea-forge-authority: 267 pass, 0 fail (cep_settlement includes identical_racing_requests_yield_one_pending_id)
-- stress: identical_racing_requests_yield_one_pending_id run 300 times, 0 failures
-- cargo test -p sea-forge-cli --test conformance_m8_artifact: both m8 CLI tests pass
+- cargo clippy --all-targets -- -D warnings: exit 0 (workspace)
 - cargo fmt --all -- --check: clean
+- cargo test -p sea-forge-authority: all suites pass
+- cargo test -p sea-forge-server -p sea-forge-cli --no-fail-fast: 646 passed, 0 failed
+- earlier: authority+thoth+artifact-ip+settlement+capability 427 pass
 
 **Limits:**
-- The race is not reproducible in-process without an injected fault; the bounded re-read is defence for a conflicting loser that reads before the winner's record is visible
-- adversarial review not done
+- Adversarial review findings F2, F3, F5, F6 not fixed: need case_id binding in the canonical hash, content-hash binding at claim time, authority-ledger-wide scope.
+- Capability-side F1 only partly fixed (thoth view filtered; capability build still needs sea-forge-capability to depend on sea-forge-authority, which AGENTS.md says to ask about first).
+- CLI approve cannot resolve settlement approvals (case-level only); m8 tests resolve through CepAuthorityService::resolve_approval.
+- Live round-trip against a running gateway not performed; needs an owner runbook step.
+- Not pushed; no PR opened.
 
-**Next:** Run the independent adversarial review, fix material findings in this worktree, rerun the verification, and record the results.
+**Next:** Owner decision on F2/F3/F5/F6 scope and the capability dependency; then CLI approve support for settlement approvals, live round-trip, and PR creation.

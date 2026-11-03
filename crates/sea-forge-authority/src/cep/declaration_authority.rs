@@ -33,6 +33,8 @@ pub enum DeclarationRefusal {
     AuthorizationSuperseded,
     /// Several declarations in the case name the same pending record before it is completed.
     AuthorizationReused,
+    /// A declaration presents as local, but its run has an external settlement pending record.
+    ClassMismatch,
 }
 
 impl DeclarationRefusal {
@@ -49,6 +51,7 @@ impl DeclarationRefusal {
             Self::AuthorizationFailed => "authorization_failed",
             Self::AuthorizationSuperseded => "authorization_superseded",
             Self::AuthorizationReused => "authorization_reused",
+            Self::ClassMismatch => "class_mismatch",
         }
     }
 }
@@ -97,7 +100,23 @@ fn verify_one(
 ) -> DeclarationAuthorization {
     use DeclarationRefusal as R;
     if !declaration.is_external() {
-        return DeclarationAuthorization::Local;
+        // A declaration cannot shed its external class by clearing its provenance. If its run has an external
+        // settlement pending record, the relabelled declaration is refused.
+        let external_gated = entries.iter().any(|entry| {
+            entry.record_kind == SETTLEMENT_PENDING_KIND
+                && entry.payload.get("operation_id").and_then(Value::as_str)
+                    == Some(declaration.run_id.as_str())
+                && entry
+                    .payload
+                    .get("settlement_authority_class")
+                    .and_then(Value::as_str)
+                    == Some("external")
+        });
+        return if external_gated {
+            DeclarationAuthorization::Quarantined(R::ClassMismatch)
+        } else {
+            DeclarationAuthorization::Local
+        };
     }
     let quarantine = DeclarationAuthorization::Quarantined;
     let (pending_id, request_sha256) = match (

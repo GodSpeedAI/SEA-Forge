@@ -809,6 +809,34 @@ mod tests {
     }
 
     #[test]
+    fn an_external_declaration_relabelled_local_is_quarantined() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // An external settlement is pending for the run.
+        claim_approved(root.path(), "run_a");
+        // A declaration for the same run, presented as local, appended out of process.
+        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
+        out_of_process_append(root.path(), &decl);
+
+        reconcile_all_cases(root.path()).unwrap();
+
+        let found = quarantines(root.path(), "case_a");
+        assert!(
+            found
+                .iter()
+                .any(|q| q["declaration_id"] == json!(decl.declaration_id)
+                    && q["reason"] == json!("class_mismatch")),
+            "{found:?}"
+        );
+    }
+
+    #[test]
     fn mismatched_run_never_correlates() {
         let root = tempfile::tempdir().unwrap();
         let manifest = commit_evidence_and_settlement(
