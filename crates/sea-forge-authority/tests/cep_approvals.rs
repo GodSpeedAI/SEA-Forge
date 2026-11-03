@@ -1,10 +1,11 @@
 //! Stage 7, SEA-Forge half: an escalation becomes an approval that is bound to one operation, single-use,
 //! expiring, resolved only by an actor policy allows, and revalidated against current policy on use.
 
-use sea_forge_authority::cep::{CepAuthorityError, CepAuthorityService, CepDecision};
+use sea_forge_authority::cep::{CepAuthorityError, CepAuthorityService, CepDecision, LEDGER_ID};
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{Actor, ActorRole};
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
+use sea_forge_ledger::LedgerStream;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -275,6 +276,16 @@ fn self_resolution_is_refused_before_policy_even_when_policy_allows_the_role() {
             .as_str(),
         "pending"
     );
+    // The attempt is audited: the refusal is a ledger record that references the escalation.
+    let refusals: Vec<_> = LedgerStream::open(c.root.path(), LEDGER_ID, "audit-reader")
+        .unwrap()
+        .read_entries()
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.record_kind == "approval_self_resolution_refused")
+        .collect();
+    assert_eq!(refusals.len(), 1);
+    assert!(refusals[0].subject_refs.iter().any(|r| r == &id));
 }
 
 #[test]
