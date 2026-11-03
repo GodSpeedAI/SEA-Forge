@@ -857,6 +857,25 @@ pub fn load_completed_transition(
             )
         })
         .and_then(|entry| serde_json::from_value(entry.payload.clone()).map_err(Into::into))?;
+    // A completed transition is trusted only through its verified authorisation: the same shared verification the
+    // reconcilers use. An external declaration without one is not a completed settlement.
+    let verdict = sea_forge_authority::cep::verify_case_declarations(
+        root,
+        std::slice::from_ref(&declaration),
+    )
+    .map_err(|error| m8_error("settlement_integrity_error", &error.to_string()))?;
+    if !matches!(
+        verdict.first(),
+        Some(
+            sea_forge_authority::cep::DeclarationAuthorization::Local
+                | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. }
+        )
+    ) {
+        return Err(m8_error(
+            "settlement_integrity_error",
+            "completed declaration is not authorised by a verified settlement record",
+        ));
+    }
     if declaration.case_id != terminal.case_id
         || declaration.run_id != terminal.run_id
         || declaration.claim_manifest_sha256 != manifest.claim_manifest_hash

@@ -1060,6 +1060,15 @@ pub struct SettlementDeclaration {
     /// `declare()` still fail this re-check.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authored_by: Option<String>,
+    /// Authorisation provenance: the settlement pending record (`settlement_pending` in the authority ledger)
+    /// this declaration was made under. Required for an external declaration; absent on local and legacy
+    /// declarations. Included in `declaration_hash`, so it cannot be relabelled without changing the hash.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_ref: Option<String>,
+    /// The `request_sha256` of the pending record named by `authorization_ref`. Binds the declaration to the
+    /// exact request that was approved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_request_sha256: Option<String>,
     pub declaration_hash: String,
 }
 

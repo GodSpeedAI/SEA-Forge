@@ -11,6 +11,10 @@
 //! The evaluated actor is the *verified caller* supplied by the server's
 //! identity gate. The envelope's subject is recorded, never trusted for role.
 
+mod declaration_authority;
+pub use declaration_authority::{
+    is_external_declaration, verify_case_declarations, DeclarationAuthorization, DeclarationRefusal,
+};
 mod obligation;
 pub use obligation::{
     argv_digest, judge, obligation_of, ClosureAck, Obligation, ObligationSource, RunResult,
@@ -2366,13 +2370,18 @@ fn settlement_identity(
         CepAuthorityError::Internal("settlement request is not serializable".into())
     })?;
     let request_sha256 = hex::encode(Sha256::digest(bytes));
-    let pending_id = format!("{SETTLEMENT_PENDING_PREFIX}{}", &request_sha256[..32]);
+    let pending_id = pending_id_for(&request_sha256);
     Ok(SettlementIdentity {
         request_sha256,
         pending_id,
         actor_role: role,
         identity_binding_hash,
     })
+}
+
+/// The pending id a canonical request hash maps to. A declaration's authorisation must derive from its own hash.
+fn pending_id_for(request_sha256: &str) -> String {
+    format!("{SETTLEMENT_PENDING_PREFIX}{}", &request_sha256[..32])
 }
 
 fn settlement_ledger(root: &Path) -> Result<LedgerStream, CepAuthorityError> {

@@ -121,6 +121,8 @@ fn append_qualifying_declaration(root: &Path, capability_name: &str) {
         source_evidence_refs: vec!["evd_test_01".into()],
         adapter_attestation_ref: None,
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
         declaration_hash: "sha256:decl".into(),
     };
     let path = dir.join("declarations.jsonl");

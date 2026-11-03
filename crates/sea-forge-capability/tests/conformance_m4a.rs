@@ -971,6 +971,8 @@ fn qualifying_declaration(declarer_id: &str, authored_by: Option<&str>) -> Settl
         source_evidence_refs: vec!["evi_gate".into()],
         adapter_attestation_ref: Some("attestation:swe-seed:1".into()),
         authored_by: authored_by.map(String::from),
+        authorization_ref: None,
+        authorization_request_sha256: None,
         declaration_hash: String::new(),
     }
 }

@@ -248,6 +248,8 @@ impl SettlementAuthority for LocalSettlementAuthority {
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: None,
             authored_by: req.authored_by.clone(),
+            authorization_ref: None,
+            authorization_request_sha256: None,
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -577,6 +579,8 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: Some(swe_resp.attestation_ref),
             authored_by: req.authored_by.clone(),
+            authorization_ref: None,
+            authorization_request_sha256: None,
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;

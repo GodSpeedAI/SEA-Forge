@@ -1335,6 +1335,8 @@ fn matching_swe_seed_declaration(
         source_evidence_refs: harvested_refs,
         adapter_attestation_ref: None,
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
         declaration_hash: String::new(),
     };
     decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
@@ -1408,9 +1410,10 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
     let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
     assert_eq!(
         correlation["declaration_ids"],
-        json!([decl.declaration_id]),
-        "server startup must reconcile the out-of-process declaration"
+        json!([]),
+        "an out-of-process declaration with no authorisation must not correlate at server startup"
     );
+    assert_quarantined(&reconciled, &decl.declaration_id, "missing_authorization");
     let view: Value = serde_json::from_str(
         &std::fs::read_to_string(
             root.path()
@@ -1421,7 +1424,23 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
         .unwrap(),
     )
     .unwrap();
-    assert_eq!(view["declaration_ids"], json!([decl.declaration_id]));
+    assert_eq!(view["declaration_ids"], json!([]));
+}
+
+/// A `settlement_quarantined` record names the refused declaration and its stable reason.
+fn assert_quarantined(
+    records: &[sea_forge_ledger::LedgerEntry],
+    declaration_id: &str,
+    reason: &str,
+) {
+    assert!(
+        records.iter().any(|entry| {
+            entry.record_kind == "settlement_quarantined"
+                && entry.payload["declaration_id"] == json!(declaration_id)
+                && entry.payload["reason"] == json!(reason)
+        }),
+        "expected settlement_quarantined for {declaration_id} with reason {reason}"
+    );
 }
 
 /// Task 18, trigger 3 (read time): the same late, out-of-process declaration
@@ -1448,15 +1467,15 @@ async fn t16_8_late_swe_seed_declaration_reconciles_at_read_time() {
     let completion =
         swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
     assert!(completion.harvested);
-    assert_eq!(
-        completion.declaration_ids,
-        vec![decl.declaration_id.clone()]
+    assert!(
+        completion.declaration_ids.is_empty(),
+        "an unauthorised out-of-process declaration must not satisfy read-time completion"
     );
-    // The read-time check must have materialized the correlation too, not
-    // just returned an ephemeral computed answer.
+    // The read-time check materializes its verdict too: the correlation is empty and the refusal is recorded.
     let reconciled = entries(root.path(), &case);
     let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
-    assert_eq!(correlation["declaration_ids"], json!([decl.declaration_id]));
+    assert_eq!(correlation["declaration_ids"], json!([]));
+    assert_quarantined(&reconciled, &decl.declaration_id, "missing_authorization");
 }
 
 #[tokio::test]

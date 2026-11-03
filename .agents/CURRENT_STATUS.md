@@ -1,23 +1,20 @@
 # Current status
 
-**Status revision:** 192
+**Status revision:** 193
 
-**Stage:** Security: approval, single-use claim, and recoverable resume for settlement pending records
+**Stage:** Security: shared settlement-declaration verification and quarantine at every reconciliation path
 
-**Summary:** Approval-gated external settlement is now resolved, claimed, and recovered from the ledger. A settlement_pending record is approved, rejected, or expired through the CEP approval path, with self-approval and non-operator resolution refused and the approval bound to pending_id, request_sha256, operation and class. An approval is spent by one create-only claim, so a second use is refused and audited. The state machine (pending, approved, resuming, completed, rejected, expired, failed, released) is derived from ledger records only. Reconcile settles an open claim from the declaration in the case ledger, or fails it, never declaring twice. Identical racing requests return one pending record.
+**Summary:** One shared verification (sea-forge-authority cep::verify_case_declarations) decides whether a settlement_declaration is authoritative. An external declaration (SWE_SEED verifier, adapter attestation, or authorisation reference) is authorised only when it names a settlement pending record whose request_sha256 and operation match, and that record is approved, claimed, or completed by this declaration. Anything else is quarantined: recorded once per reason as settlement_quarantined in the case ledger, and never correlated. Startup reconciliation, read-time reconciliation, and the artifact completion read all use it. Local declarations keep their behaviour. The declaration carries authorization_ref and authorization_request_sha256, included in declaration_hash. Legacy declarations with no provenance are quarantined, not grandfathered.
 
 **Verified:**
-- cargo test -p sea-forge-authority: 265 pass, 0 fail (cep_settlement: 43 pass, including approve-once resume, reject, expire, self and non-operator refusal, mismatched and forged approval, reuse refused, four-thread resume race, crash recovery, release, racing identical requests)
-- cargo test -p sea-forge-server: 550 pass, 0 fail
-- cargo test -p sea-forge-cli --no-fail-fast: 87 pass, 2 fail (the two conformance_m8 CLI tests, not rewritten)
-- cargo clippy --all-targets -- -D warnings: clean
+- cargo test -p sea-forge-server --lib swe_seed_reconciliation: 9 pass (startup quarantine idempotent, approval for one run does not authorise another, local declarations not quarantined, plus the correlation cases now driven through the real approve-and-claim lifecycle)
+- cargo test -p sea-forge-server --test conformance_m16: 19 pass, 2 ignored (t16_7 startup and t16_8 read-time now assert an unauthorised out-of-process declaration is quarantined and does not correlate)
+- cargo test -p sea-forge-authority -p sea-forge-artifact-ip -p sea-forge-settlement -p sea-forge-capability: all pass
 - cargo fmt --all -- --check: clean
 
 **Limits:**
-- conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 fails: resume is refused with default_deny for operator_local, because its policy has no rule that reaches an external settlement declaration. An operator escalation rule makes resume exit 5 with a settlement pending record, which the single case approval does not satisfy; the test expects one approval then success. Needs a policy or test decision; not fixed here
-- conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records fails for the same reason: resume exits 1 instead of 5
-- Reconciliation runs only in the CLI resume path. Startup, read-time, and out-of-process paths are not enforced; the server delegation path records completion but does not reconcile an open claim
-- The approver is checked by the approval_resolution policy rule, not by a fixed role; the brief asked for operator role, and the m8 policy uses R-SO
-- Adversarial review not done; the new tests were written with the code, not red first
+- Not yet done: the server path does not use the approval lifecycle for an External Allow verdict, and the outright claim of a pending record does not yet require Approved for External (checkpoint c)
+- Not yet done: out-of-process writers can still append declarations; they are refused at verification, not at write (checkpoint b)
+- Not yet done: conformance_m8 CLI tests (checkpoint d); race test (checkpoint e); adversarial review
 
-**Next:** Enforce reconciliation at startup, read time, and in the server path; decide how the artifact capitalize path satisfies an external settlement gate (a settlement approval step, or a documented case-approval binding) before the m8 tests are re-scoped.
+**Next:** Checkpoint b: write provenance on every gated declaration request and refuse an External declaration without it at the settlement writer.
