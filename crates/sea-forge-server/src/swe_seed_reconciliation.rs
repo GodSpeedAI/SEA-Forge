@@ -418,6 +418,7 @@ mod tests {
             authored_by: None,
             authorization_ref: None,
             authorization_request_sha256: None,
+            authorization_content_sha256: None,
             declaration_hash: String::new(),
         };
         decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
@@ -590,6 +591,7 @@ mod tests {
         let (pending_id, request_sha256) = claim_approved(root, &decl.run_id);
         decl.authorization_ref = Some(pending_id);
         decl.authorization_request_sha256 = Some(request_sha256);
+        decl.authorization_content_sha256 = Some(format!("sha256:content-{}", decl.run_id));
         decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
         sea_forge_settlement::append_declaration_ledgered_once(
             root,
@@ -732,6 +734,7 @@ mod tests {
         let mut replay = declaration("case_a", "run_b", "item_b", &manifest_b, "swe_seed_test");
         replay.authorization_ref = authorised.authorization_ref.clone();
         replay.authorization_request_sha256 = authorised.authorization_request_sha256.clone();
+        replay.authorization_content_sha256 = authorised.authorization_content_sha256.clone();
         replay.declaration_hash = sea_forge_settlement::compute_declaration_hash(&replay).unwrap();
         out_of_process_append(root.path(), &replay);
 
@@ -787,6 +790,7 @@ mod tests {
         let mut foreign = declaration("case_b", "run_a", "item_acp", &manifest, "swe_seed_test");
         foreign.authorization_ref = Some(pending_id.clone());
         foreign.authorization_request_sha256 = Some(request_sha256);
+        foreign.authorization_content_sha256 = Some("sha256:content-run_a".into());
         foreign.declaration_hash =
             sea_forge_settlement::compute_declaration_hash(&foreign).unwrap();
         LedgerStream::open(root.path(), "case-case_b", "test")

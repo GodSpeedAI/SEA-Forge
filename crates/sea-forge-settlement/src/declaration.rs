@@ -17,9 +17,9 @@ use sea_forge_ledger::{types::hash_canonical, CommittedRecordRef, LedgerStream};
 
 /// Compute the declaration hash over canonical content excluding `declaration_hash`.
 pub fn compute_declaration_hash(decl: &SettlementDeclaration) -> Result<String, ForgeError> {
-    let mut copy = decl.clone();
-    copy.declaration_hash.clear();
-    hash_canonical(&copy)
+    // One definition, shared with the authority verifier that recomputes it on every read.
+    sea_forge_authority::cep::declaration_content_hash(decl)
+        .map_err(|error| ForgeError::Internal(error.to_string()))
 }
 
 /// Append a declaration to a JSONL file.
@@ -269,6 +269,7 @@ impl SettlementAuthority for LocalSettlementAuthority {
             authored_by: req.authored_by.clone(),
             authorization_ref: req.authorization_ref.clone(),
             authorization_request_sha256: req.authorization_request_sha256.clone(),
+            authorization_content_sha256: req.authorization_content_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -600,6 +601,7 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             authored_by: req.authored_by.clone(),
             authorization_ref: req.authorization_ref.clone(),
             authorization_request_sha256: req.authorization_request_sha256.clone(),
+            authorization_content_sha256: req.authorization_content_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -772,6 +774,7 @@ mod tests {
             // An external declaration must name its authorisation at the writer.
             authorization_ref: Some(format!("settlement-pending-{}", "a".repeat(32))),
             authorization_request_sha256: Some("b".repeat(64)),
+            authorization_content_sha256: Some("c".repeat(64)),
         }
     }
 

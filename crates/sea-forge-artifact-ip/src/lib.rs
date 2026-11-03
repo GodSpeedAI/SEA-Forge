@@ -864,17 +864,26 @@ pub fn load_completed_transition(
         std::slice::from_ref(&declaration),
     )
     .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
-    if !matches!(
-        verdict.first(),
+    match verdict.first() {
         Some(
             sea_forge_authority::cep::DeclarationAuthorization::Local
-                | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. }
-        )
-    ) {
-        return Err(m8_error(
-            "settlement_integrity_error",
-            "completed declaration is not authorised by a verified settlement record",
-        ));
+            | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. },
+        ) => {}
+        Some(sea_forge_authority::cep::DeclarationAuthorization::Quarantined(refusal)) => {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                format!(
+                    "completed declaration is not authorised by a verified settlement record: {}",
+                    refusal.as_str()
+                ),
+            ));
+        }
+        None => {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                "completed declaration has no verdict",
+            ));
+        }
     }
     if declaration.case_id != terminal.case_id
         || declaration.run_id != terminal.run_id
@@ -1005,6 +1014,7 @@ pub fn plan_resume_declaration(
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
     };
     Ok(PlannedResumeDeclaration { manifest, request })
 }
@@ -1123,6 +1133,8 @@ pub fn resume_pending_transition(
             }
             request.authorization_ref = Some(claim.pending_id.to_string());
             request.authorization_request_sha256 = Some(claim.request_sha256.to_string());
+            // Checked equal to the declared content above, so the declaration is bound to the approved content.
+            request.authorization_content_sha256 = Some(claim.declared_content_sha256.to_string());
         }
         // The caller decides the class: the only caller, `resume` in sea-forge-cli, passes the SWE_SEED
         // authority and must gate it as `External` (`authorize_settlement_declaration`) before calling here.

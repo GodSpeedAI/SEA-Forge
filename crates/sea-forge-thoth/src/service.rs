@@ -14,7 +14,7 @@ use crate::engine::{
 use crate::protocol::*;
 use sea_forge_authority::AuthorityPolicyBundle;
 use sea_forge_capability::promotion::{
-    build_capability_record, default_v02_policy, load_declarations, load_envelopes,
+    build_capability_record, default_v02_policy, load_envelopes,
 };
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::ids::random_id;
@@ -117,8 +117,8 @@ impl SnapshotView for LedgerSnapshotView {
             vec![]
         };
         // Only declarations the shared authority verification does not refuse may build a capability.
-        let declarations =
-            load_declarations(&self.root.join("settlement/declarations.jsonl")).ok()?;
+        // Read from the verified case ledgers. An integrity failure yields no capability view, never a fallback.
+        let declarations = sea_forge_authority::cep::read_all_declarations(&self.root).ok()?;
         let verdicts =
             sea_forge_authority::cep::verify_case_declarations(&self.root, &declarations).ok()?;
         let declarations: Vec<_> = declarations

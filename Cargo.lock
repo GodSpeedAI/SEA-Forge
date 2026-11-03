@@ -2703,6 +2703,7 @@ name = "sea-forge-settlement"
 version = "0.3.0"
 dependencies = [
  "chrono",
+ "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
  "sea-forge-os",

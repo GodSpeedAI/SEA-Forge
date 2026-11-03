@@ -1,14 +1,28 @@
 //! The one verification of settlement declarations against the authority ledger.
 //!
-//! A `settlement_declaration` in a case ledger is not authoritative by being there. An external declaration is
-//! authoritative only when the authority ledger holds the settlement pending record it names, the record was
-//! created by an external gate for the same request (`request_sha256`, operation), and that record is approved,
-//! claimed, or completed by this declaration. Every reconciliation, read, and resume path that treats a
-//! declaration as settled calls [`verify_case_declarations`]; no caller re-derives the rule.
+//! The authoritative source of a settlement declaration is the hash-chained case ledger it was committed to. The
+//! `settlement/declarations.jsonl` file is a derived view: nothing reads it to decide authority, promotion, or
+//! correlation. A declaration counts as settled only when all of these hold:
+//!
+//! 1. its case ledger verifies (entry chain and stored state), and its own `declaration_hash` recomputes from its
+//!    content ([`read_case_declarations`], [`read_all_declarations`]); an integrity failure is an error, never a
+//!    silent skip;
+//! 2. the authority ledger holds the settlement pending record it names, created by an external gate for the same
+//!    case and operation;
+//! 3. the declared-content hash it carries reproduces that record's approved request hash from the record's ingress
+//!    hash (the approval is bound to this content and no other);
+//! 4. the record is claimed, or completed by this declaration, and no other declaration names it.
+//!
+//! Every reconciliation, read, resume, promotion, and Thoth path calls [`verify_case_declarations`] on declarations
+//! read through this module; no caller re-derives the rule.
+//!
+//! Trust limit: the hash chain makes a change to a stored declaration detectable by anyone who reads the ledger
+//! without write access. It does not protect against a writer that can rewrite the ledger and its stored state
+//! together. That protection needs an anchor held outside the writer's trust domain; see the runbook.
 
 use super::*;
 use sea_forge_core::types::SettlementDeclaration;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Why an external settlement declaration is not authorised. The codes are stable: they are written into
 /// `settlement_quarantined` records and asserted by tests.
@@ -18,6 +32,11 @@ pub enum DeclarationRefusal {
     MissingAuthorization,
     /// The authorisation reference or request hash is malformed, or does not derive from the other.
     MalformedAuthorization,
+    /// External, with an authorisation reference but no declared-content hash, so it cannot be bound to the content
+    /// that was approved.
+    AuthorizationUnbound,
+    /// The declared-content hash does not reproduce the pending record's approved request hash.
+    AuthorizationContentMismatch,
     /// No settlement pending record with this reference exists in the authority ledger.
     AuthorizationMissing,
     /// The named pending record predates the case binding in the request hash. It is quarantined, never reused.
@@ -46,6 +65,8 @@ impl DeclarationRefusal {
         match self {
             Self::MissingAuthorization => "missing_authorization",
             Self::MalformedAuthorization => "malformed_authorization",
+            Self::AuthorizationUnbound => "authorization_unbound",
+            Self::AuthorizationContentMismatch => "authorization_content_mismatch",
             Self::AuthorizationMissing => "authorization_missing",
             Self::AuthorizationUnscoped => "authorization_unscoped",
             Self::AuthorizationMismatch => "authorization_mismatch",
@@ -78,8 +99,100 @@ pub fn is_external_declaration(declaration: &SettlementDeclaration) -> bool {
     declaration.is_external()
 }
 
-/// Verify every declaration in one case against the authority ledger, reading the ledger once. The result is
-/// aligned with `declarations`. Pass the whole case's declarations so that reuse across them is detected.
+/// The canonical hash of a declaration's content, excluding its own `declaration_hash`. This is the one definition:
+/// the writer and every reader use it.
+pub fn declaration_content_hash(
+    declaration: &SettlementDeclaration,
+) -> Result<String, CepAuthorityError> {
+    let mut copy = declaration.clone();
+    copy.declaration_hash.clear();
+    crate::hash_canonical(&copy).map_err(|error| CepAuthorityError::Internal(error.to_string()))
+}
+
+fn integrity(message: impl std::fmt::Display) -> CepAuthorityError {
+    CepAuthorityError::Evidence(format!("declaration_integrity_error: {message}"))
+}
+
+/// Read and verify one ledger stream's settlement declarations. Fails closed: a broken chain, an unparseable
+/// declaration, or a declaration whose stored hash does not match its content is an error for the whole read.
+fn read_stream_declarations(
+    root: &Path,
+    ledger_id: &str,
+) -> Result<Vec<SettlementDeclaration>, CepAuthorityError> {
+    let stream = LedgerStream::open(root, ledger_id.to_string(), "sea-forge-authority")?;
+    stream
+        .verify()
+        .map_err(|error| integrity(format!("{ledger_id}: {error}")))?;
+    let mut declarations = Vec::new();
+    for entry in stream.read_entries()? {
+        if entry.record_kind != "settlement_declaration" {
+            continue;
+        }
+        let declaration: SettlementDeclaration = serde_json::from_value(entry.payload)
+            .map_err(|error| integrity(format!("{ledger_id}: unparseable declaration: {error}")))?;
+        if declaration_content_hash(&declaration)? != declaration.declaration_hash {
+            return Err(integrity(format!(
+                "{ledger_id}: declaration {} does not hash to its declaration_hash",
+                declaration.declaration_id
+            )));
+        }
+        declarations.push(declaration);
+    }
+    Ok(declarations)
+}
+
+/// The verified declarations of one case, from its hash-chained case ledger. Never reads the materialised view.
+pub fn read_case_declarations(
+    root: &Path,
+    case_id: &str,
+) -> Result<Vec<SettlementDeclaration>, CepAuthorityError> {
+    read_stream_declarations(root, &format!("case-{case_id}"))
+}
+
+/// The verified declarations of every case in the state root. Declaration ids must be unique across cases: a
+/// declaration id seen twice is a replay or a forged copy, and the read fails.
+pub fn read_all_declarations(root: &Path) -> Result<Vec<SettlementDeclaration>, CepAuthorityError> {
+    let dir = root.join("ledgers");
+    let names = match std::fs::read_dir(&dir) {
+        Ok(entries) => entries
+            .map(|entry| {
+                entry
+                    .map_err(|error| integrity(format!("read ledgers dir: {error}")))
+                    .and_then(|entry| {
+                        entry
+                            .file_name()
+                            .into_string()
+                            .map_err(|_| integrity("ledger name is not UTF-8"))
+                    })
+            })
+            .collect::<Result<Vec<String>, _>>()?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => return Err(integrity(format!("read ledgers dir: {error}"))),
+    };
+    let mut cases: Vec<String> = names
+        .into_iter()
+        .filter(|name| name.starts_with("case-"))
+        .collect();
+    cases.sort();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut all = Vec::new();
+    for case in cases {
+        for declaration in read_stream_declarations(root, &case)? {
+            if !seen.insert(declaration.declaration_id.clone()) {
+                return Err(integrity(format!(
+                    "declaration {} appears more than once",
+                    declaration.declaration_id
+                )));
+            }
+            all.push(declaration);
+        }
+    }
+    Ok(all)
+}
+
+/// Verify every declaration against the authority ledger, reading the ledger once. The result is aligned with
+/// `declarations`. Pass the whole set so that reuse across them is detected. Pass only declarations returned by
+/// [`read_case_declarations`] or [`read_all_declarations`].
 pub fn verify_case_declarations(
     root: &Path,
     declarations: &[SettlementDeclaration],
@@ -135,11 +248,13 @@ fn verify_one(
         (None, None) => return quarantine(R::MissingAuthorization),
         _ => return quarantine(R::MalformedAuthorization),
     };
-    // The pending id names the ingress identity; the request hash binds that identity to the approved content.
-    // The record lookup below and the record's own request hash together tie the declaration to one approval.
     if request_sha256.len() != 64 || pending_id.is_empty() {
         return quarantine(R::MalformedAuthorization);
     }
+    let content_sha256 = match declaration.authorization_content_sha256.as_deref() {
+        Some(content) if !content.is_empty() => content,
+        _ => return quarantine(R::AuthorizationUnbound),
+    };
     let record = match pending_record_in(entries, pending_id) {
         Ok(Some(record)) => record,
         Ok(None) => {
@@ -169,6 +284,15 @@ fn verify_one(
         )
     {
         return quarantine(R::AuthorizationNotExternal);
+    }
+    // The approval covers one content. The declared content must reproduce the approved request hash from the
+    // record's ingress hash. A record without an ingress hash is legacy and cannot be bound.
+    if record.ingress_sha256.is_empty() {
+        return quarantine(R::AuthorizationUnscoped);
+    }
+    match crate::cep::bind_request_sha256(&record.ingress_sha256, content_sha256) {
+        Ok(bound) if bound == record.request_sha256 => {}
+        _ => return quarantine(R::AuthorizationContentMismatch),
     }
     match status_in(entries, &record, now) {
         // A completed record belongs to the one declaration it names. Any other declaration is a replay.
@@ -203,13 +327,7 @@ pub fn reconcile_operation_claims(
     case_id: &str,
     operation_id: &str,
 ) -> Result<(), CepAuthorityError> {
-    let case_entries = LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-authority")?
-        .read_entries()?;
-    let declarations: Vec<SettlementDeclaration> = case_entries
-        .into_iter()
-        .filter(|entry| entry.record_kind == "settlement_declaration")
-        .filter_map(|entry| serde_json::from_value(entry.payload).ok())
-        .collect();
+    let declarations = read_case_declarations(root, case_id)?;
     let verdicts = verify_case_declarations(root, &declarations)?;
     let mut authorised: HashMap<String, String> = HashMap::new();
     for (declaration, verdict) in declarations.iter().zip(&verdicts) {
@@ -255,9 +373,9 @@ pub fn settle_failed_resume_attempt(
     pending_id: &str,
     attempt: u32,
 ) -> Result<AttemptSettlement, CepAuthorityError> {
-    let case_entries = LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-authority")?
+    let raw = LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-authority")?
         .read_entries()?;
-    let named = case_entries.iter().any(|entry| {
+    let named = raw.iter().any(|entry| {
         entry.record_kind == "settlement_declaration"
             && entry
                 .payload
@@ -269,11 +387,7 @@ pub fn settle_failed_resume_attempt(
         release_settlement_resume(root, pending_id, attempt)?;
         return Ok(AttemptSettlement::Released);
     }
-    let declarations: Vec<SettlementDeclaration> = case_entries
-        .into_iter()
-        .filter(|entry| entry.record_kind == "settlement_declaration")
-        .filter_map(|entry| serde_json::from_value(entry.payload).ok())
-        .collect();
+    let declarations = read_case_declarations(root, case_id)?;
     let verdicts = verify_case_declarations(root, &declarations)?;
     let authorised = declarations
         .iter()

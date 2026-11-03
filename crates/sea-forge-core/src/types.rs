@@ -1024,6 +1024,11 @@ pub struct SettlementDeclarationRequest {
     /// The `request_sha256` of that pending record.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authorization_request_sha256: Option<String>,
+    /// The declared-content hash the approval was given for: `settlement_declaration_content_sha256` of this
+    /// request with the authorisation fields cleared. The pending record's request hash must equal the binding of
+    /// its ingress hash to this value, so a declaration is tied to the exact content that was approved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_content_sha256: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1075,6 +1080,10 @@ pub struct SettlementDeclaration {
     /// exact request that was approved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authorization_request_sha256: Option<String>,
+    /// The declared-content hash the approval was given for (see `SettlementDeclarationRequest`). Covered by
+    /// `declaration_hash`, so it cannot be changed without changing the declaration's identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_content_sha256: Option<String>,
     pub declaration_hash: String,
 }
 
