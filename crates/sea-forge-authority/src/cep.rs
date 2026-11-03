@@ -1168,8 +1168,9 @@ impl CepAuthorityService<'_> {
         })
     }
 
-    /// Resolve an escalation as the verified `resolver`. The policy engine decides whether this actor may
-    /// resolve it (a rule for `approval_resolution`; the requester can never resolve their own request).
+    /// Resolve an escalation as the verified `resolver`. The requester can never resolve their own request:
+    /// that is checked here, before and independent of policy. Otherwise the policy engine decides whether
+    /// this actor may resolve it (a rule for `approval_resolution`).
     pub fn resolve_approval(
         &self,
         approval_id: &str,
@@ -1185,6 +1186,12 @@ impl CepAuthorityService<'_> {
                     "{approval_id} is not an approvable escalation"
                 ))
             })?;
+        if resolver.actor_id == standing.requester {
+            return Err(CepAuthorityError::Approval(format!(
+                "self_approval_refused: {} requested {approval_id} and may not resolve it",
+                standing.requester
+            )));
+        }
         if standing.state != ApprovalState::Pending {
             return Err(CepAuthorityError::Approval(format!(
                 "{approval_id} is {}, not pending",

@@ -254,6 +254,45 @@ fn the_requester_cannot_approve_their_own_request() {
     );
 }
 
+/// No sod_rules, and a rule that lets the requester's own role resolve approvals. Policy alone would allow
+/// the self-resolution below, so a refusal can only come from the explicit requester check.
+const SELF_RESOLVABLE: &str = "version: \"0.1\"\nrules:\n  \
+  - name: gated\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_action\n    requires_approval: true\n  \
+  - name: service-resolves\n    verdict: allow\n    actor_role: service\n    operation_kind: approval_resolution\n";
+
+#[test]
+fn self_resolution_is_refused_before_policy_even_when_policy_allows_the_role() {
+    let c = cell();
+    let (id, _) = escalate(&c, "op-8");
+    // Same identity and role as the requester (`cognate-service`), which the policy above allows.
+    assert!(matches!(
+        with(&c, SELF_RESOLVABLE, day(), |s| s.resolve_approval(&id, true, &service_actor())),
+        Err(CepAuthorityError::Approval(m)) if m.starts_with("self_approval_refused")
+    ));
+    assert_eq!(
+        with(&c, SELF_RESOLVABLE, day(), |s| s.list_approvals()).unwrap()[0]
+            .state
+            .as_str(),
+        "pending"
+    );
+}
+
+#[test]
+fn a_different_resolver_under_the_same_policy_is_not_refused_as_self_approval() {
+    let c = cell();
+    let (id, _) = escalate(&c, "op-9");
+    let reviewer = Actor {
+        actor_id: "cognate-reviewer".into(),
+        role: ActorRole::Service,
+    };
+    let resolved = with(&c, SELF_RESOLVABLE, day(), |s| {
+        s.resolve_approval(&id, true, &reviewer)
+    })
+    .unwrap();
+    assert_eq!(resolved["state"], "approved");
+    assert_eq!(resolved["resolved_by"], "cognate-reviewer");
+}
+
 #[test]
 fn only_an_actor_policy_allows_can_resolve() {
     let c = cell();

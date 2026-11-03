@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 184
+**Status revision:** 185
 
-**Stage:** Security: permission matrix enforced for every policy version
+**Stage:** Security: requester cannot resolve their own escalation
 
-**Summary:** A declared permissions matrix is always enforced. The legacy grant applies only to a 0.1 policy with no matrix (spec 8.2). Before, a 0.1 policy with a matrix granted every role every operation.
+**Summary:** resolve_approval refuses when the resolving actor is the escalation requester, before state checks and policy evaluation. The refusal no longer depends on the policy engine or on sod_rules.
 
 **Verified:**
 - cargo test -p sea-forge-server --lib: 174 pass (6 new: sentinel and root refusal, reload change, traversal chain, no traversal outside root or through .., shared-directory refusal, sticky and owner-only acceptance)
@@ -19,4 +19,4 @@
 
 **Next:** Commit, push horizon/socket-group-access, resolve the four threads on PR #73, then merge.
 
-**Recorded at:** 2026-11-03T00:00:00Z
+**Recorded at:** 2026-11-03T00:20:00Z
