@@ -1168,8 +1168,9 @@ impl CepAuthorityService<'_> {
         })
     }
 
-    /// Resolve an escalation as the verified `resolver`. The policy engine decides whether this actor may
-    /// resolve it (a rule for `approval_resolution`; the requester can never resolve their own request).
+    /// Resolve an escalation as the verified `resolver`. The requester can never resolve their own request:
+    /// that is checked here, before and independent of policy. Otherwise the policy engine decides whether
+    /// this actor may resolve it (a rule for `approval_resolution`).
     pub fn resolve_approval(
         &self,
         approval_id: &str,
@@ -1185,6 +1186,31 @@ impl CepAuthorityService<'_> {
                     "{approval_id} is not an approvable escalation"
                 ))
             })?;
+        if resolver.actor_id == standing.requester {
+            // Audit the attempt before refusing. Policy is not evaluated for self-resolution.
+            #[derive(serde::Serialize)]
+            struct SelfResolutionRefusal<'a> {
+                approval_id: &'a str,
+                requester_id: &'a str,
+                resolver_id: &'a str,
+                reason: &'static str,
+            }
+            ledger.commit_typed(
+                "approval_self_resolution_refused",
+                vec!["cognate".into(), approval_id.to_string()],
+                &SelfResolutionRefusal {
+                    approval_id,
+                    requester_id: &standing.requester,
+                    resolver_id: &resolver.actor_id,
+                    reason: "self_approval_refused",
+                },
+                vec![standing.escalation_entry.clone()],
+            )?;
+            return Err(CepAuthorityError::Approval(format!(
+                "self_approval_refused: {} requested {approval_id} and may not resolve it",
+                standing.requester
+            )));
+        }
         if standing.state != ApprovalState::Pending {
             return Err(CepAuthorityError::Approval(format!(
                 "{approval_id} is {}, not pending",

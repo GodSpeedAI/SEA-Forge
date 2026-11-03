@@ -1,22 +1,20 @@
 # Current status
 
-**Status revision:** 183
+**Status revision:** 186
 
-**Stage:** Horizon gateway: runtime socket access (opt-in socket_gid), review fixes
+**Stage:** Security: requester cannot resolve their own escalation, and the attempt is audited
 
-**Summary:** Addresses the four CodeRabbit threads on PR #73. socket_gid 0 and 4294967295 are refused in config validation. A reload that changes socket_gid is refused with socket_gid_reload_requires_restart. The socket directory must not be writable by others unless sticky, so the staging name cannot be swapped before the chmod/chown. With socket_gid set, directories on the socket path under the state root stay group-traversable, so the group can reach the socket.
+**Summary:** resolve_approval refuses when the resolving actor is the escalation requester, before state checks and policy evaluation. The attempt is recorded as an approval_self_resolution_refused ledger record that references the escalation.
 
 **Verified:**
-- cargo test -p sea-forge-server --lib: 174 pass (6 new: sentinel and root refusal, reload change, traversal chain, no traversal outside root or through .., shared-directory refusal, sticky and owner-only acceptance)
-- cargo clippy -p sea-forge-server --all-targets -D warnings: clean
-- cargo fmt: applied
+- cargo test -p sea-forge-authority: 238 pass, 0 fail, 7 ignored
+- cargo clippy -p sea-forge-authority --all-targets -D warnings: clean
+- self-resolution test asserts the refusal, the pending state, and exactly one audit record referencing the escalation
 
 **Limits:**
-- Refusal, not a private staging directory: a socket directory other users can write (without sticky) now fails startup, which a deployment on such a directory will notice
-- Traversal directories are 0711 (others may traverse, not list), matching the root's existing mode; the socket itself stays 0660 with the group
-- Not yet verified on a live gateway: redeploy is the owner's step
-- conformance_m16 t16_8 still fails on origin/main (pre-existing, needs sea-forge CLI binary)
+- Live SEA-Forge run of the self-approval path not yet performed
+- Approval transition for settlement_declaration not yet in the production policy
 
-**Next:** Commit, push horizon/socket-group-access, resolve the four threads on PR #73, then merge.
+**Next:** Add the settlement approval gate through a versioned spec amendment, then prove approve and reject against live authority records.
 
-**Recorded at:** 2026-11-02T21:00:00Z
+**Recorded at:** 2026-11-03T01:00:00Z
