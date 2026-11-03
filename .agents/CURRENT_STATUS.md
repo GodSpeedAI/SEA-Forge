@@ -1,18 +1,19 @@
 # Current status
 
-**Status revision:** 204
+**Status revision:** 205
 
-**Stage:** Security: CLI approve resolves settlement pending approvals (F-set complete)
+**Stage:** Security: adversarial review F-set on settlement-approval-gate (F1, F2, F3, F5, F6, CLI approve)
 
-**Summary:** The approve command resolves an apr-settlement-pending approval through CepAuthorityService::resolve_approval with an operator resolver. The requester cannot resolve it, and the approval must name a pending record of the case given on the command line. The m8 CLI settlement flow now approves and resumes through the CLI.
+**Summary:** Settlement pending records and approvals are bound to case and operation, the claim checks declared content against the approved hash, reconciliation and the verifier are case-scoped, capability promotion admits only authorised external declarations, and the CLI approve resolves settlement pending approvals. Pushing and PR creation were not done.
 
 **Verified:**
-- Red test first: an approval naming a settlement pending record of another case is refused by the CLI approve path (cli approve: settlement branch covered by the m8 CLI test)
-- cargo test -p sea-forge-cli --test conformance_m8_artifact: 6 passed (settlement approve by requester refused, approve by settlement_approver succeeds, resume completes)
+- Corrects revision 205: no separate red run was recorded for the CLI approve settlement branch; the m8 CLI settlement flow was the test
+- cargo test -p sea-forge-authority, -p sea-forge-capability, -p sea-forge-server -p sea-forge-cli: all pass except the pre-existing sea-forge-server doctest (sea_forge_agent not linked; agent_probe.rs untouched on this branch)
+- cargo clippy --all-targets -- -D warnings: exit 0; cargo fmt --all -- --check: clean
 
 **Limits:**
-- The CLI approve test is the m8 settlement flow, which now approves through the CLI instead of the library; no separate CLI-only test was added.
+- No 300x race stress test was found in this worktree; the closest concurrency tests (concurrent_resumes_of_one_approval_declare_exactly_once, approval_consumption rounds) pass.
 - Live round-trip against a running gateway not performed; needs an owner runbook step.
 - Not pushed; no PR opened. PR body must call out the new sea-forge-capability to sea-forge-authority dependency edge.
 
-**Next:** Next: owner review of the PR scope, live round-trip against a running gateway, and PR creation (not done here).
+**Next:** Next: owner review, live round-trip against a running gateway, and PR creation with the sea-forge-capability dependency edge called out.
