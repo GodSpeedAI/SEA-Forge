@@ -350,9 +350,9 @@ mod tests {
     use chrono::Utc;
     use sea_forge_authority::cep::{
         authorize_settlement_declaration, complete_settlement_resume, reconcile_operation_claims,
-        settlement_approval_id, settlement_status, CepAuthorityService, SettlementCriteria,
-        SettlementGate, SettlementIngress, SettlementStatus, SettlementTransport,
-        VerifiedSettlementIngress,
+        settlement_approval_id, settlement_request_sha256, settlement_status, CepAuthorityService,
+        SettlementCriteria, SettlementGate, SettlementIngress, SettlementOperation,
+        SettlementStatus, SettlementTransport, VerifiedSettlementIngress,
     };
     use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
     use sea_forge_core::types::{Actor, ActorRole};
@@ -485,6 +485,30 @@ mod tests {
 
     const APPROVAL_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
 
+    /// Gate `run_id` under `case-a`, presenting the declared content its own ingress hashes to.
+    fn gate_as(
+        engine: &PolicyAuthorityEngine,
+        bundle: &AuthorityPolicyBundle,
+        root: &Path,
+        run_id: &str,
+        ingress: &VerifiedSettlementIngress<'_>,
+        ttl: chrono::Duration,
+    ) -> Result<SettlementGate, sea_forge_authority::cep::CepAuthorityError> {
+        let declared = settlement_request_sha256(bundle, "case_a", run_id, ingress)?;
+        authorize_settlement_declaration(
+            engine,
+            bundle,
+            root,
+            SettlementOperation {
+                case_id: "case_a",
+                operation_id: run_id,
+                declared_request_sha256: &declared,
+            },
+            ingress,
+            ttl,
+        )
+    }
+
     /// Gate one external declaration for `run_id` (pending), approve it as a distinct operator, and claim it.
     /// Returns the claimed pending record's id and request hash.
     fn claim_approved(root: &Path, run_id: &str) -> (String, String) {
@@ -505,17 +529,7 @@ mod tests {
         )
         .unwrap();
         let ttl = chrono::Duration::hours(24);
-        let pending = match authorize_settlement_declaration(
-            &fresh(),
-            &bundle,
-            root,
-            "case_a",
-            run_id,
-            &ingress,
-            ttl,
-        )
-        .unwrap()
-        {
+        let pending = match gate_as(&fresh(), &bundle, root, run_id, &ingress, ttl).unwrap() {
             SettlementGate::Pending { record, .. } => *record,
             other => panic!("expected a pending settlement, got {other:?}"),
         };
@@ -540,17 +554,7 @@ mod tests {
                 &approver,
             )
             .unwrap();
-        match authorize_settlement_declaration(
-            &fresh(),
-            &bundle,
-            root,
-            "case_a",
-            run_id,
-            &ingress,
-            ttl,
-        )
-        .unwrap()
-        {
+        match gate_as(&fresh(), &bundle, root, run_id, &ingress, ttl).unwrap() {
             SettlementGate::Resumed { pending_id, .. } => {
                 assert_eq!(pending_id, pending.pending_id)
             }
@@ -812,11 +816,10 @@ mod tests {
             vec!["operation:run_a".into()],
         )
         .unwrap();
-        assert!(authorize_settlement_declaration(
+        assert!(gate_as(
             &engine,
             &bundle,
             root.path(),
-            "case_a",
             "run_a",
             &ingress,
             chrono::Duration::hours(24),

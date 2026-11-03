@@ -5,9 +5,10 @@ use sea_forge_authority::cep::{
     authorize_settlement_declaration, complete_settlement_resume,
     derive_settlement_authority_class, fail_settlement_resume, reconcile_settlement_resume,
     release_settlement_resume, settlement_approval_id, settlement_pending_records,
-    settlement_status, CepAuthorityError, CepAuthorityService, SettlementAuthorityClass,
-    SettlementCriteria, SettlementGate, SettlementIngress, SettlementPendingRecord,
-    SettlementStatus, SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
+    settlement_request_sha256, settlement_status, CepAuthorityError, CepAuthorityService,
+    SettlementAuthorityClass, SettlementCriteria, SettlementGate, SettlementIngress,
+    SettlementOperation, SettlementPendingRecord, SettlementStatus, SettlementTransport,
+    VerifiedSettlementIngress, LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, AuthorityDecision, Verdict};
@@ -933,8 +934,11 @@ fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityE
         &engine,
         &bundle,
         root.path(),
-        "case_a",
-        SETTLE_OP,
+        SettlementOperation {
+            case_id: "case_a",
+            operation_id: SETTLE_OP,
+            declared_request_sha256: &declared_hash_for_ingress(&bundle, &ingress),
+        },
         &ingress,
         chrono::Duration::hours(24),
     )
@@ -956,8 +960,11 @@ fn authorize_cep(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError>
         &engine,
         &bundle,
         root.path(),
-        "case_a",
-        SETTLE_OP,
+        SettlementOperation {
+            case_id: "case_a",
+            operation_id: SETTLE_OP,
+            declared_request_sha256: &declared_hash_for_ingress(&bundle, &ingress),
+        },
         &ingress,
         chrono::Duration::hours(24),
     )
@@ -1247,7 +1254,19 @@ fn gate_swe_seed_ttl(
         &actor,
         evidence_refs,
     )?;
-    authorize_settlement_declaration(&engine, &bundle, root, case_id, SETTLE_OP, &ingress, ttl)
+    let declared = settlement_request_sha256(&bundle, case_id, SETTLE_OP, &ingress).unwrap();
+    authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        SettlementOperation {
+            case_id,
+            operation_id: SETTLE_OP,
+            declared_request_sha256: &declared,
+        },
+        &ingress,
+        ttl,
+    )
 }
 
 /// The approver's policy: the external gate, plus operators may resolve approvals.
@@ -1403,6 +1422,104 @@ fn a_legacy_pending_record_without_a_case_is_never_reused() {
     assert_ne!(fresh.pending_id, legacy_id);
     assert_eq!(fresh.case_id, CASE);
     assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 2);
+}
+
+/// Declared content identical to the ingress the gate is given.
+fn declared_hash_for_ingress(
+    bundle: &AuthorityPolicyBundle,
+    ingress: &VerifiedSettlementIngress<'_>,
+) -> String {
+    settlement_request_sha256(bundle, "case_a", SETTLE_OP, ingress).unwrap()
+}
+
+/// The content hash a caller presents for the declaration it is about to make, computed over that content's ingress.
+fn declared_hash(policy_yaml: &str, case_id: &str, evidence_refs: Vec<String>) -> String {
+    let (bundle, _) = class_policy_engine(policy_yaml);
+    let actor = svc();
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor,
+        evidence_refs,
+    )
+    .unwrap();
+    settlement_request_sha256(&bundle, case_id, SETTLE_OP, &ingress).unwrap()
+}
+
+/// Gate the approved request for `CASE`, presenting `declared` as the content about to be declared.
+fn gate_declared(
+    root: &std::path::Path,
+    policy_yaml: &str,
+    evidence_refs: Vec<String>,
+    declared: &str,
+) -> Result<SettlementGate, CepAuthorityError> {
+    let (bundle, engine) = class_policy_engine(policy_yaml);
+    let actor = svc();
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor,
+        evidence_refs,
+    )?;
+    authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        SettlementOperation {
+            case_id: CASE,
+            operation_id: SETTLE_OP,
+            declared_request_sha256: declared,
+        },
+        &ingress,
+        chrono::Duration::hours(24),
+    )
+}
+
+#[test]
+fn a_claim_whose_declared_content_differs_from_the_approved_request_fails_without_a_declaration() {
+    let root = tempfile::tempdir().unwrap();
+    let policy = approval_policy();
+    let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+
+    // The declaration about to be made carries different evidence than the one that was approved.
+    let drifted = declared_hash(&policy, CASE, vec!["evidence:b".into()]);
+    let err = gate_declared(root.path(), &policy, evidence_a(), &drifted).unwrap_err();
+    assert!(
+        matches!(&err, CepAuthorityError::Approval(m) if m.contains("content_mismatch")),
+        "{err:?}"
+    );
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Failed {
+            reason: "content_mismatch".into()
+        }
+    );
+    // The approval is spent by the failure: nothing can claim it afterwards.
+    assert!(gate_swe_seed_in(root.path(), &policy, evidence_a()).is_err());
+}
+
+#[test]
+fn a_claim_whose_declared_content_matches_the_approved_request_resumes() {
+    let root = tempfile::tempdir().unwrap();
+    let policy = approval_policy();
+    let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let declared = declared_hash(&policy, CASE, evidence_a());
+    assert_eq!(declared, record.request_sha256);
+    match gate_declared(root.path(), &policy, evidence_a(), &declared).unwrap() {
+        SettlementGate::Resumed {
+            pending_id,
+            request_sha256,
+            ..
+        } => {
+            assert_eq!(pending_id, record.pending_id);
+            assert_eq!(request_sha256, record.request_sha256);
+        }
+        other => panic!("expected a claimed settlement, got {other:?}"),
+    }
 }
 
 #[test]

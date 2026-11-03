@@ -1084,12 +1084,22 @@ fn resume_artifact_transition(
         vec![format!("operation:{}", pending.run_id)],
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    let declared = sea_forge_authority::cep::settlement_request_sha256(
+        &bundle,
+        &pending.case_id,
+        &pending.run_id,
+        &ingress,
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     let gate = sea_forge_authority::cep::authorize_settlement_declaration(
         &engine,
         &bundle,
         &root,
-        &pending.case_id,
-        &pending.run_id,
+        sea_forge_authority::cep::SettlementOperation {
+            case_id: &pending.case_id,
+            operation_id: &pending.run_id,
+            declared_request_sha256: &declared,
+        },
         &ingress,
         chrono::Duration::hours(24),
     )

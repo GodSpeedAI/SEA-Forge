@@ -2512,6 +2512,27 @@ pub fn settlement_status(
     Ok(status_in(&entries, &record, Utc::now()))
 }
 
+/// The operation a settlement gate call is for. `declared_request_sha256` is the content hash of the declaration
+/// the caller is about to make (see [`settlement_request_sha256`]). A claim is refused, and its approval spent as
+/// `failed(content_mismatch)`, when it does not equal the approved request hash.
+pub struct SettlementOperation<'a> {
+    pub case_id: &'a str,
+    pub operation_id: &'a str,
+    pub declared_request_sha256: &'a str,
+}
+
+/// The canonical request hash of one settlement declaration: the hash a pending record and its approval are bound
+/// to. A caller computes it over the content it is about to declare and presents it as `declared_request_sha256`.
+pub fn settlement_request_sha256(
+    bundle: &AuthorityPolicyBundle,
+    case_id: &str,
+    operation_id: &str,
+    ingress: &VerifiedSettlementIngress<'_>,
+) -> Result<String, CepAuthorityError> {
+    let class = derive_settlement_authority_class(ingress);
+    Ok(settlement_identity(bundle, case_id, operation_id, class, ingress)?.request_sha256)
+}
+
 /// Gate a settlement declaration from a verified ingress, before any code path calls `declare()`.
 ///
 /// Policy is evaluated and committed on every call. An allow yields `Allowed` unless a settlement pending record
@@ -2522,11 +2543,15 @@ pub fn authorize_settlement_declaration(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
     root: &Path,
-    case_id: &str,
-    operation_id: &str,
+    operation: SettlementOperation<'_>,
     ingress: &VerifiedSettlementIngress<'_>,
     approval_ttl: Duration,
 ) -> Result<SettlementGate, CepAuthorityError> {
+    let SettlementOperation {
+        case_id,
+        operation_id,
+        declared_request_sha256,
+    } = operation;
     let ledger = settlement_ledger(root)?;
     let class = derive_settlement_authority_class(ingress);
     let identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
@@ -2552,7 +2577,7 @@ pub fn authorize_settlement_declaration(
             }
             return Ok(SettlementGate::Allowed(class));
         };
-        return gate_on_status(&ledger, &record, class, true, true);
+        return gate_on_status(&ledger, &record, class, declared_request_sha256, true, true);
     }
     if !approvable(&decision) {
         return Err(CepAuthorityError::Evidence(format!(
@@ -2571,7 +2596,14 @@ pub fn authorize_settlement_declaration(
         committed.entry_ulid(),
         approval_ttl,
     )?;
-    gate_on_status(&ledger, &record, class, replayed, false)
+    gate_on_status(
+        &ledger,
+        &record,
+        class,
+        declared_request_sha256,
+        replayed,
+        false,
+    )
 }
 
 /// Act on the current state of one pending record for a gate call. `outright` is true when policy allows the
@@ -2580,6 +2612,7 @@ fn gate_on_status(
     ledger: &LedgerStream,
     record: &SettlementPendingRecord,
     class: SettlementAuthorityClass,
+    declared_request_sha256: &str,
     replayed: bool,
     outright: bool,
 ) -> Result<SettlementGate, CepAuthorityError> {
@@ -2623,6 +2656,20 @@ fn gate_on_status(
             })
         }
         SettlementStatus::Pending | SettlementStatus::Approved => {
+            // The content about to be declared must be the content that was approved. A mismatch spends the
+            // approval as failed, and nothing is declared.
+            if declared_request_sha256 != record.request_sha256 {
+                commit_terminal(
+                    ledger,
+                    record,
+                    "failed",
+                    json!({"reason": "content_mismatch"}),
+                )?;
+                return Err(CepAuthorityError::Approval(format!(
+                    "settlement_content_mismatch: {} was approved for a different request; no declaration was made",
+                    record.pending_id
+                )));
+            }
             claim_resume(ledger, &entries, record, class)
         }
     }

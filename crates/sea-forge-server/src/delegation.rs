@@ -921,12 +921,19 @@ async fn submit_swe_seed_declaration(
     // authorised declaration if one was appended. Only then is a new attempt gated, so nothing is declared twice.
     sea_forge_authority::cep::reconcile_operation_claims(root, case, run)
         .map_err(|error| ForgeError::Input(format!("settlement state refused: {error}")))?;
+    let declared = sea_forge_authority::cep::settlement_request_sha256(
+        &bundle, case, run, &ingress,
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     let gate = sea_forge_authority::cep::authorize_settlement_declaration(
         &engine,
         &bundle,
         root,
-        case,
-        run,
+        sea_forge_authority::cep::SettlementOperation {
+            case_id: case,
+            operation_id: run,
+            declared_request_sha256: &declared,
+        },
         &ingress,
         chrono::Duration::hours(24),
     )
