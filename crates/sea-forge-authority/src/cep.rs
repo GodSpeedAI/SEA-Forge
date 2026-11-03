@@ -2338,6 +2338,8 @@ struct CanonicalSettlementRequest<'a> {
 
 /// The identity of one request, computed before anything is written.
 struct SettlementIdentity {
+    case_id: String,
+    operation_id: String,
     request_sha256: String,
     pending_id: String,
     actor_role: String,
@@ -2383,6 +2385,8 @@ fn settlement_identity(
     let request_sha256 = hex::encode(Sha256::digest(bytes));
     let pending_id = pending_id_for(&request_sha256);
     Ok(SettlementIdentity {
+        case_id: case_id.to_string(),
+        operation_id: operation_id.to_string(),
         request_sha256,
         pending_id,
         actor_role: role,
@@ -2588,8 +2592,6 @@ pub fn authorize_settlement_declaration(
     }
     let (record, replayed) = record_settlement_pending(
         &ledger,
-        case_id,
-        operation_id,
         class,
         ingress,
         &identity,
@@ -2890,8 +2892,6 @@ fn existing_pending_after_conflict(
 /// typed-once commit on the payload (timestamps differ); it then returns the record the winner wrote.
 fn record_settlement_pending(
     ledger: &LedgerStream,
-    case_id: &str,
-    operation_id: &str,
     class: SettlementAuthorityClass,
     ingress: &VerifiedSettlementIngress<'_>,
     identity: &SettlementIdentity,
@@ -2906,8 +2906,8 @@ fn record_settlement_pending(
     let record = SettlementPendingRecord {
         pending_id: identity.pending_id.clone(),
         request_sha256: identity.request_sha256.clone(),
-        case_id: case_id.to_string(),
-        operation_id: operation_id.to_string(),
+        case_id: identity.case_id.clone(),
+        operation_id: identity.operation_id.clone(),
         operation_kind: SETTLEMENT_SURFACE.into(),
         settlement_authority_class: class.as_str().into(),
         ingress: ingress.ingress().as_str().into(),
@@ -2923,7 +2923,7 @@ fn record_settlement_pending(
     match ledger.commit_typed_once(
         SETTLEMENT_PENDING_KIND,
         format!("{SETTLEMENT_PENDING_KEY}{}", identity.request_sha256),
-        vec![operation_id.to_string(), identity.pending_id.clone()],
+        vec![identity.operation_id.clone(), identity.pending_id.clone()],
         &record,
         vec![decision_ref.to_string()],
     ) {
