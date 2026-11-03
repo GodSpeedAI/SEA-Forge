@@ -116,8 +116,22 @@ impl SnapshotView for LedgerSnapshotView {
         } else {
             vec![]
         };
+        // Only declarations the shared authority verification does not refuse may build a capability.
         let declarations =
             load_declarations(&self.root.join("settlement/declarations.jsonl")).ok()?;
+        let verdicts =
+            sea_forge_authority::cep::verify_case_declarations(&self.root, &declarations).ok()?;
+        let declarations: Vec<_> = declarations
+            .into_iter()
+            .zip(verdicts)
+            .filter(|(_, verdict)| {
+                !matches!(
+                    verdict,
+                    sea_forge_authority::cep::DeclarationAuthorization::Quarantined(_)
+                )
+            })
+            .map(|(declaration, _)| declaration)
+            .collect();
         let record = build_capability_record(
             name,
             &envelopes,

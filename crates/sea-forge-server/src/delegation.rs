@@ -841,6 +841,10 @@ pub async fn execute_with_permission_broker(
             evidence_ref.entry_ulid(),
             &settlement.settlement_id,
             &execution_started_at,
+            &Actor {
+                actor_id: request.entity.into(),
+                role: request.actor_role.clone(),
+            },
         )
         .await
         {
@@ -888,6 +892,7 @@ async fn submit_swe_seed_declaration(
     evidence_entry_ulid: &str,
     settlement_id: &str,
     execution_started_at: &str,
+    caller: &Actor,
 ) -> Result<(), ForgeError> {
     let policy = resolve_policy_path(root, policy_path)?;
     let bundle = AuthorityPolicyBundle::load(&policy)?;
@@ -901,7 +906,21 @@ async fn submit_swe_seed_declaration(
             path: policy.clone(),
             message: "strong settlement authority declares no permitted role".into(),
         })?;
-
+    // The SWE_SEED transport is an external declarer, so this declaration must pass the settlement gate
+    // (fail closed) before anything is sent to it. A refusal is committed by the gate and returned here.
+    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
+    let ingress = sea_forge_authority::cep::VerifiedSettlementIngress::verified(
+        sea_forge_authority::cep::SettlementIngress::SweSeedDeclaration,
+        sea_forge_authority::cep::SettlementTransport::SweSeedAdapter,
+        None,
+        caller,
+        vec![format!("operation:{run}")],
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    // An attempt claimed by an earlier call that never recorded its outcome is settled first, from its own
+    // authorised declaration if one was appended. Only then is a new attempt gated, so nothing is declared twice.
+    sea_forge_authority::cep::reconcile_operation_claims(root, case, run)
+        .map_err(|error| ForgeError::Input(format!("settlement state refused: {error}")))?;
     let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
         case,
         run,
@@ -917,7 +936,7 @@ async fn submit_swe_seed_declaration(
     let mut source_evidence_refs = evidence.harvested_refs.clone();
     source_evidence_refs.push(evidence_entry_ulid.into());
 
-    let request = SettlementDeclarationRequest {
+    let mut request = SettlementDeclarationRequest {
         settlement_ref: settlement_id.into(),
         run_id: run.into(),
         case_id: case.into(),
@@ -945,9 +964,60 @@ async fn submit_swe_seed_declaration(
         orchestration_burden: None,
         source_evidence_refs,
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
+    };
+    // The content this request would declare is hashed before the gate, so the approval binds to it.
+    let declared = sea_forge_authority::cep::settlement_declaration_content_sha256(&request)
+        .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    let gate = sea_forge_authority::cep::authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        sea_forge_authority::cep::SettlementOperation {
+            case_id: case,
+            operation_id: run,
+            declared_request_sha256: &declared,
+        },
+        &ingress,
+        chrono::Duration::hours(24),
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    // The claimed attempt, if the gate handed one out. Its outcome is recorded once the declaration is appended.
+    let claimed = match gate {
+        sea_forge_authority::cep::SettlementGate::Pending { record, .. } => {
+            // Held for approval: the pending record is durable and nothing is sent to the authority.
+            return Err(ForgeError::Plan {
+                class: "settlement_approval_pending",
+                message: format!(
+                    "settlement declaration {} awaits approval; no declaration was made",
+                    record.pending_id
+                ),
+            });
+        }
+        sea_forge_authority::cep::SettlementGate::Completed { pending_id, .. } => {
+            return Err(ForgeError::Plan {
+                class: "settlement_already_declared",
+                message: format!(
+                    "settlement declaration {pending_id} already completed; not declared again"
+                ),
+            });
+        }
+        sea_forge_authority::cep::SettlementGate::Resumed {
+            pending_id,
+            request_sha256,
+            attempt,
+            ..
+        } => Some((pending_id, request_sha256, attempt)),
+        sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
     };
 
-    let declaration = tokio::task::spawn_blocking(
+    if let Some((pending_id, request_sha256, _)) = claimed.as_ref() {
+        request.authorization_ref = Some(pending_id.clone());
+        request.authorization_request_sha256 = Some(request_sha256.clone());
+    }
+    let echo_request = request.clone();
+    let declared = tokio::task::spawn_blocking(
         move || -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
             let transport = sea_forge_settlement::CommandSweSeedTransport::new(
                 descriptor.command.clone(),
@@ -962,14 +1032,68 @@ async fn submit_swe_seed_declaration(
         },
     )
     .await
-    .map_err(|error| ForgeError::Internal(format!("swe_seed declare task panic: {error}")))??;
+    .map_err(|error| ForgeError::Internal(format!("swe_seed declare task panic: {error}")))
+    .and_then(|declared| declared);
+    // Nothing was appended: the claim is released when the authority was unavailable, failed otherwise.
+    let declaration = match declared {
+        Ok(declaration) => declaration,
+        Err(error) => {
+            settle_unrecorded_claim(root, claimed.as_ref(), &error)?;
+            return Err(error);
+        }
+    };
 
+    if let Err(error) =
+        sea_forge_authority::cep::verify_declaration_echoes_request(&echo_request, &declaration)
+    {
+        if let Some((pending_id, _, _)) = claimed.as_ref() {
+            sea_forge_authority::cep::fail_settlement_resume(root, pending_id, "content_mismatch")
+                .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))?;
+        }
+        return Err(ForgeError::Plan {
+            class: "settlement_content_mismatch",
+            message: error.to_string(),
+        });
+    }
     crate::swe_seed_reconciliation::append_and_reconcile_swe_seed_declaration(
         root,
         entity,
         &declaration,
     )?;
+    if let Some((pending_id, _, _)) = claimed {
+        sea_forge_authority::cep::complete_settlement_resume(
+            root,
+            &pending_id,
+            &declaration.declaration_id,
+        )
+        .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;
+    }
     Ok(())
+}
+
+/// Record the outcome of a claimed attempt whose declaration was never made. Released attempts may be claimed
+/// again; failed ones are terminal.
+fn settle_unrecorded_claim(
+    root: &Path,
+    claimed: Option<&(String, String, u32)>,
+    error: &ForgeError,
+) -> Result<(), ForgeError> {
+    let Some((pending_id, _, attempt)) = claimed else {
+        return Ok(());
+    };
+    let unavailable = matches!(
+        error,
+        ForgeError::Plan {
+            class: "settlement_authority_unavailable",
+            ..
+        }
+    );
+    if unavailable {
+        sea_forge_authority::cep::release_settlement_resume(root, pending_id, *attempt)
+    } else {
+        sea_forge_authority::cep::fail_settlement_resume(root, pending_id, "declaration_not_made")
+    }
+    .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))
 }
 
 fn termination_str(t: &DelegationTermination) -> String {

@@ -1,16 +1,18 @@
 # Current status
 
-**Status revision:** 188
+**Status revision:** 209
 
-**Stage:** Security: Dependabot alert 5 closed (go-jose/v4)
+**Stage:** Security: review follow-up on pending identity and echo check
 
-**Summary:** go-jose/v4 is bumped from v4.1.4 to v4.1.6 in the Casework Go module, which fixes Dependabot alert 5 (high, DoS when parsing JWKs that contain RSA keys, affects <= 4.1.5).
+**Summary:** Review follow-up: pending id now follows the bound request hash (fixes a concurrent duplicate-id race); the echo check compares acting_entity_id; a changed declaration after approval becomes its own pending request and leaves the approval unspent.
 
 **Verified:**
-- go build ./... in apps/godspeed-casework-go: pass
-- go test ./... in apps/godspeed-casework-go: pass
+- cargo test (authority, thoth, cli, server, capability, core; lib and tests): pass
+- cargo clippy --all-targets -D warnings: clean
+- cargo fmt --check: clean
 
 **Limits:**
-- Other Dependabot alerts on the default branch not reviewed in this revision
+- sea-forge-server doctest fails on agent_probe.rs (pre-existing, unrelated)
+- A claim whose resume errors after claiming stays open until the next resume settles it as failed (fail closed, stability only)
 
-**Next:** Continue with the settlement approval gate spec amendment.
+**Next:** Owner decision on the stability limitation, then merge PR 79.

@@ -13,11 +13,22 @@
 //! repeatedly (immediately after settlement, at server startup, or at
 //! read time) — an unchanged declaration set commits nothing new.
 
+use sea_forge_authority::cep::DeclarationAuthorization;
 use sea_forge_core::{errors::ForgeError, types::SettlementDeclaration};
 use sea_forge_ledger::{types::hash_canonical, CommittedRecordRef, LedgerStream};
 use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
+
+/// Audit record for a declaration that was refused as an authorisation at reconciliation time.
+#[derive(Serialize)]
+struct SettlementQuarantine<'a> {
+    case_id: &'a str,
+    run_id: &'a str,
+    declaration_id: &'a str,
+    declaration_hash: &'a str,
+    reason: &'a str,
+}
 
 #[derive(Serialize)]
 struct SweSeedClaimManifest<'a> {
@@ -110,6 +121,42 @@ pub fn reconcile_swe_seed_declarations(
         .collect::<Result<_, _>>()
         .map_err(|error: serde_json::Error| ForgeError::Serialization(error.to_string()))?;
 
+    // Every declaration in the case is verified against the authority ledger before it may correlate. An external
+    // declaration without a verified authorisation is quarantined (recorded once, idempotently) and never joins.
+    let verdicts = sea_forge_authority::cep::verify_case_declarations(root, &declarations)
+        .map_err(|error| ForgeError::Internal(format!("settlement authorisation: {error}")))?;
+    let mut authorized: Vec<&SettlementDeclaration> = Vec::new();
+    for (declaration, verdict) in declarations.iter().zip(&verdicts) {
+        match verdict {
+            DeclarationAuthorization::Quarantined(reason) => {
+                ledger.commit_typed_once(
+                    "settlement_quarantined",
+                    format!(
+                        "settlement-quarantined:{}:{}",
+                        declaration.declaration_id,
+                        reason.as_str()
+                    ),
+                    vec![
+                        case_id.into(),
+                        declaration.run_id.clone(),
+                        declaration.declaration_id.clone(),
+                    ],
+                    &SettlementQuarantine {
+                        case_id,
+                        run_id: &declaration.run_id,
+                        declaration_id: &declaration.declaration_id,
+                        declaration_hash: &declaration.declaration_hash,
+                        reason: reason.as_str(),
+                    },
+                    vec![],
+                )?;
+            }
+            DeclarationAuthorization::Local | DeclarationAuthorization::Authorized { .. } => {
+                authorized.push(declaration)
+            }
+        }
+    }
+
     let mut outcomes = Vec::new();
     for evidence_entry in entries
         .iter()
@@ -168,8 +215,9 @@ pub fn reconcile_swe_seed_declarations(
             &harvested_refs,
         )?;
 
-        let mut matching: Vec<&SettlementDeclaration> = declarations
+        let mut matching: Vec<&SettlementDeclaration> = authorized
             .iter()
+            .copied()
             .filter(|decl| {
                 decl.case_id == case_id
                     && decl.run_id == run_id
@@ -268,7 +316,14 @@ pub fn verify_swe_seed_completion(
         &std::fs::read(&plan_path)
             .map_err(|error| ForgeError::io("read run plan for swe_seed completion", error))?,
     )?;
-    reconcile_swe_seed_declarations(root, &plan.case_id)?;
+    // The declaration ids come from this reconciliation's own verdicts, not from the last stored correlation: a
+    // stored correlation can name a declaration since found unauthorised, and an identical set is never re-appended.
+    let outcomes = reconcile_swe_seed_declarations(root, &plan.case_id)?;
+    let declaration_ids = outcomes
+        .iter()
+        .rfind(|outcome| outcome.run_id == run_id)
+        .map(|outcome| outcome.declaration_ids.clone())
+        .unwrap_or_default();
 
     let ledger = LedgerStream::open(root, format!("case-{}", plan.case_id), "sea-forge-server")?;
     let entries = ledger.read_entries()?;
@@ -281,21 +336,6 @@ pub fn verify_swe_seed_completion(
                 .and_then(Value::as_array)
                 .is_some_and(|refs| !refs.is_empty())
     });
-    let declaration_ids = entries
-        .iter()
-        .filter(|entry| {
-            entry.record_kind == "swe_seed_correlation"
-                && entry.payload.get("run_id").and_then(Value::as_str) == Some(run_id)
-        })
-        .filter_map(|entry| {
-            entry
-                .payload
-                .get("declaration_ids")
-                .and_then(|value| serde_json::from_value::<Vec<String>>(value.clone()).ok())
-        })
-        .next_back()
-        .unwrap_or_default();
-
     Ok(SweSeedCompletion {
         run_id: run_id.into(),
         case_id: plan.case_id,
@@ -308,10 +348,20 @@ pub fn verify_swe_seed_completion(
 mod tests {
     use super::*;
     use chrono::Utc;
+    use sea_forge_authority::cep::{
+        authorize_settlement_declaration, complete_settlement_resume, reconcile_operation_claims,
+        settlement_approval_id, settlement_status, CepAuthorityService, SettlementCriteria,
+        SettlementGate, SettlementIngress, SettlementOperation, SettlementStatus,
+        SettlementTransport, VerifiedSettlementIngress,
+    };
+    use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
+    use sea_forge_core::types::{Actor, ActorRole};
     use sea_forge_core::types::{
         DeclarationIndependence, DeclarationReliability, DeclarationStatus, Declarer,
         SettlementStrength,
     };
+    use sea_forge_domainforge::WorldRegistry;
+    use serde_json::json;
 
     fn declaration(
         case_id: &str,
@@ -366,8 +416,32 @@ mod tests {
             source_evidence_refs: vec![],
             adapter_attestation_ref: None,
             authored_by: None,
+            authorization_ref: None,
+            authorization_request_sha256: None,
             declaration_hash: String::new(),
         };
+        decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
+        decl
+    }
+
+    /// A declaration as the local judge makes it: local strength, not qualifying, with no external provenance.
+    /// Production creates local declarations only this way (`LocalSettlementAuthority::declare`).
+    fn local_declaration(
+        case_id: &str,
+        run_id: &str,
+        plan_item_id: &str,
+        claim_manifest_sha256: &str,
+        verifier_ref: &str,
+    ) -> SettlementDeclaration {
+        let mut decl = declaration(
+            case_id,
+            run_id,
+            plan_item_id,
+            claim_manifest_sha256,
+            verifier_ref,
+        );
+        decl.strength = SettlementStrength::Local;
+        decl.qualifies_for_capability = false;
         decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
         decl
     }
@@ -431,6 +505,420 @@ mod tests {
         .unwrap()
     }
 
+    const APPROVAL_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
+    /// Gate `run_id` under `case-a`, presenting the declared content its own ingress hashes to.
+    fn gate_as(
+        engine: &PolicyAuthorityEngine,
+        bundle: &AuthorityPolicyBundle,
+        root: &Path,
+        run_id: &str,
+        ingress: &VerifiedSettlementIngress<'_>,
+        ttl: chrono::Duration,
+    ) -> Result<SettlementGate, sea_forge_authority::cep::CepAuthorityError> {
+        let declared = format!("sha256:content-{run_id}");
+        authorize_settlement_declaration(
+            engine,
+            bundle,
+            root,
+            SettlementOperation {
+                case_id: "case_a",
+                operation_id: run_id,
+                declared_request_sha256: &declared,
+            },
+            ingress,
+            ttl,
+        )
+    }
+
+    /// Gate one external declaration for `run_id` (pending), approve it as a distinct operator, and claim it.
+    /// Returns the claimed pending record's id and request hash.
+    fn claim_approved(root: &Path, run_id: &str) -> (String, String) {
+        // A fresh engine per call, as production does: an engine remembers an escalation it issued.
+        let bundle: AuthorityPolicyBundle =
+            sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();
+        let fresh = || PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let gate_actor = Actor {
+            actor_id: "cognate-service".into(),
+            role: ActorRole::Service,
+        };
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::SweSeedDeclaration,
+            SettlementTransport::SweSeedAdapter,
+            None,
+            &gate_actor,
+            vec![format!("operation:{run_id}")],
+        )
+        .unwrap();
+        let ttl = chrono::Duration::hours(24);
+        let pending = match gate_as(&fresh(), &bundle, root, run_id, &ingress, ttl).unwrap() {
+            SettlementGate::Pending { record, .. } => *record,
+            other => panic!("expected a pending settlement, got {other:?}"),
+        };
+        let worlds = WorldRegistry::new();
+        let engine = fresh();
+        let service = CepAuthorityService {
+            engine: &engine,
+            bundle: &bundle,
+            worlds: &worlds,
+            root,
+            approval_ttl: ttl,
+            criteria: SettlementCriteria::default(),
+        };
+        let approver = Actor {
+            actor_id: "op-approver".into(),
+            role: ActorRole::Operator,
+        };
+        service
+            .resolve_approval(
+                &settlement_approval_id(&pending.pending_id),
+                true,
+                &approver,
+            )
+            .unwrap();
+        match gate_as(&fresh(), &bundle, root, run_id, &ingress, ttl).unwrap() {
+            SettlementGate::Resumed { pending_id, .. } => {
+                assert_eq!(pending_id, pending.pending_id)
+            }
+            other => panic!("expected a claimed settlement, got {other:?}"),
+        }
+        (pending.pending_id, pending.request_sha256)
+    }
+
+    /// Append a declaration under a claimed attempt, binding it to that claim. The attempt is left open.
+    fn append_under_claim(root: &Path, mut decl: SettlementDeclaration) -> SettlementDeclaration {
+        let (pending_id, request_sha256) = claim_approved(root, &decl.run_id);
+        decl.authorization_ref = Some(pending_id);
+        decl.authorization_request_sha256 = Some(request_sha256);
+        decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
+        sea_forge_settlement::append_declaration_ledgered_once(
+            root,
+            &root.join("declarations.jsonl"),
+            "test",
+            &decl,
+        )
+        .unwrap();
+        decl
+    }
+
+    /// The full lifecycle for one declaration: claim, append under the claim, and record its completion.
+    fn append_authorized(root: &Path, decl: SettlementDeclaration) -> SettlementDeclaration {
+        let decl = append_under_claim(root, decl);
+        let pending_id = decl.authorization_ref.clone().unwrap();
+        complete_settlement_resume(root, &pending_id, &decl.declaration_id).unwrap();
+        decl
+    }
+
+    /// Append straight to the case ledger, past the settlement writer's boundary.
+    fn out_of_process_append(root: &Path, decl: &SettlementDeclaration) {
+        LedgerStream::open(
+            root,
+            format!("case-{}", decl.case_id),
+            "out_of_process_operator",
+        )
+        .unwrap()
+        .commit_typed(
+            "settlement_declaration",
+            vec![
+                decl.case_id.clone(),
+                decl.settlement_ref.clone(),
+                decl.declaration_id.clone(),
+            ],
+            decl,
+            vec![decl.declarer.authority_ref.clone()],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn external_declaration_without_provenance_is_refused_by_the_writer() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
+        let error = sea_forge_settlement::append_declaration_ledgered_once(
+            root.path(),
+            &root.path().join("declarations.jsonl"),
+            "test",
+            &decl,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&error, ForgeError::Plan { class, .. } if *class == "settlement_authorization_missing"),
+            "{error:?}"
+        );
+        let written = LedgerStream::open(root.path(), "case-case_a", "test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .into_iter()
+            .filter(|entry| entry.record_kind == "settlement_declaration")
+            .count();
+        assert_eq!(written, 0, "a refused declaration is not written");
+    }
+
+    fn quarantines(root: &Path, case_id: &str) -> Vec<Value> {
+        LedgerStream::open(root, format!("case-{case_id}"), "test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .into_iter()
+            .filter(|entry| entry.record_kind == "settlement_quarantined")
+            .map(|entry| entry.payload)
+            .collect()
+    }
+
+    #[test]
+    fn unauthorised_external_declaration_is_quarantined_at_startup_idempotently() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // Legacy or out-of-process: a SWE_SEED declaration with no authorisation provenance.
+        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
+        out_of_process_append(root.path(), &decl);
+        reconcile_all_cases(root.path()).unwrap();
+        reconcile_all_cases(root.path()).unwrap();
+
+        let found = quarantines(root.path(), "case_a");
+        assert_eq!(
+            found.len(),
+            1,
+            "one quarantine, however many reconciliations"
+        );
+        assert_eq!(found[0]["declaration_id"], json!(decl.declaration_id));
+        assert_eq!(found[0]["reason"], json!("missing_authorization"));
+        let entries = LedgerStream::open(root.path(), "case-case_a", "test")
+            .unwrap()
+            .read_entries()
+            .unwrap();
+        assert!(entries
+            .iter()
+            .filter(|entry| entry.record_kind == "swe_seed_correlation")
+            .all(|entry| !entry.payload.to_string().contains(&decl.declaration_id)));
+    }
+
+    #[test]
+    fn approval_for_one_run_does_not_authorise_another() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest_a = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_a",
+            vec!["a:sha256:1".into()],
+        );
+        let manifest_b = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_b",
+            "item_b",
+            vec!["b:sha256:2".into()],
+        );
+        let authorised = append_authorized(
+            root.path(),
+            declaration("case_a", "run_a", "item_a", &manifest_a, "swe_seed_test"),
+        );
+        // Splice run_a's approved authorisation onto a declaration for run_b.
+        let mut replay = declaration("case_a", "run_b", "item_b", &manifest_b, "swe_seed_test");
+        replay.authorization_ref = authorised.authorization_ref.clone();
+        replay.authorization_request_sha256 = authorised.authorization_request_sha256.clone();
+        replay.declaration_hash = sea_forge_settlement::compute_declaration_hash(&replay).unwrap();
+        out_of_process_append(root.path(), &replay);
+
+        let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
+        let run_a = outcomes.iter().find(|o| o.run_id == "run_a").unwrap();
+        let run_b = outcomes.iter().find(|o| o.run_id == "run_b").unwrap();
+        assert_eq!(
+            run_a.declaration_ids,
+            vec![authorised.declaration_id.clone()]
+        );
+        assert!(run_b.declaration_ids.is_empty());
+        let found = quarantines(root.path(), "case_a");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0]["declaration_id"], json!(replay.declaration_id));
+        assert_eq!(found[0]["reason"], json!("authorization_mismatch"));
+    }
+
+    #[test]
+    fn local_declarations_keep_their_behaviour_and_are_not_quarantined() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        let decl = local_declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
+        sea_forge_settlement::append_declaration_ledgered_once(
+            root.path(),
+            &root.path().join("declarations.jsonl"),
+            "local",
+            &decl,
+        )
+        .unwrap();
+        reconcile_all_cases(root.path()).unwrap();
+        assert!(quarantines(root.path(), "case_a").is_empty());
+    }
+
+    #[test]
+    fn a_declaration_in_another_case_cannot_complete_a_claim() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // case_a claims run_a under an approval and has no recorded outcome yet.
+        let (pending_id, request_sha256) = claim_approved(root.path(), "run_a");
+        // A declaration in case_b names case_a's claimed pending record and its exact request hash.
+        let mut foreign = declaration("case_b", "run_a", "item_acp", &manifest, "swe_seed_test");
+        foreign.authorization_ref = Some(pending_id.clone());
+        foreign.authorization_request_sha256 = Some(request_sha256);
+        foreign.declaration_hash =
+            sea_forge_settlement::compute_declaration_hash(&foreign).unwrap();
+        LedgerStream::open(root.path(), "case-case_b", "test")
+            .unwrap()
+            .commit_typed("settlement_declaration", vec![], &foreign, vec![])
+            .unwrap();
+
+        let verdicts = sea_forge_authority::cep::verify_case_declarations(
+            root.path(),
+            std::slice::from_ref(&foreign),
+        )
+        .unwrap();
+        assert_eq!(
+            verdicts,
+            vec![DeclarationAuthorization::Quarantined(
+                sea_forge_authority::cep::DeclarationRefusal::AuthorizationMismatch
+            )]
+        );
+        // Reconciling case_b must not settle case_a's claim.
+        reconcile_operation_claims(root.path(), "case_b", "run_a").unwrap();
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { .. }
+        ));
+    }
+
+    #[test]
+    fn interrupted_claim_completes_from_its_authorised_declaration() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // The declaration is appended, then the process dies before recording the completion.
+        let decl = append_under_claim(
+            root.path(),
+            declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test"),
+        );
+        let pending_id = decl.authorization_ref.clone().unwrap();
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { .. }
+        ));
+
+        reconcile_operation_claims(root.path(), "case_a", "run_a").unwrap();
+
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Completed {
+                declaration_ref: decl.declaration_id.clone()
+            }
+        );
+        let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
+        let run_a = outcomes.iter().find(|o| o.run_id == "run_a").unwrap();
+        assert_eq!(run_a.declaration_ids, vec![decl.declaration_id.clone()]);
+    }
+
+    #[test]
+    fn interrupted_claim_without_a_declaration_fails_and_is_never_redeclared() {
+        let root = tempfile::tempdir().unwrap();
+        commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        let (pending_id, _) = claim_approved(root.path(), "run_a");
+
+        reconcile_operation_claims(root.path(), "case_a", "run_a").unwrap();
+
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Failed { .. }
+        ));
+        let bundle: AuthorityPolicyBundle =
+            sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let gate_actor = Actor {
+            actor_id: "cognate-service".into(),
+            role: ActorRole::Service,
+        };
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::SweSeedDeclaration,
+            SettlementTransport::SweSeedAdapter,
+            None,
+            &gate_actor,
+            vec!["operation:run_a".into()],
+        )
+        .unwrap();
+        assert!(gate_as(
+            &engine,
+            &bundle,
+            root.path(),
+            "run_a",
+            &ingress,
+            chrono::Duration::hours(24),
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn an_external_declaration_relabelled_local_is_quarantined() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // An external settlement is pending for the run.
+        claim_approved(root.path(), "run_a");
+        // A declaration for the same run, presented as local, appended out of process.
+        let decl = local_declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
+        out_of_process_append(root.path(), &decl);
+
+        reconcile_all_cases(root.path()).unwrap();
+
+        let found = quarantines(root.path(), "case_a");
+        assert!(
+            found
+                .iter()
+                .any(|q| q["declaration_id"] == json!(decl.declaration_id)
+                    && q["reason"] == json!("class_mismatch")),
+            "{found:?}"
+        );
+    }
+
     #[test]
     fn mismatched_run_never_correlates() {
         let root = tempfile::tempdir().unwrap();
@@ -448,13 +936,7 @@ mod tests {
             &manifest,
             "swe_seed_test",
         );
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert_eq!(outcomes.len(), 1);
         assert!(outcomes[0].declaration_ids.is_empty());
@@ -477,13 +959,7 @@ mod tests {
             &manifest,
             "some_other_verifier",
         );
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert!(outcomes[0].declaration_ids.is_empty());
     }
@@ -505,13 +981,7 @@ mod tests {
             "sha256:not-the-real-manifest",
             "swe_seed_test",
         );
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert!(outcomes[0].declaration_ids.is_empty());
     }
@@ -529,13 +999,7 @@ mod tests {
         )
         .unwrap();
         let decl = declaration("case_a", "run_a", "item_acp", &expected, "swe_seed_test");
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        let decl = append_authorized(root.path(), decl);
         // No evidence yet: nothing to correlate against.
         assert!(reconcile_swe_seed_declarations(root.path(), "case_a")
             .unwrap()
@@ -569,13 +1033,7 @@ mod tests {
             vec!["a:sha256:1".into()],
         );
         let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        append_authorized(root.path(), decl);
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
@@ -607,13 +1065,7 @@ mod tests {
             vec!["b:sha256:2".into()],
         );
         let decl = declaration("case_a", "run_a", "item_a", &manifest_a, "swe_seed_test");
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "test",
-            &decl,
-        )
-        .unwrap();
+        let decl = append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         let run_a = outcomes.iter().find(|o| o.run_id == "run_a").unwrap();
         let run_b = outcomes.iter().find(|o| o.run_id == "run_b").unwrap();

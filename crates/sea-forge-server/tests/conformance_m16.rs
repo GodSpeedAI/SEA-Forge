@@ -1335,46 +1335,35 @@ fn matching_swe_seed_declaration(
         source_evidence_refs: harvested_refs,
         adapter_attestation_ref: None,
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
         declaration_hash: String::new(),
     };
     decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
     decl
 }
 
-/// Task 18, trigger 1: the server's own production ingress
-/// (`delegation::submit_swe_seed_declaration`) declares against the real
-/// configured `CommandSweSeedTransport` immediately after settlement, and
-/// the declaration correlates in the same call — no separate reconciliation
-/// step is needed for the ordinary path.
+/// Task 18, trigger 1 under the settlement gate: the server's ingress
+/// (`delegation::submit_swe_seed_declaration`) is an external declarer, so it
+/// must pass the `settlement_declaration` gate before `declare()`. This policy
+/// has no external rule, so the gate refuses, the SWE_SEED transport is never
+/// reached, and no declaration is recorded. The settlement itself is unaffected.
 #[tokio::test]
-async fn t16_8_server_owned_swe_seed_declaration_correlates_immediately() {
+async fn t16_8_server_owned_swe_seed_declaration_is_refused_without_an_external_gate() {
     let root = tempfile::tempdir().unwrap();
     write_policy_with_swe_seed_authority(root.path());
     let config = server_config(root.path(), "read", "swe_seed");
     let case = case_id().unwrap();
-    let (run, result) = execute_fixture(&config, &case).await;
+    let (_run, result) = execute_fixture(&config, &case).await;
     assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
 
     let records = entries(root.path(), &case);
-    let declaration = records
-        .iter()
-        .find(|entry| entry.record_kind == "settlement_declaration")
-        .unwrap_or_else(|| panic!("no settlement_declaration record; records: {records:#?}"));
-    assert_eq!(declaration.payload["run_id"], run);
-    assert_eq!(declaration.payload["status"], "accepted");
-    let declaration_id = declaration.payload["declaration_id"].as_str().unwrap();
-
-    let correlation = find_run_field(&records, "swe_seed_correlation", &run);
-    assert_eq!(
-        correlation["declaration_ids"],
-        json!([declaration_id]),
-        "immediate correlation must name the just-declared id"
+    assert!(
+        records
+            .iter()
+            .all(|entry| entry.record_kind != "settlement_declaration"),
+        "no external declaration may be recorded without a gate decision; records: {records:#?}"
     );
-
-    let completion =
-        swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
-    assert!(completion.harvested);
-    assert_eq!(completion.declaration_ids, vec![declaration_id.to_string()]);
 }
 
 /// Task 18, trigger 2 (startup): a declaration appended directly through
@@ -1404,13 +1393,7 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
     );
 
     let decl = matching_swe_seed_declaration(&case, &run, &records);
-    sea_forge_settlement::append_declaration_ledgered_once(
-        root.path(),
-        &root.path().join("declarations.jsonl"),
-        "out_of_process_operator",
-        &decl,
-    )
-    .unwrap();
+    out_of_process_append(root.path(), &decl);
     // Server absent: nothing has reconciled this yet.
     let stale = find_run_field(&entries(root.path(), &case), "swe_seed_correlation", &run).clone();
     assert!(stale["declaration_ids"].as_array().unwrap().is_empty());
@@ -1421,9 +1404,10 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
     let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
     assert_eq!(
         correlation["declaration_ids"],
-        json!([decl.declaration_id]),
-        "server startup must reconcile the out-of-process declaration"
+        json!([]),
+        "an out-of-process declaration with no authorisation must not correlate at server startup"
     );
+    assert_quarantined(&reconciled, &decl.declaration_id, "missing_authorization");
     let view: Value = serde_json::from_str(
         &std::fs::read_to_string(
             root.path()
@@ -1434,7 +1418,45 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
         .unwrap(),
     )
     .unwrap();
-    assert_eq!(view["declaration_ids"], json!([decl.declaration_id]));
+    assert_eq!(view["declaration_ids"], json!([]));
+}
+
+/// Append a declaration the way an out-of-process writer can: straight to the case ledger, past the settlement
+/// writer's boundary. Reconciliation must still refuse it.
+fn out_of_process_append(root: &Path, decl: &sea_forge_core::types::SettlementDeclaration) {
+    sea_forge_ledger::LedgerStream::open(
+        root,
+        format!("case-{}", decl.case_id),
+        "out_of_process_operator",
+    )
+    .unwrap()
+    .commit_typed(
+        "settlement_declaration",
+        vec![
+            decl.case_id.clone(),
+            decl.settlement_ref.clone(),
+            decl.declaration_id.clone(),
+        ],
+        decl,
+        vec![decl.declarer.authority_ref.clone()],
+    )
+    .unwrap();
+}
+
+/// A `settlement_quarantined` record names the refused declaration and its stable reason.
+fn assert_quarantined(
+    records: &[sea_forge_ledger::LedgerEntry],
+    declaration_id: &str,
+    reason: &str,
+) {
+    assert!(
+        records.iter().any(|entry| {
+            entry.record_kind == "settlement_quarantined"
+                && entry.payload["declaration_id"] == json!(declaration_id)
+                && entry.payload["reason"] == json!(reason)
+        }),
+        "expected settlement_quarantined for {declaration_id} with reason {reason}"
+    );
 }
 
 /// Task 18, trigger 3 (read time): the same late, out-of-process declaration
@@ -1450,26 +1472,20 @@ async fn t16_8_late_swe_seed_declaration_reconciles_at_read_time() {
     assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
 
     let decl = matching_swe_seed_declaration(&case, &run, &entries(root.path(), &case));
-    sea_forge_settlement::append_declaration_ledgered_once(
-        root.path(),
-        &root.path().join("declarations.jsonl"),
-        "out_of_process_operator",
-        &decl,
-    )
-    .unwrap();
+    out_of_process_append(root.path(), &decl);
 
     let completion =
         swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();
     assert!(completion.harvested);
-    assert_eq!(
-        completion.declaration_ids,
-        vec![decl.declaration_id.clone()]
+    assert!(
+        completion.declaration_ids.is_empty(),
+        "an unauthorised out-of-process declaration must not satisfy read-time completion"
     );
-    // The read-time check must have materialized the correlation too, not
-    // just returned an ephemeral computed answer.
+    // The read-time check materializes its verdict too: the correlation is empty and the refusal is recorded.
     let reconciled = entries(root.path(), &case);
     let correlation = find_run_field(&reconciled, "swe_seed_correlation", &run);
-    assert_eq!(correlation["declaration_ids"], json!([decl.declaration_id]));
+    assert_eq!(correlation["declaration_ids"], json!([]));
+    assert_quarantined(&reconciled, &decl.declaration_id, "missing_authorization");
 }
 
 #[tokio::test]

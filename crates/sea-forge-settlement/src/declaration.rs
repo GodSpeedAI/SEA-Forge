@@ -36,6 +36,23 @@ pub fn append_declaration(path: &Path, decl: &SettlementDeclaration) -> Result<(
         .map_err(|e| ForgeError::io("append declaration", e))
 }
 
+/// The writer's boundary: an external declaration must name the pending record that authorised it. A writer that
+/// omits it still produces a record, but reconciliation quarantines that record, so refuse it here first.
+fn refuse_unauthorised_external(decl: &SettlementDeclaration) -> Result<(), ForgeError> {
+    if decl.is_external()
+        && (decl.authorization_ref.is_none() || decl.authorization_request_sha256.is_none())
+    {
+        return Err(ForgeError::Plan {
+            class: "settlement_authorization_missing",
+            message: format!(
+                "external declaration {} carries no settlement authorisation",
+                decl.declaration_id
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Commit a declaration to the M0 ledger before appending its compatibility view.
 pub fn append_declaration_ledgered(
     root: &Path,
@@ -43,6 +60,7 @@ pub fn append_declaration_ledgered(
     actor: &str,
     decl: &SettlementDeclaration,
 ) -> Result<(), ForgeError> {
+    refuse_unauthorised_external(decl)?;
     if compute_declaration_hash(decl)? != decl.declaration_hash {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
@@ -68,6 +86,7 @@ pub fn append_declaration_ledgered_once(
     actor: &str,
     decl: &SettlementDeclaration,
 ) -> Result<CommittedRecordRef, ForgeError> {
+    refuse_unauthorised_external(decl)?;
     if compute_declaration_hash(decl)? != decl.declaration_hash {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
@@ -248,6 +267,8 @@ impl SettlementAuthority for LocalSettlementAuthority {
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: None,
             authored_by: req.authored_by.clone(),
+            authorization_ref: req.authorization_ref.clone(),
+            authorization_request_sha256: req.authorization_request_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -577,6 +598,8 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: Some(swe_resp.attestation_ref),
             authored_by: req.authored_by.clone(),
+            authorization_ref: req.authorization_ref.clone(),
+            authorization_request_sha256: req.authorization_request_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -746,7 +769,35 @@ mod tests {
             orchestration_burden: None,
             source_evidence_refs: vec!["evi_x".into()],
             authored_by: None,
+            // An external declaration must name its authorisation at the writer.
+            authorization_ref: Some(format!("settlement-pending-{}", "a".repeat(32))),
+            authorization_request_sha256: Some("b".repeat(64)),
         }
+    }
+
+    /// The authorisation a request names is carried into the declaration and covered by its hash, so it cannot be
+    /// relabelled after the authority declared it.
+    #[test]
+    fn request_authorisation_is_carried_into_the_hashed_declaration() {
+        let authority = SweSeedSettlementAuthority::new(CannedSweSeedTransport, "operator_local")
+            .with_adapter_ref("swe_seed_test");
+        let request = swe_seed_declaration_request();
+        let decl = authority.declare(&request).unwrap();
+        assert_eq!(decl.authorization_ref, request.authorization_ref);
+        assert_eq!(
+            decl.authorization_request_sha256,
+            request.authorization_request_sha256
+        );
+        assert_eq!(
+            compute_declaration_hash(&decl).unwrap(),
+            decl.declaration_hash
+        );
+        let mut relabelled = decl.clone();
+        relabelled.authorization_ref = Some(format!("settlement-pending-{}", "c".repeat(32)));
+        assert_ne!(
+            compute_declaration_hash(&relabelled).unwrap(),
+            decl.declaration_hash
+        );
     }
 
     /// Two independent `declare()` calls for the exact same underlying claim
