@@ -1084,11 +1084,27 @@ fn resume_artifact_transition(
         vec![format!("operation:{}", pending.run_id)],
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
-    let declared = sea_forge_authority::cep::settlement_request_sha256(
-        &bundle,
-        &pending.case_id,
-        &pending.run_id,
-        &ingress,
+    // The declaration this resume would make is planned before the gate, so the approval binds to its content.
+    let declarer = Declarer {
+        actor_id: descriptor.declarer_actor_id.clone(),
+        authority_ref: descriptor.authority_ref.clone(),
+        role: declarer_role.clone(),
+        standing_basis: descriptor.standing_basis.clone(),
+    };
+    let verifier_sha256 = sea_forge_ledger::types::hash_canonical(&environment)?;
+    let planned = sea_forge_artifact_ip::plan_resume_declaration(
+        &root,
+        &options.entity,
+        &pending,
+        &criteria,
+        &settlement,
+        &execution.started_at,
+        &verifier_ref,
+        &verifier_sha256,
+        &declarer,
+    )?;
+    let declared = sea_forge_authority::cep::settlement_declaration_content_sha256(
+        &planned.request,
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     let gate = sea_forge_authority::cep::authorize_settlement_declaration(
@@ -1135,20 +1151,16 @@ fn resume_artifact_transition(
         &settlement,
         &execution.started_at,
         &verifier_ref,
-        &sea_forge_ledger::types::hash_canonical(&environment)?,
+        &verifier_sha256,
         &workspace,
-        Declarer {
-            actor_id: descriptor.declarer_actor_id,
-            authority_ref: descriptor.authority_ref,
-            role: declarer_role,
-            standing_basis: descriptor.standing_basis,
-        },
+        declarer,
         &authority,
         transition_grant,
         claimed.as_ref().map(|(pending_id, request_sha256, _)| {
             sea_forge_artifact_ip::PendingAuthorization {
                 pending_id,
                 request_sha256,
+                declared_content_sha256: &declared,
             }
         }),
     );

@@ -4,8 +4,8 @@ use std::path::Path;
 
 use sea_forge_authority::cep::{
     authorize_settlement_declaration, complete_settlement_resume, settlement_approval_id,
-    settlement_request_sha256, CepAuthorityService, SettlementCriteria, SettlementGate,
-    SettlementIngress, SettlementOperation, SettlementTransport, VerifiedSettlementIngress,
+    CepAuthorityService, SettlementCriteria, SettlementGate, SettlementIngress,
+    SettlementOperation, SettlementTransport, VerifiedSettlementIngress,
 };
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_capability::promotion::{
@@ -198,7 +198,7 @@ fn authorised_declare(
         vec![format!("operation:{}", req.run_id)],
     )
     .unwrap();
-    let declared = settlement_request_sha256(&bundle, &req.case_id, &req.run_id, &ingress).unwrap();
+    let declared = format!("sha256:content-{}", req.run_id);
     let operation = || SettlementOperation {
         case_id: &req.case_id,
         operation_id: &req.run_id,

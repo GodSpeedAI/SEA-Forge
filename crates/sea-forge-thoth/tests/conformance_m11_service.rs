@@ -5,9 +5,9 @@
 //! caller-supplied status, no test double `SnapshotView`.
 
 use sea_forge_authority::cep::{
-    authorize_settlement_declaration, settlement_approval_id, settlement_request_sha256,
-    CepAuthorityService, SettlementCriteria, SettlementGate, SettlementIngress,
-    SettlementOperation, SettlementTransport, VerifiedSettlementIngress,
+    authorize_settlement_declaration, settlement_approval_id, CepAuthorityService,
+    SettlementCriteria, SettlementGate, SettlementIngress, SettlementOperation,
+    SettlementTransport, VerifiedSettlementIngress,
 };
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
@@ -75,6 +75,9 @@ fn init_self_model(root: &Path, probes: Vec<ToolchainProbe>) {
 }
 
 /// The approval policy: an external settlement needs an approval, and operators may resolve approvals.
+/// The declared content hash the fixture gates and claims with. The claim matches it by construction.
+const DECLARED_CONTENT: &str = "sha256:t14a-declared-content";
+
 const APPROVAL_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
 
 /// Gate one external settlement for `run_id`, approve it as an operator through `resolve_approval`, and claim it
@@ -101,7 +104,7 @@ fn approved_claimed_external_settlement(
     .unwrap();
     let ttl = chrono::Duration::hours(24);
     let gate = |engine: &PolicyAuthorityEngine| {
-        let declared = settlement_request_sha256(&bundle, case_id, run_id, &ingress).unwrap();
+        let declared = DECLARED_CONTENT.to_string();
         authorize_settlement_declaration(
             engine,
             &bundle,

@@ -350,9 +350,9 @@ mod tests {
     use chrono::Utc;
     use sea_forge_authority::cep::{
         authorize_settlement_declaration, complete_settlement_resume, reconcile_operation_claims,
-        settlement_approval_id, settlement_request_sha256, settlement_status, CepAuthorityService,
-        SettlementCriteria, SettlementGate, SettlementIngress, SettlementOperation,
-        SettlementStatus, SettlementTransport, VerifiedSettlementIngress,
+        settlement_approval_id, settlement_status, CepAuthorityService, SettlementCriteria,
+        SettlementGate, SettlementIngress, SettlementOperation, SettlementStatus,
+        SettlementTransport, VerifiedSettlementIngress,
     };
     use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
     use sea_forge_core::types::{Actor, ActorRole};
@@ -516,7 +516,7 @@ mod tests {
         ingress: &VerifiedSettlementIngress<'_>,
         ttl: chrono::Duration,
     ) -> Result<SettlementGate, sea_forge_authority::cep::CepAuthorityError> {
-        let declared = settlement_request_sha256(bundle, "case_a", run_id, ingress)?;
+        let declared = format!("sha256:content-{run_id}");
         authorize_settlement_declaration(
             engine,
             bundle,

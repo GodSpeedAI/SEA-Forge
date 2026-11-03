@@ -921,10 +921,55 @@ async fn submit_swe_seed_declaration(
     // authorised declaration if one was appended. Only then is a new attempt gated, so nothing is declared twice.
     sea_forge_authority::cep::reconcile_operation_claims(root, case, run)
         .map_err(|error| ForgeError::Input(format!("settlement state refused: {error}")))?;
-    let declared = sea_forge_authority::cep::settlement_request_sha256(
-        &bundle, case, run, &ingress,
-    )
-    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
+        case,
+        run,
+        item,
+        settlement_id,
+        &evidence.transcript_sha256,
+        &evidence.harvested_refs,
+    )?;
+    let verifier_sha256 = format!(
+        "sha256:{}",
+        hex::encode(Sha256::digest(evidence.harvested_refs.join(",").as_bytes()))
+    );
+    let mut source_evidence_refs = evidence.harvested_refs.clone();
+    source_evidence_refs.push(evidence_entry_ulid.into());
+
+    let mut request = SettlementDeclarationRequest {
+        settlement_ref: settlement_id.into(),
+        run_id: run.into(),
+        case_id: case.into(),
+        plan_item_id: item.into(),
+        claim_manifest_sha256,
+        criteria_ref: criteria.criteria_id.clone(),
+        criteria_sha256: criteria.criteria_sha256.clone(),
+        criteria_record_hash: criteria.criteria_record_hash.clone(),
+        criteria_declared_at: criteria.declared_at.clone(),
+        execution_started_at: execution_started_at.into(),
+        job_contract_ref: None,
+        origin_refs: criteria.origin_refs.clone(),
+        verifier_ref: "swe_seed_harness".into(),
+        verifier_sha256,
+        acting_entity_id: entity.into(),
+        requested_strength: SettlementStrength::Strong,
+        declarer: Declarer {
+            actor_id: descriptor.declarer_actor_id.clone(),
+            authority_ref: descriptor.authority_ref.clone(),
+            role: declarer_role,
+            standing_basis: descriptor.standing_basis.clone(),
+        },
+        variation_tags: BTreeMap::new(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        source_evidence_refs,
+        authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
+    };
+    // The content this request would declare is hashed before the gate, so the approval binds to it.
+    let declared = sea_forge_authority::cep::settlement_declaration_content_sha256(&request)
+        .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     let gate = sea_forge_authority::cep::authorize_settlement_declaration(
         &engine,
         &bundle,
@@ -967,55 +1012,11 @@ async fn submit_swe_seed_declaration(
         sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
     };
 
-    let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
-        case,
-        run,
-        item,
-        settlement_id,
-        &evidence.transcript_sha256,
-        &evidence.harvested_refs,
-    )?;
-    let verifier_sha256 = format!(
-        "sha256:{}",
-        hex::encode(Sha256::digest(evidence.harvested_refs.join(",").as_bytes()))
-    );
-    let mut source_evidence_refs = evidence.harvested_refs.clone();
-    source_evidence_refs.push(evidence_entry_ulid.into());
-
-    let request = SettlementDeclarationRequest {
-        settlement_ref: settlement_id.into(),
-        run_id: run.into(),
-        case_id: case.into(),
-        plan_item_id: item.into(),
-        claim_manifest_sha256,
-        criteria_ref: criteria.criteria_id.clone(),
-        criteria_sha256: criteria.criteria_sha256.clone(),
-        criteria_record_hash: criteria.criteria_record_hash.clone(),
-        criteria_declared_at: criteria.declared_at.clone(),
-        execution_started_at: execution_started_at.into(),
-        job_contract_ref: None,
-        origin_refs: criteria.origin_refs.clone(),
-        verifier_ref: "swe_seed_harness".into(),
-        verifier_sha256,
-        acting_entity_id: entity.into(),
-        requested_strength: SettlementStrength::Strong,
-        declarer: Declarer {
-            actor_id: descriptor.declarer_actor_id.clone(),
-            authority_ref: descriptor.authority_ref.clone(),
-            role: declarer_role,
-            standing_basis: descriptor.standing_basis.clone(),
-        },
-        variation_tags: BTreeMap::new(),
-        disruption_tags: vec![],
-        orchestration_burden: None,
-        source_evidence_refs,
-        authored_by: None,
-        authorization_ref: claimed
-            .as_ref()
-            .map(|(pending_id, _, _)| pending_id.clone()),
-        authorization_request_sha256: claimed.as_ref().map(|(_, sha, _)| sha.clone()),
-    };
-
+    if let Some((pending_id, request_sha256, _)) = claimed.as_ref() {
+        request.authorization_ref = Some(pending_id.clone());
+        request.authorization_request_sha256 = Some(request_sha256.clone());
+    }
+    let echo_request = request.clone();
     let declared = tokio::task::spawn_blocking(
         move || -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
             let transport = sea_forge_settlement::CommandSweSeedTransport::new(
@@ -1042,6 +1043,18 @@ async fn submit_swe_seed_declaration(
         }
     };
 
+    if let Err(error) =
+        sea_forge_authority::cep::verify_declaration_echoes_request(&echo_request, &declaration)
+    {
+        if let Some((pending_id, _, _)) = claimed.as_ref() {
+            sea_forge_authority::cep::fail_settlement_resume(root, pending_id, "content_mismatch")
+                .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))?;
+        }
+        return Err(ForgeError::Plan {
+            class: "settlement_content_mismatch",
+            message: error.to_string(),
+        });
+    }
     crate::swe_seed_reconciliation::append_and_reconcile_swe_seed_declaration(
         root,
         entity,

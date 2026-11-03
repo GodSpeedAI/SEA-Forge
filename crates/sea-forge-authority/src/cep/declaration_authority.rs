@@ -135,7 +135,9 @@ fn verify_one(
         (None, None) => return quarantine(R::MissingAuthorization),
         _ => return quarantine(R::MalformedAuthorization),
     };
-    if request_sha256.len() != 64 || pending_id != pending_id_for(request_sha256) {
+    // The pending id names the ingress identity; the request hash binds that identity to the approved content.
+    // The record lookup below and the record's own request hash together tie the declaration to one approval.
+    if request_sha256.len() != 64 || pending_id.is_empty() {
         return quarantine(R::MalformedAuthorization);
     }
     let record = match pending_record_in(entries, pending_id) {

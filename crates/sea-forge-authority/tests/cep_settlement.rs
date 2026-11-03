@@ -4,14 +4,19 @@
 use sea_forge_authority::cep::{
     authorize_settlement_declaration, complete_settlement_resume,
     derive_settlement_authority_class, fail_settlement_resume, reconcile_settlement_resume,
-    release_settlement_resume, settlement_approval_id, settlement_pending_records,
-    settlement_request_sha256, settlement_status, CepAuthorityError, CepAuthorityService,
+    release_settlement_resume, settlement_approval_id, settlement_declaration_content_sha256,
+    settlement_pending_records, settlement_request_sha256, settlement_status,
+    verify_declaration_echoes_request, CepAuthorityError, CepAuthorityService,
     SettlementAuthorityClass, SettlementCriteria, SettlementGate, SettlementIngress,
     SettlementOperation, SettlementPendingRecord, SettlementStatus, SettlementTransport,
     VerifiedSettlementIngress, LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, AuthorityDecision, Verdict};
+use sea_forge_core::types::{
+    Actor, ActorRole, AuthorityAction, AuthorityDecision, DeclarationIndependence,
+    DeclarationReliability, DeclarationStatus, Declarer, SettlementDeclaration,
+    SettlementDeclarationRequest, SettlementStrength, Verdict,
+};
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use sea_forge_ledger::LedgerStream;
 use serde_json::{json, Value};
@@ -937,7 +942,7 @@ fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityE
         SettlementOperation {
             case_id: "case_a",
             operation_id: SETTLE_OP,
-            declared_request_sha256: &declared_hash_for_ingress(&bundle, &ingress),
+            declared_request_sha256: CONTENT_A,
         },
         &ingress,
         chrono::Duration::hours(24),
@@ -963,7 +968,7 @@ fn authorize_cep(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError>
         SettlementOperation {
             case_id: "case_a",
             operation_id: SETTLE_OP,
-            declared_request_sha256: &declared_hash_for_ingress(&bundle, &ingress),
+            declared_request_sha256: CONTENT_A,
         },
         &ingress,
         chrono::Duration::hours(24),
@@ -1215,6 +1220,10 @@ fn an_external_looking_operation_cannot_be_classified_local_by_the_caller() {
 
 const CASE: &str = "case_a";
 
+/// Two declared-content hashes that differ, standing for the declaration content approved and a changed one.
+const CONTENT_A: &str = "sha256:declared-content-a";
+const CONTENT_B: &str = "sha256:declared-content-b";
+
 fn gate_swe_seed_in(
     root: &std::path::Path,
     policy_yaml: &str,
@@ -1254,7 +1263,7 @@ fn gate_swe_seed_ttl(
         &actor,
         evidence_refs,
     )?;
-    let declared = settlement_request_sha256(&bundle, case_id, SETTLE_OP, &ingress).unwrap();
+    let declared = CONTENT_A;
     authorize_settlement_declaration(
         &engine,
         &bundle,
@@ -1262,7 +1271,7 @@ fn gate_swe_seed_ttl(
         SettlementOperation {
             case_id,
             operation_id: SETTLE_OP,
-            declared_request_sha256: &declared,
+            declared_request_sha256: declared,
         },
         &ingress,
         ttl,
@@ -1424,16 +1433,13 @@ fn a_legacy_pending_record_without_a_case_is_never_reused() {
     assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 2);
 }
 
-/// Declared content identical to the ingress the gate is given.
-fn declared_hash_for_ingress(
-    bundle: &AuthorityPolicyBundle,
-    ingress: &VerifiedSettlementIngress<'_>,
+/// The approved request hash for `evidence_refs` under `policy_yaml`, bound to the declared content hash.
+fn bound_request_sha256(
+    policy_yaml: &str,
+    case_id: &str,
+    evidence_refs: Vec<String>,
+    content_sha256: &str,
 ) -> String {
-    settlement_request_sha256(bundle, "case_a", SETTLE_OP, ingress).unwrap()
-}
-
-/// The content hash a caller presents for the declaration it is about to make, computed over that content's ingress.
-fn declared_hash(policy_yaml: &str, case_id: &str, evidence_refs: Vec<String>) -> String {
     let (bundle, _) = class_policy_engine(policy_yaml);
     let actor = svc();
     let ingress = VerifiedSettlementIngress::verified(
@@ -1444,7 +1450,7 @@ fn declared_hash(policy_yaml: &str, case_id: &str, evidence_refs: Vec<String>) -
         evidence_refs,
     )
     .unwrap();
-    settlement_request_sha256(&bundle, case_id, SETTLE_OP, &ingress).unwrap()
+    settlement_request_sha256(&bundle, case_id, SETTLE_OP, &ingress, content_sha256).unwrap()
 }
 
 /// Gate the approved request for `CASE`, presenting `declared` as the content about to be declared.
@@ -1484,9 +1490,8 @@ fn a_claim_whose_declared_content_differs_from_the_approved_request_fails_withou
     let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
 
-    // The declaration about to be made carries different evidence than the one that was approved.
-    let drifted = declared_hash(&policy, CASE, vec!["evidence:b".into()]);
-    let err = gate_declared(root.path(), &policy, evidence_a(), &drifted).unwrap_err();
+    // The declaration about to be made carries different content than the content that was approved.
+    let err = gate_declared(root.path(), &policy, evidence_a(), CONTENT_B).unwrap_err();
     assert!(
         matches!(&err, CepAuthorityError::Approval(m) if m.contains("content_mismatch")),
         "{err:?}"
@@ -1498,7 +1503,71 @@ fn a_claim_whose_declared_content_differs_from_the_approved_request_fails_withou
         }
     );
     // The approval is spent by the failure: nothing can claim it afterwards.
+    assert!(gate_declared(root.path(), &policy, evidence_a(), CONTENT_A).is_err());
     assert!(gate_swe_seed_in(root.path(), &policy, evidence_a()).is_err());
+}
+
+/// The request a SWE_SEED declaration is made from. Only the fields that are fixed at request time are set.
+fn declaration_request(criteria_ref: &str) -> SettlementDeclarationRequest {
+    SettlementDeclarationRequest {
+        settlement_ref: "set_a".into(),
+        run_id: SETTLE_OP.into(),
+        case_id: CASE.into(),
+        plan_item_id: "item_a".into(),
+        claim_manifest_sha256: "sha256:manifest".into(),
+        criteria_ref: criteria_ref.into(),
+        criteria_sha256: "sha256:criteria".into(),
+        criteria_record_hash: "sha256:criteria-record".into(),
+        criteria_declared_at: "2026-07-22T00:00:00Z".into(),
+        execution_started_at: "2026-07-22T00:00:01Z".into(),
+        job_contract_ref: None,
+        origin_refs: vec![],
+        verifier_ref: "swe_seed_harness".into(),
+        verifier_sha256: "sha256:verifier".into(),
+        acting_entity_id: "entity_a".into(),
+        requested_strength: SettlementStrength::Strong,
+        declarer: Declarer {
+            actor_id: "operator_a".into(),
+            authority_ref: "swe_seed".into(),
+            role: "R-AA".into(),
+            standing_basis: "external_verification".into(),
+        },
+        variation_tags: Default::default(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        source_evidence_refs: vec!["evd_a".into()],
+        authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
+    }
+}
+
+#[test]
+fn a_claim_whose_one_declared_field_changed_after_approval_is_refused_as_content_mismatch() {
+    let root = tempfile::tempdir().unwrap();
+    let policy = approval_policy();
+    let approved = settlement_declaration_content_sha256(&declaration_request("crit_a")).unwrap();
+    let (record, _) =
+        pending_of(gate_declared(root.path(), &policy, evidence_a(), &approved).unwrap());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+
+    // After approval, one declared field changes: only the criteria reference differs.
+    let changed = settlement_declaration_content_sha256(&declaration_request("crit_b")).unwrap();
+    assert_ne!(changed, approved);
+    let err = gate_declared(root.path(), &policy, evidence_a(), &changed).unwrap_err();
+    assert!(
+        matches!(&err, CepAuthorityError::Approval(m) if m.contains("content_mismatch")),
+        "{err:?}"
+    );
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Failed {
+            reason: "content_mismatch".into()
+        }
+    );
+    // No declaration was made, and the spent approval cannot be claimed with the approved content either.
+    assert_eq!(ledger_count(root.path(), "settlement_declaration"), 0);
+    assert!(gate_declared(root.path(), &policy, evidence_a(), &approved).is_err());
 }
 
 #[test]
@@ -1507,9 +1576,11 @@ fn a_claim_whose_declared_content_matches_the_approved_request_resumes() {
     let policy = approval_policy();
     let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
-    let declared = declared_hash(&policy, CASE, evidence_a());
-    assert_eq!(declared, record.request_sha256);
-    match gate_declared(root.path(), &policy, evidence_a(), &declared).unwrap() {
+    assert_eq!(
+        bound_request_sha256(&policy, CASE, evidence_a(), CONTENT_A),
+        record.request_sha256
+    );
+    match gate_declared(root.path(), &policy, evidence_a(), CONTENT_A).unwrap() {
         SettlementGate::Resumed {
             pending_id,
             request_sha256,
@@ -1520,6 +1591,65 @@ fn a_claim_whose_declared_content_matches_the_approved_request_resumes() {
         }
         other => panic!("expected a claimed settlement, got {other:?}"),
     }
+}
+
+/// A declaration the authority would append for `request`: it echoes every requested field and adds its own.
+fn echoing_declaration(request: &SettlementDeclarationRequest) -> SettlementDeclaration {
+    SettlementDeclaration {
+        version: "0.2".into(),
+        declaration_id: "sdec_a".into(),
+        settlement_ref: request.settlement_ref.clone(),
+        run_id: request.run_id.clone(),
+        case_id: request.case_id.clone(),
+        plan_item_id: request.plan_item_id.clone(),
+        claim_manifest_sha256: request.claim_manifest_sha256.clone(),
+        status: DeclarationStatus::Accepted,
+        strength: SettlementStrength::Strong,
+        qualifies_for_capability: true,
+        criteria_ref: request.criteria_ref.clone(),
+        criteria_sha256: request.criteria_sha256.clone(),
+        criteria_record_hash: request.criteria_record_hash.clone(),
+        criteria_declared_at: request.criteria_declared_at.clone(),
+        job_contract_ref: request.job_contract_ref.clone(),
+        origin_refs: request.origin_refs.clone(),
+        verifier_ref: request.verifier_ref.clone(),
+        verifier_sha256: request.verifier_sha256.clone(),
+        verification_evidence_refs: request.source_evidence_refs.clone(),
+        declarer: request.declarer.clone(),
+        independence: DeclarationIndependence {
+            acting_entity_id: request.acting_entity_id.clone(),
+            independent: true,
+            basis: "test".into(),
+        },
+        reliability: DeclarationReliability {
+            feedback_delay_ms: 0,
+            attribution_confidence: "1.000000".into(),
+            gaming_exposure: "0.000000".into(),
+            hidden_debt_blindness: "0.000000".into(),
+            weight: "1.000000".into(),
+            basis: "test".into(),
+        },
+        variation_tags: request.variation_tags.clone(),
+        disruption_tags: request.disruption_tags.clone(),
+        orchestration_burden: request.orchestration_burden.clone(),
+        issued_at: "2026-07-23T00:00:00Z".into(),
+        source_evidence_refs: request.source_evidence_refs.clone(),
+        adapter_attestation_ref: Some("att_a".into()),
+        authored_by: request.authored_by.clone(),
+        authorization_ref: request.authorization_ref.clone(),
+        authorization_request_sha256: request.authorization_request_sha256.clone(),
+        declaration_hash: "sha256:decl".into(),
+    }
+}
+
+#[test]
+fn an_appended_declaration_must_echo_the_request_it_was_made_from() {
+    let request = declaration_request("crit_a");
+    let mut declaration = echoing_declaration(&request);
+    verify_declaration_echoes_request(&request, &declaration).unwrap();
+    declaration.criteria_ref = "crit_b".into();
+    let error = verify_declaration_echoes_request(&request, &declaration).unwrap_err();
+    assert!(error.to_string().contains("criteria_ref"), "{error}");
 }
 
 #[test]

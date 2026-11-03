@@ -26,7 +26,8 @@ use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use chrono::{DateTime, Duration, Utc};
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{
-    Actor, AuthorityAction, AuthorityDecision, NormalizedDisposition, Verdict,
+    Actor, AuthorityAction, AuthorityDecision, NormalizedDisposition, SettlementDeclaration,
+    SettlementDeclarationRequest, Verdict,
 };
 use sea_forge_domainforge::WorldRegistry;
 use sea_forge_ledger::{CommittedRecordRef, LedgerEntry, LedgerStream};
@@ -2336,7 +2337,9 @@ struct CanonicalSettlementRequest<'a> {
     approval_requirement: &'a str,
 }
 
-/// The identity of one request, computed before anything is written.
+/// The identity of one request, computed before anything is written. `request_sha256` is the ingress identity only;
+/// the pending id derives from it, so a claim finds its record whatever content it presents. The approved request
+/// hash binds this to the declared content.
 struct SettlementIdentity {
     case_id: String,
     operation_id: String,
@@ -2517,24 +2520,157 @@ pub fn settlement_status(
 }
 
 /// The operation a settlement gate call is for. `declared_request_sha256` is the content hash of the declaration
-/// the caller is about to make (see [`settlement_request_sha256`]). A claim is refused, and its approval spent as
-/// `failed(content_mismatch)`, when it does not equal the approved request hash.
+/// the caller is about to make (see [`settlement_declaration_content_sha256`]). It is bound to the ingress identity
+/// to form the approved request hash. A claim is refused, and its approval spent as `failed(content_mismatch)`,
+/// when the declared content does not match the content that was approved.
 pub struct SettlementOperation<'a> {
     pub case_id: &'a str,
     pub operation_id: &'a str,
     pub declared_request_sha256: &'a str,
 }
 
-/// The canonical request hash of one settlement declaration: the hash a pending record and its approval are bound
-/// to. A caller computes it over the content it is about to declare and presents it as `declared_request_sha256`.
+/// The content hash of one settlement declaration request: the canonical hash (`hash_canonical`) of the request
+/// the declaration will be made from, with the claim's own authorisation fields cleared. Every other field of the
+/// request is covered, so changing any one of them changes this hash. Pass it as
+/// `SettlementOperation::declared_request_sha256`.
+pub fn settlement_declaration_content_sha256(
+    request: &SettlementDeclarationRequest,
+) -> Result<String, CepAuthorityError> {
+    let mut content = request.clone();
+    content.authorization_ref = None;
+    content.authorization_request_sha256 = None;
+    crate::hash_canonical(&content).map_err(|error| CepAuthorityError::Internal(error.to_string()))
+}
+
+/// Bind the ingress identity of a settlement request to the declared content hash. The result is the approved
+/// request hash: a pending record and its approval are bound to exactly this value.
+fn bind_request_sha256(
+    ingress_sha256: &str,
+    declared_content_sha256: &str,
+) -> Result<String, CepAuthorityError> {
+    use sha2::{Digest, Sha256};
+    #[derive(serde::Serialize)]
+    struct Bound<'a> {
+        ingress_sha256: &'a str,
+        declared_content_sha256: &'a str,
+    }
+    let bytes = serde_json::to_vec(&Bound {
+        ingress_sha256,
+        declared_content_sha256,
+    })
+    .map_err(|_| CepAuthorityError::Internal("settlement request is not serializable".into()))?;
+    Ok(hex::encode(Sha256::digest(bytes)))
+}
+
+/// The approved request hash for one settlement declaration: the ingress identity (case, operation, actor, evidence)
+/// bound to the declared content hash from [`settlement_declaration_content_sha256`].
 pub fn settlement_request_sha256(
     bundle: &AuthorityPolicyBundle,
     case_id: &str,
     operation_id: &str,
     ingress: &VerifiedSettlementIngress<'_>,
+    declared_content_sha256: &str,
 ) -> Result<String, CepAuthorityError> {
     let class = derive_settlement_authority_class(ingress);
-    Ok(settlement_identity(bundle, case_id, operation_id, class, ingress)?.request_sha256)
+    let identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
+    bind_request_sha256(&identity.request_sha256, declared_content_sha256)
+}
+
+/// Refuse an appended declaration that does not echo the request it was made from. The authority may add its own
+/// fields (identifier, issue time, verdict, attestation). Every field the request carries must come back unchanged.
+/// Returns an error naming the first field that differs.
+pub fn verify_declaration_echoes_request(
+    request: &SettlementDeclarationRequest,
+    declaration: &SettlementDeclaration,
+) -> Result<(), CepAuthorityError> {
+    let echoed = [
+        (
+            "settlement_ref",
+            request.settlement_ref == declaration.settlement_ref,
+        ),
+        ("run_id", request.run_id == declaration.run_id),
+        ("case_id", request.case_id == declaration.case_id),
+        (
+            "plan_item_id",
+            request.plan_item_id == declaration.plan_item_id,
+        ),
+        (
+            "claim_manifest_sha256",
+            request.claim_manifest_sha256 == declaration.claim_manifest_sha256,
+        ),
+        (
+            "criteria_ref",
+            request.criteria_ref == declaration.criteria_ref,
+        ),
+        (
+            "criteria_sha256",
+            request.criteria_sha256 == declaration.criteria_sha256,
+        ),
+        (
+            "criteria_record_hash",
+            request.criteria_record_hash == declaration.criteria_record_hash,
+        ),
+        (
+            "criteria_declared_at",
+            request.criteria_declared_at == declaration.criteria_declared_at,
+        ),
+        (
+            "job_contract_ref",
+            request.job_contract_ref == declaration.job_contract_ref,
+        ),
+        (
+            "origin_refs",
+            request.origin_refs == declaration.origin_refs,
+        ),
+        (
+            "verifier_ref",
+            request.verifier_ref == declaration.verifier_ref,
+        ),
+        (
+            "verifier_sha256",
+            request.verifier_sha256 == declaration.verifier_sha256,
+        ),
+        ("declarer", request.declarer == declaration.declarer),
+        (
+            "strength",
+            request.requested_strength == declaration.strength,
+        ),
+        (
+            "variation_tags",
+            request.variation_tags == declaration.variation_tags,
+        ),
+        (
+            "disruption_tags",
+            request.disruption_tags == declaration.disruption_tags,
+        ),
+        (
+            "orchestration_burden",
+            request.orchestration_burden == declaration.orchestration_burden,
+        ),
+        (
+            "source_evidence_refs",
+            request.source_evidence_refs == declaration.source_evidence_refs,
+        ),
+        (
+            "authored_by",
+            request.authored_by == declaration.authored_by,
+        ),
+        (
+            "authorization_ref",
+            request.authorization_ref == declaration.authorization_ref,
+        ),
+        (
+            "authorization_request_sha256",
+            request.authorization_request_sha256 == declaration.authorization_request_sha256,
+        ),
+    ];
+    match echoed.iter().find(|(_, same)| !same) {
+        None => Ok(()),
+        Some((field, _)) => Err(CepAuthorityError::Approval(format!(
+            "settlement_content_mismatch: declaration {} does not echo the approved request in {field}; nothing was appended",
+            declaration.declaration_id
+        ))),
+    }
 }
 
 /// Gate a settlement declaration from a verified ingress, before any code path calls `declare()`.
@@ -2559,6 +2695,7 @@ pub fn authorize_settlement_declaration(
     let ledger = settlement_ledger(root)?;
     let class = derive_settlement_authority_class(ingress);
     let identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
+    let request_sha256 = bind_request_sha256(&identity.request_sha256, declared_request_sha256)?;
     let (decision, committed) = commit_gate_evaluation(
         engine,
         bundle,
@@ -2581,7 +2718,7 @@ pub fn authorize_settlement_declaration(
             }
             return Ok(SettlementGate::Allowed(class));
         };
-        return gate_on_status(&ledger, &record, class, declared_request_sha256, true, true);
+        return gate_on_status(&ledger, &record, class, &request_sha256, true, true);
     }
     if !approvable(&decision) {
         return Err(CepAuthorityError::Evidence(format!(
@@ -2595,17 +2732,11 @@ pub fn authorize_settlement_declaration(
         class,
         ingress,
         &identity,
+        &request_sha256,
         committed.entry_ulid(),
         approval_ttl,
     )?;
-    gate_on_status(
-        &ledger,
-        &record,
-        class,
-        declared_request_sha256,
-        replayed,
-        false,
-    )
+    gate_on_status(&ledger, &record, class, &request_sha256, replayed, false)
 }
 
 /// Act on the current state of one pending record for a gate call. `outright` is true when policy allows the
@@ -2614,7 +2745,7 @@ fn gate_on_status(
     ledger: &LedgerStream,
     record: &SettlementPendingRecord,
     class: SettlementAuthorityClass,
-    declared_request_sha256: &str,
+    request_sha256: &str,
     replayed: bool,
     outright: bool,
 ) -> Result<SettlementGate, CepAuthorityError> {
@@ -2660,7 +2791,7 @@ fn gate_on_status(
         SettlementStatus::Pending | SettlementStatus::Approved => {
             // The content about to be declared must be the content that was approved. A mismatch spends the
             // approval as failed, and nothing is declared.
-            if declared_request_sha256 != record.request_sha256 {
+            if request_sha256 != record.request_sha256 {
                 commit_terminal(
                     ledger,
                     record,
@@ -2895,6 +3026,7 @@ fn record_settlement_pending(
     class: SettlementAuthorityClass,
     ingress: &VerifiedSettlementIngress<'_>,
     identity: &SettlementIdentity,
+    request_sha256: &str,
     decision_ref: &str,
     approval_ttl: Duration,
 ) -> Result<(SettlementPendingRecord, bool), CepAuthorityError> {
@@ -2905,7 +3037,7 @@ fn record_settlement_pending(
     let now = Utc::now();
     let record = SettlementPendingRecord {
         pending_id: identity.pending_id.clone(),
-        request_sha256: identity.request_sha256.clone(),
+        request_sha256: request_sha256.to_string(),
         case_id: identity.case_id.clone(),
         operation_id: identity.operation_id.clone(),
         operation_kind: SETTLEMENT_SURFACE.into(),
@@ -2922,7 +3054,7 @@ fn record_settlement_pending(
     };
     match ledger.commit_typed_once(
         SETTLEMENT_PENDING_KIND,
-        format!("{SETTLEMENT_PENDING_KEY}{}", identity.request_sha256),
+        format!("{SETTLEMENT_PENDING_KEY}{request_sha256}"),
         vec![identity.operation_id.clone(), identity.pending_id.clone()],
         &record,
         vec![decision_ref.to_string()],
