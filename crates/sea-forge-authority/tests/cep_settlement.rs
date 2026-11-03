@@ -2,10 +2,12 @@
 //! settlement is SEA-Forge's own, judged against criteria bound into the allow decision.
 
 use sea_forge_authority::cep::{
-    authorize_settlement_declaration, derive_settlement_authority_class,
-    settlement_pending_records, CepAuthorityError, CepAuthorityService, SettlementAuthorityClass,
+    authorize_settlement_declaration, complete_settlement_resume,
+    derive_settlement_authority_class, fail_settlement_resume, reconcile_settlement_resume,
+    release_settlement_resume, settlement_approval_id, settlement_pending_records,
+    settlement_status, CepAuthorityError, CepAuthorityService, SettlementAuthorityClass,
     SettlementCriteria, SettlementGate, SettlementIngress, SettlementPendingRecord,
-    SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
+    SettlementStatus, SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, AuthorityDecision, Verdict};
@@ -1207,6 +1209,20 @@ fn gate_swe_seed_in(
     policy_yaml: &str,
     evidence_refs: Vec<String>,
 ) -> Result<SettlementGate, CepAuthorityError> {
+    gate_swe_seed_ttl(
+        root,
+        policy_yaml,
+        evidence_refs,
+        chrono::Duration::hours(24),
+    )
+}
+
+fn gate_swe_seed_ttl(
+    root: &std::path::Path,
+    policy_yaml: &str,
+    evidence_refs: Vec<String>,
+    ttl: chrono::Duration,
+) -> Result<SettlementGate, CepAuthorityError> {
     let (bundle, engine) = class_policy_engine(policy_yaml);
     let actor = svc();
     let ingress = VerifiedSettlementIngress::verified(
@@ -1216,14 +1232,54 @@ fn gate_swe_seed_in(
         &actor,
         evidence_refs,
     )?;
-    authorize_settlement_declaration(
-        &engine,
-        &bundle,
-        root,
-        SETTLE_OP,
-        &ingress,
-        chrono::Duration::hours(24),
+    authorize_settlement_declaration(&engine, &bundle, root, SETTLE_OP, &ingress, ttl)
+}
+
+/// The approver's policy: the external gate, plus operators may resolve approvals.
+fn approval_policy() -> String {
+    format!(
+        "{EXTERNAL_GATED}  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n"
     )
+}
+
+/// Resolve the settlement approval for `pending_id` as `resolver`, through the CEP resolution path.
+fn resolve_in(
+    root: &std::path::Path,
+    pending_id: &str,
+    approve: bool,
+    resolver: &Actor,
+) -> Result<Value, CepAuthorityError> {
+    let policy = approval_policy();
+    let (bundle, engine) = class_policy_engine(&policy);
+    let worlds = sea_forge_domainforge::WorldRegistry::new();
+    let service = CepAuthorityService {
+        engine: &engine,
+        bundle: &bundle,
+        worlds: &worlds,
+        root,
+        approval_ttl: chrono::Duration::hours(24),
+        criteria: SettlementCriteria::default(),
+    };
+    service.resolve_approval(&settlement_approval_id(pending_id), approve, resolver)
+}
+
+fn evidence_a() -> Vec<String> {
+    vec!["evidence:a".into()]
+}
+
+fn ledger_count(root: &std::path::Path, kind: &str) -> usize {
+    LedgerStream::open(root, LEDGER_ID, "test-reader")
+        .unwrap()
+        .read_entries()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry.record_kind == kind)
+        .count()
+}
+
+/// Create one pending record and return it, with the approver policy in force.
+fn pending_for(root: &std::path::Path, evidence: Vec<String>) -> SettlementPendingRecord {
+    pending_of(gate_swe_seed_in(root, &approval_policy(), evidence).unwrap()).0
 }
 
 fn pending_of(gate: SettlementGate) -> (SettlementPendingRecord, bool) {
@@ -1313,4 +1369,288 @@ fn no_settlement_declaration_is_authoritative_while_pending() {
             "a pending settlement is never an allow"
         );
     }
+}
+
+// ---- Approval resolution, single consumption, and the resume state machine ----------------------------------
+
+fn declared(gate: SettlementGate) -> (String, u32) {
+    match gate {
+        SettlementGate::Resumed {
+            pending_id,
+            attempt,
+            ..
+        } => (pending_id, attempt),
+        other => panic!("expected a resumed settlement, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_approved_settlement_resumes_once_and_a_second_resume_returns_the_completed_declaration() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Approved
+    );
+
+    let (pending_id, attempt) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    assert_eq!(
+        (pending_id.as_str(), attempt),
+        (record.pending_id.as_str(), 1)
+    );
+    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+
+    // A second resume never claims again: it returns the completed declaration.
+    match gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap() {
+        SettlementGate::Completed {
+            declaration_ref, ..
+        } => assert_eq!(declaration_ref, "decl-1"),
+        other => panic!("expected the completed declaration, got {other:?}"),
+    }
+    assert_eq!(
+        ledger_count(root.path(), "settlement_state"),
+        2,
+        "resuming + completed, nothing more"
+    );
+}
+
+#[test]
+fn a_rejected_settlement_declares_nothing_and_stays_terminal() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, false, &operator()).unwrap();
+    for _ in 0..2 {
+        assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+    }
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Rejected
+    );
+    assert_eq!(
+        ledger_count(root.path(), "settlement_state"),
+        1,
+        "one rejected terminal, written once"
+    );
+    // A rejected approval cannot be approved afterwards.
+    assert!(resolve_in(root.path(), &record.pending_id, true, &operator()).is_err());
+}
+
+#[test]
+fn an_expired_settlement_declares_nothing() {
+    let root = tempfile::tempdir().unwrap();
+    let short = gate_swe_seed_ttl(
+        root.path(),
+        &approval_policy(),
+        evidence_a(),
+        chrono::Duration::milliseconds(200),
+    )
+    .unwrap();
+    let (record, _) = pending_of(short);
+    std::thread::sleep(std::time::Duration::from_millis(400));
+    // Approval after the window is refused, and so is any resume.
+    assert!(resolve_in(root.path(), &record.pending_id, true, &operator()).is_err());
+    assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Expired
+    );
+    assert_eq!(
+        ledger_count(root.path(), "settlement_state"),
+        1,
+        "one expired terminal"
+    );
+}
+
+#[test]
+fn the_requester_cannot_approve_their_own_pending_settlement() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    let err = resolve_in(root.path(), &record.pending_id, true, &svc()).unwrap_err();
+    assert!(err.to_string().contains("self_approval_refused"), "{err}");
+    assert_eq!(
+        ledger_count(root.path(), "approval_self_resolution_refused"),
+        1
+    );
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Pending
+    );
+}
+
+#[test]
+fn a_non_operator_identity_cannot_approve_a_settlement() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    let other_service = Actor {
+        actor_id: "other-service".into(),
+        role: ActorRole::Service,
+    };
+    assert!(resolve_in(root.path(), &record.pending_id, true, &other_service).is_err());
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Pending
+    );
+}
+
+#[test]
+fn an_approval_does_not_bind_to_a_different_request_or_a_forged_pending_id() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+
+    // A different request identity is a different pending record: the approval never reaches it.
+    match gate_swe_seed_in(root.path(), &approval_policy(), vec!["evidence:b".into()]).unwrap() {
+        SettlementGate::Pending { record: other, .. } => {
+            assert_ne!(other.pending_id, record.pending_id)
+        }
+        other => panic!("a mismatched request must not be resumed, got {other:?}"),
+    }
+    assert_eq!(
+        settlement_status(root.path(), &record.pending_id).unwrap(),
+        SettlementStatus::Approved
+    );
+
+    // A forged or unknown pending id is refused and audited.
+    assert!(resolve_in(
+        root.path(),
+        "settlement-pending-00000000000000000000000000000000",
+        true,
+        &operator()
+    )
+    .is_err());
+    assert_eq!(ledger_count(root.path(), "settlement_approval_refused"), 1);
+}
+
+#[test]
+fn a_reused_approval_is_refused_and_audited() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, _) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    // The claim spent the approval: a second use is refused and audited while the first attempt is open.
+    assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+    assert_eq!(ledger_count(root.path(), "settlement_approval_refused"), 1);
+    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+    // After completion the request reports the completed declaration; it is not claimed again.
+    assert!(matches!(
+        gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap(),
+        SettlementGate::Completed { .. }
+    ));
+    assert_eq!(ledger_count(root.path(), "settlement_approval_refused"), 1);
+    // The resolution is written once: approving again is refused.
+    assert!(resolve_in(root.path(), &record.pending_id, true, &operator()).is_err());
+}
+
+#[test]
+fn concurrent_resumes_of_one_approval_declare_exactly_once() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let path = root.path().to_path_buf();
+    let handles: Vec<_> = (0..4)
+        .map(|_| {
+            let path = path.clone();
+            std::thread::spawn(move || gate_swe_seed_in(&path, &approval_policy(), evidence_a()))
+        })
+        .collect();
+    let outcomes: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    let resumed = outcomes
+        .iter()
+        .filter(|o| matches!(o, Ok(SettlementGate::Resumed { .. })))
+        .count();
+    assert_eq!(
+        resumed, 1,
+        "exactly one resume may claim the approval: {outcomes:?}"
+    );
+    assert!(outcomes
+        .iter()
+        .all(|o| !matches!(o, Ok(SettlementGate::Completed { .. }))));
+}
+
+#[test]
+fn a_crash_between_claim_and_completion_recovers_to_exactly_one_declaration() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    // The process claims the approval, declares, and dies before recording completion.
+    let (pending_id, _) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    assert!(matches!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Resuming { attempt: 1 }
+    ));
+    // Recovery finds the declaration in the ledger and completes on it, once.
+    let recovered = reconcile_settlement_resume(root.path(), &pending_id, Some("decl-1")).unwrap();
+    assert_eq!(
+        recovered,
+        SettlementStatus::Completed {
+            declaration_ref: "decl-1".into()
+        }
+    );
+    let again = reconcile_settlement_resume(root.path(), &pending_id, Some("decl-1")).unwrap();
+    assert_eq!(again, recovered);
+    assert!(matches!(
+        gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap(),
+        SettlementGate::Completed { .. }
+    ));
+}
+
+#[test]
+fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, _) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    let recovered = reconcile_settlement_resume(root.path(), &pending_id, None).unwrap();
+    assert_eq!(
+        recovered,
+        SettlementStatus::Failed {
+            reason: "interrupted_before_declaration".into()
+        }
+    );
+    assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+    assert!(fail_settlement_resume(root.path(), &pending_id, "late").is_err());
+}
+
+#[test]
+fn an_unavailable_authority_releases_the_attempt_for_a_later_resume() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, first) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    release_settlement_resume(root.path(), &pending_id, first).unwrap();
+    assert_eq!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Approved
+    );
+    let (_, second) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    assert_eq!(second, first + 1);
+    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+}
+
+#[test]
+fn identical_racing_requests_yield_one_pending_id() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().to_path_buf();
+    let handles: Vec<_> = (0..4)
+        .map(|_| {
+            let path = path.clone();
+            std::thread::spawn(move || gate_swe_seed_in(&path, &approval_policy(), evidence_a()))
+        })
+        .collect();
+    let ids: Vec<String> = handles
+        .into_iter()
+        .map(|h| match h.join().unwrap() {
+            Ok(SettlementGate::Pending { record, .. }) => record.pending_id,
+            other => panic!("every racing identical request must return pending, got {other:?}"),
+        })
+        .collect();
+    assert!(ids.windows(2).all(|w| w[0] == w[1]), "{ids:?}");
+    assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 1);
 }

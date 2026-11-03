@@ -1,23 +1,23 @@
 # Current status
 
-**Status revision:** 191
+**Status revision:** 192
 
-**Stage:** Security: durable pending state for an approval-gated external settlement
+**Stage:** Security: approval, single-use claim, and recoverable resume for settlement pending records
 
-**Summary:** An approval-gated settlement declaration now writes a durable settlement_pending record to the authority ledger before returning a pending outcome. The record is idempotent by the SHA-256 of the canonical request, so an identical request returns the same record. The CLI resume path and the SWE_SEED delegation path treat a pending outcome as no declaration: nothing is sent to the authority and no declaration is appended.
+**Summary:** Approval-gated external settlement is now resolved, claimed, and recovered from the ledger. A settlement_pending record is approved, rejected, or expired through the CEP approval path, with self-approval and non-operator resolution refused and the approval bound to pending_id, request_sha256, operation and class. An approval is spent by one create-only claim, so a second use is refused and audited. The state machine (pending, approved, resuming, completed, rejected, expired, failed, released) is derived from ledger records only. Reconcile settles an open claim from the declaration in the case ledger, or fails it, never declaring twice. Identical racing requests return one pending record.
 
 **Verified:**
-- cargo test -p sea-forge-authority: all suites pass (cep_settlement: 31 pass, including durable reload, duplicate request, and no declaration while pending)
+- cargo test -p sea-forge-authority: 265 pass, 0 fail (cep_settlement: 43 pass, including approve-once resume, reject, expire, self and non-operator refusal, mismatched and forged approval, reuse refused, four-thread resume race, crash recovery, release, racing identical requests)
 - cargo test -p sea-forge-server: 550 pass, 0 fail
-- cargo test -p sea-forge-cli --no-fail-fast: 87 pass, 2 fail (the two expected conformance_m8 CLI tests, not rewritten)
-- cargo clippy -p sea-forge-authority -p sea-forge-artifact-ip -p sea-forge-server -p sea-forge-cli --all-targets -- -D warnings: clean
+- cargo test -p sea-forge-cli --no-fail-fast: 87 pass, 2 fail (the two conformance_m8 CLI tests, not rewritten)
+- cargo clippy --all-targets -- -D warnings: clean
 - cargo fmt --all -- --check: clean
 
 **Limits:**
-- Nothing resolves a settlement_pending record yet: no approval, rejection, expiry, or use transition is recorded, so a pending settlement cannot be completed
-- conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 is refused by policy for the Operator identity (no external settlement rule for that role), before any pending record is written
-- conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records exits 1 where it expects 5
-- Two identical requests racing before either record is committed can return a ledger integrity error instead of the pending id
-- The resume state machine, approval validation, and reconciliation are not implemented
+- conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5 fails: resume is refused with default_deny for operator_local, because its policy has no rule that reaches an external settlement declaration. An operator escalation rule makes resume exit 5 with a settlement pending record, which the single case approval does not satisfy; the test expects one approval then success. Needs a policy or test decision; not fixed here
+- conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records fails for the same reason: resume exits 1 instead of 5
+- Reconciliation runs only in the CLI resume path. Startup, read-time, and out-of-process paths are not enforced; the server delegation path records completion but does not reconcile an open claim
+- The approver is checked by the approval_resolution policy rule, not by a fixed role; the brief asked for operator role, and the m8 policy uses R-SO
+- Adversarial review not done; the new tests were written with the code, not red first
 
-**Next:** Implement approval resolution and use for settlement_pending records (approve, reject, expire, consume once), then bind the resumed declaration to a validated approval.
+**Next:** Enforce reconciliation at startup, read time, and in the server path; decide how the artifact capitalize path satisfies an external settlement gate (a settlement approval step, or a documented case-approval binding) before the m8 tests are re-scoped.

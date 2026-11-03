@@ -926,16 +926,29 @@ async fn submit_swe_seed_declaration(
         chrono::Duration::hours(24),
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
-    if let sea_forge_authority::cep::SettlementGate::Pending { record, .. } = gate {
-        // Held for approval: the pending record is durable and nothing is sent to the authority.
-        return Err(ForgeError::Plan {
-            class: "settlement_approval_pending",
-            message: format!(
-                "settlement declaration {} awaits approval; no declaration was made",
-                record.pending_id
-            ),
-        });
-    }
+    // The claimed attempt, if the gate handed one out. Its outcome is recorded once the declaration is appended.
+    let claimed = match gate {
+        sea_forge_authority::cep::SettlementGate::Pending { record, .. } => {
+            // Held for approval: the pending record is durable and nothing is sent to the authority.
+            return Err(ForgeError::Plan {
+                class: "settlement_approval_pending",
+                message: format!(
+                    "settlement declaration {} awaits approval; no declaration was made",
+                    record.pending_id
+                ),
+            });
+        }
+        sea_forge_authority::cep::SettlementGate::Completed { pending_id, .. } => {
+            return Err(ForgeError::Plan {
+                class: "settlement_already_declared",
+                message: format!(
+                    "settlement declaration {pending_id} already completed; not declared again"
+                ),
+            });
+        }
+        sea_forge_authority::cep::SettlementGate::Resumed { pending_id, .. } => Some(pending_id),
+        sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
+    };
 
     let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
         case,
@@ -1004,6 +1017,14 @@ async fn submit_swe_seed_declaration(
         entity,
         &declaration,
     )?;
+    if let Some(pending_id) = claimed {
+        sea_forge_authority::cep::complete_settlement_resume(
+            root,
+            &pending_id,
+            &declaration.declaration_id,
+        )
+        .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;
+    }
     Ok(())
 }
 
