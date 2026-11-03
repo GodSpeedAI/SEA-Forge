@@ -1083,7 +1083,9 @@ impl SettlementDeclaration {
     /// SWE_SEED verifier, or an authorisation reference makes a declaration external. The settlement writer
     /// and every reconciliation path use this one definition.
     pub fn is_external(&self) -> bool {
-        self.adapter_attestation_ref.is_some()
+        // Strong is produced only by an external authority, so it fails closed as external.
+        self.strength == SettlementStrength::Strong
+            || self.adapter_attestation_ref.is_some()
             || self.verifier_ref.contains("swe_seed")
             || self.authorization_ref.is_some()
             || self.authorization_request_sha256.is_some()

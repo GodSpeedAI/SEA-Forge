@@ -35,6 +35,8 @@ pub enum DeclarationRefusal {
     AuthorizationSuperseded,
     /// Several declarations in the case name the same pending record before it is completed.
     AuthorizationReused,
+    /// The approval exists but no resume attempt has claimed it. Only a claimed attempt may append a declaration.
+    AuthorizationUnclaimed,
     /// A declaration presents as local, but its run has an external settlement pending record.
     ClassMismatch,
 }
@@ -54,6 +56,7 @@ impl DeclarationRefusal {
             Self::AuthorizationFailed => "authorization_failed",
             Self::AuthorizationSuperseded => "authorization_superseded",
             Self::AuthorizationReused => "authorization_reused",
+            Self::AuthorizationUnclaimed => "authorization_unclaimed",
             Self::ClassMismatch => "class_mismatch",
         }
     }
@@ -172,9 +175,11 @@ fn verify_one(
                 return quarantine(R::AuthorizationSuperseded);
             }
         }
-        // Approved, or claimed by an attempt with no outcome yet: the authorisation is spent by at most one
-        // declaration, so any second declaration naming it is refused.
-        SettlementStatus::Approved | SettlementStatus::Resuming { .. } => {
+        // Approved but unclaimed: no legitimate writer appends here, so a declaration in this state is refused.
+        SettlementStatus::Approved => return quarantine(R::AuthorizationUnclaimed),
+        // Claimed by an attempt with no outcome yet: the authorisation is spent by at most one declaration,
+        // so any second declaration naming it is refused.
+        SettlementStatus::Resuming { .. } => {
             if named.get(pending_id).copied().unwrap_or(0) > 1 {
                 return quarantine(R::AuthorizationReused);
             }
