@@ -171,7 +171,8 @@ pub fn read_all_declarations(root: &Path) -> Result<Vec<SettlementDeclaration>, 
     };
     let mut cases: Vec<String> = names
         .into_iter()
-        .filter(|name| name.starts_with("case-"))
+        // A stray file named like a case (a lock or temp file) is not a ledger; only case directories are read.
+        .filter(|name| name.starts_with("case-") && dir.join(name).is_dir())
         .collect();
     cases.sort();
     let mut seen: HashSet<String> = HashSet::new();

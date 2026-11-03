@@ -8,7 +8,7 @@
 
 **Verified:**
 - cargo test (authority, settlement, thoth, capability, artifact-ip, server, cli): 1094 pass, 0 fail
-- 10 new adversarial tests in cep_settlement declaration_integrity: tampered hash, altered ledger status, corrupted ledger, forged authorisation id, content mismatch, unbound content, cross-case replay, superseded declaration, view edit
+- 11 tests in cep_settlement declaration_integrity (10 adversarial cases and 1 positive control): tampered hash, altered ledger status, corrupted ledger, forged authorisation id, content mismatch, unbound content, cross-case replay, superseded declaration, view edit
 - cargo clippy --all-targets -D warnings on touched crates: clean
 - cargo fmt --all: applied
 
