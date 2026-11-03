@@ -13,7 +13,8 @@
 
 mod declaration_authority;
 pub use declaration_authority::{
-    is_external_declaration, verify_case_declarations, DeclarationAuthorization, DeclarationRefusal,
+    is_external_declaration, reconcile_operation_claims, verify_case_declarations,
+    DeclarationAuthorization, DeclarationRefusal,
 };
 mod obligation;
 pub use obligation::{
@@ -2528,6 +2529,13 @@ pub fn authorize_settlement_declaration(
     if decision.verdict == Verdict::Allow {
         let entries = ledger.read_entries()?;
         let Some(record) = pending_record_in(&entries, &identity.pending_id)? else {
+            // An external declaration is never authorised outright: it must pass an approval-gated rule.
+            if class == SettlementAuthorityClass::External {
+                return Err(CepAuthorityError::Approval(format!(
+                    "{} may not declare externally for {operation_id} without an approval-gated rule",
+                    ingress.caller().actor_id
+                )));
+            }
             return Ok(SettlementGate::Allowed(class));
         };
         return gate_on_status(&ledger, &record, class, true, true);
@@ -2592,10 +2600,13 @@ fn gate_on_status(
                 record.pending_id
             )))
         }
-        SettlementStatus::Pending if !outright => Ok(SettlementGate::Pending {
-            record: Box::new(record.clone()),
-            replayed,
-        }),
+        // An external record is claimed only once approved, even when policy now allows the request outright.
+        SettlementStatus::Pending if !outright || class == SettlementAuthorityClass::External => {
+            Ok(SettlementGate::Pending {
+                record: Box::new(record.clone()),
+                replayed,
+            })
+        }
         SettlementStatus::Pending | SettlementStatus::Approved => {
             claim_resume(ledger, &entries, record, class)
         }

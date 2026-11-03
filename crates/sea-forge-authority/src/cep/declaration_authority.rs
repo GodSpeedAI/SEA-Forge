@@ -150,3 +150,41 @@ fn verify_one(
         pending_id: pending_id.to_string(),
     }
 }
+
+/// Settle every open claim for one operation (run) that has no recorded outcome. A claim completes only on an
+/// authorised declaration of this case that names that claim; otherwise it fails. Never declares.
+pub fn reconcile_operation_claims(
+    root: &Path,
+    case_id: &str,
+    operation_id: &str,
+) -> Result<(), CepAuthorityError> {
+    let case_entries = LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-authority")?
+        .read_entries()?;
+    let declarations: Vec<SettlementDeclaration> = case_entries
+        .into_iter()
+        .filter(|entry| entry.record_kind == "settlement_declaration")
+        .filter_map(|entry| serde_json::from_value(entry.payload).ok())
+        .collect();
+    let verdicts = verify_case_declarations(root, &declarations)?;
+    let mut authorised: HashMap<String, String> = HashMap::new();
+    for (declaration, verdict) in declarations.iter().zip(&verdicts) {
+        if let DeclarationAuthorization::Authorized { pending_id } = verdict {
+            if declaration.run_id == operation_id {
+                authorised.insert(pending_id.clone(), declaration.declaration_id.clone());
+            }
+        }
+    }
+    for record in settlement_pending_records(root)?
+        .iter()
+        .filter(|record| record.operation_id == operation_id)
+    {
+        if let SettlementStatus::Resuming { .. } = settlement_status(root, &record.pending_id)? {
+            reconcile_settlement_resume(
+                root,
+                &record.pending_id,
+                authorised.get(&record.pending_id).map(String::as_str),
+            )?;
+        }
+    }
+    Ok(())
+}

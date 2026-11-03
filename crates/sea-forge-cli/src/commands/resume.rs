@@ -1071,7 +1071,7 @@ fn resume_artifact_transition(
         .ok_or_else(|| ForgeError::Internal("strong authority role is missing".into()))?;
     // SWE_SEED is an external declarer: this declaration must pass the settlement gate before
     // `resume_pending_transition` can call `declare()` (fail closed). The gate commits its own refusal.
-    reconcile_open_settlement_attempts(&root, &pending, &options.entity)?;
+    reconcile_open_settlement_attempts(&root, &pending)?;
     let resume_actor = Actor {
         actor_id: options.entity.clone(),
         role: ActorRole::Operator,
@@ -1199,43 +1199,15 @@ fn resume_artifact_transition(
     })
 }
 
-/// Settle any claimed settlement attempt for this transition that has no recorded outcome. A declaration already
-/// in the case ledger completes the attempt; without one the attempt fails. Never a second declaration.
+/// Settle any claimed settlement attempt for this transition that has no recorded outcome. Shared with the server
+/// path: a claim completes only on an authorised declaration that names it, otherwise it fails. Never a second
+/// declaration.
 fn reconcile_open_settlement_attempts(
     root: &std::path::Path,
     pending: &sea_forge_artifact_ip::PendingArtifactTransition,
-    entity: &str,
 ) -> Result<(), ForgeError> {
-    let records = sea_forge_authority::cep::settlement_pending_records(root)
-        .map_err(|error| ForgeError::Input(format!("settlement state refused: {error}")))?;
-    let declared = LedgerStream::open(root, format!("case-{}", pending.case_id), entity)?
-        .read_entries()?
-        .into_iter()
-        .filter(|entry| entry.record_kind == "settlement_declaration")
-        .filter_map(|entry| serde_json::from_value::<SettlementDeclaration>(entry.payload).ok())
-        .find(|declaration| {
-            declaration.case_id == pending.case_id && declaration.run_id == pending.run_id
-        })
-        .map(|declaration| declaration.declaration_id);
-    for record in records
-        .iter()
-        .filter(|record| record.operation_id == pending.run_id)
-    {
-        let status = sea_forge_authority::cep::settlement_status(root, &record.pending_id)
-            .map_err(|error| ForgeError::Input(format!("settlement state refused: {error}")))?;
-        if matches!(
-            status,
-            sea_forge_authority::cep::SettlementStatus::Resuming { .. }
-        ) {
-            sea_forge_authority::cep::reconcile_settlement_resume(
-                root,
-                &record.pending_id,
-                declared.as_deref(),
-            )
-            .map_err(|error| ForgeError::Input(format!("settlement reconcile refused: {error}")))?;
-        }
-    }
-    Ok(())
+    sea_forge_authority::cep::reconcile_operation_claims(root, &pending.case_id, &pending.run_id)
+        .map_err(|error| ForgeError::Input(format!("settlement reconcile refused: {error}")))
 }
 
 fn approval_binds_pending(

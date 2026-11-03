@@ -349,9 +349,10 @@ mod tests {
     use super::*;
     use chrono::Utc;
     use sea_forge_authority::cep::{
-        authorize_settlement_declaration, complete_settlement_resume, settlement_approval_id,
-        CepAuthorityService, SettlementCriteria, SettlementGate, SettlementIngress,
-        SettlementTransport, VerifiedSettlementIngress,
+        authorize_settlement_declaration, complete_settlement_resume, reconcile_operation_claims,
+        settlement_approval_id, settlement_status, CepAuthorityService, SettlementCriteria,
+        SettlementGate, SettlementIngress, SettlementStatus, SettlementTransport,
+        VerifiedSettlementIngress,
     };
     use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
     use sea_forge_core::types::{Actor, ActorRole};
@@ -484,12 +485,12 @@ mod tests {
 
     const APPROVAL_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
 
-    /// Drive the real settlement lifecycle for one declaration: gate it (pending), approve it as a distinct
-    /// operator, claim it, bind the declaration to the claimed record, append it, and record its completion.
-    fn append_authorized(root: &Path, mut decl: SettlementDeclaration) -> SettlementDeclaration {
+    /// Gate one external declaration for `run_id` (pending), approve it as a distinct operator, and claim it.
+    /// Returns the claimed pending record's id and request hash.
+    fn claim_approved(root: &Path, run_id: &str) -> (String, String) {
+        // A fresh engine per call, as production does: an engine remembers an escalation it issued.
         let bundle: AuthorityPolicyBundle =
             sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();
-        // A fresh engine per call, as production does: an engine remembers an escalation it issued.
         let fresh = || PolicyAuthorityEngine::new(bundle.clone()).unwrap();
         let gate_actor = Actor {
             actor_id: "cognate-service".into(),
@@ -500,23 +501,17 @@ mod tests {
             SettlementTransport::SweSeedAdapter,
             None,
             &gate_actor,
-            vec![format!("operation:{}", decl.run_id)],
+            vec![format!("operation:{run_id}")],
         )
         .unwrap();
         let ttl = chrono::Duration::hours(24);
-        let pending = match authorize_settlement_declaration(
-            &fresh(),
-            &bundle,
-            root,
-            &decl.run_id,
-            &ingress,
-            ttl,
-        )
-        .unwrap()
-        {
-            SettlementGate::Pending { record, .. } => *record,
-            other => panic!("expected a pending settlement, got {other:?}"),
-        };
+        let pending =
+            match authorize_settlement_declaration(&fresh(), &bundle, root, run_id, &ingress, ttl)
+                .unwrap()
+            {
+                SettlementGate::Pending { record, .. } => *record,
+                other => panic!("expected a pending settlement, got {other:?}"),
+            };
         let worlds = WorldRegistry::new();
         let engine = fresh();
         let service = CepAuthorityService {
@@ -538,7 +533,7 @@ mod tests {
                 &approver,
             )
             .unwrap();
-        match authorize_settlement_declaration(&fresh(), &bundle, root, &decl.run_id, &ingress, ttl)
+        match authorize_settlement_declaration(&fresh(), &bundle, root, run_id, &ingress, ttl)
             .unwrap()
         {
             SettlementGate::Resumed { pending_id, .. } => {
@@ -546,8 +541,14 @@ mod tests {
             }
             other => panic!("expected a claimed settlement, got {other:?}"),
         }
-        decl.authorization_ref = Some(pending.pending_id.clone());
-        decl.authorization_request_sha256 = Some(pending.request_sha256.clone());
+        (pending.pending_id, pending.request_sha256)
+    }
+
+    /// Append a declaration under a claimed attempt, binding it to that claim. The attempt is left open.
+    fn append_under_claim(root: &Path, mut decl: SettlementDeclaration) -> SettlementDeclaration {
+        let (pending_id, request_sha256) = claim_approved(root, &decl.run_id);
+        decl.authorization_ref = Some(pending_id);
+        decl.authorization_request_sha256 = Some(request_sha256);
         decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
         sea_forge_settlement::append_declaration_ledgered_once(
             root,
@@ -556,7 +557,14 @@ mod tests {
             &decl,
         )
         .unwrap();
-        complete_settlement_resume(root, &pending.pending_id, &decl.declaration_id).unwrap();
+        decl
+    }
+
+    /// The full lifecycle for one declaration: claim, append under the claim, and record its completion.
+    fn append_authorized(root: &Path, decl: SettlementDeclaration) -> SettlementDeclaration {
+        let decl = append_under_claim(root, decl);
+        let pending_id = decl.authorization_ref.clone().unwrap();
+        complete_settlement_resume(root, &pending_id, &decl.declaration_id).unwrap();
         decl
     }
 
@@ -723,6 +731,84 @@ mod tests {
     }
 
     #[test]
+    fn interrupted_claim_completes_from_its_authorised_declaration() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // The declaration is appended, then the process dies before recording the completion.
+        let decl = append_under_claim(
+            root.path(),
+            declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test"),
+        );
+        let pending_id = decl.authorization_ref.clone().unwrap();
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { .. }
+        ));
+
+        reconcile_operation_claims(root.path(), "case_a", "run_a").unwrap();
+
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Completed {
+                declaration_ref: decl.declaration_id.clone()
+            }
+        );
+        let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
+        let run_a = outcomes.iter().find(|o| o.run_id == "run_a").unwrap();
+        assert_eq!(run_a.declaration_ids, vec![decl.declaration_id.clone()]);
+    }
+
+    #[test]
+    fn interrupted_claim_without_a_declaration_fails_and_is_never_redeclared() {
+        let root = tempfile::tempdir().unwrap();
+        commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        let (pending_id, _) = claim_approved(root.path(), "run_a");
+
+        reconcile_operation_claims(root.path(), "case_a", "run_a").unwrap();
+
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Failed { .. }
+        ));
+        let bundle: AuthorityPolicyBundle =
+            sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let gate_actor = Actor {
+            actor_id: "cognate-service".into(),
+            role: ActorRole::Service,
+        };
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::SweSeedDeclaration,
+            SettlementTransport::SweSeedAdapter,
+            None,
+            &gate_actor,
+            vec!["operation:run_a".into()],
+        )
+        .unwrap();
+        assert!(authorize_settlement_declaration(
+            &engine,
+            &bundle,
+            root.path(),
+            "run_a",
+            &ingress,
+            chrono::Duration::hours(24),
+        )
+        .is_err());
+    }
+
+    #[test]
     fn mismatched_run_never_correlates() {
         let root = tempfile::tempdir().unwrap();
         let manifest = commit_evidence_and_settlement(
@@ -739,7 +825,7 @@ mod tests {
             &manifest,
             "swe_seed_test",
         );
-        let decl = append_authorized(root.path(), decl);
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert_eq!(outcomes.len(), 1);
         assert!(outcomes[0].declaration_ids.is_empty());
@@ -762,7 +848,7 @@ mod tests {
             &manifest,
             "some_other_verifier",
         );
-        let decl = append_authorized(root.path(), decl);
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert!(outcomes[0].declaration_ids.is_empty());
     }
@@ -784,7 +870,7 @@ mod tests {
             "sha256:not-the-real-manifest",
             "swe_seed_test",
         );
-        let decl = append_authorized(root.path(), decl);
+        append_authorized(root.path(), decl);
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         assert!(outcomes[0].declaration_ids.is_empty());
     }
@@ -836,7 +922,7 @@ mod tests {
             vec!["a:sha256:1".into()],
         );
         let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
-        let decl = append_authorized(root.path(), decl);
+        append_authorized(root.path(), decl);
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();

@@ -1014,6 +1014,24 @@ pub fn resume_pending_transition(
         ));
     }
     let declaration = if let Some(existing) = matching.into_iter().next() {
+        // A declaration already in the case is reused only when it is authorised; an unauthorised one is refused.
+        let verdict = sea_forge_authority::cep::verify_case_declarations(
+            root,
+            std::slice::from_ref(&existing),
+        )
+        .map_err(|error| m8_error("settlement_integrity_error", &error.to_string()))?;
+        if !matches!(
+            verdict.first(),
+            Some(
+                sea_forge_authority::cep::DeclarationAuthorization::Local
+                    | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. }
+            )
+        ) {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                "existing declaration is not authorised by a verified settlement record",
+            ));
+        }
         existing
     } else {
         let request = SettlementDeclarationRequest {

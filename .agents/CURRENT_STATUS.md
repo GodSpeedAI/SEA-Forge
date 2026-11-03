@@ -1,20 +1,21 @@
 # Current status
 
-**Status revision:** 194
+**Status revision:** 195
 
-**Stage:** Security: out-of-process provenance requirement at the settlement writer and every gate caller
+**Stage:** Security: server settlement path uses the pending, approval, claim and resume lifecycle
 
-**Summary:** Every gated external declaration carries its authorisation provenance (authorization_ref, the settlement pending id, and authorization_request_sha256), copied from the request and covered by declaration_hash. The settlement writer (append_declaration_ledgered and append_declaration_ledgered_once) refuses an external declaration without both fields, so an honest writer cannot produce an unauthorised record. An out-of-process append that bypasses the writer is still refused at reconciliation and read time by the shared verification. The server path, the CLI resume path, and the artifact transition pass the claimed pending id and request hash. Local declarations are unchanged.
+**Summary:** The server-owned SWE_SEED declaration path (delegation.rs) now uses the same lifecycle as the CLI. A claim left open by an interrupted call is settled first by cep::reconcile_operation_claims, which completes only on a declaration this case verified as authorised for that claim and otherwise fails it. A new attempt is gated only after that. A declare failure releases the claim when the authority was unavailable and fails it otherwise, so nothing is left stuck. The CLI resume uses the same reconciliation. An artifact transition that reuses an existing declaration verifies it first. External declarations are never authorised outright: policy that allows one without an approval-gated rule is refused, and a claimed external record is claimed only once approved.
 
 **Verified:**
-- cargo test -p sea-forge-server: full suite exit 0 (lib 178 pass; conformance_m16 19 pass, 2 ignored; out-of-process tests use a raw ledger append past the writer and are refused at startup and read time)
-- cargo test -p sea-forge-settlement --lib: 18 pass (request authorisation carried into the hashed declaration; duplicate-declare test uses an authorised request)
-- cargo test -p sea-forge-authority -p sea-forge-artifact-ip -p sea-forge-capability -p sea-forge-thoth: all pass
+- cargo test -p sea-forge-server --lib: 180 pass, 0 fail (swe_seed_reconciliation 12 pass, including interrupted claim completes from its authorised declaration, interrupted claim without a declaration fails and is never redeclared, startup quarantine, approval for one run does not authorise another, writer refuses external without provenance)
+- cargo test -p sea-forge-server --tests: all 20 integration targets exit 0 (conformance_m16: 19 pass, 2 ignored)
+- cargo test -p sea-forge-authority -p sea-forge-artifact-ip -p sea-forge-settlement: 338 pass, 0 fail
+- Note: a policy that allows an external settlement outright is already refused at policy load (existing test an_external_class_rule_that_is_a_plain_allow_is_refused_at_policy_load), so the gate-level refusal is defence in depth and has no separate test
 - cargo fmt --all -- --check: clean
 
 **Limits:**
-- Not yet done: the server path still declares an External Allow verdict that has no pending record; the writer refuses it after the external authority is contacted (checkpoint c)
-- Not yet done: an existing matching declaration is reused by the artifact transition without a verification check (checkpoint c)
-- Not yet done: conformance_m8 CLI tests (checkpoint d); race test (checkpoint e); adversarial review
+- conformance_m8 CLI tests still fail (checkpoint d): the resume now needs a settlement approval step and the fixture has none
+- race test not yet red-then-green (checkpoint e)
+- adversarial review not done
 
-**Next:** Checkpoint c: refuse an External Allow at the gate, claim an External pending record only when Approved, release or fail a claim when declare fails, reconcile open claims for the run before a new attempt, and verify a reused declaration.
+**Next:** Checkpoint d: give the m8 fixture an external settlement rule that requires approval, a distinct operator approver identity with an approval_resolution rule, and finish both m8 CLI tests without loosening the requester's policy.
