@@ -4,12 +4,13 @@
 use sea_forge_authority::cep::{
     authorize_settlement_declaration, complete_settlement_resume,
     derive_settlement_authority_class, fail_settlement_resume, reconcile_settlement_resume,
-    release_settlement_resume, settle_failed_resume_attempt, settlement_approval_id,
-    settlement_declaration_content_sha256, settlement_pending_records, settlement_request_sha256,
-    settlement_status, verify_declaration_echoes_request, AttemptSettlement, CepAuthorityError,
-    CepAuthorityService, SettlementAuthorityClass, SettlementCriteria, SettlementGate,
-    SettlementIngress, SettlementOperation, SettlementPendingRecord, SettlementStatus,
-    SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
+    reconcile_settlement_resume_at, release_settlement_resume, settle_failed_resume_attempt,
+    settlement_approval_id, settlement_declaration_content_sha256, settlement_pending_records,
+    settlement_request_sha256, settlement_status, verify_declaration_echoes_request,
+    AttemptSettlement, CepAuthorityError, CepAuthorityService, SettlementAuthorityClass,
+    SettlementCriteria, SettlementGate, SettlementIngress, SettlementOperation,
+    SettlementPendingRecord, SettlementStatus, SettlementTransport, VerifiedSettlementIngress,
+    LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
@@ -1729,7 +1730,7 @@ fn an_approved_settlement_resumes_once_and_a_second_resume_returns_the_completed
         (pending_id.as_str(), attempt),
         (record.pending_id.as_str(), 1)
     );
-    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+    complete_settlement_resume(root.path(), &pending_id, 1, "decl-1").unwrap();
 
     // A second resume never claims again: it returns the completed declaration.
     match gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap() {
@@ -1863,7 +1864,7 @@ fn a_reused_approval_is_refused_and_audited() {
     // The claim spent the approval: a second use is refused and audited while the first attempt is open.
     assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
     assert_eq!(ledger_count(root.path(), "settlement_approval_refused"), 1);
-    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+    complete_settlement_resume(root.path(), &pending_id, 1, "decl-1").unwrap();
     // After completion the request reports the completed declaration; it is not claimed again.
     assert!(matches!(
         gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap(),
@@ -1935,7 +1936,13 @@ fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
     let (pending_id, _) =
         declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
-    let recovered = reconcile_settlement_resume(root.path(), &pending_id, None).unwrap();
+    // The claim may still be in flight, so reconciliation leaves a live claim alone.
+    let live = reconcile_settlement_resume(root.path(), &pending_id, None).unwrap();
+    assert_eq!(live, SettlementStatus::Resuming { attempt: 1 });
+    // Once the lease has lapsed the attempt is failed, and nothing is declared.
+    let lapsed =
+        lease_and_fencing::claimed_at(root.path(), &pending_id) + lease_and_fencing::lease();
+    let recovered = reconcile_settlement_resume_at(root.path(), &pending_id, None, lapsed).unwrap();
     assert_eq!(
         recovered,
         SettlementStatus::Failed {
@@ -1943,7 +1950,201 @@ fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
         }
     );
     assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
-    assert!(fail_settlement_resume(root.path(), &pending_id, "late").is_err());
+    assert!(fail_settlement_resume(root.path(), &pending_id, 1, "late").is_err());
+}
+
+mod lease_and_fencing {
+    use super::*;
+    use sea_forge_authority::cep::{reconcile_settlement_resume_at, SETTLEMENT_CLAIM_LEASE_SECS};
+
+    pub fn lease() -> chrono::Duration {
+        chrono::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS)
+    }
+
+    /// Approve a pending settlement and claim it once. Returns the pending id and the claimed attempt.
+    fn open_claim(root: &std::path::Path) -> (String, u32) {
+        let record = pending_for(root, evidence_a());
+        resolve_in(root, &record.pending_id, true, &operator()).unwrap();
+        declared(gate_swe_seed_in(root, &approval_policy(), evidence_a()).unwrap())
+    }
+
+    /// The instant the claim for attempt 1 was written, read from the ledger.
+    pub fn claimed_at(root: &std::path::Path, pending_id: &str) -> chrono::DateTime<chrono::Utc> {
+        let entries = sea_forge_ledger::LedgerStream::open(root, LEDGER_ID, "cep-lease-test")
+            .unwrap()
+            .read_entries()
+            .unwrap();
+        let key = format!("settlement-state:{pending_id}:resuming:1");
+        let entry = entries
+            .iter()
+            .find(|entry| entry.idempotency_key.as_deref() == Some(key.as_str()))
+            .expect("claim record");
+        chrono::DateTime::parse_from_rfc3339(entry.payload["claimed_at"].as_str().unwrap())
+            .unwrap()
+            .with_timezone(&chrono::Utc)
+    }
+
+    fn closes_for(root: &std::path::Path, pending_id: &str, attempt: u32) -> usize {
+        let key = format!("settlement-state:{pending_id}:closed:{attempt}");
+        sea_forge_ledger::LedgerStream::open(root, LEDGER_ID, "cep-lease-test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry.idempotency_key.as_deref() == Some(key.as_str()))
+            .count()
+    }
+
+    #[test]
+    fn a_live_claim_survives_reconciliation_and_refuses_a_second_resume() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, attempt) = open_claim(root.path());
+        assert_eq!(attempt, 1);
+        assert_eq!(
+            reconcile_settlement_resume(root.path(), &pending_id, None).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+        assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+    }
+
+    #[test]
+    fn a_claim_is_failed_at_the_lease_boundary_and_not_one_millisecond_before() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let claimed = claimed_at(root.path(), &pending_id);
+        let before = reconcile_settlement_resume_at(
+            root.path(),
+            &pending_id,
+            None,
+            claimed + lease() - chrono::Duration::milliseconds(1),
+        )
+        .unwrap();
+        assert_eq!(before, SettlementStatus::Resuming { attempt: 1 });
+        let at = reconcile_settlement_resume_at(root.path(), &pending_id, None, claimed + lease())
+            .unwrap();
+        assert_eq!(
+            at,
+            SettlementStatus::Failed {
+                reason: "interrupted_before_declaration".into()
+            }
+        );
+    }
+
+    #[test]
+    fn a_stale_attempt_cannot_complete_after_a_newer_attempt_owns_the_claim() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, first) = open_claim(root.path());
+        release_settlement_resume(root.path(), &pending_id, first).unwrap();
+        let (again, second) =
+            declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+        assert_eq!((again.as_str(), second), (pending_id.as_str(), 2));
+
+        // The stale worker from attempt 1 is fenced out of every outcome for its attempt.
+        assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-stale").is_err());
+        assert!(fail_settlement_resume(root.path(), &pending_id, 1, "late").is_err());
+        assert!(release_settlement_resume(root.path(), &pending_id, 1).is_err());
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 2 }
+        );
+        complete_settlement_resume(root.path(), &pending_id, 2, "decl-new").unwrap();
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Completed {
+                declaration_ref: "decl-new".into()
+            }
+        );
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+        assert_eq!(closes_for(root.path(), &pending_id, 2), 1);
+    }
+
+    #[test]
+    fn a_worker_that_finishes_after_reconciliation_closed_its_attempt_cannot_complete_it() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        reconcile_settlement_resume_at(root.path(), &pending_id, None, lapsed).unwrap();
+        assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-late").is_err());
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Failed { .. }
+        ));
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+    }
+
+    #[test]
+    fn reconciliation_after_a_completed_attempt_leaves_the_completion_alone() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        complete_settlement_resume(root.path(), &pending_id, 1, "decl-1").unwrap();
+        let far_future = claimed_at(root.path(), &pending_id) + lease() * 10;
+        assert_eq!(
+            reconcile_settlement_resume_at(root.path(), &pending_id, None, far_future).unwrap(),
+            SettlementStatus::Completed {
+                declaration_ref: "decl-1".into()
+            }
+        );
+        assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-2").is_err());
+    }
+
+    #[test]
+    fn concurrent_reconciliation_of_a_lapsed_claim_closes_it_exactly_once() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        let path = root.path().to_path_buf();
+        let handles: Vec<_> = (0..8)
+            .map(|_| {
+                let (path, pending_id) = (path.clone(), pending_id.clone());
+                std::thread::spawn(move || {
+                    reconcile_settlement_resume_at(&path, &pending_id, None, lapsed)
+                })
+            })
+            .collect();
+        for handle in handles {
+            let status = handle
+                .join()
+                .unwrap()
+                .expect("a lost reconciliation race must still report the settled outcome");
+            assert_eq!(
+                status,
+                SettlementStatus::Failed {
+                    reason: "interrupted_before_declaration".into()
+                }
+            );
+        }
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+    }
+
+    #[test]
+    fn two_simultaneous_resumes_claim_once_and_the_loser_leaves_the_winner_live() {
+        let root = tempfile::tempdir().unwrap();
+        let record = pending_for(root.path(), evidence_a());
+        resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+        let path = root.path().to_path_buf();
+        let handles: Vec<_> = (0..2)
+            .map(|_| {
+                let path = path.clone();
+                std::thread::spawn(move || {
+                    gate_swe_seed_in(&path, &approval_policy(), evidence_a()).is_ok()
+                })
+            })
+            .collect();
+        let winners = handles
+            .into_iter()
+            .map(|handle| handle.join().unwrap())
+            .filter(|won| *won)
+            .count();
+        assert_eq!(winners, 1);
+        assert_eq!(
+            reconcile_settlement_resume(root.path(), &record.pending_id, None).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+    }
 }
 
 #[test]
@@ -2079,7 +2280,7 @@ fn an_unavailable_authority_releases_the_attempt_for_a_later_resume() {
     let (_, second) =
         declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
     assert_eq!(second, first + 1);
-    complete_settlement_resume(root.path(), &pending_id, "decl-1").unwrap();
+    complete_settlement_resume(root.path(), &pending_id, second, "decl-1").unwrap();
 }
 
 #[test]
@@ -2336,7 +2537,7 @@ mod declaration_integrity {
             CASE,
             &authorised(&record, &pending_id, "decl-first"),
         );
-        complete_settlement_resume(root.path(), &pending_id, "decl-first").unwrap();
+        complete_settlement_resume(root.path(), &pending_id, 1, "decl-first").unwrap();
         commit_to(
             root.path(),
             CASE,

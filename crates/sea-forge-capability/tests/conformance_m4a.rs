@@ -250,7 +250,7 @@ fn authorised_declare(
     authorised.authorization_request_sha256 = Some(request_sha256);
     authorised.authorization_content_sha256 = Some(declared.clone());
     let decl = authority.declare(&authorised).unwrap();
-    complete_settlement_resume(root, &pending_id, &decl.declaration_id).unwrap();
+    complete_settlement_resume(root, &pending_id, 1, &decl.declaration_id).unwrap();
     decl
 }
 

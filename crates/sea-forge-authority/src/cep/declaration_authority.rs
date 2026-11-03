@@ -400,7 +400,7 @@ pub fn settle_failed_resume_attempt(
         });
     match authorised {
         Some(declaration_id) => {
-            complete_settlement_resume(root, pending_id, &declaration_id)?;
+            complete_settlement_resume(root, pending_id, attempt, &declaration_id)?;
             Ok(AttemptSettlement::Completed)
         }
         None => Ok(AttemptSettlement::Open),

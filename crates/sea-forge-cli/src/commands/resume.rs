@@ -1156,38 +1156,45 @@ fn resume_artifact_transition(
         declarer,
         &authority,
         transition_grant,
-        claimed.as_ref().map(|(pending_id, request_sha256, _)| {
-            sea_forge_artifact_ip::PendingAuthorization {
-                pending_id,
-                request_sha256,
-                declared_content_sha256: &declared,
-            }
-        }),
+        claimed
+            .as_ref()
+            .map(|(pending_id, request_sha256, attempt)| {
+                sea_forge_artifact_ip::PendingAuthorization {
+                    pending_id,
+                    attempt: *attempt,
+                    request_sha256,
+                    declared_content_sha256: &declared,
+                }
+            }),
     );
     let resumed = match result {
         Ok(resumed) => resumed,
         Err(error) => {
-            // Settle the open claim from the ledger before returning. A declaration naming the claim completes it;
-            // a claim no declaration names is released for a later resume; anything else stays open for
-            // reconciliation, so a second declaration can never be appended.
-            if let Some((pending_id, _, attempt)) = &claimed {
-                sea_forge_authority::cep::settle_failed_resume_attempt(
-                    &root,
-                    &pending.case_id,
-                    pending_id,
-                    *attempt,
-                )
-                .map_err(|refused| {
-                    ForgeError::Input(format!("settlement claim refused: {refused}"))
-                })?;
-            }
-            if matches!(
+            let unavailable = matches!(
                 error,
                 ForgeError::Plan {
                     class: "settlement_authority_unavailable",
                     ..
                 }
-            ) {
+            );
+            // Only an unavailable authority is known not to have received the declaration, so only that error
+            // settles the claim here (a declaration naming it completes it; otherwise it is released). Any other
+            // error leaves the claim open: the authority call may still be in flight, and the claim is settled by
+            // reconciliation once its lease lapses, or at once if a declaration is found.
+            if let Some((pending_id, _, attempt)) = &claimed {
+                if unavailable {
+                    sea_forge_authority::cep::settle_failed_resume_attempt(
+                        &root,
+                        &pending.case_id,
+                        pending_id,
+                        *attempt,
+                    )
+                    .map_err(|refused| {
+                        ForgeError::Input(format!("settlement claim refused: {refused}"))
+                    })?;
+                }
+            }
+            if unavailable {
                 return Ok(ResumeOutcome {
                     case_id: options.case_id,
                     state: "awaiting_approval",
@@ -1197,12 +1204,13 @@ fn resume_artifact_transition(
             return Err(error);
         }
     };
-    if let Some((pending_id, _, _)) = &claimed {
+    if let Some((pending_id, _, attempt)) = &claimed {
         // The declaration exists: record the attempt's outcome. Any failure before this leaves the attempt open,
         // and the next resume reconciles it from the ledger instead of declaring again.
         sea_forge_authority::cep::complete_settlement_resume(
             &root,
             pending_id,
+            *attempt,
             &resumed.declaration.declaration_id,
         )
         .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;

@@ -1049,9 +1049,14 @@ async fn submit_swe_seed_declaration(
     if let Err(error) =
         sea_forge_authority::cep::verify_declaration_echoes_request(&echo_request, &declaration)
     {
-        if let Some((pending_id, _, _)) = claimed.as_ref() {
-            sea_forge_authority::cep::fail_settlement_resume(root, pending_id, "content_mismatch")
-                .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))?;
+        if let Some((pending_id, _, attempt)) = claimed.as_ref() {
+            sea_forge_authority::cep::fail_settlement_resume(
+                root,
+                pending_id,
+                *attempt,
+                "content_mismatch",
+            )
+            .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))?;
         }
         return Err(ForgeError::Plan {
             class: "settlement_content_mismatch",
@@ -1063,10 +1068,11 @@ async fn submit_swe_seed_declaration(
         entity,
         &declaration,
     )?;
-    if let Some((pending_id, _, _)) = claimed {
+    if let Some((pending_id, _, attempt)) = claimed {
         sea_forge_authority::cep::complete_settlement_resume(
             root,
             &pending_id,
+            attempt,
             &declaration.declaration_id,
         )
         .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;
@@ -1094,7 +1100,12 @@ fn settle_unrecorded_claim(
     if unavailable {
         sea_forge_authority::cep::release_settlement_resume(root, pending_id, *attempt)
     } else {
-        sea_forge_authority::cep::fail_settlement_resume(root, pending_id, "declaration_not_made")
+        sea_forge_authority::cep::fail_settlement_resume(
+            root,
+            pending_id,
+            *attempt,
+            "declaration_not_made",
+        )
     }
     .map_err(|error| ForgeError::Input(format!("settlement claim refused: {error}")))
 }
