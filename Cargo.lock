@@ -2735,6 +2735,7 @@ dependencies = [
  "sea-forge-authority",
  "sea-forge-capability",
  "sea-forge-core",
+ "sea-forge-domainforge",
  "sea-forge-ledger",
  "sea-forge-self-model",
  "serde",

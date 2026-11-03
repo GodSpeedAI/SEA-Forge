@@ -424,6 +424,28 @@ mod tests {
         decl
     }
 
+    /// A declaration as the local judge makes it: local strength, not qualifying, with no external provenance.
+    /// Production creates local declarations only this way (`LocalSettlementAuthority::declare`).
+    fn local_declaration(
+        case_id: &str,
+        run_id: &str,
+        plan_item_id: &str,
+        claim_manifest_sha256: &str,
+        verifier_ref: &str,
+    ) -> SettlementDeclaration {
+        let mut decl = declaration(
+            case_id,
+            run_id,
+            plan_item_id,
+            claim_manifest_sha256,
+            verifier_ref,
+        );
+        decl.strength = SettlementStrength::Local;
+        decl.qualifies_for_capability = false;
+        decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();
+        decl
+    }
+
     fn commit_evidence_and_settlement(
         root: &Path,
         case_id: &str,
@@ -737,7 +759,7 @@ mod tests {
             "item_acp",
             vec!["a:sha256:1".into()],
         );
-        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
+        let decl = local_declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
         sea_forge_settlement::append_declaration_ledgered_once(
             root.path(),
             &root.path().join("declarations.jsonl"),
@@ -882,7 +904,7 @@ mod tests {
         // An external settlement is pending for the run.
         claim_approved(root.path(), "run_a");
         // A declaration for the same run, presented as local, appended out of process.
-        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
+        let decl = local_declaration("case_a", "run_a", "item_acp", &manifest, "local_judge");
         out_of_process_append(root.path(), &decl);
 
         reconcile_all_cases(root.path()).unwrap();
