@@ -2116,7 +2116,7 @@ fn settlement_parameters(operation_id: &str, class: SettlementAuthorityClass) ->
 /// caller must not proceed. Shared by the CEP settlement callers and every SWE_SEED declaration path, so
 /// no path reaches `declare()` without this decision.
 #[allow(clippy::too_many_arguments)]
-fn commit_gate_decision(
+fn commit_gate_evaluation(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
     root: &Path,
@@ -2125,7 +2125,7 @@ fn commit_gate_decision(
     parameters: Value,
     operation_id: &str,
     caller: &Actor,
-) -> Result<(), CepAuthorityError> {
+) -> Result<(AuthorityDecision, CommittedRecordRef), CepAuthorityError> {
     let action = AuthorityAction::Reserved {
         resource_type: surface.to_string(),
         resource_id: operation_id.to_string(),
@@ -2150,11 +2150,36 @@ fn commit_gate_decision(
     })?;
     // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it
     // is committed plainly rather than under an idempotency key.
-    ledger.commit_typed(
+    let committed = ledger.commit_typed(
         "authority_decision",
         vec!["cognate".into(), operation_id.to_string()],
         &decision,
         vec![],
+    )?;
+    Ok((decision, committed))
+}
+
+/// Evaluate and commit a gate that must allow outright. Any other verdict is a refusal the caller must honor.
+#[allow(clippy::too_many_arguments)]
+fn commit_gate_decision(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
+    root: &Path,
+    ledger: &LedgerStream,
+    surface: &str,
+    parameters: Value,
+    operation_id: &str,
+    caller: &Actor,
+) -> Result<(), CepAuthorityError> {
+    let (decision, _) = commit_gate_evaluation(
+        engine,
+        bundle,
+        root,
+        ledger,
+        surface,
+        parameters,
+        operation_id,
+        caller,
     )?;
     if decision.verdict != Verdict::Allow {
         return Err(CepAuthorityError::Evidence(format!(
@@ -2165,19 +2190,87 @@ fn commit_gate_decision(
     Ok(())
 }
 
-/// Gate a settlement declaration for `caller` with an explicit classification, from any code path that is
-/// about to call `declare()`. Refuses (and commits the refusal) unless the policy allows that class for this
-/// caller. Callers must not call `declare()` when this returns an error.
+/// The outcome of gating one settlement declaration from a verified ingress.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SettlementGate {
+    /// Policy allows this declaration for the derived class. The caller may call `declare()`.
+    Allowed(SettlementAuthorityClass),
+    /// Policy requires approval first. The pending record is durable and was written before this was returned.
+    /// The caller must not call `declare()`. `replayed` is true when an identical request already held this record.
+    Pending {
+        record: Box<SettlementPendingRecord>,
+        replayed: bool,
+    },
+}
+
+/// A settlement declaration held for approval. Written to the authority ledger before a pending outcome is
+/// returned. It is never an authoritative declaration.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SettlementPendingRecord {
+    pub pending_id: String,
+    /// SHA-256 over the canonical request. The same request identity always maps to the same record.
+    pub request_sha256: String,
+    pub operation_id: String,
+    pub operation_kind: String,
+    pub settlement_authority_class: String,
+    pub ingress: String,
+    pub actor_id: String,
+    pub actor_role: String,
+    pub identity_binding_hash: Option<String>,
+    pub evidence_refs: Vec<String>,
+    pub approval_requirement: String,
+    /// The committed `authority_decision` that escalated this request.
+    pub decision_ref: String,
+    pub created_at: String,
+    pub expires_at: String,
+}
+
+const SETTLEMENT_PENDING_KIND: &str = "settlement_pending";
+const SETTLEMENT_PENDING_KEY: &str = "settlement-pending:";
+const SETTLEMENT_APPROVAL_REQUIREMENT: &str = "policy_escalate";
+
+impl SettlementIngress {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::SweSeedDeclaration => "swe_seed_declaration",
+            Self::ArtifactTransitionResume => "artifact_transition_resume",
+            Self::CepSettlement => "cep_settlement",
+            Self::ObligationClosure => "obligation_closure",
+        }
+    }
+}
+
+/// The canonical identity of one settlement declaration request. Field order is fixed by this struct and
+/// evidence refs are sorted, so the hash is stable. Timestamps are excluded on purpose.
+#[derive(serde::Serialize)]
+struct CanonicalSettlementRequest<'a> {
+    ingress: &'a str,
+    operation_id: &'a str,
+    operation_kind: &'a str,
+    settlement_authority_class: &'a str,
+    actor_id: &'a str,
+    actor_role: &'a str,
+    identity_binding_hash: Option<&'a str>,
+    evidence_refs: Vec<&'a str>,
+    approval_requirement: &'a str,
+}
+
+/// Gate a settlement declaration from a verified ingress, before any code path calls `declare()`.
+///
+/// An allow yields `Allowed`. An approvable escalation writes a durable `settlement_pending` record, idempotent
+/// by the canonical request hash, and yields `Pending`. Any other verdict is a refusal, which is committed and
+/// returned as an error. The caller must not call `declare()` unless the result is `Allowed`.
 pub fn authorize_settlement_declaration(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
     root: &Path,
     operation_id: &str,
     ingress: &VerifiedSettlementIngress<'_>,
-) -> Result<SettlementAuthorityClass, CepAuthorityError> {
+    approval_ttl: Duration,
+) -> Result<SettlementGate, CepAuthorityError> {
     let ledger = LedgerStream::open(root, LEDGER_ID, "sea-forge-cep-authority")?;
     let class = derive_settlement_authority_class(ingress);
-    commit_gate_decision(
+    let (decision, committed) = commit_gate_evaluation(
         engine,
         bundle,
         root,
@@ -2187,7 +2280,126 @@ pub fn authorize_settlement_declaration(
         operation_id,
         ingress.caller(),
     )?;
-    Ok(class)
+    if decision.verdict == Verdict::Allow {
+        return Ok(SettlementGate::Allowed(class));
+    }
+    if !approvable(&decision) {
+        return Err(CepAuthorityError::Evidence(format!(
+            "{} may not use settlement_declaration for {operation_id}: {}",
+            ingress.caller().actor_id,
+            decision.reason
+        )));
+    }
+    let (record, replayed) = record_settlement_pending(
+        &ledger,
+        bundle,
+        operation_id,
+        class,
+        ingress,
+        committed.entry_ulid(),
+        approval_ttl,
+    )?;
+    Ok(SettlementGate::Pending {
+        record: Box::new(record),
+        replayed,
+    })
+}
+
+/// Write the pending record once per canonical request. Returns the existing record when one is already held.
+fn record_settlement_pending(
+    ledger: &LedgerStream,
+    bundle: &AuthorityPolicyBundle,
+    operation_id: &str,
+    class: SettlementAuthorityClass,
+    ingress: &VerifiedSettlementIngress<'_>,
+    decision_ref: &str,
+    approval_ttl: Duration,
+) -> Result<(SettlementPendingRecord, bool), CepAuthorityError> {
+    use sha2::{Digest, Sha256};
+    let caller = ingress.caller();
+    let identity_binding_hash = bundle
+        .resolve_identity(&caller.actor_id, caller.role.clone())
+        .identity_binding_hash;
+    let role = serde_json::to_value(&caller.role)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_string))
+        .ok_or(CepAuthorityError::Internal(
+            "settlement caller role is not serializable".into(),
+        ))?;
+    let mut evidence_refs: Vec<&str> = ingress.evidence_refs().iter().map(String::as_str).collect();
+    evidence_refs.sort_unstable();
+    evidence_refs.dedup();
+    let canonical = CanonicalSettlementRequest {
+        ingress: ingress.ingress().as_str(),
+        operation_id,
+        operation_kind: "settlement_declaration",
+        settlement_authority_class: class.as_str(),
+        actor_id: &caller.actor_id,
+        actor_role: &role,
+        identity_binding_hash: identity_binding_hash.as_deref(),
+        evidence_refs,
+        approval_requirement: SETTLEMENT_APPROVAL_REQUIREMENT,
+    };
+    let bytes = serde_json::to_vec(&canonical).map_err(|_| {
+        CepAuthorityError::Internal("settlement request is not serializable".into())
+    })?;
+    let request_sha256 = hex::encode(Sha256::digest(bytes));
+    let key = format!("{SETTLEMENT_PENDING_KEY}{request_sha256}");
+
+    if let Some(existing) = find_entry(&ledger.read_entries()?, &key) {
+        let record: SettlementPendingRecord = serde_json::from_value(existing.payload.clone())
+            .map_err(|_| {
+                CepAuthorityError::Internal(
+                    "ledger_integrity_error: malformed settlement_pending record".into(),
+                )
+            })?;
+        return Ok((record, true));
+    }
+    let now = Utc::now();
+    let pending_id = format!("settlement-pending-{}", &request_sha256[..32]);
+    let record = SettlementPendingRecord {
+        pending_id: pending_id.clone(),
+        request_sha256,
+        operation_id: operation_id.to_string(),
+        operation_kind: "settlement_declaration".into(),
+        settlement_authority_class: class.as_str().into(),
+        ingress: ingress.ingress().as_str().into(),
+        actor_id: caller.actor_id.clone(),
+        actor_role: role,
+        identity_binding_hash,
+        evidence_refs: ingress.evidence_refs().to_vec(),
+        approval_requirement: SETTLEMENT_APPROVAL_REQUIREMENT.into(),
+        decision_ref: decision_ref.to_string(),
+        created_at: now.to_rfc3339(),
+        expires_at: (now + approval_ttl).to_rfc3339(),
+    };
+    ledger.commit_typed_once(
+        SETTLEMENT_PENDING_KIND,
+        key,
+        vec![operation_id.to_string(), pending_id],
+        &record,
+        vec![decision_ref.to_string()],
+    )?;
+    Ok((record, false))
+}
+
+/// Every settlement pending record in the authority ledger, oldest first, read back from disk.
+pub fn settlement_pending_records(
+    root: &Path,
+) -> Result<Vec<SettlementPendingRecord>, CepAuthorityError> {
+    let ledger = LedgerStream::open(root, LEDGER_ID, "sea-forge-cep-authority")?;
+    ledger
+        .read_entries()?
+        .into_iter()
+        .filter(|entry| entry.record_kind == SETTLEMENT_PENDING_KIND)
+        .map(|entry| {
+            serde_json::from_value(entry.payload).map_err(|_| {
+                CepAuthorityError::Internal(
+                    "ledger_integrity_error: malformed settlement_pending record".into(),
+                )
+            })
+        })
+        .collect()
 }
 
 /// The CEP disposition a committed decision expresses.

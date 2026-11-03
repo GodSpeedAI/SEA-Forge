@@ -2,13 +2,15 @@
 //! settlement is SEA-Forge's own, judged against criteria bound into the allow decision.
 
 use sea_forge_authority::cep::{
-    authorize_settlement_declaration, derive_settlement_authority_class, CepAuthorityError,
-    CepAuthorityService, SettlementAuthorityClass, SettlementCriteria, SettlementIngress,
-    SettlementTransport, VerifiedSettlementIngress,
+    authorize_settlement_declaration, derive_settlement_authority_class,
+    settlement_pending_records, CepAuthorityError, CepAuthorityService, SettlementAuthorityClass,
+    SettlementCriteria, SettlementGate, SettlementIngress, SettlementPendingRecord,
+    SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, Verdict};
+use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, AuthorityDecision, Verdict};
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
+use sea_forge_ledger::LedgerStream;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -914,7 +916,7 @@ fn class_policy_engine(policy_yaml: &str) -> (AuthorityPolicyBundle, PolicyAutho
 }
 
 /// Run the real gate entry point through the verified SWE_SEED ingress, against a fresh ledger.
-fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementAuthorityClass, CepAuthorityError> {
+fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError> {
     let root = tempfile::tempdir().unwrap();
     let (bundle, engine) = class_policy_engine(policy_yaml);
     let actor = svc();
@@ -925,11 +927,18 @@ fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementAuthorityClass, Cep
         &actor,
         vec![],
     )?;
-    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, &ingress)
+    authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root.path(),
+        SETTLE_OP,
+        &ingress,
+        chrono::Duration::hours(24),
+    )
 }
 
 /// Run the real gate entry point through the verified CEP settlement ingress (no transport), fresh ledger.
-fn authorize_cep(policy_yaml: &str) -> Result<SettlementAuthorityClass, CepAuthorityError> {
+fn authorize_cep(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError> {
     let root = tempfile::tempdir().unwrap();
     let (bundle, engine) = class_policy_engine(policy_yaml);
     let actor = svc();
@@ -940,7 +949,14 @@ fn authorize_cep(policy_yaml: &str) -> Result<SettlementAuthorityClass, CepAutho
         &actor,
         vec![],
     )?;
-    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, &ingress)
+    authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root.path(),
+        SETTLE_OP,
+        &ingress,
+        chrono::Duration::hours(24),
+    )
 }
 
 /// Evaluate a raw `settlement_declaration` Reserved action, so the parameters themselves are under test.
@@ -985,11 +1001,14 @@ fn class_params(class: &str) -> Value {
 
 #[test]
 fn an_external_settlement_declaration_escalates_under_its_gated_rule() {
-    let err = authorize_swe_seed(EXTERNAL_GATED).unwrap_err();
-    assert!(
-        matches!(&err, CepAuthorityError::Evidence(m) if m.contains("may not use settlement_declaration")),
-        "{err:?}"
-    );
+    // The gated rule escalates for approval: a pending record is written, not a refusal and not an allow.
+    assert!(matches!(
+        authorize_swe_seed(EXTERNAL_GATED).unwrap(),
+        SettlementGate::Pending {
+            replayed: false,
+            ..
+        }
+    ));
     assert_eq!(
         raw_verdict(EXTERNAL_GATED, class_params("external")),
         Verdict::Escalate
@@ -1000,7 +1019,7 @@ fn an_external_settlement_declaration_escalates_under_its_gated_rule() {
 fn a_local_settlement_declaration_is_allowed_by_an_unconstrained_rule() {
     assert_eq!(
         authorize_cep(UNCONSTRAINED).unwrap(),
-        SettlementAuthorityClass::Local
+        SettlementGate::Allowed(SettlementAuthorityClass::Local)
     );
     assert_eq!(
         raw_verdict(UNCONSTRAINED, class_params("local")),
@@ -1175,8 +1194,123 @@ fn an_external_looking_operation_cannot_be_classified_local_by_the_caller() {
     .is_err());
     // An external operation that reaches the gate is never classified local, so a local-only rule refuses it.
     assert!(authorize_swe_seed(UNCONSTRAINED).is_err());
-    assert_eq!(
-        authorize_swe_seed(EXTERNAL_GATED).unwrap_err().class(),
-        "cep_evidence_refused"
+    assert!(matches!(
+        authorize_swe_seed(EXTERNAL_GATED).unwrap(),
+        SettlementGate::Pending { .. }
+    ));
+}
+
+// ---- Durable pending state for an approval-gated external settlement -----------------------------------------
+
+fn gate_swe_seed_in(
+    root: &std::path::Path,
+    policy_yaml: &str,
+    evidence_refs: Vec<String>,
+) -> Result<SettlementGate, CepAuthorityError> {
+    let (bundle, engine) = class_policy_engine(policy_yaml);
+    let actor = svc();
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor,
+        evidence_refs,
+    )?;
+    authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        SETTLE_OP,
+        &ingress,
+        chrono::Duration::hours(24),
+    )
+}
+
+fn pending_of(gate: SettlementGate) -> (SettlementPendingRecord, bool) {
+    match gate {
+        SettlementGate::Pending { record, replayed } => (*record, replayed),
+        other => panic!("expected a pending settlement, got {other:?}"),
+    }
+}
+
+#[test]
+fn a_pending_settlement_is_durable_and_reads_back_after_reload() {
+    let root = tempfile::tempdir().unwrap();
+    let (record, replayed) = pending_of(
+        gate_swe_seed_in(root.path(), EXTERNAL_GATED, vec!["evidence:a".into()]).unwrap(),
     );
+    assert!(!replayed);
+    // Read back from the ledger on disk, as a fresh process would.
+    let stored = settlement_pending_records(root.path()).unwrap();
+    assert_eq!(stored, vec![record.clone()]);
+    assert_eq!(record.operation_id, SETTLE_OP);
+    assert_eq!(record.operation_kind, "settlement_declaration");
+    assert_eq!(record.settlement_authority_class, "external");
+    assert_eq!(record.ingress, "swe_seed_declaration");
+    assert_eq!(record.actor_id, svc().actor_id);
+    assert_eq!(record.approval_requirement, "policy_escalate");
+    assert_eq!(record.evidence_refs, vec!["evidence:a".to_string()]);
+    assert!(record.pending_id.starts_with("settlement-pending-"));
+    assert!(!record.decision_ref.is_empty());
+    let created = chrono::DateTime::parse_from_rfc3339(&record.created_at).unwrap();
+    let expires = chrono::DateTime::parse_from_rfc3339(&record.expires_at).unwrap();
+    assert!(expires > created);
+}
+
+#[test]
+fn a_duplicate_request_returns_the_same_pending_record() {
+    let root = tempfile::tempdir().unwrap();
+    let refs_ab = vec!["evidence:a".to_string(), "evidence:b".to_string()];
+    let refs_ba = vec!["evidence:b".to_string(), "evidence:a".to_string()];
+    let (first, first_replayed) =
+        pending_of(gate_swe_seed_in(root.path(), EXTERNAL_GATED, refs_ab).unwrap());
+    let (second, second_replayed) =
+        pending_of(gate_swe_seed_in(root.path(), EXTERNAL_GATED, refs_ba).unwrap());
+    assert!(!first_replayed);
+    assert!(
+        second_replayed,
+        "the identical request must replay, not re-record"
+    );
+    assert_eq!(first.pending_id, second.pending_id);
+    assert_eq!(
+        first, second,
+        "the replayed record is the original, created_at included"
+    );
+    assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 1);
+
+    // A different request identity is a different pending record.
+    let (other, _) = pending_of(
+        gate_swe_seed_in(root.path(), EXTERNAL_GATED, vec!["evidence:c".into()]).unwrap(),
+    );
+    assert_ne!(other.pending_id, first.pending_id);
+    assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 2);
+}
+
+#[test]
+fn no_settlement_declaration_is_authoritative_while_pending() {
+    let root = tempfile::tempdir().unwrap();
+    let gate = gate_swe_seed_in(root.path(), EXTERNAL_GATED, vec![]).unwrap();
+    // Pending is not Allowed, so no caller may proceed to declare().
+    assert!(matches!(gate, SettlementGate::Pending { .. }));
+    let entries = LedgerStream::open(root.path(), LEDGER_ID, "test-reader")
+        .unwrap()
+        .read_entries()
+        .unwrap();
+    assert!(
+        entries
+            .iter()
+            .all(|entry| entry.record_kind != "settlement_declaration"),
+        "a pending settlement must not append a declaration"
+    );
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.record_kind == "authority_decision")
+    {
+        let decision: AuthorityDecision = serde_json::from_value(entry.payload.clone()).unwrap();
+        assert_ne!(
+            decision.verdict,
+            Verdict::Allow,
+            "a pending settlement is never an allow"
+        );
+    }
 }

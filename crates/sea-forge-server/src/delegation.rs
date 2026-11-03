@@ -917,10 +917,25 @@ async fn submit_swe_seed_declaration(
         vec![format!("operation:{run}")],
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
-    sea_forge_authority::cep::authorize_settlement_declaration(
-        &engine, &bundle, root, run, &ingress,
+    let gate = sea_forge_authority::cep::authorize_settlement_declaration(
+        &engine,
+        &bundle,
+        root,
+        run,
+        &ingress,
+        chrono::Duration::hours(24),
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    if let sea_forge_authority::cep::SettlementGate::Pending { record, .. } = gate {
+        // Held for approval: the pending record is durable and nothing is sent to the authority.
+        return Err(ForgeError::Plan {
+            class: "settlement_approval_pending",
+            message: format!(
+                "settlement declaration {} awaits approval; no declaration was made",
+                record.pending_id
+            ),
+        });
+    }
 
     let claim_manifest_sha256 = crate::swe_seed_reconciliation::swe_seed_claim_manifest_sha256(
         case,

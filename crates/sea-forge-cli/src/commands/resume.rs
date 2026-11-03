@@ -1083,14 +1083,25 @@ fn resume_artifact_transition(
         vec![format!("operation:{}", pending.run_id)],
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
-    sea_forge_authority::cep::authorize_settlement_declaration(
+    let gate = sea_forge_authority::cep::authorize_settlement_declaration(
         &engine,
         &bundle,
         &root,
         &pending.run_id,
         &ingress,
+        chrono::Duration::hours(24),
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    if let sea_forge_authority::cep::SettlementGate::Pending { record, .. } = gate {
+        // The pending settlement is durable and no declaration was made. The transition stays pending until
+        // the settlement approval is resolved.
+        println!("settlement_pending_id={}", record.pending_id);
+        return Ok(ResumeOutcome {
+            case_id: options.case_id,
+            state: "awaiting_approval",
+            exit_code: 5,
+        });
+    }
     let result = sea_forge_artifact_ip::resume_pending_transition(
         &root,
         &options.entity,
