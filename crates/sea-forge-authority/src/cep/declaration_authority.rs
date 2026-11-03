@@ -233,3 +233,62 @@ pub fn reconcile_operation_claims(
     }
     Ok(())
 }
+
+/// What settling a failed resume attempt's open claim did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttemptSettlement {
+    /// An authorised declaration names this claim: the attempt completed on that declaration.
+    Completed,
+    /// No declaration in the case names this claim: it was released and a later resume may claim it again.
+    Released,
+    /// A declaration names this claim but is not authorised for it. The claim stays open for reconciliation.
+    Open,
+}
+
+/// Settle the open claim of a resume attempt that returned an error. The claim is released only when no
+/// settlement declaration in the case names it, so a declaration appended before the failure is never joined by
+/// a second one. The check reads the raw payloads, so a declaration that does not parse still blocks release.
+/// Never declares.
+pub fn settle_failed_resume_attempt(
+    root: &Path,
+    case_id: &str,
+    pending_id: &str,
+    attempt: u32,
+) -> Result<AttemptSettlement, CepAuthorityError> {
+    let case_entries = LedgerStream::open(root, format!("case-{case_id}"), "sea-forge-authority")?
+        .read_entries()?;
+    let named = case_entries.iter().any(|entry| {
+        entry.record_kind == "settlement_declaration"
+            && entry
+                .payload
+                .get("authorization_ref")
+                .and_then(Value::as_str)
+                == Some(pending_id)
+    });
+    if !named {
+        release_settlement_resume(root, pending_id, attempt)?;
+        return Ok(AttemptSettlement::Released);
+    }
+    let declarations: Vec<SettlementDeclaration> = case_entries
+        .into_iter()
+        .filter(|entry| entry.record_kind == "settlement_declaration")
+        .filter_map(|entry| serde_json::from_value(entry.payload).ok())
+        .collect();
+    let verdicts = verify_case_declarations(root, &declarations)?;
+    let authorised = declarations
+        .iter()
+        .zip(&verdicts)
+        .find_map(|(declaration, verdict)| match verdict {
+            DeclarationAuthorization::Authorized { pending_id: named } if named == pending_id => {
+                Some(declaration.declaration_id.clone())
+            }
+            _ => None,
+        });
+    match authorised {
+        Some(declaration_id) => {
+            complete_settlement_resume(root, pending_id, &declaration_id)?;
+            Ok(AttemptSettlement::Completed)
+        }
+        None => Ok(AttemptSettlement::Open),
+    }
+}

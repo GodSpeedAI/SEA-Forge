@@ -4,12 +4,12 @@
 use sea_forge_authority::cep::{
     authorize_settlement_declaration, complete_settlement_resume,
     derive_settlement_authority_class, fail_settlement_resume, reconcile_settlement_resume,
-    release_settlement_resume, settlement_approval_id, settlement_declaration_content_sha256,
-    settlement_pending_records, settlement_request_sha256, settlement_status,
-    verify_declaration_echoes_request, CepAuthorityError, CepAuthorityService,
-    SettlementAuthorityClass, SettlementCriteria, SettlementGate, SettlementIngress,
-    SettlementOperation, SettlementPendingRecord, SettlementStatus, SettlementTransport,
-    VerifiedSettlementIngress, LEDGER_ID,
+    release_settlement_resume, settle_failed_resume_attempt, settlement_approval_id,
+    settlement_declaration_content_sha256, settlement_pending_records, settlement_request_sha256,
+    settlement_status, verify_declaration_echoes_request, AttemptSettlement, CepAuthorityError,
+    CepAuthorityService, SettlementAuthorityClass, SettlementCriteria, SettlementGate,
+    SettlementIngress, SettlementOperation, SettlementPendingRecord, SettlementStatus,
+    SettlementTransport, VerifiedSettlementIngress, LEDGER_ID,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
@@ -1942,6 +1942,121 @@ fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
     );
     assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
     assert!(fail_settlement_resume(root.path(), &pending_id, "late").is_err());
+}
+
+#[test]
+fn a_failed_attempt_with_no_declaration_is_released_and_can_be_claimed_again() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, first) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    let settled = settle_failed_resume_attempt(root.path(), CASE, &pending_id, first).unwrap();
+    assert_eq!(settled, AttemptSettlement::Released);
+    assert_eq!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Approved
+    );
+    let (_, second) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    assert_eq!(second, first + 1);
+}
+
+#[test]
+fn a_failed_attempt_whose_unparseable_declaration_names_its_claim_is_left_open() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, attempt) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    // A declaration reached the case ledger, but it does not parse as a declaration.
+    LedgerStream::open(root.path(), format!("case-{CASE}"), "test-writer")
+        .unwrap()
+        .commit_typed(
+            "settlement_declaration",
+            vec![],
+            &json!({"authorization_ref": pending_id, "declaration_id": "garbled"}),
+            vec![],
+        )
+        .unwrap();
+    let settled = settle_failed_resume_attempt(root.path(), CASE, &pending_id, attempt).unwrap();
+    assert_eq!(settled, AttemptSettlement::Open);
+    assert!(matches!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Resuming { attempt: open } if open == attempt
+    ));
+}
+
+#[test]
+fn a_failed_attempt_whose_authorised_declaration_exists_completes_on_it() {
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, attempt) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    // The attempt appended its declaration, then failed before recording the outcome.
+    let declaration = SettlementDeclaration {
+        version: "0.2".into(),
+        declaration_id: "decl-made".into(),
+        settlement_ref: "set_x".into(),
+        run_id: record.operation_id.clone(),
+        case_id: CASE.into(),
+        plan_item_id: "plan_x".into(),
+        claim_manifest_sha256: "sha256:claim".into(),
+        status: DeclarationStatus::Accepted,
+        strength: SettlementStrength::Strong,
+        qualifies_for_capability: true,
+        criteria_ref: "crit_x".into(),
+        criteria_sha256: "sha256:crit".into(),
+        criteria_record_hash: "sha256:crit-record".into(),
+        criteria_declared_at: "2026-11-03T00:00:00Z".into(),
+        job_contract_ref: None,
+        origin_refs: vec![],
+        verifier_ref: "swe_seed_test".into(),
+        verifier_sha256: "sha256:verifier".into(),
+        verification_evidence_refs: vec![],
+        declarer: Declarer {
+            actor_id: "swe_seed_verifier".into(),
+            authority_ref: "swe_seed_test".into(),
+            role: "R-AA".into(),
+            standing_basis: "test".into(),
+        },
+        independence: DeclarationIndependence {
+            acting_entity_id: "operator_local".into(),
+            independent: true,
+            basis: "test".into(),
+        },
+        reliability: DeclarationReliability {
+            feedback_delay_ms: 0,
+            attribution_confidence: "1.000000".into(),
+            gaming_exposure: "0.000000".into(),
+            hidden_debt_blindness: "0.000000".into(),
+            weight: "1.000000".into(),
+            basis: "test".into(),
+        },
+        variation_tags: Default::default(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        issued_at: "2026-11-03T00:00:00Z".into(),
+        source_evidence_refs: vec![],
+        adapter_attestation_ref: None,
+        authored_by: None,
+        authorization_ref: Some(pending_id.clone()),
+        authorization_request_sha256: Some(record.request_sha256.clone()),
+        declaration_hash: String::new(),
+    };
+    LedgerStream::open(root.path(), format!("case-{CASE}"), "test-writer")
+        .unwrap()
+        .commit_typed("settlement_declaration", vec![], &declaration, vec![])
+        .unwrap();
+    let settled = settle_failed_resume_attempt(root.path(), CASE, &pending_id, attempt).unwrap();
+    assert_eq!(settled, AttemptSettlement::Completed);
+    assert_eq!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Completed {
+            declaration_ref: "decl-made".into()
+        }
+    );
 }
 
 #[test]
