@@ -750,6 +750,48 @@ mod tests {
     }
 
     #[test]
+    fn a_declaration_in_another_case_cannot_complete_a_claim() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        // case_a claims run_a under an approval and has no recorded outcome yet.
+        let (pending_id, request_sha256) = claim_approved(root.path(), "run_a");
+        // A declaration in case_b names case_a's claimed pending record and its exact request hash.
+        let mut foreign = declaration("case_b", "run_a", "item_acp", &manifest, "swe_seed_test");
+        foreign.authorization_ref = Some(pending_id.clone());
+        foreign.authorization_request_sha256 = Some(request_sha256);
+        foreign.declaration_hash =
+            sea_forge_settlement::compute_declaration_hash(&foreign).unwrap();
+        LedgerStream::open(root.path(), "case-case_b", "test")
+            .unwrap()
+            .commit_typed("settlement_declaration", vec![], &foreign, vec![])
+            .unwrap();
+
+        let verdicts = sea_forge_authority::cep::verify_case_declarations(
+            root.path(),
+            std::slice::from_ref(&foreign),
+        )
+        .unwrap();
+        assert_eq!(
+            verdicts,
+            vec![DeclarationAuthorization::Quarantined(
+                sea_forge_authority::cep::DeclarationRefusal::AuthorizationMismatch
+            )]
+        );
+        // Reconciling case_b must not settle case_a's claim.
+        reconcile_operation_claims(root.path(), "case_b", "run_a").unwrap();
+        assert!(matches!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { .. }
+        ));
+    }
+
+    #[test]
     fn interrupted_claim_completes_from_its_authorised_declaration() {
         let root = tempfile::tempdir().unwrap();
         let manifest = commit_evidence_and_settlement(

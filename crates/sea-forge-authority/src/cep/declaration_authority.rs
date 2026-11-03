@@ -107,6 +107,8 @@ fn verify_one(
         // settlement pending record, the relabelled declaration is refused.
         let external_gated = entries.iter().any(|entry| {
             entry.record_kind == SETTLEMENT_PENDING_KIND
+                && entry.payload.get("case_id").and_then(Value::as_str)
+                    == Some(declaration.case_id.as_str())
                 && entry.payload.get("operation_id").and_then(Value::as_str)
                     == Some(declaration.run_id.as_str())
                 && entry
@@ -148,7 +150,11 @@ fn verify_one(
         }
         Err(_) => return quarantine(R::MalformedAuthorization),
     };
-    if record.request_sha256 != request_sha256 || record.operation_id != declaration.run_id {
+    // The record must belong to this declaration's case and operation, not merely share its request hash.
+    if record.request_sha256 != request_sha256
+        || record.operation_id != declaration.run_id
+        || record.case_id != declaration.case_id
+    {
         return quarantine(R::AuthorizationMismatch);
     }
     if record.settlement_authority_class != SettlementAuthorityClass::External.as_str()
@@ -208,7 +214,7 @@ pub fn reconcile_operation_claims(
     }
     for record in settlement_pending_records(root)?
         .iter()
-        .filter(|record| record.operation_id == operation_id)
+        .filter(|record| record.case_id == case_id && record.operation_id == operation_id)
     {
         if let SettlementStatus::Resuming { .. } = settlement_status(root, &record.pending_id)? {
             reconcile_settlement_resume(
