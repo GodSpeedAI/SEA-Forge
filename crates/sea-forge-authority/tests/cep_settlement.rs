@@ -1484,27 +1484,22 @@ fn gate_declared(
 }
 
 #[test]
-fn a_claim_whose_declared_content_differs_from_the_approved_request_fails_without_a_declaration() {
+fn different_declared_content_is_a_new_pending_request_and_leaves_the_approval_unspent() {
     let root = tempfile::tempdir().unwrap();
     let policy = approval_policy();
     let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
 
-    // The declaration about to be made carries different content than the content that was approved.
-    let err = gate_declared(root.path(), &policy, evidence_a(), CONTENT_B).unwrap_err();
-    assert!(
-        matches!(&err, CepAuthorityError::Approval(m) if m.contains("content_mismatch")),
-        "{err:?}"
-    );
+    // Declared content that differs from the approved content is a different request: it gets its own
+    // pending record and cannot use this approval.
+    let (other, _) =
+        pending_of(gate_declared(root.path(), &policy, evidence_a(), CONTENT_B).unwrap());
+    assert_ne!(other.pending_id, record.pending_id);
     assert_eq!(
         settlement_status(root.path(), &record.pending_id).unwrap(),
-        SettlementStatus::Failed {
-            reason: "content_mismatch".into()
-        }
+        SettlementStatus::Approved
     );
-    // The approval is spent by the failure: nothing can claim it afterwards.
-    assert!(gate_declared(root.path(), &policy, evidence_a(), CONTENT_A).is_err());
-    assert!(gate_swe_seed_in(root.path(), &policy, evidence_a()).is_err());
+    assert_eq!(ledger_count(root.path(), "settlement_declaration"), 0);
 }
 
 /// The request a SWE_SEED declaration is made from. Only the fields that are fixed at request time are set.
@@ -1543,31 +1538,24 @@ fn declaration_request(criteria_ref: &str) -> SettlementDeclarationRequest {
 }
 
 #[test]
-fn a_claim_whose_one_declared_field_changed_after_approval_is_refused_as_content_mismatch() {
+fn a_changed_declared_field_after_approval_is_a_new_pending_request() {
     let root = tempfile::tempdir().unwrap();
     let policy = approval_policy();
-    let approved = settlement_declaration_content_sha256(&declaration_request("crit_a")).unwrap();
-    let (record, _) =
-        pending_of(gate_declared(root.path(), &policy, evidence_a(), &approved).unwrap());
+    let (record, _) = pending_of(gate_swe_seed_in(root.path(), &policy, evidence_a()).unwrap());
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let approved = record.request_sha256.clone();
 
     // After approval, one declared field changes: only the criteria reference differs.
     let changed = settlement_declaration_content_sha256(&declaration_request("crit_b")).unwrap();
     assert_ne!(changed, approved);
-    let err = gate_declared(root.path(), &policy, evidence_a(), &changed).unwrap_err();
-    assert!(
-        matches!(&err, CepAuthorityError::Approval(m) if m.contains("content_mismatch")),
-        "{err:?}"
-    );
+    let (other, _) =
+        pending_of(gate_declared(root.path(), &policy, evidence_a(), &changed).unwrap());
+    assert_ne!(other.pending_id, record.pending_id);
     assert_eq!(
         settlement_status(root.path(), &record.pending_id).unwrap(),
-        SettlementStatus::Failed {
-            reason: "content_mismatch".into()
-        }
+        SettlementStatus::Approved
     );
-    // No declaration was made, and the spent approval cannot be claimed with the approved content either.
     assert_eq!(ledger_count(root.path(), "settlement_declaration"), 0);
-    assert!(gate_declared(root.path(), &policy, evidence_a(), &approved).is_err());
 }
 
 #[test]

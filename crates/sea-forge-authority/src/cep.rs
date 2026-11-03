@@ -2663,6 +2663,10 @@ pub fn verify_declaration_echoes_request(
             "authorization_request_sha256",
             request.authorization_request_sha256 == declaration.authorization_request_sha256,
         ),
+        (
+            "acting_entity_id",
+            request.acting_entity_id == declaration.independence.acting_entity_id,
+        ),
     ];
     match echoed.iter().find(|(_, same)| !same) {
         None => Ok(()),
@@ -2694,8 +2698,11 @@ pub fn authorize_settlement_declaration(
     } = operation;
     let ledger = settlement_ledger(root)?;
     let class = derive_settlement_authority_class(ingress);
-    let identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
+    let mut identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
     let request_sha256 = bind_request_sha256(&identity.request_sha256, declared_request_sha256)?;
+    // The pending id must follow the bound request hash, the same value the commit key uses. Two calls with
+    // different declared content then get different pending records, never two records under one id.
+    identity.pending_id = pending_id_for(&request_sha256);
     let (decision, committed) = commit_gate_evaluation(
         engine,
         bundle,
