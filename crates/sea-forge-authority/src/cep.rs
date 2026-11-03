@@ -2255,8 +2255,13 @@ pub enum SettlementGate {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SettlementPendingRecord {
     pub pending_id: String,
-    /// SHA-256 over the canonical request. The same request identity always maps to the same record.
+    /// SHA-256 over the canonical request, which includes `case_id`. The same request identity in the same case
+    /// always maps to the same record; the same operation in another case is a different record.
     pub request_sha256: String,
+    /// The case the request belongs to. Empty only on a legacy record written before the case was bound into
+    /// the request hash. Such a record is never matched by any lookup and is never reused.
+    #[serde(default)]
+    pub case_id: String,
     pub operation_id: String,
     pub operation_kind: String,
     pub settlement_authority_class: String,
@@ -2319,6 +2324,7 @@ impl SettlementIngress {
 /// evidence refs are sorted, so the hash is stable. Timestamps are excluded on purpose.
 #[derive(serde::Serialize)]
 struct CanonicalSettlementRequest<'a> {
+    case_id: &'a str,
     ingress: &'a str,
     operation_id: &'a str,
     operation_kind: &'a str,
@@ -2340,6 +2346,7 @@ struct SettlementIdentity {
 
 fn settlement_identity(
     bundle: &AuthorityPolicyBundle,
+    case_id: &str,
     operation_id: &str,
     class: SettlementAuthorityClass,
     ingress: &VerifiedSettlementIngress<'_>,
@@ -2359,6 +2366,7 @@ fn settlement_identity(
     evidence_refs.sort_unstable();
     evidence_refs.dedup();
     let canonical = CanonicalSettlementRequest {
+        case_id,
         ingress: ingress.ingress().as_str(),
         operation_id,
         operation_kind: SETTLEMENT_SURFACE,
@@ -2407,11 +2415,16 @@ fn pending_record_in(
 ) -> Result<Option<SettlementPendingRecord>, CepAuthorityError> {
     entries
         .iter()
-        .find(|entry| {
+        .filter(|entry| {
             entry.record_kind == SETTLEMENT_PENDING_KIND
                 && entry.payload.get("pending_id").and_then(Value::as_str) == Some(pending_id)
         })
         .map(|entry| serde_json::from_value(entry.payload.clone()).map_err(|_| malformed_pending()))
+        .collect::<Result<Vec<SettlementPendingRecord>, _>>()?
+        .into_iter()
+        // A legacy record (no case bound) is quarantined: no lookup may match it.
+        .find(|record| !record.case_id.is_empty())
+        .map(Ok)
         .transpose()
 }
 
@@ -2509,13 +2522,14 @@ pub fn authorize_settlement_declaration(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
     root: &Path,
+    case_id: &str,
     operation_id: &str,
     ingress: &VerifiedSettlementIngress<'_>,
     approval_ttl: Duration,
 ) -> Result<SettlementGate, CepAuthorityError> {
     let ledger = settlement_ledger(root)?;
     let class = derive_settlement_authority_class(ingress);
-    let identity = settlement_identity(bundle, operation_id, class, ingress)?;
+    let identity = settlement_identity(bundle, case_id, operation_id, class, ingress)?;
     let (decision, committed) = commit_gate_evaluation(
         engine,
         bundle,
@@ -2549,6 +2563,7 @@ pub fn authorize_settlement_declaration(
     }
     let (record, replayed) = record_settlement_pending(
         &ledger,
+        case_id,
         operation_id,
         class,
         ingress,
@@ -2828,6 +2843,7 @@ fn existing_pending_after_conflict(
 /// typed-once commit on the payload (timestamps differ); it then returns the record the winner wrote.
 fn record_settlement_pending(
     ledger: &LedgerStream,
+    case_id: &str,
     operation_id: &str,
     class: SettlementAuthorityClass,
     ingress: &VerifiedSettlementIngress<'_>,
@@ -2843,6 +2859,7 @@ fn record_settlement_pending(
     let record = SettlementPendingRecord {
         pending_id: identity.pending_id.clone(),
         request_sha256: identity.request_sha256.clone(),
+        case_id: case_id.to_string(),
         operation_id: operation_id.to_string(),
         operation_kind: SETTLEMENT_SURFACE.into(),
         settlement_authority_class: class.as_str().into(),
@@ -3065,6 +3082,7 @@ mod race_read_tests {
         SettlementPendingRecord {
             pending_id: pending_id.into(),
             request_sha256: "a".repeat(64),
+            case_id: "case_a".into(),
             operation_id: "run_a".into(),
             operation_kind: SETTLEMENT_SURFACE.into(),
             settlement_authority_class: "external".into(),

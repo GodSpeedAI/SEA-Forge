@@ -505,13 +505,20 @@ mod tests {
         )
         .unwrap();
         let ttl = chrono::Duration::hours(24);
-        let pending =
-            match authorize_settlement_declaration(&fresh(), &bundle, root, run_id, &ingress, ttl)
-                .unwrap()
-            {
-                SettlementGate::Pending { record, .. } => *record,
-                other => panic!("expected a pending settlement, got {other:?}"),
-            };
+        let pending = match authorize_settlement_declaration(
+            &fresh(),
+            &bundle,
+            root,
+            "case_a",
+            run_id,
+            &ingress,
+            ttl,
+        )
+        .unwrap()
+        {
+            SettlementGate::Pending { record, .. } => *record,
+            other => panic!("expected a pending settlement, got {other:?}"),
+        };
         let worlds = WorldRegistry::new();
         let engine = fresh();
         let service = CepAuthorityService {
@@ -533,8 +540,16 @@ mod tests {
                 &approver,
             )
             .unwrap();
-        match authorize_settlement_declaration(&fresh(), &bundle, root, run_id, &ingress, ttl)
-            .unwrap()
+        match authorize_settlement_declaration(
+            &fresh(),
+            &bundle,
+            root,
+            "case_a",
+            run_id,
+            &ingress,
+            ttl,
+        )
+        .unwrap()
         {
             SettlementGate::Resumed { pending_id, .. } => {
                 assert_eq!(pending_id, pending.pending_id)
@@ -801,6 +816,7 @@ mod tests {
             &engine,
             &bundle,
             root.path(),
+            "case_a",
             "run_a",
             &ingress,
             chrono::Duration::hours(24),

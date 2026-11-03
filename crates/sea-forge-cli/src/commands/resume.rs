@@ -1088,6 +1088,7 @@ fn resume_artifact_transition(
         &engine,
         &bundle,
         &root,
+        &pending.case_id,
         &pending.run_id,
         &ingress,
         chrono::Duration::hours(24),

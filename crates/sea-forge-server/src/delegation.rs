@@ -925,6 +925,7 @@ async fn submit_swe_seed_declaration(
         &engine,
         &bundle,
         root,
+        case,
         run,
         &ingress,
         chrono::Duration::hours(24),

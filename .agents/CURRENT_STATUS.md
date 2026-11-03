@@ -1,23 +1,18 @@
 # Current status
 
-**Status revision:** 198
+**Status revision:** 199
 
-**Stage:** Security: post-review fixes for quarantine class mismatch, thoth view filter, and clippy
+**Stage:** Security: adversarial review F2 fixed (case_id bound into the settlement request hash)
 
-**Summary:** Post-review fix pass. An External-classed declaration relabelled as Local is now quarantined (ClassMismatch) rather than correlated. The thoth capability view filters settlement/declarations.jsonl through verify_case_declarations. Clippy -D warnings is clean across the workspace (artifact-ip error borrows removed, resume_pending_transition marked too_many_arguments). Full server and CLI suites: 646 pass, 0 fail.
+**Summary:** Settlement requests now hash case_id with the operation, so the same operation in two cases gets two pending records and two approvals. Pending records written before the binding carry no case_id and are quarantined: no lookup matches them and a declaration naming one is refused as authorization_unscoped. F3, F5, F6 and F1 remain open on this branch.
 
 **Verified:**
-- cargo clippy --all-targets -- -D warnings: exit 0 (workspace)
+- cargo test -p sea-forge-authority --test cep_settlement: 45 passed (includes case-binding and legacy non-reuse tests)
+- cargo check --all-targets for sea-forge-server, sea-forge-cli, sea-forge-artifact-ip, sea-forge-thoth, sea-forge-case-runner: clean
 - cargo fmt --all -- --check: clean
-- cargo test -p sea-forge-authority: all suites pass
-- cargo test -p sea-forge-server -p sea-forge-cli --no-fail-fast: 646 passed, 0 failed
-- earlier: authority+thoth+artifact-ip+settlement+capability 427 pass
 
 **Limits:**
-- Adversarial review findings F2, F3, F5, F6 not fixed: need case_id binding in the canonical hash, content-hash binding at claim time, authority-ledger-wide scope.
-- Capability-side F1 only partly fixed (thoth view filtered; capability build still needs sea-forge-capability to depend on sea-forge-authority, which AGENTS.md says to ask about first).
-- CLI approve cannot resolve settlement approvals (case-level only); m8 tests resolve through CepAuthorityService::resolve_approval.
-- Live round-trip against a running gateway not performed; needs an owner runbook step.
-- Not pushed; no PR opened.
+- Adversarial finding F2 fixed: case_id is in the canonical request hash and the pending record. F3, F5, F6 and F1 not yet addressed on this branch.
+- Legacy pending records (no case_id) are quarantined: never matched by any lookup, refused as authorization_unscoped when a declaration names them. Their open claims, if any, are left for operator review.
 
-**Next:** Owner decision on F2/F3/F5/F6 scope and the capability dependency; then CLI approve support for settlement approvals, live round-trip, and PR creation.
+**Next:** Next: F3 claim-time content hash check, then F5/F6 case scoping, F1 capability dependency and promotion verification, then CLI approve for settlement approvals.

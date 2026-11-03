@@ -20,6 +20,8 @@ pub enum DeclarationRefusal {
     MalformedAuthorization,
     /// No settlement pending record with this reference exists in the authority ledger.
     AuthorizationMissing,
+    /// The named pending record predates the case binding in the request hash. It is quarantined, never reused.
+    AuthorizationUnscoped,
     /// The pending record's request hash or operation differs from the declaration.
     AuthorizationMismatch,
     /// The pending record was not created by an external gate, so it cannot authorise an external declaration.
@@ -43,6 +45,7 @@ impl DeclarationRefusal {
             Self::MissingAuthorization => "missing_authorization",
             Self::MalformedAuthorization => "malformed_authorization",
             Self::AuthorizationMissing => "authorization_missing",
+            Self::AuthorizationUnscoped => "authorization_unscoped",
             Self::AuthorizationMismatch => "authorization_mismatch",
             Self::AuthorizationNotExternal => "authorization_not_external",
             Self::AuthorizationPending => "authorization_pending",
@@ -132,7 +135,17 @@ fn verify_one(
     }
     let record = match pending_record_in(entries, pending_id) {
         Ok(Some(record)) => record,
-        Ok(None) => return quarantine(R::AuthorizationMissing),
+        Ok(None) => {
+            let legacy = entries.iter().any(|entry| {
+                entry.record_kind == SETTLEMENT_PENDING_KIND
+                    && entry.payload.get("pending_id").and_then(Value::as_str) == Some(pending_id)
+            });
+            return quarantine(if legacy {
+                R::AuthorizationUnscoped
+            } else {
+                R::AuthorizationMissing
+            });
+        }
         Err(_) => return quarantine(R::MalformedAuthorization),
     };
     if record.request_sha256 != request_sha256 || record.operation_id != declaration.run_id {

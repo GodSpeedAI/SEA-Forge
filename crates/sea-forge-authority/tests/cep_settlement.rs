@@ -933,6 +933,7 @@ fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityE
         &engine,
         &bundle,
         root.path(),
+        "case_a",
         SETTLE_OP,
         &ingress,
         chrono::Duration::hours(24),
@@ -955,6 +956,7 @@ fn authorize_cep(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError>
         &engine,
         &bundle,
         root.path(),
+        "case_a",
         SETTLE_OP,
         &ingress,
         chrono::Duration::hours(24),
@@ -1204,13 +1206,25 @@ fn an_external_looking_operation_cannot_be_classified_local_by_the_caller() {
 
 // ---- Durable pending state for an approval-gated external settlement -----------------------------------------
 
+const CASE: &str = "case_a";
+
 fn gate_swe_seed_in(
     root: &std::path::Path,
     policy_yaml: &str,
     evidence_refs: Vec<String>,
 ) -> Result<SettlementGate, CepAuthorityError> {
+    gate_swe_seed_case(root, CASE, policy_yaml, evidence_refs)
+}
+
+fn gate_swe_seed_case(
+    root: &std::path::Path,
+    case_id: &str,
+    policy_yaml: &str,
+    evidence_refs: Vec<String>,
+) -> Result<SettlementGate, CepAuthorityError> {
     gate_swe_seed_ttl(
         root,
+        case_id,
         policy_yaml,
         evidence_refs,
         chrono::Duration::hours(24),
@@ -1219,6 +1233,7 @@ fn gate_swe_seed_in(
 
 fn gate_swe_seed_ttl(
     root: &std::path::Path,
+    case_id: &str,
     policy_yaml: &str,
     evidence_refs: Vec<String>,
     ttl: chrono::Duration,
@@ -1232,7 +1247,7 @@ fn gate_swe_seed_ttl(
         &actor,
         evidence_refs,
     )?;
-    authorize_settlement_declaration(&engine, &bundle, root, SETTLE_OP, &ingress, ttl)
+    authorize_settlement_declaration(&engine, &bundle, root, case_id, SETTLE_OP, &ingress, ttl)
 }
 
 /// The approver's policy: the external gate, plus operators may resolve approvals.
@@ -1311,6 +1326,83 @@ fn a_pending_settlement_is_durable_and_reads_back_after_reload() {
     let created = chrono::DateTime::parse_from_rfc3339(&record.created_at).unwrap();
     let expires = chrono::DateTime::parse_from_rfc3339(&record.expires_at).unwrap();
     assert!(expires > created);
+}
+
+#[test]
+fn an_identical_operation_in_two_cases_cannot_share_a_pending_record_or_approval() {
+    let root = tempfile::tempdir().unwrap();
+    let policy = approval_policy();
+    let (case_a, _) =
+        pending_of(gate_swe_seed_case(root.path(), "case_a", &policy, evidence_a()).unwrap());
+    let (case_b, replayed_b) =
+        pending_of(gate_swe_seed_case(root.path(), "case_b", &policy, evidence_a()).unwrap());
+    assert!(
+        !replayed_b,
+        "the same operation in another case is a new request"
+    );
+    assert_ne!(case_a.request_sha256, case_b.request_sha256);
+    assert_ne!(case_a.pending_id, case_b.pending_id);
+    assert_eq!(case_b.case_id, "case_b");
+    assert_eq!(case_b.operation_id, case_a.operation_id);
+
+    // Approving case_a's pending record must not approve case_b's.
+    resolve_in(root.path(), &case_a.pending_id, true, &operator()).unwrap();
+    assert_eq!(
+        settlement_status(root.path(), &case_a.pending_id).unwrap(),
+        SettlementStatus::Approved
+    );
+    assert_eq!(
+        settlement_status(root.path(), &case_b.pending_id).unwrap(),
+        SettlementStatus::Pending
+    );
+    // And case_b's gate call still yields a pending record, never a claim on case_a's approval.
+    let again = gate_swe_seed_case(root.path(), "case_b", &policy, evidence_a()).unwrap();
+    assert!(matches!(
+        again,
+        SettlementGate::Pending { replayed: true, .. }
+    ));
+}
+
+#[test]
+fn a_legacy_pending_record_without_a_case_is_never_reused() {
+    let root = tempfile::tempdir().unwrap();
+    // A record written before the case was bound into the request hash: no `case_id` in its payload.
+    let legacy_sha = "b".repeat(64);
+    let legacy_id = format!("settlement-pending-{}", &legacy_sha[..32]);
+    let legacy = json!({
+        "pending_id": legacy_id,
+        "request_sha256": legacy_sha,
+        "operation_id": SETTLE_OP,
+        "operation_kind": "settlement_declaration",
+        "settlement_authority_class": "external",
+        "ingress": "swe_seed_declaration",
+        "actor_id": svc().actor_id,
+        "actor_role": "service",
+        "identity_binding_hash": null,
+        "evidence_refs": evidence_a(),
+        "approval_requirement": "policy_escalate",
+        "decision_ref": "dec_legacy",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "expires_at": (chrono::Utc::now() + chrono::Duration::hours(24)).to_rfc3339(),
+    });
+    LedgerStream::open(root.path(), LEDGER_ID, "test-writer")
+        .unwrap()
+        .commit_typed_new(
+            "settlement_pending",
+            format!("settlement-pending:{legacy_sha}"),
+            vec![SETTLE_OP.into(), legacy_id.clone()],
+            &legacy,
+            vec!["dec_legacy".into()],
+        )
+        .unwrap();
+
+    // The same operation in the current case is a new request: it gets its own record, never the legacy one.
+    let (fresh, replayed) =
+        pending_of(gate_swe_seed_in(root.path(), EXTERNAL_GATED, evidence_a()).unwrap());
+    assert!(!replayed);
+    assert_ne!(fresh.pending_id, legacy_id);
+    assert_eq!(fresh.case_id, CASE);
+    assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 2);
 }
 
 #[test]
@@ -1442,6 +1534,7 @@ fn an_expired_settlement_declares_nothing() {
     let root = tempfile::tempdir().unwrap();
     let short = gate_swe_seed_ttl(
         root.path(),
+        CASE,
         &approval_policy(),
         evidence_a(),
         chrono::Duration::milliseconds(200),
