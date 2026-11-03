@@ -6,6 +6,9 @@ use sea_forge_artifact_ip::{
     TransitionInput, TransitionKind, TransitionMode, TransitionProposal, ValueEvidenceRecord,
     ValueEvidenceRef, ValueEvidenceSourceRecord, VerifiedArtifactRegistrationInput,
 };
+use sea_forge_authority::cep::{
+    settlement_approval_id, settlement_pending_records, CepAuthorityService, SettlementCriteria,
+};
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
     Actor, ActorRole, ApprovalRequest, ArtifactDescriptor, ArtifactProducer, ArtifactStage,
@@ -66,6 +69,60 @@ fn commit_evidence(root: &Path) -> String {
         )
         .unwrap();
     ev.evidence_id
+}
+
+/// The distinct operator identity that approves an external settlement. It is not the requester (`operator_local`),
+/// and the approval it resolves names that requester, so the requester cannot resolve it.
+const SETTLEMENT_APPROVER: &str = "settlement_approver";
+
+/// Add the external settlement gate to a policy: an external declaration needs an approval, and the approval is
+/// resolved by an operator identity other than the requester. The requester's own rules are not changed.
+fn with_settlement_approval(policy_text: &str) -> String {
+    let with_identity = policy_text.replacen(
+        "  - principal: security_officer\n    actor_type: human\n    role: R-SO\n",
+        "  - principal: security_officer\n    actor_type: human\n    role: R-SO\n  - principal: settlement_approver\n    actor_type: human\n    role: operator\n",
+        1,
+    );
+    assert!(with_identity.contains(SETTLEMENT_APPROVER));
+    format!(
+        "{with_identity}  - name: settle-external-gated\n    verdict: allow\n    actor_role: operator\n    operation_kind: settlement_declaration\n    requires_approval: true\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve-settlement\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n"
+    )
+}
+
+/// Resolve the one open settlement approval through the real CEP resolution path, as `approver`.
+fn approve_pending_settlement(root: &Path, policy_path: &Path, approver: &str) {
+    resolve_pending_settlement(root, policy_path, approver).unwrap();
+}
+
+fn resolve_pending_settlement(
+    root: &Path,
+    policy_path: &Path,
+    approver: &str,
+) -> Result<(), sea_forge_authority::cep::CepAuthorityError> {
+    let bundle = AuthorityPolicyBundle::load(policy_path).unwrap();
+    let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let worlds = sea_forge_domainforge::WorldRegistry::new();
+    let service = CepAuthorityService {
+        engine: &engine,
+        bundle: &bundle,
+        worlds: &worlds,
+        root,
+        approval_ttl: chrono::Duration::hours(24),
+        criteria: SettlementCriteria::default(),
+    };
+    let pending = settlement_pending_records(root).unwrap();
+    assert_eq!(pending.len(), 1, "one settlement awaits approval");
+    let approver = Actor {
+        actor_id: approver.into(),
+        role: ActorRole::Operator,
+    };
+    service
+        .resolve_approval(
+            &settlement_approval_id(&pending[0].pending_id),
+            true,
+            &approver,
+        )
+        .map(|_| ())
 }
 
 fn policy(path: &Path) {
@@ -454,7 +511,7 @@ fn conformance_m8_cli_capitalize_commits_one_pending_and_approval_then_exits_5()
     let policy_path = temp.path().join("policy.yaml");
     fs::write(
         &policy_path,
-        format!(
+        with_settlement_approval(&format!(
             r#"version: "0.1"
 identity:
   source: test
@@ -535,7 +592,7 @@ rules:
     operation_kind: approval_resolution
 "#,
             env!("CARGO_BIN_EXE_sea-forge")
-        ),
+        )),
     )
     .unwrap();
     let bin = PathBuf::from(env!("CARGO_BIN_EXE_sea-forge"));
@@ -813,17 +870,31 @@ rules:
         .output()
         .unwrap();
     assert!(approved.status.success());
-    let resumed = Command::new(&bin)
-        .args([
-            "resume",
-            &case_id,
-            "--root",
-            root.to_str().unwrap(),
-            "--policy",
-            policy_path.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
+    let resume_args = [
+        "resume",
+        &case_id,
+        "--root",
+        root.to_str().unwrap(),
+        "--policy",
+        policy_path.to_str().unwrap(),
+    ];
+    // The case is approved, but the external settlement it needs is not: resume parks with exit 5 before any
+    // declaration is made.
+    let awaiting = Command::new(&bin).args(resume_args).output().unwrap();
+    assert_eq!(
+        awaiting.status.code(),
+        Some(5),
+        "{}",
+        String::from_utf8_lossy(&awaiting.stderr)
+    );
+    assert!(String::from_utf8_lossy(&awaiting.stdout).contains("settlement_pending_id="));
+    let parked_entries = fs::read_to_string(case_ledger.join("entries.jsonl")).unwrap();
+    assert!(!parked_entries.contains("\"record_kind\":\"settlement_declaration\""));
+    // The requester cannot approve its own settlement, even with the approval rule in force.
+    assert!(resolve_pending_settlement(&root, &policy_path, "operator_local").is_err());
+    // A distinct operator approves the settlement through the real resolution path; then resume completes it.
+    approve_pending_settlement(&root, &policy_path, SETTLEMENT_APPROVER);
+    let resumed = Command::new(&bin).args(resume_args).output().unwrap();
     assert!(
         resumed.status.success(),
         "{}",
@@ -1107,6 +1178,7 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
                 ),
             );
             fs::write(&outage_file, b"outage").unwrap();
+            policy_text = with_settlement_approval(&policy_text);
         }
         fs::write(&policy_path, policy_text).unwrap();
         let input_path = temp.path().join("input.json");
@@ -1212,6 +1284,16 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
                 "--policy",
                 policy_path.to_str().unwrap(),
             ];
+            // Case approved, settlement not yet approved: resume parks with exit 5 and makes no declaration.
+            let awaiting = Command::new(&bin).args(resume_args).output().unwrap();
+            assert_eq!(awaiting.status.code(), Some(5));
+            assert!(String::from_utf8_lossy(&awaiting.stdout).contains("settlement_pending_id="));
+            assert!(!fs::read_to_string(case_ledger.join("entries.jsonl"))
+                .unwrap()
+                .contains("\"record_kind\":\"settlement_declaration\""));
+            // A distinct operator approves the settlement through the real resolution path.
+            approve_pending_settlement(&root, &policy_path, SETTLEMENT_APPROVER);
+            // The authority is unavailable: the attempt is released and parks with exit 5, declaring nothing.
             let parked = Command::new(&bin).args(resume_args).output().unwrap();
             assert_eq!(parked.status.code(), Some(5));
             let outage_case_entries =
