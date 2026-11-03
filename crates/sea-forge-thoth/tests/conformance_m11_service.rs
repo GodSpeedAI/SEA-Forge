@@ -15,6 +15,7 @@ use sea_forge_core::types::{
     SettlementDeclaration, SettlementStrength,
 };
 use sea_forge_domainforge::WorldRegistry;
+use sea_forge_ledger::LedgerStream;
 use sea_forge_self_model::{
     bundled, load_composed,
     store::{self, RebuildInputs},
@@ -209,13 +210,22 @@ fn append_qualifying_declaration(root: &Path, capability_name: &str) {
         authored_by: None,
         authorization_ref: Some(pending_id),
         authorization_request_sha256: Some(request_sha256),
-        declaration_hash: "sha256:decl".into(),
+        authorization_content_sha256: Some(DECLARED_CONTENT.to_string()),
+        declaration_hash: String::new(),
     };
-    let path = dir.join("declarations.jsonl");
+    // The declaration is committed to its case ledger, the authoritative source, with a hash that recomputes.
+    let mut decl = decl;
+    decl.declaration_hash = sea_forge_authority::cep::declaration_content_hash(&decl).unwrap();
+    LedgerStream::open(root, format!("case-{case_id}"), "test-writer")
+        .unwrap()
+        .commit_typed("settlement_declaration", vec![], &decl, vec![])
+        .unwrap();
+    // The derived view is written too, as the writers do. Nothing reads it for authority.
+    let view = dir.join("declarations.jsonl");
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&path)
+        .open(&view)
         .unwrap();
     let mut line = serde_json::to_vec(&decl).unwrap();
     line.push(b'\n');

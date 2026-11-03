@@ -112,6 +112,7 @@ fn declaration_request(
         authored_by: authored_by.map(String::from),
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
     }
 }
 

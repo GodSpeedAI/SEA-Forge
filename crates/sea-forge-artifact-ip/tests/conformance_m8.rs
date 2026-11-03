@@ -563,6 +563,7 @@ fn strong_declaration(
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
         declaration_hash: String::new(),
     };
     declaration.declaration_hash = hash_canonical(&declaration).unwrap();

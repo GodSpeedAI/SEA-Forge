@@ -966,6 +966,7 @@ async fn submit_swe_seed_declaration(
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
     };
     // The content this request would declare is hashed before the gate, so the approval binds to it.
     let declared = sea_forge_authority::cep::settlement_declaration_content_sha256(&request)
@@ -1015,6 +1016,8 @@ async fn submit_swe_seed_declaration(
     if let Some((pending_id, request_sha256, _)) = claimed.as_ref() {
         request.authorization_ref = Some(pending_id.clone());
         request.authorization_request_sha256 = Some(request_sha256.clone());
+        // The content the gate approved, so the declaration can be bound to it on every later read.
+        request.authorization_content_sha256 = Some(declared.clone());
     }
     let echo_request = request.clone();
     let declared = tokio::task::spawn_blocking(

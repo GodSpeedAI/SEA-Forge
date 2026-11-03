@@ -1337,6 +1337,7 @@ fn matching_swe_seed_declaration(
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
         declaration_hash: String::new(),
     };
     decl.declaration_hash = sea_forge_settlement::compute_declaration_hash(&decl).unwrap();

@@ -1,20 +1,21 @@
 # Current status
 
-**Status revision:** 210
+**Status revision:** 211
 
-**Stage:** Security: failed resume attempts settle their claim from the ledger
+**Stage:** Security: declaration integrity from the verified case ledger (F-A)
 
-**Summary:** A resume that errors after claiming no longer leaves the claim open. The claim is released when no settlement declaration names it, completed when an authorised declaration does, and otherwise left open for reconciliation. Never declares.
+**Summary:** Settlement declarations are read only from the hash-chained case ledgers. The declarations.jsonl view is derived and decides nothing. Reads verify the chain and recompute each declaration hash; any integrity failure is an explicit error, never a skip. An authorised declaration must carry its declared-content hash, which must reproduce the approved request hash from the pending record's ingress hash. Promotion and Thoth read through the same path.
 
 **Verified:**
-- cargo test -p sea-forge-authority --test cep_settlement: 52 pass (3 new: released, left open, completed)
-- cargo test -p sea-forge-cli --test resume_recovery (6 pass) and --test conformance_m8_artifact (5 pass)
-- cargo clippy -p sea-forge-authority -p sea-forge-cli --all-targets -D warnings: clean
-- cargo fmt --all --check: clean
+- cargo test (authority, settlement, thoth, capability, artifact-ip, server, cli): 1094 pass, 0 fail
+- 11 tests in cep_settlement declaration_integrity (10 adversarial cases and 1 positive control): tampered hash, altered ledger status, corrupted ledger, forged authorisation id, content mismatch, unbound content, cross-case replay, superseded declaration, view edit
+- cargo clippy --all-targets -D warnings on touched crates: clean
+- cargo fmt --all: applied
 
 **Limits:**
-- Server path (sea-forge-server delegation.rs settle_unrecorded_claim) still records declaration_not_made on non-unavailable errors without checking for an appended declaration; not changed here
-- The completed branch is tested at authority level with a hand-built declaration, not through a CLI run
-- sea-forge-server doctest fails on agent_probe.rs (pre-existing, unrelated)
+- Trust anchor: the hash chain detects changes by anyone without write access. A writer that can rewrite a case ledger and its MMR state together is not detected. Checkpoints (signed) exist only in the legacy migration path, and their key is stored in the state root, so they are not an external anchor. An external anchor (key held outside the gateway trust domain) is still required for that threat.
+- Integrity failure blocks all promotion and Thoth reads until repaired; it is explicit by design
+- Pending records written before this change lack ingress_sha256 and are refused as unscoped
+- Live gateway not redeployed with this build
 
-**Next:** Commit and open PR for review; decide whether the server path gets the same fix.
+**Next:** Open PR for F-A. Then F-B (resume reconciliation) on its own branch.

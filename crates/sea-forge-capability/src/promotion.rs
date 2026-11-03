@@ -490,10 +490,10 @@ pub fn rebuild_capability(
     // F-12/SUP-07: state-root joins — the same `<root>/capabilities.jsonl`
     // the pipeline writes, not a double-nested shadow copy.
     let envelopes = load_envelopes(&root.join("capabilities.jsonl"))?;
-    let declarations = admitted_declarations(
-        root,
-        load_declarations(&root.join("settlement/declarations.jsonl"))?,
-    )?;
+    // The declarations come from the verified case ledgers, never from the `settlement/declarations.jsonl` view.
+    let read = sea_forge_authority::cep::read_all_declarations(root)
+        .map_err(|error| ForgeError::Internal(format!("settlement declarations: {error}")))?;
+    let declarations = admitted_declarations(root, read)?;
     let record = build_capability_record(
         capability_name,
         &envelopes,

@@ -16,8 +16,8 @@ use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::*;
 use sea_forge_domainforge::WorldRegistry;
 use sea_forge_settlement::declaration::{
-    append_declaration, LocalSettlementAuthority, SettlementAuthority, SweSeedResponse,
-    SweSeedSettlementAuthority, SweSeedTransport,
+    LocalSettlementAuthority, SettlementAuthority, SweSeedResponse, SweSeedSettlementAuthority,
+    SweSeedTransport,
 };
 
 // ── Test helpers ──
@@ -155,6 +155,7 @@ fn make_decl_req(
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
     }
 }
 
@@ -247,6 +248,7 @@ fn authorised_declare(
     let mut authorised = req.clone();
     authorised.authorization_ref = Some(pending_id.clone());
     authorised.authorization_request_sha256 = Some(request_sha256);
+    authorised.authorization_content_sha256 = Some(declared.clone());
     let decl = authority.declare(&authorised).unwrap();
     complete_settlement_resume(root, &pending_id, &decl.declaration_id).unwrap();
     decl
@@ -307,7 +309,7 @@ fn m4a_local_declaration_zero_qualifying_weight() {
     assert_eq!(decl.strength, SettlementStrength::Local);
     assert!(!decl.qualifies_for_capability);
 
-    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
+    commit_declaration(root.path(), &decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -354,7 +356,7 @@ fn m4a_post_hoc_criteria_integrity_failure() {
     assert_eq!(decl.status, DeclarationStatus::Rejected);
     assert!(!decl.qualifies_for_capability);
 
-    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
+    commit_declaration(root.path(), &decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -396,7 +398,7 @@ fn m4a_self_declaration_integrity_failure() {
     assert!(!decl.qualifies_for_capability);
     assert!(!decl.independence.independent);
 
-    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
+    commit_declaration(root.path(), &decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -442,7 +444,7 @@ fn m4a_gameable_feedback_weight_below_threshold() {
         decl.reliability.weight
     );
 
-    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
+    commit_declaration(root.path(), &decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -487,7 +489,7 @@ fn m4a_low_attribution_weight_below_threshold() {
         decl.reliability.weight
     );
 
-    append_declaration(&root.path().join("settlement/declarations.jsonl"), &decl).unwrap();
+    commit_declaration(root.path(), &decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -511,8 +513,6 @@ fn m4a_three_qualifying_declarations_promotion_to_proven() {
         response: good_reliability(),
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
-
-    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     // Three qualifying declarations spanning all required variation dimensions
     // with decreasing orchestration burden (baseline 0.9 → current 0.7)
@@ -550,7 +550,7 @@ fn m4a_three_qualifying_declarations_promotion_to_proven() {
         let decl = authorised_declare(root.path(), &authority, &req);
         assert_eq!(decl.status, DeclarationStatus::Accepted);
         assert!(decl.qualifies_for_capability);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     let policy = default_v02_policy();
@@ -594,8 +594,6 @@ fn m4a_repeated_variation_no_coverage_increase() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join("settlement/declarations.jsonl");
-
     // Same variation value repeated 3 times
     for i in 1..=3 {
         let req = make_decl_req(
@@ -611,7 +609,7 @@ fn m4a_repeated_variation_no_coverage_increase() {
             Some("0.900000"),
         );
         let decl = authorised_declare(root.path(), &authority, &req);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     let policy = default_v02_policy();
@@ -652,8 +650,6 @@ fn m4a_regression_contraction() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join("settlement/declarations.jsonl");
-
     // 3 qualifying + 1 rejected-strong (regression)
     let variations = [
         (
@@ -687,7 +683,7 @@ fn m4a_regression_contraction() {
             *burden,
         );
         let decl = authorised_declare(root.path(), &authority, &req);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     // Add a rejected-strong declaration (regression)
@@ -711,7 +707,7 @@ fn m4a_regression_contraction() {
     // Recompute hash after mutation
     regress_decl.declaration_hash =
         sea_forge_settlement::compute_declaration_hash(&regress_decl).unwrap();
-    append_declaration(&decl_path, &regress_decl).unwrap();
+    commit_declaration(root.path(), &regress_decl);
 
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -743,8 +739,6 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
         response: good_reliability(),
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
-
-    let decl_path = root.path().join("settlement/declarations.jsonl");
 
     let variations = [
         (
@@ -778,7 +772,7 @@ fn m4a_rebuild_byte_identical_modulo_rebuilt_at() {
             *burden,
         );
         let decl = authorised_declare(root.path(), &authority, &req);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     let policy = default_v02_policy();
@@ -879,8 +873,6 @@ fn m4a_require_proven_allows_when_proven() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join("settlement/declarations.jsonl");
-
     let variations = [
         (
             vec![("model_scale", "small"), ("input_type", "text")],
@@ -913,7 +905,7 @@ fn m4a_require_proven_allows_when_proven() {
             *burden,
         );
         let decl = authorised_declare(root.path(), &authority, &req);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     let policy = default_v02_policy();
@@ -944,8 +936,6 @@ fn m4a_policy_change_contraction() {
     };
     let authority = SweSeedSettlementAuthority::new(transport, "entity_a");
 
-    let decl_path = root.path().join("settlement/declarations.jsonl");
-
     let variations = [
         (
             vec![("model_scale", "small"), ("input_type", "text")],
@@ -978,7 +968,7 @@ fn m4a_policy_change_contraction() {
             *burden,
         );
         let decl = authorised_declare(root.path(), &authority, &req);
-        append_declaration(&decl_path, &decl).unwrap();
+        commit_declaration(root.path(), &decl);
     }
 
     // First policy: proven
@@ -1061,6 +1051,7 @@ fn qualifying_declaration(declarer_id: &str, authored_by: Option<&str>) -> Settl
         authored_by: authored_by.map(String::from),
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
         declaration_hash: String::new(),
     }
 }
@@ -1194,7 +1185,6 @@ fn f1_unauthorised_external_declarations_are_refused_at_promotion() {
         },
         "entity_a",
     );
-    let decl_path = root.path().join("settlement/declarations.jsonl");
     for (i, run) in runs.iter().enumerate() {
         let variation = [
             vec![("model_scale", "small"), ("input_type", "text")],
@@ -1216,7 +1206,16 @@ fn f1_unauthorised_external_declarations_are_refused_at_promotion() {
         let decl = authority.declare(&req).unwrap();
         assert!(decl.is_external());
         assert!(decl.authorization_ref.is_none());
-        append_declaration(&decl_path, &decl).unwrap();
+        // An out-of-process append: it bypasses the writer's boundary, which refuses this declaration. Promotion must
+        // still refuse it, so the write goes straight to the case ledger.
+        sea_forge_ledger::LedgerStream::open(
+            root.path(),
+            format!("case-{}", decl.case_id),
+            "bypass",
+        )
+        .unwrap()
+        .commit_typed("settlement_declaration", vec![], &decl, vec![])
+        .unwrap();
     }
     let policy = default_v02_policy();
     save_policy(root.path(), &policy).unwrap();
@@ -1228,4 +1227,15 @@ fn f1_unauthorised_external_declarations_are_refused_at_promotion() {
     );
     assert_ne!(record.status, CapabilityStatus::Proven);
     assert!(require_proven(root.path(), CAP, &policy.name, &policy.policy_sha256).is_err());
+}
+
+/// Commit a declaration to its case ledger (the authoritative source) and to the derived view, as the writers do.
+fn commit_declaration(root: &std::path::Path, decl: &SettlementDeclaration) {
+    sea_forge_settlement::append_declaration_ledgered_once(
+        root,
+        &root.join("settlement/declarations.jsonl"),
+        "test-writer",
+        decl,
+    )
+    .unwrap();
 }

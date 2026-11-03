@@ -1221,8 +1221,8 @@ fn an_external_looking_operation_cannot_be_classified_local_by_the_caller() {
 const CASE: &str = "case_a";
 
 /// Two declared-content hashes that differ, standing for the declaration content approved and a changed one.
-const CONTENT_A: &str = "sha256:declared-content-a";
-const CONTENT_B: &str = "sha256:declared-content-b";
+const CONTENT_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const CONTENT_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 fn gate_swe_seed_in(
     root: &std::path::Path,
@@ -1534,6 +1534,7 @@ fn declaration_request(criteria_ref: &str) -> SettlementDeclarationRequest {
         authored_by: None,
         authorization_ref: None,
         authorization_request_sha256: None,
+        authorization_content_sha256: None,
     }
 }
 
@@ -1626,6 +1627,7 @@ fn echoing_declaration(request: &SettlementDeclarationRequest) -> SettlementDecl
         authored_by: request.authored_by.clone(),
         authorization_ref: request.authorization_ref.clone(),
         authorization_request_sha256: request.authorization_request_sha256.clone(),
+        authorization_content_sha256: request.authorization_content_sha256.clone(),
         declaration_hash: "sha256:decl".into(),
     }
 }
@@ -1979,8 +1981,8 @@ fn a_failed_attempt_whose_unparseable_declaration_names_its_claim_is_left_open()
             vec![],
         )
         .unwrap();
-    let settled = settle_failed_resume_attempt(root.path(), CASE, &pending_id, attempt).unwrap();
-    assert_eq!(settled, AttemptSettlement::Open);
+    // An unparseable declaration naming the claim is an integrity failure: explicit, and the claim is not settled.
+    assert!(settle_failed_resume_attempt(root.path(), CASE, &pending_id, attempt).is_err());
     assert!(matches!(
         settlement_status(root.path(), &pending_id).unwrap(),
         SettlementStatus::Resuming { attempt: open } if open == attempt
@@ -1995,7 +1997,7 @@ fn a_failed_attempt_whose_authorised_declaration_exists_completes_on_it() {
     let (pending_id, attempt) =
         declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
     // The attempt appended its declaration, then failed before recording the outcome.
-    let declaration = SettlementDeclaration {
+    let mut declaration = SettlementDeclaration {
         version: "0.2".into(),
         declaration_id: "decl-made".into(),
         settlement_ref: "set_x".into(),
@@ -2043,8 +2045,11 @@ fn a_failed_attempt_whose_authorised_declaration_exists_completes_on_it() {
         authored_by: None,
         authorization_ref: Some(pending_id.clone()),
         authorization_request_sha256: Some(record.request_sha256.clone()),
+        authorization_content_sha256: Some(CONTENT_A.to_string()),
         declaration_hash: String::new(),
     };
+    declaration.declaration_hash =
+        sea_forge_authority::cep::declaration_content_hash(&declaration).unwrap();
     LedgerStream::open(root.path(), format!("case-{CASE}"), "test-writer")
         .unwrap()
         .commit_typed("settlement_declaration", vec![], &declaration, vec![])
@@ -2096,4 +2101,311 @@ fn identical_racing_requests_yield_one_pending_id() {
         .collect();
     assert!(ids.windows(2).all(|w| w[0] == w[1]), "{ids:?}");
     assert_eq!(settlement_pending_records(root.path()).unwrap().len(), 1);
+}
+
+/// Declaration integrity (F-A). Every test here reads the authoritative case ledgers, never the view.
+mod declaration_integrity {
+    use super::*;
+    use sea_forge_authority::cep::{
+        declaration_content_hash, read_all_declarations, read_case_declarations,
+        verify_case_declarations, DeclarationAuthorization, DeclarationRefusal,
+    };
+
+    /// One approved, claimed external settlement. Returns the pending id and its pending record.
+    fn claimed(root: &std::path::Path) -> (String, SettlementPendingRecord) {
+        let record = pending_for(root, evidence_a());
+        resolve_in(root, &record.pending_id, true, &operator()).unwrap();
+        let (pending_id, _) =
+            declared(gate_swe_seed_in(root, &approval_policy(), evidence_a()).unwrap());
+        let record = settlement_pending_records(root)
+            .unwrap()
+            .into_iter()
+            .find(|r| r.pending_id == pending_id)
+            .unwrap();
+        (pending_id, record)
+    }
+
+    /// A declaration bound to `record`'s approval and to the approved content, with a recomputed hash.
+    fn authorised(
+        record: &SettlementPendingRecord,
+        pending_id: &str,
+        declaration_id: &str,
+    ) -> SettlementDeclaration {
+        let mut decl = SettlementDeclaration {
+            version: "0.2".into(),
+            declaration_id: declaration_id.into(),
+            settlement_ref: "set_x".into(),
+            run_id: record.operation_id.clone(),
+            case_id: record.case_id.clone(),
+            plan_item_id: "plan_x".into(),
+            claim_manifest_sha256: "sha256:claim".into(),
+            status: DeclarationStatus::Accepted,
+            strength: SettlementStrength::Strong,
+            qualifies_for_capability: true,
+            criteria_ref: "crit_x".into(),
+            criteria_sha256: "sha256:crit".into(),
+            criteria_record_hash: "sha256:crit-record".into(),
+            criteria_declared_at: "2026-11-03T00:00:00Z".into(),
+            job_contract_ref: None,
+            origin_refs: vec![],
+            verifier_ref: "swe_seed_test".into(),
+            verifier_sha256: "sha256:verifier".into(),
+            verification_evidence_refs: vec![],
+            declarer: Declarer {
+                actor_id: "swe_seed_verifier".into(),
+                authority_ref: "swe_seed_test".into(),
+                role: "R-AA".into(),
+                standing_basis: "test".into(),
+            },
+            independence: DeclarationIndependence {
+                acting_entity_id: "operator_local".into(),
+                independent: true,
+                basis: "test".into(),
+            },
+            reliability: DeclarationReliability {
+                feedback_delay_ms: 0,
+                attribution_confidence: "1.000000".into(),
+                gaming_exposure: "0.000000".into(),
+                hidden_debt_blindness: "0.000000".into(),
+                weight: "1.000000".into(),
+                basis: "test".into(),
+            },
+            variation_tags: Default::default(),
+            disruption_tags: vec![],
+            orchestration_burden: None,
+            issued_at: "2026-11-03T00:00:00Z".into(),
+            source_evidence_refs: vec![],
+            adapter_attestation_ref: None,
+            authored_by: None,
+            authorization_ref: Some(pending_id.into()),
+            authorization_request_sha256: Some(record.request_sha256.clone()),
+            authorization_content_sha256: Some(CONTENT_A.to_string()),
+            declaration_hash: String::new(),
+        };
+        decl.declaration_hash = declaration_content_hash(&decl).unwrap();
+        decl
+    }
+
+    /// Commit a declaration to a case ledger the way an out-of-process writer would: no writer checks.
+    fn commit_to(root: &std::path::Path, case_id: &str, decl: &SettlementDeclaration) {
+        LedgerStream::open(root, format!("case-{case_id}"), "test-writer")
+            .unwrap()
+            .commit_typed("settlement_declaration", vec![], decl, vec![])
+            .unwrap();
+    }
+
+    fn case_ledger_entries(root: &std::path::Path, case_id: &str) -> std::path::PathBuf {
+        root.join("ledgers")
+            .join(format!("case-{case_id}"))
+            .join("entries.jsonl")
+    }
+
+    fn verdicts(root: &std::path::Path) -> Vec<DeclarationAuthorization> {
+        let all = read_all_declarations(root).unwrap();
+        verify_case_declarations(root, &all).unwrap()
+    }
+
+    #[test]
+    fn a_verified_authorised_declaration_is_authorised_from_the_ledger() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-ok"),
+        );
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Authorized {
+                pending_id: pending_id.clone()
+            }]
+        );
+    }
+
+    #[test]
+    fn a_stray_file_named_like_a_case_does_not_block_reads() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-ok"),
+        );
+        // A lock or temp file that matches the case-name prefix is not a ledger.
+        std::fs::write(root.path().join("ledgers").join("case-stray.lock"), b"x").unwrap();
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Authorized { pending_id }]
+        );
+    }
+
+    #[test]
+    fn a_tampered_declaration_hash_is_an_integrity_failure_not_a_skip() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        let mut decl = authorised(&record, &pending_id, "decl-forged-hash");
+        decl.declaration_hash = "sha256:forged".into();
+        commit_to(root.path(), CASE, &decl);
+        assert!(read_case_declarations(root.path(), CASE).is_err());
+        assert!(read_all_declarations(root.path()).is_err());
+    }
+
+    #[test]
+    fn an_altered_status_in_the_ledger_breaks_the_chain_and_fails_closed() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-altered"),
+        );
+        let path = case_ledger_entries(root.path(), CASE);
+        let text = std::fs::read_to_string(&path).unwrap();
+        let altered = text.replace(
+            "\"qualifies_for_capability\":true",
+            "\"qualifies_for_capability\":false",
+        );
+        assert_ne!(text, altered, "the fixture must contain the field");
+        std::fs::write(&path, altered).unwrap();
+        assert!(read_case_declarations(root.path(), CASE).is_err());
+        assert!(read_all_declarations(root.path()).is_err());
+    }
+
+    #[test]
+    fn a_corrupted_ledger_fails_closed_and_returns_no_partial_result() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-corrupt"),
+        );
+        std::fs::write(
+            case_ledger_entries(root.path(), CASE),
+            "not a ledger entry\n",
+        )
+        .unwrap();
+        assert!(read_all_declarations(root.path()).is_err());
+    }
+
+    #[test]
+    fn a_forged_authorisation_reference_is_refused_as_missing() {
+        let root = tempfile::tempdir().unwrap();
+        let (_, record) = claimed(root.path());
+        let forged = authorised(&record, "settlement-pending-forged", "decl-forged-id");
+        commit_to(root.path(), CASE, &forged);
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Quarantined(
+                DeclarationRefusal::AuthorizationMissing
+            )]
+        );
+    }
+
+    #[test]
+    fn declared_content_that_differs_from_the_approval_is_refused() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        let mut decl = authorised(&record, &pending_id, "decl-other-content");
+        decl.authorization_content_sha256 = Some(CONTENT_B.to_string());
+        decl.declaration_hash = declaration_content_hash(&decl).unwrap();
+        commit_to(root.path(), CASE, &decl);
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Quarantined(
+                DeclarationRefusal::AuthorizationContentMismatch
+            )]
+        );
+    }
+
+    #[test]
+    fn an_external_declaration_without_content_binding_is_refused() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        let mut decl = authorised(&record, &pending_id, "decl-unbound");
+        decl.authorization_content_sha256 = None;
+        decl.declaration_hash = declaration_content_hash(&decl).unwrap();
+        commit_to(root.path(), CASE, &decl);
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Quarantined(
+                DeclarationRefusal::AuthorizationUnbound
+            )]
+        );
+    }
+
+    #[test]
+    fn a_declaration_replayed_into_another_case_is_an_integrity_failure() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        let decl = authorised(&record, &pending_id, "decl-replayed");
+        commit_to(root.path(), CASE, &decl);
+        commit_to(root.path(), "case_b", &decl);
+        assert!(read_all_declarations(root.path()).is_err());
+    }
+
+    #[test]
+    fn a_second_declaration_for_a_completed_approval_is_superseded() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-first"),
+        );
+        complete_settlement_resume(root.path(), &pending_id, "decl-first").unwrap();
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-second"),
+        );
+        let all = read_all_declarations(root.path()).unwrap();
+        let verdict = verify_case_declarations(root.path(), &all).unwrap();
+        let by_id: std::collections::HashMap<_, _> = all
+            .iter()
+            .map(|d| d.declaration_id.clone())
+            .zip(verdict)
+            .collect();
+        assert_eq!(
+            by_id["decl-first"],
+            DeclarationAuthorization::Authorized {
+                pending_id: pending_id.clone()
+            }
+        );
+        assert_eq!(
+            by_id["decl-second"],
+            DeclarationAuthorization::Quarantined(DeclarationRefusal::AuthorizationSuperseded)
+        );
+    }
+
+    #[test]
+    fn editing_the_derived_view_changes_nothing_that_is_authoritative() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, record) = claimed(root.path());
+        commit_to(
+            root.path(),
+            CASE,
+            &authorised(&record, &pending_id, "decl-real"),
+        );
+        // A fabricated declaration appears only in the view. Nothing in the ledger names it.
+        let mut fake = authorised(&record, &pending_id, "decl-fake-in-view");
+        fake.declaration_id = "decl-fake-in-view".into();
+        fake.declaration_hash = declaration_content_hash(&fake).unwrap();
+        let view = root.path().join("settlement");
+        std::fs::create_dir_all(&view).unwrap();
+        std::fs::write(
+            view.join("declarations.jsonl"),
+            format!("{}\n", serde_json::to_string(&fake).unwrap()),
+        )
+        .unwrap();
+        let all = read_all_declarations(root.path()).unwrap();
+        let ids: Vec<&str> = all.iter().map(|d| d.declaration_id.as_str()).collect();
+        assert_eq!(ids, vec!["decl-real"]);
+        assert_eq!(
+            verdicts(root.path()),
+            vec![DeclarationAuthorization::Authorized {
+                pending_id: pending_id.clone()
+            }]
+        );
+    }
 }

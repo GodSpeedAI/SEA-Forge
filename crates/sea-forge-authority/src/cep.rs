@@ -13,7 +13,8 @@
 
 mod declaration_authority;
 pub use declaration_authority::{
-    is_external_declaration, reconcile_operation_claims, settle_failed_resume_attempt,
+    declaration_content_hash, is_external_declaration, read_all_declarations,
+    read_case_declarations, reconcile_operation_claims, settle_failed_resume_attempt,
     verify_case_declarations, AttemptSettlement, DeclarationAuthorization, DeclarationRefusal,
 };
 mod obligation;
@@ -2259,6 +2260,11 @@ pub struct SettlementPendingRecord {
     /// SHA-256 over the canonical request, which includes `case_id`. The same request identity in the same case
     /// always maps to the same record; the same operation in another case is a different record.
     pub request_sha256: String,
+    /// The ingress identity hash that `request_sha256` binds to the declared content:
+    /// `request_sha256 == bind(ingress_sha256, declared content)`. An authorised declaration must carry the declared
+    /// content hash that reproduces `request_sha256` from this value. Empty only on a legacy record, which is refused.
+    #[serde(default)]
+    pub ingress_sha256: String,
     /// The case the request belongs to. Empty only on a legacy record written before the case was bound into
     /// the request hash. Such a record is never matched by any lookup and is never reused.
     #[serde(default)]
@@ -2539,12 +2545,13 @@ pub fn settlement_declaration_content_sha256(
     let mut content = request.clone();
     content.authorization_ref = None;
     content.authorization_request_sha256 = None;
+    content.authorization_content_sha256 = None;
     crate::hash_canonical(&content).map_err(|error| CepAuthorityError::Internal(error.to_string()))
 }
 
 /// Bind the ingress identity of a settlement request to the declared content hash. The result is the approved
 /// request hash: a pending record and its approval are bound to exactly this value.
-fn bind_request_sha256(
+pub(crate) fn bind_request_sha256(
     ingress_sha256: &str,
     declared_content_sha256: &str,
 ) -> Result<String, CepAuthorityError> {
@@ -2662,6 +2669,10 @@ pub fn verify_declaration_echoes_request(
         (
             "authorization_request_sha256",
             request.authorization_request_sha256 == declaration.authorization_request_sha256,
+        ),
+        (
+            "authorization_content_sha256",
+            request.authorization_content_sha256 == declaration.authorization_content_sha256,
         ),
         (
             "acting_entity_id",
@@ -3045,6 +3056,7 @@ fn record_settlement_pending(
     let record = SettlementPendingRecord {
         pending_id: identity.pending_id.clone(),
         request_sha256: request_sha256.to_string(),
+        ingress_sha256: identity.request_sha256.clone(),
         case_id: identity.case_id.clone(),
         operation_id: identity.operation_id.clone(),
         operation_kind: SETTLEMENT_SURFACE.into(),
@@ -3268,6 +3280,7 @@ mod race_read_tests {
         SettlementPendingRecord {
             pending_id: pending_id.into(),
             request_sha256: "a".repeat(64),
+            ingress_sha256: "b".repeat(64),
             case_id: "case_a".into(),
             operation_id: "run_a".into(),
             operation_kind: SETTLEMENT_SURFACE.into(),
