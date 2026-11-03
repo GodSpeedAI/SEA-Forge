@@ -1071,16 +1071,24 @@ fn resume_artifact_transition(
         .ok_or_else(|| ForgeError::Internal("strong authority role is missing".into()))?;
     // SWE_SEED is an external declarer: this declaration must pass the settlement gate before
     // `resume_pending_transition` can call `declare()` (fail closed). The gate commits its own refusal.
+    let resume_actor = Actor {
+        actor_id: options.entity.clone(),
+        role: ActorRole::Operator,
+    };
+    let ingress = sea_forge_authority::cep::VerifiedSettlementIngress::verified(
+        sea_forge_authority::cep::SettlementIngress::ArtifactTransitionResume,
+        sea_forge_authority::cep::SettlementTransport::SweSeedAdapter,
+        None,
+        &resume_actor,
+        vec![format!("operation:{}", pending.run_id)],
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     sea_forge_authority::cep::authorize_settlement_declaration(
         &engine,
         &bundle,
         &root,
         &pending.run_id,
-        sea_forge_authority::cep::SettlementAuthorityClass::External,
-        &Actor {
-            actor_id: options.entity.clone(),
-            role: ActorRole::Operator,
-        },
+        &ingress,
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     let result = sea_forge_artifact_ip::resume_pending_transition(

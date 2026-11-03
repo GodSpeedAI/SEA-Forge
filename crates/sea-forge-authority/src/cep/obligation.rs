@@ -27,8 +27,8 @@
 
 use super::{
     allowed_operation, committed_ref, settlement_status_of, Actor, CepAuthorityError,
-    CepAuthorityService, SettlementAuthorityClass, SettlementOutcome, PROFILE_VERSION,
-    SETTLE_SUFFIX_FINAL,
+    CepAuthorityService, SettlementIngress, SettlementOutcome, SettlementTransport,
+    VerifiedSettlementIngress, PROFILE_VERSION, SETTLE_SUFFIX_FINAL,
 };
 use chrono::{DateTime, Duration, Utc};
 use serde_json::{json, Map, Value};
@@ -359,12 +359,14 @@ impl CepAuthorityService<'_> {
         }
         // Local: obligation settlement is SEA-Forge's own judgement over RealityTrace's ledger; no external
         // declarer is invoked on this path.
-        self.gate_settlement_declaration(
-            &ledger,
-            operation_id,
-            SettlementAuthorityClass::Local,
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::ObligationClosure,
+            SettlementTransport::None,
+            None,
             caller,
+            vec![format!("operation:{operation_id}")],
         )?;
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {
@@ -447,12 +449,14 @@ impl CepAuthorityService<'_> {
         }
         // Local: obligation settlement is SEA-Forge's own judgement over RealityTrace's ledger; no external
         // declarer is invoked on this path.
-        self.gate_settlement_declaration(
-            &ledger,
-            operation_id,
-            SettlementAuthorityClass::Local,
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::ObligationClosure,
+            SettlementTransport::None,
+            None,
             caller,
+            vec![format!("operation:{operation_id}")],
         )?;
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {

@@ -909,13 +909,16 @@ async fn submit_swe_seed_declaration(
     // The SWE_SEED transport is an external declarer, so this declaration must pass the settlement gate
     // (fail closed) before anything is sent to it. A refusal is committed by the gate and returned here.
     let engine = PolicyAuthorityEngine::new(bundle.clone())?;
-    sea_forge_authority::cep::authorize_settlement_declaration(
-        &engine,
-        &bundle,
-        root,
-        run,
-        sea_forge_authority::cep::SettlementAuthorityClass::External,
+    let ingress = sea_forge_authority::cep::VerifiedSettlementIngress::verified(
+        sea_forge_authority::cep::SettlementIngress::SweSeedDeclaration,
+        sea_forge_authority::cep::SettlementTransport::SweSeedAdapter,
+        None,
         caller,
+        vec![format!("operation:{run}")],
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
+    sea_forge_authority::cep::authorize_settlement_declaration(
+        &engine, &bundle, root, run, &ingress,
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
 

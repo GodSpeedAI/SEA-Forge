@@ -2,8 +2,9 @@
 //! settlement is SEA-Forge's own, judged against criteria bound into the allow decision.
 
 use sea_forge_authority::cep::{
-    authorize_settlement_declaration, CepAuthorityError, CepAuthorityService,
-    SettlementAuthorityClass, SettlementCriteria,
+    authorize_settlement_declaration, derive_settlement_authority_class, CepAuthorityError,
+    CepAuthorityService, SettlementAuthorityClass, SettlementCriteria, SettlementIngress,
+    SettlementTransport, VerifiedSettlementIngress,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, Verdict};
@@ -912,11 +913,34 @@ fn class_policy_engine(policy_yaml: &str) -> (AuthorityPolicyBundle, PolicyAutho
     (bundle, engine)
 }
 
-/// Run the real gate entry point the SWE_SEED paths call, against a fresh ledger.
-fn authorize(policy_yaml: &str, class: SettlementAuthorityClass) -> Result<(), CepAuthorityError> {
+/// Run the real gate entry point through the verified SWE_SEED ingress, against a fresh ledger.
+fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementAuthorityClass, CepAuthorityError> {
     let root = tempfile::tempdir().unwrap();
     let (bundle, engine) = class_policy_engine(policy_yaml);
-    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, class, &svc())
+    let actor = svc();
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor,
+        vec![],
+    )?;
+    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, &ingress)
+}
+
+/// Run the real gate entry point through the verified CEP settlement ingress (no transport), fresh ledger.
+fn authorize_cep(policy_yaml: &str) -> Result<SettlementAuthorityClass, CepAuthorityError> {
+    let root = tempfile::tempdir().unwrap();
+    let (bundle, engine) = class_policy_engine(policy_yaml);
+    let actor = svc();
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::CepSettlement,
+        SettlementTransport::None,
+        None,
+        &actor,
+        vec![],
+    )?;
+    authorize_settlement_declaration(&engine, &bundle, root.path(), SETTLE_OP, &ingress)
 }
 
 /// Evaluate a raw `settlement_declaration` Reserved action, so the parameters themselves are under test.
@@ -961,7 +985,7 @@ fn class_params(class: &str) -> Value {
 
 #[test]
 fn an_external_settlement_declaration_escalates_under_its_gated_rule() {
-    let err = authorize(EXTERNAL_GATED, SettlementAuthorityClass::External).unwrap_err();
+    let err = authorize_swe_seed(EXTERNAL_GATED).unwrap_err();
     assert!(
         matches!(&err, CepAuthorityError::Evidence(m) if m.contains("may not use settlement_declaration")),
         "{err:?}"
@@ -974,7 +998,10 @@ fn an_external_settlement_declaration_escalates_under_its_gated_rule() {
 
 #[test]
 fn a_local_settlement_declaration_is_allowed_by_an_unconstrained_rule() {
-    authorize(UNCONSTRAINED, SettlementAuthorityClass::Local).unwrap();
+    assert_eq!(
+        authorize_cep(UNCONSTRAINED).unwrap(),
+        SettlementAuthorityClass::Local
+    );
     assert_eq!(
         raw_verdict(UNCONSTRAINED, class_params("local")),
         Verdict::Allow
@@ -984,7 +1011,7 @@ fn a_local_settlement_declaration_is_allowed_by_an_unconstrained_rule() {
 #[test]
 fn an_external_settlement_declaration_is_not_reached_by_an_unconstrained_allow_rule() {
     // Fail closed: a plain allow never covers an external declarer.
-    assert!(authorize(UNCONSTRAINED, SettlementAuthorityClass::External).is_err());
+    assert!(authorize_swe_seed(UNCONSTRAINED).is_err());
     assert_ne!(
         raw_verdict(UNCONSTRAINED, class_params("external")),
         Verdict::Allow
@@ -1027,4 +1054,129 @@ fn a_settlement_authority_class_names_only_settlement_declarations() {
     let elsewhere = "version: \"0.1\"\nrules:\n  - name: ext\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: cognate_action\n    boundary_constraints:\n      settlement_authority_class: [external]\n";
     let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(elsewhere).unwrap();
     assert!(PolicyAuthorityEngine::new(bundle).is_err());
+}
+
+// ---- Settlement authority class: derived from the verified ingress, never passed by a caller ----------------
+
+const ATTESTATION: &str = "attestation:swe-seed:1";
+
+fn verified_for<'a>(
+    ingress: SettlementIngress,
+    transport: SettlementTransport,
+    attestation: Option<&'a str>,
+    actor: &'a Actor,
+) -> Result<VerifiedSettlementIngress<'a>, CepAuthorityError> {
+    VerifiedSettlementIngress::verified(ingress, transport, attestation, actor, vec![])
+}
+
+#[test]
+fn swe_seed_declaration_ingress_derives_external() {
+    let actor = svc();
+    let ingress = verified_for(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor,
+    )
+    .unwrap();
+    assert_eq!(
+        derive_settlement_authority_class(&ingress),
+        SettlementAuthorityClass::External
+    );
+}
+
+#[test]
+fn artifact_transition_resume_ingress_derives_external() {
+    let actor = operator();
+    let ingress = verified_for(
+        SettlementIngress::ArtifactTransitionResume,
+        SettlementTransport::SweSeedAdapter,
+        Some(ATTESTATION),
+        &actor,
+    )
+    .unwrap();
+    assert_eq!(
+        derive_settlement_authority_class(&ingress),
+        SettlementAuthorityClass::External
+    );
+}
+
+#[test]
+fn cep_settle_ingress_derives_local_without_transport() {
+    let actor = svc();
+    let ingress = verified_for(
+        SettlementIngress::CepSettlement,
+        SettlementTransport::None,
+        None,
+        &actor,
+    )
+    .unwrap();
+    assert_eq!(
+        derive_settlement_authority_class(&ingress),
+        SettlementAuthorityClass::Local
+    );
+}
+
+#[test]
+fn obligation_closure_ingress_derives_local_without_transport() {
+    let actor = svc();
+    let ingress = verified_for(
+        SettlementIngress::ObligationClosure,
+        SettlementTransport::None,
+        None,
+        &actor,
+    )
+    .unwrap();
+    assert_eq!(
+        derive_settlement_authority_class(&ingress),
+        SettlementAuthorityClass::Local
+    );
+}
+
+#[test]
+fn an_external_looking_operation_cannot_be_classified_local_by_the_caller() {
+    let actor = svc();
+    // An external ingress with no transport is not a verified ingress, so it cannot be built at all.
+    assert!(verified_for(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::None,
+        None,
+        &actor
+    )
+    .is_err());
+    assert!(verified_for(
+        SettlementIngress::ArtifactTransitionResume,
+        SettlementTransport::None,
+        None,
+        &actor
+    )
+    .is_err());
+    // A CEP or obligation settlement cannot smuggle an adapter transport or attestation to look local-free.
+    assert!(verified_for(
+        SettlementIngress::CepSettlement,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &actor
+    )
+    .is_err());
+    assert!(verified_for(
+        SettlementIngress::ObligationClosure,
+        SettlementTransport::None,
+        Some(ATTESTATION),
+        &actor
+    )
+    .is_err());
+    assert!(verified_for(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        Some(""),
+        &actor
+    )
+    .is_err());
+    // An external operation that reaches the gate is never classified local, so a local-only rule refuses it.
+    assert!(authorize_swe_seed(UNCONSTRAINED).is_err());
+    assert_eq!(
+        authorize_swe_seed(EXTERNAL_GATED).unwrap_err().class(),
+        "cep_evidence_refused"
+    );
 }

@@ -1511,15 +1511,14 @@ impl CepAuthorityService<'_> {
         )
     }
 
-    /// The gate for a settlement declaration. `class` is the caller's own classification (see
-    /// [`SettlementAuthorityClass`]); it is never read from the declaration record.
+    /// The gate for a settlement declaration. The class is derived from the verified ingress, never passed in.
     fn gate_settlement_declaration(
         &self,
         ledger: &LedgerStream,
         operation_id: &str,
-        class: SettlementAuthorityClass,
-        caller: &Actor,
+        ingress: &VerifiedSettlementIngress<'_>,
     ) -> Result<(), CepAuthorityError> {
+        let class = derive_settlement_authority_class(ingress);
         commit_gate_decision(
             self.engine,
             self.bundle,
@@ -1528,7 +1527,7 @@ impl CepAuthorityService<'_> {
             "settlement_declaration",
             settlement_parameters(operation_id, class),
             operation_id,
-            caller,
+            ingress.caller(),
         )
     }
 
@@ -1720,12 +1719,14 @@ impl CepAuthorityService<'_> {
         }
         // Local: CEP settlement is SEA-Forge's own judgement over the evidence (no SettlementAuthority or
         // SWE_SEED transport is invoked on this path; the record is attributed to `caller`).
-        self.gate_settlement_declaration(
-            &ledger,
-            operation_id,
-            SettlementAuthorityClass::Local,
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::CepSettlement,
+            SettlementTransport::None,
+            None,
             caller,
+            vec![format!("operation:{operation_id}")],
         )?;
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
 
         let mut items: Vec<EvidenceItem> = Vec::new();
         let mut questions: Vec<Value> = Vec::new();
@@ -1996,6 +1997,113 @@ impl SettlementAuthorityClass {
     }
 }
 
+/// The trusted ingress a settlement declaration arrives through. The code that owns each path names its own
+/// ingress; no caller passes a class.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettlementIngress {
+    /// The production SWE_SEED declaration sent to the strong settlement authority adapter.
+    SweSeedDeclaration,
+    /// Resume of a pending artifact transition, which declares through the SWE_SEED adapter.
+    ArtifactTransitionResume,
+    /// CEP `settle` / `settle_with` over evidence SEA-Forge committed itself.
+    CepSettlement,
+    /// Obligation closure over RealityTrace's ledger.
+    ObligationClosure,
+}
+
+/// The settlement authority transport a verified ingress reaches, if any.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettlementTransport {
+    None,
+    SweSeedAdapter,
+}
+
+/// What a trusted ingress verified about one settlement declaration: the ingress, the transport it reaches, any
+/// adapter attestation it carries, the verified identity it acts as, and the evidence refs it rests on. Built only
+/// through [`VerifiedSettlementIngress::verified`], which refuses any ingress/transport/attestation combination
+/// that does not match the operation.
+#[derive(Debug, Clone)]
+pub struct VerifiedSettlementIngress<'a> {
+    ingress: SettlementIngress,
+    transport: SettlementTransport,
+    adapter_attestation_ref: Option<&'a str>,
+    caller: &'a Actor,
+    evidence_refs: Vec<String>,
+}
+
+impl<'a> VerifiedSettlementIngress<'a> {
+    pub fn verified(
+        ingress: SettlementIngress,
+        transport: SettlementTransport,
+        adapter_attestation_ref: Option<&'a str>,
+        caller: &'a Actor,
+        evidence_refs: Vec<String>,
+    ) -> Result<Self, CepAuthorityError> {
+        let transport_matches = match ingress {
+            SettlementIngress::SweSeedDeclaration | SettlementIngress::ArtifactTransitionResume => {
+                transport == SettlementTransport::SweSeedAdapter
+            }
+            SettlementIngress::CepSettlement | SettlementIngress::ObligationClosure => {
+                transport == SettlementTransport::None
+            }
+        };
+        if !transport_matches {
+            return Err(CepAuthorityError::Malformed(
+                "settlement transport does not match its ingress",
+            ));
+        }
+        if adapter_attestation_ref.is_some_and(str::is_empty) {
+            return Err(CepAuthorityError::Malformed(
+                "settlement adapter attestation is empty",
+            ));
+        }
+        if adapter_attestation_ref.is_some() && transport != SettlementTransport::SweSeedAdapter {
+            return Err(CepAuthorityError::Malformed(
+                "settlement adapter attestation requires an adapter transport",
+            ));
+        }
+        Ok(Self {
+            ingress,
+            transport,
+            adapter_attestation_ref,
+            caller,
+            evidence_refs,
+        })
+    }
+
+    pub fn ingress(&self) -> SettlementIngress {
+        self.ingress
+    }
+
+    pub fn caller(&self) -> &Actor {
+        self.caller
+    }
+
+    pub fn evidence_refs(&self) -> &[String] {
+        &self.evidence_refs
+    }
+}
+
+/// The one place a settlement authority class is decided. External when the operation reaches an adapter
+/// transport, carries an adapter attestation, or enters through an external ingress. Local only for CEP
+/// settlement and obligation closure with no transport. A caller cannot choose the result: it follows from the
+/// verified ingress.
+pub fn derive_settlement_authority_class(
+    ingress: &VerifiedSettlementIngress<'_>,
+) -> SettlementAuthorityClass {
+    let external = ingress.transport == SettlementTransport::SweSeedAdapter
+        || ingress.adapter_attestation_ref.is_some()
+        || matches!(
+            ingress.ingress,
+            SettlementIngress::SweSeedDeclaration | SettlementIngress::ArtifactTransitionResume
+        );
+    if external {
+        SettlementAuthorityClass::External
+    } else {
+        SettlementAuthorityClass::Local
+    }
+}
+
 fn settlement_parameters(operation_id: &str, class: SettlementAuthorityClass) -> Value {
     json!({
         "operation_id": operation_id,
@@ -2065,10 +2173,10 @@ pub fn authorize_settlement_declaration(
     bundle: &AuthorityPolicyBundle,
     root: &Path,
     operation_id: &str,
-    class: SettlementAuthorityClass,
-    caller: &Actor,
-) -> Result<(), CepAuthorityError> {
+    ingress: &VerifiedSettlementIngress<'_>,
+) -> Result<SettlementAuthorityClass, CepAuthorityError> {
     let ledger = LedgerStream::open(root, LEDGER_ID, "sea-forge-cep-authority")?;
+    let class = derive_settlement_authority_class(ingress);
     commit_gate_decision(
         engine,
         bundle,
@@ -2077,8 +2185,9 @@ pub fn authorize_settlement_declaration(
         "settlement_declaration",
         settlement_parameters(operation_id, class),
         operation_id,
-        caller,
-    )
+        ingress.caller(),
+    )?;
+    Ok(class)
 }
 
 /// The CEP disposition a committed decision expresses.
