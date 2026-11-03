@@ -2289,7 +2289,7 @@ impl PolicyAuthorityEngine {
             && binding.principal == actor.actor_id
             && binding.actor_type == actor_type_for_role(&actor.role)
             && binding.identity_binding_source == self.bundle.identity.source
-            && (self.bundle.version == RECORD_VERSION || binding.identity_binding_hash.is_some())
+            && binding.identity_binding_hash.is_some()
             && identity_not_expired
             && (!matches!(actor.role, ActorRole::Agent | ActorRole::AutomatedAgent)
                 || binding.sponsor.is_some());
@@ -4207,6 +4207,44 @@ mod tests {
         assert_eq!(resolved.binding_resolution, BindingResolution::Exact);
         let unknown = bundle.resolve_identity("unknown", ActorRole::Operator);
         assert_eq!(unknown.binding_resolution, BindingResolution::Unresolved);
+    }
+
+    #[test]
+    fn unresolved_identity_is_never_allowed_on_a_v02_bundle() {
+        // The identity check must depend on resolution, not on the bundle version:
+        // an unknown principal on a 0.2 bundle has no binding hash and must not be allowed.
+        let bundle: AuthorityPolicyBundle = complete_v02(sea_forge_core::yaml::from_str(
+            "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
+        )
+        .unwrap());
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let actor = Actor {
+            actor_id: "unknown".into(),
+            role: ActorRole::Operator,
+        };
+        let action = AuthorityAction::WriteFile {
+            path: "model.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let decision = engine
+            .evaluate(AuthorityEvaluation {
+                actor: &actor,
+                binding: bundle.resolve_identity("unknown", ActorRole::Operator),
+                run_id: "run_unknown",
+                case_id: "case_test",
+                plan_item_id: "item_unknown",
+                sequence: 1,
+                action: &action,
+                workspace_root: Path::new("/tmp/workspace"),
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: None,
+                env_keys: Default::default(),
+                opa_candidate: None,
+                environment: None,
+            })
+            .unwrap();
+        assert_ne!(decision.verdict, Verdict::Allow);
     }
 
     #[test]
