@@ -2229,9 +2229,11 @@ pub enum SettlementGate {
     /// One approved (or policy-allowed, previously pending) settlement was claimed for this attempt. The caller
     /// may call `declare()` once and must then record the outcome: `complete_settlement_resume` on success,
     /// `release_settlement_resume` when the authority was unavailable, `fail_settlement_resume` otherwise.
+    /// The declaration must carry `pending_id` and `request_sha256` as its authorisation.
     Resumed {
         class: SettlementAuthorityClass,
         pending_id: String,
+        request_sha256: String,
         attempt: u32,
     },
     /// The declaration for this request already completed. Nothing may be declared again.
@@ -2633,6 +2635,7 @@ fn claim_resume(
         Ok(_) => Ok(SettlementGate::Resumed {
             class,
             pending_id: record.pending_id.clone(),
+            request_sha256: record.request_sha256.clone(),
             attempt,
         }),
         Err(_) => {

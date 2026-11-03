@@ -64,13 +64,9 @@ pub enum DeclarationAuthorization {
     Quarantined(DeclarationRefusal),
 }
 
-/// A declaration is external when any of its provenance says an external authority made it. Fail closed: naming
-/// an adapter attestation, a SWE_SEED verifier, or an authorisation reference makes a declaration external.
+/// A declaration is external when an external authority made it. See [`SettlementDeclaration::is_external`].
 pub fn is_external_declaration(declaration: &SettlementDeclaration) -> bool {
-    declaration.adapter_attestation_ref.is_some()
-        || declaration.verifier_ref.contains("swe_seed")
-        || declaration.authorization_ref.is_some()
-        || declaration.authorization_request_sha256.is_some()
+    declaration.is_external()
 }
 
 /// Verify every declaration in one case against the authority ledger, reading the ledger once. The result is
@@ -100,7 +96,7 @@ fn verify_one(
     named: &HashMap<&str, usize>,
 ) -> DeclarationAuthorization {
     use DeclarationRefusal as R;
-    if !is_external_declaration(declaration) {
+    if !declaration.is_external() {
         return DeclarationAuthorization::Local;
     }
     let quarantine = DeclarationAuthorization::Quarantined;

@@ -910,6 +910,13 @@ pub fn load_completed_transition(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// The settlement pending record a declaration is made under: the gate's claim, bound to the request it approved.
+#[derive(Debug, Clone, Copy)]
+pub struct PendingAuthorization<'a> {
+    pub pending_id: &'a str,
+    pub request_sha256: &'a str,
+}
+
 pub fn resume_pending_transition(
     root: &Path,
     actor: &str,
@@ -924,6 +931,7 @@ pub fn resume_pending_transition(
     declarer: Declarer,
     authority: &dyn SettlementAuthority,
     grant: ActionGrant,
+    authorization: Option<PendingAuthorization<'_>>,
 ) -> Result<ResumedArtifactTransition, ForgeError> {
     if approval.status != ApprovalStatus::Approved
         || approval.approval_id != pending.approval_ref
@@ -1031,6 +1039,8 @@ pub fn resume_pending_transition(
             orchestration_burden: None,
             source_evidence_refs: evidence_refs.clone(),
             authored_by: None,
+            authorization_ref: authorization.map(|a| a.pending_id.to_string()),
+            authorization_request_sha256: authorization.map(|a| a.request_sha256.to_string()),
         };
         // The caller decides the class: the only caller, `resume` in sea-forge-cli, passes the SWE_SEED
         // authority and must gate it as `External` (`authorize_settlement_declaration`) before calling here.

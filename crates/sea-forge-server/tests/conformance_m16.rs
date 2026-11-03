@@ -1393,13 +1393,7 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
     );
 
     let decl = matching_swe_seed_declaration(&case, &run, &records);
-    sea_forge_settlement::append_declaration_ledgered_once(
-        root.path(),
-        &root.path().join("declarations.jsonl"),
-        "out_of_process_operator",
-        &decl,
-    )
-    .unwrap();
+    out_of_process_append(root.path(), &decl);
     // Server absent: nothing has reconciled this yet.
     let stale = find_run_field(&entries(root.path(), &case), "swe_seed_correlation", &run).clone();
     assert!(stale["declaration_ids"].as_array().unwrap().is_empty());
@@ -1425,6 +1419,28 @@ async fn t16_8_late_swe_seed_declaration_reconciles_on_server_startup() {
     )
     .unwrap();
     assert_eq!(view["declaration_ids"], json!([]));
+}
+
+/// Append a declaration the way an out-of-process writer can: straight to the case ledger, past the settlement
+/// writer's boundary. Reconciliation must still refuse it.
+fn out_of_process_append(root: &Path, decl: &sea_forge_core::types::SettlementDeclaration) {
+    sea_forge_ledger::LedgerStream::open(
+        root,
+        format!("case-{}", decl.case_id),
+        "out_of_process_operator",
+    )
+    .unwrap()
+    .commit_typed(
+        "settlement_declaration",
+        vec![
+            decl.case_id.clone(),
+            decl.settlement_ref.clone(),
+            decl.declaration_id.clone(),
+        ],
+        decl,
+        vec![decl.declarer.authority_ref.clone()],
+    )
+    .unwrap();
 }
 
 /// A `settlement_quarantined` record names the refused declaration and its stable reason.
@@ -1456,13 +1472,7 @@ async fn t16_8_late_swe_seed_declaration_reconciles_at_read_time() {
     assert_eq!(result.settlement, SettlementStatus::Accepted, "{result:?}");
 
     let decl = matching_swe_seed_declaration(&case, &run, &entries(root.path(), &case));
-    sea_forge_settlement::append_declaration_ledgered_once(
-        root.path(),
-        &root.path().join("declarations.jsonl"),
-        "out_of_process_operator",
-        &decl,
-    )
-    .unwrap();
+    out_of_process_append(root.path(), &decl);
 
     let completion =
         swe_seed_reconciliation::verify_swe_seed_completion(root.path(), &run).unwrap();

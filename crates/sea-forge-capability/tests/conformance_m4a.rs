@@ -146,6 +146,8 @@ fn make_decl_req(
         orchestration_burden: burden.map(String::from),
         source_evidence_refs: vec!["evd_0001".into()],
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
     }
 }
 

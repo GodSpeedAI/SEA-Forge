@@ -1018,6 +1018,12 @@ pub struct SettlementDeclarationRequest {
     /// against `declarer.actor_id` before acceptance (T13B).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authored_by: Option<String>,
+    /// The settlement pending record this request was authorised under. Carried into the declaration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_ref: Option<String>,
+    /// The `request_sha256` of that pending record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_request_sha256: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1070,6 +1076,18 @@ pub struct SettlementDeclaration {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authorization_request_sha256: Option<String>,
     pub declaration_hash: String,
+}
+
+impl SettlementDeclaration {
+    /// True when an external authority made this declaration. Fail closed: naming an adapter attestation, a
+    /// SWE_SEED verifier, or an authorisation reference makes a declaration external. The settlement writer
+    /// and every reconciliation path use this one definition.
+    pub fn is_external(&self) -> bool {
+        self.adapter_attestation_ref.is_some()
+            || self.verifier_ref.contains("swe_seed")
+            || self.authorization_ref.is_some()
+            || self.authorization_request_sha256.is_some()
+    }
 }
 
 // === M4a: Capability Records ===

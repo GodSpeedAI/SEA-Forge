@@ -946,7 +946,11 @@ async fn submit_swe_seed_declaration(
                 ),
             });
         }
-        sea_forge_authority::cep::SettlementGate::Resumed { pending_id, .. } => Some(pending_id),
+        sea_forge_authority::cep::SettlementGate::Resumed {
+            pending_id,
+            request_sha256,
+            ..
+        } => Some((pending_id, request_sha256)),
         sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
     };
 
@@ -993,6 +997,8 @@ async fn submit_swe_seed_declaration(
         orchestration_burden: None,
         source_evidence_refs,
         authored_by: None,
+        authorization_ref: claimed.as_ref().map(|(pending_id, _)| pending_id.clone()),
+        authorization_request_sha256: claimed.as_ref().map(|(_, sha)| sha.clone()),
     };
 
     let declaration = tokio::task::spawn_blocking(
@@ -1017,7 +1023,7 @@ async fn submit_swe_seed_declaration(
         entity,
         &declaration,
     )?;
-    if let Some(pending_id) = claimed {
+    if let Some((pending_id, _)) = claimed {
         sea_forge_authority::cep::complete_settlement_resume(
             root,
             &pending_id,

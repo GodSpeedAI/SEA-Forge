@@ -560,6 +560,59 @@ mod tests {
         decl
     }
 
+    /// Append straight to the case ledger, past the settlement writer's boundary.
+    fn out_of_process_append(root: &Path, decl: &SettlementDeclaration) {
+        LedgerStream::open(
+            root,
+            format!("case-{}", decl.case_id),
+            "out_of_process_operator",
+        )
+        .unwrap()
+        .commit_typed(
+            "settlement_declaration",
+            vec![
+                decl.case_id.clone(),
+                decl.settlement_ref.clone(),
+                decl.declaration_id.clone(),
+            ],
+            decl,
+            vec![decl.declarer.authority_ref.clone()],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn external_declaration_without_provenance_is_refused_by_the_writer() {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = commit_evidence_and_settlement(
+            root.path(),
+            "case_a",
+            "run_a",
+            "item_acp",
+            vec!["a:sha256:1".into()],
+        );
+        let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
+        let error = sea_forge_settlement::append_declaration_ledgered_once(
+            root.path(),
+            &root.path().join("declarations.jsonl"),
+            "test",
+            &decl,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&error, ForgeError::Plan { class, .. } if *class == "settlement_authorization_missing"),
+            "{error:?}"
+        );
+        let written = LedgerStream::open(root.path(), "case-case_a", "test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .into_iter()
+            .filter(|entry| entry.record_kind == "settlement_declaration")
+            .count();
+        assert_eq!(written, 0, "a refused declaration is not written");
+    }
+
     fn quarantines(root: &Path, case_id: &str) -> Vec<Value> {
         LedgerStream::open(root, format!("case-{case_id}"), "test")
             .unwrap()
@@ -583,13 +636,7 @@ mod tests {
         );
         // Legacy or out-of-process: a SWE_SEED declaration with no authorisation provenance.
         let decl = declaration("case_a", "run_a", "item_acp", &manifest, "swe_seed_test");
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "out_of_process_operator",
-            &decl,
-        )
-        .unwrap();
+        out_of_process_append(root.path(), &decl);
         reconcile_all_cases(root.path()).unwrap();
         reconcile_all_cases(root.path()).unwrap();
 
@@ -637,13 +684,7 @@ mod tests {
         replay.authorization_ref = authorised.authorization_ref.clone();
         replay.authorization_request_sha256 = authorised.authorization_request_sha256.clone();
         replay.declaration_hash = sea_forge_settlement::compute_declaration_hash(&replay).unwrap();
-        sea_forge_settlement::append_declaration_ledgered_once(
-            root.path(),
-            &root.path().join("declarations.jsonl"),
-            "out_of_process_operator",
-            &replay,
-        )
-        .unwrap();
+        out_of_process_append(root.path(), &replay);
 
         let outcomes = reconcile_swe_seed_declarations(root.path(), "case_a").unwrap();
         let run_a = outcomes.iter().find(|o| o.run_id == "run_a").unwrap();

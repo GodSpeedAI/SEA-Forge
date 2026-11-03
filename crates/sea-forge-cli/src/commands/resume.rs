@@ -1107,9 +1107,10 @@ fn resume_artifact_transition(
         }
         sea_forge_authority::cep::SettlementGate::Resumed {
             pending_id,
+            request_sha256,
             attempt,
             ..
-        } => Some((pending_id, attempt)),
+        } => Some((pending_id, request_sha256, attempt)),
         // Completed: the declaration already exists, so resume only finds it again (no second declaration).
         sea_forge_authority::cep::SettlementGate::Completed { .. }
         | sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
@@ -1133,6 +1134,12 @@ fn resume_artifact_transition(
         },
         &authority,
         transition_grant,
+        claimed.as_ref().map(|(pending_id, request_sha256, _)| {
+            sea_forge_artifact_ip::PendingAuthorization {
+                pending_id,
+                request_sha256,
+            }
+        }),
     );
     let resumed = match result {
         Err(ForgeError::Plan {
@@ -1140,7 +1147,7 @@ fn resume_artifact_transition(
             ..
         }) => {
             // The authority never received the declaration: release the attempt so a later resume may claim it.
-            if let Some((pending_id, attempt)) = &claimed {
+            if let Some((pending_id, _, attempt)) = &claimed {
                 sea_forge_authority::cep::release_settlement_resume(&root, pending_id, *attempt)
                     .map_err(|error| {
                         ForgeError::Input(format!("settlement release refused: {error}"))
@@ -1154,7 +1161,7 @@ fn resume_artifact_transition(
         }
         other => other?,
     };
-    if let Some((pending_id, _)) = &claimed {
+    if let Some((pending_id, _, _)) = &claimed {
         // The declaration exists: record the attempt's outcome. Any failure before this leaves the attempt open,
         // and the next resume reconciles it from the ledger instead of declaring again.
         sea_forge_authority::cep::complete_settlement_resume(
