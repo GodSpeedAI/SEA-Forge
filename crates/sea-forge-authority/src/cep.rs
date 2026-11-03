@@ -13,8 +13,8 @@
 
 mod declaration_authority;
 pub use declaration_authority::{
-    is_external_declaration, reconcile_operation_claims, verify_case_declarations,
-    DeclarationAuthorization, DeclarationRefusal,
+    is_external_declaration, reconcile_operation_claims, settle_failed_resume_attempt,
+    verify_case_declarations, AttemptSettlement, DeclarationAuthorization, DeclarationRefusal,
 };
 mod obligation;
 pub use obligation::{

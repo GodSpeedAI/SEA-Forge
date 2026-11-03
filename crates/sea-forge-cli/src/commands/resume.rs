@@ -1165,24 +1165,37 @@ fn resume_artifact_transition(
         }),
     );
     let resumed = match result {
-        Err(ForgeError::Plan {
-            class: "settlement_authority_unavailable",
-            ..
-        }) => {
-            // The authority never received the declaration: release the attempt so a later resume may claim it.
+        Ok(resumed) => resumed,
+        Err(error) => {
+            // Settle the open claim from the ledger before returning. A declaration naming the claim completes it;
+            // a claim no declaration names is released for a later resume; anything else stays open for
+            // reconciliation, so a second declaration can never be appended.
             if let Some((pending_id, _, attempt)) = &claimed {
-                sea_forge_authority::cep::release_settlement_resume(&root, pending_id, *attempt)
-                    .map_err(|error| {
-                        ForgeError::Input(format!("settlement release refused: {error}"))
-                    })?;
+                sea_forge_authority::cep::settle_failed_resume_attempt(
+                    &root,
+                    &pending.case_id,
+                    pending_id,
+                    *attempt,
+                )
+                .map_err(|refused| {
+                    ForgeError::Input(format!("settlement claim refused: {refused}"))
+                })?;
             }
-            return Ok(ResumeOutcome {
-                case_id: options.case_id,
-                state: "awaiting_approval",
-                exit_code: 5,
-            });
+            if matches!(
+                error,
+                ForgeError::Plan {
+                    class: "settlement_authority_unavailable",
+                    ..
+                }
+            ) {
+                return Ok(ResumeOutcome {
+                    case_id: options.case_id,
+                    state: "awaiting_approval",
+                    exit_code: 5,
+                });
+            }
+            return Err(error);
         }
-        other => other?,
     };
     if let Some((pending_id, _, _)) = &claimed {
         // The declaration exists: record the attempt's outcome. Any failure before this leaves the attempt open,
