@@ -1123,7 +1123,10 @@ impl AuthorityPolicyBundle {
                     .iter()
                     .any(String::is_empty)
                 || descriptor.standing_basis.is_empty()
-                || descriptor.timeout_secs == 0;
+                || descriptor.timeout_secs == 0
+                || descriptor.timeout_secs
+                    > (cep::SETTLEMENT_CLAIM_LEASE_SECS - cep::SETTLEMENT_CLAIM_HEADROOM_SECS)
+                        as u64;
             let invalid_adapter = match descriptor.adapter.as_str() {
                 "local" => descriptor.may_issue_strong || !descriptor.command.is_empty(),
                 "swe_seed" => descriptor.command.first().is_none_or(String::is_empty),

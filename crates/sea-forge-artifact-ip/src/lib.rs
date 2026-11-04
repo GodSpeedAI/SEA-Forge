@@ -924,6 +924,8 @@ pub fn load_completed_transition(
 #[derive(Debug, Clone, Copy)]
 pub struct PendingAuthorization<'a> {
     pub pending_id: &'a str,
+    /// The claimed attempt this resume holds. Its outcome is recorded only while that attempt is still open.
+    pub attempt: u32,
     pub request_sha256: &'a str,
     pub declared_content_sha256: &'a str,
 }
@@ -1123,6 +1125,7 @@ pub fn resume_pending_transition(
                 sea_forge_authority::cep::fail_settlement_resume(
                     root,
                     claim.pending_id,
+                    claim.attempt,
                     "content_mismatch",
                 )
                 .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
@@ -1146,6 +1149,7 @@ pub fn resume_pending_transition(
                 sea_forge_authority::cep::fail_settlement_resume(
                     root,
                     claim.pending_id,
+                    claim.attempt,
                     "content_mismatch",
                 )
                 .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;

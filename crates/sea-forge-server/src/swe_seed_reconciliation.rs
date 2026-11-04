@@ -607,7 +607,7 @@ mod tests {
     fn append_authorized(root: &Path, decl: SettlementDeclaration) -> SettlementDeclaration {
         let decl = append_under_claim(root, decl);
         let pending_id = decl.authorization_ref.clone().unwrap();
-        complete_settlement_resume(root, &pending_id, &decl.declaration_id).unwrap();
+        complete_settlement_resume(root, &pending_id, 1, &decl.declaration_id).unwrap();
         decl
     }
 
@@ -852,7 +852,7 @@ mod tests {
     }
 
     #[test]
-    fn interrupted_claim_without_a_declaration_fails_and_is_never_redeclared() {
+    fn interrupted_claim_within_its_lease_is_left_open_and_never_redeclared() {
         let root = tempfile::tempdir().unwrap();
         commit_evidence_and_settlement(
             root.path(),
@@ -863,11 +863,12 @@ mod tests {
         );
         let (pending_id, _) = claim_approved(root.path(), "run_a");
 
+        // The claim was just written, so its lease is live: reconciliation must not fail it.
         reconcile_operation_claims(root.path(), "case_a", "run_a").unwrap();
 
         assert!(matches!(
             settlement_status(root.path(), &pending_id).unwrap(),
-            SettlementStatus::Failed { .. }
+            SettlementStatus::Resuming { attempt: 1 }
         ));
         let bundle: AuthorityPolicyBundle =
             sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();

@@ -93,6 +93,37 @@ rules: []
 }
 
 #[test]
+fn settlement_descriptor_timeout_must_leave_headroom_below_the_claim_lease() {
+    // The lease is 900s with 300s reserved for work after the authority returns, so 600s is the largest timeout.
+    let descriptor = |timeout: u64| {
+        sea_forge_core::yaml::from_str::<AuthorityPolicyBundle>(&format!(
+            r#"version: "0.1"
+settlement_authorities:
+  - authority_ref: swe_seed_prod
+    adapter: swe_seed
+    command: ["/opt/swe-seed", "declare"]
+    timeout_secs: {timeout}
+    trust_anchor_ref: key://swe-seed/current
+    declarer_actor_id: swe_seed
+    permitted_declarer_roles: [R-AA]
+    standing_basis: externally-attested
+    may_issue_strong: true
+rules: []
+"#
+        ))
+        .unwrap()
+    };
+    assert!(PolicyAuthorityEngine::new(descriptor(600)).is_ok());
+    assert_eq!(
+        PolicyAuthorityEngine::new(descriptor(601))
+            .err()
+            .unwrap()
+            .class(),
+        "settlement_authority_config_error"
+    );
+}
+
+#[test]
 fn m8_attestation_rule_missing_role_constraints_is_schema_error() {
     let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(
         r#"version: "0.1"

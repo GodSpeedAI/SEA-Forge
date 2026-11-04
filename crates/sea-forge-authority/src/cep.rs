@@ -2312,6 +2312,14 @@ pub fn settlement_approval_id(pending_id: &str) -> String {
     format!("apr-{pending_id}")
 }
 
+/// How long an open claim is presumed live, from its `claimed_at`. Longer than the authority timeout any descriptor
+/// may carry (enforced on load), so a lapsed lease means the claiming attempt is no longer calling the authority.
+pub const SETTLEMENT_CLAIM_LEASE_SECS: i64 = 900;
+
+/// Time reserved inside the lease for the work after the authority returns: reading its output, checking the echo,
+/// and appending the declaration. A descriptor timeout must leave this headroom below the lease.
+pub const SETTLEMENT_CLAIM_HEADROOM_SECS: i64 = 300;
+
 fn state_key(pending_id: &str, suffix: &str) -> String {
     format!("settlement-state:{pending_id}:{suffix}")
 }
@@ -2471,6 +2479,29 @@ fn status_in(
             .find(|(s, _)| *s == suffix)
             .map(|(_, entry)| *entry)
     };
+    // An attempt is closed by one create-only marker, so its latest closing outcome decides the status.
+    let closing = states
+        .iter()
+        .filter_map(|(s, entry)| {
+            let attempt = s.strip_prefix("closed:")?.parse::<u32>().ok()?;
+            Some((attempt, *entry))
+        })
+        .max_by_key(|(attempt, _)| *attempt);
+    if let Some((_, entry)) = closing {
+        match text_at(&entry.payload, "/state").as_str() {
+            "completed" => {
+                return SettlementStatus::Completed {
+                    declaration_ref: text_at(&entry.payload, "/declaration_ref"),
+                }
+            }
+            "failed" => {
+                return SettlementStatus::Failed {
+                    reason: text_at(&entry.payload, "/reason"),
+                }
+            }
+            _ => {}
+        }
+    }
     if let Some(entry) = find("completed") {
         return SettlementStatus::Completed {
             declaration_ref: text_at(&entry.payload, "/declaration_ref"),
@@ -2492,7 +2523,9 @@ fn status_in(
         .filter_map(|(s, _)| s.strip_prefix("resuming:")?.parse::<u32>().ok())
         .max();
     if let Some(attempt) = latest {
-        if find(&format!("released:{attempt}")).is_none() {
+        if find(&format!("released:{attempt}")).is_none()
+            && find(&format!("closed:{attempt}")).is_none()
+        {
             return SettlementStatus::Resuming { attempt };
         }
     }
@@ -2904,6 +2937,25 @@ fn commit_terminal(
     Ok(())
 }
 
+/// Close one claimed attempt with its outcome. The close is a single create-only marker per attempt, so an attempt
+/// has at most one outcome: a reconciler and a worker cannot both settle it.
+fn close_attempt(
+    ledger: &LedgerStream,
+    record: &SettlementPendingRecord,
+    attempt: u32,
+    outcome: &str,
+    extra: Value,
+) -> Result<(), CepAuthorityError> {
+    ledger.commit_typed_new(
+        SETTLEMENT_STATE_KIND,
+        state_key(&record.pending_id, &format!("closed:{attempt}")),
+        vec![record.operation_id.clone(), record.pending_id.clone()],
+        &state_payload(record, outcome, extra),
+        vec![record.decision_ref.clone()],
+    )?;
+    Ok(())
+}
+
 /// Audit a refused use of an approval. Every refusal is its own governance event.
 fn refuse_approval(
     ledger: &LedgerStream,
@@ -2933,10 +2985,13 @@ fn refuse_approval(
     Ok(())
 }
 
-/// Record the outcome of a claimed attempt that declared. Idempotent for the same declaration.
+/// Record the outcome of a claimed attempt that declared. Fenced to that attempt: once a newer attempt owns the
+/// claim, or the attempt was failed or released, a stale worker's completion is refused. Idempotent for the same
+/// declaration.
 pub fn complete_settlement_resume(
     root: &Path,
     pending_id: &str,
+    attempt: u32,
     declaration_ref: &str,
 ) -> Result<(), CepAuthorityError> {
     let ledger = settlement_ledger(root)?;
@@ -2946,33 +3001,57 @@ pub fn complete_settlement_resume(
         SettlementStatus::Completed {
             declaration_ref: existing,
         } if existing == declaration_ref => Ok(()),
-        SettlementStatus::Resuming { .. } => commit_terminal(
+        SettlementStatus::Resuming { attempt: open } if open == attempt => match close_attempt(
             &ledger,
             &record,
+            attempt,
             "completed",
             json!({"declaration_ref": declaration_ref}),
-        ),
+        ) {
+            Ok(()) => Ok(()),
+            // A concurrent settle of this attempt may have closed it with the same declaration.
+            Err(error) => match settlement_status(root, pending_id)? {
+                SettlementStatus::Completed {
+                    declaration_ref: existing,
+                } if existing == declaration_ref => Ok(()),
+                _ => Err(error),
+            },
+        },
         other => Err(CepAuthorityError::Internal(format!(
-            "settlement {pending_id} is {other:?}, not resuming; it cannot complete"
+            "settlement {pending_id} attempt {attempt} is {other:?}; it cannot complete"
         ))),
     }
 }
 
-/// Record that a claimed attempt failed for a reason that will not succeed on retry.
+/// Record that a claimed attempt failed for a reason that will not succeed on retry. Fenced to that attempt.
 pub fn fail_settlement_resume(
     root: &Path,
     pending_id: &str,
+    attempt: u32,
     reason: &str,
 ) -> Result<(), CepAuthorityError> {
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
     match status_in(&entries, &record, Utc::now()) {
-        SettlementStatus::Resuming { .. } => {
-            commit_terminal(&ledger, &record, "failed", json!({"reason": reason}))
+        SettlementStatus::Resuming { attempt: open } if open == attempt => {
+            match close_attempt(
+                &ledger,
+                &record,
+                attempt,
+                "failed",
+                json!({"reason": reason}),
+            ) {
+                Ok(()) => Ok(()),
+                // A concurrent settle of this attempt may have failed it already: that outcome stands.
+                Err(error) => match settlement_status(root, pending_id)? {
+                    SettlementStatus::Failed { .. } => Ok(()),
+                    _ => Err(error),
+                },
+            }
         }
         other => Err(CepAuthorityError::Internal(format!(
-            "settlement {pending_id} is {other:?}, not resuming; it cannot fail"
+            "settlement {pending_id} attempt {attempt} is {other:?}; it cannot fail"
         ))),
     }
 }
@@ -2988,10 +3067,11 @@ pub fn release_settlement_resume(
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
     match status_in(&entries, &record, Utc::now()) {
-        SettlementStatus::Resuming { attempt: open } if open == attempt => commit_terminal(
+        SettlementStatus::Resuming { attempt: open } if open == attempt => close_attempt(
             &ledger,
             &record,
-            &format!("released:{attempt}"),
+            attempt,
+            "released",
             json!({"attempt": attempt}),
         ),
         other => Err(CepAuthorityError::Internal(format!(
@@ -3001,20 +3081,78 @@ pub fn release_settlement_resume(
 }
 
 /// Crash recovery. A claimed attempt with no recorded outcome is settled from what the ledger holds: if the
-/// caller found the declaration that attempt made, the attempt completes on it; otherwise it fails with a reason
-/// and nothing is declared. Never a second declaration. Returns the status after reconciliation.
+/// caller found the declaration that attempt made, the attempt completes on it. Otherwise it fails, but only once
+/// its lease has lapsed, so an attempt that may still be calling the authority is left alone. Never a second
+/// declaration. Returns the status after reconciliation.
 pub fn reconcile_settlement_resume(
     root: &Path,
     pending_id: &str,
     declaration_ref: Option<&str>,
 ) -> Result<SettlementStatus, CepAuthorityError> {
-    if let SettlementStatus::Resuming { .. } = settlement_status(root, pending_id)? {
+    reconcile_settlement_resume_at(root, pending_id, declaration_ref, Utc::now())
+}
+
+/// [`reconcile_settlement_resume`] judged at an explicit instant. Production recovery uses
+/// [`reconcile_settlement_resume`]; this exists so lease boundaries can be tested without waiting.
+pub fn reconcile_settlement_resume_at(
+    root: &Path,
+    pending_id: &str,
+    declaration_ref: Option<&str>,
+    now: DateTime<Utc>,
+) -> Result<SettlementStatus, CepAuthorityError> {
+    let ledger = settlement_ledger(root)?;
+    let entries = ledger.read_entries()?;
+    let record = require_pending(&entries, pending_id)?;
+    if let SettlementStatus::Resuming { attempt } = status_in(&entries, &record, now) {
         match declaration_ref {
-            Some(found) => complete_settlement_resume(root, pending_id, found)?,
-            None => fail_settlement_resume(root, pending_id, "interrupted_before_declaration")?,
+            Some(found) => complete_settlement_resume(root, pending_id, attempt, found)?,
+            None => {
+                if claim_lease_lapsed(&entries, &record, attempt, now)? {
+                    // A concurrent reconciler may have closed the attempt since it was read. That outcome stands.
+                    if let Err(error) = fail_settlement_resume(
+                        root,
+                        pending_id,
+                        attempt,
+                        "interrupted_before_declaration",
+                    ) {
+                        if let SettlementStatus::Resuming { .. } =
+                            settlement_status(root, pending_id)?
+                        {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
         }
     }
     settlement_status(root, pending_id)
+}
+
+/// Whether an open attempt's lease has lapsed. The lease starts when the claim is written, which is before the
+/// attempt calls the authority. `SETTLEMENT_CLAIM_LEASE_SECS` is longer than the longest authority timeout a
+/// descriptor may carry (validated on load), so a lapsed lease means that call has ended.
+fn claim_lease_lapsed(
+    entries: &[LedgerEntry],
+    record: &SettlementPendingRecord,
+    attempt: u32,
+    now: DateTime<Utc>,
+) -> Result<bool, CepAuthorityError> {
+    let key = state_key(&record.pending_id, &format!("resuming:{attempt}"));
+    let entry = find_entry(entries, &key).ok_or_else(|| {
+        CepAuthorityError::Internal(format!(
+            "settlement {} attempt {attempt} has no claim record",
+            record.pending_id
+        ))
+    })?;
+    let claimed_at = DateTime::parse_from_rfc3339(&text_at(&entry.payload, "/claimed_at"))
+        .map_err(|error| {
+            CepAuthorityError::Internal(format!(
+                "settlement {} attempt {attempt} claim has no valid claimed_at: {error}",
+                record.pending_id
+            ))
+        })?
+        .with_timezone(&Utc);
+    Ok(now >= claimed_at + chrono::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS))
 }
 
 /// Reads a conflicting racer makes for the record the winner wrote before it gives up.

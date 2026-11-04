@@ -9,6 +9,27 @@ use std::path::PathBuf;
 use crate::approvals;
 use crate::plan_pipeline::{append_event, write_json};
 
+/// Wraps the settlement authority and records whether a declaration was attempted. A failure before the attempt
+/// cannot have reached the authority, so its claim can be released.
+struct DeclareTracker<'a> {
+    inner: &'a dyn sea_forge_settlement::SettlementAuthority,
+    started: std::cell::Cell<bool>,
+}
+
+impl sea_forge_settlement::SettlementAuthority for DeclareTracker<'_> {
+    fn declare(
+        &self,
+        req: &sea_forge_core::types::SettlementDeclarationRequest,
+    ) -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
+        self.started.set(true);
+        self.inner.declare(req)
+    }
+
+    fn adapter_ref(&self) -> &str {
+        self.inner.adapter_ref()
+    }
+}
+
 struct AuthorizedOperation {
     decision: AuthorityDecision,
     committed: sea_forge_ledger::CommittedRecordRef,
@@ -1142,6 +1163,10 @@ fn resume_artifact_transition(
         sea_forge_authority::cep::SettlementGate::Completed { .. }
         | sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
     };
+    let tracked = DeclareTracker {
+        inner: &authority,
+        started: std::cell::Cell::new(false),
+    };
     let result = sea_forge_artifact_ip::resume_pending_transition(
         &root,
         &options.entity,
@@ -1154,40 +1179,49 @@ fn resume_artifact_transition(
         &verifier_sha256,
         &workspace,
         declarer,
-        &authority,
+        &tracked,
         transition_grant,
-        claimed.as_ref().map(|(pending_id, request_sha256, _)| {
-            sea_forge_artifact_ip::PendingAuthorization {
-                pending_id,
-                request_sha256,
-                declared_content_sha256: &declared,
-            }
-        }),
+        claimed
+            .as_ref()
+            .map(|(pending_id, request_sha256, attempt)| {
+                sea_forge_artifact_ip::PendingAuthorization {
+                    pending_id,
+                    attempt: *attempt,
+                    request_sha256,
+                    declared_content_sha256: &declared,
+                }
+            }),
     );
     let resumed = match result {
         Ok(resumed) => resumed,
         Err(error) => {
-            // Settle the open claim from the ledger before returning. A declaration naming the claim completes it;
-            // a claim no declaration names is released for a later resume; anything else stays open for
-            // reconciliation, so a second declaration can never be appended.
-            if let Some((pending_id, _, attempt)) = &claimed {
-                sea_forge_authority::cep::settle_failed_resume_attempt(
-                    &root,
-                    &pending.case_id,
-                    pending_id,
-                    *attempt,
-                )
-                .map_err(|refused| {
-                    ForgeError::Input(format!("settlement claim refused: {refused}"))
-                })?;
-            }
-            if matches!(
+            let unavailable = matches!(
                 error,
                 ForgeError::Plan {
                     class: "settlement_authority_unavailable",
                     ..
                 }
-            ) {
+            );
+            // A failure before the authority call started cannot have reached the authority, so its claim is settled
+            // here (a declaration naming it completes it; otherwise it is released). After the call started, an
+            // unavailable authority is also known not to have received the declaration. Any other error after the
+            // call leaves the claim open: the call may still be in flight, and reconciliation settles it once its
+            // lease lapses, or at once if a declaration is found.
+            let call_started = tracked.started.get();
+            if let Some((pending_id, _, attempt)) = &claimed {
+                if !call_started || unavailable {
+                    sea_forge_authority::cep::settle_failed_resume_attempt(
+                        &root,
+                        &pending.case_id,
+                        pending_id,
+                        *attempt,
+                    )
+                    .map_err(|refused| {
+                        ForgeError::Input(format!("settlement claim refused: {refused}"))
+                    })?;
+                }
+            }
+            if unavailable {
                 return Ok(ResumeOutcome {
                     case_id: options.case_id,
                     state: "awaiting_approval",
@@ -1197,12 +1231,13 @@ fn resume_artifact_transition(
             return Err(error);
         }
     };
-    if let Some((pending_id, _, _)) = &claimed {
+    if let Some((pending_id, _, attempt)) = &claimed {
         // The declaration exists: record the attempt's outcome. Any failure before this leaves the attempt open,
         // and the next resume reconciles it from the ledger instead of declaring again.
         sea_forge_authority::cep::complete_settlement_resume(
             &root,
             pending_id,
+            *attempt,
             &resumed.declaration.declaration_id,
         )
         .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;
