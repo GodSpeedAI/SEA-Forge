@@ -157,6 +157,33 @@ enum Command {
         #[arg(long)]
         note: Option<String>,
     },
+    /// Resolve a settlement claim whose outcome is uncertain: its lease has lapsed and no declaration is recorded.
+    /// Give exactly one of `--declared <declaration_ref>` (the attempt completes on that declaration) or
+    /// `--not-declared <evidence>` (the attempt is released for a fenced retry).
+    ResolveUncertain {
+        case_id: String,
+        approval_id: String,
+        #[arg(long)]
+        attempt: u32,
+        #[arg(
+            long,
+            conflicts_with = "not_declared",
+            required_unless_present = "not_declared"
+        )]
+        declared: Option<String>,
+        #[arg(
+            long,
+            conflicts_with = "declared",
+            required_unless_present = "declared"
+        )]
+        not_declared: Option<String>,
+        #[arg(long, default_value = ".sea-forge")]
+        root: PathBuf,
+        #[arg(long)]
+        policy: Option<PathBuf>,
+        #[arg(long, default_value = "operator_local")]
+        actor: String,
+    },
     Reject {
         case_id: String,
         approval_id: String,
@@ -705,6 +732,44 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
                 actor: &actor,
                 note: note.as_deref(),
                 policy: Some(&policy),
+            })
+            .map_err(|e| (1, e))
+        }
+        Command::ResolveUncertain {
+            case_id,
+            approval_id,
+            attempt,
+            declared,
+            not_declared,
+            root,
+            policy,
+            actor,
+        } => {
+            let policy = commands::mediated::policy_path(&root, policy.as_deref());
+            let resolution = match (declared, not_declared) {
+                (Some(declaration_ref), None) => {
+                    commands::approve::UncertainResolutionArg::Declared(declaration_ref)
+                }
+                (None, Some(evidence)) => {
+                    commands::approve::UncertainResolutionArg::NotDeclared(evidence)
+                }
+                _ => {
+                    return Err((
+                        2,
+                        sea_forge_core::errors::ForgeError::Input(
+                            "give exactly one of --declared or --not-declared".into(),
+                        ),
+                    ))
+                }
+            };
+            commands::approve::resolve_uncertain(commands::approve::UncertainOptions {
+                root: &root,
+                case_id: &case_id,
+                approval_id: &approval_id,
+                attempt,
+                actor: &actor,
+                resolution,
+                policy: &policy,
             })
             .map_err(|e| (1, e))
         }

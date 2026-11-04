@@ -7,7 +7,8 @@
 //! wrappers render the outcome exactly as the CLI always has.
 
 use sea_forge_authority::cep::{
-    settlement_approval_id, settlement_pending_records, CepAuthorityService, SettlementCriteria,
+    resolve_uncertain_settlement, settlement_approval_id, settlement_pending_records,
+    CepAuthorityService, SettlementCriteria, UncertainResolution,
 };
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::errors::ForgeError;
@@ -54,6 +55,75 @@ fn resolve(opts: &ApproveOptions, approved: bool) -> Result<u8, ForgeError> {
     )?;
     println!("approval_id={}", opts.approval_id);
     println!("status={:?}", resolved.status);
+    println!("resolved_by={}", opts.actor);
+    Ok(0)
+}
+
+/// The operator's resolution of an uncertain settlement claim, as given on the command line.
+pub enum UncertainResolutionArg {
+    Declared(String),
+    NotDeclared(String),
+}
+
+pub struct UncertainOptions<'a> {
+    pub root: &'a Path,
+    pub case_id: &'a str,
+    pub approval_id: &'a str,
+    pub attempt: u32,
+    pub actor: &'a str,
+    pub resolution: UncertainResolutionArg,
+    pub policy: &'a Path,
+}
+
+/// Resolve an uncertain settlement claim (lease lapsed, no ledger declaration) through the same authority the
+/// approval path uses. The approval must name a pending record of this case, and the resolver is refused by
+/// policy unless it may resolve approvals. Each resolution is audited before the attempt closes.
+pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
+    let Some(pending_id) = opts.approval_id.strip_prefix("apr-") else {
+        return Err(ForgeError::Input(format!(
+            "approval {} is not a settlement pending approval",
+            opts.approval_id
+        )));
+    };
+    let pending = settlement_pending_records(opts.root)
+        .map_err(|error| ForgeError::Input(format!("settlement resolution refused: {error}")))?;
+    let record = pending
+        .iter()
+        .find(|record| record.pending_id == pending_id)
+        .ok_or_else(|| {
+            ForgeError::Input(format!(
+                "approval {} is not a settlement pending approval",
+                opts.approval_id
+            ))
+        })?;
+    if record.case_id != opts.case_id {
+        return Err(ForgeError::Input(format!(
+            "approval {} does not belong to case {}",
+            opts.approval_id, opts.case_id
+        )));
+    }
+    // The policy must load: a missing or invalid policy refuses the resolution rather than skipping the check.
+    AuthorityPolicyBundle::load(opts.policy)?;
+    let resolver = Actor {
+        actor_id: opts.actor.into(),
+        role: ActorRole::Operator,
+    };
+    let resolution = match opts.resolution {
+        UncertainResolutionArg::Declared(declaration_ref) => {
+            UncertainResolution::Declared { declaration_ref }
+        }
+        UncertainResolutionArg::NotDeclared(evidence) => {
+            UncertainResolution::NotDeclared { evidence }
+        }
+    };
+    let status =
+        resolve_uncertain_settlement(opts.root, pending_id, opts.attempt, resolution, &resolver)
+            .map_err(|error| {
+                ForgeError::Input(format!("settlement resolution refused: {error}"))
+            })?;
+    println!("approval_id={}", opts.approval_id);
+    println!("attempt={}", opts.attempt);
+    println!("status={status:?}");
     println!("resolved_by={}", opts.actor);
     Ok(0)
 }

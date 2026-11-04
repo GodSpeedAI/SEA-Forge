@@ -1,18 +1,22 @@
 # Current status
 
-**Status revision:** 213
+**Status revision:** 214
 
-**Stage:** Security: keep the claim lease after an ambiguous SWE_SEED declare failure (server path)
+**Stage:** Security: uncertain-claim recovery and operator resolution (PR 84); Horizon approval-gate engine verification (PR 15)
 
-**Summary:** A declare failure after the SWE_SEED authority call has started no longer fails the attempt claim. The external authority may still append its declaration after an error, so the claim keeps its lease and reconciliation settles it after the lease lapses. Only failures before the call starts are settled at once, and an unavailable authority still releases the claim. Baseline: origin/main 22bf66a3 passes all unit and integration suites; the three doctest targets failed once under --no-fail-fast and passed on rerun.
+**Summary:** A claim whose lease has lapsed with no ledger declaration is no longer failed automatically. The authority call may have appended a declaration before the worker died, so the claim is held open and blocks every resume. An operator resolves it with resolve_uncertain_settlement: either completing it on a declaration found in the authority record, or attesting that none exists and releasing the claim for a fenced retry. Resolution is audited, requires the operator role, and is refused before the lease lapses. The Horizon approval-gate policy is checked against the SEA-Forge engine with the rendered fixture.
 
 **Verified:**
-- origin/main 22bf66a3 cargo test --workspace: all unit and integration suites pass (0 failures); doctests pass on rerun
-- sea-forge-server lib: 184 pass, 0 fail, including ambiguous_declare_tests (2)
-- cargo fmt --check clean; cargo clippy -p sea-forge-server --all-targets -D warnings clean
+- cargo test -p sea-forge-authority -p sea-forge-cli -p sea-forge-server -p sea-forge-artifact-ip --lib --tests: 83 suites ok, 0 failed
+- cep_settlement: 73 pass including post-append completion, crash-then-operator resolution, concurrent reconcilers, concurrent operator resolutions, stale-worker fencing
+- horizon_gateway_policy: 9 pass against the rendered Horizon policy fixture
+- clippy -D warnings on sea-forge-authority and sea-forge-cli: clean
+- origin/main 22bf66a3 workspace doctests: sea-forge-server failed under the multi-package selection (deterministic); passes alone
 
 **Limits:**
-- The post-start path is verified by the decision helper's unit tests, not by an end-to-end server test with a fake authority transport; that test is still needed
-- Operator recovery for a declaration that lands after its lease lapsed is unchanged (quarantine)
+- No end-to-end server test drives submit_swe_seed_declaration through a transport; the ambiguous case is tested at the authority layer
+- No independent review yet; PR 84 must not merge until one is obtained
+- CLI approve takes the actor id from --actor and hard-codes the operator role; self-approval is enforced on that string, so the CLI is not an authenticated identity path
+- Operator resolution trusts the declaration reference the operator supplies; it is not checked against the external authority record
 
-**Next:** Independent review of the branch, then merge; then SEA-Forge PR #15 policy dependency and the gateway batch.
+**Next:** Independent review of PR 84; server end-to-end test; CLI identity fix; then SPEC-CR-003.
