@@ -9,6 +9,27 @@ use std::path::PathBuf;
 use crate::approvals;
 use crate::plan_pipeline::{append_event, write_json};
 
+/// Wraps the settlement authority and records whether a declaration was attempted. A failure before the attempt
+/// cannot have reached the authority, so its claim can be released.
+struct DeclareTracker<'a> {
+    inner: &'a dyn sea_forge_settlement::SettlementAuthority,
+    started: std::cell::Cell<bool>,
+}
+
+impl sea_forge_settlement::SettlementAuthority for DeclareTracker<'_> {
+    fn declare(
+        &self,
+        req: &sea_forge_core::types::SettlementDeclarationRequest,
+    ) -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
+        self.started.set(true);
+        self.inner.declare(req)
+    }
+
+    fn adapter_ref(&self) -> &str {
+        self.inner.adapter_ref()
+    }
+}
+
 struct AuthorizedOperation {
     decision: AuthorityDecision,
     committed: sea_forge_ledger::CommittedRecordRef,
@@ -1142,6 +1163,10 @@ fn resume_artifact_transition(
         sea_forge_authority::cep::SettlementGate::Completed { .. }
         | sea_forge_authority::cep::SettlementGate::Allowed(_) => None,
     };
+    let tracked = DeclareTracker {
+        inner: &authority,
+        started: std::cell::Cell::new(false),
+    };
     let result = sea_forge_artifact_ip::resume_pending_transition(
         &root,
         &options.entity,
@@ -1154,7 +1179,7 @@ fn resume_artifact_transition(
         &verifier_sha256,
         &workspace,
         declarer,
-        &authority,
+        &tracked,
         transition_grant,
         claimed
             .as_ref()
@@ -1177,12 +1202,14 @@ fn resume_artifact_transition(
                     ..
                 }
             );
-            // Only an unavailable authority is known not to have received the declaration, so only that error
-            // settles the claim here (a declaration naming it completes it; otherwise it is released). Any other
-            // error leaves the claim open: the authority call may still be in flight, and the claim is settled by
-            // reconciliation once its lease lapses, or at once if a declaration is found.
+            // A failure before the authority call started cannot have reached the authority, so its claim is settled
+            // here (a declaration naming it completes it; otherwise it is released). After the call started, an
+            // unavailable authority is also known not to have received the declaration. Any other error after the
+            // call leaves the claim open: the call may still be in flight, and reconciliation settles it once its
+            // lease lapses, or at once if a declaration is found.
+            let call_started = tracked.started.get();
             if let Some((pending_id, _, attempt)) = &claimed {
-                if unavailable {
+                if !call_started || unavailable {
                     sea_forge_authority::cep::settle_failed_resume_attempt(
                         &root,
                         &pending.case_id,

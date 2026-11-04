@@ -2316,6 +2316,10 @@ pub fn settlement_approval_id(pending_id: &str) -> String {
 /// may carry (enforced on load), so a lapsed lease means the claiming attempt is no longer calling the authority.
 pub const SETTLEMENT_CLAIM_LEASE_SECS: i64 = 900;
 
+/// Time reserved inside the lease for the work after the authority returns: reading its output, checking the echo,
+/// and appending the declaration. A descriptor timeout must leave this headroom below the lease.
+pub const SETTLEMENT_CLAIM_HEADROOM_SECS: i64 = 300;
+
 fn state_key(pending_id: &str, suffix: &str) -> String {
     format!("settlement-state:{pending_id}:{suffix}")
 }
