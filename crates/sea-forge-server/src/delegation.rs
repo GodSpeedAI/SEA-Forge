@@ -1020,6 +1020,9 @@ async fn submit_swe_seed_declaration(
         request.authorization_content_sha256 = Some(declared.clone());
     }
     let echo_request = request.clone();
+    // Set once the authority call is under way. Before that, a failure cannot have produced a declaration.
+    let call_started = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let call_started_in_task = Arc::clone(&call_started);
     let declared = tokio::task::spawn_blocking(
         move || -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
             let transport = sea_forge_settlement::CommandSweSeedTransport::new(
@@ -1031,16 +1034,22 @@ async fn submit_swe_seed_declaration(
                 &request.acting_entity_id,
             )
             .with_adapter_ref(&descriptor.authority_ref);
+            call_started_in_task.store(true, std::sync::atomic::Ordering::SeqCst);
             authority.declare(&request)
         },
     )
     .await
     .map_err(|error| ForgeError::Internal(format!("swe_seed declare task panic: {error}")))
     .and_then(|declared| declared);
-    // Nothing was appended: the claim is released when the authority was unavailable, failed otherwise.
     let declaration = match declared {
         Ok(declaration) => declaration,
         Err(error) => {
+            let started = call_started.load(std::sync::atomic::Ordering::SeqCst);
+            // After the call started, an error other than "unavailable" is ambiguous: the external authority may
+            // still append its declaration. The claim keeps its lease and reconciliation settles it later.
+            if ambiguous_after_call(started, &error) {
+                return Err(error);
+            }
             settle_unrecorded_claim(root, claimed.as_ref(), &error)?;
             return Err(error);
         }
@@ -1078,6 +1087,60 @@ async fn submit_swe_seed_declaration(
         .map_err(|error| ForgeError::Input(format!("settlement completion refused: {error}")))?;
     }
     Ok(())
+}
+
+/// Whether a declare failure may still have produced a declaration. Only an error raised after the authority call
+/// started can, and "unavailable" is the one post-start error that releases the claim.
+fn ambiguous_after_call(call_started: bool, error: &ForgeError) -> bool {
+    call_started
+        && !matches!(
+            error,
+            ForgeError::Plan {
+                class: "settlement_authority_unavailable",
+                ..
+            }
+        )
+}
+
+#[cfg(test)]
+mod ambiguous_declare_tests {
+    use super::ambiguous_after_call;
+    use sea_forge_core::ForgeError;
+
+    fn plan(class: &'static str) -> ForgeError {
+        ForgeError::Plan {
+            class,
+            message: "x".into(),
+        }
+    }
+
+    #[test]
+    fn a_failure_after_the_call_started_keeps_the_lease_unless_unavailable() {
+        assert!(ambiguous_after_call(
+            true,
+            &plan("settlement_declaration_timeout")
+        ));
+        assert!(ambiguous_after_call(
+            true,
+            &ForgeError::Internal("panic".into())
+        ));
+        assert!(!ambiguous_after_call(
+            true,
+            &plan("settlement_authority_unavailable")
+        ));
+    }
+
+    #[test]
+    fn a_failure_before_the_call_started_is_settled_at_once() {
+        assert!(!ambiguous_after_call(
+            false,
+            &plan("settlement_declaration_timeout")
+        ));
+        assert!(!ambiguous_after_call(
+            false,
+            &ForgeError::Internal("config".into())
+        ));
+    }
 }
 
 /// Record the outcome of a claimed attempt whose declaration was never made. Released attempts may be claimed
