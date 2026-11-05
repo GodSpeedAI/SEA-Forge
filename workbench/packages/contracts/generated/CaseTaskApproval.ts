@@ -13,7 +13,7 @@ export type RebuildStanding = "verified" | "rebuild_required";
 /**
  * One pending approval, shaped for the inbox.
  */
-export interface PendingApproval {
+export interface CaseTaskApproval {
   approval_id: string;
   case_id: string;
   /**

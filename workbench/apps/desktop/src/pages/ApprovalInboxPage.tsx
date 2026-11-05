@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { GovernedStatusPill } from "@sea-forge/ui-components";
-import type { PendingApproval } from "@sea-forge/contracts";
+import type { CaseTaskApproval } from "@sea-forge/contracts";
 import { useApprovals, VERDICT_PAST, type Verdict } from "../hooks/useApprovals";
 import { useIdentity } from "../hooks/useIdentity";
 import { evaluateProtectedAction, type ProtectedActionDecision } from "../guards/protectedAction";
@@ -23,7 +23,7 @@ function ApprovalRow({
   currentActorId,
   onDecide,
 }: {
-  approval: PendingApproval;
+  approval: CaseTaskApproval;
   busy: boolean;
   action: ProtectedActionDecision;
   currentActorId?: string;

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "PendingApproval",
+  "title": "CaseTaskApproval",
   "description": "One pending approval, shaped for the inbox.",
   "type": "object",
   "properties": {
