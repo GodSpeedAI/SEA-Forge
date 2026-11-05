@@ -3131,8 +3131,9 @@ pub enum UncertainResolution {
 }
 
 /// Resolve an uncertain open claim. Only an operator may resolve it, and only after the lease has lapsed, so the
-/// attempt's authority call cannot still be running. The resolution is audited before the attempt is closed, and
-/// the close is fenced to the attempt, so a retried resolution cannot settle a newer attempt.
+/// attempt's authority call cannot still be running. The requester cannot resolve their own claim. The attempt is
+/// closed first, fenced to the attempt, so a retried resolution cannot settle a newer attempt; the resolution is
+/// audited only after the close took effect.
 pub fn resolve_uncertain_settlement(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
@@ -3166,6 +3167,34 @@ pub fn resolve_uncertain_settlement_at(
     resolver: &Actor,
     now: DateTime<Utc>,
 ) -> Result<SettlementStatus, CepAuthorityError> {
+    resolve_uncertain_settlement_with_hook(
+        engine,
+        bundle,
+        root,
+        pending_id,
+        attempt,
+        resolution,
+        resolver,
+        now,
+        || {},
+    )
+}
+
+/// Test seam: [`resolve_uncertain_settlement_at`] with `before_close` run after every check has passed and before
+/// the attempt is closed, so a test can interleave another actor (the worker) at exactly that point.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn resolve_uncertain_settlement_with_hook(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
+    root: &Path,
+    pending_id: &str,
+    attempt: u32,
+    resolution: UncertainResolution,
+    resolver: &Actor,
+    now: DateTime<Utc>,
+    before_close: impl FnOnce(),
+) -> Result<SettlementStatus, CepAuthorityError> {
     if resolver.role != sea_forge_core::types::ActorRole::Operator {
         return Err(CepAuthorityError::Approval(format!(
             "{} may not resolve an uncertain settlement; only an operator may",
@@ -3175,6 +3204,33 @@ pub fn resolve_uncertain_settlement_at(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
+    // Separation of duties, as in `resolve_approval`: the requester can never resolve their own request. Checked
+    // here, before policy and before any status read or close, and audited as a refusal.
+    if resolver.actor_id == record.actor_id {
+        #[derive(serde::Serialize)]
+        struct SelfResolutionRefusal<'a> {
+            approval_id: &'a str,
+            requester_id: &'a str,
+            resolver_id: &'a str,
+            reason: &'static str,
+        }
+        let approval_id = settlement_approval_id(&record.pending_id);
+        ledger.commit_typed(
+            "approval_self_resolution_refused",
+            vec!["cognate".into(), approval_id.clone()],
+            &SelfResolutionRefusal {
+                approval_id: &approval_id,
+                requester_id: &record.actor_id,
+                resolver_id: &resolver.actor_id,
+                reason: "self_approval_refused",
+            },
+            vec![record.decision_ref.clone()],
+        )?;
+        return Err(CepAuthorityError::Approval(format!(
+            "self_approval_refused: {} requested {approval_id} and may not resolve it",
+            record.actor_id
+        )));
+    }
     // The same `approval_resolution` decision that governs resolving an approval governs resolving its uncertain
     // claim, evaluated before anything is read or written about the attempt. A refusal is audited, and fails closed.
     let approval_id = settlement_approval_id(&record.pending_id);
@@ -3241,30 +3297,39 @@ pub fn resolve_uncertain_settlement_at(
         UncertainResolution::Declared { declaration_ref } => ("declared", declaration_ref.as_str()),
         UncertainResolution::NotDeclared { evidence } => ("not_declared", evidence.as_str()),
     };
-    // One audit record per attempt, create-once: of several operators racing past the status check, the first
-    // record wins. An identical retry replays it, and a conflicting resolution is refused here, so the audit log
-    // never holds a resolution that did not take effect.
-    ledger.commit_typed_once(
-        SETTLEMENT_UNCERTAIN_RESOLUTION_KIND,
-        format!("settlement-uncertain:{}:{attempt}", record.pending_id),
-        vec![record.operation_id.clone(), record.pending_id.clone()],
-        &json!({
-            "pending_id": record.pending_id,
-            "attempt": attempt,
-            "resolution": kind,
-            "detail": detail,
-            "resolver_actor_id": resolver.actor_id,
-        }),
-        vec![record.decision_ref.clone()],
-    )?;
-    match resolution {
+    before_close();
+    // Close first. The close is fenced to the attempt and happens once per attempt, so racing resolvers and the
+    // worker are serialised by it: a resolution that loses is refused here and writes no audit record.
+    match &resolution {
         UncertainResolution::Declared { declaration_ref } => {
-            complete_settlement_resume(root, pending_id, attempt, &declaration_ref)?
+            complete_settlement_resume(root, pending_id, attempt, declaration_ref)?
         }
         UncertainResolution::NotDeclared { .. } => {
             release_settlement_resume(root, pending_id, attempt)?
         }
     }
+    // The audit record is written only after the close took effect, so the audit log never holds a resolution that
+    // did not take effect. It is create-once per attempt, so an identical retry replays it. If this write fails,
+    // the close has already happened: say so rather than hide it.
+    ledger
+        .commit_typed_once(
+            SETTLEMENT_UNCERTAIN_RESOLUTION_KIND,
+            format!("settlement-uncertain:{}:{attempt}", record.pending_id),
+            vec![record.operation_id.clone(), record.pending_id.clone()],
+            &json!({
+                "pending_id": record.pending_id,
+                "attempt": attempt,
+                "resolution": kind,
+                "detail": detail,
+                "resolver_actor_id": resolver.actor_id,
+            }),
+            vec![record.decision_ref.clone()],
+        )
+        .map_err(|error| {
+            CepAuthorityError::Internal(format!(
+                "settlement {pending_id} attempt {attempt} was closed as {kind}, but its resolution audit record was not written: {error}"
+            ))
+        })?;
     settlement_status(root, pending_id)
 }
 

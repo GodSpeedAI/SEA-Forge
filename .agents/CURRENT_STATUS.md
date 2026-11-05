@@ -1,18 +1,19 @@
 # Current status
 
-**Status revision:** 218
+**Status revision:** 219
 
-**Stage:** Security: PR 84 review fixes (4/4) uncertain-claim resolution is policy-gated
+**Stage:** Security: PR 84 review round 2 (1/3) separation of duties and close-before-audit for uncertain resolution
 
-**Summary:** resolve_uncertain_settlement now evaluates the policy's approval_resolution decision for the resolver before it reads or changes the attempt, so the CLI cannot complete or release an uncertain claim for an actor the policy does not allow. A refusal is audited as an authority_decision and leaves the claim open.
+**Summary:** resolve_uncertain_settlement refuses a resolver who is the requester (self_approval_refused, audited as approval_self_resolution_refused) after the operator-role check and before policy, status or close. The attempt is now closed first, and the resolution audit record is written only after the close succeeds, so a resolution fenced out by the worker leaves no audit. If the audit write fails after a successful close, the error says the close took effect and the audit was not written.
 
 **Verified:**
-- cep_settlement: an operator without an approval_resolution rule is refused, the claim stays open and no resolution record is written
+- cep_settlement: 76 pass, including the requester refused with the claim open and no resolution record, a different operator still resolving, and a worker completing between the operator's checks and the close (refused, no settlement_uncertain_resolution record) for both resolutions
+- The concurrent-resolver test still shows one close and one audit record
 
 **Limits:**
-- No end-to-end server test drives submit_swe_seed_declaration through a transport; the ambiguous case is tested at the authority layer
-- No independent review yet; PR 84 must not merge until one is obtained
-- CLI approve takes the actor id from --actor and hard-codes the operator role; self-approval is enforced on that string, so the CLI is not an authenticated identity path
+- The interleaving test uses a doc-hidden hook (resolve_uncertain_settlement_with_hook) that runs after the checks and before the close
+- A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
+- CLI approve and resolve-uncertain build an Operator from --actor, the same local trust model as approve
 - Operator resolution trusts the declaration reference the operator supplies; it is not checked against the external authority record
 
-**Next:** Independent review of PR 84; server end-to-end test; CLI identity fix; then SPEC-CR-003.
+**Next:** CLI keep-decision proof, server wiring test, docs and PR body.
