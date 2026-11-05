@@ -2335,7 +2335,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sea-forge-agent"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "reqwest",
@@ -2354,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-artifact-ip"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "sea-forge-authority",
@@ -2372,7 +2372,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-authority"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2388,7 +2388,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-capability"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2406,7 +2406,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-case-runner"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2426,7 +2426,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cell"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2441,7 +2441,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-changeset"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "serde",
@@ -2453,7 +2453,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cli"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "clap",
@@ -2488,7 +2488,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "getrandom 0.4.3",
@@ -2504,14 +2504,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-domain"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "sea-forge-core",
 ]
 
 [[package]]
 name = "sea-forge-domainforge"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "domainforge-core",
  "hex",
@@ -2524,7 +2524,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-evidence"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2537,7 +2537,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-extension"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2552,7 +2552,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-ledger"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -2570,7 +2570,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-os"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "tokio",
  "windows-sys 0.61.2",
@@ -2578,7 +2578,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-planner"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2592,7 +2592,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-realitytrace"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hex",
  "jsonschema 0.58.6",
@@ -2609,7 +2609,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-runtime"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2625,7 +2625,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-sandbox"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2647,7 +2647,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-self-model"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2663,7 +2663,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-server"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chacha20poly1305",
  "chrono",
@@ -2700,7 +2700,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-settlement"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2715,7 +2715,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-spec-pipeline"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2730,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-thoth"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2747,7 +2747,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-trace"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "sea-forge-core",
