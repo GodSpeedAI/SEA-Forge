@@ -2519,7 +2519,7 @@ fn no_follow_open_flag() -> u32 {
 
 /// `submit_swe_seed_declaration` driven end to end against a SWE_SEED command that starts and then fails. The
 /// command is the policy's own `settlement_authorities` entry, so no transport fake is needed.
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod started_command_failure_tests {
     use super::*;
     use sea_forge_authority::cep::{

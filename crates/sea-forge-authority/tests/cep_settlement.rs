@@ -2381,6 +2381,36 @@ mod lease_and_fencing {
     }
 
     #[test]
+    fn an_uncertain_resolution_with_empty_detail_is_refused_and_the_claim_stays_resuming() {
+        use sea_forge_authority::cep::UncertainResolution;
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        for resolution in [
+            UncertainResolution::Declared {
+                declaration_ref: "  ".into(),
+            },
+            UncertainResolution::NotDeclared {
+                evidence: "".into(),
+            },
+        ] {
+            assert!(resolve_uncertain_at(
+                root.path(),
+                &pending_id,
+                1,
+                resolution,
+                &operator(),
+                lapsed
+            )
+            .is_err());
+        }
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+    }
+
+    #[test]
     fn a_declaration_found_after_a_lapsed_claim_completes_it_and_nothing_is_declared_again() {
         let root = tempfile::tempdir().unwrap();
         let (pending_id, _) = open_claim(root.path());

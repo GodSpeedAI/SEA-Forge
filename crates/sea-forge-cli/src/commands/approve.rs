@@ -77,7 +77,8 @@ pub struct UncertainOptions<'a> {
 
 /// Resolve an uncertain settlement claim (lease lapsed, no ledger declaration) through the same authority the
 /// approval path uses. The approval must name a pending record of this case, and the resolver is refused by
-/// policy unless it may resolve approvals (`approval_resolution`). Each resolution is audited before the attempt closes.
+/// policy unless it may resolve approvals (`approval_resolution`). Each resolution closes the attempt first, and is
+/// audited only after the close took effect, so a refused or losing resolution writes no resolution record.
 pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
     let Some(pending_id) = opts.approval_id.strip_prefix("apr-") else {
         return Err(ForgeError::Input(format!(

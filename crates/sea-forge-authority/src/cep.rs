@@ -3130,9 +3130,10 @@ pub enum UncertainResolution {
     NotDeclared { evidence: String },
 }
 
-/// Resolve an uncertain open claim. Only an operator may resolve it, and only after the lease has lapsed, so the
-/// attempt's authority call cannot still be running. The requester cannot resolve their own claim. The attempt is
-/// closed first, fenced to the attempt, so a retried resolution cannot settle a newer attempt; the resolution is
+/// Resolve an uncertain open claim. Only an operator may resolve it, and only after the lease has lapsed. The lease
+/// lapse is the earliest point at which an operator may attest: the lease is a time bound only, so a detached
+/// grandchild or a command orphaned by a server crash can outlive it (see issue #86). The requester cannot resolve
+/// their own claim. The attempt is closed first, fenced to the attempt, so a retried resolution cannot settle a newer attempt; the resolution is
 /// audited only after the close took effect.
 pub fn resolve_uncertain_settlement(
     engine: &PolicyAuthorityEngine,
@@ -3200,6 +3201,21 @@ pub fn resolve_uncertain_settlement_with_hook(
             "{} may not resolve an uncertain settlement; only an operator may",
             resolver.actor_id
         )));
+    }
+    match &resolution {
+        UncertainResolution::Declared { declaration_ref } if declaration_ref.trim().is_empty() => {
+            return Err(CepAuthorityError::Approval(format!(
+                "an uncertain settlement resolution needs a non-empty {}",
+                "declaration reference"
+            )));
+        }
+        UncertainResolution::NotDeclared { evidence } if evidence.trim().is_empty() => {
+            return Err(CepAuthorityError::Approval(format!(
+                "an uncertain settlement resolution needs a non-empty {}",
+                "evidence"
+            )));
+        }
+        _ => {}
     }
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;

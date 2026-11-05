@@ -1469,6 +1469,7 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
 /// A SWE_SEED command that starts and then fails (nonzero exit, or a timeout) may already have appended its
 /// declaration, so `resume` keeps the claim open and exits 1 with `settlement_authority_call_failed`. A second
 /// resume must not call the authority again: releasing the claim here would let it declare twice.
+#[cfg(unix)]
 #[test]
 fn conformance_m8_resume_keeps_the_claim_when_a_started_authority_command_fails() {
     use std::os::unix::fs::PermissionsExt;
