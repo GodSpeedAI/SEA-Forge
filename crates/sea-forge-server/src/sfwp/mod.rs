@@ -460,7 +460,7 @@ pub fn get_schema(method: Option<&str>) -> GetSchemaResult {
             .iter()
             .map(|name| SchemaRef {
                 name: (*name).to_string(),
-                path: format!("workbench/packages/contracts/schema/{name}.schema.json"),
+                path: format!("contracts/schema/{name}.schema.json"),
             })
             .collect()
     } else {

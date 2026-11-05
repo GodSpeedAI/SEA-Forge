@@ -10,7 +10,7 @@
 // SFWP IPC bridge mock for the SEA-Forge Journey Settlement Gauntlet.
 //
 // Grounded in the real generated AJV contracts at
-// workbench/packages/contracts/schema/*.schema.json — every response shape
+// contracts/schema/*.schema.json — every response shape
 // below is validated against those schemas by
 // harness/validate_mock_payloads.mjs before this file is trusted, so the
 // Workbench renders its real query-result branches instead of an AJV

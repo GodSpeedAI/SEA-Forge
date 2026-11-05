@@ -718,7 +718,7 @@ async fn readiness_get_is_listed_as_inspect() {
 }
 
 /// Drift guard: regenerating the SFWP schemas must produce byte-identical
-/// output to the committed `workbench/packages/contracts/schema/*.schema.json`.
+/// output to the committed `contracts/schema/*.schema.json`.
 /// Shells out to the same generator binary the developer runs, into a temp
 /// dir, then diffs. Changing a schemars-derived type without regenerating
 /// fails here (the Rust-side half of the end-to-end drift check).
@@ -726,7 +726,7 @@ async fn readiness_get_is_listed_as_inspect() {
 fn generated_schemas_are_committed_and_current() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace = manifest.parent().and_then(Path::parent).unwrap();
-    let committed_dir = workspace.join("workbench/packages/contracts/schema");
+    let committed_dir = workspace.join("contracts/schema");
     assert!(
         committed_dir.exists(),
         "committed schema dir missing; run `just workbench-contracts-generate`"
@@ -801,6 +801,25 @@ fn generated_schemas_are_committed_and_current() {
         "sfwp::SCHEMA_TYPES and gen_sfwp_schema disagree; system.get_schema would \
          under- or over-report the available contracts"
     );
+}
+
+/// Every path `system.get_schema` advertises must exist in the repository, so
+/// the advertised schema home cannot drift from where the generator writes.
+#[test]
+fn get_schema_paths_exist_on_disk() {
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace = manifest.parent().and_then(Path::parent).unwrap();
+    let result = sea_forge_server::sfwp::get_schema(None);
+    assert!(!result.schemas.is_empty(), "get_schema returned no schemas");
+    for schema in &result.schemas {
+        let path = workspace.join(&schema.path);
+        assert!(
+            path.is_file(),
+            "system.get_schema advertises {} for {} but it does not exist",
+            schema.path,
+            schema.name
+        );
+    }
 }
 
 /// SF-006: the response is lost after the mutation lands, and the client

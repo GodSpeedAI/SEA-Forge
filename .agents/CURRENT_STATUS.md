@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 222
+**Status revision:** 224
 
 **Stage:** Security: ambiguous SWE_SEED declare keeps the claim; operator resolves uncertain claims (PR 84)
 
-**Summary:** Once the SWE_SEED authority call has started, a failure keeps the claim lease, and the CLI exits 1 with settlement_authority_call_failed. A failure before the call starts settles at once, and an unavailable authority releases the claim. Reconciliation no longer fails a lapsed claim that has no declaration. That claim stays open (Resuming) and blocks resumes. An operator resolves it with `sea-forge resolve-uncertain <case> <approval> --attempt N` plus either `--declared <ref>` or `--not-declared <evidence>`. This is allowed only after the lease lapses, never by the requester (`self_approval_refused`), and only if the `approval_resolution` policy allows it. The close happens first, and its audit record is written once per attempt after the close.
+**Summary:** Once the SWE_SEED authority call has started, a failure keeps the claim lease, and the CLI exits 1 with settlement_authority_call_failed. A failure before the call starts settles at once, and an unavailable authority releases the claim. Reconciliation no longer fails a lapsed claim that has no declaration. That claim stays open (Resuming) and blocks resumes. An operator resolves it with `sea-forge resolve-uncertain <case> <approval> --attempt N` plus either `--declared <ref>` or `--not-declared <evidence>`. This is allowed only after the lease lapses, never by the requester (`self_approval_refused`), and only if the `approval_resolution` policy allows it. The close happens first, and its audit record is written once per attempt after the close. Main is merged in: the generated SFWP schemas now live in contracts/schema/ (PR 85).
 
 **Verified:**
 - sea-forge-server lib delegation: new test passes
