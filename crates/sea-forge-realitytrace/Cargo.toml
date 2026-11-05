@@ -24,7 +24,7 @@ sea-forge-runtime = { path = "../sea-forge-runtime", version = "0.3.0" }
 sea-forge-server = { path = "../sea-forge-server", version = "0.3.0" }
 tempfile.workspace = true
 # Contract schemas are embedded and use only local references.
-jsonschema = { version = "0.58.6", default-features = false }
+jsonschema = { version = "0.60.0", default-features = false }
 
 [lints]
 workspace = true
