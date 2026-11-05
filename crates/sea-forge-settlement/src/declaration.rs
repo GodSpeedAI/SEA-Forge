@@ -334,7 +334,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
         let mut stdin = child
             .stdin
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdin was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stdin was not piped"))?;
         let request = serde_json::to_vec(req)?;
         let stdin_done = Arc::new(AtomicBool::new(false));
         let stdin_flag = Arc::clone(&stdin_done);
@@ -346,11 +346,11 @@ impl SweSeedTransport for CommandSweSeedTransport {
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdout was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stdout was not piped"))?;
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stderr was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stderr was not piped"))?;
         let stdout_reader = thread::spawn(move || {
             let mut bytes = Vec::new();
             stdout
@@ -365,13 +365,13 @@ impl SweSeedTransport for CommandSweSeedTransport {
         let started = Instant::now();
         let deadline = started + self.timeout;
         let status = loop {
-            if let Some(status) = child.try_wait().map_err(settlement_authority_unavailable)? {
+            if let Some(status) = child.try_wait().map_err(settlement_authority_call_failed)? {
                 break status;
             }
             if Instant::now() >= deadline {
                 tree.terminate(&child)?;
                 let _ = child.wait();
-                return Err(settlement_authority_unavailable(
+                return Err(settlement_authority_call_failed(
                     "SWE_SEED command timed out",
                 ));
             }
@@ -382,7 +382,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
             if Instant::now() >= deadline {
                 tree.terminate(&child)?;
                 let _ = child.wait();
-                return Err(settlement_authority_unavailable(
+                return Err(settlement_authority_call_failed(
                     "SWE_SEED command timed out",
                 ));
             }
@@ -390,17 +390,17 @@ impl SweSeedTransport for CommandSweSeedTransport {
         }
         stdin_writer
             .join()
-            .map_err(|_| settlement_authority_unavailable("SWE_SEED stdin writer failed"))?
-            .map_err(settlement_authority_unavailable)?;
+            .map_err(|_| settlement_authority_call_failed("SWE_SEED stdin writer failed"))?
+            .map_err(settlement_authority_call_failed)?;
         let stdout = join_reader_within(stdout_reader, deadline, "stdout")?;
         let stderr = join_reader_within(stderr_reader, deadline, "stderr")?;
         if !status.success() || stdout.len() > 1_048_576 || stderr.len() > 65_536 {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED command failed or exceeded output limits",
             ));
         }
         serde_json::from_slice(&stdout).map_err(|_| {
-            settlement_authority_unavailable("SWE_SEED returned an invalid JSON response")
+            settlement_authority_call_failed("SWE_SEED returned an invalid JSON response")
         })
     }
 }
@@ -441,9 +441,9 @@ impl ProcessTree {
             .terminate_and_wait(std::time::Duration::from_secs(5))
             .map_err(|error| match error.kind() {
                 std::io::ErrorKind::TimedOut => {
-                    settlement_authority_unavailable("timed out process group survived termination")
+                    settlement_authority_call_failed("timed out process group survived termination")
                 }
-                _ => settlement_authority_unavailable(error),
+                _ => settlement_authority_call_failed(error),
             })
     }
 }
@@ -455,17 +455,17 @@ fn terminate_process_tree_unix(child: &std::process::Child) -> Result<(), ForgeE
         .args(["-KILL", "--", &group])
         .env_clear()
         .output()
-        .map_err(settlement_authority_unavailable)?;
+        .map_err(settlement_authority_call_failed)?;
     if !group_kill.status.success() {
         let group_still_exists = Command::new("/bin/kill")
             .args(["-0", "--", &group])
             .env_clear()
             .output()
-            .map_err(settlement_authority_unavailable)?
+            .map_err(settlement_authority_call_failed)?
             .status
             .success();
         if group_still_exists {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED process group survived termination",
             ));
         }
@@ -483,12 +483,12 @@ fn join_reader_within(
             return handle
                 .join()
                 .map_err(|_| {
-                    settlement_authority_unavailable(format!("SWE_SEED {label} reader failed"))
+                    settlement_authority_call_failed(format!("SWE_SEED {label} reader failed"))
                 })?
-                .map_err(settlement_authority_unavailable);
+                .map_err(settlement_authority_call_failed);
         }
         if Instant::now() >= deadline {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED command timed out",
             ));
         }
@@ -496,9 +496,19 @@ fn join_reader_within(
     }
 }
 
+/// The SWE_SEED command could not be started, so it cannot have received the request or declared anything.
 fn settlement_authority_unavailable(error: impl std::fmt::Display) -> ForgeError {
     ForgeError::Plan {
         class: "settlement_authority_unavailable",
+        message: error.to_string(),
+    }
+}
+
+/// The SWE_SEED command was started and then failed (timeout, nonzero exit, output limits, invalid response). It
+/// may already have appended a declaration, so callers must not treat this as proof that none was made.
+fn settlement_authority_call_failed(error: impl std::fmt::Display) -> ForgeError {
+    ForgeError::Plan {
+        class: "settlement_authority_call_failed",
         message: error.to_string(),
     }
 }
@@ -839,5 +849,45 @@ mod tests {
             conflict.is_err(),
             "a second declaration for the same claim must not append as a distinct record"
         );
+    }
+    #[cfg(unix)]
+    fn class_of(error: &ForgeError) -> &'static str {
+        match error {
+            ForgeError::Plan { class, .. } => class,
+            other => panic!("expected a plan error, got {other:?}"),
+        }
+    }
+
+    /// A command that cannot be started never received the request, so it is the only failure that may be treated
+    /// as "nothing was declared".
+    #[cfg(unix)]
+    #[test]
+    fn a_command_that_cannot_start_is_unavailable() {
+        let transport =
+            CommandSweSeedTransport::new(vec!["/nonexistent/swe-seed".into()], 5).unwrap();
+        let error = transport
+            .submit(&swe_seed_declaration_request())
+            .unwrap_err();
+        assert_eq!(class_of(&error), "settlement_authority_unavailable");
+    }
+
+    /// Once the command has started it may have appended a declaration, so every later failure (nonzero exit,
+    /// invalid response, timeout) must be reported as a failed call, never as "unavailable".
+    #[cfg(unix)]
+    #[test]
+    fn failures_after_the_command_started_are_not_unavailable() {
+        for script in ["exit 3", "cat >/dev/null; echo not-json", "sleep 30"] {
+            let transport =
+                CommandSweSeedTransport::new(vec!["/bin/sh".into(), "-c".into(), script.into()], 1)
+                    .unwrap();
+            let error = transport
+                .submit(&swe_seed_declaration_request())
+                .unwrap_err();
+            assert_eq!(
+                class_of(&error),
+                "settlement_authority_call_failed",
+                "script {script:?}"
+            );
+        }
     }
 }

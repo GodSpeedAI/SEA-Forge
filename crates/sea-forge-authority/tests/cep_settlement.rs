@@ -1307,6 +1307,41 @@ fn resolve_in(
     service.resolve_approval(&settlement_approval_id(pending_id), approve, resolver)
 }
 
+/// Resolve an uncertain claim at `now` under `policy`, through the shared authority API.
+fn resolve_uncertain_under(
+    policy: &str,
+    root: &std::path::Path,
+    pending_id: &str,
+    attempt: u32,
+    resolution: sea_forge_authority::cep::UncertainResolution,
+    resolver: &Actor,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<SettlementStatus, CepAuthorityError> {
+    let (bundle, engine) = class_policy_engine(policy);
+    sea_forge_authority::cep::resolve_uncertain_settlement_at(
+        &engine, &bundle, root, pending_id, attempt, resolution, resolver, now,
+    )
+}
+
+fn resolve_uncertain_at(
+    root: &std::path::Path,
+    pending_id: &str,
+    attempt: u32,
+    resolution: sea_forge_authority::cep::UncertainResolution,
+    resolver: &Actor,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<SettlementStatus, CepAuthorityError> {
+    resolve_uncertain_under(
+        &approval_policy(),
+        root,
+        pending_id,
+        attempt,
+        resolution,
+        resolver,
+        now,
+    )
+}
+
 fn evidence_a() -> Vec<String> {
     vec!["evidence:a".into()]
 }
@@ -1929,8 +1964,103 @@ fn a_crash_between_claim_and_completion_recovers_to_exactly_one_declaration() {
     ));
 }
 
+/// An operator the policy gives no `approval_resolution` rule is refused even though the role matches, and the
+/// refusal leaves the claim open with no resolution audit record.
 #[test]
-fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
+fn an_operator_without_an_approval_resolution_rule_cannot_resolve_an_uncertain_claim() {
+    use sea_forge_authority::cep::UncertainResolution;
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, _) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    let lapsed =
+        lease_and_fencing::claimed_at(root.path(), &pending_id) + lease_and_fencing::lease();
+    // The same policy minus the `approval_resolution` rule: the engine denies by default.
+    let no_resolution_rule = EXTERNAL_GATED.to_string();
+    let attest = || UncertainResolution::NotDeclared {
+        evidence: "authority-record".into(),
+    };
+    let refused = resolve_uncertain_under(
+        &no_resolution_rule,
+        root.path(),
+        &pending_id,
+        1,
+        attest(),
+        &operator(),
+        lapsed,
+    );
+    assert!(refused.is_err(), "policy must refuse the resolver");
+    assert_eq!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Resuming { attempt: 1 },
+        "a refused resolver must leave the claim open"
+    );
+    let audits = LedgerStream::open(root.path(), LEDGER_ID, "cep-lease-test")
+        .unwrap()
+        .read_entries()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry.record_kind == "settlement_uncertain_resolution")
+        .count();
+    assert_eq!(
+        audits, 0,
+        "a refused resolution writes no resolution record"
+    );
+    // The allowed policy still resolves it.
+    resolve_uncertain_at(root.path(), &pending_id, 1, attest(), &operator(), lapsed).unwrap();
+}
+
+/// The requester cannot resolve their own uncertain claim, even as an operator the policy allows. The refusal is
+/// audited with the same reason as a self-approval, the claim stays open, and no resolution record is written. A
+/// different operator still resolves it.
+#[test]
+fn the_requester_cannot_resolve_their_own_uncertain_claim() {
+    use sea_forge_authority::cep::UncertainResolution;
+    let root = tempfile::tempdir().unwrap();
+    let record = pending_for(root.path(), evidence_a());
+    resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
+    let (pending_id, _) =
+        declared(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap());
+    let lapsed =
+        lease_and_fencing::claimed_at(root.path(), &pending_id) + lease_and_fencing::lease();
+    let requester = Actor {
+        actor_id: record.actor_id.clone(),
+        role: ActorRole::Operator,
+    };
+    let attest = || UncertainResolution::NotDeclared {
+        evidence: "authority-record".into(),
+    };
+    let refused = resolve_uncertain_at(root.path(), &pending_id, 1, attest(), &requester, lapsed);
+    assert!(
+        format!("{refused:?}").contains("self_approval_refused"),
+        "unexpected: {refused:?}"
+    );
+    assert_eq!(
+        settlement_status(root.path(), &pending_id).unwrap(),
+        SettlementStatus::Resuming { attempt: 1 },
+        "a refused requester must leave the claim open"
+    );
+    let entries = LedgerStream::open(root.path(), LEDGER_ID, "cep-lease-test")
+        .unwrap()
+        .read_entries()
+        .unwrap();
+    let count = |kind: &str| entries.iter().filter(|e| e.record_kind == kind).count();
+    assert_eq!(count("settlement_uncertain_resolution"), 0);
+    assert_eq!(
+        count("approval_self_resolution_refused"),
+        1,
+        "refusal audited"
+    );
+    // A different operator still resolves it.
+    let released =
+        resolve_uncertain_at(root.path(), &pending_id, 1, attest(), &operator(), lapsed).unwrap();
+    assert_eq!(released, SettlementStatus::Approved);
+}
+
+#[test]
+fn a_crash_with_no_declaration_is_held_uncertain_and_resolved_by_an_operator_only() {
+    use sea_forge_authority::cep::UncertainResolution;
     let root = tempfile::tempdir().unwrap();
     let record = pending_for(root.path(), evidence_a());
     resolve_in(root.path(), &record.pending_id, true, &operator()).unwrap();
@@ -1939,17 +2069,25 @@ fn a_crash_with_no_declaration_fails_the_attempt_and_declares_nothing() {
     // The claim may still be in flight, so reconciliation leaves a live claim alone.
     let live = reconcile_settlement_resume(root.path(), &pending_id, None).unwrap();
     assert_eq!(live, SettlementStatus::Resuming { attempt: 1 });
-    // Once the lease has lapsed the attempt is failed, and nothing is declared.
+    // After the lease lapses the outcome is uncertain: no ledger declaration does not prove that none was
+    // appended. The claim is held, never failed, and blocks every resume.
     let lapsed =
         lease_and_fencing::claimed_at(root.path(), &pending_id) + lease_and_fencing::lease();
-    let recovered = reconcile_settlement_resume_at(root.path(), &pending_id, None, lapsed).unwrap();
-    assert_eq!(
-        recovered,
-        SettlementStatus::Failed {
-            reason: "interrupted_before_declaration".into()
-        }
-    );
+    let held = reconcile_settlement_resume_at(root.path(), &pending_id, None, lapsed).unwrap();
+    assert_eq!(held, SettlementStatus::Resuming { attempt: 1 });
     assert!(gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).is_err());
+    let attest = || UncertainResolution::NotDeclared {
+        evidence: "authority-record".into(),
+    };
+    // A service actor cannot resolve it.
+    let refused = resolve_uncertain_at(root.path(), &pending_id, 1, attest(), &svc(), lapsed);
+    assert!(refused.is_err());
+    // An operator attests that the authority holds no declaration. The claim is released for a fenced retry.
+    let released =
+        resolve_uncertain_at(root.path(), &pending_id, 1, attest(), &operator(), lapsed).unwrap();
+    assert_eq!(released, SettlementStatus::Approved);
+    // The released attempt is fenced: it cannot complete or fail after the release.
+    assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-late").is_err());
     assert!(fail_settlement_resume(root.path(), &pending_id, 1, "late").is_err());
 }
 
@@ -2012,10 +2150,14 @@ mod lease_and_fencing {
     }
 
     #[test]
-    fn a_claim_is_failed_at_the_lease_boundary_and_not_one_millisecond_before() {
+    fn a_lapsed_claim_is_held_and_an_operator_resolution_is_refused_until_the_lease_lapses() {
+        use sea_forge_authority::cep::UncertainResolution;
         let root = tempfile::tempdir().unwrap();
         let (pending_id, _) = open_claim(root.path());
         let claimed = claimed_at(root.path(), &pending_id);
+        let attest = || UncertainResolution::NotDeclared {
+            evidence: "authority-record".into(),
+        };
         let before = reconcile_settlement_resume_at(
             root.path(),
             &pending_id,
@@ -2024,13 +2166,32 @@ mod lease_and_fencing {
         )
         .unwrap();
         assert_eq!(before, SettlementStatus::Resuming { attempt: 1 });
+        // One millisecond early the attempt may still be calling the authority: an operator cannot resolve it.
+        let early = resolve_uncertain_at(
+            root.path(),
+            &pending_id,
+            1,
+            attest(),
+            &operator(),
+            claimed + lease() - chrono::Duration::milliseconds(1),
+        );
+        assert!(early.is_err());
+        // At the boundary the claim is still held, never failed.
         let at = reconcile_settlement_resume_at(root.path(), &pending_id, None, claimed + lease())
             .unwrap();
+        assert_eq!(at, SettlementStatus::Resuming { attempt: 1 });
+        // Once lapsed, an operator may resolve it.
         assert_eq!(
-            at,
-            SettlementStatus::Failed {
-                reason: "interrupted_before_declaration".into()
-            }
+            resolve_uncertain_at(
+                root.path(),
+                &pending_id,
+                1,
+                attest(),
+                &operator(),
+                claimed + lease()
+            )
+            .unwrap(),
+            SettlementStatus::Approved
         );
     }
 
@@ -2063,16 +2224,20 @@ mod lease_and_fencing {
     }
 
     #[test]
-    fn a_worker_that_finishes_after_reconciliation_closed_its_attempt_cannot_complete_it() {
+    fn a_worker_that_finishes_after_the_lease_lapsed_completes_its_own_attempt_once() {
         let root = tempfile::tempdir().unwrap();
         let (pending_id, _) = open_claim(root.path());
         let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        // Reconciliation with no declaration leaves the claim open. The worker that really declared still owns it.
         reconcile_settlement_resume_at(root.path(), &pending_id, None, lapsed).unwrap();
-        assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-late").is_err());
-        assert!(matches!(
+        complete_settlement_resume(root.path(), &pending_id, 1, "decl-late").unwrap();
+        assert_eq!(
             settlement_status(root.path(), &pending_id).unwrap(),
-            SettlementStatus::Failed { .. }
-        ));
+            SettlementStatus::Completed {
+                declaration_ref: "decl-late".into()
+            }
+        );
+        assert!(complete_settlement_resume(root.path(), &pending_id, 1, "decl-again").is_err());
         assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
     }
 
@@ -2092,7 +2257,7 @@ mod lease_and_fencing {
     }
 
     #[test]
-    fn concurrent_reconciliation_of_a_lapsed_claim_closes_it_exactly_once() {
+    fn concurrent_reconciliation_of_a_lapsed_claim_holds_it_and_closes_nothing() {
         let root = tempfile::tempdir().unwrap();
         let (pending_id, _) = open_claim(root.path());
         let lapsed = claimed_at(root.path(), &pending_id) + lease();
@@ -2109,14 +2274,183 @@ mod lease_and_fencing {
             let status = handle
                 .join()
                 .unwrap()
-                .expect("a lost reconciliation race must still report the settled outcome");
+                .expect("reconciliation must not fail");
+            assert_eq!(status, SettlementStatus::Resuming { attempt: 1 });
+        }
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 0);
+    }
+
+    #[test]
+    fn concurrent_operator_resolutions_of_a_lapsed_claim_close_it_exactly_once() {
+        use sea_forge_authority::cep::UncertainResolution;
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        let path = root.path().to_path_buf();
+        let handles: Vec<_> = (0..8)
+            .map(|i| {
+                let (path, pending_id) = (path.clone(), pending_id.clone());
+                std::thread::spawn(move || {
+                    let resolution = if i % 2 == 0 {
+                        UncertainResolution::NotDeclared {
+                            evidence: "authority-record".into(),
+                        }
+                    } else {
+                        UncertainResolution::Declared {
+                            declaration_ref: format!("decl-{i}"),
+                        }
+                    };
+                    resolve_uncertain_at(&path, &pending_id, 1, resolution, &operator(), lapsed)
+                        .is_ok()
+                })
+            })
+            .collect();
+        let winners = handles
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .filter(|won| *won)
+            .count();
+        assert_eq!(winners, 1);
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+        // Losing resolutions leave no audit record: the log shows only the resolution that took effect.
+        let audits = sea_forge_ledger::LedgerStream::open(root.path(), LEDGER_ID, "cep-lease-test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry.record_kind == "settlement_uncertain_resolution")
+            .count();
+        assert_eq!(audits, 1, "exactly one resolution audit record");
+    }
+
+    /// The worker completes the attempt after the operator's checks passed and before the operator's close. The
+    /// hook runs at exactly that point, which a plain call cannot reach: completing the attempt beforehand would
+    /// stop the operator at the status check, which says nothing about the order of audit and close.
+    #[test]
+    fn a_worker_that_completes_between_the_checks_and_the_close_leaves_no_resolution_audit() {
+        use sea_forge_authority::cep::{
+            resolve_uncertain_settlement_with_hook, UncertainResolution,
+        };
+        let (bundle, engine) = class_policy_engine(&approval_policy());
+        for resolution in [
+            UncertainResolution::NotDeclared {
+                evidence: "authority-record".into(),
+            },
+            UncertainResolution::Declared {
+                declaration_ref: "decl-operator".into(),
+            },
+        ] {
+            let root = tempfile::tempdir().unwrap();
+            let (pending_id, _) = open_claim(root.path());
+            let lapsed = claimed_at(root.path(), &pending_id) + lease();
+            let refused = resolve_uncertain_settlement_with_hook(
+                &engine,
+                &bundle,
+                root.path(),
+                &pending_id,
+                1,
+                resolution,
+                &operator(),
+                lapsed,
+                || complete_settlement_resume(root.path(), &pending_id, 1, "decl-worker").unwrap(),
+            );
+            assert!(
+                refused.is_err(),
+                "the fenced close must refuse: {refused:?}"
+            );
             assert_eq!(
-                status,
-                SettlementStatus::Failed {
-                    reason: "interrupted_before_declaration".into()
+                settlement_status(root.path(), &pending_id).unwrap(),
+                SettlementStatus::Completed {
+                    declaration_ref: "decl-worker".into()
                 }
             );
+            assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+            let audits =
+                sea_forge_ledger::LedgerStream::open(root.path(), LEDGER_ID, "cep-lease-test")
+                    .unwrap()
+                    .read_entries()
+                    .unwrap()
+                    .iter()
+                    .filter(|entry| entry.record_kind == "settlement_uncertain_resolution")
+                    .count();
+            assert_eq!(
+                audits, 0,
+                "no audit for a resolution that did not take effect"
+            );
         }
+    }
+
+    #[test]
+    fn an_uncertain_resolution_with_empty_detail_is_refused_and_the_claim_stays_resuming() {
+        use sea_forge_authority::cep::UncertainResolution;
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        for resolution in [
+            UncertainResolution::Declared {
+                declaration_ref: "  ".into(),
+            },
+            UncertainResolution::NotDeclared {
+                evidence: "".into(),
+            },
+        ] {
+            assert!(resolve_uncertain_at(
+                root.path(),
+                &pending_id,
+                1,
+                resolution,
+                &operator(),
+                lapsed
+            )
+            .is_err());
+        }
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+    }
+
+    #[test]
+    fn a_declaration_found_after_a_lapsed_claim_completes_it_and_nothing_is_declared_again() {
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        // The worker's declaration reached the ledger, but the worker died before completing its claim.
+        let recovered =
+            reconcile_settlement_resume_at(root.path(), &pending_id, Some("decl-found"), lapsed)
+                .unwrap();
+        assert_eq!(
+            recovered,
+            SettlementStatus::Completed {
+                declaration_ref: "decl-found".into()
+            }
+        );
+        // A later resume sees the completion and declares nothing.
+        assert!(matches!(
+            gate_swe_seed_in(root.path(), &approval_policy(), evidence_a()).unwrap(),
+            SettlementGate::Completed { .. }
+        ));
+        assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+    }
+
+    #[test]
+    fn a_resolution_is_refused_for_an_attempt_that_is_not_open() {
+        use sea_forge_authority::cep::UncertainResolution;
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _) = open_claim(root.path());
+        let lapsed = claimed_at(root.path(), &pending_id) + lease();
+        complete_settlement_resume(root.path(), &pending_id, 1, "decl-1").unwrap();
+        assert!(resolve_uncertain_at(
+            root.path(),
+            &pending_id,
+            1,
+            UncertainResolution::NotDeclared {
+                evidence: "late".into()
+            },
+            &operator(),
+            lapsed
+        )
+        .is_err());
         assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
     }
 
