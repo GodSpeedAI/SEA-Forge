@@ -77,7 +77,7 @@ pub struct UncertainOptions<'a> {
 
 /// Resolve an uncertain settlement claim (lease lapsed, no ledger declaration) through the same authority the
 /// approval path uses. The approval must name a pending record of this case, and the resolver is refused by
-/// policy unless it may resolve approvals. Each resolution is audited before the attempt closes.
+/// policy unless it may resolve approvals (`approval_resolution`). Each resolution is audited before the attempt closes.
 pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
     let Some(pending_id) = opts.approval_id.strip_prefix("apr-") else {
         return Err(ForgeError::Input(format!(
@@ -102,8 +102,10 @@ pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
             opts.approval_id, opts.case_id
         )));
     }
-    // The policy must load: a missing or invalid policy refuses the resolution rather than skipping the check.
-    AuthorityPolicyBundle::load(opts.policy)?;
+    // A missing or invalid policy refuses the resolution; the policy's `approval_resolution` decision is then
+    // evaluated inside `resolve_uncertain_settlement`, so no caller can complete or release a claim without it.
+    let bundle = AuthorityPolicyBundle::load(opts.policy)?;
+    let engine = PolicyAuthorityEngine::new(bundle.clone())?;
     let resolver = Actor {
         actor_id: opts.actor.into(),
         role: ActorRole::Operator,
@@ -116,11 +118,16 @@ pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
             UncertainResolution::NotDeclared { evidence }
         }
     };
-    let status =
-        resolve_uncertain_settlement(opts.root, pending_id, opts.attempt, resolution, &resolver)
-            .map_err(|error| {
-                ForgeError::Input(format!("settlement resolution refused: {error}"))
-            })?;
+    let status = resolve_uncertain_settlement(
+        &engine,
+        &bundle,
+        opts.root,
+        pending_id,
+        opts.attempt,
+        resolution,
+        &resolver,
+    )
+    .map_err(|error| ForgeError::Input(format!("settlement resolution refused: {error}")))?;
     println!("approval_id={}", opts.approval_id);
     println!("attempt={}", opts.attempt);
     println!("status={status:?}");

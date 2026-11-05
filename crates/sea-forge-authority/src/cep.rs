@@ -3134,17 +3134,31 @@ pub enum UncertainResolution {
 /// attempt's authority call cannot still be running. The resolution is audited before the attempt is closed, and
 /// the close is fenced to the attempt, so a retried resolution cannot settle a newer attempt.
 pub fn resolve_uncertain_settlement(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
     root: &Path,
     pending_id: &str,
     attempt: u32,
     resolution: UncertainResolution,
     resolver: &Actor,
 ) -> Result<SettlementStatus, CepAuthorityError> {
-    resolve_uncertain_settlement_at(root, pending_id, attempt, resolution, resolver, Utc::now())
+    resolve_uncertain_settlement_at(
+        engine,
+        bundle,
+        root,
+        pending_id,
+        attempt,
+        resolution,
+        resolver,
+        Utc::now(),
+    )
 }
 
 /// [`resolve_uncertain_settlement`] judged at an explicit instant, so lease boundaries can be tested.
+#[allow(clippy::too_many_arguments)]
 pub fn resolve_uncertain_settlement_at(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
     root: &Path,
     pending_id: &str,
     attempt: u32,
@@ -3161,6 +3175,55 @@ pub fn resolve_uncertain_settlement_at(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
+    // The same `approval_resolution` decision that governs resolving an approval governs resolving its uncertain
+    // claim, evaluated before anything is read or written about the attempt. A refusal is audited, and fails closed.
+    let approval_id = settlement_approval_id(&record.pending_id);
+    let action = AuthorityAction::Reserved {
+        resource_type: "approval_resolution".into(),
+        resource_id: approval_id.clone(),
+        parameters: json!({
+            "approval_id": approval_id,
+            "original_decision_id": record.decision_ref,
+            "requester_id": record.actor_id,
+            // The rule matches on the approval's own resolution vocabulary. The claim belongs to an approved
+            // request, so the resolver exercises the same authority; `uncertain_resolution` says what for.
+            "resolution": "approved",
+            "uncertain_resolution": match &resolution {
+                UncertainResolution::Declared { .. } => "declared",
+                UncertainResolution::NotDeclared { .. } => "not_declared",
+            },
+            "required_approver_roles": [],
+        }),
+    };
+    let binding = bundle.resolve_identity(&resolver.actor_id, resolver.role.clone());
+    let decision = engine.evaluate(AuthorityEvaluation {
+        actor: resolver,
+        binding,
+        run_id: &approval_id,
+        case_id: "cognate",
+        plan_item_id: &approval_id,
+        sequence: 1,
+        action: &action,
+        workspace_root: root,
+        evidence_refs: vec![format!("approval:{approval_id}")],
+        artifacts_root: None,
+        timeout_secs: None,
+        env_keys: Default::default(),
+        opa_candidate: None,
+        environment: None,
+    })?;
+    if decision.verdict != Verdict::Allow {
+        ledger.commit_typed(
+            "authority_decision",
+            vec![record.operation_id.clone(), record.pending_id.clone()],
+            &decision,
+            vec![record.decision_ref.clone()],
+        )?;
+        return Err(CepAuthorityError::Approval(format!(
+            "{} may not resolve the uncertain settlement {approval_id}: {}",
+            resolver.actor_id, decision.reason
+        )));
+    }
     match status_in(&entries, &record, now) {
         SettlementStatus::Resuming { attempt: open } if open == attempt => {}
         other => {
