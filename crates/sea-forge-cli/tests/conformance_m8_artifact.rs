@@ -1466,6 +1466,161 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
     }
 }
 
+/// A SWE_SEED command that starts and then fails (nonzero exit, or a timeout) may already have appended its
+/// declaration, so `resume` keeps the claim open and exits 1 with `settlement_authority_call_failed`. A second
+/// resume must not call the authority again: releasing the claim here would let it declare twice.
+#[test]
+fn conformance_m8_resume_keeps_the_claim_when_a_started_authority_command_fails() {
+    use std::os::unix::fs::PermissionsExt;
+    for script_body in ["cat >/dev/null\nexit 1", "sleep 60"] {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("state");
+        let policy_path = temp.path().join("policy.yaml");
+        policy(&policy_path);
+        let bin = PathBuf::from(env!("CARGO_BIN_EXE_sea-forge"));
+        environment(&root, &bin, true);
+        let registration = append_registration(
+            &root,
+            "operator_local",
+            &commit_evidence(&root).clone(),
+            VerifiedArtifactRegistrationInput {
+                name: "model.sea".into(),
+                version: "1".into(),
+                case_id: "case_source".into(),
+                derived_from: vec![],
+                created_at: "now".into(),
+            },
+        )
+        .unwrap();
+        let mut gate = profile();
+        gate.requires_approval = true;
+        gate.required_settlement_strength = Some("strong".into());
+        let hash = store_gate_profile(&root, &gate).unwrap();
+        let authority_command = temp.path().join("swe-seed-authority");
+        let marker = temp.path().join("authority-calls");
+        let policy_text = fs::read_to_string(&policy_path)
+            .unwrap()
+            .replace("requires_approval: false", "requires_approval: true")
+            .replace(
+                "required_settlement_strength: local",
+                "required_settlement_strength: strong",
+            )
+            .replace(
+                &format!("\"{}\", \"internal-test-swe-seed\"", bin.display()),
+                &format!(
+                    "\"{}\", \"internal-test-swe-seed\"",
+                    authority_command.display()
+                ),
+            );
+        assert!(policy_text.contains(&authority_command.display().to_string()));
+        fs::write(&policy_path, with_settlement_approval(&policy_text)).unwrap();
+        // The command starts (it records one line per invocation) and then fails.
+        fs::write(
+            &authority_command,
+            format!(
+                "#!/bin/sh\necho call >> {}\n{script_body}\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&authority_command, fs::Permissions::from_mode(0o755)).unwrap();
+        let input_path = temp.path().join("input.json");
+        fs::write(
+            &input_path,
+            serde_json::to_vec(&proposal(&registration, hash, TransitionKind::Synthesize)).unwrap(),
+        )
+        .unwrap();
+        let output = Command::new(&bin)
+            .args([
+                "artifact",
+                "--root",
+                root.to_str().unwrap(),
+                "--policy",
+                policy_path.to_str().unwrap(),
+                "synthesize",
+                input_path.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(5));
+        let case_id = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .find_map(|line| line.strip_prefix("case_id="))
+            .unwrap()
+            .to_owned();
+        let case_ledger = fs::read_dir(root.join("ledgers"))
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .find(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with("case-case_"))
+            })
+            .unwrap();
+        let entries = fs::read_to_string(case_ledger.join("entries.jsonl")).unwrap();
+        let approval_id = entries
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+            .find(|entry| entry["record_kind"] == "approval_request")
+            .unwrap()["payload"]["approval_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let approved = Command::new(&bin)
+            .args([
+                "approve",
+                &case_id,
+                &approval_id,
+                "--root",
+                root.to_str().unwrap(),
+                "--policy",
+                policy_path.to_str().unwrap(),
+                "--actor",
+                "security_officer",
+            ])
+            .output()
+            .unwrap();
+        assert!(approved.status.success());
+        let resume_args = [
+            "resume",
+            &case_id,
+            "--root",
+            root.to_str().unwrap(),
+            "--policy",
+            policy_path.to_str().unwrap(),
+        ];
+        let awaiting = Command::new(&bin).args(resume_args).output().unwrap();
+        assert_eq!(awaiting.status.code(), Some(5));
+        approve_pending_settlement(&root, &policy_path, SETTLEMENT_APPROVER);
+        let pending_id = settlement_pending_records(&root).unwrap()[0]
+            .pending_id
+            .clone();
+
+        let calls = || fs::read_to_string(&marker).map_or(0, |text| text.lines().count());
+        let failed = Command::new(&bin).args(resume_args).output().unwrap();
+        let stderr = String::from_utf8_lossy(&failed.stderr);
+        assert_eq!(failed.status.code(), Some(1), "{stderr}");
+        assert!(
+            stderr.contains("settlement_authority_call_failed"),
+            "{stderr}"
+        );
+        assert_eq!(calls(), 1, "the command was started once");
+        assert_eq!(
+            sea_forge_authority::cep::settlement_status(&root, &pending_id).unwrap(),
+            sea_forge_authority::cep::SettlementStatus::Resuming { attempt: 1 },
+            "a started command that failed keeps the claim open"
+        );
+        // The claim is still held, so a second resume must not reach the authority again.
+        let again = Command::new(&bin).args(resume_args).output().unwrap();
+        assert_ne!(again.status.code(), Some(0));
+        assert_eq!(calls(), 1, "a held claim must not call the authority twice");
+        assert!(!fs::read_to_string(case_ledger.join("entries.jsonl"))
+            .unwrap()
+            .contains("\"record_kind\":\"settlement_declaration\""));
+    }
+}
+
 #[test]
 fn conformance_m8_resume_expired_pending_approval_terminalizes_once() {
     let temp = tempfile::tempdir().unwrap();
