@@ -2516,3 +2516,169 @@ fn no_follow_open_flag() -> i32 {
 fn no_follow_open_flag() -> u32 {
     0x0020_0000
 }
+
+/// `submit_swe_seed_declaration` driven end to end against a SWE_SEED command that starts and then fails. The
+/// command is the policy's own `settlement_authorities` entry, so no transport fake is needed.
+#[cfg(test)]
+mod started_command_failure_tests {
+    use super::*;
+    use sea_forge_authority::cep::{
+        settlement_approval_id, settlement_pending_records, settlement_status, CepAuthorityService,
+        SettlementStatus,
+    };
+    use sea_forge_core::types::{
+        ActorRole, CriteriaDerivation, DelegationTermination, DerivationMethod, OriginRef,
+        OriginRefKind, OriginRole, SettlementCriteria, SettlementCriteriaRecord, TranscriptSummary,
+    };
+    use std::os::unix::fs::PermissionsExt;
+
+    fn digest<T: serde::Serialize>(value: &T) -> String {
+        format!(
+            "sha256:{}",
+            hex::encode(Sha256::digest(serde_json::to_vec(value).unwrap()))
+        )
+    }
+
+    fn criteria() -> SettlementCriteriaRecord {
+        let body = SettlementCriteria {
+            require_exit_zero: true,
+            ..Default::default()
+        };
+        let mut record = SettlementCriteriaRecord {
+            version: "0.2".into(),
+            criteria_id: "crit_started_failure".into(),
+            criteria_sha256: digest(&body),
+            criteria: body,
+            origin_refs: vec![OriginRef {
+                kind: OriginRefKind::ImplementationDefined,
+                reference: "started-command-failure-test".into(),
+                sha256: "sha256:origin".into(),
+                role: OriginRole::AcceptanceSource,
+                evidence_refs: vec![],
+                domain_model_ref: None,
+            }],
+            derivation: CriteriaDerivation {
+                method: DerivationMethod::ImplementationDefined,
+                actor_ref: "agent-x".into(),
+                producer_ref: None,
+                rationale: "fixture".into(),
+            },
+            declared_at: "2026-07-15T00:00:00Z".into(),
+            criteria_record_hash: String::new(),
+        };
+        record.criteria_record_hash = digest(&record);
+        record
+    }
+
+    fn evidence() -> TranscriptEvidence {
+        TranscriptEvidence {
+            run_id: "run-1".into(),
+            endpoint_ref: "endpoint".into(),
+            turns_used: 1,
+            termination: DelegationTermination::Completed,
+            transcript_sha256: "sha256:transcript".into(),
+            summary: TranscriptSummary {
+                turn_count: 1,
+                tool_calls: 0,
+                final_excerpt: String::new(),
+            },
+            artifact_ref: None,
+            harvested_refs: vec!["proof-1".into()],
+        }
+    }
+
+    async fn submit(root: &Path, caller: &Actor) -> Result<(), ForgeError> {
+        submit_swe_seed_declaration(
+            root,
+            "policy.yaml",
+            "agent-x",
+            "case-1",
+            "run-1",
+            "item-1",
+            &criteria(),
+            &evidence(),
+            "entry-ulid-1",
+            "set-1",
+            "2026-07-15T00:00:01Z",
+            caller,
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn a_started_command_that_fails_keeps_the_claim_and_a_second_submit_does_not_call_it_again(
+    ) {
+        let root = tempfile::tempdir().unwrap();
+        let marker = root.path().join("authority-calls");
+        let command = root.path().join("authority.sh");
+        // Starts (records one line), then exits nonzero.
+        std::fs::write(
+            &command,
+            format!(
+                "#!/bin/sh\necho call >> {}\ncat >/dev/null\nexit 1\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&command, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::write(
+            root.path().join("policy.yaml"),
+            format!(
+                "version: \"0.1\"\nsettlement_authorities:\n  - authority_ref: swe_seed_test\n    adapter: swe_seed\n    command: [\"{}\"]\n    timeout_secs: 10\n    trust_anchor_ref: test-anchor\n    declarer_actor_id: swe_seed_verifier\n    permitted_declarer_roles: [R-AA]\n    standing_basis: test-attested-verifier\n    may_issue_strong: true\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n",
+                command.display()
+            ),
+        )
+        .unwrap();
+        let caller = Actor {
+            actor_id: "agent-x".into(),
+            role: ActorRole::Service,
+        };
+        // First submit: held for approval, the command is never started.
+        let held = submit(root.path(), &caller).await.unwrap_err();
+        assert!(
+            format!("{held:?}").contains("settlement_approval_pending"),
+            "{held:?}"
+        );
+        assert!(!marker.exists());
+        // A different operator approves through the real resolution path.
+        let bundle = AuthorityPolicyBundle::load(&root.path().join("policy.yaml")).unwrap();
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let worlds = sea_forge_domainforge::WorldRegistry::new();
+        let pending_id = settlement_pending_records(root.path()).unwrap()[0]
+            .pending_id
+            .clone();
+        CepAuthorityService {
+            engine: &engine,
+            bundle: &bundle,
+            worlds: &worlds,
+            root: root.path(),
+            approval_ttl: chrono::Duration::hours(24),
+            criteria: sea_forge_authority::cep::SettlementCriteria::default(),
+        }
+        .resolve_approval(
+            &settlement_approval_id(&pending_id),
+            true,
+            &Actor {
+                actor_id: "approver-y".into(),
+                role: ActorRole::Operator,
+            },
+        )
+        .unwrap();
+        // The claim is taken, the command starts and fails: the lease is kept.
+        let failed = submit(root.path(), &caller).await.unwrap_err();
+        assert!(
+            format!("{failed:?}").contains("settlement_authority_call_failed"),
+            "{failed:?}"
+        );
+        let calls = || std::fs::read_to_string(&marker).map_or(0, |text| text.lines().count());
+        assert_eq!(calls(), 1);
+        assert_eq!(
+            settlement_status(root.path(), &pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 },
+            "a started command that failed keeps the claim open"
+        );
+        // The held claim blocks a second submit before it reaches the authority.
+        assert!(submit(root.path(), &caller).await.is_err());
+        assert_eq!(calls(), 1, "a held claim must not call the authority twice");
+    }
+}
