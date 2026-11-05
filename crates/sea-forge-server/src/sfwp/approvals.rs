@@ -73,7 +73,7 @@ pub struct ApprovalGovernanceContext {
 
 /// One pending approval, shaped for the inbox.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct PendingApproval {
+pub struct CaseTaskApproval {
     pub approval_id: String,
     pub case_id: String,
     pub run_id: String,
@@ -103,7 +103,7 @@ pub struct PendingApproval {
 pub struct ApprovalListResult {
     /// Oldest request first: an approval inbox is a queue, and the thing that
     /// has waited longest is the thing most likely to be blocking work.
-    pub approvals: Vec<PendingApproval>,
+    pub approvals: Vec<CaseTaskApproval>,
     /// Set when the journal itself could not be read. The list is then empty
     /// *because nothing could be determined*, which is different from an empty
     /// queue — the UI must be able to tell those apart.
@@ -203,9 +203,9 @@ fn governance_context(root: &Path, request: &ApprovalRequest) -> Option<Approval
     })
 }
 
-fn shape(root: &Path, request: ApprovalRequest, now: &str) -> PendingApproval {
+fn shape(root: &Path, request: ApprovalRequest, now: &str) -> CaseTaskApproval {
     let governance = governance_context(root, &request);
-    PendingApproval {
+    CaseTaskApproval {
         expired: request.expires_at.as_str() <= now,
         approval_id: request.approval_id,
         case_id: request.case_id,
@@ -236,7 +236,7 @@ pub fn list(root: &Path, case_id: Option<&str>) -> ApprovalListResult {
         }
     };
 
-    let mut approvals: Vec<PendingApproval> = pending
+    let mut approvals: Vec<CaseTaskApproval> = pending
         .into_iter()
         .filter(|request| case_id.is_none_or(|id| request.case_id == id))
         .map(|request| shape(root, request, &now))

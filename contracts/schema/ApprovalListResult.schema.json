@@ -8,7 +8,7 @@
       "description": "Oldest request first: an approval inbox is a queue, and the thing that\nhas waited longest is the thing most likely to be blocking work.",
       "type": "array",
       "items": {
-        "$ref": "#/$defs/PendingApproval"
+        "$ref": "#/$defs/CaseTaskApproval"
       }
     },
     "unreadable": {
@@ -122,7 +122,7 @@
         "eligibility_standing"
       ]
     },
-    "PendingApproval": {
+    "CaseTaskApproval": {
       "description": "One pending approval, shaped for the inbox.",
       "type": "object",
       "properties": {
