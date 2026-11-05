@@ -1,18 +1,19 @@
 # Current status
 
-**Status revision:** 213
+**Status revision:** 214
 
-**Stage:** T1 stage D2.1: SFWP schemas moved to contracts/schema
+**Stage:** T1 stage D2.2: case-task PendingApproval renamed to CaseTaskApproval; approval-standing golden fixture
 
-**Summary:** The generated SFWP JSON schemas moved from workbench/packages/contracts/schema/ to top-level contracts/schema/ (git mv, files byte-stable). The generator output dir, system.get_schema paths, the TS generator, the drift test and live docs point at the new home. A conformance test asserts every path system.get_schema returns exists on disk.
+**Summary:** The sfwp case-task PendingApproval is now CaseTaskApproval (Rust type, SCHEMA_TYPES entry, schema title and file, ApprovalListResult defs by regeneration, TS contracts, ApprovalInboxPage). ApprovalStanding is unchanged. A golden fixture contracts/fixtures/approval-standing.json holds two ApprovalStanding::to_json objects, checked by crates/sea-forge-authority/tests/approval_standing_fixture.rs as parsed JSON with exactly the 11 wire keys.
 
 **Verified:**
-- cargo test -p sea-forge-server --test conformance_sfwp: 20 passed (19 before, plus get_schema_paths_exist_on_disk)
-- get_schema path mutation fails the new test as expected
-- just workbench-contracts-gate: clean after regeneration (TS banner path updated)
+- cargo test -p sea-forge-server --test conformance_sfwp: 20 passed
+- cargo test -p sea-forge-authority: 297 passed, 0 failed (295 before, plus 2 fixture tests)
+- fixture mutation (resource_id changed) fails the fixture test
+- just workbench-contracts-gate and workbench bun run check: clean
 
 **Limits:**
-- Historical logs under .agents (status archive, evidence, session export, run summaries, old plans) still name the old path by design
-- crates/sea-forge-server/src/bin/README.md named in the design does not exist, so nothing to edit there
+- Casework-go Go identifiers named PendingApproval are not renamed (Non-Goal; no Go toolchain here)
+- The fixture is the to_string_pretty output, so its keys are alphabetical; it is value-equal to the Cognate copy but not byte-identical
 
-**Next:** Rename the case-task PendingApproval to CaseTaskApproval and add the approval-standing golden fixture (D2.2).
+**Next:** Review and merge D2.1 then D2.2; sync the Cognate fixture copy to the sea-rs fixture bytes.

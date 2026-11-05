@@ -377,7 +377,7 @@ pub const SCHEMA_TYPES: &[&str] = &[
     "HorizonItem",
     "RunSettlement",
     "ApprovalListResult",
-    "PendingApproval",
+    "CaseTaskApproval",
     "ApprovalGovernanceContext",
     "RunListResult",
     "RunSummary",

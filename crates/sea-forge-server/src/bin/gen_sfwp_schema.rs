@@ -10,7 +10,7 @@
 use schemars::schema_for;
 use sea_forge_server::identity::{AvailableActor, IdentityView, RefusalView};
 use sea_forge_server::sfwp::approvals::{
-    ApprovalGovernanceContext, ApprovalListResult, PendingApproval,
+    ApprovalGovernanceContext, ApprovalListResult, CaseTaskApproval,
 };
 use sea_forge_server::sfwp::assets::{AssetKind, AssetListResult, AssetRow};
 use sea_forge_server::sfwp::case::{
@@ -96,7 +96,7 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(HorizonItem, "HorizonItem"),
         schema!(RunSettlement, "RunSettlement"),
         schema!(ApprovalListResult, "ApprovalListResult"),
-        schema!(PendingApproval, "PendingApproval"),
+        schema!(CaseTaskApproval, "CaseTaskApproval"),
         schema!(ApprovalGovernanceContext, "ApprovalGovernanceContext"),
         schema!(RunListResult, "RunListResult"),
         schema!(RunSummary, "RunSummary"),
