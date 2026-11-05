@@ -29,7 +29,7 @@ Rust SFWP Types (crates/sea-forge-server/src/sfwp/)
 cargo run -p sea-forge-server --bin gen_sfwp_schema
   │
   ▼
-JSON Schemas (workbench/packages/contracts/schema/*.schema.json)
+JSON Schemas (contracts/schema/*.schema.json)
   │
   ▼
 cd workbench && bun run generate:contracts
@@ -79,7 +79,7 @@ From the repository root, run the Rust generator:
 ```sh
 cargo run -p sea-forge-server --bin gen_sfwp_schema
 ```
-This writes `<TypeName>.schema.json` files to `workbench/packages/contracts/schema/`.
+This writes `<TypeName>.schema.json` files to `contracts/schema/`.
 
 ### Step 4: Emit TypeScript Interfaces & AJV Validators
 Run the Bun generation script:

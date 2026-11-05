@@ -1,7 +1,7 @@
 //! SFWP JSON Schema generator (Task 3, Rust half).
 //!
 //! Emits one `<TypeName>.schema.json` per SFWP-layer contract type into
-//! `workbench/packages/contracts/schema/`. This is the Rust-authored
+//! `contracts/schema/`. This is the Rust-authored
 //! intermediate the follow-up TypeScript generator consumes. Running
 //! `just workbench-contracts-generate` regenerates these deterministically; a
 //! drift test fails if a contract type changes
@@ -143,7 +143,7 @@ pub fn schema_dir() -> PathBuf {
         .parent()
         .and_then(|p| p.parent())
         .expect("crate lives two levels under workspace root")
-        .join("workbench/packages/contracts/schema")
+        .join("contracts/schema")
 }
 
 fn main() -> std::io::Result<()> {
