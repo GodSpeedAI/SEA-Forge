@@ -83,7 +83,7 @@ If you modified types in `sea-forge-server/src/sfwp` or frontend contracts under
 just workbench-contracts-gate
 ```
 Asserts two critical properties:
-1. **Schema Zero-Diff:** JSON schemas in `workbench/packages/contracts/schema/` match Rust types.
+1. **Schema Zero-Diff:** JSON schemas in `contracts/schema/` match Rust types.
 2. **TypeScript AJV Zero-Diff:** TypeScript validators match generated JSON schemas.
 
 To run the full Workbench test suite:

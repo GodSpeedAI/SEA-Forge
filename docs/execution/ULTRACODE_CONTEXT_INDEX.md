@@ -122,7 +122,7 @@ SEA_FORGE_ROOT=/tmp/probe/state ./target/debug/sea-forge-server &
 
 | Zone | Source | Generator |
 |---|---|---|
-| `workbench/packages/contracts/schema/*.schema.json` | Rust `SCHEMA_TYPES` | `cargo run -p sea-forge-server --bin gen_sfwp_schema` |
+| `contracts/schema/*.schema.json` | Rust `SCHEMA_TYPES` | `cargo run -p sea-forge-server --bin gen_sfwp_schema` |
 | `workbench/packages/contracts/generated/` | Schema files | `bun run generate:contracts` |
 | `workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css` | `.agents/specs/frontend/colors_and_type.css` | copy + `bun run check-drift` |
 | `.ua/knowledge-graph.json` | Repository source | `understand` skill (rebuildable projection) |

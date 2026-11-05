@@ -36,7 +36,7 @@ ADR does not pre-approve schemars on any crate beyond `sea-forge-server`.
 
 A new binary, `crates/sea-forge-server/src/bin/gen_sfwp_schema.rs`, calls
 `schemars::schema_for!()` for each of those types and writes
-`<TypeName>.schema.json` into `workbench/packages/contracts/schema/` — the
+`<TypeName>.schema.json` into `contracts/schema/` — the
 Rust-authored intermediate the TypeScript generation step consumes.
 `crates/sea-forge-server/tests/conformance_sfwp.rs`'s
 `generated_schemas_are_committed_and_current` test regenerates into a temp

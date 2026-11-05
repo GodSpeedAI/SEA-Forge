@@ -79,7 +79,7 @@ verbs; the catalog is not proof that roadmap methods exist.
 
 - Rust SFWP types derive schemas through `schemars`
   (`crates/sea-forge-server/Cargo.toml:26`); `gen_sfwp_schema` emits committed
-  schema files under `workbench/packages/contracts/schema/`.
+  schema files under `contracts/schema/`.
 - `workbench/packages/contracts/scripts/generate.ts` generates TypeScript and
   AJV validators into `packages/contracts/generated/`; for example
   `ReadinessView.ts` and `ReadinessView.validator.ts`. These zones are
