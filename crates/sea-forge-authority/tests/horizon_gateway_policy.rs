@@ -166,6 +166,15 @@ fn an_operator_requested_external_declaration_escalates_too() {
     assert!(matches!(pending.unwrap(), SettlementGate::Pending { .. }));
 }
 
+/// A refused resolver must leave the approval unresolved. Refusal-audit entries are allowed; a resolution is not.
+fn assert_still_pending(root: &std::path::Path, pending_id: &str) {
+    assert_eq!(
+        sea_forge_authority::cep::settlement_status(root, pending_id).unwrap(),
+        sea_forge_authority::cep::SettlementStatus::Pending,
+        "a refused resolver must not resolve the approval"
+    );
+}
+
 #[test]
 fn a_gateway_cannot_approve_its_own_external_declaration() {
     let root = tempfile::tempdir().unwrap();
@@ -174,6 +183,20 @@ fn a_gateway_cannot_approve_its_own_external_declaration() {
         pending_id_of(gate(RENDERED, root.path(), &external_ingress(&caller), OP).unwrap());
     // The gateway is a service actor. It has no approval_resolution rule, so the policy refuses it.
     assert!(resolve(root.path(), RENDERED, &pending, true, &caller).is_err());
+    assert_still_pending(root.path(), &pending);
+}
+
+#[test]
+fn a_service_actor_without_an_approval_resolution_rule_cannot_resolve_an_operator_request() {
+    let root = tempfile::tempdir().unwrap();
+    let requester = operator("op-alice");
+    let pending =
+        pending_id_of(gate(RENDERED, root.path(), &external_ingress(&requester), OP).unwrap());
+    // The gateway is not the requester here, so only policy refuses it: it has no approval_resolution rule.
+    let refused = resolve(root.path(), RENDERED, &pending, true, &gateway());
+    let text = refused.unwrap_err().to_string();
+    assert!(text.contains("may not resolve"), "{text}");
+    assert_still_pending(root.path(), &pending);
 }
 
 #[test]
@@ -190,6 +213,7 @@ fn an_operator_cannot_approve_their_own_request() {
         text.contains("self_approval_refused") || text.contains("requester"),
         "{text}"
     );
+    assert_still_pending(root.path(), &pending);
 }
 
 #[test]

@@ -1090,7 +1090,9 @@ async fn submit_swe_seed_declaration(
 }
 
 /// Whether a declare failure may still have produced a declaration. Only an error raised after the authority call
-/// started can, and "unavailable" is the one post-start error that releases the claim.
+/// started can. "Unavailable" is raised only when the SWE_SEED command could not be started, so it alone proves
+/// nothing was sent; a started command that timed out, exited nonzero or answered badly is
+/// `settlement_authority_call_failed` and keeps the lease.
 fn ambiguous_after_call(call_started: bool, error: &ForgeError) -> bool {
     call_started
         && !matches!(
@@ -1119,6 +1121,10 @@ mod ambiguous_declare_tests {
         assert!(ambiguous_after_call(
             true,
             &plan("settlement_declaration_timeout")
+        ));
+        assert!(ambiguous_after_call(
+            true,
+            &plan("settlement_authority_call_failed")
         ));
         assert!(ambiguous_after_call(
             true,

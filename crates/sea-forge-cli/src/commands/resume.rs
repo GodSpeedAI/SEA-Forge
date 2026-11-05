@@ -1204,8 +1204,8 @@ fn resume_artifact_transition(
             );
             // A failure before the authority call started cannot have reached the authority, so its claim is settled
             // here (a declaration naming it completes it; otherwise it is released). After the call started, an
-            // unavailable authority is also known not to have received the declaration. Any other error after the
-            // call leaves the claim open: the call may still be in flight, and reconciliation settles it once its
+            // unavailable authority (the command could not be started) is also known not to have received the
+            // declaration. Any other error after the call, including a started command that failed, leaves the claim open: the call may still be in flight, and reconciliation settles it once its
             // lease lapses, or at once if a declaration is found.
             let call_started = tracked.started.get();
             if let Some((pending_id, _, attempt)) = &claimed {

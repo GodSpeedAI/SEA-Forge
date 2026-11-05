@@ -1201,20 +1201,23 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
         let mut policy_text = fs::read_to_string(&policy_path)
             .unwrap()
             .replace("requires_approval: false", "requires_approval: true");
-        let outage_file = temp.path().join("swe-seed.outage");
+        let authority_command = temp.path().join("swe-seed-authority");
         if gate.required_settlement_strength.as_deref() == Some("strong") {
             policy_text = policy_text.replace(
                 "required_settlement_strength: local",
                 "required_settlement_strength: strong",
             );
+            // The authority command is its own copy of the binary, so an outage can be simulated by removing it:
+            // a command that cannot be started cannot have declared anything.
             policy_text = policy_text.replace(
-                "internal-test-swe-seed\"]",
+                &format!("\"{}\", \"internal-test-swe-seed\"", bin.display()),
                 &format!(
-                    "internal-test-swe-seed\", \"--outage-file\", \"{}\"]",
-                    outage_file.display()
+                    "\"{}\", \"internal-test-swe-seed\"",
+                    authority_command.display()
                 ),
             );
-            fs::write(&outage_file, b"outage").unwrap();
+            assert!(policy_text.contains(&authority_command.display().to_string()));
+            fs::copy(&bin, &authority_command).unwrap();
             policy_text = with_settlement_approval(&policy_text);
         }
         fs::write(&policy_path, policy_text).unwrap();
@@ -1330,9 +1333,17 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
                 .contains("\"record_kind\":\"settlement_declaration\""));
             // A distinct operator approves the settlement through the real resolution path.
             approve_pending_settlement(&root, &policy_path, SETTLEMENT_APPROVER);
-            // The authority is unavailable: the attempt is released and parks with exit 5, declaring nothing.
+            // The authority is unavailable because its command cannot be started, so it cannot have declared: the
+            // attempt is released and parks with exit 5, declaring nothing. (A command that started and then failed
+            // is ambiguous and keeps the lease instead; that is covered where the transport and the claim meet.)
+            fs::remove_file(&authority_command).unwrap();
             let parked = Command::new(&bin).args(resume_args).output().unwrap();
-            assert_eq!(parked.status.code(), Some(5));
+            assert_eq!(
+                parked.status.code(),
+                Some(5),
+                "{}",
+                String::from_utf8_lossy(&parked.stderr)
+            );
             let outage_case_entries =
                 fs::read_to_string(case_ledger.join("entries.jsonl")).unwrap();
             assert!(!outage_case_entries.contains("\"record_kind\":\"settlement_declaration\""));
@@ -1341,7 +1352,7 @@ fn conformance_m8_cli_parks_external_gate_profiles_without_fabricating_records()
                     .unwrap()
                     .contains("\"record_kind\":\"artifact_transition\"")
             );
-            fs::remove_file(&outage_file).unwrap();
+            fs::copy(&bin, &authority_command).unwrap();
             let resumed = Command::new(&bin).args(resume_args).output().unwrap();
             assert!(
                 resumed.status.success(),
