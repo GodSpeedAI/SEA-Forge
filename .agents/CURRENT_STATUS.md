@@ -1,14 +1,15 @@
 # Current status
 
-**Status revision:** 221
+**Status revision:** 222
 
-**Stage:** Security: PR 84 review round 2 (3/3) server wiring test for a started SWE_SEED failure
+**Stage:** Security: ambiguous SWE_SEED declare keeps the claim; operator resolves uncertain claims (PR 84)
 
-**Summary:** A unit test in sea-forge-server drives submit_swe_seed_declaration end to end through the policy's own settlement_authorities command (no transport fake needed): held for approval, approved by a different operator, then a command that starts and exits nonzero. The claim stays Resuming and a second submit does not call the command again.
+**Summary:** Once the SWE_SEED authority call has started, a failure keeps the claim lease, and the CLI exits 1 with settlement_authority_call_failed. A failure before the call starts settles at once, and an unavailable authority releases the claim. Reconciliation no longer fails a lapsed claim that has no declaration. That claim stays open (Resuming) and blocks resumes. An operator resolves it with `sea-forge resolve-uncertain <case> <approval> --attempt N` plus either `--declared <ref>` or `--not-declared <evidence>`. This is allowed only after the lease lapses, never by the requester (`self_approval_refused`), and only if the `approval_resolution` policy allows it. The close happens first, and its audit record is written once per attempt after the close.
 
 **Verified:**
 - sea-forge-server lib delegation: new test passes
 - Mutation M1 (ambiguous_after_call always false) by hand: the new test and the predicate unit test both fail; reverted
+- cargo test on authority, settlement, cli, server: 993 passed, 0 failed
 
 **Limits:**
 - A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
@@ -17,5 +18,6 @@
 - The CLI builds an Operator from --actor, the same local trust model as approve
 - The Horizon policy renderer and the sea-rs fixture are not tied by a test (follow-up)
 - The server test covers a nonzero exit only; the timeout variant is covered at the CLI
+- On Unix a SWE_SEED command can outlive a server crash (no process-group containment tied to the server). An operator NotDeclared attestation after the lease lapses can then race an orphaned command's late declaration. Mitigation needs authority-side dedup on authorization_request_sha256 or containment; tracked as a follow-up.
 
-**Next:** Independent re-review of PR 84.
+**Next:** Merge PR 84 after review; follow-up issue for crash-orphan containment.

@@ -850,6 +850,7 @@ mod tests {
             "a second declaration for the same claim must not append as a distinct record"
         );
     }
+    #[cfg(unix)]
     fn class_of(error: &ForgeError) -> &'static str {
         match error {
             ForgeError::Plan { class, .. } => class,
