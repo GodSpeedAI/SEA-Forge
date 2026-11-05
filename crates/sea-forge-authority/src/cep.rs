@@ -3178,8 +3178,12 @@ pub fn resolve_uncertain_settlement_at(
         UncertainResolution::Declared { declaration_ref } => ("declared", declaration_ref.as_str()),
         UncertainResolution::NotDeclared { evidence } => ("not_declared", evidence.as_str()),
     };
-    ledger.commit_typed(
+    // One audit record per attempt, create-once: of several operators racing past the status check, the first
+    // record wins. An identical retry replays it, and a conflicting resolution is refused here, so the audit log
+    // never holds a resolution that did not take effect.
+    ledger.commit_typed_once(
         SETTLEMENT_UNCERTAIN_RESOLUTION_KIND,
+        format!("settlement-uncertain:{}:{attempt}", record.pending_id),
         vec![record.operation_id.clone(), record.pending_id.clone()],
         &json!({
             "pending_id": record.pending_id,

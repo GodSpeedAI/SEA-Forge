@@ -2192,6 +2192,15 @@ mod lease_and_fencing {
             .count();
         assert_eq!(winners, 1);
         assert_eq!(closes_for(root.path(), &pending_id, 1), 1);
+        // Losing resolutions leave no audit record: the log shows only the resolution that took effect.
+        let audits = sea_forge_ledger::LedgerStream::open(root.path(), LEDGER_ID, "cep-lease-test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry.record_kind == "settlement_uncertain_resolution")
+            .count();
+        assert_eq!(audits, 1, "exactly one resolution audit record");
     }
 
     #[test]
