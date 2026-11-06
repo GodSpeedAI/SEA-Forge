@@ -1081,7 +1081,8 @@ fn resume_artifact_transition(
     let transport = sea_forge_settlement::CommandSweSeedTransport::new(
         descriptor.command.clone(),
         descriptor.timeout_secs,
-    )?;
+    )?
+    .with_launch_evidence(root.clone());
     let authority =
         sea_forge_settlement::SweSeedSettlementAuthority::new(transport, &options.entity)
             .with_adapter_ref(&descriptor.authority_ref);

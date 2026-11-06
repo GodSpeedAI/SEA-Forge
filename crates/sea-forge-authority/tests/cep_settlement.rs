@@ -2944,3 +2944,347 @@ mod declaration_integrity {
         );
     }
 }
+
+/// Issue #86: a SWE_SEED command that outlives a crashed server must not be able to race an operator's
+/// `NotDeclared` resolution into a second external declaration. These tests use real processes: a shell script
+/// stands in for the external authority and appends to a store file after a delay.
+#[cfg(unix)]
+mod orphaned_command {
+    use super::*;
+    use sea_forge_authority::cep::UncertainResolution;
+    use sea_forge_settlement::{CommandSweSeedTransport, SweSeedTransport};
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
+
+    const AUTHORITY_SCRIPT: &str = r#"store="$1"
+req=$(/bin/cat)
+: > "$store/started.$$"
+/bin/sleep "$2"
+sha=$(printf '%s' "$req" | /bin/sed -n 's/.*"authorization_request_sha256":"\([0-9a-f]*\)".*/\1/p')
+printf '%s\n' "$sha" >> "$store/store.jsonl"
+echo '{"attestation_ref":"attestation:script","attribution_confidence":"1.000000","gaming_exposure":"0.000000","hidden_debt_blindness":"0.000000","feedback_delay_ms":1}'
+"#;
+
+    fn wait_for(what: &str, limit: Duration, mut done: impl FnMut() -> bool) {
+        let start = Instant::now();
+        while !done() {
+            assert!(start.elapsed() < limit, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    fn started(store: &Path) -> bool {
+        std::fs::read_dir(store)
+            .unwrap()
+            .flatten()
+            .any(|e| e.file_name().to_string_lossy().starts_with("started."))
+    }
+
+    fn declarations(store: &Path) -> usize {
+        std::fs::read_to_string(store.join("store.jsonl"))
+            .map(|text| text.lines().count())
+            .unwrap_or(0)
+    }
+
+    fn claim(root: &Path) -> (String, String, u32) {
+        let record = pending_for(root, evidence_a());
+        resolve_in(root, &record.pending_id, true, &operator()).unwrap();
+        match gate_swe_seed_in(root, &approval_policy(), evidence_a()).unwrap() {
+            SettlementGate::Resumed {
+                pending_id,
+                request_sha256,
+                attempt,
+                ..
+            } => (pending_id, request_sha256, attempt),
+            other => panic!("expected a resumed settlement, got {other:?}"),
+        }
+    }
+
+    fn argv(script: &Path, store: &Path, seconds: u32) -> Vec<String> {
+        vec![
+            "/bin/sh".into(),
+            script.display().to_string(),
+            store.display().to_string(),
+            seconds.to_string(),
+        ]
+    }
+
+    fn request_for(
+        pending_id: &str,
+        request_sha256: &str,
+    ) -> sea_forge_core::types::SettlementDeclarationRequest {
+        let mut request = declaration_request("crit_a");
+        request.authorization_ref = Some(pending_id.into());
+        request.authorization_request_sha256 = Some(request_sha256.into());
+        request
+    }
+
+    /// Runs only when the race test re-executes this binary: the "server" that calls the command and is then killed.
+    #[test]
+    fn orphan_driver_child() {
+        let Ok(root) = std::env::var("SEA_ORPHAN_ROOT") else {
+            return;
+        };
+        let var = |name: &str| std::env::var(name).unwrap();
+        let transport = CommandSweSeedTransport::new(
+            argv(
+                &PathBuf::from(var("SEA_ORPHAN_SCRIPT")),
+                &PathBuf::from(var("SEA_ORPHAN_STORE")),
+                var("SEA_ORPHAN_SECONDS").parse().unwrap(),
+            ),
+            60,
+        )
+        .unwrap()
+        .with_launch_evidence(root);
+        let _ = transport.submit(&request_for(
+            &var("SEA_ORPHAN_PENDING"),
+            &var("SEA_ORPHAN_SHA"),
+        ));
+    }
+
+    struct Race {
+        root: tempfile::TempDir,
+        store: tempfile::TempDir,
+        script: PathBuf,
+        pending_id: String,
+        request_sha256: String,
+    }
+
+    /// Steps 1 and 2 of the issue: the server crashes while the command runs, and the claim lease lapses.
+    fn crash_the_server_mid_command(seconds: u32) -> Race {
+        let root = tempfile::tempdir().unwrap();
+        let store = tempfile::tempdir().unwrap();
+        let script = store.path().join("authority.sh");
+        std::fs::write(&script, AUTHORITY_SCRIPT).unwrap();
+        let (pending_id, request_sha256, _) = claim(root.path());
+        let mut driver = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "orphaned_command::orphan_driver_child",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env("SEA_ORPHAN_ROOT", root.path())
+            .env("SEA_ORPHAN_SCRIPT", &script)
+            .env("SEA_ORPHAN_STORE", store.path())
+            .env("SEA_ORPHAN_SECONDS", seconds.to_string())
+            .env("SEA_ORPHAN_PENDING", &pending_id)
+            .env("SEA_ORPHAN_SHA", &request_sha256)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        wait_for("the command to start", Duration::from_secs(60), || {
+            started(store.path())
+        });
+        driver.kill().unwrap(); // SIGKILL: the command is now orphaned and nothing enforces its deadline.
+        driver.wait().unwrap();
+        Race {
+            root,
+            store,
+            script,
+            pending_id,
+            request_sha256,
+        }
+    }
+
+    fn not_declared(race: &Race) -> Result<SettlementStatus, CepAuthorityError> {
+        let lapsed = lease_and_fencing::claimed_at(race.root.path(), &race.pending_id)
+            + lease_and_fencing::lease();
+        resolve_uncertain_at(
+            race.root.path(),
+            &race.pending_id,
+            1,
+            UncertainResolution::NotDeclared {
+                evidence: "authority record is empty".into(),
+            },
+            &operator(),
+            lapsed,
+        )
+    }
+
+    /// The five steps of the issue. On main step 3 succeeds, the orphan appends (step 4), and the re-claim
+    /// declares again (step 5): two external declarations for one request.
+    #[test]
+    fn an_orphaned_command_cannot_race_not_declared_into_a_second_declaration() {
+        let race = crash_the_server_mid_command(3);
+        // Step 3: the operator attests while the orphan still runs.
+        let released = not_declared(&race);
+        // Step 4: the orphan appends late.
+        wait_for("the orphan to append", Duration::from_secs(30), || {
+            declarations(race.store.path()) >= 1
+        });
+        // Step 5: if the claim was released, it is re-claimed and attempt 2 declares again.
+        if released.is_ok() {
+            let (_, _, attempt) =
+                match gate_swe_seed_in(race.root.path(), &approval_policy(), evidence_a()).unwrap()
+                {
+                    SettlementGate::Resumed {
+                        pending_id,
+                        request_sha256,
+                        attempt,
+                        ..
+                    } => (pending_id, request_sha256, attempt),
+                    other => panic!("expected a re-claim, got {other:?}"),
+                };
+            assert_eq!(attempt, 2);
+            CommandSweSeedTransport::new(argv(&race.script, race.store.path(), 0), 60)
+                .unwrap()
+                .with_launch_evidence(race.root.path())
+                .submit(&request_for(&race.pending_id, &race.request_sha256))
+                .unwrap();
+        }
+        let count = declarations(race.store.path());
+        assert!(
+            released.is_err() && count == 1,
+            "NotDeclared was {} while the orphaned command was still running; the authority store now holds {count} declaration(s) for one request",
+            if released.is_ok() { "accepted" } else { "refused" },
+        );
+        let refusal = released.unwrap_err().to_string();
+        assert!(refusal.contains("settlement_command_alive"), "{refusal}");
+        assert_eq!(
+            settlement_status(race.root.path(), &race.pending_id).unwrap(),
+            SettlementStatus::Resuming { attempt: 1 }
+        );
+    }
+
+    fn lapsed(root: &Path, pending_id: &str) -> chrono::DateTime<chrono::Utc> {
+        lease_and_fencing::claimed_at(root, pending_id) + lease_and_fencing::lease()
+    }
+
+    fn resolve_with(
+        root: &Path,
+        pending_id: &str,
+        resolution: UncertainResolution,
+    ) -> Result<SettlementStatus, CepAuthorityError> {
+        resolve_uncertain_at(
+            root,
+            pending_id,
+            1,
+            resolution,
+            &operator(),
+            lapsed(root, pending_id),
+        )
+    }
+
+    fn write_launch_payload(root: &Path, pending_id: &str, payload: Value) {
+        LedgerStream::open(root, LEDGER_ID, "cep-launch-test")
+            .unwrap()
+            .commit_typed_once(
+                "settlement_state",
+                format!("settlement-state:{pending_id}:launched:1"),
+                vec![pending_id.to_string()],
+                &payload,
+                vec![],
+            )
+            .unwrap();
+    }
+
+    fn audit_records(root: &Path) -> Vec<Value> {
+        LedgerStream::open(root, LEDGER_ID, "cep-launch-test")
+            .unwrap()
+            .read_entries()
+            .unwrap()
+            .into_iter()
+            .filter(|e| e.record_kind == "settlement_uncertain_resolution")
+            .map(|e| e.payload)
+            .collect()
+    }
+
+    /// A launch record that exists but cannot be read must never fall back to the lease-only rule.
+    #[test]
+    fn a_malformed_launch_record_is_unknown_and_only_the_attestation_overrides_it() {
+        for bad in [
+            json!({}),
+            json!({"pgid": "x"}),
+            json!({"pgid": 99999999999u64, "leader_starttime": null, "boot_id": null}),
+            json!({"pgid": 5, "leader_starttime": 7, "boot_id": null}),
+        ] {
+            let root = tempfile::tempdir().unwrap();
+            let (pending_id, _, _) = claim(root.path());
+            write_launch_payload(root.path(), &pending_id, bad.clone());
+            let attest = || UncertainResolution::NotDeclared {
+                evidence: "empty".into(),
+            };
+            let refused = resolve_with(root.path(), &pending_id, attest())
+                .unwrap_err()
+                .to_string();
+            assert!(
+                refused.contains("settlement_command_liveness_unknown"),
+                "{bad}: {refused}"
+            );
+            assert_eq!(
+                settlement_status(root.path(), &pending_id).unwrap(),
+                SettlementStatus::Resuming { attempt: 1 }
+            );
+            // The explicit, audited attestation releases it.
+            let gone = UncertainResolution::NotDeclaredCommandGone {
+                evidence: "empty".into(),
+            };
+            assert_eq!(
+                resolve_with(root.path(), &pending_id, gone).unwrap(),
+                SettlementStatus::Approved
+            );
+            let audit = audit_records(root.path());
+            assert_eq!(audit.len(), 1);
+            assert_eq!(audit[0]["command_gone_attested"], json!(true));
+            assert_eq!(audit[0]["command_liveness_overridden"], json!(true));
+            assert_eq!(audit[0]["resolver_actor_id"], json!(operator().actor_id));
+        }
+    }
+
+    /// The attestation never bypasses a process group that is positively alive.
+    #[test]
+    fn the_attestation_does_not_override_a_live_command() {
+        use std::os::unix::process::CommandExt;
+        let root = tempfile::tempdir().unwrap();
+        let (pending_id, _, _) = claim(root.path());
+        let mut live = std::process::Command::new("/bin/sleep")
+            .arg("20")
+            .process_group(0)
+            .spawn()
+            .unwrap();
+        sea_forge_authority::cep::record_command_launch(
+            root.path(),
+            &pending_id,
+            &sea_forge_authority::cep::CommandLaunch::capture(live.id()),
+        )
+        .unwrap();
+        let gone = UncertainResolution::NotDeclaredCommandGone {
+            evidence: "empty".into(),
+        };
+        let refused = resolve_with(root.path(), &pending_id, gone)
+            .unwrap_err()
+            .to_string();
+        live.kill().unwrap();
+        live.wait().unwrap();
+        assert!(refused.contains("settlement_command_alive"), "{refused}");
+        assert!(audit_records(root.path()).is_empty());
+    }
+
+    #[test]
+    fn not_declared_is_accepted_once_the_command_has_exited() {
+        let race = crash_the_server_mid_command(1);
+        wait_for("the orphan to exit", Duration::from_secs(30), || {
+            declarations(race.store.path()) >= 1
+        });
+        // The shell has appended and is exiting; give it a moment, then the group is empty.
+        let status = {
+            let start = Instant::now();
+            loop {
+                match not_declared(&race) {
+                    Ok(status) => break status,
+                    Err(error) if start.elapsed() < Duration::from_secs(10) => {
+                        assert!(
+                            error.to_string().contains("settlement_command_alive"),
+                            "{error}"
+                        );
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                    Err(error) => panic!("still refused after the command exited: {error}"),
+                }
+            }
+        };
+        assert_eq!(status, SettlementStatus::Approved);
+    }
+}

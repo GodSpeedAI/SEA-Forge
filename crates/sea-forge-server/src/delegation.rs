@@ -1023,12 +1023,14 @@ async fn submit_swe_seed_declaration(
     // Set once the authority call is under way. Before that, a failure cannot have produced a declaration.
     let call_started = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let call_started_in_task = Arc::clone(&call_started);
+    let launch_root = root.to_path_buf();
     let declared = tokio::task::spawn_blocking(
         move || -> Result<sea_forge_core::types::SettlementDeclaration, ForgeError> {
             let transport = sea_forge_settlement::CommandSweSeedTransport::new(
                 descriptor.command.clone(),
                 descriptor.timeout_secs,
-            )?;
+            )?
+            .with_launch_evidence(launch_root);
             let authority = sea_forge_settlement::SweSeedSettlementAuthority::new(
                 transport,
                 &request.acting_entity_id,

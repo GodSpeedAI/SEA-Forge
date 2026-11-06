@@ -294,9 +294,28 @@ pub trait SweSeedTransport {
     fn submit(&self, req: &SettlementDeclarationRequest) -> Result<SweSeedResponse, ForgeError>;
 }
 
+/// The external SWE_SEED authority is any command that follows this contract.
+///
+/// - The request on stdin is a `SettlementDeclarationRequest`; the response on stdout is a `SweSeedResponse`.
+/// - **Idempotency (MUST).** An external declaration carries `authorization_request_sha256`. It is identical for
+///   every attempt at the same approved request, including a retry after an operator resolved an earlier attempt
+///   as not declared. The authority MUST treat it as an idempotency key and, in one atomic check-and-append,
+///   refuse (or answer with the existing attestation for) a second declaration for the same key. This is the
+///   only complete defence against the double declaration of issue #86; the checks below only narrow it.
+/// - **Liveness evidence (this crate).** When [`CommandSweSeedTransport::with_launch_evidence`] is set, the
+///   command's process group, leader start time and boot id are recorded on the claimed attempt right after the
+///   spawn, and `resolve_uncertain_settlement` refuses `NotDeclared` while that group is alive. Bounds: a process
+///   that left the group (`setsid`, `setpgid`), a resolver in a different pid namespace on the same boot, and the
+///   instant between `fork` and the ledger write are not covered. Exited-but-unreaped (zombie) members do not count
+///   as alive. A claim with no record keeps the lease-only rule; a record that cannot be read, or a check that
+///   cannot run, refuses with `settlement_command_liveness_unknown`, which only the operator's explicit,
+///   audited `resolve-uncertain --not-declared --attest-command-gone` overrides (never a group that is alive).
+/// - **Containment.** Windows kills the command with the server (Job Object). Under systemd,
+///   `KillMode=control-group` kills a crashed server's leftovers when the unit stops.
 pub struct CommandSweSeedTransport {
     argv: Vec<String>,
     timeout: Duration,
+    launch_evidence_root: Option<std::path::PathBuf>,
 }
 
 impl CommandSweSeedTransport {
@@ -311,7 +330,16 @@ impl CommandSweSeedTransport {
         Ok(Self {
             argv,
             timeout: Duration::from_secs(timeout_secs),
+            launch_evidence_root: None,
         })
+    }
+
+    /// Record the spawned command's process group on the claimed attempt in the settlement ledger under `root`.
+    /// Only a request that carries an `authorization_ref` (a claimed settlement) is recorded.
+    #[must_use]
+    pub fn with_launch_evidence(mut self, root: impl Into<std::path::PathBuf>) -> Self {
+        self.launch_evidence_root = Some(root.into());
+        self
     }
 }
 
@@ -331,6 +359,35 @@ impl SweSeedTransport for CommandSweSeedTransport {
             command.process_group(0);
         }
         let (mut child, tree) = ProcessTree::spawn(&mut command)?;
+        if let Some(root) = &self.launch_evidence_root {
+            if let Some(pending_id) = req.authorization_ref.as_deref() {
+                let launch = sea_forge_authority::cep::CommandLaunch::capture(child.id());
+                if let Err(error) =
+                    sea_forge_authority::cep::record_command_launch(root, pending_id, &launch)
+                {
+                    // Without the evidence the command must not run on: stop it, and keep the claim open.
+                    let stopped = tree.terminate(&child).map_err(|e| e.to_string());
+                    let exited = wait_bounded(&mut child, Duration::from_secs(5));
+                    let still_running = stopped.is_err() || !exited;
+                    return Err(settlement_authority_call_failed(format!(
+                        "could not record the SWE_SEED command launch: {error}{}",
+                        if still_running {
+                            format!(
+                                "; the command (process group {}) could not be confirmed stopped ({}); the claim stays held",
+                                child.id(),
+                                stopped.err().unwrap_or_else(|| "it did not exit in time".into())
+                            )
+                        } else {
+                            String::new()
+                        }
+                    )));
+                }
+            } else {
+                eprintln!(
+                    "warning: SWE_SEED launch evidence is enabled but the request carries no authorization_ref; no launch record was written"
+                );
+            }
+        }
         let mut stdin = child
             .stdin
             .take()
@@ -506,6 +563,18 @@ fn settlement_authority_unavailable(error: impl std::fmt::Display) -> ForgeError
 
 /// The SWE_SEED command was started and then failed (timeout, nonzero exit, output limits, invalid response). It
 /// may already have appended a declaration, so callers must not treat this as proof that none was made.
+/// Wait for `child` to exit, polling, for at most `limit`. True if it exited.
+fn wait_bounded(child: &mut std::process::Child, limit: Duration) -> bool {
+    let deadline = Instant::now() + limit;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return true,
+            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
+            _ => return false,
+        }
+    }
+}
+
 fn settlement_authority_call_failed(error: impl std::fmt::Display) -> ForgeError {
     ForgeError::Plan {
         class: "settlement_authority_call_failed",
