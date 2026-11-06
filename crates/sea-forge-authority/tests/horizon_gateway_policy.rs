@@ -304,13 +304,14 @@ fn class_verdict(class: Option<&str>) -> Verdict {
 /// missing or unrecognised class is not allowed. An unconstrained rule matches only the local class, so the
 /// fallback does not fail open. If the engine ever changed that, this test fails.
 #[test]
-fn the_unconstrained_fallback_does_not_allow_a_missing_or_unknown_class() {
-    assert_ne!(class_verdict(None), Verdict::Allow, "a missing class");
+fn the_unconstrained_fallback_denies_a_missing_or_unknown_class() {
+    // Deny, not merely "not Allow": an Escalate would make an invalid class eligible for approval.
+    assert_eq!(class_verdict(None), Verdict::Deny, "a missing class");
     for unknown in ["internal", "External", "LOCAL", "", "local ", "remote"] {
-        assert_ne!(
+        assert_eq!(
             class_verdict(Some(unknown)),
-            Verdict::Allow,
-            "class {unknown:?} must not be allowed"
+            Verdict::Deny,
+            "class {unknown:?} must be denied"
         );
     }
 }
