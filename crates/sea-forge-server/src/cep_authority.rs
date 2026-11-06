@@ -83,7 +83,7 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
     }
     let mut registry = WorldRegistry::new();
     for (name, entry, files) in sets {
-        registry
+        let world_ref = registry
             .register_source_set(
                 &name,
                 &SeaSourceSet {
@@ -92,6 +92,9 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
                 },
             )
             .map_err(|e| format!("world {name}: {e}"))?;
+        // The name an operator configures and the ref a caller must present are different strings; log both so an
+        // "unknown world" refusal can be matched to what was actually loaded.
+        tracing::info!(world = %name, world_ref = %world_ref, "cep_authority world loaded");
     }
     for (name, relative, content) in priors {
         registry

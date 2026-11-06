@@ -7,8 +7,9 @@ use sea_forge_authority::cep::{
     SettlementAuthorityClass, SettlementCriteria, SettlementGate, SettlementIngress,
     SettlementOperation, SettlementTransport, VerifiedSettlementIngress,
 };
+use sea_forge_authority::AuthorityEvaluation;
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_core::types::{Actor, ActorRole};
+use sea_forge_core::types::{Actor, ActorRole, AuthorityAction, Verdict};
 use sea_forge_domainforge::WorldRegistry;
 
 const RENDERED: &str = include_str!("fixtures/horizon-gateway-policy.yaml");
@@ -259,4 +260,63 @@ fn an_unscoped_service_allow_placed_before_the_gate_does_not_shadow_external_dec
     )
     .unwrap();
     assert!(matches!(pending, SettlementGate::Pending { .. }));
+}
+
+/// Evaluate a raw `settlement_declaration` action under the rendered policy, so the class parameter itself is
+/// under test. `None` leaves `settlement_authority_class` out of the parameters.
+fn class_verdict(class: Option<&str>) -> Verdict {
+    let root = tempfile::tempdir().unwrap();
+    let (bundle, engine) = engine(RENDERED);
+    let mut parameters =
+        serde_json::json!({"operation_id": OP, "surface": "settlement_declaration"});
+    if let Some(class) = class {
+        parameters["settlement_authority_class"] = class.into();
+    }
+    let action = AuthorityAction::Reserved {
+        resource_type: "settlement_declaration".into(),
+        resource_id: OP.into(),
+        parameters,
+    };
+    let actor = gateway();
+    let binding = bundle.resolve_identity(&actor.actor_id, actor.role.clone());
+    engine
+        .evaluate(AuthorityEvaluation {
+            actor: &actor,
+            binding,
+            run_id: OP,
+            case_id: "cognate",
+            plan_item_id: OP,
+            sequence: 1,
+            action: &action,
+            workspace_root: root.path(),
+            evidence_refs: vec![],
+            artifacts_root: None,
+            timeout_secs: None,
+            env_keys: Default::default(),
+            opa_candidate: None,
+            environment: None,
+        })
+        .unwrap()
+        .verdict
+}
+
+/// Pins the behaviour Horizon issue #19 asks about: the rendered fallback rule carries no class constraint, yet a
+/// missing or unrecognised class is not allowed. An unconstrained rule matches only the local class, so the
+/// fallback does not fail open. If the engine ever changed that, this test fails.
+#[test]
+fn the_unconstrained_fallback_does_not_allow_a_missing_or_unknown_class() {
+    assert_ne!(class_verdict(None), Verdict::Allow, "a missing class");
+    for unknown in ["internal", "External", "LOCAL", "", "local ", "remote"] {
+        assert_ne!(
+            class_verdict(Some(unknown)),
+            Verdict::Allow,
+            "class {unknown:?} must not be allowed"
+        );
+    }
+}
+
+#[test]
+fn the_fallback_allows_local_and_the_gate_requires_approval_for_external() {
+    assert_eq!(class_verdict(Some("local")), Verdict::Allow);
+    assert_eq!(class_verdict(Some("external")), Verdict::Escalate);
 }
