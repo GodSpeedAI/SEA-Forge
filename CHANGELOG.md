@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.0...v0.4.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **settlement:** refuse NotDeclared while the settlement command may still be running ([#89](https://github.com/GodSpeedAI/SEA-Forge/issues/89)) ([7db070a](https://github.com/GodSpeedAI/SEA-Forge/commit/7db070a5e67f340ecd94cb61ddff1493d594eada))
+
 ## [0.4.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.3.0...v0.4.0) (2026-11-05)
 
 
