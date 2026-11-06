@@ -63,6 +63,8 @@ fn resolve(opts: &ApproveOptions, approved: bool) -> Result<u8, ForgeError> {
 pub enum UncertainResolutionArg {
     Declared(String),
     NotDeclared(String),
+    /// `--not-declared` with `--attest-command-gone`.
+    NotDeclaredCommandGone(String),
 }
 
 pub struct UncertainOptions<'a> {
@@ -117,6 +119,9 @@ pub fn resolve_uncertain(opts: UncertainOptions) -> Result<u8, ForgeError> {
         }
         UncertainResolutionArg::NotDeclared(evidence) => {
             UncertainResolution::NotDeclared { evidence }
+        }
+        UncertainResolutionArg::NotDeclaredCommandGone(evidence) => {
+            UncertainResolution::NotDeclaredCommandGone { evidence }
         }
     };
     let status = resolve_uncertain_settlement(

@@ -25,3 +25,5 @@ workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+# Tests only: the race test drives the real SWE_SEED command transport.
+sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.4.0" }

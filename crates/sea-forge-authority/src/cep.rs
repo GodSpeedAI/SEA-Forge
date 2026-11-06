@@ -11,6 +11,8 @@
 //! The evaluated actor is the *verified caller* supplied by the server's
 //! identity gate. The envelope's subject is recorded, never trusted for role.
 
+mod command_launch;
+pub use command_launch::{CommandLaunch, GroupLiveness};
 mod declaration_authority;
 pub use declaration_authority::{
     declaration_content_hash, is_external_declaration, read_all_declarations,
@@ -2324,6 +2326,72 @@ fn state_key(pending_id: &str, suffix: &str) -> String {
     format!("settlement-state:{pending_id}:{suffix}")
 }
 
+/// Record, on the open attempt of `pending_id`, the process group of the SWE_SEED command that was just spawned.
+/// Create-only per attempt. Called by the transport right after the spawn; a failure must stop the command.
+pub fn record_command_launch(
+    root: &Path,
+    pending_id: &str,
+    launch: &CommandLaunch,
+) -> Result<(), CepAuthorityError> {
+    let ledger = settlement_ledger(root)?;
+    let entries = ledger.read_entries()?;
+    let record = require_pending(&entries, pending_id)?;
+    let attempt = match status_in(&entries, &record, Utc::now()) {
+        SettlementStatus::Resuming { attempt } => attempt,
+        other => {
+            return Err(CepAuthorityError::Internal(format!(
+            "settlement {pending_id} is {other:?}; there is no open attempt to record a launch on"
+        )))
+        }
+    };
+    ledger.commit_typed_once(
+        SETTLEMENT_STATE_KIND,
+        state_key(pending_id, &format!("launched:{attempt}")),
+        vec![record.operation_id.clone(), record.pending_id.clone()],
+        &state_payload(
+            &record,
+            "launched",
+            json!({
+                "attempt": attempt,
+                "pgid": launch.pgid,
+                "leader_starttime": launch.leader_starttime,
+                "boot_id": launch.boot_id,
+            }),
+        ),
+        vec![record.decision_ref.clone()],
+    )?;
+    Ok(())
+}
+
+/// The launch evidence recorded for one attempt. `None`: no entry (a claim from before this evidence existed).
+/// `Some(Err)`: an entry exists but cannot be read, which must never be treated as "no entry".
+fn recorded_launch(
+    entries: &[LedgerEntry],
+    record: &SettlementPendingRecord,
+    attempt: u32,
+) -> Option<Result<CommandLaunch, String>> {
+    let key = state_key(&record.pending_id, &format!("launched:{attempt}"));
+    let payload = &find_entry(entries, &key)?.payload;
+    let optional_text = |pointer: &str| match payload.pointer(pointer) {
+        Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => Ok(Some(text.clone())),
+        _ => Err(format!("launch record has no valid {pointer}")),
+    };
+    Some((|| {
+        let pgid = payload
+            .pointer("/pgid")
+            .and_then(Value::as_u64)
+            .and_then(|pgid| u32::try_from(pgid).ok())
+            .filter(|pgid| *pgid > 0)
+            .ok_or_else(|| "launch record has no valid /pgid".to_string())?;
+        Ok(CommandLaunch {
+            pgid,
+            leader_starttime: optional_text("/leader_starttime")?,
+            boot_id: optional_text("/boot_id")?,
+        })
+    })())
+}
+
 impl SettlementIngress {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -3128,11 +3196,18 @@ pub enum UncertainResolution {
     /// The operator attests that the external authority holds no declaration for this attempt. The claim is
     /// released, so a fenced retry can claim it again. A stale worker from this attempt cannot complete later.
     NotDeclared { evidence: String },
+    /// As `NotDeclared`, and the operator also attests that they verified by hand that the SWE_SEED command's
+    /// process group is gone. It overrides only an unknown liveness result (the check could not run, or the
+    /// launch record is unreadable); it never overrides a group that is positively alive. The attestation, the
+    /// operator and the pgid are kept in the resolution audit record.
+    NotDeclaredCommandGone { evidence: String },
 }
 
 /// Resolve an uncertain open claim. Only an operator may resolve it, and only after the lease has lapsed. The lease
 /// lapse is the earliest point at which an operator may attest: the lease is a time bound only, so a detached
-/// grandchild or a command orphaned by a server crash can outlive it (see issue #86). The requester cannot resolve
+/// grandchild or a command orphaned by a server crash can outlive it (see issue #86). `NotDeclared` is therefore also refused while the recorded SWE_SEED process group is alive
+/// (`settlement_command_alive`) or cannot be checked (`settlement_command_liveness_unknown`); only
+/// `NotDeclaredCommandGone` overrides the latter, never the former. The requester cannot resolve
 /// their own claim. The attempt is closed first, fenced to the attempt, so a retried resolution cannot settle a newer attempt; the resolution is
 /// audited only after the close took effect.
 pub fn resolve_uncertain_settlement(
@@ -3196,6 +3271,12 @@ pub fn resolve_uncertain_settlement_with_hook(
     now: DateTime<Utc>,
     before_close: impl FnOnce(),
 ) -> Result<SettlementStatus, CepAuthorityError> {
+    let (resolution, command_gone_attested) = match resolution {
+        UncertainResolution::NotDeclaredCommandGone { evidence } => {
+            (UncertainResolution::NotDeclared { evidence }, true)
+        }
+        other => (other, false),
+    };
     if resolver.role != sea_forge_core::types::ActorRole::Operator {
         return Err(CepAuthorityError::Approval(format!(
             "{} may not resolve an uncertain settlement; only an operator may",
@@ -3262,7 +3343,9 @@ pub fn resolve_uncertain_settlement_with_hook(
             "resolution": "approved",
             "uncertain_resolution": match &resolution {
                 UncertainResolution::Declared { .. } => "declared",
-                UncertainResolution::NotDeclared { .. } => "not_declared",
+                UncertainResolution::NotDeclared { .. } | UncertainResolution::NotDeclaredCommandGone { .. } => {
+                    "not_declared"
+                }
             },
             "required_approver_roles": [],
         }),
@@ -3309,9 +3392,51 @@ pub fn resolve_uncertain_settlement_with_hook(
             "settlement {pending_id} attempt {attempt} lease has not lapsed; the attempt may still be calling the authority"
         )));
     }
+    // Issue #86: the lease is a time bound only. A command orphaned by a server crash is not bound by its
+    // deadline and may still append its declaration, so "not declared" cannot be attested while its process
+    // group exists. A claim with no launch record (made before this evidence existed) keeps the lease-only rule.
+    let mut attested_pgid: Option<Option<u32>> = None;
+    if matches!(resolution, UncertainResolution::NotDeclared { .. }) {
+        let unknown = |pgid: Option<u32>, reason: String| {
+            let check = pgid.map_or_else(
+                || "check the launched process group by hand".to_string(),
+                |pgid| format!("check by hand, for example `ps -g {pgid}`"),
+            );
+            CepAuthorityError::Approval(format!(
+                "settlement_command_liveness_unknown: settlement {pending_id} attempt {attempt}: cannot tell whether the SWE_SEED command is still running ({reason}); {check}, then resolve with --attest-command-gone"
+            ))
+        };
+        match recorded_launch(&entries, &record, attempt) {
+            None => {}
+            Some(Ok(launch)) => match launch.liveness() {
+                GroupLiveness::Gone => {}
+                GroupLiveness::Alive => {
+                    return Err(CepAuthorityError::Approval(format!(
+                        "settlement_command_alive: settlement {pending_id} attempt {attempt}: the SWE_SEED command (process group {}) is still running and may append its declaration; wait for it to exit, then resolve",
+                        launch.pgid
+                    )))
+                }
+                GroupLiveness::Unknown(reason) => {
+                    if !command_gone_attested {
+                        return Err(unknown(Some(launch.pgid), reason));
+                    }
+                    attested_pgid = Some(Some(launch.pgid));
+                }
+            },
+            Some(Err(reason)) => {
+                if !command_gone_attested {
+                    return Err(unknown(None, reason));
+                }
+                attested_pgid = Some(None);
+            }
+        }
+    }
     let (kind, detail) = match &resolution {
         UncertainResolution::Declared { declaration_ref } => ("declared", declaration_ref.as_str()),
-        UncertainResolution::NotDeclared { evidence } => ("not_declared", evidence.as_str()),
+        UncertainResolution::NotDeclared { evidence }
+        | UncertainResolution::NotDeclaredCommandGone { evidence } => {
+            ("not_declared", evidence.as_str())
+        }
     };
     before_close();
     // Close first. The close is fenced to the attempt and happens once per attempt, so racing resolvers and the
@@ -3320,7 +3445,8 @@ pub fn resolve_uncertain_settlement_with_hook(
         UncertainResolution::Declared { declaration_ref } => {
             complete_settlement_resume(root, pending_id, attempt, declaration_ref)?
         }
-        UncertainResolution::NotDeclared { .. } => {
+        UncertainResolution::NotDeclared { .. }
+        | UncertainResolution::NotDeclaredCommandGone { .. } => {
             release_settlement_resume(root, pending_id, attempt)?
         }
     }
@@ -3332,13 +3458,22 @@ pub fn resolve_uncertain_settlement_with_hook(
             SETTLEMENT_UNCERTAIN_RESOLUTION_KIND,
             format!("settlement-uncertain:{}:{attempt}", record.pending_id),
             vec![record.operation_id.clone(), record.pending_id.clone()],
-            &json!({
-                "pending_id": record.pending_id,
-                "attempt": attempt,
-                "resolution": kind,
-                "detail": detail,
-                "resolver_actor_id": resolver.actor_id,
-            }),
+            &{
+                let mut audit = json!({
+                    "pending_id": record.pending_id,
+                    "attempt": attempt,
+                    "resolution": kind,
+                    "detail": detail,
+                    "resolver_actor_id": resolver.actor_id,
+                });
+                if command_gone_attested {
+                    // Only present when the operator gave the attestation, so older records keep their shape.
+                    audit["command_gone_attested"] = json!(true);
+                    audit["command_liveness_overridden"] = json!(attested_pgid.is_some());
+                    audit["command_pgid"] = json!(attested_pgid.flatten());
+                }
+                audit
+            },
             vec![record.decision_ref.clone()],
         )
         .map_err(|error| {

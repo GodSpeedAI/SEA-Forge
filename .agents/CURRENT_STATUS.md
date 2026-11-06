@@ -1,14 +1,16 @@
 # Current status
 
-**Status revision:** 228
+**Status revision:** 230
 
-**Stage:** Tests: pin fail-closed settlement classes for the Horizon gateway policy; log loaded world refs
+**Stage:** Fix review: document the attempts that have no launch record (#86)
 
-**Summary:** With the Horizon gateway policy fixture, a settlement declaration whose class is missing or unknown is denied, local is allowed, and external requires operator approval (Horizon#19 is a non-issue; this pins it). cep_authority now logs each loaded world with its registered ref.
+**Summary:** CI and review fixes for the NotDeclared liveness guard: the test-only sea-forge-settlement dependency carries a version (cargo-deny wildcard ban), parse_ps_members allows dead_code on non-Unix, and the lease-only exception for attempts without a launch record is recorded.
 
 **Verified:**
-- sea-forge-authority horizon_gateway_policy: a missing or unknown class is Deny, local is Allow, external needs approval
-- the world-load log is emitted only after every world and prior identity registers
+- cargo test --workspace passes; clippy clean
+- cep_settlement orphaned_command race test fails without the guard and passes with it
+- Independent review: two rounds, APPROVE on round 2 (zombies are gone, read errors fail closed, a malformed record is Unknown)
+- cargo-deny bans pass with the dev-dependency version
 
 **Limits:**
 - A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
@@ -17,7 +19,11 @@
 - The CLI builds an Operator from --actor, the same local trust model as approve
 - The Horizon policy renderer and the sea-rs fixture are not tied by a test (follow-up)
 - The server test covers a nonzero exit only; the timeout variant is covered at the CLI
-- On Unix a SWE_SEED command can outlive a server crash (no process-group containment tied to the server). An operator NotDeclared attestation after the lease lapses can then race an orphaned command's late declaration. Mitigation needs authority-side dedup on authorization_request_sha256 or containment; tracked as a follow-up.
 - The world-load log is INFO level; SFWP has no way to list loaded worlds
+- The liveness guard sees the recorded process group only: a process that left it (setsid/setpgid), a resolver in another pid namespace on the same boot, and the instant between fork and the ledger write are not seen
+- An Unknown liveness result or a malformed launch record can be overridden only by the operator's audited --attest-command-gone; a group that is positively alive is always refused
+- Exactly-once across an operator NotDeclared and a late declaration still relies on the external authority treating authorization_request_sha256 as an idempotency key (contract documented in sea-forge-settlement declaration.rs)
+- Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
+- An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
 
-**Next:** Merge after CI; close Horizon#19.
+**Next:** Merge after CI; release, then the owner reinstalls the Horizon gateway with the new binary and unit.

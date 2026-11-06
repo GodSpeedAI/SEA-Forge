@@ -177,6 +177,10 @@ enum Command {
             required_unless_present = "declared"
         )]
         not_declared: Option<String>,
+        /// With `--not-declared`: state that you verified by hand that the SWE_SEED command's process group is
+        /// gone. Overrides only an unknown liveness check, never a group that is positively alive. Audited.
+        #[arg(long, requires = "not_declared")]
+        attest_command_gone: bool,
         #[arg(long, default_value = ".sea-forge")]
         root: PathBuf,
         #[arg(long)]
@@ -741,6 +745,7 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             attempt,
             declared,
             not_declared,
+            attest_command_gone,
             root,
             policy,
             actor,
@@ -749,6 +754,9 @@ fn dispatch(cli: Cli) -> Result<u8, (u8, sea_forge_core::ForgeError)> {
             let resolution = match (declared, not_declared) {
                 (Some(declaration_ref), None) => {
                     commands::approve::UncertainResolutionArg::Declared(declaration_ref)
+                }
+                (None, Some(evidence)) if attest_command_gone => {
+                    commands::approve::UncertainResolutionArg::NotDeclaredCommandGone(evidence)
                 }
                 (None, Some(evidence)) => {
                     commands::approve::UncertainResolutionArg::NotDeclared(evidence)
