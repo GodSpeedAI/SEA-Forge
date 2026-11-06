@@ -119,7 +119,7 @@ fn has_exited(state: char) -> bool {
 }
 
 /// Parse `ps -A -o pid=,pgid=,stat=` and return the live members of `pgid`. Any unparseable line is an error.
-#[cfg_attr(target_os = "linux", allow(dead_code))]
+#[cfg_attr(any(target_os = "linux", not(unix)), allow(dead_code))]
 fn parse_ps_members(text: &str, pgid: u32) -> Result<Vec<u32>, String> {
     let mut members = Vec::new();
     for line in text.lines().filter(|line| !line.trim().is_empty()) {
