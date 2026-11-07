@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 232
+**Status revision:** 233
 
-**Stage:** Horizon desk support: plan digest, add_item dry_run, case read digests
+**Stage:** Horizon desk support: protocol reference
 
-**Summary:** case.preflight returns plan_precondition and case.commit checks it; case.add_item gains dry_run and plan: preconditions; case.get_overview and approval.list return a ready-made digest record; contracts/schema regenerated.
+**Summary:** The SFWP protocol reference now covers plan: refs, case.add_item (request_id, dry_run, preconditions, external_ref), the review marker and where a client reads each precondition digest.
 
 **Verified:**
 - cargo build --release -p sea-forge-server; cargo test -p sea-forge-core (67 unit tests); cargo test -p sea-forge-server (573 tests, 0 failed); clippy has no new warnings
@@ -13,4 +13,4 @@
 - The case.add_item precondition is checked before the write, not under the same lock as the write
 - contracts generated TypeScript under workbench/ is not regenerated here (needs bun)
 
-**Next:** Docs for the new fields follow.
+**Next:** Hand to the Horizon desk adapter.

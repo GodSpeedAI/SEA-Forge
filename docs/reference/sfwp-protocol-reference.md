@@ -87,15 +87,16 @@ The protocol defines 18 methods across three interaction classes:
 | Method | Class | Description |
 |---|---|---|
 | `case.list` | `Inspect` | Lists all cases in the cell with state and progress metrics. |
-| `case.get_overview` | `Inspect` | Returns summary status, timestamps, and active items for a single case. |
+| `case.get_overview` | `Inspect` | Returns summary status, timestamps, and active items for a single case, plus `digest` (a `case:` precondition record). |
 | `case.get_horizon` | `Inspect` | Returns the complete CMMN sentry dependency horizon and enabled items. |
 | `case.preflight` | `Inspect` | Pure dry-run check of a proposed case plan; verifies policy without side effects. |
-| `case.commit` | `Command` | Admits, creates, and activates a case plan. Requires `request_id` for idempotency. |
+| `case.commit` | `Command` | Admits, creates, and activates a case plan. Requires `request_id` for idempotency. Accepts `preconditions` (`template:` and `plan:` refs). |
+| `case.add_item` | `Command` | Adds one discretionary step to a case's plan. Requires `request_id` (except with `dry_run`). Supports `dry_run` and `preconditions`; see section 5. |
 
 ### Approvals & Human Tasks
 | Method | Class | Description |
 |---|---|---|
-| `approval.list` | `Inspect` | Lists all pending, approved, or rejected approval requests. |
+| `approval.list` | `Inspect` | Lists all pending, approved, or rejected approval requests. Each entry carries `digest` (an `approval:` precondition record). |
 | `approval.decide` | `Command` | Commits a human approval or rejection decision to `approvals.jsonl`. |
 
 ### Runs & Assets
@@ -129,3 +130,102 @@ The protocol defines 18 methods across three interaction classes:
 | `schema_validation_failed`| 422 | Payload failed AJV or JSON Schema validation against canonical type. |
 | `sod_violation` | 403 | Separation of Duties violation: proposer attempted to approve own item. |
 | `internal_error` | 500 | Unhandled internal server failure; check `server.log`. |
+
+---
+
+## 5. Preconditions, digests, and `case.add_item`
+
+The examples in this section show the wire as the server reads it: one JSON
+object per line, flat, with a `verb` field.
+
+### 5.1 Preconditions
+
+A protected request (`case_commit`, `case_add_item`, `approval_decide`) may
+carry `preconditions`:
+
+```json
+{"preconditions": {"records": [{"ref": "plan:<id>", "expected_digest": "sha256:<hex>"}]}}
+```
+
+The server recomputes each record's current digest. If any differs, the call
+is refused with no side effect:
+
+```json
+{"outcome": "rejected_as_stale", "code": "precondition_failed",
+ "changed_records": [{"ref": "...", "expected_digest": "...", "current_digest": "..."}],
+ "next_actions": ["..."]}
+```
+
+At most 16 records. A ref the verb cannot resolve is stale.
+
+| Ref | Accepted by | Digest of |
+|---|---|---|
+| `template:<name>@<version>` | `case_commit` | the template file's bytes |
+| `plan:<name>@<version>` | `case_commit` | canonical JSON `{template_sha256, params, items}`: the template's bytes, the request's `params`, and the instantiated plan items. Changes if any of the three changes |
+| `plan:<case_id>` | `case_add_item` | the case's plan as it would be after this add (current `plan.json` plus the item, as validated) |
+| `case:<case_id>` | `approval_decide` | the ordered record kinds and payload hashes of the case ledger |
+| `approval:<approval_id>` | `approval_decide` | the latest case-ledger record that names the approval |
+
+### 5.2 Where a client gets each digest
+
+Never compute a digest on the client. Read it:
+
+* `plan:<template_ref>`: the `plan_precondition` field of the `case_preflight` reply (same params as the commit).
+  `{"plan_precondition": {"ref": "plan:sequential_agents@0.1.0", "expected_digest": "sha256:..."}}`
+  Omitted when the plan could not be built.
+* `template:<ref>`: the existing `precondition` field of the same reply.
+* `plan:<case_id>`: the `plan_precondition` field of a `case_add_item` `dry_run` reply (section 5.3).
+* `case:<case_id>`: the `digest` field of the `case_get_overview` reply.
+  `{"digest": {"ref": "case:<case_id>", "expected_digest": "sha256:..."}}`
+* `approval:<approval_id>`: the `digest` field of the matching entry in the `approval_list` reply.
+  `{"digest": {"ref": "approval:<approval_id>", "expected_digest": "sha256:..."}}`
+
+Every one of these is a ready-made `{ref, expected_digest}` record: copy it
+into `preconditions.records` unchanged. `digest` is omitted when the record
+cannot be resolved. These digests are computed by the same code that checks
+them, and they change whenever the record changes (a `case:` digest changes
+on every new ledger record for the case, so it pins "nothing happened since I
+looked", not just the fields on screen).
+
+### 5.3 `case_add_item`
+
+Adds one discretionary step. The verified actor becomes `proposed_by`; a
+client-supplied value is overwritten. The item must pass plan validation (no
+cycles, unique ids) and the `discretionary_task_add` authority check.
+
+Request:
+
+```json
+{
+  "verb": "case_add_item",
+  "case_id": "case_...",
+  "item": {
+    "plan_item_id": "step_9", "name": "Fix the parser",
+    "item_kind": "human_task",
+    "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
+    "markers": {"required": false, "review": false},
+    "external_ref": {"kind": "github_issue", "id": "owner/repo#7", "url": "https://github.com/owner/repo/issues/7"}
+  },
+  "policy": "policy.yaml",
+  "request_id": "handoff:<draft id>",
+  "dry_run": false,
+  "preconditions": {"records": [{"ref": "plan:case_...", "expected_digest": "sha256:..."}]}
+}
+```
+
+* `request_id`: required for a real call. Same id and same payload replays the first reply and adds nothing. Same id with a different payload is refused with `error_class: "request_id_reused"`.
+* `item.external_ref`: optional `{kind, id, url}`; `kind` is `github_issue` or `ticket`. Stored on the plan item and returned unchanged by `case_get_horizon` items. The case keeper never follows it. Omitted from the stored plan when absent, so plans without it keep their hash.
+* `item.markers.review`: optional boolean, default false; marks a step that reviews other work. Omitted from the stored plan when false.
+* `dry_run: true`: runs the same validation and authority checks and commits nothing: no plan change, no event, no correlation record. It does not consume `request_id` (and needs none). Reply:
+
+```json
+{
+  "ok": true, "dry_run": true, "outcome": "would_add",
+  "case_id": "case_...", "plan_item_id": "step_9", "proposed_by": "operator_local",
+  "item": { "...": "the item as it would be stored, proposed_by set" },
+  "plan_precondition": {"ref": "plan:case_...", "expected_digest": "sha256:..."}
+}
+```
+
+* `preconditions`: send the dry run's `plan_precondition` with the same item. If the case's plan changed since the preview, the reply is `rejected_as_stale` and nothing is written. The check is made before the write, not under the same lock as the write; two writers racing between check and write are not ordered by it.
+* Real reply: `{"ok": true, "case_id": "...", "plan_item_id": "...", "proposed_by": "..."}`.
