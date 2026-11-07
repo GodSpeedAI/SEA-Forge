@@ -2471,12 +2471,14 @@ fn dedupe_key(request: &Request, raw_line: &str) -> Option<(String, String, Stri
     if !crate::identity::is_protected(request) {
         return None;
     }
-    let mut value: serde_json::Value = serde_json::from_str(raw_line).ok()?;
-    let object = value.as_object_mut()?;
-    // A dry run must not bind (consume) its request_id.
-    if object.get("dry_run").and_then(|v| v.as_bool()) == Some(true) {
+    // A dry run must not bind (consume) its request_id. Decided on the parsed
+    // variant, never on a raw `dry_run` field: other verbs ignore that field,
+    // so trusting the raw JSON would let any of them skip replay protection.
+    if matches!(request, Request::CaseAddItem { dry_run: true, .. }) {
         return None;
     }
+    let mut value: serde_json::Value = serde_json::from_str(raw_line).ok()?;
+    let object = value.as_object_mut()?;
     // Removed before hashing: the id is the key, not part of what it keys.
     // Everything else stays in, `verb` included — so a reused id pointed at a
     // different operation is caught by the payload comparison alone.
@@ -3274,12 +3276,33 @@ pub async fn handle_request_as(
         }
         Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.root))
             .unwrap_or_else(|_| serde_json::json!({"error": "case list serialization failed"})),
-        Request::CaseGetOverview { case_id } => case_view_response(
-            sfwp::case_views::get_overview(&state.root, &case_id).map(|mut overview| {
-                overview.digest = current_record_digest(&state.root, &case_id, "case", &case_id);
-                overview
-            }),
-        ),
+        Request::CaseGetOverview { case_id } => {
+            // The digest must describe exactly the state returned. Hold the
+            // case lock (so `case.add_item`, which commits and materializes
+            // under it, cannot land half-way) and bracket the read with the
+            // digest: if the ledger moved while reading, read again, and if it
+            // keeps moving return the overview without a digest rather than a
+            // digest for a different state.
+            let _case_lock = state.acquire_case_lock(&case_id).await;
+            let mut response = None;
+            for _ in 0..3 {
+                let before = current_record_digest(&state.root, &case_id, "case", &case_id);
+                let overview = sfwp::case_views::get_overview(&state.root, &case_id);
+                let after = current_record_digest(&state.root, &case_id, "case", &case_id);
+                let stable = before.as_ref().map(|d| &d.expected_digest)
+                    == after.as_ref().map(|d| &d.expected_digest);
+                response = Some(overview.map(|mut overview| {
+                    overview.digest = if stable { after } else { None };
+                    overview
+                }));
+                if stable {
+                    break;
+                }
+            }
+            drop(_case_lock);
+            state.prune_case_lock(&case_id).await;
+            case_view_response(response.expect("loop runs at least once"))
+        }
         Request::CaseGetHorizon { case_id } => {
             case_view_response(sfwp::case_views::get_horizon(&state.root, &case_id))
         }
@@ -3390,12 +3413,26 @@ pub async fn handle_request_as(
         } => {
             record_pending(state, request_id.as_deref(), "case.commit");
 
+            // Read the template once. The precondition is checked against these
+            // bytes and the plan is instantiated from these same bytes, so an
+            // edit between the check and the commit cannot slip a different
+            // plan past an accepted digest.
+            let loaded = {
+                let root = state.root.clone();
+                let template_ref = template_ref.clone();
+                tokio::task::spawn_blocking(move || {
+                    sfwp::case::load_template_once(&root, &template_ref)
+                })
+                .await
+                .map_err(|e| ForgeError::Internal(format!("load template task panic: {e}")))
+                .and_then(|result| result)
+            };
+
             // Evaluate the precondition first — before any side effect. Mirrors
             // `decide`'s "no side effect on stale" discipline for approve/reject.
             if let Some(precondition) = &preconditions {
                 let resolver = PlanRecordResolver {
-                    template: TemplateRecordResolver { root: &state.root },
-                    root: &state.root,
+                    loaded: loaded.as_ref().ok(),
                     template_ref: &template_ref,
                     params: &params,
                 };
@@ -3419,19 +3456,25 @@ pub async fn handle_request_as(
                 }
             }
 
-            let response = match instantiate_plan_file(state, &template_ref, &params).await {
-                Ok(plan_path) => {
-                    let payload = SubmitPayload {
-                        intent: None,
-                        plan: Some(plan_path),
-                        policy,
-                        entity,
-                        process,
-                        timeout,
-                        correlation_request_id: request_id.clone(),
-                    };
-                    commit_plan(state, payload, verified_role).await
-                }
+            let response = match loaded {
+                Ok(loaded) => match instantiate_plan_file(state, &loaded, &params).await {
+                    Ok(plan_path) => {
+                        let payload = SubmitPayload {
+                            intent: None,
+                            plan: Some(plan_path),
+                            policy,
+                            entity,
+                            process,
+                            timeout,
+                            correlation_request_id: request_id.clone(),
+                        };
+                        commit_plan(state, payload, verified_role).await
+                    }
+                    Err(error) => serde_json::json!({
+                        "error": error.to_string(),
+                        "error_class": error.class(),
+                    }),
+                },
                 Err(error) => serde_json::json!({
                     "error": error.to_string(),
                     "error_class": error.class(),
@@ -3753,20 +3796,19 @@ async fn commit_plan(
 /// — additive, no forked commit logic, no duplicate case-minting path.
 async fn instantiate_plan_file(
     state: &Arc<ServerState>,
-    template_ref: &str,
+    loaded: &sfwp::case::LoadedTemplate,
     params: &std::collections::BTreeMap<String, String>,
 ) -> Result<String, ForgeError> {
     let root = state.root.clone();
-    let template_ref = template_ref.to_string();
+    let loaded = loaded.clone();
     let params = params.clone();
     tokio::task::spawn_blocking(move || {
-        let (name, version) = sea_forge_planner::templates::parse_template_ref(&template_ref)?;
-        let path = root
-            .join("templates")
-            .join(format!("{name}@{version}.yaml"));
-        let template = sea_forge_planner::templates::load(&path)?;
         let plan = sea_forge_planner::templates::instantiate(
-            &template, &params, "pending", "pending", "pending",
+            &loaded.template,
+            &params,
+            "pending",
+            "pending",
+            "pending",
         )?;
         let drafts_dir = root.join("drafts");
         std::fs::create_dir_all(&drafts_dir)
@@ -3790,51 +3832,35 @@ async fn instantiate_plan_file(
     .and_then(|result| result)
 }
 
-/// Resolves a `template:<name>@<version>` precondition ref to its current
-/// on-disk digest, so a `case.commit` whose template changed since
-/// `case.preflight` computed the expected digest stale-rejects cleanly.
-struct TemplateRecordResolver<'a> {
-    root: &'a Path,
-}
-
-impl sfwp::precondition::RecordResolver for TemplateRecordResolver<'_> {
-    fn resolve(&self, r#ref: &str) -> Result<Option<serde_json::Value>, ForgeError> {
-        let Some(template_ref) = r#ref.strip_prefix("template:") else {
-            return Ok(None);
-        };
-        Ok(sfwp::case::resolve_template_digest_source(
-            self.root,
-            template_ref,
-        ))
-    }
-}
-
-/// Resolves `plan:<template_ref>` to the plan this commit would instantiate
-/// (template bytes, params and items), and every other ref through
-/// [`TemplateRecordResolver`]. `case.preflight` returns the expected digest as
-/// `plan_precondition`.
+/// Resolves `template:<ref>` and `plan:<ref>` precondition refs for
+/// `case.commit` from the one template read the request already made (see
+/// [`sfwp::case::LoadedTemplate`]). `case.preflight` returns the expected
+/// digests. A ref naming a different template, or a template that could not
+/// be loaded, resolves to nothing and so stale-rejects.
 struct PlanRecordResolver<'a> {
-    template: TemplateRecordResolver<'a>,
-    root: &'a Path,
+    loaded: Option<&'a sfwp::case::LoadedTemplate>,
     template_ref: &'a str,
     params: &'a std::collections::BTreeMap<String, String>,
 }
 
 impl sfwp::precondition::RecordResolver for PlanRecordResolver<'_> {
     fn resolve(&self, r#ref: &str) -> Result<Option<serde_json::Value>, ForgeError> {
-        let Some(plan_ref) = r#ref.strip_prefix("plan:") else {
-            return self.template.resolve(r#ref);
-        };
-        // A plan digest names the plan this commit would create, so it must
-        // name this commit's template.
-        if plan_ref != self.template_ref {
+        let Some(loaded) = self.loaded else {
             return Ok(None);
+        };
+        if let Some(template_ref) = r#ref.strip_prefix("template:") {
+            return Ok((template_ref == self.template_ref)
+                .then(|| sfwp::case::template_digest_source(loaded)));
         }
-        Ok(sfwp::case::plan_digest_source(
-            self.root,
-            self.template_ref,
-            self.params,
-        ))
+        if let Some(plan_ref) = r#ref.strip_prefix("plan:") {
+            // A plan digest names the plan this commit would create, so it must
+            // name this commit's template.
+            if plan_ref != self.template_ref {
+                return Ok(None);
+            }
+            return Ok(sfwp::case::plan_digest_source(loaded, self.params));
+        }
+        Ok(None)
     }
 }
 

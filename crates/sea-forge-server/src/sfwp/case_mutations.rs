@@ -217,14 +217,30 @@ where
     result
 }
 
-/// `case.add_item`: wrap `case_ops::propose_item_with`. The verified actor is
-/// the proposer of record — a client cannot attribute discretionary work to
+/// What the check phase of `case.add_item` decided.
+enum AddItemCheck {
+    /// A precondition no longer matches: the stale body, nothing written.
+    Stale(serde_json::Value),
+    /// `dry_run`: the reply, nothing written.
+    Preview(serde_json::Value),
+    /// Go ahead and write exactly this validated plan.
+    Ready(sea_forge_core::types::CasePlan),
+}
+
+/// `case.add_item`: wrap `case_ops` plan staging and commit. The verified actor
+/// is the proposer of record — a client cannot attribute discretionary work to
 /// someone else.
 ///
-/// With `dry_run` it runs the same checks and returns the item and the
-/// resulting plan's digest without writing. With `preconditions` it refuses
-/// (`rejected_as_stale`, nothing written) when the plan the add would leave
-/// behind no longer matches the caller's `plan:<case_id>` digest.
+/// The whole request runs under the case's keyed lock (the one `advance`
+/// uses). Under it the plan is read once, the `plan:<case_id>` precondition is
+/// evaluated against `plan + item` first (so a changed plan is `rejected_as_stale`
+/// even if it would also fail validation, and nothing durable has been written),
+/// then that same in-memory plan is validated and written: nothing is reloaded
+/// between the check and the write.
+///
+/// With `dry_run` the same checks run, the authority check is evaluated without
+/// recording it, and the normalized item that would be stored is returned
+/// with the digest; nothing is written.
 pub(crate) async fn add_item(
     state: &Arc<ServerState>,
     actor: &str,
@@ -235,71 +251,117 @@ pub(crate) async fn add_item(
     preconditions: Option<&crate::sfwp::precondition::Precondition>,
 ) -> Result<serde_json::Value, ForgeError> {
     let policy_path = crate::agent_probe::resolve_policy_path(&state.root, policy)?;
-    let root = state.root.clone();
-    let actor = actor.to_string();
-    let case_id = case_id.to_string();
+    item.proposed_by = Some(actor.to_string());
+    let case_lock = state.acquire_case_lock(case_id).await;
+    let result = add_item_locked(
+        state,
+        actor,
+        case_id,
+        item,
+        policy_path,
+        dry_run,
+        preconditions.cloned(),
+    )
+    .await;
+    drop(case_lock);
+    state.prune_case_lock(case_id).await;
+    result
+}
+
+async fn add_item_locked(
+    state: &Arc<ServerState>,
+    actor: &str,
+    case_id: &str,
+    item: PlanItem,
+    policy_path: PathBuf,
+    dry_run: bool,
+    preconditions: Option<crate::sfwp::precondition::Precondition>,
+) -> Result<serde_json::Value, ForgeError> {
+    use sea_forge_case_runner::case_ops;
     let plan_item_id = item.plan_item_id.clone();
-    let proposed_by = actor.clone();
-    item.proposed_by = Some(actor.clone());
-    if dry_run || preconditions.is_some() {
-        let (root_p, policy_p, actor_p, case_p, item_p) = (
-            root.clone(),
-            policy_path.clone(),
-            actor.clone(),
-            case_id.clone(),
+    let check = {
+        let (root, actor, case_id, item, policy_path) = (
+            state.root.clone(),
+            actor.to_string(),
+            case_id.to_string(),
             item.clone(),
+            policy_path.clone(),
         );
-        let plan = tokio::task::spawn_blocking(move || {
-            sea_forge_case_runner::case_ops::preview_item(
-                &root_p, &policy_p, &actor_p, &case_p, &item_p,
-            )
-        })
-        .await
-        .map_err(|error| ForgeError::Internal(format!("add_item preview task panic: {error}")))??;
-        let plan = serde_json::to_value(&plan)?;
-        if let Some(precondition) = preconditions {
-            let resolver = ResultingPlan {
-                case_id: &case_id,
-                plan: &plan,
-            };
-            if let Some(rejected) = crate::sfwp::precondition::evaluate(precondition, &resolver)? {
-                return Ok(serde_json::to_value(rejected)?);
+        tokio::task::spawn_blocking(move || -> Result<AddItemCheck, ForgeError> {
+            let current = case_ops::read_case_plan(&root, &case_id)?;
+            let candidate = case_ops::plan_with_item(&current, &item);
+            let candidate_value = serde_json::to_value(&candidate)?;
+            if let Some(precondition) = &preconditions {
+                let resolver = ResultingPlan {
+                    case_id: &case_id,
+                    plan: &candidate_value,
+                };
+                if let Some(rejected) =
+                    crate::sfwp::precondition::evaluate(precondition, &resolver)?
+                {
+                    return Ok(AddItemCheck::Stale(serde_json::to_value(rejected)?));
+                }
             }
-        }
-        if dry_run {
+            let validated = case_ops::validate_staged_plan(&candidate)?;
+            if !dry_run {
+                return Ok(AddItemCheck::Ready(validated));
+            }
+            case_ops::preview_add_item_authority(
+                &root,
+                &policy_path,
+                &actor,
+                &case_id,
+                &item.plan_item_id,
+            )?;
+            let stored = validated
+                .items
+                .iter()
+                .rev()
+                .find(|stored| stored.plan_item_id == item.plan_item_id)
+                .unwrap_or(&item);
             let result = CaseAddItemResult {
                 ok: true,
                 case_id: case_id.clone(),
-                plan_item_id,
-                proposed_by,
+                plan_item_id: item.plan_item_id.clone(),
+                proposed_by: actor.clone(),
                 dry_run: true,
                 outcome: Some("would_add".into()),
-                item: Some(serde_json::to_value(&item)?),
+                item: Some(serde_json::to_value(stored)?),
                 plan_precondition: Some(crate::sfwp::precondition::RecordDigest {
                     r#ref: format!("plan:{case_id}"),
-                    expected_digest: crate::sfwp::precondition::digest_of(&plan)?,
+                    expected_digest: crate::sfwp::precondition::digest_of(&candidate_value)?,
                 }),
             };
-            return Ok(serde_json::to_value(result)?);
-        }
-    }
-    let case_id_for_task = case_id.clone();
-    run_case_mutation(state, &case_id, move |notify| {
-        sea_forge_case_runner::case_ops::propose_item_with(
+            Ok(AddItemCheck::Preview(serde_json::to_value(result)?))
+        })
+        .await
+        .map_err(|error| ForgeError::Internal(format!("add_item check task panic: {error}")))??
+    };
+    let plan = match check {
+        AddItemCheck::Stale(body) | AddItemCheck::Preview(body) => return Ok(body),
+        AddItemCheck::Ready(plan) => plan,
+    };
+    let root = state.root.clone();
+    let actor_owned = actor.to_string();
+    let case_id_owned = case_id.to_string();
+    let id_for_commit = plan_item_id.clone();
+    run_case_mutation(state, case_id, move |notify| {
+        case_ops::commit_staged_plan(
             &root,
             &policy_path,
-            &actor,
-            &case_id_for_task,
-            item,
+            &actor_owned,
+            &case_id_owned,
+            &plan,
+            &id_for_commit,
             notify,
         )
     })
     .await?;
     Ok(serde_json::to_value(CaseAddItemResult {
         ok: true,
-        case_id,
+        case_id: case_id.to_string(),
         plan_item_id,
-        proposed_by,
+        proposed_by: actor.to_string(),
         dry_run: false,
         outcome: None,
         item: None,

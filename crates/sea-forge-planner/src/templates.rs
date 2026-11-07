@@ -481,8 +481,14 @@ pub fn instantiate(
 pub fn load(path: &Path) -> Result<PlanTemplate, ForgeError> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| ForgeError::io(format!("read template {}", path.display()), e))?;
+    load_from_text(&text, path)
+}
+
+/// [`load`] over text the caller already read, so the caller can hash and
+/// parse the very same bytes. `path` is used only in error values.
+pub fn load_from_text(text: &str, path: &Path) -> Result<PlanTemplate, ForgeError> {
     let template: PlanTemplate =
-        sea_forge_core::yaml::from_str(&text).map_err(|e| ForgeError::Config {
+        sea_forge_core::yaml::from_str(text).map_err(|e| ForgeError::Config {
             class: "schema_error",
             path: path.into(),
             message: e.to_string(),

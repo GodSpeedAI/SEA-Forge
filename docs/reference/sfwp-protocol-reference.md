@@ -162,13 +162,13 @@ At most 16 records. A ref the verb cannot resolve is stale.
 |---|---|---|
 | `template:<name>@<version>` | `case_commit` | the template file's bytes |
 | `plan:<name>@<version>` | `case_commit` | canonical JSON `{template_sha256, params, items}`: the template's bytes, the request's `params`, and the instantiated plan items. Changes if any of the three changes |
-| `plan:<case_id>` | `case_add_item` | the case's plan as it would be after this add (current `plan.json` plus the item, as validated) |
+| `plan:<case_id>` | `case_add_item` | the case's current `plan.json` with this item appended, before validation (so a changed plan is reported stale even if it would also fail validation) |
 | `case:<case_id>` | `approval_decide` | the ordered record kinds and payload hashes of the case ledger |
 | `approval:<approval_id>` | `approval_decide` | the latest case-ledger record that names the approval |
 
 ### 5.2 Where a client gets each digest
 
-Never compute a digest on the client. Read it:
+Never compute a digest on the client. Read it. A `case_get_overview` digest describes exactly the state in the same reply (read under the case lock and re-checked; omitted if the case kept changing):
 
 * `plan:<template_ref>`: the `plan_precondition` field of the `case_preflight` reply (same params as the commit).
   `{"plan_precondition": {"ref": "plan:sequential_agents@0.1.0", "expected_digest": "sha256:..."}}`
@@ -216,7 +216,7 @@ Request:
 * `request_id`: required for a real call. Same id and same payload replays the first reply and adds nothing. Same id with a different payload is refused with `error_class: "request_id_reused"`.
 * `item.external_ref`: optional `{kind, id, url}`; `kind` is `github_issue` or `ticket`. Stored on the plan item and returned unchanged by `case_get_horizon` items. The case keeper never follows it. Omitted from the stored plan when absent, so plans without it keep their hash.
 * `item.markers.review`: optional boolean, default false; marks a step that reviews other work. Omitted from the stored plan when false.
-* `dry_run: true`: runs the same validation and authority checks and commits nothing: no plan change, no event, no correlation record. It does not consume `request_id` (and needs none). Reply:
+* `dry_run: true`: runs the same validation and authority checks and commits nothing: no plan change, no event, no correlation record, no authority record. The returned `item` is the normalized item exactly as it would be stored. It does not consume `request_id` (and needs none). Reply:
 
 ```json
 {
@@ -227,5 +227,5 @@ Request:
 }
 ```
 
-* `preconditions`: send the dry run's `plan_precondition` with the same item. If the case's plan changed since the preview, the reply is `rejected_as_stale` and nothing is written. The check is made before the write, not under the same lock as the write; two writers racing between check and write are not ordered by it.
+* `preconditions`: send the dry run's `plan_precondition` with the same item. If the case's plan changed since the preview, the reply is `rejected_as_stale` and nothing is written. The precondition is checked first, then the same in-memory plan is validated and written, all under the case's lock, so two confirmations of one preview cannot both commit.
 * Real reply: `{"ok": true, "case_id": "...", "plan_item_id": "...", "proposed_by": "..."}`.

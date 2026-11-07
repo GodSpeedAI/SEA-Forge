@@ -720,3 +720,281 @@ async fn case_overview_returns_a_digest_that_tracks_the_case() {
     let after = client.call(read()).await;
     assert_ne!(after["digest"], first["digest"]);
 }
+
+// ---------------------------------------------------------------------------
+// Blind-critic fixes: replay protection, locking, durable-write-free previews,
+// consistent digests, normalized preview item
+// ---------------------------------------------------------------------------
+
+/// Every file under `root` whose path mentions `authority`, with its bytes.
+fn authority_snapshot(root: &Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+    fn walk(dir: &Path, root: &Path, out: &mut std::collections::BTreeMap<String, Vec<u8>>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, root, out);
+            } else {
+                let relative = path
+                    .strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                if relative.contains("authority") {
+                    out.insert(relative, std::fs::read(&path).unwrap());
+                }
+            }
+        }
+    }
+    let mut out = std::collections::BTreeMap::new();
+    walk(root, root, &mut out);
+    out
+}
+
+#[tokio::test]
+async fn dry_run_field_on_another_verb_does_not_skip_replay_protection() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let request = |process: &str| {
+        json!({
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
+            "template_ref": TEMPLATE_REF, "params": {},
+            "policy": policy_path(root.path()), "entity": "operator_local",
+            "process": process, "request_id": "req-dry-run-smuggle", "dry_run": true,
+        })
+    };
+    let first = client.call(request("test")).await;
+    assert!(first["case_id"].is_string(), "{first}");
+    let replay = client.call(request("test")).await;
+    assert_eq!(replay, first, "same id and payload must replay");
+    let reused = client.call(request("other")).await;
+    assert_eq!(reused["error_class"], "request_id_reused", "{reused}");
+    let cases = std::fs::read_dir(root.path().join("cases"))
+        .unwrap()
+        .count();
+    assert_eq!(cases, 1, "exactly one case");
+}
+
+#[tokio::test]
+async fn add_item_concurrent_confirmations_of_one_preview_commit_once() {
+    let (root, socket) = boot().await;
+    let mut setup = Client::connect(&socket).await;
+    let case_id = commit_case(&mut setup, root.path(), "req-commit-race").await;
+    let mut digests = Vec::new();
+    for id in ["race_a", "race_b"] {
+        let dry = setup
+            .call(add_item_request(
+                root.path(),
+                &case_id,
+                extra_item(id),
+                json!({"dry_run": true}),
+            ))
+            .await;
+        digests.push(dry["plan_precondition"].clone());
+    }
+    let (mut a, mut b) = (
+        Client::connect(&socket).await,
+        Client::connect(&socket).await,
+    );
+    let req_a = add_item_request(
+        root.path(),
+        &case_id,
+        extra_item("race_a"),
+        json!({"request_id": "race-a", "preconditions": {"records": [digests[0].clone()]}}),
+    );
+    let req_b = add_item_request(
+        root.path(),
+        &case_id,
+        extra_item("race_b"),
+        json!({"request_id": "race-b", "preconditions": {"records": [digests[1].clone()]}}),
+    );
+    let (ra, rb) = tokio::join!(a.call(req_a), b.call(req_b));
+    let ok = [&ra, &rb].iter().filter(|r| r["ok"] == true).count();
+    let stale = [&ra, &rb]
+        .iter()
+        .filter(|r| r["outcome"] == "rejected_as_stale")
+        .count();
+    assert_eq!((ok, stale), (1, 1), "a: {ra} b: {rb}");
+    let plan = plan_json(root.path(), &case_id);
+    let added = ["race_a", "race_b"]
+        .iter()
+        .filter(|id| plan_item(&plan, id).is_some())
+        .count();
+    assert_eq!(added, 1);
+}
+
+#[tokio::test]
+async fn add_item_duplicate_after_preview_is_stale_not_a_validation_error() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-dup").await;
+    let dry = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("dup"),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    let digest = dry["plan_precondition"].clone();
+    let other = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("dup"),
+            json!({"request_id": "dup-first"}),
+        ))
+        .await;
+    assert_eq!(other["ok"], true, "{other}");
+    let stale = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("dup"),
+            json!({"request_id": "dup-second", "preconditions": {"records": [digest]}}),
+        ))
+        .await;
+    assert_eq!(stale["outcome"], "rejected_as_stale", "{stale}");
+}
+
+#[tokio::test]
+async fn add_item_dry_run_and_stale_rejection_write_no_authority_records() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-authority").await;
+    let before = authority_snapshot(root.path());
+    assert!(!before.is_empty(), "the snapshot must see authority files");
+
+    let dry = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("quiet"),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    assert_eq!(dry["ok"], true, "{dry}");
+    assert_eq!(
+        authority_snapshot(root.path()),
+        before,
+        "dry run wrote authority state"
+    );
+
+    let stale = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("quiet"),
+            json!({"request_id": "quiet-stale", "preconditions": {"records": [
+                {"ref": format!("plan:{case_id}"), "expected_digest": "sha256:00"}
+            ]}}),
+        ))
+        .await;
+    assert_eq!(stale["outcome"], "rejected_as_stale", "{stale}");
+    assert_eq!(
+        authority_snapshot(root.path()),
+        before,
+        "stale rejection wrote authority state"
+    );
+
+    // Sanity: the real call does record its decision, so the detector works.
+    let real = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("quiet"),
+            json!({"request_id": "quiet-real"}),
+        ))
+        .await;
+    assert_eq!(real["ok"], true, "{real}");
+    assert_ne!(authority_snapshot(root.path()), before);
+}
+
+#[tokio::test]
+async fn case_overview_digest_matches_the_state_it_returns() {
+    let (root, socket) = boot().await;
+    let mut setup = Client::connect(&socket).await;
+    let case_id = commit_case(&mut setup, root.path(), "req-commit-consistent").await;
+    let writer_socket = socket.clone();
+    let writer_case = case_id.clone();
+    let writer_root = root.path().to_path_buf();
+    let writer = tokio::spawn(async move {
+        let mut client = Client::connect(&writer_socket).await;
+        for n in 0..6 {
+            let reply = client
+                .call(add_item_request(
+                    &writer_root,
+                    &writer_case,
+                    extra_item(&format!("w{n}")),
+                    json!({"request_id": format!("consistent-{n}")}),
+                ))
+                .await;
+            assert_eq!(reply["ok"], true, "{reply}");
+        }
+    });
+    let mut seen: std::collections::BTreeMap<String, std::collections::BTreeSet<u64>> =
+        Default::default();
+    let mut reader = Client::connect(&socket).await;
+    while !writer.is_finished() {
+        let overview = reader
+            .call(json!({"verb": "case_get_overview", "case_id": case_id}))
+            .await;
+        if let Some(digest) = overview["digest"]["expected_digest"].as_str() {
+            seen.entry(digest.to_string())
+                .or_default()
+                .insert(overview["item_count"].as_u64().unwrap());
+        }
+    }
+    writer.await.unwrap();
+    for (digest, counts) in &seen {
+        assert_eq!(
+            counts.len(),
+            1,
+            "digest {digest} paired with item counts {counts:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn add_item_dry_run_returns_the_item_as_it_will_be_stored() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-normalized").await;
+    let first_id = plan_json(root.path(), &case_id)["items"][0]["plan_item_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut item = extra_item("normalized");
+    item["item_kind"] = json!("sandboxed_task");
+    item["operations"] = json!([{"kind": "execute_command", "argv": ["true"], "cwd": "."}]);
+    item["depends_on"] = json!([first_id]);
+    let dry = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            item.clone(),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    assert_eq!(dry["ok"], true, "{dry}");
+    let real = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            item,
+            json!({"request_id": "normalized-real"}),
+        ))
+        .await;
+    assert_eq!(real["ok"], true, "{real}");
+    let stored = plan_item(&plan_json(root.path(), &case_id), "normalized")
+        .unwrap()
+        .clone();
+    assert_eq!(dry["item"], stored, "preview must equal what is saved");
+    assert_ne!(
+        stored["sandbox_class"],
+        json!(null),
+        "normalization should have set a sandbox class"
+    );
+}

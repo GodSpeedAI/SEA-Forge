@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 234
+**Status revision:** 235
 
-**Stage:** Horizon desk support: regenerated TS contracts
+**Stage:** Horizon desk support: blind-critic fixes for the case keeper
 
-**Summary:** workbench/packages/contracts/generated is regenerated for the plan digest, add_item dry_run, external_ref and the case read digests (14 files).
+**Summary:** Fixes eight review findings: dry_run replay bypass, add_item check-then-write race (case lock, precondition first), template read once for preflight and commit, no authority records from dry runs or stale rejections, overview digest consistent with its state, normalized dry-run item.
 
 **Verified:**
 - cargo build --release -p sea-forge-server; cargo test -p sea-forge-core (67 unit tests); cargo test -p sea-forge-server (573 tests, 0 failed); clippy has no new warnings

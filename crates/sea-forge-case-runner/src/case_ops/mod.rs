@@ -269,35 +269,90 @@ pub fn propose_item(
     propose_item_with(root, policy, actor, case_id, item, &mut noop_notifier)
 }
 
-/// Run every check [`propose_item_with`] runs before it writes (id safety,
-/// proposal validation and cycle checks, authority) and return the plan as it
-/// would be committed. Writes nothing to the case; backs `case.add_item`'s
-/// `dry_run`.
-pub fn preview_item(
-    root: &Path,
-    policy: &Path,
-    actor: &str,
-    case_id: &str,
-    item: &PlanItem,
-) -> Result<CasePlan, ForgeError> {
+/// The case's current plan (`plan.json`), after the same id-safety check every
+/// case mutation makes.
+pub fn read_case_plan(root: &Path, case_id: &str) -> Result<CasePlan, ForgeError> {
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
     let (_, plan_path, _) = paths(root, case_id);
-    let mut plan: CasePlan = read_json(&plan_path)?;
-    plan.items.push(item.clone());
+    read_json(&plan_path)
+}
+
+/// `plan` with `item` appended, before any validation. This is the value a
+/// `plan:<case_id>` precondition pins: it needs no validation to be computed,
+/// so a changed plan can be reported as stale even when it would also fail
+/// validation.
+pub fn plan_with_item(plan: &CasePlan, item: &PlanItem) -> CasePlan {
+    let mut candidate = plan.clone();
+    candidate.items.push(item.clone());
+    candidate
+}
+
+/// Validate a plan from [`plan_with_item`] and normalize it exactly as the
+/// write would store it (default sandbox class, `depends_on` turned into
+/// sentries, ...). Pure; writes nothing.
+pub fn validate_staged_plan(candidate: &CasePlan) -> Result<CasePlan, ForgeError> {
+    let mut plan = candidate.clone();
     sea_forge_planner::case_engine::validate_proposal(&mut plan)?;
-    mediation::authorize_read(
-        root,
-        policy,
-        actor,
-        &AuthorityAction::Reserved {
-            resource_type: "discretionary_task_add".into(),
-            resource_id: format!("{case_id}:{}", item.plan_item_id),
-            parameters: json!({"item": item.plan_item_id}),
-        },
-    )?;
     Ok(plan)
+}
+
+fn add_item_action(case_id: &str, item_id: &str) -> AuthorityAction {
+    AuthorityAction::Reserved {
+        resource_type: "discretionary_task_add".into(),
+        resource_id: format!("{case_id}:{item_id}"),
+        parameters: json!({"item": item_id}),
+    }
+}
+
+/// The authority check for adding `item_id`, evaluated without recording
+/// anything (see [`mediation::authorize_preview`]).
+pub fn preview_add_item_authority(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item_id: &str,
+) -> Result<(), ForgeError> {
+    mediation::authorize_preview(root, policy, actor, &add_item_action(case_id, item_id))
+}
+
+/// Authorize (recorded) and write an already validated plan that adds
+/// `item_id`: the commit half of [`propose_item_with`]. The caller supplies the
+/// plan it checked, so nothing is re-read between its check and this write.
+pub fn commit_staged_plan(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    plan: &CasePlan,
+    item_id: &str,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    let (_, plan_path, _) = paths(root, case_id);
+    mediation::authorize_read(root, policy, actor, &add_item_action(case_id, item_id))?;
+    let committed = LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
+        "case_plan_mutation",
+        vec![case_id.into()],
+        plan,
+        vec![],
+    )?;
+    LedgerStream::open(root, format!("case-{case_id}"), actor)?.materialize_view(
+        &committed,
+        &plan_path,
+        &serde_json::to_vec_pretty(plan)?,
+    )?;
+    append_case_event_with(
+        root,
+        case_id,
+        actor,
+        TraceKind::PlanMutated,
+        Some(item_id),
+        json!({"operation": "add_task"}),
+        notify,
+    )?;
+    Ok(0)
 }
 
 /// [`propose_item`], notifying the host sink of the appended `PlanMutated`
@@ -311,29 +366,17 @@ pub fn propose_item_with(
     item: PlanItem,
     notify: CaseEventNotifier<'_>,
 ) -> Result<u8, ForgeError> {
-    let plan = preview_item(root, policy, actor, case_id, &item)?;
-    let (_, plan_path, _) = paths(root, case_id);
-    let committed = LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
-        "case_plan_mutation",
-        vec![case_id.into()],
-        &plan,
-        vec![],
-    )?;
-    LedgerStream::open(root, format!("case-{case_id}"), actor)?.materialize_view(
-        &committed,
-        &plan_path,
-        &serde_json::to_vec_pretty(&plan)?,
-    )?;
-    append_case_event_with(
+    let current = read_case_plan(root, case_id)?;
+    let plan = validate_staged_plan(&plan_with_item(&current, &item))?;
+    commit_staged_plan(
         root,
-        case_id,
+        policy,
         actor,
-        TraceKind::PlanMutated,
-        Some(&item.plan_item_id),
-        json!({"operation": "add_task"}),
+        case_id,
+        &plan,
+        &item.plan_item_id,
         notify,
-    )?;
-    Ok(0)
+    )
 }
 
 /// Complete a human-task item (moved verbatim from the CLI's `task complete`
