@@ -150,6 +150,7 @@ fn t14_0_agent_task_endpoint_ref_forbids_substitution() {
 #[test]
 fn t14_0_any_of_legacy_behavior_unchanged() {
     let items = vec![sea_forge_core::types::PlanItem {
+        external_ref: None,
         plan_item_id: "gate".into(),
         name: "gate".into(),
         operations: vec![],
@@ -194,6 +195,7 @@ fn t14_0_any_of_legacy_behavior_unchanged() {
 #[test]
 fn t14_0_all_of_waits_for_every_named_source() {
     let items = vec![sea_forge_core::types::PlanItem {
+        external_ref: None,
         plan_item_id: "gate".into(),
         name: "gate".into(),
         operations: vec![],

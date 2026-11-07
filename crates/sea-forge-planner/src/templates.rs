@@ -303,6 +303,7 @@ fn project_item(
     extra_entry_criteria: &[Sentry],
 ) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id,
         name: ti.name.clone(),
         operations: ti
