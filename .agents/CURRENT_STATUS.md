@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 233
+**Status revision:** 234
 
-**Stage:** Horizon desk support: protocol reference
+**Stage:** Horizon desk support: regenerated TS contracts
 
-**Summary:** The SFWP protocol reference now covers plan: refs, case.add_item (request_id, dry_run, preconditions, external_ref), the review marker and where a client reads each precondition digest.
+**Summary:** workbench/packages/contracts/generated is regenerated for the plan digest, add_item dry_run, external_ref and the case read digests (14 files).
 
 **Verified:**
 - cargo build --release -p sea-forge-server; cargo test -p sea-forge-core (67 unit tests); cargo test -p sea-forge-server (573 tests, 0 failed); clippy has no new warnings

@@ -28,6 +28,13 @@ export interface CaseTaskApproval {
   criteria_sha256?: string | null;
   decision_id: string;
   /**
+   * `{ref: "approval:<approval_id>", expected_digest}` as the precondition
+   * check computes it right now. Paste it into `approval.decide`'s
+   * `preconditions.records` unchanged. Absent when the record could not be
+   * resolved.
+   */
+  digest?: RecordDigest | null;
+  /**
    * True when `expires_at` has passed. Reported so the approver sees *why*
    * a decision may be refused, rather than the row vanishing.
    */
@@ -41,6 +48,19 @@ export interface CaseTaskApproval {
   plan_item_id: string;
   requested_at: string;
   run_id: string;
+}
+/**
+ * A single `{ref, expected_digest}` precondition entry.
+ */
+export interface RecordDigest {
+  /**
+   * The sha256 digest the caller expects the referenced record to have.
+   */
+  expected_digest: string;
+  /**
+   * Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).
+   */
+  ref: string;
 }
 /**
  * The canonical governance context an approval decision must be judged
