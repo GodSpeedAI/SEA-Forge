@@ -156,6 +156,7 @@ pub async fn probe(
         run_id: run.clone(),
         intent_id: intent.intent_id.clone(),
         items: vec![PlanItem {
+            external_ref: None,
             plan_item_id: item.into(),
             name: "agent_probe".into(),
             operations: vec![operation],

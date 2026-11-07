@@ -332,6 +332,7 @@ fn transition_plan(
         template_ref: None,
         job_contract_ref: None,
         items: vec![PlanItem {
+            external_ref: None,
             plan_item_id: "transition".into(),
             name: format!(
                 "{:?} {:?} {} through {}",

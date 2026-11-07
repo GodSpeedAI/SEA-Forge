@@ -22,6 +22,7 @@ fn demo_intent() -> Intent {
 
 fn demo_item() -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: "item_01".into(),
         name: "generate_and_validate".into(),
         operations: vec![],

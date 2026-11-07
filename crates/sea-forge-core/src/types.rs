@@ -67,6 +67,28 @@ pub struct ItemMarkers {
     pub repetition: bool,
     #[serde(default)]
     pub manual_activation: bool,
+    /// The step is a review of another step's work. Omitted from the wire
+    /// (and from the plan's canonical hash) when false, so plans written before
+    /// this marker existed keep their hash.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub review: bool,
+}
+
+/// What kind of outside record an [`ExternalRef`] names.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ExternalRefKind {
+    GithubIssue,
+    Ticket,
+}
+
+/// A link from a plan item to a record held outside the case keeper (for
+/// example a GitHub issue). Carried verbatim; the case keeper never follows it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ExternalRef {
+    pub kind: ExternalRefKind,
+    pub id: String,
+    pub url: String,
 }
 
 /// How an item's `entry_criteria` list combines (§7.5 E16a). `Any` (default)
@@ -136,6 +158,10 @@ pub struct PlanItem {
     /// Enables SoD: the proposer cannot resolve approvals over its own item.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub proposed_by: Option<String>,
+    /// Optional link to an outside record. Omitted from the wire and from the
+    /// plan's canonical hash when `None`, so existing plans are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external_ref: Option<ExternalRef>,
 }
 
 fn default_max_instances() -> u32 {
@@ -1348,6 +1374,68 @@ pub struct ProjectionRef {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const OLD_ITEM_JSON: &str = r#"{
+        "plan_item_id": "a", "name": "A",
+        "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
+        "markers": {"required": true, "repetition": false, "manual_activation": false}
+    }"#;
+
+    #[test]
+    fn external_ref_absent_in_old_json_loads() {
+        let item: PlanItem = serde_json::from_str(OLD_ITEM_JSON).unwrap();
+        assert!(item.external_ref.is_none());
+    }
+
+    #[test]
+    fn external_ref_none_is_not_serialized() {
+        let item: PlanItem = serde_json::from_str(OLD_ITEM_JSON).unwrap();
+        let value = serde_json::to_value(&item).unwrap();
+        assert!(value.get("external_ref").is_none(), "{value}");
+        let mut with_ref = item;
+        with_ref.external_ref = Some(ExternalRef {
+            kind: ExternalRefKind::GithubIssue,
+            id: "o/r#1".into(),
+            url: "https://github.com/o/r/issues/1".into(),
+        });
+        let value = serde_json::to_value(&with_ref).unwrap();
+        assert_eq!(value["external_ref"]["kind"], "github_issue");
+        let back: PlanItem = serde_json::from_value(value).unwrap();
+        assert_eq!(back, with_ref);
+    }
+
+    #[test]
+    fn plan_hash_unchanged_without_external_ref() {
+        // The canonical bytes of an item that carries neither new field have
+        // exactly the keys they had before the fields existed, so the plan's
+        // canonical hash is unchanged.
+        let item: PlanItem = serde_json::from_str(OLD_ITEM_JSON).unwrap();
+        let value = serde_json::to_value(&item).unwrap();
+        let mut expected = value.clone();
+        expected.as_object_mut().unwrap().remove("external_ref");
+        expected["markers"]
+            .as_object_mut()
+            .unwrap()
+            .remove("review");
+        assert_eq!(value, expected);
+        assert_eq!(
+            crate::canonical::canonical_bytes(&item).unwrap(),
+            crate::canonical::canonical_json(&expected).unwrap()
+        );
+        let markers = value["markers"].as_object().unwrap();
+        let mut keys: Vec<&str> = markers.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["manual_activation", "repetition", "required"]);
+    }
+
+    #[test]
+    fn item_markers_review_defaults_false_in_old_json() {
+        let item: PlanItem = serde_json::from_str(OLD_ITEM_JSON).unwrap();
+        assert!(!item.markers.review);
+        let reviewed: ItemMarkers = serde_json::from_str(r#"{"review": true}"#).unwrap();
+        assert!(reviewed.review);
+        assert_eq!(serde_json::to_value(&reviewed).unwrap()["review"], true);
+    }
     #[test]
     fn operation_uses_tagged_snake_case_json() {
         let value = serde_json::to_value(Operation::WriteFile {

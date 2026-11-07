@@ -85,6 +85,7 @@ fn sandboxed_plan(argv: Vec<String>, criteria: SettlementCriteria) -> CasePlan {
         run_id: "run_placeholder".into(),
         intent_id: "int_episode".into(),
         items: vec![PlanItem {
+            external_ref: None,
             plan_item_id: "task".into(),
             name: "sandboxed".into(),
             operations: vec![Operation::ExecuteCommand {

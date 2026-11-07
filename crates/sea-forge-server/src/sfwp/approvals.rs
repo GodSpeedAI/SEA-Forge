@@ -96,6 +96,12 @@ pub struct CaseTaskApproval {
     /// resolve to committed records in the case ledger.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub governance: Option<ApprovalGovernanceContext>,
+    /// `{ref: "approval:<approval_id>", expected_digest}` as the precondition
+    /// check computes it right now. Paste it into `approval.decide`'s
+    /// `preconditions.records` unchanged. Absent when the record could not be
+    /// resolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<super::precondition::RecordDigest>,
 }
 
 /// `approval.list` result body.
@@ -217,6 +223,7 @@ fn shape(root: &Path, request: ApprovalRequest, now: &str) -> CaseTaskApproval {
         criteria_ref: request.criteria_ref,
         criteria_sha256: request.criteria_sha256,
         governance,
+        digest: None,
     }
 }
 

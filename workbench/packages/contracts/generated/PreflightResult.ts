@@ -11,6 +11,13 @@ export interface PreflightResult {
   items: PlanItemSummary[];
   ok: boolean;
   /**
+   * Pins the whole plan this commit would create: the template's bytes, the
+   * params and the instantiated items. Ref `plan:<template_ref>`. Carry it
+   * into `case.commit`'s `preconditions.records` alongside (or instead of)
+   * `precondition`. `None` when the plan could not be built.
+   */
+  plan_precondition?: RecordDigest | null;
+  /**
    * Carry this into `case.commit`'s `preconditions.records` unchanged.
    * `None` when the template itself could not be loaded (nothing to pin).
    */
