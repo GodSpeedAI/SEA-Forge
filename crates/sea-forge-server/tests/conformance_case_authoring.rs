@@ -93,7 +93,7 @@ async fn boot() -> (tempfile::TempDir, PathBuf) {
     let policy_path = root.path().join("policy.yaml");
     std::fs::write(
         &policy_path,
-        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [127.0.0.1]\nrules:\n  - name: allow-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n",
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [127.0.0.1]\nrules:\n  - name: allow-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n  - name: allow-propose\n    verdict: allow\n    actor_role: operator\n    operation_kind: discretionary_task_add\n",
     )
     .unwrap();
 
@@ -334,4 +334,389 @@ async fn commit_outcome_is_recoverable_via_request_get_status() {
     assert_eq!(recovered["status"], "completed");
     assert_eq!(recovered["method"], "case.commit");
     assert_eq!(recovered["outcome"]["case_id"], case_id);
+}
+
+// ---------------------------------------------------------------------------
+// plan: digest on preflight, case.add_item (external_ref, review marker,
+// request_id, dry_run, plan preconditions), digests on case reads
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn preflight_returns_plan_precondition() {
+    let (_root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let call = json!({"verb": "case_preflight", "template_ref": TEMPLATE_REF, "params": {}});
+    let first = client.call(call.clone()).await;
+    assert_eq!(first["ok"], true, "{first}");
+    assert_eq!(
+        first["plan_precondition"]["ref"],
+        format!("plan:{TEMPLATE_REF}")
+    );
+    let digest = first["plan_precondition"]["expected_digest"]
+        .as_str()
+        .unwrap();
+    assert!(digest.starts_with("sha256:"));
+    // The plan digest is distinct from the template-bytes digest, and stable.
+    assert_ne!(digest, first["precondition"]["expected_digest"]);
+    let second = client.call(call).await;
+    assert_eq!(second["plan_precondition"], first["plan_precondition"]);
+    // No plan to pin when the template does not exist.
+    let missing = client
+        .call(json!({"verb": "case_preflight", "template_ref": "nope@1.0.0", "params": {}}))
+        .await;
+    assert!(missing["plan_precondition"].is_null());
+}
+
+fn extra_item(id: &str) -> Value {
+    json!({
+        "plan_item_id": id,
+        "name": "extra",
+        "operations": [],
+        "entry_criteria": [], "exit_criteria": [],
+        "settlement_criteria": {"required_artifacts": [], "required_declarations": []},
+        "item_kind": "human_task",
+        "markers": {"required": false},
+        "max_instances": 1,
+        "depends_on": []
+    })
+}
+
+async fn commit_case(client: &mut Client, root: &Path, request_id: &str) -> String {
+    let commit = client
+        .call(json!({
+            "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
+            "template_ref": TEMPLATE_REF,
+            "params": {},
+            "policy": policy_path(root),
+            "entity": "operator_local",
+            "process": "test",
+            "request_id": request_id,
+        }))
+        .await;
+    commit["case_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("commit failed: {commit}"))
+        .to_string()
+}
+
+fn add_item_request(root: &Path, case_id: &str, item: Value, extra: Value) -> Value {
+    let mut request = json!({
+        "verb": "case_add_item",
+        "actor": {"actor_id": "operator_local", "role": "operator"},
+        "case_id": case_id,
+        "item": item,
+        "policy": policy_path(root),
+    });
+    for (key, value) in extra.as_object().unwrap() {
+        request[key] = value.clone();
+    }
+    request
+}
+
+fn plan_json(root: &Path, case_id: &str) -> Value {
+    serde_json::from_slice(
+        &std::fs::read(root.join("cases").join(case_id).join("plan.json")).unwrap(),
+    )
+    .unwrap()
+}
+
+fn plan_item<'a>(plan: &'a Value, id: &str) -> Option<&'a Value> {
+    plan["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["plan_item_id"] == id)
+}
+
+#[tokio::test]
+async fn add_item_carries_external_ref() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-ext").await;
+    let mut item = extra_item("from_issue");
+    item["external_ref"] = json!({
+        "kind": "github_issue",
+        "id": "GodSpeedAI/horizon-sandbox#7",
+        "url": "https://github.com/GodSpeedAI/horizon-sandbox/issues/7",
+    });
+    let reply = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            item.clone(),
+            json!({"request_id": "github:GodSpeedAI/horizon-sandbox#7"}),
+        ))
+        .await;
+    assert_eq!(reply["ok"], true, "{reply}");
+    let plan = plan_json(root.path(), &case_id);
+    assert_eq!(
+        plan_item(&plan, "from_issue").unwrap()["external_ref"],
+        item["external_ref"]
+    );
+    // Items without one stay free of the key.
+    assert!(plan_item(&plan, "from_issue").is_some());
+    assert!(plan["items"][0].get("external_ref").is_none());
+}
+
+#[tokio::test]
+async fn add_item_same_request_id_replays() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-replay").await;
+    let request = add_item_request(
+        root.path(),
+        &case_id,
+        extra_item("once"),
+        json!({"request_id": "handoff:draft-1"}),
+    );
+    let first = client.call(request.clone()).await;
+    assert_eq!(first["ok"], true, "{first}");
+    let before = plan_json(root.path(), &case_id)["items"]
+        .as_array()
+        .unwrap()
+        .len();
+    let second = client.call(request.clone()).await;
+    let third = client.call(request).await;
+    assert_eq!(second, first);
+    assert_eq!(third, first);
+    let plan = plan_json(root.path(), &case_id);
+    assert_eq!(plan["items"].as_array().unwrap().len(), before);
+    assert_eq!(
+        plan["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|item| item["plan_item_id"] == "once")
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn add_item_changed_payload_is_request_id_reused() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-reuse").await;
+    let first = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("first"),
+            json!({"request_id": "handoff:draft-2"}),
+        ))
+        .await;
+    assert_eq!(first["ok"], true, "{first}");
+    let reused = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("second"),
+            json!({"request_id": "handoff:draft-2"}),
+        ))
+        .await;
+    assert_eq!(reused["error_class"], "request_id_reused", "{reused}");
+    assert!(plan_item(&plan_json(root.path(), &case_id), "second").is_none());
+}
+
+#[tokio::test]
+async fn add_item_keeps_review_marker() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-review").await;
+    let mut item = extra_item("review_it");
+    item["markers"] = json!({"required": false, "review": true});
+    let reply = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            item,
+            json!({"request_id": "handoff:review-1"}),
+        ))
+        .await;
+    assert_eq!(reply["ok"], true, "{reply}");
+    let plan = plan_json(root.path(), &case_id);
+    assert_eq!(
+        plan_item(&plan, "review_it").unwrap()["markers"]["review"],
+        true
+    );
+}
+
+#[tokio::test]
+async fn add_item_dry_run_commits_nothing() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-dry").await;
+    let case_dir = root.path().join("cases").join(&case_id);
+    let plan_before = std::fs::read(case_dir.join("plan.json")).unwrap();
+    let events_before = std::fs::read(case_dir.join("case-events.jsonl")).unwrap();
+
+    // A dry run needs no request_id; with one, it must not consume it.
+    let request = add_item_request(
+        root.path(),
+        &case_id,
+        extra_item("preview"),
+        json!({"dry_run": true, "request_id": "handoff:dry-1"}),
+    );
+    let dry = client.call(request.clone()).await;
+    assert_eq!(dry["ok"], true, "{dry}");
+    assert_eq!(dry["dry_run"], true);
+    assert_eq!(dry["outcome"], "would_add");
+    assert_eq!(dry["item"]["plan_item_id"], "preview");
+    assert_eq!(dry["item"]["proposed_by"], "operator_local");
+    assert_eq!(dry["plan_precondition"]["ref"], format!("plan:{case_id}"));
+    assert!(dry["plan_precondition"]["expected_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("sha256:"));
+    let again = client.call(request).await;
+    assert_eq!(again["plan_precondition"], dry["plan_precondition"]);
+    let mut without_id = add_item_request(
+        root.path(),
+        &case_id,
+        extra_item("preview"),
+        json!({"dry_run": true}),
+    );
+    without_id.as_object_mut().unwrap().remove("request_id");
+    let anonymous = client.call(without_id).await;
+    assert_eq!(anonymous["plan_precondition"], dry["plan_precondition"]);
+
+    assert_eq!(
+        std::fs::read(case_dir.join("plan.json")).unwrap(),
+        plan_before
+    );
+    assert_eq!(
+        std::fs::read(case_dir.join("case-events.jsonl")).unwrap(),
+        events_before
+    );
+
+    // The request_id is still free: the real call is a first attempt, not a
+    // replay of the preview.
+    let real = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("preview"),
+            json!({"request_id": "handoff:dry-1"}),
+        ))
+        .await;
+    assert_eq!(real["ok"], true, "{real}");
+    assert!(real.get("dry_run").is_none(), "{real}");
+    assert!(plan_item(&plan_json(root.path(), &case_id), "preview").is_some());
+
+    // A dry run is refused like the real call: duplicate id fails validation.
+    let refused = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("preview"),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    assert!(refused.get("error").is_some(), "{refused}");
+}
+
+#[tokio::test]
+async fn add_item_with_stale_plan_digest_is_refused() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-stale").await;
+
+    // Fresh digest: the real call goes through.
+    let dry = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("a"),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    let digest = dry["plan_precondition"].clone();
+    let ok = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("a"),
+            json!({"request_id": "add-a", "preconditions": {"records": [digest]}}),
+        ))
+        .await;
+    assert_eq!(ok["ok"], true, "{ok}");
+
+    // The plan changes between preview and confirm.
+    let dry_b = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("b"),
+            json!({"dry_run": true}),
+        ))
+        .await;
+    let digest_b = dry_b["plan_precondition"].clone();
+    let other = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("c"),
+            json!({"request_id": "add-c"}),
+        ))
+        .await;
+    assert_eq!(other["ok"], true, "{other}");
+    let events_before = std::fs::read(
+        root.path()
+            .join("cases")
+            .join(&case_id)
+            .join("case-events.jsonl"),
+    )
+    .unwrap();
+
+    let stale = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("b"),
+            json!({"request_id": "add-b", "preconditions": {"records": [digest_b]}}),
+        ))
+        .await;
+    assert_eq!(stale["outcome"], "rejected_as_stale", "{stale}");
+    assert_eq!(stale["code"], "precondition_failed");
+    assert_eq!(
+        stale["changed_records"][0]["ref"],
+        format!("plan:{case_id}")
+    );
+    assert!(plan_item(&plan_json(root.path(), &case_id), "b").is_none());
+    assert_eq!(
+        std::fs::read(
+            root.path()
+                .join("cases")
+                .join(&case_id)
+                .join("case-events.jsonl")
+        )
+        .unwrap(),
+        events_before
+    );
+}
+
+#[tokio::test]
+async fn case_overview_returns_a_digest_that_tracks_the_case() {
+    let (root, socket) = boot().await;
+    let mut client = Client::connect(&socket).await;
+    let case_id = commit_case(&mut client, root.path(), "req-commit-digest").await;
+    let read = || json!({"verb": "case_get_overview", "case_id": case_id});
+    let first = client.call(read()).await;
+    assert_eq!(first["digest"]["ref"], format!("case:{case_id}"), "{first}");
+    assert!(first["digest"]["expected_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("sha256:"));
+    assert_eq!(client.call(read()).await["digest"], first["digest"]);
+    let added = client
+        .call(add_item_request(
+            root.path(),
+            &case_id,
+            extra_item("moves_digest"),
+            json!({"request_id": "add-digest"}),
+        ))
+        .await;
+    assert_eq!(added["ok"], true, "{added}");
+    let after = client.call(read()).await;
+    assert_ne!(after["digest"], first["digest"]);
 }

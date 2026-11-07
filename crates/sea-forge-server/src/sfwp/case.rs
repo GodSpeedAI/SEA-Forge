@@ -135,6 +135,37 @@ pub struct PreflightResult {
     /// `None` when the template itself could not be loaded (nothing to pin).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub precondition: Option<RecordDigest>,
+    /// Pins the whole plan this commit would create: the template's bytes, the
+    /// params and the instantiated items. Ref `plan:<template_ref>`. Carry it
+    /// into `case.commit`'s `preconditions.records` alongside (or instead of)
+    /// `precondition`. `None` when the plan could not be built.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_precondition: Option<RecordDigest>,
+}
+
+/// A precondition ref naming the plan a template + params would create.
+pub fn plan_precondition_ref(template_ref: &str) -> String {
+    format!("plan:{template_ref}")
+}
+
+/// The value whose digest a `plan:<template_ref>` precondition pins: canonical
+/// JSON `{template_sha256, params, items}`. `None` if the template cannot be
+/// read, instantiated or validated.
+pub fn plan_digest_source(
+    root: &Path,
+    template_ref: &str,
+    params: &BTreeMap<String, String>,
+) -> Option<serde_json::Value> {
+    let template_sha256 = resolve_template_digest_source(root, template_ref)?;
+    let template = load_template_for_preflight(root, template_ref).ok()?;
+    let mut plan =
+        templates::instantiate(&template, params, "preflight", "preflight", "preflight").ok()?;
+    validate_proposal(&mut plan).ok()?;
+    Some(serde_json::json!({
+        "template_sha256": template_sha256,
+        "params": params,
+        "items": serde_json::to_value(&plan.items).ok()?,
+    }))
 }
 
 /// A precondition ref naming a template, pinned to its current on-disk bytes.
@@ -191,6 +222,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
                 errors: vec![error.to_string()],
                 items: Vec::new(),
                 precondition: None,
+                plan_precondition: None,
             }
         }
     };
@@ -213,6 +245,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
                 errors: vec![error.to_string()],
                 items: Vec::new(),
                 precondition: None,
+                plan_precondition: None,
             }
         }
     };
@@ -237,6 +270,13 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
             expected_digest,
         });
 
+    let plan_precondition = plan_digest_source(root, &params.template_ref, &params.params)
+        .and_then(|value| digest_of(&value).ok())
+        .map(|expected_digest| RecordDigest {
+            r#ref: plan_precondition_ref(&params.template_ref),
+            expected_digest,
+        });
+
     match validation {
         Ok(()) => PreflightResult {
             ok: true,
@@ -244,6 +284,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
             errors: Vec::new(),
             items,
             precondition,
+            plan_precondition,
         },
         Err(error) => PreflightResult {
             ok: false,
@@ -251,6 +292,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
             errors: vec![error.to_string()],
             items,
             precondition,
+            plan_precondition,
         },
     }
 }

@@ -73,6 +73,26 @@
         }
       ]
     },
+    "ExternalRefView": {
+      "description": "Wire shape of a plan item's `external_ref` (`kind` is `github_issue` or\n`ticket`).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "url"
+      ]
+    },
     "HorizonItem": {
       "description": "One row of the case horizon: a plan item with its separately-derived\nexecution and settlement standing.",
       "type": "object",
@@ -87,6 +107,17 @@
         },
         "execution": {
           "$ref": "#/$defs/ExecutionStanding"
+        },
+        "external_ref": {
+          "description": "Link to an outside record (for example a GitHub issue), when the plan\nitem carries one.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExternalRefView"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "item_kind": {
           "description": "`sandboxed_task`, `human_task`, `agent_task`, `stage`, `milestone`, …",

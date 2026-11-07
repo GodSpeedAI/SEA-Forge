@@ -269,17 +269,17 @@ pub fn propose_item(
     propose_item_with(root, policy, actor, case_id, item, &mut noop_notifier)
 }
 
-/// [`propose_item`], notifying the host sink of the appended `PlanMutated`
-/// event. The event is only appended after the ledger commit and the
-/// `plan.json` view materialize, so a refused proposal notifies nothing.
-pub fn propose_item_with(
+/// Run every check [`propose_item_with`] runs before it writes (id safety,
+/// proposal validation and cycle checks, authority) and return the plan as it
+/// would be committed. Writes nothing to the case; backs `case.add_item`'s
+/// `dry_run`.
+pub fn preview_item(
     root: &Path,
     policy: &Path,
     actor: &str,
     case_id: &str,
-    item: PlanItem,
-    notify: CaseEventNotifier<'_>,
-) -> Result<u8, ForgeError> {
+    item: &PlanItem,
+) -> Result<CasePlan, ForgeError> {
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
@@ -297,6 +297,22 @@ pub fn propose_item_with(
             parameters: json!({"item": item.plan_item_id}),
         },
     )?;
+    Ok(plan)
+}
+
+/// [`propose_item`], notifying the host sink of the appended `PlanMutated`
+/// event. The event is only appended after the ledger commit and the
+/// `plan.json` view materialize, so a refused proposal notifies nothing.
+pub fn propose_item_with(
+    root: &Path,
+    policy: &Path,
+    actor: &str,
+    case_id: &str,
+    item: PlanItem,
+    notify: CaseEventNotifier<'_>,
+) -> Result<u8, ForgeError> {
+    let plan = preview_item(root, policy, actor, case_id, &item)?;
+    let (_, plan_path, _) = paths(root, case_id);
     let committed = LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
         "case_plan_mutation",
         vec![case_id.into()],

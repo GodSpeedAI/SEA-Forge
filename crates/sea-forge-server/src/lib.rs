@@ -1176,6 +1176,15 @@ pub enum Request {
         policy: String,
         #[serde(default)]
         request_id: Option<String>,
+        /// Run the same checks and return the item that would be added plus a
+        /// `plan:<case_id>` digest of the resulting plan; commit nothing. A
+        /// dry run does not consume `request_id`.
+        #[serde(default)]
+        dry_run: bool,
+        /// Refuse with `rejected_as_stale` unless the plan the add would leave
+        /// behind still matches the caller's `plan:<case_id>` digest.
+        #[serde(default)]
+        preconditions: Option<sfwp::precondition::Precondition>,
     },
     CaseReopen {
         case_id: String,
@@ -2042,6 +2051,10 @@ fn request_id(request: &Request) -> Option<&str> {
 /// `agent.probe` is durable: it records a case, run, and authority decision
 /// before contacting the configured endpoint.
 fn requires_durable_locator(request: &Request) -> bool {
+    // A dry run commits nothing, so it has nothing to be idempotent about.
+    if matches!(request, Request::CaseAddItem { dry_run: true, .. }) {
+        return false;
+    }
     matches!(
         request,
         Request::Submit { .. }
@@ -2460,6 +2473,10 @@ fn dedupe_key(request: &Request, raw_line: &str) -> Option<(String, String, Stri
     }
     let mut value: serde_json::Value = serde_json::from_str(raw_line).ok()?;
     let object = value.as_object_mut()?;
+    // A dry run must not bind (consume) its request_id.
+    if object.get("dry_run").and_then(|v| v.as_bool()) == Some(true) {
+        return None;
+    }
     // Removed before hashing: the id is the key, not part of what it keys.
     // Everything else stays in, `verb` included — so a reused id pointed at a
     // different operation is caught by the payload comparison alone.
@@ -3257,9 +3274,12 @@ pub async fn handle_request_as(
         }
         Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.root))
             .unwrap_or_else(|_| serde_json::json!({"error": "case list serialization failed"})),
-        Request::CaseGetOverview { case_id } => {
-            case_view_response(sfwp::case_views::get_overview(&state.root, &case_id))
-        }
+        Request::CaseGetOverview { case_id } => case_view_response(
+            sfwp::case_views::get_overview(&state.root, &case_id).map(|mut overview| {
+                overview.digest = current_record_digest(&state.root, &case_id, "case", &case_id);
+                overview
+            }),
+        ),
         Request::CaseGetHorizon { case_id } => {
             case_view_response(sfwp::case_views::get_horizon(&state.root, &case_id))
         }
@@ -3310,10 +3330,18 @@ pub async fn handle_request_as(
             |_| serde_json::json!({"error": "delegation preview serialization failed"}),
         ),
         Request::ApprovalList { case_id } => {
-            serde_json::to_value(sfwp::approvals::list(&state.root, case_id.as_deref()))
-                .unwrap_or_else(
-                    |_| serde_json::json!({"error": "approval list serialization failed"}),
-                )
+            let mut list = sfwp::approvals::list(&state.root, case_id.as_deref());
+            for approval in &mut list.approvals {
+                approval.digest = current_record_digest(
+                    &state.root,
+                    &approval.case_id,
+                    "approval",
+                    &approval.approval_id,
+                );
+            }
+            serde_json::to_value(list).unwrap_or_else(
+                |_| serde_json::json!({"error": "approval list serialization failed"}),
+            )
         }
         Request::ApprovalDecide {
             case_id,
@@ -3365,7 +3393,12 @@ pub async fn handle_request_as(
             // Evaluate the precondition first — before any side effect. Mirrors
             // `decide`'s "no side effect on stale" discipline for approve/reject.
             if let Some(precondition) = &preconditions {
-                let resolver = TemplateRecordResolver { root: &state.root };
+                let resolver = PlanRecordResolver {
+                    template: TemplateRecordResolver { root: &state.root },
+                    root: &state.root,
+                    template_ref: &template_ref,
+                    params: &params,
+                };
                 match sfwp::precondition::evaluate(precondition, &resolver) {
                     Ok(Some(rejected)) => {
                         let response = serde_json::to_value(&rejected).unwrap_or_else(|_| {
@@ -3417,17 +3450,25 @@ pub async fn handle_request_as(
             item,
             policy,
             request_id,
+            dry_run,
+            preconditions,
         } => {
+            // A dry run writes no correlation record: it is a read.
+            let request_id = request_id.filter(|_| !dry_run);
             record_pending(state, request_id.as_deref(), "case.add_item");
             let actor = actor_id.unwrap_or("operator_local").to_string();
             let response = match sfwp::case_mutations::add_item(
-                state, &actor, &case_id, item, &policy,
+                state,
+                &actor,
+                &case_id,
+                item,
+                &policy,
+                dry_run,
+                preconditions.as_ref(),
             )
             .await
             {
-                Ok(result) => serde_json::to_value(result).unwrap_or_else(
-                    |_| serde_json::json!({"error": "add_item serialization failed"}),
-                ),
+                Ok(result) => result,
                 Err(error) => forge_error_response(&error),
             };
             record_outcome(state, request_id.as_deref(), "case.add_item", &response);
@@ -3768,6 +3809,35 @@ impl sfwp::precondition::RecordResolver for TemplateRecordResolver<'_> {
     }
 }
 
+/// Resolves `plan:<template_ref>` to the plan this commit would instantiate
+/// (template bytes, params and items), and every other ref through
+/// [`TemplateRecordResolver`]. `case.preflight` returns the expected digest as
+/// `plan_precondition`.
+struct PlanRecordResolver<'a> {
+    template: TemplateRecordResolver<'a>,
+    root: &'a Path,
+    template_ref: &'a str,
+    params: &'a std::collections::BTreeMap<String, String>,
+}
+
+impl sfwp::precondition::RecordResolver for PlanRecordResolver<'_> {
+    fn resolve(&self, r#ref: &str) -> Result<Option<serde_json::Value>, ForgeError> {
+        let Some(plan_ref) = r#ref.strip_prefix("plan:") else {
+            return self.template.resolve(r#ref);
+        };
+        // A plan digest names the plan this commit would create, so it must
+        // name this commit's template.
+        if plan_ref != self.template_ref {
+            return Ok(None);
+        }
+        Ok(sfwp::case::plan_digest_source(
+            self.root,
+            self.template_ref,
+            self.params,
+        ))
+    }
+}
+
 /// Shape a case-view result into a wire response.
 ///
 /// A failed lookup carries a machine-readable `error_class` (`not_found` vs
@@ -3898,6 +3968,30 @@ impl sfwp::precondition::RecordResolver for LedgerRecordResolver<'_> {
             _ => Ok(None),
         }
     }
+}
+
+/// The digest `LedgerRecordResolver` would compute for `<kind>:<id>` in
+/// `case_id` right now, as a ready-to-send precondition record. Using the
+/// resolver itself means a client that echoes it back cannot disagree with the
+/// server's check.
+fn current_record_digest(
+    root: &Path,
+    case_id: &str,
+    kind: &str,
+    id: &str,
+) -> Option<sfwp::precondition::RecordDigest> {
+    let resolver = LedgerRecordResolver {
+        root,
+        case_id,
+        entries: std::cell::RefCell::new(None),
+    };
+    let ref_ = format!("{kind}:{id}");
+    let value = sfwp::precondition::RecordResolver::resolve(&resolver, &ref_).ok()??;
+    let expected_digest = sfwp::precondition::digest_of(&value).ok()?;
+    Some(sfwp::precondition::RecordDigest {
+        r#ref: ref_,
+        expected_digest,
+    })
 }
 
 /// Handle an `approve`/`reject` decision with optional precondition + request
