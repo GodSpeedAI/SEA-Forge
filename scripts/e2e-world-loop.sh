@@ -31,7 +31,14 @@ for tool in domainforge uv cargo python3; do command -v "$tool" >/dev/null || fa
 for d in "$GSA" "$CK" "$SWE" "$SXR" "$SEA_RS"; do [ -d "$d" ] || fail "repo not found: $d"; done
 
 step() { printf '\n== %s\n' "$1"; }
-quiet_cargo() { cargo test --quiet "$@" 2>&1 | grep -E "^test result|^error|panicked|FAILED" || true; return "${PIPESTATUS[0]}"; }
+# Returns cargo's own status: `|| true` on the pipeline would reset PIPESTATUS and
+# let a failed hop pass, so the status is captured before the filter's is ignored.
+quiet_cargo() {
+  local out rc=0
+  out="$(cargo test --quiet "$@" 2>&1)" || rc=$?
+  printf '%s\n' "$out" | grep -E "^test result|^error|panicked|FAILED" || true
+  return "$rc"
+}
 
 dir="$(mktemp -d)"
 trap 'rm -rf "$dir" "$dir"-*' EXIT
@@ -52,10 +59,10 @@ echo "world  $E2E_WORLD_REF"
 echo "model  $E2E_DOMAIN_HASH"
 
 step "hop 1  GodSpeed-Agent emits E1 WorkRequested"
-(cd "$GSA" && uv run --quiet pytest -q tests/test_e2e_world_loop.py -k hop_1)
+(cd "$GSA" && uv run --quiet --extra dev pytest -q tests/test_e2e_world_loop.py -k hop_1)
 
 step "hop 0  Context Kernel retrieves and emits E3 (+ CEP context_bundle)"
-(cd "$CK" && quiet_cargo -p ck-mcp --test e2e_world_loop)
+(cd "$CK" && quiet_cargo -p context-kernel-mcp --test e2e_world_loop)
 
 step "hop 2  SWE_SEED builds E4 GovernedWorkRequest"
 (cd "$SWE" && quiet_cargo -p swe-seed-core --test e2e_world_loop hop_2)
@@ -70,7 +77,7 @@ step "hop 5  RealityTrace ingests E7 and emits E8 EvidenceRecorded"
 (cd "$SXR" && quiet_cargo -p sxr-core --test e2e_world_loop)
 
 step "hop 6  GodSpeed-Agent ingests E8, bound to the same world"
-(cd "$GSA" && uv run --quiet pytest -q tests/test_e2e_world_loop.py -k hop_6)
+(cd "$GSA" && uv run --quiet --extra dev pytest -q tests/test_e2e_world_loop.py -k hop_6)
 
 if [ -n "${CEP_REPO:-}" ]; then
   step "cep  the context bundle satisfies godspeed.context_bundle"
