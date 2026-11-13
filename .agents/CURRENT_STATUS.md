@@ -1,29 +1,22 @@
 # Current status
 
-**Status revision:** 230
+**Status revision:** 231
 
-**Stage:** Fix review: document the attempts that have no launch record (#86)
+**Stage:** FDE convergence: EGM-reviewed planning baseline (draft 3); S0 baseline measured
 
-**Summary:** CI and review fixes for the NotDeclared liveness guard: the test-only sea-forge-settlement dependency carries a version (cargo-deny wildcard ban), parse_ps_members allows dead_code on non-Unix, and the lease-only exception for attempts without a launch record is recorded.
+**Summary:** Planning baseline for converging the GodSpeed stack into one FDE operating environment: deliverables A-H, synthesized SOP v0.4.1, recon, two EGM Goldfish review rounds with resolutions RD-01..RD-27. No product code changed. Measured readiness at current origin heads is NO-GO 19/30.
 
 **Verified:**
-- cargo test --workspace passes; clippy clean
-- cep_settlement orphaned_command race test fails without the guard and passes with it
-- Independent review: two rounds, APPROVE on round 2 (zombies are gone, read errors fail closed, a malformed record is Unknown)
-- cargo-deny bans pass with the dev-dependency version
+- Cross-document identifier checks pass by script: every work-package id exists in the id map; every negative test cited in the matrix exists in the qualification plan; every critical requirement row cites a negative test (169 rows, 76 critical; 20 acceptance and 62 negative tests)
+- godspeed-readiness scripts/readiness.sh ran against pinned heads synced to origin defaults: 19/30 gates passed (FAIL C01, J02, J02R2, SW01, SW02, U01, BM-AUTH, BM-SETTLE, BM-STACK; BLOCKED CK01, L01)
+- Backup tags fde-backup/<branch>/20261113 created on every local branch in 12 repositories
 
 **Limits:**
-- A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
-- --declared <ref> is not checked against a ledger declaration
-- A failure inside declare before the transport spawns is held for an operator, which is conservative
-- The CLI builds an Operator from --actor, the same local trust model as approve
-- The Horizon policy renderer and the sea-rs fixture are not tied by a test (follow-up)
-- The server test covers a nonzero exit only; the timeout variant is covered at the CLI
-- The world-load log is INFO level; SFWP has no way to list loaded worlds
-- The liveness guard sees the recorded process group only: a process that left it (setsid/setpgid), a resolver in another pid namespace on the same boot, and the instant between fork and the ledger write are not seen
-- An Unknown liveness result or a malformed launch record can be overridden only by the operator's audited --attest-command-gone; a group that is positively alive is always refused
-- Exactly-once across an operator NotDeclared and a late declaration still relies on the external authority treating authorization_request_sha256 as an idempotency key (contract documented in sea-forge-settlement declaration.rs)
-- Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
-- An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
+- Planning only: nothing in this change is implemented or tested as product behaviour
+- Recon and reviews were read-only; test counts quoted from other repositories were not re-run except through the readiness harness
+- The readiness failures are not yet diagnosed
+- No third Goldfish pass was run after the round-2 edits
+- Owner decisions OD-1..OD-6 in H-egm-review-record.md are open; work proceeds on the recommended options
+- scripts/e2e-world-loop.sh has not been run
 
-**Next:** Merge after CI; release, then the owner reinstalls the Horizon gateway with the new binary and unit.
+**Next:** Diagnose and fix the failing readiness gates, build fde/integration branches (WP-00c), then start slice S1 with WP-09, WP-10, WP-11 and WP-13.
