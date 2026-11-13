@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 230
+**Status revision:** 231
 
 **Stage:** Fix review: document the attempts that have no launch record (#86)
 
-**Summary:** CI and review fixes for the NotDeclared liveness guard: the test-only sea-forge-settlement dependency carries a version (cargo-deny wildcard ban), parse_ps_members allows dead_code on non-Unix, and the lease-only exception for attempts without a launch record is recorded.
+**Summary:** Clear RUSTSEC-2026-0459 (libsqlite3-sys 0.38.2 -> 0.39.1 via rusqlite 0.40 -> 0.41) and RUSTSEC-2026-0486 (rustix 1.1.5 -> 1.1.6) so cargo deny passes again.
 
 **Verified:**
 - cargo test --workspace passes; clippy clean
