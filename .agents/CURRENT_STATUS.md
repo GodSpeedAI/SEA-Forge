@@ -4,13 +4,14 @@
 
 **Stage:** e2e-world-loop-fix
 
-**Summary:** scripts/e2e-world-loop.sh is fixed in three places: the Context Kernel hop builds package context-kernel-mcp (renamed upstream from ck-mcp, so hop 0 failed and every later hop had no input); quiet_cargo now returns cargo's real exit status (the old '|| true' reset PIPESTATUS, so a failed hop never stopped the script); and the GodSpeed-Agent hops use 'uv run --quiet --extra dev pytest' so pytest exists on a fresh checkout. Script logic is otherwise unchanged. E5B execution remains simulated in this loop.
+**Summary:** scripts/e2e-world-loop.sh is fixed in three places: the Context Kernel hop builds package context-kernel-mcp (renamed upstream from ck-mcp, so hop 0 failed and every later hop had no input); quiet_cargo now returns cargo's real exit status (the old '|| true' reset PIPESTATUS, so a failed hop never stopped the script); and the GodSpeed-Agent hops use 'uv run --quiet --extra dev pytest' so pytest exists on a fresh checkout. Script logic is otherwise unchanged. E5B execution remains simulated in this loop. The 0.21.2 lockstep gates carried from revision 232 are closed: see the readiness entry under verified.
 
 **Verified:**
 - bash -n scripts/e2e-world-loop.sh: ok
 - scripts/check-agent-context.sh: ok
 - 2026-11-13 patched script run against pinned origin heads (SEA-Forge main, Context Kernel 36bd8c8, SWE_SEED, RealityTrace main, cep 5111ec3, GodSpeed-Agent 4bfed12) with DomainForge 0.21.2: hops 1,0,2,3,4,5,6 passed, cep context_bundle valid, three refusals refused, final line 'e2e-world-loop: OK. One world (world:demo@sha256:6e00ae2d...) from E1 to the evidence the agent records.'
 - before the patch the same run failed at hop 0 (package ID specification `ck-mcp` did not match any packages) yet continued through every later hop
+- 2026-11-13, after Cognate 0.9.1 (npm, DomainForge 0.21.2), RealityTrace 0.4.0 (crates.io), Cognate-Workbench #32 and Horizon #30 landed: the full readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main, SEA-Forge at 0439abb0) reported GO 30/30, including C01, SW01, SW02, J02 and J02R2. Evidence: godspeed-readiness commit 79f5039, evidence/REPORT.md (that repo is local-only, not published)
 
 **Limits:**
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
