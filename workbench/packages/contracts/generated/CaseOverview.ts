@@ -16,6 +16,11 @@ export interface CaseOverview {
   close_reason?: string | null;
   closed_at?: string | null;
   created_at: string;
+  /**
+   * `{ref: "case:<case_id>", expected_digest}` as the precondition check
+   * computes it right now. Absent when the case ledger could not be read.
+   */
+  digest?: RecordDigest | null;
   item_count: number;
   /**
    * The plan this case was committed from, when `plan.json` is readable.
@@ -36,6 +41,19 @@ export interface CaseOverview {
    * `name@version` of the originating template, when the plan recorded one.
    */
   template_ref?: string | null;
+}
+/**
+ * A single `{ref, expected_digest}` precondition entry.
+ */
+export interface RecordDigest {
+  /**
+   * The sha256 digest the caller expects the referenced record to have.
+   */
+  expected_digest: string;
+  /**
+   * Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).
+   */
+  ref: string;
 }
 /**
  * A settlement record linked to a run, projected for the overview.

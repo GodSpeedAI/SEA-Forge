@@ -1209,3 +1209,186 @@ async fn unknown_events_cursor_errors_instead_of_replaying_from_start() {
             .is_some_and(|e| e.contains("events_unknown_cursor"));
     assert!(refused, "{replay}");
 }
+
+// ---------------------------------------------------------------------------
+// `plan:<template_ref>` preconditions on case.commit (D8)
+// ---------------------------------------------------------------------------
+
+const PLAN_TEMPLATE_REF: &str = "sequential_agents@0.1.0";
+
+/// Boot with a stub agent, an allow policy, and a one-item template whose
+/// operation reads the `topic` parameter (default `alpha`), so the plan depends
+/// on template bytes, params and items.
+async fn boot_for_plan_digest() -> (
+    tempfile::TempDir,
+    PathBuf,
+    tokio::task::JoinHandle<()>,
+    PathBuf,
+) {
+    use sea_forge_planner::templates::{ParameterDef, TemplateOperation};
+    let (endpoint, stub) =
+        stub_endpoint(r#"{"choices":[{"message":{"content":"ok"}}],"usage":{"total_tokens":1}}"#);
+    let (root, socket) = boot_with_endpoint(Some(endpoint)).await;
+    std::fs::write(
+        root.path().join("policy.yaml"),
+        "version: \"0.1\"\npolicy_surfaces:\n  external_api:\n    mode: deny-by-default\n    allow_hosts: [127.0.0.1]\nrules:\n  - name: allow-agent-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: agent_task\n",
+    )
+    .unwrap();
+    let mut template = sequential_agents_template(STUB_ENDPOINT).unwrap();
+    let mut item = template.plan.repeated[0].item.clone();
+    item.plan_item_id = "one".into();
+    item.operations = vec![TemplateOperation::AgentTask {
+        endpoint_ref: STUB_ENDPOINT.into(),
+        instruction: "${topic}".into(),
+        max_turns: 1,
+        token_budget: None,
+    }];
+    template.plan.repeated.clear();
+    template.plan.items.push(item);
+    template.parameters.insert(
+        "topic".into(),
+        ParameterDef {
+            param_type: "string".into(),
+            required: false,
+            default: Some("alpha".into()),
+        },
+    );
+    let dir = root.path().join("templates");
+    std::fs::create_dir_all(&dir).unwrap();
+    let template_path = dir.join(format!("{PLAN_TEMPLATE_REF}.yaml"));
+    std::fs::write(
+        &template_path,
+        sea_forge_core::yaml::to_string(&template).unwrap(),
+    )
+    .unwrap();
+    (root, socket, stub, template_path)
+}
+
+async fn plan_digest(client: &mut Client, params: Value) -> Value {
+    let reply = client
+        .call(
+            json!({"verb": "case_preflight", "template_ref": PLAN_TEMPLATE_REF, "params": params}),
+        )
+        .await;
+    assert_eq!(reply["ok"], true, "{reply}");
+    assert_eq!(
+        reply["plan_precondition"]["ref"],
+        format!("plan:{PLAN_TEMPLATE_REF}")
+    );
+    reply["plan_precondition"].clone()
+}
+
+fn plan_commit(root: &Path, params: Value, request_id: &str, records: Vec<Value>) -> Value {
+    json!({
+        "verb": "case_commit", "actor": {"actor_id": "operator_local", "role": "operator"},
+        "template_ref": PLAN_TEMPLATE_REF,
+        "params": params,
+        "policy": root.join("policy.yaml").strip_prefix(root).unwrap().to_str().unwrap(),
+        "entity": "operator_local",
+        "process": "test",
+        "request_id": request_id,
+        "preconditions": {"records": records},
+    })
+}
+
+#[tokio::test]
+async fn plan_digest_covers_template_params_and_items() {
+    let (_root, socket, _stub, template_path) = boot_for_plan_digest().await;
+    let mut client = Client::connect(&socket).await;
+    let base = plan_digest(&mut client, json!({})).await;
+    // Stable for the same inputs.
+    assert_eq!(plan_digest(&mut client, json!({})).await, base);
+    // Params are pinned as the caller sent them, even when equal to the default.
+    assert_ne!(
+        plan_digest(&mut client, json!({"topic": "alpha"})).await["expected_digest"],
+        base["expected_digest"]
+    );
+    // A different param changes the items and so the digest.
+    let other_param = plan_digest(&mut client, json!({"topic": "beta"})).await;
+    assert_ne!(other_param["expected_digest"], base["expected_digest"]);
+    // Changed template bytes change it.
+    let mut bytes = std::fs::read_to_string(&template_path).unwrap();
+    bytes.push_str("# edited\n");
+    std::fs::write(&template_path, bytes).unwrap();
+    let edited = plan_digest(&mut client, json!({})).await;
+    assert_ne!(edited["expected_digest"], base["expected_digest"]);
+    // The plan digest is not the template-bytes digest.
+    let template_only = client
+        .call(json!({"verb": "case_preflight", "template_ref": PLAN_TEMPLATE_REF, "params": {}}))
+        .await["precondition"]["expected_digest"]
+        .clone();
+    assert_ne!(edited["expected_digest"], template_only);
+}
+
+#[tokio::test]
+async fn plan_digest_mismatch_is_rejected_as_stale() {
+    let (root, socket, _stub, template_path) = boot_for_plan_digest().await;
+    let mut client = Client::connect(&socket).await;
+    let digest = plan_digest(&mut client, json!({})).await;
+
+    // Different params than the previewed ones: stale, no case.
+    let params_changed = client
+        .call(plan_commit(
+            root.path(),
+            json!({"topic": "beta"}),
+            "req-plan-params",
+            vec![digest.clone()],
+        ))
+        .await;
+    assert_eq!(
+        params_changed["outcome"], "rejected_as_stale",
+        "{params_changed}"
+    );
+    assert_eq!(params_changed["code"], "precondition_failed");
+    assert_eq!(
+        params_changed["changed_records"][0]["ref"],
+        format!("plan:{PLAN_TEMPLATE_REF}")
+    );
+
+    // Template edited after the preview: stale, no case.
+    let mut bytes = std::fs::read_to_string(&template_path).unwrap();
+    bytes.push_str("# edited\n");
+    std::fs::write(&template_path, bytes).unwrap();
+    let template_changed = client
+        .call(plan_commit(
+            root.path(),
+            json!({}),
+            "req-plan-template",
+            vec![digest],
+        ))
+        .await;
+    assert_eq!(
+        template_changed["outcome"], "rejected_as_stale",
+        "{template_changed}"
+    );
+
+    // A plan ref naming a different template cannot match.
+    let wrong_ref = client
+        .call(plan_commit(
+            root.path(),
+            json!({}),
+            "req-plan-wrong-ref",
+            vec![json!({"ref": "plan:other@1.0.0", "expected_digest": "sha256:00"})],
+        ))
+        .await;
+    assert_eq!(wrong_ref["outcome"], "rejected_as_stale", "{wrong_ref}");
+    assert_eq!(cases_committed(root.path()), 0);
+}
+
+#[tokio::test]
+async fn plan_digest_match_commits() {
+    let (root, socket, _stub, _template) = boot_for_plan_digest().await;
+    let mut client = Client::connect(&socket).await;
+    let digest = plan_digest(&mut client, json!({"topic": "beta"})).await;
+    let commit = client
+        .call(plan_commit(
+            root.path(),
+            json!({"topic": "beta"}),
+            "req-plan-match",
+            vec![digest],
+        ))
+        .await;
+    assert!(commit.get("error").is_none(), "{commit}");
+    assert!(commit["case_id"].as_str().is_some(), "{commit}");
+    assert_eq!(cases_committed(root.path()), 1);
+}

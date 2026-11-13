@@ -1,17 +1,13 @@
 # Current status
 
-**Status revision:** 233
+**Status revision:** 234
 
-**Stage:** e2e-world-loop-fix
+**Stage:** FDE integration branch: main plus Horizon desk support (PR #91)
 
-**Summary:** scripts/e2e-world-loop.sh is fixed in three places: the Context Kernel hop builds package context-kernel-mcp (renamed upstream from ck-mcp, so hop 0 failed and every later hop had no input); quiet_cargo now returns cargo's real exit status (the old '|| true' reset PIPESTATUS, so a failed hop never stopped the script); and the GodSpeed-Agent hops use 'uv run --quiet --extra dev pytest' so pytest exists on a fresh checkout. Script logic is otherwise unchanged. E5B execution remains simulated in this loop. The 0.21.2 lockstep gates carried from revision 232 are closed: see the readiness entry under verified.
+**Summary:** fde/integration is origin/main (09b628ec) merged with feat/horizon-desk-support (6e8b6aff, PR #91: plan digest, case.add_item dry_run and preconditions, external_ref, digests on case reads). The other 33 unmerged local branches were each checked against main and are recorded in the branch ledger; none was ported. This branch is an integration check only and is not proposed for merge.
 
 **Verified:**
-- bash -n scripts/e2e-world-loop.sh: ok
-- scripts/check-agent-context.sh: ok
-- 2026-11-13 patched script run against pinned origin heads (SEA-Forge main, Context Kernel 36bd8c8, SWE_SEED, RealityTrace main, cep 5111ec3, GodSpeed-Agent 4bfed12) with DomainForge 0.21.2: hops 1,0,2,3,4,5,6 passed, cep context_bundle valid, three refusals refused, final line 'e2e-world-loop: OK. One world (world:demo@sha256:6e00ae2d...) from E1 to the evidence the agent records.'
-- before the patch the same run failed at hop 0 (package ID specification `ck-mcp` did not match any packages) yet continued through every later hop
-- 2026-11-13, after Cognate 0.9.1 (npm, DomainForge 0.21.2), RealityTrace 0.4.0 (crates.io), Cognate-Workbench #32 and Horizon #30 landed: the full readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main, SEA-Forge at 0439abb0) reported GO 30/30, including C01, SW01, SW02, J02 and J02R2. Evidence: godspeed-readiness commit 79f5039, evidence/REPORT.md (that repo is local-only, not published)
+- See the branch ledger for the gate commands and results run on this merge
 
 **Limits:**
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
@@ -30,5 +26,9 @@
 - Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
 - An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
 - Only sea-forge-capability was tested (the sole rusqlite user); full workspace tests, CI and MSRV 1.92 job not run locally; rusqlite 0.41.1 declares rust-version 1.89
+- The case.add_item precondition is checked before the write, not under the same lock as the write
+- contracts generated TypeScript under workbench/ is not regenerated here (needs bun)
+- Integration branch only: not merged to main, no PR; PR #91 remains the route for the Horizon work
+- Full workspace tests and just ci not run (host memory); see the branch ledger for what was run
 
-**Next:** Review and merge the e2e-world-loop fix; then re-run just e2e-world-loop after any pin change.
+**Next:** Review PR #91 on its own; decide the fate of feat/hardening-capability-harvest and feat/arm64-jetson-packaging per the branch ledger.

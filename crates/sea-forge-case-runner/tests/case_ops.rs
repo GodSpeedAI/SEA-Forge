@@ -69,6 +69,7 @@ fn plan(case_id: &str, items: Vec<PlanItem>) -> CasePlan {
 
 fn item(id: &str, depends_on: Vec<&str>) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: id.into(),
         name: id.into(),
         operations: vec![],

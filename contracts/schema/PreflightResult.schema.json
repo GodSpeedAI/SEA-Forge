@@ -19,6 +19,17 @@
     "ok": {
       "type": "boolean"
     },
+    "plan_precondition": {
+      "description": "Pins the whole plan this commit would create: the template's bytes, the\nparams and the instantiated items. Ref `plan:<template_ref>`. Carry it\ninto `case.commit`'s `preconditions.records` alongside (or instead of)\n`precondition`. `None` when the plan could not be built.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecordDigest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "precondition": {
       "description": "Carry this into `case.commit`'s `preconditions.records` unchanged.\n`None` when the template itself could not be loaded (nothing to pin).",
       "anyOf": [

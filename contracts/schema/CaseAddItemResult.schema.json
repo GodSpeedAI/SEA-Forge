@@ -7,11 +7,36 @@
     "case_id": {
       "type": "string"
     },
+    "dry_run": {
+      "description": "`true` only on a `dry_run` reply, where nothing was committed.",
+      "type": "boolean"
+    },
+    "item": {
+      "description": "`dry_run` only: the item as it would be stored (`proposed_by` set)."
+    },
     "ok": {
       "type": "boolean"
     },
+    "outcome": {
+      "description": "`dry_run` only: `\"would_add\"`.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "plan_item_id": {
       "type": "string"
+    },
+    "plan_precondition": {
+      "description": "`dry_run` only: digest of the case's plan as it would be after the add\n(ref `plan:<case_id>`). Pass it as a precondition on the real call.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecordDigest"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "proposed_by": {
       "description": "The actor the identity gate verified — the proposer of record. A\nclient-supplied `proposed_by` is overwritten, never trusted.",
@@ -23,5 +48,25 @@
     "case_id",
     "plan_item_id",
     "proposed_by"
-  ]
+  ],
+  "$defs": {
+    "RecordDigest": {
+      "description": "A single `{ref, expected_digest}` precondition entry.",
+      "type": "object",
+      "properties": {
+        "expected_digest": {
+          "description": "The sha256 digest the caller expects the referenced record to have.",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "expected_digest"
+      ]
+    }
+  }
 }

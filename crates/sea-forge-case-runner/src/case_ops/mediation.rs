@@ -31,6 +31,51 @@ pub fn authorize_action(
     })
 }
 
+/// Evaluate `action` against the policy exactly as [`authorize_read`] does,
+/// but record nothing: no policy, evidence or decision record is committed and
+/// no authority mirror is rebuilt. Same decision, no durable trace. Used for
+/// previews (`case.add_item` with `dry_run`) and for requests that may still be
+/// refused before they act. The real, recorded authorization is still taken by
+/// the call that acts.
+pub fn authorize_preview(
+    root: &Path,
+    policy_path: &Path,
+    actor_id: &str,
+    action: &AuthorityAction,
+) -> Result<(), ForgeError> {
+    let bundle = AuthorityPolicyBundle::load(policy_path)?;
+    let binding = bundle.resolve_identity(actor_id, ActorRole::Operator);
+    let engine = PolicyAuthorityEngine::new(bundle)?;
+    engine.load_opaque_constraints(load_opaque_constraints(root)?)?;
+    let actor = Actor {
+        actor_id: actor_id.into(),
+        role: ActorRole::Operator,
+    };
+    let context = action_context(action);
+    let decision = engine.evaluate(AuthorityEvaluation {
+        actor: &actor,
+        binding,
+        run_id: context,
+        case_id: context,
+        plan_item_id: context,
+        sequence: 1,
+        action,
+        workspace_root: root,
+        evidence_refs: vec![],
+        artifacts_root: None,
+        timeout_secs: None,
+        env_keys: Default::default(),
+        opa_candidate: None,
+        environment: None,
+    })?;
+    if decision.verdict != sea_forge_core::types::Verdict::Allow {
+        return Err(ForgeError::Input(
+            "authority decision does not grant this action".into(),
+        ));
+    }
+    Ok(())
+}
+
 pub fn with_authorized_action<T>(
     root: &Path,
     policy_path: &Path,

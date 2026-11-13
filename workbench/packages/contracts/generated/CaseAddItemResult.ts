@@ -6,11 +6,43 @@
  */
 export interface CaseAddItemResult {
   case_id: string;
+  /**
+   * `true` only on a `dry_run` reply, where nothing was committed.
+   */
+  dry_run?: boolean;
+  /**
+   * `dry_run` only: the item as it would be stored (`proposed_by` set).
+   */
+  item?: {
+    [k: string]: unknown;
+  };
   ok: boolean;
+  /**
+   * `dry_run` only: `"would_add"`.
+   */
+  outcome?: string | null;
   plan_item_id: string;
+  /**
+   * `dry_run` only: digest of the case's plan as it would be after the add
+   * (ref `plan:<case_id>`). Pass it as a precondition on the real call.
+   */
+  plan_precondition?: RecordDigest | null;
   /**
    * The actor the identity gate verified — the proposer of record. A
    * client-supplied `proposed_by` is overwritten, never trusted.
    */
   proposed_by: string;
+}
+/**
+ * A single `{ref, expected_digest}` precondition entry.
+ */
+export interface RecordDigest {
+  /**
+   * The sha256 digest the caller expects the referenced record to have.
+   */
+  expected_digest: string;
+  /**
+   * Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).
+   */
+  ref: string;
 }

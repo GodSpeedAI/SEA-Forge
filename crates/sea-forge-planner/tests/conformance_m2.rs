@@ -14,6 +14,7 @@ fn sentry(source: &str, event: &str) -> Sentry {
 
 fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: id.into(),
         name: id.into(),
         operations: vec![],
@@ -44,6 +45,7 @@ fn milestone_item(id: &str, entry: Vec<Sentry>) -> PlanItem {
 
 fn task_item(id: &str, required: bool, entry: Vec<Sentry>, max_instances: u32) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: id.into(),
         name: id.into(),
         operations: vec![Operation::WriteFile {
@@ -508,6 +510,7 @@ fn m10_or_of_sentries_behavior_unchanged() {
 fn linear_chain_plan(length: usize) -> CasePlan {
     let items: Vec<PlanItem> = (0..length)
         .map(|i| PlanItem {
+            external_ref: None,
             plan_item_id: format!("item_{i:06}"),
             name: format!("item {i}"),
             operations: vec![Operation::WriteFile {

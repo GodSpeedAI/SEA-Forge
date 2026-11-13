@@ -297,6 +297,7 @@ fn synthesized_proposal(
     endpoint_ref: &str,
 ) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: format!("mgr_{case_id}_{iteration}"),
         name: "thoth_proposed_agent_task".into(),
         operations: vec![Operation::AgentTask {
