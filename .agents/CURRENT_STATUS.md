@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 234
+**Status revision:** 235
 
-**Stage:** FDE integration branch: main plus Horizon desk support (PR #91)
+**Stage:** FDE integration branch: planner test fix after the Horizon merge
 
-**Summary:** fde/integration is origin/main (09b628ec) merged with feat/horizon-desk-support (6e8b6aff, PR #91: plan digest, case.add_item dry_run and preconditions, external_ref, digests on case reads). The other 33 unmerged local branches were each checked against main and are recorded in the branch ledger; none was ported. This branch is an integration check only and is not proposed for merge.
+**Summary:** fde/integration: sea-forge-planner/tests/conformance_m2.rs now sets the new ItemMarkers.review field in its two struct literals; the merge of feat/horizon-desk-support (PR #91) left the test target unable to compile. PR #91 itself has the same defect. Gate results are in the branch ledger.
 
 **Verified:**
-- See the branch ledger for the gate commands and results run on this merge
+- cargo fmt --check, cargo check --workspace --locked: ok
+- cargo test -p sea-forge-core, case-runner, cli, server --locked: 0 failures; sea-forge-planner 69 passed 0 failed after the fix
 
 **Limits:**
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
@@ -31,4 +32,4 @@
 - Integration branch only: not merged to main, no PR; PR #91 remains the route for the Horizon work
 - Full workspace tests and just ci not run (host memory); see the branch ledger for what was run
 
-**Next:** Review PR #91 on its own; decide the fate of feat/hardening-capability-harvest and feat/arm64-jetson-packaging per the branch ledger.
+**Next:** Apply the same one-line test fix to PR #91 (feat/horizon-desk-support) before it merges.
