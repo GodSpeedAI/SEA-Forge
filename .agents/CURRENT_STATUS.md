@@ -1,19 +1,16 @@
 # Current status
 
-**Status revision:** 232
+**Status revision:** 233
 
-**Stage:** domainforge-0.21.2-lockstep
+**Stage:** e2e-world-loop-fix
 
-**Summary:** SEA-Forge moves its DomainForge producer pin from 0.21.1 to 0.21.2 for stack lockstep (readiness gate C01: versions disagree 0.21.1 vs 0.21.2; SW01/SW02: CLI reports 0.21.2). The library pin, EXPECTED_DOMAINFORGE_VERSION, devbox CLI install, Cargo.lock (targeted update), fixture provenance and READMEs now say 0.21.2. The v2-full-preimage world_ref changes with producer_version: demo world a71ff6... becomes 7ddedb..., confirmed by both the linked compiler and the 0.21.2 CLI.
+**Summary:** scripts/e2e-world-loop.sh is fixed in three places: the Context Kernel hop builds package context-kernel-mcp (renamed upstream from ck-mcp, so hop 0 failed and every later hop had no input); quiet_cargo now returns cargo's real exit status (the old '|| true' reset PIPESTATUS, so a failed hop never stopped the script); and the GodSpeed-Agent hops use 'uv run --quiet --extra dev pytest' so pytest exists on a fresh checkout. Script logic is otherwise unchanged. E5B execution remains simulated in this loop.
 
 **Verified:**
-- cargo update -p domainforge-core --precise 0.21.2: only domainforge-core changed in Cargo.lock
-- cargo check -p sea-forge-domainforge: ok
-- cargo test -p sea-forge-domainforge: 4 suites with tests, 0 failed (prior_identity digest updated to the compiler-minted 7ddedb...)
-- cargo test -p sea-forge-authority --test cep_compiler_upgrade: 9 passed, 0 failed
-- cargo test -p sea-forge-server --test conformance_cep_authority: 13 passed, 0 failed
-- fixtures regenerated with the 0.21.2 CLI: byte-identical apart from the provenance generator field; OpenShell lock unchanged
-- cargo fmt --check on the three touched crates: clean
+- bash -n scripts/e2e-world-loop.sh: ok
+- scripts/check-agent-context.sh: ok
+- 2026-11-13 patched script run against pinned origin heads (SEA-Forge main, Context Kernel 36bd8c8, SWE_SEED, RealityTrace main, cep 5111ec3, GodSpeed-Agent 4bfed12) with DomainForge 0.21.2: hops 1,0,2,3,4,5,6 passed, cep context_bundle valid, three refusals refused, final line 'e2e-world-loop: OK. One world (world:demo@sha256:6e00ae2d...) from E1 to the evidence the agent records.'
+- before the patch the same run failed at hop 0 (package ID specification `ck-mcp` did not match any packages) yet continued through every later hop
 
 **Limits:**
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
@@ -33,4 +30,4 @@
 - An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
 - Only sea-forge-capability was tested (the sole rusqlite user); full workspace tests, CI and MSRV 1.92 job not run locally; rusqlite 0.41.1 declares rust-version 1.89
 
-**Next:** Merge with the other stack products pinned to 0.21.2; re-run the readiness gates C01, SW01 and SW02.
+**Next:** Review and merge the e2e-world-loop fix; then re-run just e2e-world-loop after any pin change.
