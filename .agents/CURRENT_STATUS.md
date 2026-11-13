@@ -1,6 +1,6 @@
 # Current status
 
-**Status revision:** 231
+**Status revision:** 232
 
 **Stage:** domainforge-0.21.2-lockstep
 
