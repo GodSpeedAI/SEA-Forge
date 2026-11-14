@@ -183,7 +183,26 @@ fn main() {
         let mut ack = std::fs::OpenOptions::new()
             .write(true)
             .open(format!("/proc/self/fd/{fd}"))
-            .unwrap_or_else(|e| fail(&format!("ack pipe unavailable: {e}")));
+            .unwrap_or_else(|e| {
+                // Name what descriptors this helper actually holds, so a
+                // launch chain that dropped the ack end is diagnosable from
+                // the captured stderr alone.
+                let held: Vec<String> = std::fs::read_dir("/proc/self/fd")
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .map(|entry| {
+                        let target = std::fs::read_link(entry.path())
+                            .map(|t| t.display().to_string())
+                            .unwrap_or_default();
+                        format!("{}->{target}", entry.file_name().to_string_lossy())
+                    })
+                    .collect();
+                fail(&format!(
+                    "ack pipe unavailable: {e} (ack fd {fd}; held: {})",
+                    held.join(" ")
+                ))
+            });
         ack.write_all(&[0x01])
             .unwrap_or_else(|e| fail(&format!("ack write failed: {e}")));
     }
