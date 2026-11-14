@@ -1,19 +1,19 @@
 # Current status
 
-**Status revision:** 252
+**Status revision:** 253
 
-**Stage:** WP-19 S1 gate: claim-ledger builder, bundle collector
+**Stage:** WP-19 S1 gate: replayable derive windows
 
-**Summary:** fde/integration: scripts/fde-claim-ledger.py builds the S1 claim ledger mechanically from results.json and the frozen predictions and fails on a missing test; scripts/fde-s1/bundle.py collects the evidence bundle; a full real episode run was completed in a scratch cell.
+**Summary:** fde/integration: the S1 episode run pins every derive to an explicit --until ordinal so the AT-18 verifier can replay a recorded derive byte for byte (the default head moves as the ledger grows); AT-06 wrapper minimum corrected.
 
 **Verified:**
-- real run of three program episodes completed: settlements U / F / U; AT-13 delta NO_GAIN; promotion approved by a different actor
+- first full run: AT-18 verifier disagreed because derive used until=head; fixed
 
 **Limits:**
-- Results not yet committed
+- Bundle not yet committed
 
-**Next:** Proof-runner run on a clean tree, evidence bundle commit
+**Next:** Re-run the pipeline, proof runner, bundle
 
 **Evidence:**
-- scripts/fde-claim-ledger.py
-- scripts/fde-s1/bundle.py
+- scripts/fde-s1/run.py
+- scripts/fde-proof.d/AT-06.sh

@@ -346,7 +346,9 @@ def derive(c, ep_id, tag, world, events_world=None, until=None, ledger=None):
             "--kind", "evaluated", "--profile", "profile:s1", "--independent-system", "sea-forge.case-ledger", "--declared", str(c.p / "in" / f"declared-{world}.json"),
             "--coverage-manifest", str(coverage_rows(c, ep_id)), "--out", str(out)]
     if events_world: args += ["--events-world", c.state["worlds"][events_world]["world_ref"]]
-    if until: args += ["--until", str(until)]
+    if not until:  # pin the window to the current head ordinal: the default `head` moves as the ledger grows and could not be replayed
+        until = subprocess.run(["sqlite3", c.state["rt_ledger"], "select max(append_ordinal) from ledger"], capture_output=True, text=True, check=True).stdout.strip()
+    args += ["--until", str(until)]
     p = rt(c, f"rt-derive-{ep_id}-{tag}", args)
     return out, json.loads(out.read_text())
 
