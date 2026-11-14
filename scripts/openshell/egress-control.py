@@ -49,6 +49,28 @@ def serve(args):
         _accept_loop(listener, log)
 
 
+HTTP_METHODS = (b"GET ", b"HEAD ", b"POST ", b"PUT ", b"DELETE ", b"OPTIONS ", b"PATCH ")
+
+
+def _reply(first):
+    """A valid HTTP/1.1 response to an HTTP request, the bare `logged` line otherwise.
+
+    The granted endpoint is a REST flow, so a request that arrives as HTTP is
+    answered as HTTP (status line, Content-Length, Connection: close) and a
+    client can assert the exchange; a raw probe still gets the plain line.
+    """
+    body = b"logged\n"
+    if first.startswith(HTTP_METHODS):
+        head = (
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Type: text/plain\r\n"
+            b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+            b"Connection: close\r\n\r\n"
+        )
+        return head + (b"" if first.startswith(b"HEAD ") else body)
+    return body
+
+
 def _accept_loop(listener, log):
     while True:
         try:
@@ -69,7 +91,7 @@ def _accept_loop(listener, log):
             log.write(json.dumps(record, sort_keys=True) + "\n")
             log.flush()
             try:
-                conn.sendall(b"logged\n")
+                conn.sendall(_reply(first))
             except OSError:
                 # Best effort: the peer may already be gone; the arrival is logged.
                 pass

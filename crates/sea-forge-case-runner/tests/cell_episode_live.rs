@@ -1082,9 +1082,9 @@ fn blocked_or_require(require_env: &str, what: &str, why: &dyn std::fmt::Display
 /// `/proc/net/tcp` snapshot (the record of how the guest reaches the host),
 /// (b) attempts the raw connect and records the outcome — deliberately
 /// sending no bytes so the token in the arrival log could only travel over
-/// the tunnel — and (c) discovers the egress proxy and, when one IS found,
-/// issues an HTTP CONNECT to <egress-host>:<port> through it and sends the
-/// token over the tunnel.
+/// the proxied request — and (c) discovers the egress proxy and, when one IS found,
+/// issues an HTTP GET for <egress-host>:<port> through it (the granted endpoint
+/// is a read-only REST flow) with the token in the query string.
 ///
 /// The listener is host state the sandbox cannot reach except over the
 /// libkrun user network, so an arrival line would be host-observed evidence
@@ -1131,7 +1131,7 @@ fn live_network_allow_control_connects() {
             "    print('unavailable:', err)\n",
             "# Raw connect to the granted endpoint: recorded, never asserted, and\n",
             "# it sends no bytes, so the token below can only reach the host over\n",
-            "# the proxied tunnel.\n",
+            "# the proxied request.\n",
             "try:\n",
             "    raw = socket.create_connection(TARGET, timeout=10)\n",
             "    print('RAW_CONNECT: connected (unexpected; closed without sending)')\n",
@@ -1182,58 +1182,51 @@ fn live_network_allow_control_connects() {
             "proxy_host = parsed.hostname\n",
             "proxy_port = parsed.port or 80\n",
             "print('USING_PROXY source=' + source + ' ' + proxy_host + ':' + str(proxy_port))\n",
-            "# The tunnel: an HTTP CONNECT request to the proxy, then the token\n",
-            "# over the established tunnel. The request is written manually:\n",
-            "# http.client closes the connection after reading a CONNECT response\n",
-            "# on this python (a 200 with no Content-Length means read-until-close\n",
-            "# to it), so its conn.sock is already gone when the tunnel is needed.\n",
-            "# The whole response head — status line plus headers, read byte-wise\n",
-            "# so no tunnel byte is swallowed — is read up to the blank-line\n",
-            "# terminator, bounded at 4 KiB. EOF or timeout before the terminator\n",
-            "# is a protocol failure and NO token is sent; the token goes out only\n",
-            "# after a complete 200 head. The parsed status code is normalized to\n",
-            "# a CONNECT_STATUS <code> marker line the host asserts on (the raw\n",
-            "# status line stays as evidence). This tunnel path is BLOCKED\n",
-            "# upstream on OpenShell 0.1.x — no proxy is discoverable — so the\n",
-            "# parsing is exercised by future platforms that expose one and by\n",
-            "# the off-lane simulation once fixed.\n",
+            "# The flow the projection grants is a REST endpoint (protocol rest,\n",
+            "# access read-only), so the control is a real HTTP GET through the\n",
+            "# proxy: an absolute-URI request line the proxy can match against the\n",
+            "# granted method and endpoint. The token travels in the query string,\n",
+            "# so the listener's first bytes (the request line) carry it and the\n",
+            "# arrival is attributable to this run. The whole response is read to\n",
+            "# end-of-stream (the request asks for `Connection: close`), bounded at\n",
+            "# 64 KiB, and parsed as HTTP: a malformed status line or a non-200 code\n",
+            "# is a failure, never a pass. This path is BLOCKED upstream on\n",
+            "# OpenShell 0.1.x — no proxy is discoverable — so the parsing is\n",
+            "# exercised by future platforms that expose one.\n",
             "sock = socket.create_connection((proxy_host, proxy_port), timeout=15)\n",
-            "request = 'CONNECT ' + TARGET[0] + ':' + str(TARGET[1]) + ' HTTP/1.1\\r\\n'\n",
-            "request += 'Host: ' + TARGET[0] + ':' + str(TARGET[1]) + '\\r\\n\\r\\n'\n",
+            "target = TARGET[0] + ':' + str(TARGET[1])\n",
+            "request = 'GET http://' + target + '/egress-control?token=' + TOKEN + ' HTTP/1.1\\r\\n'\n",
+            "request += 'Host: ' + target + '\\r\\n'\n",
+            "request += 'Connection: close\\r\\n\\r\\n'\n",
             "sock.sendall(request.encode())\n",
-            "def head_complete(buf):\n",
-            "    return buf.endswith(b'\\r\\n\\r\\n') or buf.endswith(b'\\n\\n')\n",
-            "head = b''\n",
+            "response = b''\n",
             "try:\n",
-            "    while len(head) < 4096 and not head_complete(head):\n",
-            "        byte = sock.recv(1)\n",
-            "        if not byte:\n",
+            "    while len(response) < 65536:\n",
+            "        chunk = sock.recv(4096)\n",
+            "        if not chunk:\n",
             "            break\n",
-            "        head += byte\n",
+            "        response += chunk\n",
             "except socket.timeout:\n",
-            "    print('PROXY_NO_RESPONSE (timed out reading the response head)')\n",
+            "    print('PROXY_NO_RESPONSE (timed out reading the response)')\n",
             "    sys.exit(4)\n",
-            "if not head:\n",
+            "sock.close()\n",
+            "if not response:\n",
             "    print('PROXY_NO_RESPONSE (the proxy closed without answering)')\n",
             "    sys.exit(4)\n",
-            "if not head_complete(head):\n",
-            "    print('TUNNEL_REFUSED (no blank line ended the response head within 4 KiB)')\n",
-            "    sys.exit(4)\n",
+            "head, _, body = response.partition(b'\\r\\n\\r\\n')\n",
             "status = head.split(b'\\n', 1)[0].rstrip(b'\\r').decode(errors='replace')\n",
-            "print('PROXY_CONNECT ' + status)\n",
+            "print('PROXY_RESPONSE ' + status)\n",
             "fields = status.split()\n",
-            "if len(fields) >= 2 and fields[1].isdigit():\n",
+            "if len(fields) >= 2 and fields[0].startswith('HTTP/') and fields[1].isdigit():\n",
             "    code = fields[1]\n",
             "else:\n",
             "    code = '(malformed status line)'\n",
-            "print('CONNECT_STATUS ' + code)\n",
+            "print('HTTP_STATUS ' + code)\n",
             "if code != '200':\n",
-            "    print('TUNNEL_REFUSED')\n",
+            "    print('REQUEST_REFUSED')\n",
             "    sys.exit(4)\n",
-            "sock.sendall((TOKEN + chr(10)).encode())\n",
-            "print('TUNNEL_REPLY ' + sock.recv(64).decode(errors='replace').strip())\n",
-            "sock.close()\n",
-            "print('TUNNEL_OK')\n",
+            "print('HTTP_BODY ' + body.decode(errors='replace').strip())\n",
+            "print('HTTP_OK')\n",
         ),
         host = host,
         port = port,
@@ -1253,7 +1246,7 @@ fn live_network_allow_control_connects() {
     assert_eq!(episode.decision.verdict, Verdict::Allow);
     let execution = episode.execution.as_ref().expect("execution");
     // Read the guest output first so a failing status assertion carries the
-    // only evidence of why the granted tunnel failed.
+    // only evidence of why the granted request failed.
     let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
     let stderr = read_or_empty(&run_dir.join("artifacts/stderr.txt"));
     assert_eq!(
@@ -1284,20 +1277,24 @@ fn live_network_allow_control_connects() {
     assert_eq!(
         execution.exit_code,
         Some(0),
-        "the granted proxied tunnel must succeed inside the sandbox; stdout:\n{stdout}\nstderr:\n{stderr}"
+        "the granted proxied HTTP request must succeed inside the sandbox; stdout:\n{stdout}\nstderr:\n{stderr}"
     );
-    // The payload normalizes the proxy's status line to a CONNECT_STATUS
-    // <code> marker; the raw "PROXY_CONNECT HTTP/1.1 200 ..." line is
-    // evidence only. This branch is BLOCKED upstream on OpenShell 0.1.x
-    // (no discoverable proxy): the parsing is exercised by future platforms
-    // and the off-lane simulation once fixed.
+    // The payload issues a real HTTP GET through the discovered proxy (the
+    // granted endpoint is protocol `rest`, access `read-only`) and parses the
+    // response; the raw "PROXY_RESPONSE HTTP/1.1 200 ..." line is evidence
+    // only. This branch is BLOCKED upstream on OpenShell 0.1.x (no
+    // discoverable proxy): the parsing is exercised by future platforms.
     assert!(
-        stdout.contains("CONNECT_STATUS 200"),
-        "the CONNECT tunnel through the discovered proxy did not succeed: {stdout:?}"
+        stdout.contains("HTTP_STATUS 200"),
+        "the HTTP GET through the discovered proxy did not return 200: {stdout:?}"
     );
     assert!(
-        stdout.contains("TUNNEL_OK"),
-        "the token did not traverse the tunnel: {stdout:?}"
+        stdout.contains("HTTP_BODY logged"),
+        "the listener's HTTP response body did not come back through the proxy: {stdout:?}"
+    );
+    assert!(
+        stdout.contains("HTTP_OK"),
+        "the proxied HTTP exchange did not complete: {stdout:?}"
     );
     println!("guest egress discovery dump:\n{stdout}");
 
