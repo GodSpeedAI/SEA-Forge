@@ -917,6 +917,27 @@ pub enum Request {
     AuthorityApprovals,
     /// Every allowed world transition, read back from the ledger. Read-only (Stage 10).
     AuthorityTransitions,
+    /// Promote a candidate world through the approval-gated `semantic_change` transition and record
+    /// the pin (WP-18). `proposal` and `matrix` are RealityTrace's revision proposal and regression
+    /// matrix; `envelope` is the CEP `authority_request` naming the approval. The approval must be
+    /// bound to the proposal digest (`claims.proposal_digest`).
+    AuthorityPromote {
+        proposal: serde_json::Value,
+        matrix: serde_json::Value,
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Re-pin the cell to a world it was pinned to before, through the same gated transition (WP-18).
+    AuthorityRepin {
+        to_world_ref: String,
+        reason: String,
+        envelope: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// The current pin, its history and the retained refused attempts. Read-only (WP-18).
+    AuthorityPin,
     /// Submit a RealityTrace-derived CEP `evidence_packet` for an operation SEA-Forge allowed (Stage 8).
     /// Records evidence; settles nothing.
     AuthorityEvidence {
@@ -2040,6 +2061,8 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::AgentProbe { request_id, .. }
         | Request::AuthorityRequest { request_id, .. }
         | Request::AuthorityApproval { request_id, .. }
+        | Request::AuthorityPromote { request_id, .. }
+        | Request::AuthorityRepin { request_id, .. }
         | Request::AuthorityEvidence { request_id, .. }
         | Request::AuthoritySettle { request_id, .. }
         | Request::AuthorityClosure { request_id, .. }
@@ -2080,6 +2103,8 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::AgentProbe { .. }
             | Request::AuthorityRequest { .. }
             | Request::AuthorityApproval { .. }
+            | Request::AuthorityPromote { .. }
+            | Request::AuthorityRepin { .. }
             | Request::AuthorityEvidence { .. }
             | Request::AuthoritySettle { .. }
             | Request::AuthorityClosure { .. }
@@ -3057,6 +3082,96 @@ pub async fn handle_request_as(
                 .unwrap_or_else(|_| {
                     serde_json::json!({
                         "error": "transition listing task failed",
+                        "error_class": "cep_authority_internal",
+                    })
+                })
+        }
+        Request::AuthorityPromote {
+            proposal,
+            matrix,
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.promote");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::promote(
+                            &config, &root, &proposal, &matrix, &envelope, &caller,
+                        )
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "promotion task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                // A promotion is attributed to a verified peer, never the local-default operator.
+                None => serde_json::json!({
+                    "error": "authority_promote requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.promote", &response);
+            response
+        }
+        Request::AuthorityRepin {
+            to_world_ref,
+            reason,
+            envelope,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.repin");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::repin(
+                            &config,
+                            &root,
+                            &to_world_ref,
+                            &reason,
+                            &envelope,
+                            &caller,
+                        )
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "re-pin task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_repin requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(state, request_id.as_deref(), "authority.repin", &response);
+            response
+        }
+        Request::AuthorityPin => {
+            let config = state.config();
+            let root = state.root.clone();
+            tokio::task::spawn_blocking(move || cep_authority::pin(&config, &root))
+                .await
+                .unwrap_or_else(|_| {
+                    serde_json::json!({
+                        "error": "pin listing task failed",
                         "error_class": "cep_authority_internal",
                     })
                 })

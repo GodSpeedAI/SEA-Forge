@@ -20,9 +20,14 @@ pub use declaration_authority::{
     verify_case_declarations, AttemptSettlement, DeclarationAuthorization, DeclarationRefusal,
 };
 mod obligation;
+mod world_pin;
 pub use obligation::{
     argv_digest, judge, obligation_of, ClosureAck, Obligation, ObligationSource, RunResult,
     SourceRow, CLOSURE_KIND, DEFAULT_CLOSE_GRACE_S,
+};
+pub use world_pin::{
+    proposal_digest, repin_digest, PinRecord, PinRefusal, PinState, PromoteRequest, RepinRequest,
+    CLAIM_PROPOSAL_DIGEST, CLAIM_REPIN_DIGEST, PIN_ATTEMPT_KIND, PIN_DECLINED_KIND, PIN_KIND,
 };
 
 use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};

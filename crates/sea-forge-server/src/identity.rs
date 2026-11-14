@@ -1041,6 +1041,8 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::AgentProbe { .. }
         | Request::AuthorityRequest { .. }
         | Request::AuthorityApproval { .. }
+        | Request::AuthorityPromote { .. }
+        | Request::AuthorityRepin { .. }
         | Request::AuthorityEvidence { .. }
         | Request::AuthoritySettle { .. }
         | Request::AuthorityClosure { .. }
@@ -1060,6 +1062,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::AgentList
         | Request::AuthorityApprovals
         | Request::AuthorityTransitions
+        | Request::AuthorityPin
         | Request::SystemHello { .. }
         | Request::SystemDescribe
         | Request::SystemGetSchema { .. }

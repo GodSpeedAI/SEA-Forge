@@ -20,7 +20,9 @@ fn refusal(class: &str, message: impl std::fmt::Display) -> Value {
 /// Most distinct world sets kept; a world is immutable by digest, so entries never go stale.
 const CACHE_LIMIT: usize = 8;
 
-type RegistryCache = Mutex<HashMap<String, Arc<WorldRegistry>>>;
+/// The registry and the first configured world's ref (the baseline pin before any promotion).
+type Loaded = (Arc<WorldRegistry>, Option<String>);
+type RegistryCache = Mutex<HashMap<String, Loaded>>;
 
 /// Largest prior-identity document read. A `DomainModelIdentity` is a few hundred bytes.
 const MAX_PRIOR_IDENTITY_BYTES: u64 = 64 * 1024;
@@ -37,7 +39,7 @@ fn cache() -> &'static RegistryCache {
 /// Prior identities are registered after every current world, so a prior that
 /// equals a current identity is refused rather than silently changing its role.
 /// Their bytes are part of the key like source bytes are.
-fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>, String> {
+fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Loaded, String> {
     let mut key = Sha256::new();
     key.update(serde_json::to_vec(&config.cep_authority.worlds).map_err(|e| e.to_string())?);
     let mut sets = Vec::new();
@@ -79,7 +81,7 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
         .map_err(|_| "world cache poisoned".to_string())?
         .get(&key)
     {
-        return Ok(Arc::clone(hit));
+        return Ok((Arc::clone(&hit.0), hit.1.clone()));
     }
     let mut registry = WorldRegistry::new();
     let mut loaded = Vec::new();
@@ -107,14 +109,15 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
         tracing::info!(world = %name, world_ref = %world_ref, "cep_authority world loaded");
     }
     let registry = Arc::new(registry);
+    let baseline = loaded.first().map(|(_, world_ref)| world_ref.to_string());
     let mut guard = cache()
         .lock()
         .map_err(|_| "world cache poisoned".to_string())?;
     if guard.len() >= CACHE_LIMIT {
         guard.clear();
     }
-    guard.insert(key, Arc::clone(&registry));
-    Ok(registry)
+    guard.insert(key, (Arc::clone(&registry), baseline.clone()));
+    Ok((registry, baseline))
 }
 
 /// Read one prior-identity document under the cell root, size-bounded. Fails closed on a bad path or an
@@ -151,6 +154,16 @@ fn with_service(
     root: &Path,
     f: impl FnOnce(&CepAuthorityService<'_>) -> Value,
 ) -> Value {
+    with_service_baseline(config, root, |service, _| f(service))
+}
+
+/// [`with_service`], also giving the baseline world (the first configured one), which is the
+/// pinned world until the first promotion.
+fn with_service_baseline(
+    config: &ServerConfig,
+    root: &Path,
+    f: impl FnOnce(&CepAuthorityService<'_>, Option<&str>) -> Value,
+) -> Value {
     if !config.cep_authority.enabled {
         return refusal(
             "cep_authority_disabled",
@@ -170,7 +183,7 @@ fn with_service(
         Ok(e) => e,
         Err(e) => return refusal("cep_authority_config", e),
     };
-    let worlds = match load_worlds(config, root) {
+    let (worlds, baseline) = match load_worlds(config, root) {
         Ok(w) => w,
         Err(e) => return refusal("cep_world_config", e),
     };
@@ -182,7 +195,72 @@ fn with_service(
         approval_ttl: ttl(config),
         criteria: criteria(config),
     };
-    f(&service)
+    f(&service, baseline.as_deref())
+}
+
+fn pin_refusal(r: &sea_forge_authority::cep::PinRefusal) -> Value {
+    json!({"error": r.to_string(), "error_class": "cep_promotion_refused", "code": r.code})
+}
+
+/// Promote the proposal's candidate world through the existing gated transition (`authority_promote`
+/// verb). `proposal` and `matrix` are RealityTrace's `revision-proposal.v1` and `regression-matrix.v1`;
+/// `envelope` is the CEP `authority_request` that names the approval.
+pub fn promote(
+    config: &ServerConfig,
+    root: &Path,
+    proposal: &Value,
+    matrix: &Value,
+    envelope: &Value,
+    caller: &Actor,
+) -> Value {
+    with_service_baseline(config, root, |service, baseline| {
+        let request = sea_forge_authority::cep::PromoteRequest {
+            proposal: proposal.clone(),
+            matrix: matrix.clone(),
+            envelope: envelope.clone(),
+        };
+        match service.promote(&request, caller, baseline) {
+            Ok(pin) => json!({"ok": true, "pin": pin}),
+            Err(r) => pin_refusal(&r),
+        }
+    })
+}
+
+/// Re-pin to a world the cell was pinned to before, through the same gated transition (`authority_repin`).
+pub fn repin(
+    config: &ServerConfig,
+    root: &Path,
+    to_world_ref: &str,
+    reason: &str,
+    envelope: &Value,
+    caller: &Actor,
+) -> Value {
+    with_service_baseline(config, root, |service, baseline| {
+        let request = sea_forge_authority::cep::RepinRequest {
+            to_world_ref: to_world_ref.to_string(),
+            reason: reason.to_string(),
+            envelope: envelope.clone(),
+        };
+        match service.repin(&request, caller, baseline) {
+            Ok(pin) => json!({"ok": true, "pin": pin}),
+            Err(r) => pin_refusal(&r),
+        }
+    })
+}
+
+/// The current pin, the history and the retained refused attempts (`authority_pin` verb; read-only).
+pub fn pin(config: &ServerConfig, root: &Path) -> Value {
+    with_service_baseline(config, root, |service, baseline| {
+        match (service.pin_state(baseline), service.pin_attempts()) {
+            (Ok(state), Ok(attempts)) => {
+                let mut v = state.to_json();
+                v["ok"] = json!(true);
+                v["attempts"] = json!(attempts);
+                v
+            }
+            (Err(e), _) | (_, Err(e)) => refusal(e.class(), e),
+        }
+    })
 }
 
 /// Resolve an escalation as the verified `resolver` (`authority_approval` verb).
