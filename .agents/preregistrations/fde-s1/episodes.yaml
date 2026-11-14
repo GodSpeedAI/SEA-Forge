@@ -1,0 +1,158 @@
+# Frozen S1 episodes (WP-09): three `program` executor episodes in one world, one Field Case.
+# Field Case FC-001 "Close recorded SEA-Forge and DomainForge debt items" (G section 1).
+# This file freezes intent, criteria and predictions. The hash-pinned patch of each episode does not
+# exist yet; its digest enters that episode's own freeze (AT-04, fde-anchor/freeze/<id>), not this file.
+# Selection rule (G section 1): each candidate was confirmed to exist on fde/integration or in its repo on 2026-11-14.
+preregistration_id: fde-s1
+case_id: FC-001
+world_ref: "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b"
+world_note: "Model v1 (WP-13). Declares 18 operations, 26 operation-bound policies (precondition only, DomainForge 0.21.2) and 9 graph count policies. The harness's fresh-context verification step is NOT declared in v1."
+selection:
+  confirmed_present:
+    - candidate: E2
+      evidence: ".agents/OBSERVED_DEBT.md, 'Open: events.get_range has no server-side tail read'; crates/sea-forge-server/src/sfwp/events.rs get_range"
+    - candidate: E1
+      evidence: ".agents/OBSERVED_DEBT.md, 'Open: ReadinessView.recent_invalidations has no real source and overall: stale is never derived'"
+    - candidate: E3
+      evidence: "domainforge/.agents/OBSERVED_DEBT.md D-doc-egm-3 (status PARTIAL: to_graph drops sea:EntityInstance and sea:Policy triples), domainforge-core/src/kg.rs"
+  dropped: []
+  mapping:
+    ep-1-control: E2
+    ep-2-inquiry: E3
+    ep-3-subsequent: E1
+  note: "G names E1 or E2 for the control and E4 for the subsequent episode without defining E4. E2 is the control; E1 is taken as the E4 slot. The item for ep-3 stays E1 as bounded below; if it no longer exists at its freeze the drop is recorded and no substitute is invented."
+revision_candidate:
+  description: "The executor harness's own fresh-context verification step: a fresh-context agent re-runs the declared command before the episode is claimed. It really happens in every program episode and is not declared in model v1."
+  predicted_arising_in: ep-1-control
+  diagnosis_input: [ep-1-control]
+  held_out: [ep-2-inquiry]
+  held_out_rule: "Occurrences of ep-2-inquiry are excluded from diagnosis by episode id; the rule is stated here before any run."
+  revision_count: 1
+  promotion_requires: "authorized approval by a principal other than the proposer (SEA-Forge approval path, assurance session, pre-S3)"
+episodes:
+  - id: ep-1-control
+    candidate: E2
+    role: conforming control
+    executor_provenance: program
+    kind: evaluated
+    plan_item_id: pi-e2-tail-read
+    n: 1
+    world: v1
+    inputs:
+      repo: SEA-Forge
+      base: "tip of fde/integration at the episode's freeze"
+      executor: "deterministic program applying a hash-pinned patch (digest recorded at freeze)"
+      declared_command: "cargo test --locked -p sea-forge-server --test conformance_lifecycle (events tail-read cases added by the patch)"
+      facts_for_evaluate: "operation input records for the SOP operations exercised (freeze, authorize, execute, settle, dispose); supplied by the harness from real SEA-Forge records"
+    intention: "Close the recorded debt: events.get_range gains a server-side tail read."
+    expected_change: "events.get_range accepts a tail selector and returns the last N events of a stream without a client-side scan; existing range behaviour is unchanged."
+    invariants:
+      - "Existing events.get_range responses for explicit ranges are byte-identical."
+      - "EVENTS_REPLAY_CAP bounds the page."
+      - "No consequential action runs before an authority decision."
+    predicted_irrelevancies:
+      - "Wall-clock duration of the test run."
+      - "Which program executor instance ran the patch."
+    success_region: "Declared command exits 0 and the independent verifier's own run of it exits 0; every consequential event carries its authority decision."
+    failure_region: "Declared command exits non-zero, or an existing explicit-range response changes."
+    falsifiers:
+      - "A pre-existing explicit-range events.get_range test fails after the patch."
+      - "The tail read returns events out of stream order."
+    predicted_result: S
+    predicted_comparison_classes:
+      - expectation: "Freeze recorded before the first run record (precondition policy)"
+        class_v1: confirmed
+      - expectation: "Authority decision exists before execute (precondition policy executed_steps_have_approval)"
+        class_v1: confirmed
+      - expectation: "Declared command passes (executor's own run, independent verifier's run)"
+        class_v1: confirmed
+      - expectation: "Fresh-context verification step performed before the claim (not declared in v1)"
+        class_v1: observed_undeclared
+      - expectation: "Settlement postcondition (S7.5e: independent result recorded after the run)"
+        class_v1: insufficient
+        basis: "postcondition enforcement is not expressible in DomainForge 0.21.2 (only 'at precondition')"
+      - expectation: "Residue capture after settlement (S6.3)"
+        class_v1: not_exercised
+        note: "trigger absent unless the verifier settles F or U; not a divergence class (NT-29)"
+    behaviour_kind_expected: [conforming, legitimate_undeclared]
+  - id: ep-2-inquiry
+    candidate: E3
+    role: falsifiable inquiry
+    executor_provenance: program
+    kind: evaluated
+    plan_item_id: pi-e3-kg-roundtrip
+    n: 1
+    world: v1
+    inputs:
+      repo: DomainForge
+      base: "origin/main at the episode's freeze (0.21.2 line)"
+      executor: "deterministic program applying a hash-pinned test-only patch (digest recorded at freeze)"
+      declared_command: "cargo test -p domainforge-core --features cli kg_round_trip_policy_and_instance (test added by the patch)"
+      hypothesis: "DomainForge KG round trip (to_turtle then to_graph) preserves Policy and EntityInstance triples."
+    intention: "Test the frozen hypothesis against the real DomainForge code."
+    expected_change: "None to product code; the inquiry adds only a test that asserts the hypothesis."
+    invariants:
+      - "No file under domainforge-core/src is changed by the patch."
+    predicted_irrelevancies:
+      - "Which entity names the fixture uses."
+    success_region: "Hypothesis holds: the round trip preserves both triple kinds (result S)."
+    failure_region: "Hypothesis fails: a Policy or EntityInstance triple is lost (result F)."
+    falsifiers:
+      - "The round-tripped graph contains the same Policy and EntityInstance triples as the original."
+    predicted_result: F
+    predicted_result_reason: "D-doc-egm-3 records that to_graph drops sea:EntityInstance and sea:Policy triples (high confidence from the code path, not yet covered by a test)."
+    predicted_comparison_classes:
+      - expectation: "Hypothesis: round trip preserves Policy and EntityInstance triples"
+        class_v1: contradicted
+      - expectation: "Patch changes no product source (invariant)"
+        class_v1: confirmed
+    behaviour_kind_expected: [contradicted_expectation]
+  - id: ep-3-subsequent
+    candidate: E1
+    role: subsequent episode after one revision
+    executor_provenance: program
+    kind: evaluated
+    plan_item_id: pi-e1-stale
+    n: 1
+    world: "v2 (the world promoted by the one revision); also classified under v1 for AT-13"
+    inputs:
+      repo: SEA-Forge
+      base: "tip of fde/integration at the episode's freeze"
+      executor: "deterministic program applying a hash-pinned patch (digest recorded at freeze)"
+      declared_command: "cargo test --locked -p sea-forge-server readiness (stale derivation cases added by the patch)"
+      control_variant: "same episode records with the newly declared verification step removed"
+    intention: "Close the recorded debt: ReadinessView.overall derives stale from a real invalidation source, bounded to what the debt entry names."
+    expected_change: "readiness.get derives overall = stale when a recorded invalidation exists, and still never fabricates invalidations."
+    invariants:
+      - "recent_invalidations is empty when no invalidation record exists."
+      - "Existing readiness conformance tests pass."
+    predicted_irrelevancies:
+      - "Ordering of unrelated readiness fields."
+    success_region: "Declared command exits 0 and the independent verifier's own run exits 0."
+    failure_region: "The debt entry names no honest invalidation source in the code, so the derivation cannot be built without fabricating one: result U."
+    falsifiers:
+      - "Existing readiness tests fail after the patch."
+      - "overall is stale with no invalidation record present."
+    predicted_result: S
+    predicted_result_confidence: low
+    predicted_comparison_classes:
+      - expectation: "Fresh-context verification step performed before the claim"
+        class_v1: observed_undeclared
+        class_v2: confirmed
+        class_control_variant_v2: "unchanged from v1 (observed_undeclared or undetectable); no gain without the step"
+      - expectation: "Declared command passes (executor and independent verifier)"
+        class_v1: confirmed
+        class_v2: confirmed
+    predicted_at_13_result: GAIN
+    predicted_at_13_confidence: low
+    predicted_at_13_reason: "The step is declared in v2 as an operation with an executable precondition, so the occurrence matches a declared element; the control variant lacks the step and cannot gain. Risk: ordering and temporal obligations are 'unknown' in the model (WP-13 limits), so the step's position may be unclassifiable and give NO_GAIN."
+    behaviour_kind_expected: [conforming]
+behaviour_kinds:
+  conforming: {predicted: arises, episode: ep-1-control}
+  contradicted_expectation: {predicted: arises, episode: ep-2-inquiry}
+  legitimate_undeclared: {predicted: arises, episode: ep-1-control, note: "labelled program; arises by construction of the harness"}
+  missing_observation: {predicted: not_tested, reason: "no frozen reference names an unmeasured evidence source as required; executor token cost is not named"}
+  unmeasured_payment: {predicted: reported_only, reason: "program executors have no cost meter; payment unknown, episode result unaffected (S5.3)"}
+  declared_unobserved: {predicted: not_tested, reason: "needs a manifest-covered, closed window with a triggered obligation whose record is absent; none planned"}
+  declared_untriggered: {predicted: not_exercised, note: "not a divergence class (NT-29)"}
+  fault: {predicted: not_applicable_in_episodes, note: "injected_fault never supports an execution claim (NT-26)"}

@@ -1,0 +1,342 @@
+# Frozen S1 tests (WP-09). Oracle and pass criterion text is copied verbatim from G-qualification-plan.md sections 5 and 6 (draft 2).
+# A criterion change is a new version (fde-s1-v2), never an edit of this file.
+preregistration_id: fde-s1
+slice: s1
+source: G-qualification-plan.md draft 2 sections 5, 6, 9
+tests:
+- id: AT-01
+  kind: acceptance
+  statement: model valid, identified, contexts kept distinct
+  method: '`domainforge validate` and `envelope --emit cep` on the model; check the two settlement packs do not unify'
+  oracle_pass_condition: exit 0; source hash, `world_ref`, compiler version recorded; rerun gives identical `world_ref`; packs distinct
+  g_command_column: '`--only AT-01`'
+  falsifier: 'Any of: `scripts/check-fde-sop-model.sh` exits non-zero; two `envelope --emit cep` runs give different `world_ref`; source hash, `world_ref` or compiler version is missing from the output; the two Settlement concepts share a ConceptId or the merged-namespace model is accepted.'
+  owning_wp: WP-13
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-01
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-04
+  kind: acceptance
+  statement: freeze precedes execution, externally
+  method: 'order check on case ledger and RealityTrace; `fde-anchor.sh verify freeze/<ref>`; variants: within-reference correction does not start a new version (R-97); incomplete freeze cannot be delegated against'
+  oracle_pass_condition: contract/plan/question/threshold and `episode.frozen` exist and precede the first run record; digest equals the anchored tag; anchor push time earlier than first run; verifier receipt matches
+  g_command_column: '`--only AT-04`'
+  falsifier: 'Any of: a run record in the case ledger or RealityTrace is timestamped at or before `episode.frozen`; the freeze digest differs from the anchored tag digest; the anchor tag is absent or its server push time is not earlier than the first run record; the verifier receipt does not match; a delegation proceeds against an incomplete freeze; a within-reference correction starts a new version.'
+  owning_wp: WP-14
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-04
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-05
+  kind: acceptance
+  statement: semantic exhaust complete and authentic
+  method: validate every consequential event against the extension schema; resolve `source.record_id` and `authority.decision_id` at owners; check signature; duplicate replay variant
+  oracle_pass_condition: 100 % carry all required fields; every `source.record_id` resolves; correlation is a structured field; replayed duplicates do not change counts
+  g_command_column: '`--only AT-05`'
+  falsifier: 'Any of: one consequential event lacks a required extension field (fewer than 100 %); a `source.record_id` or `authority.decision_id` does not resolve at its owner; correlation is not a structured field; a replayed duplicate changes any count; a signature check is attempted and fails.'
+  owning_wp: WP-15, WP-14
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-05
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-06
+  kind: acceptance
+  statement: observed representation computed
+  method: '`observed derive --episode --kind` twice from the same ledger'
+  oracle_pass_condition: byte-identical output and hash; every aggregate lists its occurrence ids (verified against the ledger); coverage section and profile present
+  g_command_column: '`--only AT-06`'
+  falsifier: 'Any of: two `observed derive` runs on the same ledger differ in bytes or hash; an aggregate lists an occurrence id absent from the ledger or omits a real one; the coverage section or profile is missing.'
+  owning_wp: WP-16
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-06
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-07
+  kind: acceptance
+  statement: five classes
+  method: '`observed compare` over the frozen episode set with the comparison profile'
+  oracle_pass_condition: each class that arises (§2) carries rule, occurrences, elements, context, basis, world stamp; in S1 `confirmed` plus one of `contradicted` / `observed_undeclared` must arise and the other classes are reported NOT TESTED without failing the gate; all five on `live` execution is an S5 requirement; zero silent omissions; episode and structural residuals in separate lists
+  g_command_column: '`--only AT-07`'
+  falsifier: 'Any of: neither `confirmed` nor one of `contradicted` / `observed_undeclared` arises in the S1 episode set; a class that arises lacks rule, occurrences, elements, context, basis or world stamp; any element is silently omitted; episode and structural residuals share one list.'
+  owning_wp: WP-17
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-07
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-08
+  kind: acceptance
+  statement: input sensitivity
+  method: derive and compare on a ledger variant produced by a real re-run with one input changed (`--until` excludes later records)
+  oracle_pass_condition: the affected residual changes class or disappears; representation hash differs; no file edited
+  g_command_column: '`--only AT-08`'
+  falsifier: 'Any of: after a real re-run with one input changed (`--until` excluding later records) the affected residual keeps its class and is still present; the representation hash is unchanged; a file had to be edited to produce the variant.'
+  owning_wp: WP-16
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-08
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-12
+  kind: acceptance
+  statement: governed revision
+  method: diagnose, propose with held-out rule, candidate validate, semantic diff, regression transition matrix, authorize, promote, re-pin rehearsal
+  oracle_pass_condition: held-out set excluded by the frozen rule (no overlap with diagnosis input); the regression matrix of E §7 (total, RD-25) is applied and every transition result matches it; proposer ≠ approver; both worlds in registry; failed and inconclusive attempts retained; non-promotion variant retains divergence and rationale
+  g_command_column: '`--only AT-12`'
+  falsifier: 'Any of: the held-out set overlaps the diagnosis input; any transition in the E §7 regression matrix differs from its expected result; proposer equals approver; either world is missing from the registry; a failed or inconclusive attempt is not retained; the non-promotion variant loses the divergence or its rationale.'
+  owning_wp: WP-18
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-12
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-13
+  kind: acceptance
+  statement: capability delta
+  method: same subsequent-episode records classified under the old and the new world, plus a control variant without the newly declared step; falsifier and prediction frozen beforehand
+  oracle_pass_condition: 'result is `GAIN` or `NO_GAIN`, reported either way. `GAIN` requires: old world `observed_undeclared` or undetectable, new world `confirmed`, control variant shows no gain, falsifier not triggered. R-58 is PROVEN only on `GAIN`'
+  g_command_column: '`--only AT-13`'
+  falsifier: 'The test FAILS (not NO_GAIN) if: the result is neither `GAIN` nor `NO_GAIN`; the falsifier or prediction was not frozen beforehand; the control variant was not run. Separately, R-58 stays unproven if the result is `NO_GAIN`, or if on `GAIN` the old world was `confirmed`, the new world was not `confirmed`, the control variant shows the same gain, or the frozen falsifier triggered.'
+  owning_wp: WP-18
+  g_slice: S1
+  command: scripts/fde-proof.sh --slice s1 --only AT-13
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-14
+  kind: acceptance
+  statement: Horizon shows the source result
+  method: Playwright reads the rendered DOM text for case, residuals, settlement, world; compare with the ledger result computed independently from raw records
+  oracle_pass_condition: rendered text equals ledger values after canonicalization; ids and digests present; absent source renders "not connected"; runs on a build containing only the read adapters (R-84)
+  g_command_column: '`--only AT-14`'
+  falsifier: 'Any of: rendered DOM text for case, residuals, settlement or world differs from the independently computed ledger value after canonicalization; an id or digest is not present; an absent source does not render "not connected"; the run needs a build with more than the read adapters.'
+  owning_wp: WP-19 (full WP-40)
+  g_slice: S1 (full S4)
+  command: scripts/fde-proof.sh --slice s1 --only AT-14
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: AT-18
+  kind: acceptance
+  statement: reproducibility and independent "before"
+  method: 'fresh verifier on a clean cell: verify anchors; verify and replay the immutable raw records to recompute representation and comparison; **re-execute the `program` episodes** and compare class-level results'
+  oracle_pass_condition: anchors verify; replay hashes equal; re-executed classes equal the recorded classes at class level (differences reported, not hidden); verifier report agrees with claim ledger; bundle complete (§7)
+  g_command_column: '`--only AT-18`'
+  falsifier: 'Any of: an anchor fails `scripts/fde-anchor.sh verify`; a replayed raw-record hash differs; a re-executed `program` episode gives a class different from the recorded one at class level and the difference is hidden; the verifier report disagrees with the claim ledger; the bundle (G section 7) is incomplete.'
+  owning_wp: WP-19 (S1), WP-53
+  g_slice: S1 (full S5)
+  command: scripts/fde-proof.sh --slice s1 --only AT-18
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-01
+  kind: negative
+  statement: frozen reference cannot be rewritten (M§7)
+  attack: second freeze for the same `(case, item, n)` with different criteria
+  oracle_expected_code: '`FREEZE_KEY_EXISTS` ‡'
+  mode: refusal
+  mutation_patch_changes: remove I-3 key check
+  falsifier: A second freeze for the same `(case, item, n)` with different criteria is accepted, or the refusal code is not `FREEZE_KEY_EXISTS`, or the original frozen record changed.
+  owning_wp: WP-14
+  command: scripts/fde-proof.sh --slice s1 --only NT-01
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-02
+  kind: negative
+  statement: no verified conclusion without identity or evidence (M§7)
+  attack: (a) event without `world_ref`/`declaration_key`; (b) event with valid `world_ref` but no evidence record
+  oracle_expected_code: '`INGEST_REJECTED_IDENTITY` ‡ for (a); `INGEST_REJECTED_EVIDENCE` ‡ for (b); two rows of the test, one code each'
+  mode: refusal
+  mutation_patch_changes: accept missing key; accept missing evidence
+  falsifier: (a) an event without `world_ref` or `declaration_key` is ingested, or is refused with a code other than `INGEST_REJECTED_IDENTITY`; (b) an event with a valid `world_ref` but no evidence record is ingested, or is refused with a code other than `INGEST_REJECTED_EVIDENCE`; or the protected store changed.
+  owning_wp: WP-16
+  command: scripts/fde-proof.sh --slice s1 --only NT-02
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-03
+  kind: negative
+  statement: changed record changes the result (M§7)
+  attack: real re-run with one occurrence's content changed (a violating value)
+  oracle_expected_code: class changes to `contradicted`; hash differs
+  mode: input-variation
+  mutation_patch_changes: cache result by case id
+  falsifier: After a real re-run with one occurrence's content changed to a violating value, the class stays unchanged or the representation hash is unchanged.
+  owning_wp: WP-16
+  command: scripts/fde-proof.sh --slice s1 --only NT-03
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-03b
+  kind: negative
+  statement: missing or tampered record is detected (M§7)
+  attack: delete one occurrence from the append-only ledger copy
+  oracle_expected_code: '`CHAIN_VERIFY_FAILED` ‡'
+  mode: tamper
+  mutation_patch_changes: skip chain verify in derive
+  falsifier: After one occurrence is deleted from the append-only ledger copy, derive succeeds, or fails with a code other than `CHAIN_VERIFY_FAILED`.
+  owning_wp: WP-16
+  command: scripts/fde-proof.sh --slice s1 --only NT-03b
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-04
+  kind: negative
+  statement: undeclared occurrence ≠ authorized change (M§7)
+  attack: undeclared behaviour before promotion; then the same behaviour after an authorized promotion declaring it
+  oracle_expected_code: 'before: `observed_undeclared`, world unchanged; after: `confirmed` only via the recorded transition'
+  mode: input-variation
+  mutation_patch_changes: auto-add undeclared to the model
+  falsifier: 'Any of: before promotion the undeclared behaviour is classed anything but `observed_undeclared`, or the world changes; after an authorized promotion the same behaviour is classed `confirmed` without the recorded transition, or is not classed `confirmed` with it.'
+  owning_wp: WP-17
+  command: scripts/fde-proof.sh --slice s1 --only NT-04
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-05
+  kind: negative
+  statement: denied or unknown authority cannot promote (M§7)
+  attack: promotion with denied / unavailable / expired / digest-mismatched decision (four cases, one code each)
+  oracle_expected_code: '`PROMOTION_DENIED`, `AUTHORITY_UNAVAILABLE`, `DECISION_EXPIRED`, `DECISION_DIGEST_MISMATCH` ‡'
+  mode: refusal
+  mutation_patch_changes: treat unknown as approved
+  falsifier: A promotion with a denied, unavailable, expired or digest-mismatched decision is accepted, or is refused with a code other than the one named for that case (`PROMOTION_DENIED`, `AUTHORITY_UNAVAILABLE`, `DECISION_EXPIRED`, `DECISION_DIGEST_MISMATCH`), or the world registry changed.
+  owning_wp: WP-18
+  command: scripts/fde-proof.sh --slice s1 --only NT-05
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-06
+  kind: negative
+  statement: missing observation stays unresolved (M§7)
+  attack: episode whose frozen reference names an evidence source that emitted nothing
+  oracle_expected_code: class `insufficient`, basis `evidence_source_silent`; result `U`
+  mode: input-variation
+  mutation_patch_changes: default missing evidence to success
+  falsifier: An episode whose frozen reference names an evidence source that emitted nothing is classed anything but `insufficient` with basis `evidence_source_silent`, or its result is not `U`.
+  owning_wp: WP-17
+  command: scripts/fde-proof.sh --slice s1 --only NT-06
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-07
+  kind: negative
+  statement: settled evidence stays with its world (M§7)
+  attack: read evidence after promotion and after re-pin
+  oracle_expected_code: still bound to the old `world_ref`
+  mode: refusal
+  mutation_patch_changes: retarget refs on promotion
+  falsifier: After promotion, or after re-pin, evidence settled under the old world is read bound to any `world_ref` other than the old one.
+  owning_wp: WP-18, WP-22
+  command: scripts/fde-proof.sh --slice s1 --only NT-07
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-08
+  kind: negative
+  statement: failing regression blocks success (M§7)
+  attack: candidate that breaks a prior confirmed element not in intended changes
+  oracle_expected_code: '`REGRESSION_FAILED` ‡'
+  mode: refusal
+  mutation_patch_changes: skip regression
+  falsifier: A candidate that breaks a prior confirmed element not in the intended changes is promoted, or is refused with a code other than `REGRESSION_FAILED`.
+  owning_wp: WP-18
+  command: scripts/fde-proof.sh --slice s1 --only NT-08
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-09
+  kind: negative
+  statement: Horizon equals programmatic result (M§7)
+  attack: alter the adapter's classification mapping
+  oracle_expected_code: 'rendered DOM text differs from ledger value: `PARITY_MISMATCH` ‡'
+  mode: input-variation
+  mutation_patch_changes: change adapter mapping (the attack is the patch)
+  falsifier: After the adapter's classification mapping is altered, the rendered DOM text still equals the ledger value, or the mismatch is reported with a code other than `PARITY_MISMATCH`.
+  owning_wp: WP-19
+  command: scripts/fde-proof.sh --slice s1 --only NT-09
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
+- id: NT-16
+  kind: negative
+  statement: '"before" is externally anchored (M§3, F1)'
+  attack: regenerate the whole chain with the freeze inserted before the first run record; anchor tag absent or later
+  oracle_expected_code: '`ANCHOR_PREDATES_FAILED` ‡'
+  mode: tamper
+  mutation_patch_changes: verifier trusts chain only
+  falsifier: A chain regenerated with the freeze inserted before the first run record, with the anchor tag absent or later, passes verification, or fails with a code other than `ANCHOR_PREDATES_FAILED`.
+  owning_wp: WP-14
+  command: scripts/fde-proof.sh --slice s1 --only NT-16
+  status_vocabulary:
+  - PASS
+  - FAIL
+  - PARTIAL
+  - NOT_TESTED
+  - NOT_RUN
