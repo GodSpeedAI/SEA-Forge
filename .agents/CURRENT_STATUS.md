@@ -1,17 +1,16 @@
 # Current status
 
-**Status revision:** 233
+**Status revision:** 234
 
-**Stage:** e2e-world-loop-fix
+**Stage:** FDE convergence: planning baseline A-H and SOP v0.4.1 draft; S0 evidence
 
-**Summary:** scripts/e2e-world-loop.sh is fixed in three places: the Context Kernel hop builds package context-kernel-mcp (renamed upstream from ck-mcp, so hop 0 failed and every later hop had no input); quiet_cargo now returns cargo's real exit status (the old '|| true' reset PIPESTATUS, so a failed hop never stopped the script); and the GodSpeed-Agent hops use 'uv run --quiet --extra dev pytest' so pytest exists on a fresh checkout. Script logic is otherwise unchanged. E5B execution remains simulated in this loop. The 0.21.2 lockstep gates carried from revision 232 are closed: see the readiness entry under verified.
+**Summary:** FDE convergence planning baseline recorded under .agents/reports/fde-convergence-2026-11-12/: deliverables A-H for the FDE convergence program (EGM-reviewed, draft 3) and the SOP v0.4.1 draft, with the S0 baseline evidence. S0: readiness GO 30/30 on 2026-11-13 after the DomainForge 0.21.2 lockstep, and the e2e world loop runs OK. No product code changed. S1 not started. Owner decisions OD-1 to OD-6 are open (see H-egm-review-record.md).
 
 **Verified:**
-- bash -n scripts/e2e-world-loop.sh: ok
 - scripts/check-agent-context.sh: ok
-- 2026-11-13 patched script run against pinned origin heads (SEA-Forge main, Context Kernel 36bd8c8, SWE_SEED, RealityTrace main, cep 5111ec3, GodSpeed-Agent 4bfed12) with DomainForge 0.21.2: hops 1,0,2,3,4,5,6 passed, cep context_bundle valid, three refusals refused, final line 'e2e-world-loop: OK. One world (world:demo@sha256:6e00ae2d...) from E1 to the evidence the agent records.'
-- before the patch the same run failed at hop 0 (package ID specification `ck-mcp` did not match any packages) yet continued through every later hop
-- 2026-11-13, after Cognate 0.9.1 (npm, DomainForge 0.21.2), RealityTrace 0.4.0 (crates.io), Cognate-Workbench #32 and Horizon #30 landed: the full readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main, SEA-Forge at 0439abb0) reported GO 30/30, including C01, SW01, SW02, J02 and J02R2. Evidence: godspeed-readiness commit 79f5039, evidence/REPORT.md (that repo is local-only, not published)
+- 2026-11-13 readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main) reported GO 30/30 after the DomainForge 0.21.2 lockstep; evidence in the S0 baseline files under the report directory
+- 2026-11-13 scripts/e2e-world-loop.sh against pinned origin heads: final line 'e2e-world-loop: OK' (revision 233)
+- gitleaks scan of the report directory: no leaks found
 
 **Limits:**
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
@@ -30,5 +29,8 @@
 - Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
 - An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
 - Only sea-forge-capability was tested (the sole rusqlite user); full workspace tests, CI and MSRV 1.92 job not run locally; rusqlite 0.41.1 declares rust-version 1.89
+- Planning documents only: no product code changed, S1 not started
+- Owner decisions OD-1 to OD-6 are open; see .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
+- The planning baseline is draft 3 and the SOP is a v0.4.1 draft; neither is approved
 
-**Next:** Review and merge the e2e-world-loop fix; then re-run just e2e-world-loop after any pin change.
+**Next:** Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged.

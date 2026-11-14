@@ -1,0 +1,26 @@
+2026-11-13T17:26:43Z
+  cep                5111ec3 feat(profiles): godspeed.context_bundle, partial retrieval is never complete (#3)
+  cognate-workbench  74601f3 test(live): require the lockstep DomainForge CLI for the live SEA-Forge tests (#31
+  cognate            0c1f350 docs(domainforge): record the owner-approved lockstep exception for the 0.21.2 pin
+  context-kernel     36bd8c8 Merge pull request #11 from GodSpeedAI/fix/crates-content-compare
+  domainforge        f90905a chore(agents): log dead doc pointer in the to_graph API documentation
+  gauntlet           1543cbf fix(state-postgres): drop test namespaces on every exit path (#6)
+  horizon            d9cb701 fix(realitytrace): initialise the obligations repository once under concurrent cal
+  realitytrace       90eff85 fix(ingest): accept the "json" --stdin-format spelling Cognate's outbox sends (#14
+post-checkout: dependency/toolchain files changed since your last HEAD.
+
+  next move: just sync    # re-pins the Rust toolchain and refetches deps
+
+This hook never runs sync for you; review the diff and converge explicitly.
+  sea-forge          0439abb0 build(domainforge): move the producer pin to 0.21.2 (stack lockstep) (#94)
+  swe-seed           232e02d fix(federation): hash bundle integers exactly as Context Kernel does (#12)
+FAIL         J02R2  [e2e] Horizon's bound operation is paid for, preregistered, authorized, verified independently and settled by SEA-Forge (HORIZON-001 1.1.0)
+FAIL         J02    [e2e] Horizon's consequential operation is authorized by SEA-Forge, committed once, observed by RealityTrace and settled by SEA-Forge
+
+## Local single operator (Linux / WSL2, loopback only, internal use)	NO-GO — 8/30 gates passed at pinned clean revisions. License: permitted (SEA-Forge Sustainable Use License, internal business use)
+## Self-hosted internal team (several humans, one organization)	WITHHELD — license: permitted for internal use only
+## Hosted, managed or embedded for third parties	NOT SUPPORTED — license: NOT permitted without a SEA-Forge commercial license (LICENSE:48-66)
+## Pinned revisions	
+report: /home/sprime01/projects/godspeed-readiness/evidence/REPORT.md
+exit=1
+2026-11-13T17:27:24Z

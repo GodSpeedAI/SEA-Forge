@@ -1,0 +1,16 @@
+  cep                5111ec3 feat(profiles): godspeed.context_bundle, partial retrieval is never complete (#3)
+  cognate-workbench  74601f3 test(live): require the lockstep DomainForge CLI for the live SEA-Forge tests (#31
+  cognate            bcef663 chore(main): release main (#72)
+  context-kernel     36bd8c8 Merge pull request #11 from GodSpeedAI/fix/crates-content-compare
+  gauntlet           1543cbf fix(state-postgres): drop test namespaces on every exit path (#6)
+  horizon            822e349 Merge pull request #28: Horizon desk v2, merged with origin/main
+  realitytrace       4d154b1 feat(packaging): precompiled native binaries for Linux, macOS, and Windows (#12)
+post-checkout: dependency/toolchain files changed since your last HEAD.
+
+  next move: just sync    # re-pins the Rust toolchain and refetches deps
+
+This hook never runs sync for you; review the diff and converge explicitly.
+  sea-forge          595b5270 chore(main): release 0.4.1 (#90)
+  swe-seed           232e02d fix(federation): hash bundle integers exactly as Context Kernel does (#12)
+readiness: missing executable: /home/sprime01/projects/gsr-heads/domainforge/target/release/domainforge
+exit=2
