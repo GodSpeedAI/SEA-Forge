@@ -32,20 +32,24 @@ def now_iso():
 def serve(args):
     import socket
 
-    log = open(args.log, "a", encoding="utf-8")
     ready = args.ready
     with open(args.pidfile, "w", encoding="utf-8") as handle:
         handle.write(f"{os.getpid()}\n")
 
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener.bind(("0.0.0.0", args.port))
-    listener.listen(16)
-    # Signal readiness only once the socket is actually listening.
-    if ready:
-        with open(ready, "w", encoding="utf-8") as handle:
-            handle.write(f"0.0.0.0:{args.port} listening\n")
+    with open(args.log, "a", encoding="utf-8") as log, socket.socket(
+        socket.AF_INET, socket.SOCK_STREAM
+    ) as listener:
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("0.0.0.0", args.port))
+        listener.listen(16)
+        # Signal readiness only once the socket is actually listening.
+        if ready:
+            with open(ready, "w", encoding="utf-8") as handle:
+                handle.write(f"0.0.0.0:{args.port} listening\n")
+        _accept_loop(listener, log)
 
+
+def _accept_loop(listener, log):
     while True:
         try:
             conn, addr = listener.accept()
@@ -67,6 +71,7 @@ def serve(args):
             try:
                 conn.sendall(b"logged\n")
             except OSError:
+                # Best effort: the peer may already be gone; the arrival is logged.
                 pass
         finally:
             conn.close()

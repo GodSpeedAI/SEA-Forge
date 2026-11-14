@@ -511,12 +511,17 @@ fn write_entry_unix_inner(
             ))
         }
     };
-    let (mut file, temp_name) = staging.new_temp(name, mode).map_err(|error| {
-        ForgeError::io(
-            format!("open staged temp for {}", destination.display()),
-            error,
-        )
-    })?;
+    let (mut file, temp_name) = match staging.new_temp(name, mode) {
+        Ok(pair) => pair,
+        Err(error) => {
+            // Do not leave an empty staging directory behind in the destination.
+            staging.remove(dir);
+            return Err(ForgeError::io(
+                format!("open staged temp for {}", destination.display()),
+                error,
+            ));
+        }
+    };
     let outcome = file
         .write_all(bytes)
         .and_then(|()| file.sync_all())

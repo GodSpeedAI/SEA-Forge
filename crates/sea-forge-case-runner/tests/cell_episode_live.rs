@@ -1252,9 +1252,15 @@ fn live_network_allow_control_connects() {
 
     assert_eq!(episode.decision.verdict, Verdict::Allow);
     let execution = episode.execution.as_ref().expect("execution");
-    assert_eq!(execution.status, ExecutionStatus::Completed);
+    // Read the guest output first so a failing status assertion carries the
+    // only evidence of why the granted tunnel failed.
     let stdout = read_or_empty(&run_dir.join("artifacts/stdout.txt"));
     let stderr = read_or_empty(&run_dir.join("artifacts/stderr.txt"));
+    assert_eq!(
+        execution.status,
+        ExecutionStatus::Completed,
+        "live egress allow-control run did not complete; guest stdout:\n{stdout}\nguest stderr:\n{stderr}"
+    );
     // The payload already ran the full evidence pass (raw connect, proxy env,
     // routes, /proc/net/tcp, discovery scan). NO_PROXY_DISCOVERABLE means the
     // positive control is not expressible on this gateway (rounds 1-3, see

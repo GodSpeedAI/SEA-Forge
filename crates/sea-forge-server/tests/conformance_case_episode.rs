@@ -448,6 +448,25 @@ async fn an_allowed_episode_records_its_trace_and_evidence() {
         kinds.contains(&"authority_decision") && kinds.contains(&"execution_result"),
         "evidence kinds {kinds:?}"
     );
+    // The containment verdict must survive into both the trace and the
+    // execution-result evidence, not only the CLI pipeline's records.
+    let finished = episode
+        .jsonl("trace.jsonl")
+        .into_iter()
+        .find(|event| event["kind"] == "command_finished")
+        .expect("command_finished event");
+    assert!(
+        finished["payload"]["lifecycle_containment"].is_string(),
+        "trace dropped lifecycle_containment: {finished}"
+    );
+    let execution = evidence
+        .iter()
+        .find(|record| record["kind"] == "execution_result")
+        .expect("execution_result evidence");
+    assert!(
+        execution["metadata"]["lifecycle_containment"].is_string(),
+        "evidence dropped lifecycle_containment: {execution}"
+    );
     // Evidence points back at the trace event that produced it, or the two
     // files are parallel logs rather than one linked record.
     let trace_ids: Vec<String> = episode

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 267
+**Status revision:** 268
 
-**Stage:** FDE convergence planning baseline plus security hardening harvest (F05/F08/F15/F17/F32/F33, PR #71) merged with main
+**Stage:** PR #71 review-thread fixes on top of the main merge
 
-**Summary:** FDE convergence planning baseline recorded under .agents/reports/fde-convergence-2026-11-12/: deliverables A-H for the FDE convergence program (EGM-reviewed, draft 3) and the SOP v0.4.1 draft, with the S0 baseline evidence. S0: readiness GO 30/30 on 2026-11-13 after the DomainForge 0.21.2 lockstep, and the e2e world loop runs OK. The FDE planning baseline itself changed no product code. S1 not started. Owner decisions OD-1 to OD-6 are open (see H-egm-review-record.md). Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device.
+**Summary:** FDE convergence planning baseline recorded under .agents/reports/fde-convergence-2026-11-12/: deliverables A-H for the FDE convergence program (EGM-reviewed, draft 3) and the SOP v0.4.1 draft, with the S0 baseline evidence. S0: readiness GO 30/30 on 2026-11-13 after the DomainForge 0.21.2 lockstep, and the e2e world loop runs OK. The FDE planning baseline itself changed no product code. S1 not started. Owner decisions OD-1 to OD-6 are open (see H-egm-review-record.md). Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device. Review threads: the server dispatch path now records lifecycle_containment in its command_finished trace payload and execution_result evidence (conformance_case_episode asserts it); write_file removes its staging directory when new_temp fails; egress-control.py closes its log and socket via context managers; the live egress allow-control test prints guest output before its status assertion; OBSERVED_DEBT records the WSL2 post_start_internal_error test failure.
 
 **Verified:**
 
@@ -13,6 +13,7 @@
 - 2026-11-13 scripts/e2e-world-loop.sh against pinned origin heads: final line 'e2e-world-loop: OK' (revision 233)
 - gitleaks scan of the report directory: no leaks found
 - PR #71 checks: 20+ green incl. gate/test/windows/macos/kernel-22.04; run 40614104830 all four legs success; independent artifact verification
+- sea-forge-server and sea-forge-sandbox tests pass on this WSL2 host (workload isolation and cgroup-delegated lanes report NOT_RUN); fmt and clippy -D warnings clean
 
 **Limits:**
 
@@ -36,8 +37,9 @@
 - Owner decisions OD-1 to OD-6 are open; see .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
 - The planning baseline is draft 3 and the SOP is a v0.4.1 draft; neither is approved
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
+- cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged. PR #71: address review threads, then merge on green; Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
+**Next:** Owner to answer the open PR #71 review questions; then merge on green. Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged. PR #71: address review threads, then merge on green; Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
 
 **Evidence:**
 
