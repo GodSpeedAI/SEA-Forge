@@ -8,9 +8,9 @@
     "kind": "episode.frozen",
     "idempotency_key": "case-keeper/rec-0001",
     "payload": {
-      "episode_ref": "episode:case-0001:item-03:1@sha256:5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
       "reference": {
-        "episode_ref": "episode:case-0001:item-03:1@sha256:5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
+        "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
         "body": {
           "case_id": "case-0001",
           "plan_item_id": "item-03",
@@ -32,6 +32,10 @@
             "falsifiers": [
               "Evidence record absent after the executor reports done."
             ]
+          },
+          "comparison_profile": {
+            "id": "profile:fde-s1-default",
+            "sha256": "c528927db1d3b01861412de15f6ba988616b55abababc01cd455ddee4a9e7c00"
           },
           "decision_maker": {
             "principal": "human:operator",
@@ -61,7 +65,7 @@
           ]
         }
       },
-      "digest": "5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
+      "digest": "1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
       "realitytrace_refs": {
         "plan_id": "plan:01JABCDEF0000000000000000E",
         "question_ids": [

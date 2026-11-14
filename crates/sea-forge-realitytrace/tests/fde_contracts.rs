@@ -62,46 +62,44 @@ fn errors(v: &Validator, instance: &Value) -> Vec<(String, String)> {
         .collect()
 }
 
-/// RFC 8785 for the values these fixtures use: objects, arrays, strings,
-/// integers, booleans, null. Keys sort by UTF-16 code units, which equals byte
-/// order for the ASCII-only content asserted below. The CEP-0008 section 16.5
-/// vectors verify the rule itself against a full RFC 8785 library.
-fn canonical(v: &Value) -> String {
+/// A deliberately small canonicaliser for the fixtures: objects, arrays,
+/// ASCII strings, integers, booleans and null. Keys sort by UTF-16 code units,
+/// which equals byte order only for ASCII. It REFUSES anything else
+/// (non-ASCII text, floats) with an error instead of hashing it wrongly.
+/// Full RFC 8785 conformance (number formatting, UTF-16 key order, escapes) is
+/// tested in the CEP repository only (CEP-0008 section 16.5 vectors).
+fn canonical(v: &Value) -> Result<String, String> {
     match v {
         Value::Object(m) => {
             let mut keys: Vec<&String> = m.keys().collect();
             keys.sort();
-            let parts: Vec<String> = keys
-                .iter()
-                .map(|k| {
-                    assert!(k.is_ascii(), "non-ASCII key");
-                    format!(
-                        "{}:{}",
-                        serde_json::to_string(k).unwrap(),
-                        canonical(&m[*k])
-                    )
-                })
-                .collect();
-            format!("{{{}}}", parts.join(","))
+            let mut parts = Vec::new();
+            for k in keys {
+                if !k.is_ascii() {
+                    return Err(format!("non-ASCII key {k:?}"));
+                }
+                parts.push(format!(
+                    "{}:{}",
+                    serde_json::to_string(k).unwrap(),
+                    canonical(&m[k])?
+                ));
+            }
+            Ok(format!("{{{}}}", parts.join(",")))
         }
-        Value::Array(a) => format!(
-            "[{}]",
-            a.iter().map(canonical).collect::<Vec<_>>().join(",")
-        ),
-        Value::String(s) => {
-            assert!(s.is_ascii(), "non-ASCII string");
-            serde_json::to_string(s).unwrap()
+        Value::Array(a) => {
+            let parts: Result<Vec<String>, String> = a.iter().map(canonical).collect();
+            Ok(format!("[{}]", parts?.join(",")))
         }
-        Value::Number(n) => {
-            assert!(n.is_i64() || n.is_u64(), "float in a digested value");
-            n.to_string()
-        }
-        other => other.to_string(),
+        Value::String(s) if s.is_ascii() => Ok(serde_json::to_string(s).unwrap()),
+        Value::String(s) => Err(format!("non-ASCII string {s:?}")),
+        Value::Number(n) if n.is_i64() || n.is_u64() => Ok(n.to_string()),
+        Value::Number(n) => Err(format!("non-integer number {n}")),
+        other => Ok(other.to_string()),
     }
 }
 
 fn body_digest(body: &Value) -> String {
-    hex::encode(Sha256::digest(canonical(body).as_bytes()))
+    hex::encode(Sha256::digest(canonical(body).unwrap().as_bytes()))
 }
 
 /// episode_ref = episode:<case_id>:<plan_item_id>:<n>@sha256:<digest of body>.
@@ -307,6 +305,7 @@ fn case_record_append_scenarios_name_the_refusal_they_exercise() {
         }
     }
     for code in [
+        "EXPLORATORY_NOT_SETTLEABLE",
         "FREEZE_KEY_EXISTS",
         "FREEZE_MISSING",
         "FREEZE_INCOMPLETE",
@@ -376,4 +375,16 @@ fn digest_check_fails_when_a_schema_drifts() {
         .unwrap();
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stdout).contains("DIGEST MISMATCH anchor.v1.json"));
+}
+
+#[test]
+fn the_test_canonicaliser_refuses_input_it_cannot_hash_faithfully() {
+    assert!(canonical(&json!({"a": "caf\u{e9}"})).is_err());
+    assert!(canonical(&json!({"caf\u{e9}": 1})).is_err());
+    assert!(canonical(&json!({"a": 1.5})).is_err());
+    assert!(canonical(&json!({"a": [1e30]})).is_err());
+    assert_eq!(
+        canonical(&json!({"b": [1, null, true], "a": "x"})).unwrap(),
+        r#"{"a":"x","b":[1,null,true]}"#
+    );
 }

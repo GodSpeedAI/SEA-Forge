@@ -1,5 +1,5 @@
 {
-  "episode_ref": "episode:case-0001:item-04:1@sha256:24fa9d0049ce88dc04daa6100a7f336955497623895965d9cb4cf07ee1c7fcde",
+  "episode_ref": "episode:case-0001:item-04:1@sha256:d7f4c070d4e3fd916005cb9a3b01f081f5cc6683f10ab97a722c81265edcfa5c",
   "body": {
     "case_id": "case-0001",
     "plan_item_id": "item-04",
@@ -18,9 +18,11 @@
       ],
       "success_region": "Evidence record present, source independent of the executor.",
       "failure_region": "No evidence record, or the source is the executor only.",
-      "falsifiers": [
-        "Evidence record absent after the executor reports done."
-      ]
+      "falsifiers": []
+    },
+    "comparison_profile": {
+      "id": "profile:fde-s1-default",
+      "sha256": "c528927db1d3b01861412de15f6ba988616b55abababc01cd455ddee4a9e7c00"
     },
     "decision_maker": {
       "principal": "human:operator",

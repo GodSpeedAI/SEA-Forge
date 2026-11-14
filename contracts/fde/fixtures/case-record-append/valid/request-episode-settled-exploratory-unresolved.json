@@ -1,0 +1,16 @@
+{
+  "kind": "episode.settled",
+  "idempotency_key": "verifier/rec-0200",
+  "payload": {
+    "episode_ref": "episode:case-0001:item-04:1@sha256:d7f4c070d4e3fd916005cb9a3b01f081f5cc6683f10ab97a722c81265edcfa5c",
+    "result": "U",
+    "reliability": {
+      "K": "two independent sources"
+    },
+    "independence": {
+      "independent_source_count": 2,
+      "verifier_context": "fresh"
+    },
+    "settlement_ref": "settlement:01JABCDEF0000000000000000C"
+  }
+}

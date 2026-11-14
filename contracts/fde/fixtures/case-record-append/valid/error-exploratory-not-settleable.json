@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "EXPLORATORY_NOT_SETTLEABLE",
+  "message": "an exploratory episode cannot settle S or F"
+}

@@ -36,6 +36,18 @@
     {
       "file": "error-schema-invalid.json",
       "def": "Error"
+    },
+    {
+      "file": "error-exploratory-not-settleable.json",
+      "def": "Error"
+    },
+    {
+      "file": "request-episode-frozen-exploratory.json",
+      "def": "Request"
+    },
+    {
+      "file": "request-episode-settled-exploratory-unresolved.json",
+      "def": "Request"
     }
   ],
   "invalid": [
@@ -136,6 +148,12 @@
       "contains": "was expected"
     },
     {
+      "file": "error-exploratory-not-settleable-carries-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "is not allowed for"
+    },
+    {
       "file": "error-schema-invalid-carries-invariant.json",
       "def": "Error",
       "pointer": "",
@@ -157,6 +175,9 @@
     "idempotency-key-reused-with-different-body.json",
     "i1-settle-without-freeze.json",
     "i1-freeze-references-missing-realitytrace-plan.json",
-    "i2-executor-settles-own-episode.json"
+    "i2-executor-settles-own-episode.json",
+    "exploratory-settled-success-refused.json",
+    "exploratory-settled-failure-refused.json",
+    "exploratory-settled-unresolved-accepted.json"
   ]
 }

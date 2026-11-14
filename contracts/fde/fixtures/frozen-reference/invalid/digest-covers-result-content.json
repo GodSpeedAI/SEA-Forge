@@ -1,5 +1,5 @@
 {
-  "episode_ref": "episode:case-0001:item-03:1@sha256:4a4f57481e59a2b8c44a1da1e976ed04280b6dc8603c8750de2ddb4a2c6eb313",
+  "episode_ref": "episode:case-0001:item-03:1@sha256:3a4d1750152896ac8eef20077f18e8501fe981f1def4fc58a070a76e58d4648f",
   "body": {
     "case_id": "case-0001",
     "plan_item_id": "item-03",
@@ -21,6 +21,10 @@
       "falsifiers": [
         "Evidence record absent after the executor reports done."
       ]
+    },
+    "comparison_profile": {
+      "id": "profile:fde-s1-default",
+      "sha256": "c528927db1d3b01861412de15f6ba988616b55abababc01cd455ddee4a9e7c00"
     },
     "decision_maker": {
       "principal": "human:operator",

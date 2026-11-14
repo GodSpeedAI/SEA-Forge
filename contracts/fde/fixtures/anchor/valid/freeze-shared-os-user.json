@@ -1,9 +1,9 @@
 {
-  "tag": "fde-anchor/freeze/5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
+  "tag": "fde-anchor/freeze/1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
   "kind": "freeze",
-  "id": "5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
-  "subject_ref": "episode:case-0001:item-03:1@sha256:5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
-  "digest": "5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669",
+  "id": "1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+  "subject_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+  "digest": "1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
   "pusher": {
     "identity": "service:case-keeper",
     "credential_scope": "shared_os_user"
@@ -14,6 +14,6 @@
     "issued_at": "2026-11-13T10:00:05Z",
     "server_push_time": "2026-11-13T10:00:01Z",
     "tag_object_id": "9fceb02d0ae598e95dc970b74767f19372d61af8",
-    "digest": "5347a89e564433d3747833b214919f9589cae1001e0361e320b1cc1f38f5e669"
+    "digest": "1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879"
   }
 }

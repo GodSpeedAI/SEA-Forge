@@ -4,9 +4,11 @@ Reviewed-before-code contracts for the Field Case path. JSON Schema draft 2020-1
 
 | Contract | File | Fixtures (valid / invalid, schema + semantic) | Test |
 |---|---|---|---|
-| Frozen reference | `frozen-reference.v1.json` | 3 / 12 + 1 | `crates/sea-forge-realitytrace/tests/fde_contracts.rs` |
+| Frozen reference | `frozen-reference.v1.json` | 3 / 16 + 1 | `crates/sea-forge-realitytrace/tests/fde_contracts.rs` |
 | Anchor | `anchor.v1.json` | 3 / 8 + 2 | same |
-| `case.record.append` | `case-record-append.v1.json` | 9 / 17 + 1, 8 scenarios | same |
+| `case.record.append` | `case-record-append.v1.json` | 12 / 18 + 1, 11 scenarios | same |
+
+Test canonicalisation: the SEA-Forge test hashes fixtures with a small ASCII-only helper that refuses (errors on) non-ASCII text and non-integer numbers instead of hashing them wrongly. Full RFC 8785 conformance is tested in the CEP repository only (CEP-0008 section 16.5 vectors).
 
 Run: `cargo test --locked -p sea-forge-realitytrace --test fde_contracts` and `scripts/check-fde-contract-digests.sh`.
 
@@ -33,7 +35,8 @@ Document `{episode_ref, body}`. The digest input is `body` alone; `episode_ref` 
 | `body.criteria.invariants` | string[] | yes (may be empty) | what must not change | §13 |
 | `body.criteria.predicted_irrelevancies` | string[] | yes (may be empty) | what is predicted not to matter | §13 |
 | `body.criteria.success_region`, `failure_region` | string | yes | regions | §13 |
-| `body.criteria.falsifiers` | string[] >= 1 | yes | what would show the expectation wrong | §13 |
+| `body.criteria.falsifiers` | string[] | yes; >= 1 item when `kind` is `evaluated`, may be empty when `exploratory` | what would show the expectation wrong | §13, review 2026-11-14 |
+| `body.comparison_profile` | `{id: profile:<token>, sha256: 64 hex}` | yes | the comparison profile frozen with the episode; `sha256` is of the profile document (CEP-0008 §16.5) | RD-08, review 2026-11-14 |
 | `body.decision_maker` | `{principal, role}` | yes | who settles (I-2 reads this and the delegation chain) | §13 |
 | `body.evidence_sources[]` | `{source_id, system, purpose}` | yes, >= 1 | evidence source and what it is for (RD-03) | §13 |
 | `body.coverage_manifest[]` | `{emitter, event_kinds[] >= 1}` | yes, >= 1 | which emitters must report which event kinds; frozen, never self-reported (RD-12) | §5, §13 |
@@ -125,6 +128,7 @@ The settling principal is the authenticated principal of the request, not a payl
 | `IDEMPOTENCY_CONFLICT` | | `idempotency_key` seen with a different body | |
 | `EPISODE_REF_DIGEST_MISMATCH` | | `payload.digest`, `episode_ref` and the recomputed body digest disagree | NT-17 |
 | `RESULT_INVALID` | | `result` outside S/F/U/C, or `reliability` merged into `result` | NT-42 |
+| `EXPLORATORY_NOT_SETTLEABLE` | | `episode.settled` with `result` `S` or `F` (the confirmed / contradicted classes) for an episode whose frozen `kind` is `exploratory`; only `U` and `C` are accepted. Needs no payload change: the kind is read from the freeze record | NT-13, RD-12 |
 | `FREEZE_KEY_EXISTS` | I-3 | a freeze already exists for the episode key, whatever its digest, under a different `idempotency_key`; changed criteria allocate `n+1` | NT-01 |
 | `FREEZE_MISSING` | I-1 | `episode.settled` for an episode with no freeze record (also the delegation refusal of WP-20) | NT-32 |
 | `FREEZE_INCOMPLETE` | I-1 | `episode.frozen` references a RealityTrace plan, question or threshold that does not exist (the reverse half, and the missing anchor, are checked at delegation) | NT-33 |

@@ -16,10 +16,34 @@
   ],
   "invalid": [
     {
-      "file": "falsifiers-empty.json",
+      "file": "evaluated-falsifiers-empty.json",
       "def": null,
       "pointer": "/body/criteria/falsifiers",
       "contains": "has less than 1 item"
+    },
+    {
+      "file": "exploratory-falsifiers-missing.json",
+      "def": null,
+      "pointer": "/body/criteria",
+      "contains": "\"falsifiers\" is a required property"
+    },
+    {
+      "file": "comparison-profile-missing.json",
+      "def": null,
+      "pointer": "/body",
+      "contains": "\"comparison_profile\" is a required property"
+    },
+    {
+      "file": "comparison-profile-digest-malformed.json",
+      "def": null,
+      "pointer": "/body/comparison_profile/sha256",
+      "contains": "does not match"
+    },
+    {
+      "file": "comparison-profile-id-not-prefixed.json",
+      "def": null,
+      "pointer": "/body/comparison_profile/id",
+      "contains": "does not match"
     },
     {
       "file": "kind-not-in-enum.json",
