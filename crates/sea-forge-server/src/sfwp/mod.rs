@@ -16,6 +16,7 @@ pub mod approvals;
 pub mod assets;
 pub mod case;
 pub mod case_mutations;
+pub mod case_records;
 pub mod case_views;
 mod continuation_codec;
 pub mod correlation;
@@ -267,6 +268,11 @@ pub const IMPLEMENTED_METHODS: &[MethodDescriptor] = &[
     },
     MethodDescriptor {
         method: "case.advance",
+        class: InteractionClass::Command,
+    },
+    // --- Field Case record verb (WP-14, contracts/fde case.record.append) ---
+    MethodDescriptor {
+        method: "case.record.append",
         class: InteractionClass::Command,
     },
     MethodDescriptor {

@@ -1186,6 +1186,22 @@ pub enum Request {
         #[serde(default)]
         preconditions: Option<sfwp::precondition::Precondition>,
     },
+    /// Field Case record append (WP-14, `contracts/fde/case-record-append.v1.json`).
+    /// `kind`, `payload` and `idempotency_key` are the contract request; they
+    /// are validated by the schema registry, so malformed values reach it
+    /// as JSON instead of failing deserialization here. The case is addressed
+    /// by `case_id`, not by the contract body.
+    CaseRecordAppend {
+        case_id: String,
+        #[serde(default)]
+        kind: serde_json::Value,
+        #[serde(default)]
+        payload: serde_json::Value,
+        #[serde(default)]
+        idempotency_key: serde_json::Value,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     CaseReopen {
         case_id: String,
         #[serde(default = "default_policy")]
@@ -2033,6 +2049,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::ApprovalDecide { request_id, .. }
         | Request::CaseAddItem { request_id, .. }
         | Request::CaseReopen { request_id, .. }
+        | Request::CaseRecordAppend { request_id, .. }
         | Request::CaseTerminate { request_id, .. }
         | Request::CaseAdvance { request_id, .. }
         | Request::ItemExecute { request_id, .. }
@@ -2072,6 +2089,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::ApprovalDecide { .. }
             | Request::CaseAddItem { .. }
             | Request::CaseReopen { .. }
+            | Request::CaseRecordAppend { .. }
             | Request::CaseTerminate { .. }
             | Request::CaseAdvance { .. }
             | Request::ItemExecute { .. }
@@ -3515,6 +3533,48 @@ pub async fn handle_request_as(
                 Err(error) => forge_error_response(&error),
             };
             record_outcome(state, request_id.as_deref(), "case.add_item", &response);
+            response
+        }
+        Request::CaseRecordAppend {
+            case_id,
+            kind,
+            payload,
+            idempotency_key,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "case.record.append");
+            let principal = actor_id.unwrap_or("operator_local").to_string();
+            let response = {
+                let case_lock = state.acquire_case_lock(&case_id).await;
+                let root = state.root.clone();
+                let case = case_id.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    sfwp::case_records::run_verb(
+                        &root,
+                        &case,
+                        &principal,
+                        kind,
+                        payload,
+                        idempotency_key,
+                    )
+                })
+                .await;
+                drop(case_lock);
+                state.prune_case_lock(&case_id).await;
+                match result {
+                    Ok(Ok(value)) => value,
+                    Ok(Err(error)) => forge_error_response(&error),
+                    Err(error) => forge_error_response(&ForgeError::Internal(format!(
+                        "case.record.append task panic: {error}"
+                    ))),
+                }
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "case.record.append",
+                &response,
+            );
             response
         }
         Request::CaseReopen {

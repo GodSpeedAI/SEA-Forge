@@ -2670,6 +2670,7 @@ dependencies = [
  "chrono",
  "getrandom 0.4.3",
  "hex",
+ "jsonschema 0.58.6",
  "rustix",
  "schemars",
  "sea-forge-agent",

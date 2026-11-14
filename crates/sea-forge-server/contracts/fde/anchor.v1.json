@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:anchor:v1",
+  "title": "Anchor v1",
+  "description": "The external anchor of a digest: a signed annotated git tag `fde-anchor/<kind>/<id>` pushed to the GitHub remote by the case-keeper service identity, never an executor credential (RD-04), with the verifier's own receipt. On a single-operator host it proves not rewritten after the server-recorded push time, not that an executor could not have written it (RD-26); `pusher.credential_scope` records which case applies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tag", "kind", "id", "subject_ref", "digest", "pusher", "verifier_receipt"],
+  "properties": {
+    "tag": {
+      "type": "string",
+      "pattern": "^fde-anchor/(model|freeze|prereg)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "description": "fde-anchor/<kind>/<id>; kind and id equal the fields below. The id uses only characters valid in a git ref name."
+    },
+    "kind": { "enum": ["model", "freeze", "prereg"], "description": "model registration, a freeze, or pre-registration." },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "subject_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the digest is about: a world_ref (model), an episode_ref (freeze) or a pre-registration id (prereg)."
+    },
+    "digest": { "$ref": "#/$defs/sha256", "description": "The anchored digest, lowercase hex, computed under CEP-0008 section 16.5." },
+    "pusher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "credential_scope"],
+      "properties": {
+        "identity": { "type": "string", "minLength": 1, "description": "The case-keeper service identity that pushed the tag." },
+        "credential_scope": {
+          "enum": ["shared_os_user", "dedicated_anchor_credential"],
+          "description": "shared_os_user: executors and the case keeper share an OS user; anchoring rows are PARTIAL (RD-26, OD-6). dedicated_anchor_credential: protected tag namespace fde-anchor/* (no delete, no force)."
+        }
+      }
+    },
+    "verifier_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "verifier", "issued_at", "server_push_time", "tag_object_id", "digest"],
+      "properties": {
+        "receipt_id": { "type": "string", "minLength": 1 },
+        "verifier": { "type": "string", "minLength": 1, "description": "Identity of the verifier; not the pusher." },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "server_push_time": { "$ref": "#/$defs/timestamp", "description": "Push time recorded by the remote's server, not by the pusher." },
+        "tag_object_id": { "type": "string", "pattern": "^[0-9a-f]{40}$|^[0-9a-f]{64}$", "description": "Git object id of the annotated tag." },
+        "digest": { "$ref": "#/$defs/sha256", "description": "The digest the verifier read from the tag; must equal the anchor digest." }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+    }
+  }
+}

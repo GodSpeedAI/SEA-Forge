@@ -32,6 +32,8 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 hex.workspace = true
+# Schema registry for contracts/fde (already in the workspace lock via sea-forge-realitytrace).
+jsonschema = { version = "0.58.6", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "process", "sync", "time", "fs", "macros"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true

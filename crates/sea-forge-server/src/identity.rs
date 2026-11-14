@@ -1048,6 +1048,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::ApprovalDecide { .. }
         | Request::CaseAddItem { .. }
         | Request::CaseReopen { .. }
+        | Request::CaseRecordAppend { .. }
         | Request::CaseTerminate { .. }
         | Request::CaseAdvance { .. }
         | Request::ItemExecute { .. }
