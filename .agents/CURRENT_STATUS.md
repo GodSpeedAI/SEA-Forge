@@ -1,20 +1,19 @@
 # Current status
 
-**Status revision:** 251
+**Status revision:** 252
 
-**Stage:** WP-19 S1 gate: runner wiring and episode orchestration
+**Stage:** WP-19 S1 gate: claim-ledger builder, bundle collector
 
-**Summary:** fde/integration: fde-proof.sh records command, exit, status, duration, reason, repo commits and tool versions per test; fde-proof.d wrappers for AT-05 (both halves), AT-06, AT-07, AT-08, AT-14, AT-18, NT-02, NT-03, NT-03b, NT-04, NT-06, NT-09; fde-s1-run.sh runs the three program episodes through SEA-Forge, Cognate, RealityTrace and DomainForge into a scratch cell; fde-s1-verify.sh is the AT-18 verifier.
+**Summary:** fde/integration: scripts/fde-claim-ledger.py builds the S1 claim ledger mechanically from results.json and the frozen predictions and fails on a missing test; scripts/fde-s1/bundle.py collects the evidence bundle; a full real episode run was completed in a scratch cell.
 
 **Verified:**
-- plumbing exercised end to end on debug cells (freeze, program.run, ingest, derive, compare, settle by another actor, propose, regression, approved promotion, subsequent episode, capability delta)
+- real run of three program episodes completed: settlements U / F / U; AT-13 delta NO_GAIN; promotion approved by a different actor
 
 **Limits:**
-- No full real run committed yet
+- Results not yet committed
 
-**Next:** Full run, claim-ledger builder, evidence bundle
+**Next:** Proof-runner run on a clean tree, evidence bundle commit
 
 **Evidence:**
-- scripts/fde-s1/
-- scripts/fde-proof.d/
-- scripts/fde-s1-run.sh
+- scripts/fde-claim-ledger.py
+- scripts/fde-s1/bundle.py
