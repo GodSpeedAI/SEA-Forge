@@ -1,20 +1,18 @@
 #!/usr/bin/env sh
-# AT-05 (WP-14 SEA-Forge half, WP-15 Cognate half): semantic exhaust complete and authentic.
-# Exit 0 would be PASS; this script exits 10 (PARTIAL) when the SEA-Forge half passes, because the
-# runtime half (WP-15: Cognate run/invocation events) is absent and no emitter signs yet (WP-33).
-set -eu
+# AT-05: semantic exhaust complete and authentic. SEA-Forge half (WP-14) and Cognate half (WP-15).
+# Always PARTIAL when both pass: no emitter signs before WP-33, so the "check signature" step cannot run.
+. "$(dirname "$0")/_lib.sh"
 here=$(cd "$(dirname "$0")" && pwd)
 t=conformance_interaction_events
-# SEA-Forge half: every ledger record and authority decision yields one schema-valid event,
-# source.record_id and authority.decision_id resolve at their owner, correlation is structured,
-# a replayed duplicate changes no count, an emitter failure leaves the write committed.
-"$here/_cargo-test.sh" sea-forge-server "$t" 5 at_05
+"$here/_cargo-test.sh" sea-forge-server "$t" 5 at_05 || exit 1
 "$here/_cargo-test.sh" sea-forge-server "$t" 1 replay_and_redelivery injected_emitter_failure \
-  an_outbox_write_failure an_episode_in_another_world vendored_extension_schema
-cat >&2 <<'MSG'
-AT-05 PARTIAL: the SEA-Forge half passed (ledger and I-2 decision events). Not covered:
-  - Cognate run and invocation events (WP-15, absent): 100 % of consequential events cannot be claimed;
-  - signature check: nothing is signed before WP-33, so authenticity rests on source-record
-    resolution and the independent-emitter rule (E 5), not on a verified signature.
-MSG
-exit 10
+  an_outbox_write_failure an_episode_in_another_world vendored_extension_schema || exit 1
+need_sibling "$COG_DIR" "$COG_EXPECT" Cognate
+command -v bun >/dev/null 2>&1 || not_run "bun missing for the Cognate half"
+out=$(mktemp "$TMPDIR/fde-cog.XXXXXX")
+( cd "$COG_DIR" && bun test ./packages/realitytrace/test/interaction-event.test.ts ) >"$out" 2>&1; code=$?
+tail -n 8 "$out" >&2
+[ "$code" -eq 0 ] || { rm -f "$out"; echo "FAIL: Cognate interaction-event tests failed" >&2; exit 1; }
+n=$(sed -n 's/^ *\([0-9][0-9]*\) pass.*/\1/p' "$out" | tail -1); rm -f "$out"
+[ "${n:-0}" -ge 10 ] || { echo "FAIL: Cognate half ran ${n:-0} tests" >&2; exit 1; }
+partial "SEA-Forge half and Cognate half pass; emitter signatures arrive with WP-33 so the signature check cannot run; authenticity rests on source-record resolution and the independent-emitter rule"

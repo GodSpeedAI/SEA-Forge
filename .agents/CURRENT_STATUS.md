@@ -1,20 +1,20 @@
 # Current status
 
-**Status revision:** 250
+**Status revision:** 251
 
-**Stage:** WP-19 S1 gate: episode harness (in progress)
+**Stage:** WP-19 S1 gate: runner wiring and episode orchestration
 
-**Summary:** fde/integration: S1 gate driver example (fde_s1_driver), Cognate program.run harness, three hash-pinned episode patches (events tail read, KG round trip test, readiness invalidation), SOP v2 candidate patch.
+**Summary:** fde/integration: fde-proof.sh records command, exit, status, duration, reason, repo commits and tool versions per test; fde-proof.d wrappers for AT-05 (both halves), AT-06, AT-07, AT-08, AT-14, AT-18, NT-02, NT-03, NT-03b, NT-04, NT-06, NT-09; fde-s1-run.sh runs the three program episodes through SEA-Forge, Cognate, RealityTrace and DomainForge into a scratch cell; fde-s1-verify.sh is the AT-18 verifier.
 
 **Verified:**
-- ep-1 patch: conformance_lifecycle 11 passed; ep-3 patch: cargo test readiness passed; ep-2 patch test fails as the hypothesis predicts (Policy triples 0 vs 1)
+- plumbing exercised end to end on debug cells (freeze, program.run, ingest, derive, compare, settle by another actor, propose, regression, approved promotion, subsequent episode, capability delta)
 
 **Limits:**
-- Not yet run end to end
-- Patches are not regenerated into SFWP schemas
+- No full real run committed yet
 
-**Next:** runner wiring, episode orchestration, claim ledger
+**Next:** Full run, claim-ledger builder, evidence bundle
 
 **Evidence:**
 - scripts/fde-s1/
-- crates/sea-forge-server/examples/fde_s1_driver.rs
+- scripts/fde-proof.d/
+- scripts/fde-s1-run.sh

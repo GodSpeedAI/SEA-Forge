@@ -45,7 +45,10 @@ const runtime = await createRuntime({
   components: [programExecutorComponent(registry)],
   policy: { authorize: () => ({ allow: true, policyId: "fde-s1-local", reason: "local program executor policy; no SEA-Forge authority decision is consulted (I-1 execution gate not wired before WP-20)" }) },
   actions: { authorize: () => ({ allow: true, reason: "local" }) },
-  outboxFor: (e: unknown) => interactionOutboxFor(e as never),
+  // Host choice (recorded as a gap in the gate evidence): only capability invocations (the consequential action) are
+  // emitted. The run lifecycle events (run.started, run.completed) carry a per-run resource id, so as undeclared
+  // elements they would never be comparable across episodes; Cognate's default hook emits them too.
+  outboxFor: (e: unknown) => ((e as { eventType?: string }).eventType === "run.invocation" ? interactionOutboxFor(e as never) : []),
 });
 const caller = { actor: { id: spec.actor, kind: "user" }, tenant: spec.tenant ?? "fde-s1" };
 const caseContext = {

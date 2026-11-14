@@ -1,0 +1,12 @@
+# S1 gate helper (copied from the Horizon fixture generator): appends the `evidence.recorded` ledger rows that `observed ingest` resolves events against. The path dependency assumes the sibling layout ~/projects/_wt/{fde-sea-rs-integration,fde-sxr-integration}.
+[package]
+name = "rt-seed"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+sxr-ledger = { path = "../../../../fde-sxr-integration/sxr-ledger" }
+serde_json = "1"
+
+[workspace]

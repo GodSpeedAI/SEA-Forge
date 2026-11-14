@@ -10,7 +10,10 @@
 # in .agents/preregistrations/fde-<slice>/tests.yaml run scripts/fde-proof.d/<ID>.sh when it
 # exists, else record NOT_RUN. NOT_RUN is never PASS.
 #
-# Dispatcher exit codes: 0 PASS, 10 PARTIAL, 11 NOT_TESTED, anything else FAIL.
+# Dispatcher exit codes: 0 PASS, 10 PARTIAL, 11 NOT_TESTED, 12 NOT_RUN, anything else FAIL.
+# A script may print one line "REASON: <text>" (last one wins); it is recorded with the status.
+# Each result records command, exit code, status, duration, reason, the commit of every repo involved
+# and tool versions (top level `repos`, `tools`; see scripts/fde-proof.d/_lib.sh).
 # Output: .tmp/fde-proof/<slice>/results.json (id, status, command, exit_code, evidence) and
 # one log per test. Exit 0 only when every selected test is PASS.
 # Exit: 0 all PASS, 1 not all PASS, 2 usage, 3 pre-registration or pre-flight refused, 4 stub.
@@ -18,7 +21,7 @@ set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
-slice=""; only=""; replay=""; mutate=""; remote=""
+slice=""; only=""; replay=""; mutate=""; remote=""; run_eps=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --slice) slice=${2:?--slice needs a value}; shift 2;;
@@ -26,6 +29,7 @@ while [ $# -gt 0 ]; do
     --replay) replay=${2:?--replay needs a run id}; shift 2;;
     --mutate) mutate=${2:?--mutate needs an NT id}; shift 2;;
     --remote) remote=--remote; shift;;
+    --run-episodes) run_eps=1; shift;;
     -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
     *) echo "fde-proof: unknown argument: $1" >&2; exit 2;;
   esac
@@ -41,15 +45,18 @@ write_results() { # $1 = JSON-lines file, $2 = overall note
   python3 - "$1" "$out/results.json" "$slice" "$prereg_id" "$2" <<'PY'
 import sys, json, datetime
 lines = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
-doc = {"slice": sys.argv[3], "preregistration": sys.argv[4], "note": sys.argv[5],
+import subprocess, os
+ctx = json.loads(subprocess.run(["sh", os.path.join(os.path.dirname(os.path.abspath(sys.argv[2])), "../../../scripts/fde-proof.d/_context.sh")], capture_output=True, text=True).stdout or "{}")
+doc = {"slice": sys.argv[3], "preregistration": sys.argv[4], "note": sys.argv[5], "repos": ctx.get("repos", {}), "tools": ctx.get("tools", {}),
        "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
        "results": lines}
 json.dump(doc, open(sys.argv[2], "w"), indent=2, sort_keys=True); open(sys.argv[2], "a").write("\n")
 PY
 }
-rec() { # id status command exit evidence
+rec() { # id status command exit evidence [duration_s] [reason]
   python3 -c 'import json,sys
-print(json.dumps({"id":sys.argv[1],"status":sys.argv[2],"command":sys.argv[3],"exit_code":int(sys.argv[4]),"evidence":sys.argv[5]}))' "$@" >>"$lines"
+a=sys.argv
+print(json.dumps({"id":a[1],"status":a[2],"command":a[3],"exit_code":int(a[4]),"evidence":a[5],"duration_s":float(a[6]) if len(a)>6 else 0.0,"reason":a[7] if len(a)>7 else ""}))' "$@" >>"$lines"
 }
 lines=$(mktemp "${TMPDIR:-/tmp}/fde-proof.XXXXXX"); trap 'rm -f "$lines"' EXIT INT TERM
 
@@ -87,18 +94,29 @@ if [ -n "$only" ]; then
   ids=$only
 fi
 
+# Episode cell: --run-episodes performs the whole real run first (scripts/fde-s1-run.sh); otherwise the
+# latest cell (FDE_S1_CELL, else ~/projects/_wt/tmp/fde-s1/latest) is used. No cell: dependent tests are PARTIAL/NOT_RUN.
+if [ -n "$run_eps" ]; then
+  echo "== episodes: scripts/fde-s1-run.sh"
+  FDE_S1_CELL=$(scripts/fde-s1-run.sh | tail -1) || echo "fde-proof: episode run did not complete (see its log)" >&2
+fi
+FDE_S1_CELL=${FDE_S1_CELL:-$(readlink -f "$HOME/projects/_wt/tmp/fde-s1/latest" 2>/dev/null || true)}
+export FDE_S1_CELL
 all_pass=1
 for id in $ids; do
   d=scripts/fde-proof.d/$id.sh
   cmd="scripts/fde-proof.sh --slice $slice --only $id"
   if [ -x "$d" ]; then
     log=$out/$id.log
+    t0=$(date +%s.%N)
     set +e; "$d" >"$log" 2>&1; code=$?; set -e
-    case "$code" in 0) st=PASS;; 10) st=PARTIAL;; 11) st=NOT_TESTED;; *) st=FAIL;; esac
-    rec "$id" "$st" "$d" "$code" "${log#"$root"/}"
+    dur=$(python3 -c "import sys;print(round(float(sys.argv[1])-float(sys.argv[2]),2))" "$(date +%s.%N)" "$t0")
+    case "$code" in 0) st=PASS;; 10) st=PARTIAL;; 11) st=NOT_TESTED;; 12) st=NOT_RUN;; *) st=FAIL;; esac
+    reason=$(sed -n 's/^REASON: //p' "$log" | tail -1)
+    rec "$id" "$st" "$cmd" "$code" "${log#"$root"/}" "$dur" "$reason"
   else
     st=NOT_RUN; code=0
-    rec "$id" NOT_RUN "$cmd" 0 ""
+    rec "$id" NOT_RUN "$cmd" 0 "" 0 "no scripts/fde-proof.d/$id.sh"
   fi
   [ "$st" = PASS ] || all_pass=0
   printf '%-8s %s\n' "$id" "$st"
