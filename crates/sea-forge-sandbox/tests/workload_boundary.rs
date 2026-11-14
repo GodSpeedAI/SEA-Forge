@@ -267,8 +267,14 @@ fn launcher_fixture_child() {
     // A failure prints the helper's captured stderr (its only voice — the
     // launch itself runs with null stdio).
     wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT).unwrap_or_else(|error| {
+        // The chain closed the pipe without a byte: collect how it ended (a
+        // signal here names a kill that leaves no stderr), bounded.
+        let ended = wait_until_exit(&mut child);
         let captured = fs::read_to_string(&stderr_path).unwrap_or_default();
-        panic!("isolated launch acknowledged its setup: {error}; helper stderr: {captured:?}");
+        panic!(
+            "isolated launch acknowledged its setup: {error}; launch chain ended: {ended}; \
+             helper stderr: {captured:?}"
+        );
     });
     wait_until("workload ready", || ready.exists());
     fs::write(
@@ -280,6 +286,24 @@ fn launcher_fixture_child() {
     // Killed here by the test; the wait only runs if nobody does.
     std::thread::sleep(Duration::from_secs(600));
     let _ = child.wait();
+}
+
+/// How a launch chain ended, waiting at most 5 s: its exit code or signal.
+fn wait_until_exit(child: &mut Child) -> String {
+    use std::os::unix::process::ExitStatusExt;
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                return format!("code {:?}, signal {:?}", status.code(), status.signal())
+            }
+            Ok(None) if start.elapsed() < Duration::from_secs(5) => {
+                std::thread::sleep(Duration::from_millis(50))
+            }
+            Ok(None) => return "still running after 5s".into(),
+            Err(error) => return format!("wait failed: {error}"),
+        }
+    }
 }
 
 /// A traversable directory for one launch: a reissued slot must not meet

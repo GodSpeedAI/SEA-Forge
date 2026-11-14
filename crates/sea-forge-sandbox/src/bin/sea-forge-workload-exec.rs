@@ -34,6 +34,13 @@ fn main() {
     unsafe {
         libc::syscall(libc::SYS_close_range, 3u32, u32::MAX, 4u32); // CLOSE_RANGE_CLOEXEC
     }
+    if std::env::var_os("SEA_FORGE_SOCKET_SUPERVISOR_DEBUG").is_some() {
+        eprintln!(
+            "[workload-exec] start uid={} gid={}",
+            rustix::process::getuid().as_raw(),
+            rustix::process::getgid().as_raw()
+        );
+    }
 
     fn fail(message: &str) -> ! {
         eprintln!("sea-forge-workload-exec: {message}");
