@@ -621,9 +621,9 @@ dependencies = [
 
 [[package]]
 name = "domainforge-core"
-version = "0.21.2"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1eab0724b50a17904dc66eeb0d6770da0dd872851e34996cf758060e89142835"
+checksum = "fd2563041989417e6a97bc3dd26e5bab23680099bdf43301c3708047e05808ff"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

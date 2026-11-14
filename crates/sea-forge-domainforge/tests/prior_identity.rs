@@ -25,11 +25,11 @@ fn current(src: &str) -> (WorldRegistry, String) {
 }
 
 #[test]
-fn the_0_21_0_fixture_mints_the_recorded_prior_ref_and_the_0_21_2_build_mints_the_current_one() {
+fn the_0_21_0_fixture_mints_the_recorded_prior_ref_and_the_0_22_0_build_mints_the_current_one() {
     let (mut reg, now) = current(SRC);
     assert_eq!(
         now,
-        "world:demo@sha256:7ddedbcee1a7031c5af7b5ecd54d2eb3298f4d6149c0eb88fd2db191323351d3"
+        "world:demo@sha256:469e93b20c5181b97f19e3e4ae1fa7b22a530bc33e10db7a2558f082d90c88c0"
     );
     let prior = reg
         .register_prior_identity_json("demo", FIXTURE_0_21_0)
