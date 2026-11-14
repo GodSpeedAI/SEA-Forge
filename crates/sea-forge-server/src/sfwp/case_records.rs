@@ -189,24 +189,90 @@ pub trait AnchorPublisher {
     fn publish(&self, kind: &str, id: &str, digest: &str) -> Result<Value, String>;
 }
 
-/// Runs `scripts/fde-anchor.sh publish <kind> <id> <digest> --push`. Only built
-/// when the operator configures a script path: pushing a tag is an external,
+/// Runs `scripts/fde-anchor.sh publish <kind> <id> <digest> --push` with a
+/// bounded run time (the child is killed at the deadline). Only built when the
+/// operator configures a script path: pushing a tag is an external,
 /// irreversible effect.
-pub struct ScriptPublisher(pub PathBuf);
+///
+/// The receipt is what the script actually prints (`tag_object_id <oid>`) plus
+/// the tag name. The remote server's push time is NOT obtainable from a plain
+/// `git push`, so the receipt carries the local clock at push return as
+/// `local_push_time` with `time_source: "local_clock"`; the verifier reports
+/// that as [`AnchorOrder::AnchorTimeLocalOnly`], never as externally verified.
+pub struct ScriptPublisher(pub PathBuf, pub std::time::Duration);
+
+/// Default bound on one publish.
+pub const ANCHOR_PUBLISH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
 impl AnchorPublisher for ScriptPublisher {
     fn publish(&self, kind: &str, id: &str, digest: &str) -> Result<Value, String> {
-        let out = std::process::Command::new(&self.0)
+        use std::io::Read;
+        use std::process::Stdio;
+        let mut child = std::process::Command::new(&self.0)
             .args(["publish", kind, id, digest, "--push"])
-            .output()
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
             .map_err(|e| e.to_string())?;
-        if out.status.success() {
-            Ok(json!({"script": self.0.display().to_string(),
-                      "stdout": String::from_utf8_lossy(&out.stdout).trim()}))
-        } else {
-            Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        let deadline = std::time::Instant::now() + self.1;
+        let status = loop {
+            match child.try_wait().map_err(|e| e.to_string())? {
+                Some(status) => break status,
+                None if std::time::Instant::now() >= deadline => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(format!("anchor publish timed out after {:?}", self.1));
+                }
+                None => std::thread::sleep(std::time::Duration::from_millis(25)),
+            }
+        };
+        let mut stdout = String::new();
+        let mut stderr = String::new();
+        if let Some(mut o) = child.stdout.take() {
+            let _ = o.read_to_string(&mut stdout);
         }
+        if let Some(mut e) = child.stderr.take() {
+            let _ = e.read_to_string(&mut stderr);
+        }
+        if !status.success() {
+            return Err(stderr.trim().to_string());
+        }
+        let oid = stdout
+            .lines()
+            .find_map(|l| l.strip_prefix("tag_object_id "))
+            .map(str::trim)
+            .filter(|o| matches!(o.len(), 40 | 64) && o.bytes().all(|b| b.is_ascii_hexdigit()))
+            .ok_or("the publish script printed no tag_object_id")?
+            .to_string();
+        Ok(json!({"script": self.0.display().to_string(),
+                  "tag": format!("fde-anchor/{kind}/{id}"), "tag_object_id": oid,
+                  "stdout": stdout.trim(), "local_push_time": now_rfc3339(),
+                  "time_source": "local_clock"}))
     }
+}
+
+/// Stands in for the real publisher inside the case lock: the push itself runs
+/// after the lock is released ([`anchor_work`], [`record_anchor_receipt`]), so
+/// an inline attempt only leaves the outbox entry pending.
+pub struct DeferredPublisher;
+
+impl AnchorPublisher for DeferredPublisher {
+    fn publish(&self, _: &str, _: &str, _: &str) -> Result<Value, String> {
+        Err("anchor delivery is deferred until the case lock is released".into())
+    }
+}
+
+/// The script publisher configured by `SEA_FORGE_FDE_ANCHOR_SCRIPT` (and
+/// `SEA_FORGE_FDE_ANCHOR_TIMEOUT_SECS`), when set.
+pub fn configured_publisher() -> Option<ScriptPublisher> {
+    let script = std::env::var_os("SEA_FORGE_FDE_ANCHOR_SCRIPT")?;
+    let timeout = std::env::var("SEA_FORGE_FDE_ANCHOR_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|s| (1..=600).contains(s))
+        .map_or(ANCHOR_PUBLISH_TIMEOUT, std::time::Duration::from_secs);
+    Some(ScriptPublisher(PathBuf::from(script), timeout))
 }
 
 /// Everything one append needs besides the request.
@@ -1117,50 +1183,98 @@ pub fn require_complete_freeze(
     }
 }
 
+/// What a passing order check established about the anchor's time.
+#[derive(Debug, PartialEq, Eq)]
+pub enum AnchorOrder {
+    /// The receipt carries the remote server's own push time.
+    ExternallyVerified,
+    /// The receipt's push time is the local clock at push return
+    /// (`anchor_time_local_only`): the tag exists, its time is not independent.
+    AnchorTimeLocalOnly,
+}
+
 /// NT-16 / AT-04 order check from the ledger side: the freeze's anchor must be
-/// published, and its server push time must be earlier than the first run
-/// record (the first case event naming the plan item). The push time is read
-/// from the publisher's receipt (`server_push_time`, RFC 3339); a ledger
-/// regenerated with the freeze inserted early still fails, because the anchor
-/// time is not ledger-controlled. `ANCHOR_PREDATES_FAILED` otherwise.
-pub fn verify_freeze_anchor(ctx: &AppendContext, plan_item_id: &str, n: u64) -> Result<(), Value> {
-    let fail = |why: &str| Err(refuse_anchor(why));
-    if integrity(ctx).is_err() {
-        return fail("case store integrity check failed");
+/// published with a receipt, and its push time must be earlier than the first
+/// run record (the first case event naming the plan item). Every failure is a
+/// distinct `state` under `ANCHOR_PREDATES_FAILED`: `store_integrity`,
+/// `no_freeze_record`, `anchor_absent`, `receipt_missing`, `malformed_run_event`,
+/// `no_run_events`, `push_not_before_first_run`. Nothing is `Ok` by default.
+pub fn verify_freeze_anchor(
+    ctx: &AppendContext,
+    plan_item_id: &str,
+    n: u64,
+) -> Result<AnchorOrder, Value> {
+    let fail = |state: &str, why: &str| Err(refuse_anchor(state, why));
+    if let Err(e) = integrity(ctx) {
+        return fail("store_integrity", &e);
     }
     let Some(frozen) = records(ctx).into_iter().find(|r| {
         r["kind"] == "episode.frozen" && r["episode_key"] == key_json(ctx.case_id, plan_item_id, n)
     }) else {
-        return fail("no freeze record");
+        return fail("no_freeze_record", "no freeze record");
     };
     let digest = frozen["digest"].as_str().unwrap_or("");
     let anchor = read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
         .into_iter()
         .find(|a| a["state"] == "published" && a["digest"] == digest);
     let Some(anchor) = anchor else {
-        return fail("anchor tag absent");
+        return fail("anchor_absent", "anchor tag absent");
     };
     let parse = |v: &Value| {
         v.as_str()
             .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
     };
-    let Some(pushed) = parse(&anchor["receipt"]["server_push_time"]) else {
-        return fail("receipt has no server push time");
+    let receipt = &anchor["receipt"];
+    let (pushed, order) = if let Some(t) = parse(&receipt["server_push_time"]) {
+        (t, AnchorOrder::ExternallyVerified)
+    } else if receipt["time_source"] == "local_clock" {
+        match parse(&receipt["local_push_time"]) {
+            Some(t) => (t, AnchorOrder::AnchorTimeLocalOnly),
+            None => return fail("receipt_missing", "receipt has no usable push time"),
+        }
+    } else {
+        return fail("receipt_missing", "receipt has no push time");
     };
-    let first_run = read_lines(&case_dir(ctx.root, ctx.case_id).join("case-events.jsonl"))
-        .iter()
-        .filter(|e| e["plan_item_id"] == plan_item_id)
-        .filter_map(|e| parse(&e["timestamp"]))
-        .min();
+    let events = match read_lines_strict(&case_dir(ctx.root, ctx.case_id).join("case-events.jsonl"))
+    {
+        Ok(e) => e,
+        Err(e) => return fail("malformed_run_event", &e),
+    };
+    let mut first_run: Option<chrono::DateTime<chrono::FixedOffset>> = None;
+    for event in &events {
+        match &event["plan_item_id"] {
+            Value::Null => {}
+            Value::String(item) if item != plan_item_id => {}
+            Value::String(_) => match parse(&event["timestamp"]) {
+                Some(t) => first_run = Some(first_run.map_or(t, |f| f.min(t))),
+                None => {
+                    return fail(
+                        "malformed_run_event",
+                        "a run event for the item has no usable timestamp",
+                    )
+                }
+            },
+            _ => {
+                return fail(
+                    "malformed_run_event",
+                    "a run event's plan_item_id is not a string",
+                )
+            }
+        }
+    }
     match first_run {
-        Some(run) if pushed >= run => fail("anchor push time is not before the first run record"),
-        _ => Ok(()),
+        None => fail("no_run_events", "no run event names the plan item"),
+        Some(run) if pushed >= run => fail(
+            "push_not_before_first_run",
+            "anchor push time is not before the first run record",
+        ),
+        Some(_) => Ok(order),
     }
 }
 
-fn refuse_anchor(why: &str) -> Value {
+fn refuse_anchor(state: &str, why: &str) -> Value {
     // anchor.v1 error table, not the case.record.append enum.
-    json!({"outcome": "refused", "code": "ANCHOR_PREDATES_FAILED", "message": why})
+    json!({"outcome": "refused", "code": "ANCHOR_PREDATES_FAILED", "state": state, "message": why})
 }
 
 /// Outcome of [`recover`] for one case.
@@ -1174,6 +1288,10 @@ pub struct Recovered {
 /// records exist and whose digest still matches, otherwise mark it
 /// `abandoned` (nothing is deleted; the next freeze allocates `n+1`).
 /// Idempotent. Then retries pending anchors when a publisher is supplied.
+///
+/// The caller MUST hold the case's lock (a recovery interleaved with an append
+/// would race on `seq` and the outbox files); the server entry point that
+/// does so is `recover_field_case` in `lib.rs`.
 pub fn recover(ctx: &AppendContext) -> Recovered {
     let mut out = Recovered::default();
     if integrity(ctx).is_err() {
@@ -1209,43 +1327,119 @@ pub fn recover(ctx: &AppendContext) -> Recovered {
     out
 }
 
-/// Publish every pending anchor whose freeze record is committed. A failure
-/// leaves the entry pending (retried by the next call); it never touches the
-/// case record.
-pub fn deliver_anchors(ctx: &AppendContext, publisher: &dyn AnchorPublisher) -> usize {
-    let dir = case_dir(ctx.root, ctx.case_id);
+/// The pending anchors whose freeze record is committed and that are not yet
+/// published. Read-only; the caller publishes them without holding the case
+/// lock, then records each receipt with [`record_anchor_receipt`].
+pub fn anchor_work(ctx: &AppendContext) -> Vec<Value> {
     if integrity(ctx).is_err() {
-        return 0;
+        return Vec::new();
     }
     let committed: BTreeSet<String> = records(ctx)
         .iter()
         .filter(|r| r["kind"] == "episode.frozen")
         .filter_map(|r| r["digest"].as_str().map(String::from))
         .collect();
-    let lines = read_lines(&dir.join(ANCHOR_OUTBOX));
+    let lines = read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX));
     let published: BTreeSet<String> = lines
         .iter()
         .filter(|a| a["state"] == "published")
         .filter_map(|a| a["id"].as_str().map(String::from))
         .collect();
+    let mut seen = BTreeSet::new();
+    lines
+        .iter()
+        .filter(|a| a["state"] == "pending")
+        .filter(|a| match (a["id"].as_str(), a["digest"].as_str()) {
+            (Some(id), Some(digest)) => {
+                !published.contains(id) && committed.contains(digest) && seen.insert(id.to_string())
+            }
+            _ => false,
+        })
+        .cloned()
+        .collect()
+}
+
+/// Record a publisher receipt for `entry` (call under the case lock). A
+/// no-op when the entry was published meanwhile.
+pub fn record_anchor_receipt(
+    ctx: &AppendContext,
+    entry: &Value,
+    receipt: Value,
+) -> Result<bool, String> {
+    integrity(ctx)?;
+    let path = case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX);
+    let id = entry["id"].as_str().unwrap_or("");
+    if read_lines(&path)
+        .iter()
+        .any(|a| a["state"] == "published" && a["id"] == id)
+    {
+        return Ok(false);
+    }
+    let mut done = entry.clone();
+    done["state"] = json!("published");
+    done["receipt"] = receipt;
+    append_line(&path, &done)?;
+    Ok(true)
+}
+
+/// Publish every pending anchor whose freeze record is committed, in the
+/// caller's thread (so under whatever lock the caller holds; each publish is
+/// bounded by the publisher's own timeout). A failure leaves the entry
+/// pending (retried by the next call); it never touches the case record.
+pub fn deliver_anchors(ctx: &AppendContext, publisher: &dyn AnchorPublisher) -> usize {
     let mut sent = 0;
-    for entry in lines.iter().filter(|a| a["state"] == "pending") {
+    for entry in anchor_work(ctx) {
         let (Some(id), Some(digest)) = (entry["id"].as_str(), entry["digest"].as_str()) else {
             continue;
         };
-        if published.contains(id) || !committed.contains(digest) {
-            continue;
-        }
         if let Ok(receipt) = publisher.publish("freeze", id, digest) {
-            let mut done = entry.clone();
-            done["state"] = json!("published");
-            done["receipt"] = receipt;
-            if append_line(&dir.join(ANCHOR_OUTBOX), &done).is_ok() {
+            if record_anchor_receipt(ctx, &entry, receipt) == Ok(true) {
                 sent += 1;
             }
         }
     }
     sent
+}
+
+fn with_store_ctx<T>(root: &Path, case_id: &str, f: impl FnOnce(&AppendContext) -> T) -> T {
+    let index = FileIndex(root.to_path_buf());
+    f(&AppendContext {
+        root,
+        case_id,
+        principal: "anchor-delivery",
+        role: "service",
+        chain: &[],
+        rt: &index,
+        anchor: None,
+    })
+}
+
+/// [`anchor_work`] for a case, without a request context.
+pub fn anchor_work_for(root: &Path, case_id: &str) -> Vec<Value> {
+    if !valid_case_segment(case_id) {
+        return Vec::new();
+    }
+    with_store_ctx(root, case_id, anchor_work)
+}
+
+/// [`record_anchor_receipt`] for a case; call under the case lock.
+pub fn record_anchor_receipt_for(
+    root: &Path,
+    case_id: &str,
+    entry: &Value,
+    receipt: Value,
+) -> Result<bool, String> {
+    with_store_ctx(root, case_id, |ctx| {
+        record_anchor_receipt(ctx, entry, receipt)
+    })
+}
+
+/// [`recover`] for a case without a request context; call under the case lock.
+pub fn recover_for(root: &Path, case_id: &str) -> Recovered {
+    if !valid_case_segment(case_id) {
+        return Recovered::default();
+    }
+    with_store_ctx(root, case_id, recover)
 }
 
 /// The wire-level helper the SFWP verb uses: build the context from server state.
@@ -1269,8 +1463,9 @@ pub fn run_verb(
     request.insert("payload".into(), payload);
     request.insert("idempotency_key".into(), idempotency_key);
     let index = FileIndex(root.to_path_buf());
-    let script =
-        std::env::var_os("SEA_FORGE_FDE_ANCHOR_SCRIPT").map(|p| ScriptPublisher(PathBuf::from(p)));
+    // Inside the case lock the configured publisher is only a marker that an
+    // anchor is required; the push runs after the lock is released.
+    let script = configured_publisher().map(|_| DeferredPublisher);
     // `chain` is the delegation chain the identity gate established for this
     // request, root first, ending at the principal; it never defaults to a
     // caller-chosen value. An empty one is completed with the principal alone.

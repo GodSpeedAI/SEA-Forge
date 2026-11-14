@@ -2796,6 +2796,66 @@ pub async fn handle_request(request: Request, state: &Arc<ServerState>) -> serde
 /// Those callers get `None` and the behaviour they always had; a socket request
 /// carries the verified actor — id *and* role — through to the records it
 /// produces.
+/// Push the freeze anchors a case owes (WP-14, F5). The push is an external
+/// process bounded by its own timeout and runs OUTSIDE the case lock; only the
+/// receipt append takes the lock, and it re-checks that the entry is still
+/// unpublished. A failed or timed-out push leaves the entry pending for the
+/// next pass; it never changes a case write's response.
+async fn deliver_field_anchors(state: &Arc<ServerState>, case_id: &str) {
+    if sfwp::case_records::configured_publisher().is_none() {
+        return;
+    }
+    let (root, case) = (state.root.clone(), case_id.to_string());
+    let work = {
+        let (r, c) = (root.clone(), case.clone());
+        tokio::task::spawn_blocking(move || sfwp::case_records::anchor_work_for(&r, &c))
+            .await
+            .unwrap_or_default()
+    };
+    for entry in work {
+        let (Some(id), Some(digest)) = (
+            entry["id"].as_str().map(str::to_string),
+            entry["digest"].as_str().map(str::to_string),
+        ) else {
+            continue;
+        };
+        let receipt = tokio::task::spawn_blocking(move || {
+            sfwp::case_records::configured_publisher()
+                .ok_or_else(|| "no anchor publisher configured".to_string())
+                .and_then(|p| {
+                    sfwp::case_records::AnchorPublisher::publish(&p, "freeze", &id, &digest)
+                })
+        })
+        .await;
+        let Ok(Ok(receipt)) = receipt else { continue };
+        let lock = state.acquire_case_lock(case_id).await;
+        let (r, c) = (root.clone(), case.clone());
+        let _ = tokio::task::spawn_blocking(move || {
+            sfwp::case_records::record_anchor_receipt_for(&r, &c, &entry, receipt)
+        })
+        .await;
+        drop(lock);
+        state.prune_case_lock(case_id).await;
+    }
+}
+
+/// E §11 "Partial freeze": complete or abandon a case's prepared freezes under
+/// the case lock (F9). The kernel's `recover` interleaved with an append would
+/// race on `seq` and the outbox files, so the server entry point is this one.
+pub async fn recover_field_case(
+    state: &Arc<ServerState>,
+    case_id: &str,
+) -> sfwp::case_records::Recovered {
+    let lock = state.acquire_case_lock(case_id).await;
+    let (root, case) = (state.root.clone(), case_id.to_string());
+    let out = tokio::task::spawn_blocking(move || sfwp::case_records::recover_for(&root, &case))
+        .await
+        .unwrap_or_default();
+    drop(lock);
+    state.prune_case_lock(case_id).await;
+    out
+}
+
 pub async fn handle_request_as(
     request: Request,
     state: &Arc<ServerState>,
@@ -3692,6 +3752,8 @@ pub async fn handle_request_as(
                 .await;
                 drop(case_lock);
                 state.prune_case_lock(&case_id).await;
+                // Owed anchors are pushed with the case lock released.
+                deliver_field_anchors(state, &case_id).await;
                 match result {
                     Ok(Ok(value)) => value,
                     Ok(Err(error)) => forge_error_response(&error),

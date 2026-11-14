@@ -12,8 +12,8 @@
 
 use sea_forge_server::sfwp::case_records::{
     append, append_faulted, deliver_anchors, freeze_status, recover, require_complete_freeze,
-    vendored_schemas, verify_freeze_anchor, AnchorPublisher, AppendContext, CrashInjected, Fault,
-    FileIndex, FreezeStatus, Recovered,
+    vendored_schemas, verify_freeze_anchor, AnchorOrder, AnchorPublisher, AppendContext,
+    CrashInjected, Fault, FileIndex, FreezeStatus, Recovered, ScriptPublisher,
 };
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -756,7 +756,10 @@ fn at_04_freeze_is_complete_only_with_record_realitytrace_and_anchor_and_precede
     let c = ctx(root.path(), "case-keeper", &chain, &idx);
     assert_eq!(freeze_status(&c, &item, 1), FreezeStatus::Complete);
     assert_eq!(require_complete_freeze(&c, &item, 1), Ok(()));
-    assert_eq!(verify_freeze_anchor(&c, &item, 1), Ok(()));
+    assert_eq!(
+        verify_freeze_anchor(&c, &item, 1),
+        Ok(AnchorOrder::ExternallyVerified)
+    );
     // freeze order in the ledger: the freeze record is the first record of the case
     let first =
         fs::read_to_string(root.path().join("cases/case-0001/field-records.jsonl")).unwrap();
@@ -1212,4 +1215,152 @@ async fn f7_production_entry_point_enforces_i_2_and_fails_closed_on_identity_les
     assert_eq!(out["outcome"], "refused", "{out}");
     assert_ne!(code(&out), "SELF_SETTLEMENT_REFUSED", "{out}");
     let _ = std::fs::remove_file(&socket);
+}
+
+// ---------------------------------------------------------------------------
+// Review fixes: F5 (anchor receipt shape, explicit states, bounded publish)
+// ---------------------------------------------------------------------------
+
+#[cfg(unix)]
+fn fake_script(dir: &Path, body: &str) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let path = dir.join("fde-anchor.sh");
+    fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+    path
+}
+
+fn anchor_state(out: &Result<AnchorOrder, Value>) -> String {
+    out.as_ref()
+        .err()
+        .map(|e| e["state"].as_str().unwrap_or("").to_string())
+        .unwrap_or_default()
+}
+
+#[cfg(unix)]
+#[test]
+fn f5_what_the_script_prints_verifies_and_is_reported_local_time_only() {
+    let root = cell();
+    let tools = tempfile::tempdir().unwrap();
+    let script = fake_script(
+        tools.path(),
+        "echo \"created fde-anchor/freeze/x on abc1234 (digest d)\"\necho \"tag_object_id 0123456789abcdef0123456789abcdef01234567\"\necho \"pushed fde-anchor/freeze/x\"",
+    );
+    let publisher = ScriptPublisher(script, std::time::Duration::from_secs(10));
+    let request = frozen_request();
+    rt_register_for(root.path(), &request);
+    let idx = FileIndex(root.path().to_path_buf());
+    let chain = vec!["case-keeper".to_string()];
+    let c = AppendContext {
+        root: root.path(),
+        case_id: "case-0001",
+        principal: "case-keeper",
+        role: "operator",
+        chain: &chain,
+        rt: &idx,
+        anchor: Some(&publisher),
+    };
+    assert_eq!(append(&c, &request)["outcome"], "recorded");
+    let item = "item-03";
+    assert_eq!(freeze_status(&c, item, 1), FreezeStatus::Complete);
+    write_event(
+        root.path(),
+        item,
+        "agent:builder-01",
+        "2099-01-01T00:00:00Z",
+    );
+    assert_eq!(
+        verify_freeze_anchor(&c, item, 1),
+        Ok(AnchorOrder::AnchorTimeLocalOnly),
+        "a local-clock push time is never reported as externally verified"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn f5_a_script_without_a_tag_object_id_or_that_hangs_publishes_nothing() {
+    let tools = tempfile::tempdir().unwrap();
+    let silent = ScriptPublisher(
+        fake_script(tools.path(), "echo pushed"),
+        std::time::Duration::from_secs(10),
+    );
+    assert!(silent.publish("freeze", "a1", &"0".repeat(64)).is_err());
+    let tools2 = tempfile::tempdir().unwrap();
+    let hang = ScriptPublisher(
+        fake_script(tools2.path(), "sleep 30"),
+        std::time::Duration::from_millis(500),
+    );
+    let started = std::time::Instant::now();
+    let out = hang.publish("freeze", "a1", &"0".repeat(64));
+    assert!(out.unwrap_err().contains("timed out"));
+    assert!(started.elapsed() < std::time::Duration::from_secs(10));
+}
+
+#[test]
+fn f5_each_failure_of_the_order_check_is_a_distinct_state() {
+    let chain = vec!["case-keeper".to_string()];
+    // no run events
+    let root = cell();
+    let (_, item) = anchored_freeze(root.path(), "2026-11-12T09:00:00Z");
+    let idx = FileIndex(root.path().to_path_buf());
+    let c = ctx(root.path(), "case-keeper", &chain, &idx);
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c, &item, 1)),
+        "no_run_events"
+    );
+    // a run event without a usable timestamp
+    let events = root.path().join("cases/case-0001/case-events.jsonl");
+    fs::write(
+        &events,
+        format!("{}\n", json!({"plan_item_id": item, "actor_id": "a"})),
+    )
+    .unwrap();
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c, &item, 1)),
+        "malformed_run_event"
+    );
+    // a corrupt events line
+    fs::write(&events, "garbage\n").unwrap();
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c, &item, 1)),
+        "malformed_run_event"
+    );
+    // anchor absent (record only)
+    let root2 = cell();
+    let request = frozen_request();
+    rt_register_for(root2.path(), &request);
+    let idx2 = FileIndex(root2.path().to_path_buf());
+    let c2 = ctx(root2.path(), "case-keeper", &chain, &idx2);
+    append(&c2, &request);
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c2, &item, 1)),
+        "anchor_absent"
+    );
+    // receipt missing: published with no receipt
+    let root3 = cell();
+    rt_register_for(root3.path(), &request);
+    let idx3 = FileIndex(root3.path().to_path_buf());
+    let c3 = ctx(root3.path(), "case-keeper", &chain, &idx3);
+    append(&c3, &request);
+    let outbox = root3
+        .path()
+        .join("cases/case-0001/field-anchor-outbox.jsonl");
+    let mut entry: Value =
+        serde_json::from_str(fs::read_to_string(&outbox).unwrap().lines().next().unwrap()).unwrap();
+    entry["state"] = json!("published");
+    let mut text = fs::read_to_string(&outbox).unwrap();
+    text.push_str(&format!("{entry}\n"));
+    fs::write(&outbox, text).unwrap();
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c3, &item, 1)),
+        "receipt_missing"
+    );
+    // no freeze record
+    let root4 = cell();
+    let idx4 = FileIndex(root4.path().to_path_buf());
+    let c4 = ctx(root4.path(), "case-keeper", &chain, &idx4);
+    assert_eq!(
+        anchor_state(&verify_freeze_anchor(&c4, &item, 1)),
+        "no_freeze_record"
+    );
 }

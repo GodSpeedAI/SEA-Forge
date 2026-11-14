@@ -88,6 +88,7 @@ print(json.dumps({"tag": os.environ["TAG"], "kind": os.environ["KIND"], "id": os
 PY
   git tag -a "$tag" -F "$msg" HEAD
   echo "created $tag on $(git rev-parse --short HEAD) (digest $digest)"
+  echo "tag_object_id $(git rev-parse "refs/tags/$tag")"
   if [ "$push" -eq 1 ]; then
     git push origin "refs/tags/$tag:refs/tags/$tag"
     echo "pushed $tag"
