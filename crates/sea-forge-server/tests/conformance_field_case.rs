@@ -38,6 +38,8 @@ fn cell() -> tempfile::TempDir {
     let dir = root.path().join("cases/case-0001");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("case.json"), "{}").unwrap();
+    // A committed case has an event ledger; its absence is a refusal (F7).
+    fs::write(dir.join("case-events.jsonl"), "").unwrap();
     root
 }
 
@@ -306,6 +308,7 @@ fn response_and_error_fixtures_match_what_the_verb_emits_in_shape() {
 fn seed_ledger(root: &Path, scenario: &Value) {
     let request = &scenario["request"];
     let mut text = String::new();
+    let mut intents = String::new();
     for (i, entry) in scenario["ledger_before"]
         .as_array()
         .unwrap()
@@ -330,7 +333,8 @@ fn seed_ledger(root: &Path, scenario: &Value) {
         let mut record = json!({
             "seq": i + 1, "record_id": rec_id, "kind": entry["kind"], "idempotency_key": key,
             "body_digest": body_digest, "episode_key": entry["episode_key"], "digest": entry["digest"],
-            "principal": "case-keeper", "payload": {},
+            "principal": "case-keeper",
+            "payload": {"realitytrace_refs": {"plan_id": "plan:seed", "question_ids": [], "threshold_ids": []}},
             "response": {"outcome": "recorded", "kind": entry["kind"], "record_id": rec_id,
                          "episode_key": entry["episode_key"], "replayed": false},
             "prev_hash": "0", "hash": "0",
@@ -339,8 +343,22 @@ fn seed_ledger(root: &Path, scenario: &Value) {
             record["episode_kind"] = kind.clone();
         }
         text.push_str(&format!("{record}\n"));
+        if entry["kind"] == "episode.frozen" {
+            // A seeded freeze is a complete one: committed intent, RT plan.
+            intents.push_str(&format!(
+                "{}\n",
+                json!({"idempotency_key": key, "state": "committed", "episode_key": entry["episode_key"],
+                       "body_digest": record["body_digest"], "digest": entry["digest"], "payload": record["payload"]})
+            ));
+        }
     }
+    rt_register(root, &["plan:seed"]);
     fs::write(root.join("cases/case-0001/field-records.jsonl"), text).unwrap();
+    fs::write(
+        root.join("cases/case-0001/field-freeze-intents.jsonl"),
+        intents,
+    )
+    .unwrap();
 }
 
 #[test]
@@ -937,4 +955,261 @@ fn f2_a_corrupt_complete_line_refuses_and_writes_nothing() {
         ) == FreezeStatus::Complete,
         false
     );
+}
+
+// ---------------------------------------------------------------------------
+// Review fixes: F1 (settlement needs a complete freeze), F6 (one settlement),
+// F7 (I-2 fails closed)
+// ---------------------------------------------------------------------------
+
+fn settle_request() -> Value {
+    fixture("valid/request-episode-settled.json")
+}
+
+#[test]
+fn f1_settlement_refuses_a_freeze_that_is_only_prepared_or_not_committed() {
+    for fault in [Fault::AfterPrepare, Fault::AfterRecord] {
+        let root = cell();
+        let freeze = frozen_request();
+        rt_register_for(root.path(), &freeze);
+        let idx = FileIndex(root.path().to_path_buf());
+        let chain = vec!["case-keeper".to_string()];
+        let c = ctx(root.path(), "case-keeper", &chain, &idx);
+        assert!(append_faulted(&c, &freeze, Some(fault)).is_err());
+        let out = run_as(root.path(), "agent:verifier", &settle_request());
+        assert_eq!(
+            (code(&out), out["invariant"].as_str()),
+            ("FREEZE_INCOMPLETE", Some("I-1")),
+            "{fault:?}: {out}"
+        );
+        assert!(
+            !fs::read_to_string(records_path(root.path()))
+                .unwrap_or_default()
+                .contains("episode.settled"),
+            "nothing is written by the refusal"
+        );
+        // Completing the freeze (replay) lets the settlement through.
+        assert_eq!(
+            run_as(root.path(), "case-keeper", &freeze)["outcome"],
+            "recorded"
+        );
+        assert_eq!(
+            run_as(root.path(), "agent:verifier", &settle_request())["outcome"],
+            "recorded"
+        );
+    }
+}
+
+#[test]
+fn f1_with_an_anchor_configured_settlement_needs_the_published_anchor() {
+    let root = cell();
+    let freeze = frozen_request();
+    rt_register_for(root.path(), &freeze);
+    let idx = FileIndex(root.path().to_path_buf());
+    let chain = vec!["agent:verifier".to_string()];
+    let failing = Failing;
+    let c = AppendContext {
+        root: root.path(),
+        case_id: "case-0001",
+        principal: "agent:verifier",
+        role: "operator",
+        chain: &chain,
+        rt: &idx,
+        anchor: Some(&failing),
+    };
+    assert_eq!(append(&c, &freeze)["outcome"], "recorded");
+    let out = append(&c, &settle_request());
+    assert_eq!(
+        (code(&out), out["invariant"].as_str()),
+        ("FREEZE_INCOMPLETE", Some("I-1")),
+        "{out}"
+    );
+    let ok = Published(json!({"server_push_time": "2026-11-12T09:00:00Z"}));
+    let c2 = AppendContext {
+        anchor: Some(&ok),
+        ..c
+    };
+    assert_eq!(deliver_anchors(&c2, &ok), 1);
+    assert_eq!(append(&c2, &settle_request())["outcome"], "recorded");
+}
+
+#[test]
+fn f6_a_second_settlement_under_another_key_is_refused_same_key_replays() {
+    let root = cell();
+    let freeze = frozen_request();
+    rt_register_for(root.path(), &freeze);
+    run_as(root.path(), "case-keeper", &freeze);
+    let first = run_as(root.path(), "agent:verifier", &settle_request());
+    assert_eq!(first["outcome"], "recorded", "{first}");
+    let mut second = settle_request();
+    second["idempotency_key"] = json!("verifier/rec-0200");
+    second["payload"]["result"] = json!("U");
+    let out = run_as(root.path(), "agent:verifier", &second);
+    assert_eq!(code(&out), "IDEMPOTENCY_CONFLICT", "{out}");
+    let settled = fs::read_to_string(records_path(root.path()))
+        .unwrap()
+        .lines()
+        .filter(|l| serde_json::from_str::<Value>(l).unwrap()["kind"] == "episode.settled")
+        .count();
+    assert_eq!(settled, 1, "only one settlement is stored");
+    let again = run_as(root.path(), "agent:verifier", &settle_request());
+    assert_eq!(again["replayed"], true);
+    assert_eq!(again["record_id"], first["record_id"]);
+}
+
+fn settle_after_freeze(root: &Path) -> Value {
+    let freeze = frozen_request();
+    rt_register_for(root, &freeze);
+    run_as(root, "case-keeper", &freeze);
+    run_as(root, "agent:verifier", &settle_request())
+}
+
+#[test]
+fn f7_missing_unreadable_or_identity_less_events_refuse_settlement() {
+    let item = "item-03";
+    let events = |root: &Path| root.join("cases/case-0001/case-events.jsonl");
+    // missing file
+    let root = cell();
+    fs::remove_file(events(root.path())).unwrap();
+    let out = settle_after_freeze(root.path());
+    assert_eq!(out["outcome"], "refused", "missing events: {out}");
+    // corrupt complete line
+    let root = cell();
+    fs::write(events(root.path()), "not json\n").unwrap();
+    assert_eq!(settle_after_freeze(root.path())["outcome"], "refused");
+    // event without actor_id
+    let root = cell();
+    fs::write(
+        events(root.path()),
+        format!(
+            "{}\n",
+            json!({"event_id": "e1", "plan_item_id": item, "timestamp": "2026-11-12T10:00:00Z"})
+        ),
+    )
+    .unwrap();
+    assert_eq!(settle_after_freeze(root.path())["outcome"], "refused");
+    // non-string plan_item_id
+    let root = cell();
+    fs::write(
+        events(root.path()),
+        format!(
+            "{}\n",
+            json!({"event_id": "e1", "plan_item_id": 7, "actor_id": "a"})
+        ),
+    )
+    .unwrap();
+    assert_eq!(settle_after_freeze(root.path())["outcome"], "refused");
+    // events with a case-level (null) item and an identity are fine
+    let root = cell();
+    fs::write(
+        events(root.path()),
+        format!(
+            "{}\n",
+            json!({"event_id": "e1", "plan_item_id": null, "actor_id": "a"})
+        ),
+    )
+    .unwrap();
+    assert_eq!(settle_after_freeze(root.path())["outcome"], "recorded");
+}
+
+#[test]
+fn f7_executor_spelling_variants_do_not_evade_i_2() {
+    let root = cell();
+    let freeze = frozen_request();
+    rt_register_for(root.path(), &freeze);
+    run_as(root.path(), "case-keeper", &freeze);
+    write_event(
+        root.path(),
+        "item-03",
+        "  Agent:Builder-01 ",
+        "2026-11-12T10:00:00Z",
+    );
+    let out = run_as(root.path(), "agent:builder-01", &settle_request());
+    assert_eq!(code(&out), "SELF_SETTLEMENT_REFUSED", "{out}");
+}
+
+#[test]
+fn f7_an_unverified_or_placeholder_principal_cannot_write() {
+    let root = cell();
+    let freeze = frozen_request();
+    rt_register_for(root.path(), &freeze);
+    for who in ["", "  ", "unknown", "none"] {
+        let out = run_as(root.path(), who, &freeze);
+        assert_eq!(out["outcome"], "refused", "{who:?}: {out}");
+    }
+    assert!(!records_path(root.path()).exists());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn f7_production_entry_point_enforces_i_2_and_fails_closed_on_identity_less_events() {
+    use sea_forge_server::identity::IdentityBindings;
+    use sea_forge_server::{run, ServerConfig};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixStream;
+
+    let root = cell();
+    let freeze = frozen_request();
+    rt_register_for(root.path(), &freeze);
+    let socket = std::env::temp_dir().join(format!("sf-wp14-i2-{}.sock", std::process::id()));
+    let config = ServerConfig {
+        socket_path: socket.clone(),
+        root: root.path().to_path_buf(),
+        identity: IdentityBindings::local_operator("operator_local"),
+        ..ServerConfig::default()
+    };
+    tokio::spawn(async move {
+        let _ = run(config).await;
+    });
+    for _ in 0..500 {
+        if socket.exists() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    let (reader, mut writer) = UnixStream::connect(&socket).await.unwrap().into_split();
+    let mut reader = BufReader::new(reader);
+    let mut n = 0;
+    let mut call = |req: Value| {
+        n += 1;
+        let frame = json!({"verb": "case_record_append", "case_id": "case-0001", "kind": req["kind"],
+               "payload": req["payload"], "idempotency_key": req["idempotency_key"],
+               "request_id": format!("req-{n}"), "actor": {"actor_id": "operator_local", "role": "operator"}});
+        (frame, ())
+    };
+    macro_rules! send {
+        ($req:expr) => {{
+            let (frame, _) = call($req);
+            writer
+                .write_all(format!("{frame}\n").as_bytes())
+                .await
+                .unwrap();
+            let mut out = String::new();
+            reader.read_line(&mut out).await.unwrap();
+            serde_json::from_str::<Value>(out.trim()).unwrap()
+        }};
+    }
+    assert_eq!(send!(freeze.clone())["outcome"], "recorded");
+    // The server's real chain for this request is [operator_local]; the
+    // executor of the item is the same identity, in another spelling.
+    write_event(
+        root.path(),
+        "item-03",
+        " Operator_Local",
+        "2026-11-12T10:00:00Z",
+    );
+    let out = send!(settle_request());
+    assert_eq!(code(&out), "SELF_SETTLEMENT_REFUSED", "{out}");
+    // An event without an actor refuses instead of being skipped.
+    fs::write(
+        root.path().join("cases/case-0001/case-events.jsonl"),
+        format!("{}\n", json!({"event_id": "e2", "plan_item_id": "item-03"})),
+    )
+    .unwrap();
+    let mut other = settle_request();
+    other["idempotency_key"] = json!("verifier/rec-0300");
+    let out = send!(other);
+    assert_eq!(out["outcome"], "refused", "{out}");
+    assert_ne!(code(&out), "SELF_SETTLEMENT_REFUSED", "{out}");
+    let _ = std::fs::remove_file(&socket);
 }

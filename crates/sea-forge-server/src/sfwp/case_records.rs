@@ -538,6 +538,19 @@ pub fn append_faulted(
     if let Err(e) = integrity(ctx) {
         return Ok(io_refusal(e));
     }
+    // Every write needs an authenticated principal (E §8: freeze is P1,
+    // settle is P2). The server passes an empty principal when the request
+    // carried no verified identity; the shared `operator_local` fallback is
+    // never invented here.
+    if canonical_actor(ctx.principal).is_err()
+        || ctx.chain.iter().any(|c| canonical_actor(c).is_err())
+    {
+        return Ok(refuse(
+            "SCHEMA_INVALID",
+            "the request carries no verified principal (or chain member)",
+            None,
+        ));
+    }
     let kind = request["kind"].as_str().unwrap_or("");
     let payload = &request["payload"];
     let key = request["idempotency_key"].as_str().unwrap_or("");
@@ -568,6 +581,19 @@ pub fn append_faulted(
     let records = records(ctx);
     if let Some(done) = records.iter().find(|r| r["idempotency_key"] == key) {
         if done["body_digest"] == body_digest.as_str() {
+            // A crash between the record and the committed mark leaves the
+            // intent `prepared`; the replay completes that second phase.
+            if done["kind"] == "episode.frozen" {
+                let pending = latest_intents(ctx)
+                    .into_iter()
+                    .find(|i| i["idempotency_key"] == key && i["state"] == "prepared");
+                if let Some(intent) = pending {
+                    let rec_id = done["record_id"].as_str().unwrap_or("");
+                    if let Err(e) = put_intent(ctx, "committed", &intent, Some(rec_id)) {
+                        return Ok(io_refusal(e));
+                    }
+                }
+            }
             let original = &done["response"];
             return Ok(response(
                 original["kind"].as_str().unwrap_or(kind),
@@ -825,6 +851,16 @@ fn enqueue_freeze_outbox(
     Ok(())
 }
 
+/// The repo's identity canonicalisation for actor strings
+/// (`governed_execution_boundary::check_identity_string`: trimmed, empty and
+/// placeholder spellings refused), compared case-insensitively. Case folding
+/// can only merge two spellings, so it can only add refusals, never miss one.
+/// (Unicode NFC is not applied: the crate has no normalisation dependency.)
+fn canonical_actor(raw: &str) -> Result<String, String> {
+    crate::governed_execution_boundary::check_identity_string("actor", raw)
+        .map(|t| t.to_lowercase())
+}
+
 fn settle(
     ctx: &AppendContext,
     payload: &Value,
@@ -837,7 +873,26 @@ fn settle(
         return refuse("SCHEMA_INVALID", "payload.episode_ref does not parse", None);
     };
     let episode_key = key_json(&case, &item, n);
-    // I-1: a settlement needs the freeze record.
+    // I-1: a settlement needs a COMPLETE freeze (both phases, the realitytrace
+    // records, and the anchor when an anchor publisher is configured), not
+    // merely a record.
+    match freeze_state(ctx, &item, n, ctx.anchor.is_some()) {
+        FreezeStatus::Complete => {}
+        FreezeStatus::Missing => {
+            return refuse(
+                "FREEZE_MISSING",
+                "no freeze record for the episode",
+                Some("I-1"),
+            )
+        }
+        FreezeStatus::Incomplete(parts) => {
+            return refuse(
+                "FREEZE_INCOMPLETE",
+                &format!("freeze incomplete: missing {}", parts.join(", ")),
+                Some("I-1"),
+            )
+        }
+    }
     let Some(freeze) = records
         .iter()
         .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == episode_key)
@@ -871,13 +926,30 @@ fn settle(
             None,
         );
     }
+    // One settlement per episode key. The same idempotency key replays before
+    // this point; a different key for a settled episode is a conflict (the
+    // contract enum has no dedicated code; IDEMPOTENCY_CONFLICT is the closest).
+    if records
+        .iter()
+        .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == episode_key)
+    {
+        return refuse(
+            "IDEMPOTENCY_CONFLICT",
+            "the episode is already settled under another idempotency key",
+            None,
+        );
+    }
     // I-2: the settling principal's chain must not contain an executor of the item.
-    let executors = executors_of(ctx, &item);
+    let executors = match executors_of(ctx, &item) {
+        Ok(e) => e,
+        Err(why) => return io_refusal(why),
+    };
     let contained = ctx
         .chain
         .iter()
         .chain(std::iter::once(&ctx.principal.to_string()))
-        .any(|c| executors.contains(c));
+        .filter_map(|c| canonical_actor(c).ok())
+        .any(|c| executors.contains(&c));
     let decision =
         match record_decision(ctx, key, body_digest, &episode_key, !contained, &executors) {
             Ok(d) => d,
@@ -910,15 +982,41 @@ fn settle(
     }
 }
 
-/// Execution identities for a plan item: the actor of every case event that
-/// names it, plus actors recorded on freeze records' executors. These are
-/// SEA-Forge actor ids; the verb never trusts a caller-supplied tag.
-fn executors_of(ctx: &AppendContext, plan_item_id: &str) -> BTreeSet<String> {
-    read_lines(&case_dir(ctx.root, ctx.case_id).join("case-events.jsonl"))
-        .iter()
-        .filter(|e| e["plan_item_id"] == plan_item_id)
-        .filter_map(|e| e["actor_id"].as_str().map(String::from))
-        .collect()
+/// Canonical execution identities for a plan item: the actor of every case
+/// event that names it. Fails closed: an unreadable or missing events file, an
+/// unparseable event line, or an event without a usable `actor_id` (or with a
+/// non-string `plan_item_id`) is an error, never an empty executor set. An
+/// event with `plan_item_id: null` is a case-level event (`TraceEvent`'s
+/// `plan_item_id` is optional) and names no item.
+fn executors_of(ctx: &AppendContext, plan_item_id: &str) -> Result<BTreeSet<String>, String> {
+    let path = case_dir(ctx.root, ctx.case_id).join("case-events.jsonl");
+    if !path.exists() {
+        return Err(format!(
+            "executor identities cannot be established: {} is missing",
+            path.display()
+        ));
+    }
+    let wanted = plan_item_id.trim().to_lowercase();
+    let mut out = BTreeSet::new();
+    for event in read_lines_strict(&path)? {
+        let actor = event["actor_id"]
+            .as_str()
+            .ok_or_else(|| format!("case event {} has no actor_id", event["event_id"]))
+            .and_then(|a| {
+                canonical_actor(a)
+                    .map_err(|_| "case event actor_id is empty or a placeholder".to_string())
+            })?;
+        match &event["plan_item_id"] {
+            Value::Null => {}
+            Value::String(item) => {
+                if item.trim().to_lowercase() == wanted {
+                    out.insert(actor);
+                }
+            }
+            other => return Err(format!("case event plan_item_id is not a string: {other}")),
+        }
+    }
+    Ok(out)
 }
 
 // ---------------------------------------------------------------------------
@@ -930,12 +1028,23 @@ fn executors_of(ctx: &AppendContext, plan_item_id: &str) -> BTreeSet<String> {
 pub enum FreezeStatus {
     /// No record and no intent.
     Missing,
-    /// Parts present but not all three: `case_record`, `realitytrace_records`, `anchor`.
+    /// Parts present but not all: `case_record`, `intent_committed`, `realitytrace_records`, `anchor`.
     Incomplete(Vec<&'static str>),
     Complete,
 }
 
 pub fn freeze_status(ctx: &AppendContext, plan_item_id: &str, n: u64) -> FreezeStatus {
+    freeze_state(ctx, plan_item_id, n, true)
+}
+
+/// [`freeze_status`] with the anchor requirement chosen by the caller:
+/// settlement requires the anchor only when a publisher is configured.
+fn freeze_state(
+    ctx: &AppendContext,
+    plan_item_id: &str,
+    n: u64,
+    require_anchor: bool,
+) -> FreezeStatus {
     if integrity(ctx).is_err() {
         return FreezeStatus::Incomplete(vec!["store_integrity"]);
     }
@@ -950,8 +1059,17 @@ pub fn freeze_status(ctx: &AppendContext, plan_item_id: &str, n: u64) -> FreezeS
         return FreezeStatus::Missing;
     };
     let mut missing = Vec::new();
-    if record.is_none() {
-        missing.push("case_record");
+    match &record {
+        None => missing.push("case_record"),
+        Some(r) => {
+            // Both phases: the intent for the record's key must be committed.
+            let committed = latest_intents(ctx)
+                .iter()
+                .any(|i| i["idempotency_key"] == r["idempotency_key"] && i["state"] == "committed");
+            if !committed {
+                missing.push("intent_committed");
+            }
+        }
     }
     let refs = &source["payload"]["realitytrace_refs"];
     let ids: Vec<&str> = std::iter::once(&refs["plan_id"])
@@ -966,7 +1084,7 @@ pub fn freeze_status(ctx: &AppendContext, plan_item_id: &str, n: u64) -> FreezeS
     let anchored = read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
         .iter()
         .any(|a| a["state"] == "published" && a["digest"] == digest);
-    if !anchored {
+    if require_anchor && !anchored {
         missing.push("anchor");
     }
     if missing.is_empty() {
@@ -1139,6 +1257,7 @@ pub fn run_verb(
     kind: Value,
     payload: Value,
     idempotency_key: Value,
+    chain: Vec<String>,
 ) -> Result<Value, sea_forge_core::errors::ForgeError> {
     if !valid_case_segment(case_id) || !case_dir(root, case_id).join("case.json").exists() {
         return Err(sea_forge_core::errors::ForgeError::Input(format!(
@@ -1152,7 +1271,13 @@ pub fn run_verb(
     let index = FileIndex(root.to_path_buf());
     let script =
         std::env::var_os("SEA_FORGE_FDE_ANCHOR_SCRIPT").map(|p| ScriptPublisher(PathBuf::from(p)));
-    let chain = vec![principal.to_string()];
+    // `chain` is the delegation chain the identity gate established for this
+    // request, root first, ending at the principal; it never defaults to a
+    // caller-chosen value. An empty one is completed with the principal alone.
+    let mut chain = chain;
+    if chain.last().map(String::as_str) != Some(principal) {
+        chain.push(principal.to_string());
+    }
     let ctx = AppendContext {
         root,
         case_id,

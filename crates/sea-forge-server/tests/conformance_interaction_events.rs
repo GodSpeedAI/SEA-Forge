@@ -27,6 +27,7 @@ fn cell() -> tempfile::TempDir {
     let dir = root.path().join("cases/case-0001");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("case.json"), "{}").unwrap();
+    fs::write(dir.join("case-events.jsonl"), "").unwrap();
     root
 }
 

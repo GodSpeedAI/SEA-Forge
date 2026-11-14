@@ -3658,7 +3658,17 @@ pub async fn handle_request_as(
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.record.append");
-            let principal = actor_id.unwrap_or("operator_local").to_string();
+            // No verified identity means no principal: the shared
+            // `operator_local` fallback is not an identity a settlement or a
+            // freeze can be attributed to (the kernel refuses an empty one).
+            let principal = actor_id.unwrap_or("").to_string();
+            // The delegation chain the gate established: the gateway that
+            // spoke for the end user (if any), then the end user.
+            let chain: Vec<String> = verified
+                .and_then(|actor| actor.delegation())
+                .map(|d| d.gateway_actor_id().to_string())
+                .into_iter()
+                .collect();
             let role = serde_json::to_value(&verified_role)
                 .ok()
                 .and_then(|v| v.as_str().map(String::from))
@@ -3676,6 +3686,7 @@ pub async fn handle_request_as(
                         kind,
                         payload,
                         idempotency_key,
+                        chain,
                     )
                 })
                 .await;
