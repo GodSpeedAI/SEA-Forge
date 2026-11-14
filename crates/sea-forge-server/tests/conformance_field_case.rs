@@ -950,13 +950,14 @@ fn f2_a_corrupt_complete_line_refuses_and_writes_nothing() {
         "{out}"
     );
     assert_eq!(snapshot(&dir), before, "a refused verb writes nothing");
-    assert_eq!(
+    assert_ne!(
         freeze_status(
             &ctx(root.path(), "x", &[], &FileIndex(root.path().into())),
             "item-03",
             1
-        ) == FreezeStatus::Complete,
-        false
+        ),
+        FreezeStatus::Complete,
+        "a store that fails its integrity check is never a complete freeze"
     );
 }
 
@@ -1363,4 +1364,24 @@ fn f5_each_failure_of_the_order_check_is_a_distinct_state() {
         anchor_state(&verify_freeze_anchor(&c4, &item, 1)),
         "no_freeze_record"
     );
+}
+
+#[test]
+fn f9_an_oversized_payload_is_refused_before_anything_is_written() {
+    let root = cell();
+    let mut request = frozen_request();
+    request["payload"]["realitytrace_refs"]["question_ids"] = json!((0..40_000)
+        .map(|i| format!("question:{i:08}"))
+        .collect::<Vec<_>>());
+    let out = run_as(root.path(), "case-keeper", &request);
+    assert_eq!(code(&out), "SCHEMA_INVALID", "{out}");
+    assert!(
+        out["message"].as_str().unwrap().contains("exceeds"),
+        "{out}"
+    );
+    assert!(!records_path(root.path()).exists());
+    assert!(!root
+        .path()
+        .join("cases/case-0001/field-freeze-intents.jsonl")
+        .exists());
 }

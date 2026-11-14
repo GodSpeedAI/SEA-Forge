@@ -28,6 +28,9 @@ use sea_forge_ledger::LedgerEntry;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, OnceLock};
 
 /// Ledger record kind of a pin.
 pub const PIN_KIND: &str = "world_pin";
@@ -36,10 +39,21 @@ pub const PIN_ATTEMPT_KIND: &str = "world_pin_attempt";
 /// Ledger record kind of an explicit non-promotion.
 pub const PIN_DECLINED_KIND: &str = "world_promotion_declined";
 
+/// Most refused attempts one caller has retained per hour (F10).
+pub const ATTEMPTS_PER_ACTOR_PER_HOUR: usize = 50;
+
 /// The claim key a promotion's escalation request must carry: the proposal
 /// digest (`sha256:<hex>`). Recorded with the decision; the approval is then
 /// bound to it.
 pub const CLAIM_PROPOSAL_DIGEST: &str = "proposal_digest";
+/// The claim key a promotion's escalation request must also carry: the
+/// `matrix_id` (`matrix:<hex>`) of the regression matrix the approver saw.
+/// The approver decides on the proposal digest AND this matrix; a different
+/// self-consistent matrix presented at promote is `DECISION_DIGEST_MISMATCH`.
+pub const CLAIM_MATRIX_ID: &str = "matrix_id";
+/// The claim key carrying the held-out rule's digest (`sha256:<hex>`, the
+/// proposal's `held_out_rule.sha256`), bound for the same reason.
+pub const CLAIM_HELDOUT_RULE: &str = "held_out_rule_sha256";
 /// The claim key a re-pin's escalation request must carry.
 pub const CLAIM_REPIN_DIGEST: &str = "repin_digest";
 
@@ -64,6 +78,19 @@ fn refuse<T>(code: &'static str, message: impl Into<String>) -> Result<T, PinRef
         code,
         message: message.into(),
     })
+}
+
+/// One lock per ledger root, held for the whole promote or re-pin sequence
+/// (read the pin, authorize and decide, commit the pin). In-process only;
+/// across processes `commit_pin` still re-checks the pin and takes a
+/// per-position ledger key, so a second committer loses with `PIN_STALE`.
+fn pin_lock(root: &Path) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = OnceLock::new();
+    let mut map = LOCKS
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
+    Arc::clone(map.entry(root.to_path_buf()).or_default())
 }
 
 /// A durable pin: the cell's world moved from `from_world_ref` to `to_world_ref`.
@@ -214,7 +241,10 @@ impl CepAuthorityService<'_> {
     }
 
     /// Retain a refused attempt. Best effort: a ledger that cannot be written
-    /// still yields the refusal.
+    /// still yields the refusal. Growth is bounded: fields are size-capped,
+    /// and one caller keeps at most [`ATTEMPTS_PER_ACTOR_PER_HOUR`] attempts an
+    /// hour; the attempt that reaches the cap is recorded as a rate-limit
+    /// marker and later ones in the window are refused without a record.
     fn retain_attempt(
         &self,
         kind: &str,
@@ -223,15 +253,42 @@ impl CepAuthorityService<'_> {
         target: &str,
         who: &Actor,
     ) {
-        if let Ok(ledger) = self.ledger() {
-            let _ = ledger.commit_typed(
-                PIN_ATTEMPT_KIND,
-                vec!["world-pin".into(), target.to_string()],
-                &json!({"attempt": kind, "outcome": "refused", "code": r.code, "message": r.message,
-                        "bound_digest": digest, "target_world_ref": target, "actor": who.actor_id}),
-                vec![],
-            );
-        }
+        let Ok(ledger) = self.ledger() else { return };
+        let cap = |s: &str, n: usize| s.chars().take(n).collect::<String>();
+        let actor = cap(&who.actor_id, 128);
+        let now = Utc::now();
+        let recent = ledger
+            .read_entries()
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter(|e| e.record_kind == PIN_ATTEMPT_KIND)
+                    .filter(|e| e.payload["actor"] == json!(actor))
+                    .filter(|e| {
+                        chrono::DateTime::parse_from_rfc3339(&e.committed_at).is_ok_and(|t| {
+                            now.signed_duration_since(t) < chrono::Duration::hours(1)
+                        })
+                    })
+                    .count()
+            })
+            .unwrap_or(0);
+        let payload = if recent + 1 < ATTEMPTS_PER_ACTOR_PER_HOUR {
+            json!({"attempt": kind, "outcome": "refused", "code": r.code,
+                   "message": cap(&r.message, 512), "bound_digest": digest,
+                   "target_world_ref": cap(target, 256), "actor": actor})
+        } else if recent + 1 == ATTEMPTS_PER_ACTOR_PER_HOUR {
+            json!({"attempt": kind, "outcome": "refused", "code": "ATTEMPTS_RATE_LIMITED",
+                   "message": format!("further refused attempts by this caller are not retained for an hour (limit {ATTEMPTS_PER_ACTOR_PER_HOUR})"),
+                   "bound_digest": null, "target_world_ref": cap(target, 256), "actor": actor})
+        } else {
+            return;
+        };
+        let _ = ledger.commit_typed(
+            PIN_ATTEMPT_KIND,
+            vec!["world-pin".into(), cap(target, 256)],
+            &payload,
+            vec![],
+        );
     }
 
     /// The world a recorded decision was made under, read from the decision
@@ -276,6 +333,8 @@ impl CepAuthorityService<'_> {
     ) -> Result<PinRecord, PinRefusal> {
         let target = str_at(&req.proposal, "/candidate_world_ref").to_owned();
         let digest = proposal_digest(&req.proposal).ok();
+        let lock = pin_lock(self.root);
+        let _held = lock.lock().unwrap_or_else(|p| p.into_inner());
         let out = self.promote_inner(req, caller, baseline);
         if let Err(r) = &out {
             self.retain_attempt("promote", r, digest.as_deref(), &target, caller);
@@ -319,11 +378,17 @@ impl CepAuthorityService<'_> {
                 ),
             );
         }
+        let matrix_id = str_at(&req.matrix, "/matrix_id").to_owned();
+        let rule = str_at(proposal, "/held_out_rule/sha256").to_owned();
+        if rule.is_empty() {
+            return refuse("PROPOSAL_INVALID", "held_out_rule.sha256 is missing");
+        }
         let auth = self.authorize(
             &req.envelope,
             caller,
             CLAIM_PROPOSAL_DIGEST,
             &digest,
+            &[(CLAIM_MATRIX_ID, &matrix_id), (CLAIM_HELDOUT_RULE, &rule)],
             &old,
             &cand,
             &proposer,
@@ -344,7 +409,7 @@ impl CepAuthorityService<'_> {
             transition_ref: auth.transition_ref,
             supersedes_pin: None,
         };
-        self.commit_pin(record)
+        self.commit_pin(record, baseline)
     }
 
     /// Re-pin the cell to a world it was pinned to before, through the same
@@ -355,6 +420,8 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         baseline: Option<&str>,
     ) -> Result<PinRecord, PinRefusal> {
+        let lock = pin_lock(self.root);
+        let _held = lock.lock().unwrap_or_else(|p| p.into_inner());
         let out = self.repin_inner(req, caller, baseline);
         if let Err(r) = &out {
             self.retain_attempt("repin", r, None, &req.to_world_ref, caller);
@@ -409,6 +476,7 @@ impl CepAuthorityService<'_> {
             caller,
             CLAIM_REPIN_DIGEST,
             &digest,
+            &[],
             &current,
             &req.to_world_ref,
             &caller.actor_id,
@@ -429,7 +497,7 @@ impl CepAuthorityService<'_> {
             transition_ref: auth.transition_ref,
             supersedes_pin: state.history.last().map(|p| p.pin_id.clone()),
         };
-        self.commit_pin(record)
+        self.commit_pin(record, baseline)
     }
 
     /// Record that a candidate was not promoted, with the divergence (the
@@ -474,23 +542,51 @@ impl CepAuthorityService<'_> {
         Ok(record)
     }
 
-    fn commit_pin(&self, record: PinRecord) -> Result<PinRecord, PinRefusal> {
+    /// Append the pin. Called under the pin lock; it still re-checks that the
+    /// pin it moves from is the current one, and takes a per-position ledger
+    /// key (`world-pin-slot:<n>`, n = pins so far) so that even a committer in
+    /// another process loses (`PIN_STALE`) rather than forking the history.
+    fn commit_pin(
+        &self,
+        record: PinRecord,
+        baseline: Option<&str>,
+    ) -> Result<PinRecord, PinRefusal> {
         let unavailable = |e: String| PinRefusal {
             code: "AUTHORITY_UNAVAILABLE",
             message: e,
         };
         let ledger = self.ledger().map_err(|e| unavailable(e.to_string()))?;
-        let key = format!("world-pin:{}", record.operation_id);
         let existing = ledger
             .read_entries()
             .map_err(|e| unavailable(e.to_string()))?;
-        // Replay or crash recovery: the same operation has one pin.
-        if let Some(prior) = pins_in(&existing)
-            .into_iter()
-            .find(|p| p.operation_id == record.operation_id)
-        {
-            return Ok(prior);
+        let pins = pins_in(&existing);
+        // Replay or crash recovery: the same operation has one pin. It is a
+        // success only while that pin is still the current one; once a later
+        // pin superseded it, the answer says so instead of claiming success.
+        if let Some(prior) = pins.iter().find(|p| p.operation_id == record.operation_id) {
+            if pins.last().map(|p| p.pin_id.as_str()) == Some(prior.pin_id.as_str()) {
+                return Ok(prior.clone());
+            }
+            return refuse(
+                "PIN_SUPERSEDED",
+                format!(
+                    "{} already pinned this operation and a later pin superseded it; nothing was pinned now",
+                    prior.pin_id
+                ),
+            );
         }
+        let current = pins.last().map(|p| p.to_world_ref.as_str()).or(baseline);
+        if current != Some(record.from_world_ref.as_str()) {
+            return refuse(
+                "PIN_STALE",
+                format!(
+                    "the pin moved from {} to {} while this operation was being decided",
+                    record.from_world_ref,
+                    current.unwrap_or("none")
+                ),
+            );
+        }
+        let key = format!("world-pin-slot:{}", pins.len());
         ledger
             .commit_typed_new(
                 PIN_KIND,
@@ -503,7 +599,17 @@ impl CepAuthorityService<'_> {
                 &record,
                 vec![record.transition_ref.clone()],
             )
-            .map_err(|e| unavailable(e.to_string()))?;
+            .map_err(|e| {
+                let m = e.to_string();
+                if m.contains("already committed") {
+                    PinRefusal {
+                        code: "PIN_STALE",
+                        message: "another promotion took this position in the pin history".into(),
+                    }
+                } else {
+                    unavailable(m)
+                }
+            })?;
         Ok(record)
     }
 
@@ -516,6 +622,7 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         claim_key: &str,
         digest: &str,
+        extra_claims: &[(&str, &str)],
         source: &str,
         target: &str,
         proposer: &str,
@@ -640,6 +747,28 @@ impl CepAuthorityService<'_> {
             .pointer(&format!("/parameters/claims/{claim_key}"))
             .and_then(Value::as_str)
             .unwrap_or_default();
+        // The extra claims (the matrix the approver saw, the held-out rule)
+        // must equal what is presented now, in the decision AND the request.
+        for (key, want) in extra_claims {
+            let decided = action
+                .pointer(&format!("/parameters/claims/{key}"))
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let requested = request
+                .claims
+                .as_ref()
+                .and_then(|c| c.get(*key))
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if decided != *want || requested != *want {
+                return refuse(
+                    "DECISION_DIGEST_MISMATCH",
+                    format!(
+                        "{approval_id} was decided with {key} {decided:?}; this request presents {want:?}"
+                    ),
+                );
+            }
+        }
         if text_at(&action, "/resource_id") != target || claimed != digest {
             return refuse(
                 "DECISION_DIGEST_MISMATCH",
@@ -815,6 +944,11 @@ fn check_matrix(
     let rows = matrix["rows"]
         .as_array()
         .ok_or_else(|| reg("matrix has no rows"))?;
+    if rows.is_empty() {
+        return Err(reg(
+            "the matrix has no rows: an empty matrix proves no regression check ran",
+        ));
+    }
     let failing: Vec<&Value> = rows
         .iter()
         .filter(|r| r["result"] != json!("pass"))
@@ -839,6 +973,76 @@ fn check_matrix(
             code: "ESCALATED_APPROVAL_REQUIRED",
             message: "the matrix lists a weakening, which needs the escalated approval class; this path has none".into(),
         });
+    }
+    check_coverage(rows, proposal)
+}
+
+/// Structural completeness of a passing matrix against the proposal that
+/// names it. RealityTrace's rows carry `old_expectation` / `new_expectation`
+/// (the expectation ids of the old and candidate worlds) and `episode_ref`;
+/// a proposal's `intended_changes[].element` is a candidate-world expectation
+/// id and `supersedes` lists old-world ids. So: every intended element is the
+/// `new_expectation` (or, for a removal, the `old_expectation`) of some row,
+/// every superseded id is the `old_expectation` of some row, and every episode
+/// the proposal names (diagnosis and held-out) is the `episode_ref` of some
+/// row. Rows for further compared episodes are allowed (RealityTrace compares
+/// a superset).
+///
+/// LIMIT, stated plainly: SEA-Forge cannot recompute the transitions without
+/// RealityTrace. The rows' classes and results are the proposer-supplied
+/// matrix's word; what binds them is the approver's `matrix_id` claim
+/// ([`CLAIM_MATRIX_ID`]), not a recomputation here. Completeness narrows what a
+/// forged matrix can omit; it does not make the rows true, and it cannot tell
+/// whether a row's element exists in either world (that needs RealityTrace).
+fn check_coverage(rows: &[Value], proposal: &Value) -> Result<(), PinRefusal> {
+    let reg = |m: String| PinRefusal {
+        code: "REGRESSION_FAILED",
+        message: m,
+    };
+    let base = |e: &str| e.split('@').next().unwrap_or(e).to_owned();
+    let has = |field: &str, id: &str| rows.iter().any(|r| r[field].as_str() == Some(id));
+    for change in proposal["intended_changes"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        if let Some(element) = change["element"].as_str() {
+            if !has("new_expectation", element) && !has("old_expectation", element) {
+                return Err(reg(format!(
+                    "the matrix has no row for the proposal's element {element}"
+                )));
+            }
+        }
+        for old in change["supersedes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            if !has("old_expectation", old) {
+                return Err(reg(format!(
+                    "the matrix has no row for the superseded element {old}"
+                )));
+            }
+        }
+    }
+    let row_episodes: Vec<String> = rows
+        .iter()
+        .filter_map(|r| r["episode_ref"].as_str().map(base))
+        .collect();
+    for set in ["diagnosis", "held_out"] {
+        for ep in proposal[set]["episodes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            if !row_episodes.contains(&base(ep)) {
+                return Err(reg(format!(
+                    "the matrix has no row for the proposal's episode {ep}"
+                )));
+            }
+        }
     }
     Ok(())
 }

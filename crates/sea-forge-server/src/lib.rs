@@ -5169,3 +5169,44 @@ mod pipe_transport_tests {
         drop(first);
     }
 }
+
+#[cfg(test)]
+mod field_recover_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn recover_field_case_waits_for_the_case_lock() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(root.path().join("cases/case-0001")).unwrap();
+        let config = ServerConfig {
+            root: root.path().to_path_buf(),
+            ..ServerConfig::default()
+        };
+        let state = Arc::new(ServerState::new(config).unwrap());
+        let held = state.acquire_case_lock("case-0001").await;
+        let task = {
+            let state = Arc::clone(&state);
+            tokio::spawn(async move { recover_field_case(&state, "case-0001").await })
+        };
+        let early = tokio::time::timeout(std::time::Duration::from_millis(300), async {
+            while !task.is_finished() {
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            }
+        })
+        .await;
+        assert!(
+            early.is_err(),
+            "recovery must not run while the case lock is held"
+        );
+        drop(held);
+        let out = tokio::time::timeout(std::time::Duration::from_secs(5), task)
+            .await
+            .expect("recovery runs once the lock is free")
+            .unwrap();
+        assert_eq!(out, sea_forge_server_recovered_default());
+    }
+
+    fn sea_forge_server_recovered_default() -> sfwp::case_records::Recovered {
+        sfwp::case_records::Recovered::default()
+    }
+}

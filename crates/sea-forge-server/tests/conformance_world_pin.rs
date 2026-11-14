@@ -52,6 +52,7 @@ fn config() -> (tempfile::TempDir, ServerConfig) {
     let cases = root.path().join("cases/case-0001");
     std::fs::create_dir_all(&cases).unwrap();
     std::fs::write(cases.join("case.json"), "{}").unwrap();
+    std::fs::write(cases.join("case-events.jsonl"), "").unwrap();
     let socket = std::env::temp_dir().join(format!(
         "sf-pin-{}-{}.sock",
         std::process::id(),
@@ -86,6 +87,7 @@ fn config() -> (tempfile::TempDir, ServerConfig) {
         },
         cep_authority: CepAuthorityConfig {
             enabled: true,
+            pinned_baseline: Some("demo".into()),
             policy: "sea-forge-policy.yaml".into(),
             worlds: vec![world("worlds"), world("worlds-changed")],
             approval_ttl_hours: 24,
@@ -152,15 +154,25 @@ fn proposal(old: &str, cand: &str) -> Value {
 
 fn matrix(p: &Value) -> Value {
     let id = p["proposal_id"].as_str().unwrap();
+    let rows: Vec<Value> = ["item-03", "item-09"]
+        .iter()
+        .map(|item| {
+            json!({
+                "element": format!("episode:case-0001:{item}:1|structural|undeclared:x"),
+                "episode_ref": format!("episode:case-0001:{item}:1"), "comparison": "structural",
+                "old_expectation": "undeclared:x", "new_expectation": "flow-fresh-context-verification",
+                "old_class": "observed_undeclared", "new_class": "confirmed",
+                "result": "pass", "code": null, "reason": "declared", "intended": true,
+                "escalated": false, "reported": "gain"})
+        })
+        .collect();
     let mut m = json!({
         "contract": "regression-matrix.v1", "proposal_id": id,
         "proposal_digest": format!("sha256:{}", &id["proposal:".len()..]),
         "old_world_ref": p["old_world_ref"], "candidate_world_ref": p["candidate_world_ref"],
         "old_comparisons": ["comparison:o"], "new_comparisons": ["comparison:n"],
-        "rows": [{"element": "e", "episode_ref": "episode:case-0001:item-03:1", "comparison": "structural",
-                  "old_expectation": "x", "new_expectation": "x", "old_class": "confirmed", "new_class": "confirmed",
-                  "result": "pass", "code": null, "reason": "unchanged", "intended": false, "escalated": false, "reported": null}],
-        "summary": {"pass": 1, "fail": 0, "escalated": 0, "gains": 0},
+        "rows": rows,
+        "summary": {"pass": 2, "fail": 0, "escalated": 0, "gains": 2},
         "verdict": "pass", "failure_codes": [], "refusal_code": null, "escalated": false,
     });
     m["matrix_id"] = json!(format!("matrix:{}", hex_of(&m)));
@@ -171,11 +183,11 @@ fn transition_request(
     source: &str,
     target: &str,
     op: &str,
-    claim: (&str, &str),
+    claims: Value,
     approval: Option<&str>,
 ) -> Value {
     let mut ext = json!({"operation_id": op, "correlation_id": "corr-1", "operation_kind": "world_transition",
-        "operation_name": "transition", "resource_id": target, "claims": {claim.0: claim.1}});
+        "operation_name": "transition", "resource_id": target, "claims": claims});
     if let Some(a) = approval {
         ext["approval_id"] = json!(a);
     }
@@ -372,11 +384,14 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         "sha256:{}",
         &p["proposal_id"].as_str().unwrap()["proposal:".len()..]
     );
+    // The approver decides on the proposal digest AND the matrix and rule.
+    let claims = json!({"proposal_digest": digest, "matrix_id": matrix(&p)["matrix_id"],
+                        "held_out_rule_sha256": p["held_out_rule"]["sha256"]});
     let esc = cell
         .call_for(
             &service,
             authority_request(
-                transition_request(&v1, &v2, "op-p1", ("proposal_digest", &digest), None),
+                transition_request(&v1, &v2, "op-p1", claims.clone(), None),
                 "op-p1",
             ),
         )
@@ -387,13 +402,7 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .to_string();
 
     // Not approved yet: unknown is never approved.
-    let second = transition_request(
-        &v1,
-        &v2,
-        "op-p1-b",
-        ("proposal_digest", &digest),
-        Some(&approval),
-    );
+    let second = transition_request(&v1, &v2, "op-p1-b", claims.clone(), Some(&approval));
     let promote = |env: &Value, id: &str| {
         as_actor(
             json!({"verb": "authority_promote", "proposal": p, "matrix": matrix(&p), "envelope": env, "request_id": id}),
@@ -487,7 +496,7 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .call_for(
             &service,
             authority_request(
-                transition_request(&v2, &v1, "op-r1", ("repin_digest", &rd), None),
+                transition_request(&v2, &v1, "op-r1", json!({"repin_digest": rd}), None),
                 "op-r1",
             ),
         )
@@ -497,7 +506,13 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .unwrap()
         .to_string();
     cell.call_for(&operator, as_actor(json!({"verb": "authority_approval", "approval_id": approval, "resolution": "approved", "request_id": "ar-2"}), "op-alice", "operator")).await;
-    let env = transition_request(&v2, &v1, "op-r1-b", ("repin_digest", &rd), Some(&approval));
+    let env = transition_request(
+        &v2,
+        &v1,
+        "op-r1-b",
+        json!({"repin_digest": rd}),
+        Some(&approval),
+    );
     let repinned = cell
         .call_for(&service, as_actor(json!({"verb": "authority_repin", "to_world_ref": v1, "reason": reason, "envelope": env, "request_id": "rp-1"}), "cognate-service", "service"))
         .await;
@@ -530,4 +545,80 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .unwrap();
     cell.verify_authentication();
     cell.shutdown().await;
+}
+
+// ------------------------------------------------------- review fixes (F3, F8)
+
+#[test]
+fn f3_the_vendored_regression_matrix_schema_matches_its_digest_and_the_source() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("contracts/rt");
+    let manifest = std::fs::read_to_string(dir.join("DIGESTS")).unwrap();
+    let text = std::fs::read_to_string(dir.join("regression-matrix.v1.json")).unwrap();
+    let want = manifest
+        .lines()
+        .find_map(|l| {
+            l.split_once("  ")
+                .filter(|(_, n)| *n == "regression-matrix.v1.json")
+        })
+        .map(|(h, _)| h.to_string())
+        .expect("listed in DIGESTS");
+    assert_eq!(want, hex::encode(sha2::Sha256::digest(text.as_bytes())));
+    // When the RealityTrace worktree is present the copy must equal it.
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../fde-sxr-integration/contracts/regression-matrix.v1.json");
+    if let Ok(origin) = std::fs::read_to_string(source) {
+        assert_eq!(
+            origin, text,
+            "the vendored schema drifted from RealityTrace's"
+        );
+    }
+}
+
+#[tokio::test]
+async fn f3_a_matrix_that_is_not_a_regression_matrix_document_is_refused_before_the_service() {
+    let (_root, config) = config();
+    let mut cell = authenticated::Cell::start(config).await;
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let (v1, v2) = (world_ref_of(BASE), world_ref_of(CHANGED));
+    let p = proposal(&v1, &v2);
+    let mut bad = matrix(&p);
+    bad["rows"] = json!([{"element": "e"}]);
+    let out = cell
+        .call_for(
+            &service,
+            as_actor(
+                json!({"verb": "authority_promote", "proposal": p, "matrix": bad,
+                       "envelope": {}, "request_id": "pr-bad"}),
+                "cognate-service",
+                "service",
+            ),
+        )
+        .await;
+    assert_eq!(out["code"], "MATRIX_INVALID", "{out}");
+}
+
+#[tokio::test]
+async fn f8_two_worlds_without_a_named_baseline_cannot_move_the_pin() {
+    let (_root, mut config) = config();
+    config.cep_authority.pinned_baseline = None;
+    let mut cell = authenticated::Cell::start(config).await;
+    let service = authenticated::principal("cognate-service", ActorRole::Service);
+    let (v1, v2) = (world_ref_of(BASE), world_ref_of(CHANGED));
+    let p = proposal(&v1, &v2);
+    let out = cell
+        .call_for(
+            &service,
+            as_actor(
+                json!({"verb": "authority_promote", "proposal": p, "matrix": matrix(&p),
+                       "envelope": {}, "request_id": "pr-amb"}),
+                "cognate-service",
+                "service",
+            ),
+        )
+        .await;
+    assert_eq!(out["error_class"], "cep_pin_baseline_ambiguous", "{out}");
+    let pin = cell
+        .call_for(&service, json!({"verb": "authority_pin"}))
+        .await;
+    assert_eq!(pin["current"], json!(null), "no baseline is guessed: {pin}");
 }

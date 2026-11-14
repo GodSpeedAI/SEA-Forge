@@ -162,6 +162,11 @@ pub struct CepAuthorityConfig {
     pub policy: String,
     #[serde(default)]
     pub worlds: Vec<CepWorldConfig>,
+    /// The name of the configured world that is pinned before any promotion.
+    /// Required to promote or re-pin when more than one world is configured
+    /// (no "first configured world" guess); with exactly one it is that one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pinned_baseline: Option<String>,
     /// Settlement criteria, bound into every allow decision when it is made.
     #[serde(default)]
     pub settlement: CepSettlementConfig,
@@ -235,6 +240,7 @@ impl Default for CepAuthorityConfig {
             enabled: false,
             policy: default_cep_policy(),
             worlds: Vec::new(),
+            pinned_baseline: None,
             approval_ttl_hours: default_cep_approval_ttl_hours(),
             settlement: CepSettlementConfig::default(),
             realitytrace: None,
@@ -426,6 +432,13 @@ impl ServerConfig {
     /// Validate every operator-controlled value before startup creates cell
     /// records or binds a socket.
     fn validate_cep_worlds(&self) -> Result<(), String> {
+        if let Some(name) = &self.cep_authority.pinned_baseline {
+            if !self.cep_authority.worlds.iter().any(|w| &w.name == name) {
+                return Err(format!(
+                    "cep_authority.pinned_baseline {name:?} names no configured world"
+                ));
+            }
+        }
         for world in &self.cep_authority.worlds {
             if world.prior_identities.len() > MAX_PRIOR_IDENTITIES_PER_WORLD {
                 return Err(format!(

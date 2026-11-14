@@ -20,8 +20,8 @@ fn refusal(class: &str, message: impl std::fmt::Display) -> Value {
 /// Most distinct world sets kept; a world is immutable by digest, so entries never go stale.
 const CACHE_LIMIT: usize = 8;
 
-/// The registry and the first configured world's ref (the baseline pin before any promotion).
-type Loaded = (Arc<WorldRegistry>, Option<String>);
+/// The registry and every configured `(name, world_ref)`, in configuration order.
+type Loaded = (Arc<WorldRegistry>, Vec<(String, String)>);
 type RegistryCache = Mutex<HashMap<String, Loaded>>;
 
 /// Largest prior-identity document read. A `DomainModelIdentity` is a few hundred bytes.
@@ -109,7 +109,10 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Loaded, String> {
         tracing::info!(world = %name, world_ref = %world_ref, "cep_authority world loaded");
     }
     let registry = Arc::new(registry);
-    let baseline = loaded.first().map(|(_, world_ref)| world_ref.to_string());
+    let baseline = loaded
+        .iter()
+        .map(|(name, world_ref)| (name.clone(), world_ref.to_string()))
+        .collect::<Vec<_>>();
     let mut guard = cache()
         .lock()
         .map_err(|_| "world cache poisoned".to_string())?;
@@ -154,14 +157,34 @@ fn with_service(
     root: &Path,
     f: impl FnOnce(&CepAuthorityService<'_>) -> Value,
 ) -> Value {
-    with_service_baseline(config, root, |service, _| f(service))
+    with_service_baseline(config, root, false, |service, _| f(service))
 }
 
-/// [`with_service`], also giving the baseline world (the first configured one), which is the
-/// pinned world until the first promotion.
+/// The baseline world: the pinned world until the first promotion. Explicit
+/// configuration only (`cep_authority.pinned_baseline`), or the single
+/// configured world. With several worlds and no named baseline there is none
+/// (`Ok(None)`): the first configured world is never assumed.
+fn baseline_of(
+    config: &ServerConfig,
+    loaded: &[(String, String)],
+) -> Result<Option<String>, String> {
+    match &config.cep_authority.pinned_baseline {
+        Some(name) => loaded
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, r)| Some(r.clone()))
+            .ok_or_else(|| format!("pinned_baseline {name:?} names no configured world")),
+        None if loaded.len() == 1 => Ok(Some(loaded[0].1.clone())),
+        None => Ok(None),
+    }
+}
+
+/// [`with_service`], also giving the baseline world (see [`baseline_of`]).
+/// `need_baseline`: the verb moves the pin, so an ambiguous baseline is refused.
 fn with_service_baseline(
     config: &ServerConfig,
     root: &Path,
+    need_baseline: bool,
     f: impl FnOnce(&CepAuthorityService<'_>, Option<&str>) -> Value,
 ) -> Value {
     if !config.cep_authority.enabled {
@@ -183,10 +206,21 @@ fn with_service_baseline(
         Ok(e) => e,
         Err(e) => return refusal("cep_authority_config", e),
     };
-    let (worlds, baseline) = match load_worlds(config, root) {
+    let (worlds, loaded) = match load_worlds(config, root) {
         Ok(w) => w,
         Err(e) => return refusal("cep_world_config", e),
     };
+    let baseline = match baseline_of(config, &loaded) {
+        Ok(b) => b,
+        Err(e) => return refusal("cep_world_config", e),
+    };
+    if need_baseline && baseline.is_none() {
+        return refusal(
+            "cep_pin_baseline_ambiguous",
+            "several worlds are configured and cep_authority.pinned_baseline names none: \
+             the pinned world is not guessed, so the pin cannot be moved",
+        );
+    }
     let service = CepAuthorityService {
         engine: &engine,
         bundle: &bundle,
@@ -196,6 +230,33 @@ fn with_service_baseline(
         criteria: criteria(config),
     };
     f(&service, baseline.as_deref())
+}
+
+/// RealityTrace's `regression-matrix.v1`, vendored by digest in
+/// `contracts/rt/DIGESTS` (a gate test fails when the copy differs).
+pub const REGRESSION_MATRIX_SCHEMA: &str =
+    include_str!("../contracts/rt/regression-matrix.v1.json");
+
+fn validate_matrix(matrix: &Value) -> Result<(), String> {
+    static VALIDATOR: OnceLock<jsonschema::Validator> = OnceLock::new();
+    let validator = VALIDATOR.get_or_init(|| {
+        let schema: Value =
+            serde_json::from_str(REGRESSION_MATRIX_SCHEMA).expect("vendored schema is JSON");
+        jsonschema::validator_for(&schema).expect("vendored schema compiles")
+    });
+    let errors: Vec<String> = validator
+        .iter_errors(matrix)
+        .take(5)
+        .map(|e| format!("{}: {e}", e.instance_path()))
+        .collect();
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "the matrix is not a regression-matrix.v1 document: {}",
+            errors.join("; ")
+        ))
+    }
 }
 
 fn pin_refusal(r: &sea_forge_authority::cep::PinRefusal) -> Value {
@@ -213,7 +274,11 @@ pub fn promote(
     envelope: &Value,
     caller: &Actor,
 ) -> Value {
-    with_service_baseline(config, root, |service, baseline| {
+    // Schema first: RealityTrace's own contract, vendored by digest.
+    if let Err(message) = validate_matrix(matrix) {
+        return json!({"error": message, "error_class": "cep_promotion_refused", "code": "MATRIX_INVALID"});
+    }
+    with_service_baseline(config, root, true, |service, baseline| {
         let request = sea_forge_authority::cep::PromoteRequest {
             proposal: proposal.clone(),
             matrix: matrix.clone(),
@@ -235,7 +300,7 @@ pub fn repin(
     envelope: &Value,
     caller: &Actor,
 ) -> Value {
-    with_service_baseline(config, root, |service, baseline| {
+    with_service_baseline(config, root, true, |service, baseline| {
         let request = sea_forge_authority::cep::RepinRequest {
             to_world_ref: to_world_ref.to_string(),
             reason: reason.to_string(),
@@ -250,7 +315,7 @@ pub fn repin(
 
 /// The current pin, the history and the retained refused attempts (`authority_pin` verb; read-only).
 pub fn pin(config: &ServerConfig, root: &Path) -> Value {
-    with_service_baseline(config, root, |service, baseline| {
+    with_service_baseline(config, root, false, |service, baseline| {
         match (service.pin_state(baseline), service.pin_attempts()) {
             (Ok(state), Ok(attempts)) => {
                 let mut v = state.to_json();

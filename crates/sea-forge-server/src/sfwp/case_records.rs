@@ -44,6 +44,12 @@ const FROZEN_REFERENCE: &str = include_str!("../../contracts/fde/frozen-referenc
 const ANCHOR: &str = include_str!("../../contracts/fde/anchor.v1.json");
 
 const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+/// Largest `payload` (canonical JSON bytes) one `case.record.append` may carry.
+/// The socket frame cap is 1 MiB per request line (`MAX_REQUEST_BYTES` in
+/// `lib.rs`); a payload is stored in the record, the freeze intent and the
+/// outbox, so it is held to a quarter of the frame.
+pub const MAX_PAYLOAD_BYTES: usize = 256 * 1024;
+
 const RECORDS: &str = "field-records.jsonl";
 const INTENTS: &str = "field-freeze-intents.jsonl";
 const RT_OUTBOX: &str = "field-rt-outbox.jsonl";
@@ -598,6 +604,13 @@ pub fn append_faulted(
     request: &Value,
     fault: Option<Fault>,
 ) -> Result<Value, CrashInjected> {
+    if serde_json::to_vec(&request["payload"]).map_or(true, |b| b.len() > MAX_PAYLOAD_BYTES) {
+        return Ok(refuse(
+            "SCHEMA_INVALID",
+            &format!("payload exceeds {MAX_PAYLOAD_BYTES} bytes"),
+            None,
+        ));
+    }
     if let Err(refusal) = validate_request(request) {
         return Ok(refusal);
     }
@@ -1443,6 +1456,7 @@ pub fn recover_for(root: &Path, case_id: &str) -> Recovered {
 }
 
 /// The wire-level helper the SFWP verb uses: build the context from server state.
+#[allow(clippy::too_many_arguments)]
 pub fn run_verb(
     root: &Path,
     case_id: &str,

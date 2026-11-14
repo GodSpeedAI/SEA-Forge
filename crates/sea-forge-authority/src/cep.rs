@@ -27,7 +27,8 @@ pub use obligation::{
 };
 pub use world_pin::{
     proposal_digest, repin_digest, PinRecord, PinRefusal, PinState, PromoteRequest, RepinRequest,
-    CLAIM_PROPOSAL_DIGEST, CLAIM_REPIN_DIGEST, PIN_ATTEMPT_KIND, PIN_DECLINED_KIND, PIN_KIND,
+    ATTEMPTS_PER_ACTOR_PER_HOUR, CLAIM_HELDOUT_RULE, CLAIM_MATRIX_ID, CLAIM_PROPOSAL_DIGEST,
+    CLAIM_REPIN_DIGEST, PIN_ATTEMPT_KIND, PIN_DECLINED_KIND, PIN_KIND,
 };
 
 use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};

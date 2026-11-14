@@ -114,6 +114,7 @@ fn fixture(enabled: bool, policy: &str) -> (tempfile::TempDir, ServerConfig) {
         },
         cep_authority: CepAuthorityConfig {
             enabled,
+            pinned_baseline: Some("demo".into()),
             policy: "sea-forge-policy.yaml".into(),
             worlds: vec![
                 CepWorldConfig {

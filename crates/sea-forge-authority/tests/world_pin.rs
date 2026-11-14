@@ -8,7 +8,7 @@
 
 use sea_forge_authority::cep::{
     proposal_digest, repin_digest, CepAuthorityService, PinRecord, PinRefusal, PromoteRequest,
-    RepinRequest, CLAIM_PROPOSAL_DIGEST, CLAIM_REPIN_DIGEST,
+    RepinRequest, CLAIM_HELDOUT_RULE, CLAIM_MATRIX_ID, CLAIM_PROPOSAL_DIGEST, CLAIM_REPIN_DIGEST,
 };
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{Actor, ActorRole};
@@ -170,14 +170,29 @@ fn row(result: &str, code: Value, escalated: bool) -> Value {
            "result": result, "code": code, "reason": "r", "intended": false, "escalated": escalated, "reported": null})
 }
 
+/// One passing row per element-and-episode the proposal names (the shape
+/// RealityTrace emits: element `<episode>|<comparison>|<expectation>`).
+fn covering_rows(p: &Value) -> Vec<Value> {
+    let change = &p["intended_changes"][0];
+    let (new, old) = (
+        change["element"].as_str().unwrap(),
+        change["supersedes"][0].as_str().unwrap(),
+    );
+    ["diagnosis", "held_out"]
+        .iter()
+        .flat_map(|set| p[*set]["episodes"].as_array().unwrap().clone())
+        .map(|ep| {
+            let ep = ep.as_str().unwrap().split('@').next().unwrap().to_string();
+            json!({"element": format!("{ep}|structural|{old}"), "episode_ref": ep, "comparison": "structural",
+                   "old_expectation": old, "new_expectation": new, "old_class": "observed_undeclared",
+                   "new_class": "confirmed", "result": "pass", "code": null, "reason": "r",
+                   "intended": true, "escalated": false, "reported": "gain"})
+        })
+        .collect()
+}
+
 fn good_matrix(p: &Value) -> Value {
-    matrix_for(
-        p,
-        vec![row("pass", Value::Null, false)],
-        "pass",
-        Value::Null,
-        false,
-    )
+    matrix_for(p, covering_rows(p), "pass", Value::Null, false)
 }
 
 fn request(
@@ -248,7 +263,11 @@ fn escalate_and_approve(
     digest: &str,
     op: &str,
 ) -> (String, Value) {
-    let claims = json!({ claim_key: digest });
+    let claims = if claim_key == CLAIM_PROPOSAL_DIGEST {
+        promotion_claims(digest)
+    } else {
+        json!({ claim_key: digest })
+    };
     let first = request(source, op, target, claims.clone(), None, &[]);
     let d = with(c, OPEN, |s| s.decide(&first, &service())).unwrap();
     let approval = d.envelope["extensions"]["godspeed.authority_decision"]["approval_id"]
@@ -297,8 +316,25 @@ fn code(r: Result<PinRecord, PinRefusal>) -> &'static str {
     r.expect_err("expected a refusal").code
 }
 
+thread_local! {
+    static PROPOSALS: std::cell::RefCell<std::collections::HashMap<String, Value>> = Default::default();
+}
+
 fn digest_of(p: &Value) -> String {
-    proposal_digest(p).unwrap()
+    let d = proposal_digest(p).unwrap();
+    PROPOSALS.with(|m| m.borrow_mut().insert(d.clone(), p.clone()));
+    d
+}
+
+/// The claims an approver decides a promotion on: the proposal digest, the
+/// matrix the approver saw (the proposal's good matrix) and the held-out rule.
+fn promotion_claims(digest: &str) -> Value {
+    let p = PROPOSALS
+        .with(|m| m.borrow().get(digest).cloned())
+        .expect("digest_of(p) first");
+    json!({CLAIM_PROPOSAL_DIGEST: digest,
+           CLAIM_MATRIX_ID: good_matrix(&p)["matrix_id"],
+           CLAIM_HELDOUT_RULE: p["held_out_rule"]["sha256"]})
 }
 
 // ----------------------------------------------------------------- AT-12
@@ -1015,4 +1051,257 @@ fn a_crash_between_the_transition_and_the_pin_is_finished_not_decided_twice() {
     );
     let facts = with(&c, OPEN, |s| s.transitions()).unwrap();
     assert_eq!(facts[0].ledger_entry, pin.transition_ref);
+}
+
+// ------------------------------------------------- review fixes F3, F4, F8, F10
+
+fn promote_as(
+    c: &Cell,
+    caller: &Actor,
+    p: &Value,
+    m: &Value,
+    env: &Value,
+) -> Result<PinRecord, PinRefusal> {
+    let baseline = c.v1.clone();
+    with(c, OPEN, |s| {
+        s.promote(
+            &PromoteRequest {
+                proposal: p.clone(),
+                matrix: m.clone(),
+                envelope: env.clone(),
+            },
+            caller,
+            Some(&baseline),
+        )
+    })
+}
+
+#[test]
+fn f3_an_empty_passing_matrix_is_refused() {
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    let (_, env) = escalate_and_approve(
+        &c,
+        &c.v1,
+        &c.v2,
+        CLAIM_PROPOSAL_DIGEST,
+        &digest_of(&p),
+        "f3-1",
+    );
+    let empty = matrix_for(&p, vec![], "pass", Value::Null, false);
+    assert_eq!(code(promote(&c, &p, &empty, &env)), "REGRESSION_FAILED");
+    assert_eq!(state(&c).1, 0, "nothing was pinned");
+}
+
+#[test]
+fn f3_a_matrix_that_omits_a_proposed_element_or_episode_is_refused() {
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    let (_, env) = escalate_and_approve(
+        &c,
+        &c.v1,
+        &c.v2,
+        CLAIM_PROPOSAL_DIGEST,
+        &digest_of(&p),
+        "f3-2",
+    );
+    // only the diagnosis episode is covered
+    let rows: Vec<Value> = covering_rows(&p).into_iter().take(1).collect();
+    let partial = matrix_for(&p, rows, "pass", Value::Null, false);
+    assert_eq!(code(promote(&c, &p, &partial, &env)), "REGRESSION_FAILED");
+    // rows that never mention the proposal's element
+    let mut rows = covering_rows(&p);
+    for r in &mut rows {
+        r["new_expectation"] = json!("something-else");
+    }
+    let wrong = matrix_for(&p, rows, "pass", Value::Null, false);
+    assert_eq!(code(promote(&c, &p, &wrong, &env)), "REGRESSION_FAILED");
+    assert_eq!(state(&c).1, 0);
+}
+
+#[test]
+fn f3_a_self_consistent_matrix_swapped_in_after_approval_is_refused() {
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    // the approver decided on the proposal AND the first matrix
+    let (_, env) = escalate_and_approve(
+        &c,
+        &c.v1,
+        &c.v2,
+        CLAIM_PROPOSAL_DIGEST,
+        &digest_of(&p),
+        "f3-3",
+    );
+    // another passing, covering, self-consistent matrix for the same proposal
+    let mut rows = covering_rows(&p);
+    rows[0]["reason"] = json!("a different, equally passing story");
+    let swapped = matrix_for(&p, rows, "pass", Value::Null, false);
+    assert_ne!(swapped["matrix_id"], good_matrix(&p)["matrix_id"]);
+    assert_eq!(
+        code(promote(&c, &p, &swapped, &env)),
+        "DECISION_DIGEST_MISMATCH"
+    );
+    assert_eq!(state(&c).1, 0);
+    // the matrix the approver saw still promotes
+    assert!(promote(&c, &p, &good_matrix(&p), &env).is_ok());
+}
+
+#[test]
+fn f3_the_held_out_rule_digest_is_bound_into_the_decision() {
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    let digest = digest_of(&p);
+    let mut claims = promotion_claims(&digest);
+    claims[CLAIM_HELDOUT_RULE] = json!(format!("sha256:{}", "9".repeat(64)));
+    let first = request(&c.v1, "f3-4", &c.v2, claims.clone(), None, &[]);
+    let d = with(&c, OPEN, |s| s.decide(&first, &service())).unwrap();
+    let approval = d.envelope["extensions"]["godspeed.authority_decision"]["approval_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    with(&c, OPEN, |s| {
+        s.resolve_approval(&approval, true, &operator("op-alice"))
+    })
+    .unwrap();
+    let second = request(
+        &c.v1,
+        "f3-4-b",
+        &c.v2,
+        claims,
+        Some(&approval),
+        &["env-authority_request-f3-4"],
+    );
+    assert_eq!(
+        code(promote(&c, &p, &good_matrix(&p), &second)),
+        "DECISION_DIGEST_MISMATCH"
+    );
+}
+
+#[test]
+fn f4_two_concurrent_promotions_from_one_pin_commit_exactly_one() {
+    for round in 0..6 {
+        let c = cell();
+        let p1 = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+        let p2 = proposal(&c.v1, &c.v3, "cognate-service", "undeclared:y");
+        let (_, e1) = escalate_and_approve(
+            &c,
+            &c.v1,
+            &c.v2,
+            CLAIM_PROPOSAL_DIGEST,
+            &digest_of(&p1),
+            &format!("r{round}-1"),
+        );
+        let (_, e2) = escalate_and_approve(
+            &c,
+            &c.v1,
+            &c.v3,
+            CLAIM_PROPOSAL_DIGEST,
+            &digest_of(&p2),
+            &format!("r{round}-2"),
+        );
+        let (m1, m2) = (good_matrix(&p1), good_matrix(&p2));
+        let gate = std::sync::Barrier::new(2);
+        let (r1, r2) = std::thread::scope(|s| {
+            let a = s.spawn(|| {
+                gate.wait();
+                promote(&c, &p1, &m1, &e1)
+            });
+            let b = s.spawn(|| {
+                gate.wait();
+                promote(&c, &p2, &m2, &e2)
+            });
+            (a.join().unwrap(), b.join().unwrap())
+        });
+        let outcomes = [r1, r2];
+        assert_eq!(
+            outcomes.iter().filter(|r| r.is_ok()).count(),
+            1,
+            "round {round}: {outcomes:?}"
+        );
+        let loser = outcomes.iter().find_map(|r| r.as_ref().err()).unwrap();
+        assert_eq!(loser.code, "PIN_STALE", "round {round}");
+        let (_, pins, transitions) = state(&c);
+        assert_eq!(pins, 1, "one pin in the history");
+        assert_eq!(transitions, 1, "the loser never spent a transition");
+    }
+}
+
+#[test]
+fn f8_replaying_a_promotion_after_a_re_pin_says_it_was_superseded() {
+    let c = cell();
+    let baseline = c.v1.clone();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    let (_, env) = escalate_and_approve(
+        &c,
+        &c.v1,
+        &c.v2,
+        CLAIM_PROPOSAL_DIGEST,
+        &digest_of(&p),
+        "f8-1",
+    );
+    let promoted = promote(&c, &p, &good_matrix(&p), &env).unwrap();
+    // a replay while the pin has moved on is stale
+    assert_eq!(code(promote(&c, &p, &good_matrix(&p), &env)), "PIN_STALE");
+    let reason = "held-out regression";
+    let rd = repin_digest(&c.v2, &c.v1, reason, &promoted.pin_id);
+    let (_, renv) = escalate_and_approve(&c, &c.v2, &c.v1, CLAIM_REPIN_DIGEST, &rd, "f8-2");
+    with(&c, OPEN, |s| {
+        s.repin(
+            &RepinRequest {
+                to_world_ref: c.v1.clone(),
+                reason: reason.into(),
+                envelope: renv,
+            },
+            &service(),
+            Some(&baseline),
+        )
+    })
+    .unwrap();
+    let again = promote(&c, &p, &good_matrix(&p), &env);
+    assert_eq!(again.unwrap_err().code, "PIN_SUPERSEDED");
+    assert_eq!(
+        state(&c).0.as_deref(),
+        Some(c.v1.as_str()),
+        "the pin did not move"
+    );
+    assert_eq!(state(&c).1, 2);
+}
+
+#[test]
+fn the_approver_may_not_be_the_proposer_even_when_someone_else_requested() {
+    // The third layer: the service requested the escalation, op-alice approved
+    // it, and op-alice is also the proposal's proposer making the request.
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "op-alice", "undeclared:x");
+    let (_, env) = escalate_and_approve(
+        &c,
+        &c.v1,
+        &c.v2,
+        CLAIM_PROPOSAL_DIGEST,
+        &digest_of(&p),
+        "pa-1",
+    );
+    let out = promote_as(&c, &operator("op-alice"), &p, &good_matrix(&p), &env);
+    assert_eq!(code(out), "PROPOSER_IS_APPROVER");
+    assert_eq!(state(&c).1, 0);
+}
+
+#[test]
+fn f10_refused_attempts_are_size_capped_and_rate_limited_per_caller() {
+    let c = cell();
+    let p = proposal(&c.v1, &c.v2, "cognate-service", "undeclared:x");
+    let bad = matrix_for(&p, vec![], "pass", Value::Null, false);
+    let env = request(&c.v1, "f10", &c.v2, json!({}), None, &[]);
+    for _ in 0..(sea_forge_authority::cep::ATTEMPTS_PER_ACTOR_PER_HOUR + 20) {
+        let _ = promote(&c, &p, &bad, &env);
+    }
+    let attempts = with(&c, OPEN, |s| s.pin_attempts()).unwrap();
+    assert_eq!(
+        attempts.len(),
+        sea_forge_authority::cep::ATTEMPTS_PER_ACTOR_PER_HOUR
+    );
+    assert_eq!(attempts.last().unwrap()["code"], "ATTEMPTS_RATE_LIMITED");
+    assert!(attempts
+        .iter()
+        .all(|a| a["message"].as_str().unwrap().len() <= 512));
 }
