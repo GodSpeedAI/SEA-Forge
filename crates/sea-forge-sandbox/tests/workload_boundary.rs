@@ -253,16 +253,20 @@ fn launcher_fixture_child() {
     } else {
         production
     };
+    // The launch chain's stderr (`unshare` and the helper's `fail()` reason)
+    // goes to a file the failure message below reads back; the inherited
+    // descriptor needs no access for the subordinate identity.
+    let stderr_path = std::env::temp_dir().join(format!(
+        "launcher-fixture-stderr-{}.log",
+        std::process::id()
+    ));
+    launch.stderr(Stdio::from(fs::File::create(&stderr_path).unwrap()));
     let mut child = launch.spawn().unwrap();
     // Review pass 2 (R4): consume the trusted setup acknowledgement; the
     // helper fails its launch when its launcher never reads the ack byte.
     // A failure prints the helper's captured stderr (its only voice — the
     // launch itself runs with null stdio).
     wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT).unwrap_or_else(|error| {
-        let stderr_path = std::env::temp_dir().join(format!(
-            "launcher-fixture-stderr-{}.log",
-            std::process::id()
-        ));
         let captured = fs::read_to_string(&stderr_path).unwrap_or_default();
         panic!("isolated launch acknowledged its setup: {error}; helper stderr: {captured:?}");
     });
