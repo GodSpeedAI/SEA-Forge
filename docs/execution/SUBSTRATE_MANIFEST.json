@@ -83,7 +83,7 @@
       "name": "gen_sfwp_schema",
       "binary": "target/debug/gen_sfwp_schema",
       "kind": "schema emitter",
-      "output": "workbench/packages/contracts/schema/*.schema.json",
+      "output": "contracts/schema/*.schema.json",
       "evidence": "crates/sea-forge-server/src/bin/"
     }
   ],
@@ -250,7 +250,7 @@
     {"path": ".github/copilot-instructions.md", "role": "absent (file does not exist; AGENTS.md rule #3 not exercisable)"}
   ],
   "known_generated_artifacts": [
-    "workbench/packages/contracts/schema/*.schema.json (from gen_sfwp_schema)",
+    "contracts/schema/*.schema.json (from gen_sfwp_schema)",
     "workbench/packages/contracts/generated/*.ts and *.validator.ts (from bun run generate:contracts)",
     "workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css (byte-copy of .agents/specs/frontend/colors_and_type.css; drift-checked)",
     "workbench/apps/desktop/src-tauri/gen/ (Tauri build scaffolding)",

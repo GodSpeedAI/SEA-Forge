@@ -1,0 +1,30 @@
+# SEA-Forge policy for the gateway root. Placed once by scripts/install-sea-forge-gateway.sh; yours to edit.
+# SEA-Forge rereads it on every decision, so edits apply without a restart.
+version: "0.1"
+rules:
+  - name: navigation-commit
+    verdict: allow
+    actor_role: service
+    operation_kind: cognate_capability
+    resources: ["horizon.navigation.intent.commit"]
+  - { name: horizon-capabilities, verdict: allow, actor_role: service, operation_kind: cognate_capability }
+  - { name: horizon-actions, verdict: allow, actor_role: service, operation_kind: cognate_action }
+  - { name: operator-approves, verdict: allow, actor_role: operator, operation_kind: approval_resolution }
+  - { name: evidence, verdict: allow, actor_role: service, operation_kind: evidence_mutation }
+  # External settlement declarations (SWE_SEED and artifact transitions) stop at Escalate until an operator other
+  # than the requester approves them. Matched by settlement_authority_class, so local declarations are unaffected.
+  - name: settlement-external-approval
+    verdict: allow
+    requires_approval: true
+    actor_role: service
+    operation_kind: settlement_declaration
+    boundary_constraints:
+      settlement_authority_class: [external]
+  - name: settlement-external-approval-operator
+    verdict: allow
+    requires_approval: true
+    actor_role: operator
+    operation_kind: settlement_declaration
+    boundary_constraints:
+      settlement_authority_class: [external]
+  - { name: settlement, verdict: allow, actor_role: service, operation_kind: settlement_declaration }

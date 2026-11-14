@@ -1073,6 +1073,17 @@ pub struct SettlementDeclarationRequest {
     /// against `declarer.actor_id` before acceptance (T13B).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authored_by: Option<String>,
+    /// The settlement pending record this request was authorised under. Carried into the declaration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_ref: Option<String>,
+    /// The `request_sha256` of that pending record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_request_sha256: Option<String>,
+    /// The declared-content hash the approval was given for: `settlement_declaration_content_sha256` of this
+    /// request with the authorisation fields cleared. The pending record's request hash must equal the binding of
+    /// its ingress hash to this value, so a declaration is tied to the exact content that was approved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_content_sha256: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1115,7 +1126,34 @@ pub struct SettlementDeclaration {
     /// `declare()` still fail this re-check.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authored_by: Option<String>,
+    /// Authorisation provenance: the settlement pending record (`settlement_pending` in the authority ledger)
+    /// this declaration was made under. Required for an external declaration; absent on local and legacy
+    /// declarations. Included in `declaration_hash`, so it cannot be relabelled without changing the hash.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_ref: Option<String>,
+    /// The `request_sha256` of the pending record named by `authorization_ref`. Binds the declaration to the
+    /// exact request that was approved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_request_sha256: Option<String>,
+    /// The declared-content hash the approval was given for (see `SettlementDeclarationRequest`). Covered by
+    /// `declaration_hash`, so it cannot be changed without changing the declaration's identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_content_sha256: Option<String>,
     pub declaration_hash: String,
+}
+
+impl SettlementDeclaration {
+    /// True when an external authority made this declaration. Fail closed: naming an adapter attestation, a
+    /// SWE_SEED verifier, or an authorisation reference makes a declaration external. The settlement writer
+    /// and every reconciliation path use this one definition.
+    pub fn is_external(&self) -> bool {
+        // Strong is produced only by an external authority, so it fails closed as external.
+        self.strength == SettlementStrength::Strong
+            || self.adapter_attestation_ref.is_some()
+            || self.verifier_ref.contains("swe_seed")
+            || self.authorization_ref.is_some()
+            || self.authorization_request_sha256.is_some()
+    }
 }
 
 // === M4a: Capability Records ===

@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.4.1](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.0...v0.4.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **settlement:** refuse NotDeclared while the settlement command may still be running ([#89](https://github.com/GodSpeedAI/SEA-Forge/issues/89)) ([7db070a](https://github.com/GodSpeedAI/SEA-Forge/commit/7db070a5e67f340ecd94cb61ddff1493d594eada))
+
+## [0.4.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.3.0...v0.4.0) (2026-11-05)
+
+
+### Features
+
+* **server:** optional socket_gid grants one group access to the socket ([#73](https://github.com/GodSpeedAI/SEA-Forge/issues/73)) ([6fae052](https://github.com/GodSpeedAI/SEA-Forge/commit/6fae052d4e7db49c544ce543d9c754d60276a831))
+
+
+### Bug Fixes
+
+* **authority:** durable settlement approval-resume and reconciliation gate ([#79](https://github.com/GodSpeedAI/SEA-Forge/issues/79)) ([652ed71](https://github.com/GodSpeedAI/SEA-Forge/commit/652ed710b398a0c2f28ea7cd611b5b8c2f57a196))
+* **authority:** enforce permission matrix and refuse self-resolution ([#76](https://github.com/GodSpeedAI/SEA-Forge/issues/76)) ([9b784fe](https://github.com/GodSpeedAI/SEA-Forge/commit/9b784feabd2c07b36e9cf30df2fd48490b5e0f01))
+* **authority:** gate identity on resolution, not bundle version ([#77](https://github.com/GodSpeedAI/SEA-Forge/issues/77)) ([c30e51e](https://github.com/GodSpeedAI/SEA-Forge/commit/c30e51edbd7afaf99269c6d44b9559673a8fd62a))
+* **casework:** bump go-jose/v4 to 4.1.6 ([#78](https://github.com/GodSpeedAI/SEA-Forge/issues/78)) ([11efa4b](https://github.com/GodSpeedAI/SEA-Forge/commit/11efa4b1fd5ae9f4aa7c567e427b3b23b357b962))
+* **settlement:** keep the claim lease after an ambiguous SWE_SEED declare failure ([#84](https://github.com/GodSpeedAI/SEA-Forge/issues/84)) ([bdb42a5](https://github.com/GodSpeedAI/SEA-Forge/commit/bdb42a52d08c075e87ee98f1998af359e7e2e73b))
+* **settlement:** lease-gate resume reconciliation and fence claim outcomes (F-B) ([#83](https://github.com/GodSpeedAI/SEA-Forge/issues/83)) ([22bf66a](https://github.com/GodSpeedAI/SEA-Forge/commit/22bf66a304fbe23df3c11c1e938b180faa96bc22))
+* **settlement:** read declarations only from the verified case ledger (F-A) ([#82](https://github.com/GodSpeedAI/SEA-Forge/issues/82)) ([f947e8e](https://github.com/GodSpeedAI/SEA-Forge/commit/f947e8e6df9200528121f8d9bbfe90517e7e6a55))
+* **settlement:** settle a failed resume's claim from the ledger ([#81](https://github.com/GodSpeedAI/SEA-Forge/issues/81)) ([09c2541](https://github.com/GodSpeedAI/SEA-Forge/commit/09c2541bbc59868fee288f6158d1cc5b939687da))
+
 ## [0.3.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.2.0...v0.3.0) (2026-10-26)
 
 

@@ -6,7 +6,7 @@
 //
 // Validates every response the SFWP IPC mock (sfwp-full-mock.js) actually
 // returns against the real generated AJV schemas at
-// workbench/packages/contracts/schema/*.schema.json.
+// contracts/schema/*.schema.json.
 //
 // This does not hand-duplicate the mock's fixtures — it loads the real mock
 // file into a fake `window`, invokes it exactly the way the real Workbench
@@ -22,7 +22,7 @@ import { createRequire } from "node:module";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../../../");
-const SCHEMA_DIR = path.join(REPO_ROOT, "workbench/packages/contracts/schema");
+const SCHEMA_DIR = path.join(REPO_ROOT, "contracts/schema");
 const MOCK_FILE = path.join(__dirname, "sfwp-full-mock.js");
 
 // Resolve ajv the way the contracts package itself would (it declares ajv as

@@ -4,10 +4,18 @@
 //! declarations/envelopes, and a real authority policy bundle — no
 //! caller-supplied status, no test double `SnapshotView`.
 
+use sea_forge_authority::cep::{
+    authorize_settlement_declaration, settlement_approval_id, CepAuthorityService,
+    SettlementCriteria, SettlementGate, SettlementIngress, SettlementOperation,
+    SettlementTransport, VerifiedSettlementIngress,
+};
+use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::types::{
-    DeclarationIndependence, DeclarationReliability, DeclarationStatus, Declarer,
+    Actor, ActorRole, DeclarationIndependence, DeclarationReliability, DeclarationStatus, Declarer,
     SettlementDeclaration, SettlementStrength,
 };
+use sea_forge_domainforge::WorldRegistry;
+use sea_forge_ledger::LedgerStream;
 use sea_forge_self_model::{
     bundled, load_composed,
     store::{self, RebuildInputs},
@@ -67,20 +75,99 @@ fn init_self_model(root: &Path, probes: Vec<ToolchainProbe>) {
     store::ensure_init(root, &inputs).unwrap();
 }
 
-/// Append one real, qualifying (accepted/strong/independent) declaration for
-/// `capability_name` directly to the compatibility view
-/// `rebuild_capability` reads, so `CapabilityRecord.status` becomes at least
-/// `Demonstrated` without needing to satisfy the full `default_v02_policy`
-/// promotion thresholds (proving is exercised in `conformance_m4a.rs`).
+/// The approval policy: an external settlement needs an approval, and operators may resolve approvals.
+/// The declared content hash the fixture gates and claims with. The claim matches it by construction.
+const DECLARED_CONTENT: &str = "sha256:t14a-declared-content";
+
+const APPROVAL_POLICY: &str = "version: \"0.1\"\nrules:\n  - name: external-settlement\n    verdict: allow\n    requires_approval: true\n    actor_role: service\n    operation_kind: settlement_declaration\n    boundary_constraints:\n      settlement_authority_class: [external]\n  - name: approve\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
+/// Gate one external settlement for `run_id`, approve it as an operator through `resolve_approval`, and claim it
+/// with a second gate call. This is the approve-then-resume path the reconciliation tests use.
+/// Returns the claimed pending record's id and request hash.
+fn approved_claimed_external_settlement(
+    root: &Path,
+    case_id: &str,
+    run_id: &str,
+) -> (String, String) {
+    let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(APPROVAL_POLICY).unwrap();
+    let fresh = || PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+    let gate_actor = Actor {
+        actor_id: "cognate-service".into(),
+        role: ActorRole::Service,
+    };
+    let ingress = VerifiedSettlementIngress::verified(
+        SettlementIngress::SweSeedDeclaration,
+        SettlementTransport::SweSeedAdapter,
+        None,
+        &gate_actor,
+        vec![format!("operation:{run_id}")],
+    )
+    .unwrap();
+    let ttl = chrono::Duration::hours(24);
+    let gate = |engine: &PolicyAuthorityEngine| {
+        let declared = DECLARED_CONTENT.to_string();
+        authorize_settlement_declaration(
+            engine,
+            &bundle,
+            root,
+            SettlementOperation {
+                case_id,
+                operation_id: run_id,
+                declared_request_sha256: &declared,
+            },
+            &ingress,
+            ttl,
+        )
+        .unwrap()
+    };
+    let pending = match gate(&fresh()) {
+        SettlementGate::Pending { record, .. } => *record,
+        other => panic!("expected a pending settlement, got {other:?}"),
+    };
+    let worlds = WorldRegistry::new();
+    let engine = fresh();
+    let service = CepAuthorityService {
+        engine: &engine,
+        bundle: &bundle,
+        worlds: &worlds,
+        root,
+        approval_ttl: ttl,
+        criteria: SettlementCriteria::default(),
+    };
+    let approver = Actor {
+        actor_id: "op-approver".into(),
+        role: ActorRole::Operator,
+    };
+    service
+        .resolve_approval(
+            &settlement_approval_id(&pending.pending_id),
+            true,
+            &approver,
+        )
+        .unwrap();
+    match gate(&fresh()) {
+        SettlementGate::Resumed { pending_id, .. } => assert_eq!(pending_id, pending.pending_id),
+        other => panic!("expected a claimed settlement, got {other:?}"),
+    }
+    (pending.pending_id, pending.request_sha256)
+}
+
+/// Append one real, authorised external declaration for `capability_name` to the compatibility view
+/// `rebuild_capability` reads. It is strong and qualifying, made by the external SWE_SEED verifier, and bound to
+/// an approved, claimed settlement for its own case and run. Without that binding it would be quarantined.
+/// The thresholds of `default_v02_policy` are exercised in `conformance_m4a.rs`.
 fn append_qualifying_declaration(root: &Path, capability_name: &str) {
+    let case_id = "case_test_01";
+    let run_id = "run_test_01";
+    let (pending_id, request_sha256) = approved_claimed_external_settlement(root, case_id, run_id);
     let dir = root.join("settlement");
     fs::create_dir_all(&dir).unwrap();
     let decl = SettlementDeclaration {
         version: "0.1".into(),
         declaration_id: "decl_test_01".into(),
         settlement_ref: "set_test_01".into(),
-        run_id: "run_test_01".into(),
-        case_id: "case_test_01".into(),
+        run_id: run_id.into(),
+        case_id: case_id.into(),
         plan_item_id: capability_name.to_string(),
         claim_manifest_sha256: "sha256:manifest".into(),
         status: DeclarationStatus::Accepted,
@@ -92,7 +179,7 @@ fn append_qualifying_declaration(root: &Path, capability_name: &str) {
         criteria_declared_at: "2026-07-22T00:00:00Z".into(),
         job_contract_ref: None,
         origin_refs: vec![],
-        verifier_ref: "builtin:local".into(),
+        verifier_ref: "swe_seed_harness".into(),
         verifier_sha256: "sha256:verifier".into(),
         verification_evidence_refs: vec!["evd_test_01".into()],
         declarer: Declarer {
@@ -119,15 +206,26 @@ fn append_qualifying_declaration(root: &Path, capability_name: &str) {
         orchestration_burden: None,
         issued_at: "2026-07-23T00:00:00Z".into(),
         source_evidence_refs: vec!["evd_test_01".into()],
-        adapter_attestation_ref: None,
+        adapter_attestation_ref: Some("att_test_01".into()),
         authored_by: None,
-        declaration_hash: "sha256:decl".into(),
+        authorization_ref: Some(pending_id),
+        authorization_request_sha256: Some(request_sha256),
+        authorization_content_sha256: Some(DECLARED_CONTENT.to_string()),
+        declaration_hash: String::new(),
     };
-    let path = dir.join("declarations.jsonl");
+    // The declaration is committed to its case ledger, the authoritative source, with a hash that recomputes.
+    let mut decl = decl;
+    decl.declaration_hash = sea_forge_authority::cep::declaration_content_hash(&decl).unwrap();
+    LedgerStream::open(root, format!("case-{case_id}"), "test-writer")
+        .unwrap()
+        .commit_typed("settlement_declaration", vec![], &decl, vec![])
+        .unwrap();
+    // The derived view is written too, as the writers do. Nothing reads it for authority.
+    let view = dir.join("declarations.jsonl");
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&path)
+        .open(&view)
         .unwrap();
     let mut line = serde_json::to_vec(&decl).unwrap();
     line.push(b'\n');

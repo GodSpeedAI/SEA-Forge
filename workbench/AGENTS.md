@@ -52,11 +52,11 @@ regardless of anything in this directory.
 
 ## Generated-zone rules
 
-- `packages/contracts/schema/*.schema.json` (from Task 3 on): JSON Schema
+- `../contracts/schema/*.schema.json` (from Task 3 on): JSON Schema
   emitted from the types listed in `crates/sea-forge-server/src/sfwp/mod.rs`'s
   `SCHEMA_TYPES`. Never hand-edit; run `just workbench-contracts-generate`.
 - `packages/contracts/generated/` (from Task 3 on): `@sea-forge/contracts`,
-  built from `packages/contracts/schema/` by `just workbench-contracts-generate`
+  built from `../contracts/schema/` by `just workbench-contracts-generate`
   (`packages/contracts/scripts/generate.ts`, using `json-schema-to-typescript`
   + Ajv standalone generation — see `docs/decisions/ADR-005-sfwp-schema-generation.md`).
   One `<Name>.ts` type and one static `<Name>.validator.ts` per schema, plus a

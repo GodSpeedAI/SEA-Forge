@@ -99,7 +99,7 @@ entry when resolved; do not use this file as a backlog of ideas.
 - Observed: 2026-08-15
 - Evidence: `workbench/apps/desktop/e2e/tauriMock.ts`'s
   `degradedReadinessView()` omits `next_lawful_action`, which the generated
-  `ReadinessItem` schema now requires (`packages/contracts/schema/
+  `ReadinessItem` schema now requires (`contracts/schema/
   ReadinessItem.schema.json` required list). Validated directly:
   `validateReadinessView(readyReadinessView())` fails with
   "must have required property 'next_lawful_action'" per item, so
@@ -457,7 +457,7 @@ entry below; `thoth.ask` still has no response contract, and `asset.list` /
   `crates/sea-forge-server/src/lib.rs`, but its response is untyped
   `serde_json::Value`); `assets` and `domain models` have no SFWP method at
   all. Each needs a server-side schema in
-  `workbench/packages/contracts/schema/` first.
+  `contracts/schema/` first.
 - Scope: the six surfaces that claimed a `ready`/"Active" pill over *no* data
   and *no* disclosure were replaced with `UnbackedSurface` in an earlier pass;
   `cases`/`inbox` were made real in Task 7. These three were left because

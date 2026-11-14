@@ -1,6 +1,6 @@
 # Current status
 
-**Status revision:** 222
+**Status revision:** 266
 
 **Stage:** FINAL: capability harvest + ARM64 distribution delivered — consolidated report published; session terminal state recorded
 

@@ -218,7 +218,7 @@ Coverage philosophy (`ARCHITECTURE.md` §7, `spec-minimum.md` §17): tests asser
 
 Generated artifacts are governed and committed:
 
-- `workbench/packages/contracts/schema/*.schema.json` — emitted by `gen_sfwp_schema` from `crates/sea-forge-server/src/sfwp/mod.rs`'s `SCHEMA_TYPES`. Conformance test `generated_schemas_are_committed_and_current` fails the Rust gate on drift.
+- `contracts/schema/*.schema.json` — emitted by `gen_sfwp_schema` from `crates/sea-forge-server/src/sfwp/mod.rs`'s `SCHEMA_TYPES`. Conformance test `generated_schemas_are_committed_and_current` fails the Rust gate on drift.
 - `workbench/packages/contracts/generated/*.ts` + `*.validator.ts` — emitted by `bun run generate:contracts`. Verified deterministic this pass (50 types, zero diff after regeneration).
 - `workbench/packages/sea-forge-ui-tokens/sea-forge.tokens.css` — byte-copy of `.agents/specs/frontend/colors_and_type.css`; `bun run check-drift` (in that package) fails on divergence.
 - `.ua/knowledge-graph.json` — Understand-Anything projection; regenerated, never hand-edited.

@@ -34,7 +34,7 @@ just proof                              # minimum kernel proofs P1–P4b
 
 ## 4. Contract Synchronization (`sea-forge-server` ↔ Workbench)
 
-* `crates/sea-forge-server/src/sfwp/mod.rs` (`SCHEMA_TYPES`) is the canonical source of truth for SFWP JSON schemas emitted to `workbench/packages/contracts/schema/`.
+* `crates/sea-forge-server/src/sfwp/mod.rs` (`SCHEMA_TYPES`) is the canonical source of truth for SFWP JSON schemas emitted to `contracts/schema/`.
 * When modifying any SFWP DTO or request verb:
   1. Run `just workbench-contracts-generate` to regenerate schemas and TypeScript/AJV bindings.
   2. Verify with `just workbench-contracts-gate`.

@@ -1,7 +1,7 @@
 //! SFWP JSON Schema generator (Task 3, Rust half).
 //!
 //! Emits one `<TypeName>.schema.json` per SFWP-layer contract type into
-//! `workbench/packages/contracts/schema/`. This is the Rust-authored
+//! `contracts/schema/`. This is the Rust-authored
 //! intermediate the follow-up TypeScript generator consumes. Running
 //! `just workbench-contracts-generate` regenerates these deterministically; a
 //! drift test fails if a contract type changes
@@ -10,7 +10,7 @@
 use schemars::schema_for;
 use sea_forge_server::identity::{AvailableActor, IdentityView, RefusalView};
 use sea_forge_server::sfwp::approvals::{
-    ApprovalGovernanceContext, ApprovalListResult, PendingApproval,
+    ApprovalGovernanceContext, ApprovalListResult, CaseTaskApproval,
 };
 use sea_forge_server::sfwp::assets::{AssetKind, AssetListResult, AssetRow};
 use sea_forge_server::sfwp::case::{
@@ -96,7 +96,7 @@ pub fn generated_schemas() -> Vec<(String, String)> {
         schema!(HorizonItem, "HorizonItem"),
         schema!(RunSettlement, "RunSettlement"),
         schema!(ApprovalListResult, "ApprovalListResult"),
-        schema!(PendingApproval, "PendingApproval"),
+        schema!(CaseTaskApproval, "CaseTaskApproval"),
         schema!(ApprovalGovernanceContext, "ApprovalGovernanceContext"),
         schema!(RunListResult, "RunListResult"),
         schema!(RunSummary, "RunSummary"),
@@ -143,7 +143,7 @@ pub fn schema_dir() -> PathBuf {
         .parent()
         .and_then(|p| p.parent())
         .expect("crate lives two levels under workspace root")
-        .join("workbench/packages/contracts/schema")
+        .join("contracts/schema")
 }
 
 fn main() -> std::io::Result<()> {

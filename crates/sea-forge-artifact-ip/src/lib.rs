@@ -857,6 +857,34 @@ pub fn load_completed_transition(
             )
         })
         .and_then(|entry| serde_json::from_value(entry.payload.clone()).map_err(Into::into))?;
+    // A completed transition is trusted only through its verified authorisation: the same shared verification the
+    // reconcilers use. An external declaration without one is not a completed settlement.
+    let verdict = sea_forge_authority::cep::verify_case_declarations(
+        root,
+        std::slice::from_ref(&declaration),
+    )
+    .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
+    match verdict.first() {
+        Some(
+            sea_forge_authority::cep::DeclarationAuthorization::Local
+            | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. },
+        ) => {}
+        Some(sea_forge_authority::cep::DeclarationAuthorization::Quarantined(refusal)) => {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                format!(
+                    "completed declaration is not authorised by a verified settlement record: {}",
+                    refusal.as_str()
+                ),
+            ));
+        }
+        None => {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                "completed declaration has no verdict",
+            ));
+        }
+    }
     if declaration.case_id != terminal.case_id
         || declaration.run_id != terminal.run_id
         || declaration.claim_manifest_sha256 != manifest.claim_manifest_hash
@@ -890,41 +918,42 @@ pub fn load_completed_transition(
     }))
 }
 
+/// The settlement pending record a declaration is made under: the gate's claim, bound to the request it approved.
+/// `declared_content_sha256` is the content hash the gate was called with. The resume re-derives the declaration
+/// content and refuses to declare when it differs.
+#[derive(Debug, Clone, Copy)]
+pub struct PendingAuthorization<'a> {
+    pub pending_id: &'a str,
+    /// The claimed attempt this resume holds. Its outcome is recorded only while that attempt is still open.
+    pub attempt: u32,
+    pub request_sha256: &'a str,
+    pub declared_content_sha256: &'a str,
+}
+
+/// The declaration a resume would make, built without side effects. The claim manifest is sealed here but not
+/// committed, and nothing is declared. The approval gate binds to `request` before the resume runs.
+#[derive(Debug, Clone)]
+pub struct PlannedResumeDeclaration {
+    pub manifest: ArtifactTransitionClaimManifest,
+    /// The request without its authorisation fields; the claim sets those.
+    pub request: SettlementDeclarationRequest,
+}
+
+/// Plan the declaration a resume of `pending` would make. Reads the ledger, seals the claim manifest and builds the
+/// request. It commits nothing and declares nothing, so the caller can gate the content before the resume.
 #[allow(clippy::too_many_arguments)]
-pub fn resume_pending_transition(
+pub fn plan_resume_declaration(
     root: &Path,
     actor: &str,
     pending: &PendingArtifactTransition,
-    approval: &ApprovalRequest,
     criteria: &SettlementCriteriaRecord,
     settlement: &SettlementEvent,
     execution_started_at: &str,
     verifier_ref: &str,
     verifier_sha256: &str,
-    workspace_root: &Path,
-    declarer: Declarer,
-    authority: &dyn SettlementAuthority,
-    grant: ActionGrant,
-) -> Result<ResumedArtifactTransition, ForgeError> {
-    if approval.status != ApprovalStatus::Approved
-        || approval.approval_id != pending.approval_ref
-        || approval.resolved_by.as_deref().is_none_or(str::is_empty)
-        || settlement.status != SettlementStatus::Accepted
-        || settlement.run_id != pending.run_id
-        || settlement.criteria_ref.as_deref() != Some(pending.criteria_ref.as_str())
-        || criteria.criteria_id != pending.criteria_ref
-    {
-        return Err(m8_error(
-            "artifact_pending_transition_error",
-            "approved transition records do not match the pending transition",
-        ));
-    }
-    let (registrations, tokens) = load_ledger_records(root, actor)?;
-    let profile = read_gate_profile(
-        root,
-        &pending.proposal.gate_profile_ref,
-        &pending.profile_hash,
-    )?;
+    declarer: &Declarer,
+) -> Result<PlannedResumeDeclaration, ForgeError> {
+    let (registrations, _tokens) = load_ledger_records(root, actor)?;
     let mut evidence_refs = pending
         .proposal
         .source_artifact_ids
@@ -962,6 +991,84 @@ pub fn resume_pending_transition(
         claim_manifest_hash: String::new(),
     };
     seal_claim_manifest(&mut manifest)?;
+    let request = SettlementDeclarationRequest {
+        settlement_ref: settlement.settlement_id.clone(),
+        run_id: pending.run_id.clone(),
+        case_id: pending.case_id.clone(),
+        plan_item_id: pending.plan_item_id.clone(),
+        claim_manifest_sha256: manifest.claim_manifest_hash.clone(),
+        criteria_ref: criteria.criteria_id.clone(),
+        criteria_sha256: criteria.criteria_sha256.clone(),
+        criteria_record_hash: criteria.criteria_record_hash.clone(),
+        criteria_declared_at: criteria.declared_at.clone(),
+        execution_started_at: execution_started_at.into(),
+        job_contract_ref: None,
+        origin_refs: criteria.origin_refs.clone(),
+        verifier_ref: verifier_ref.into(),
+        verifier_sha256: verifier_sha256.into(),
+        acting_entity_id: actor.into(),
+        requested_strength: SettlementStrength::Strong,
+        declarer: declarer.clone(),
+        variation_tags: BTreeMap::new(),
+        disruption_tags: vec![],
+        orchestration_burden: None,
+        source_evidence_refs: evidence_refs,
+        authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
+        authorization_content_sha256: None,
+    };
+    Ok(PlannedResumeDeclaration { manifest, request })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn resume_pending_transition(
+    root: &Path,
+    actor: &str,
+    pending: &PendingArtifactTransition,
+    approval: &ApprovalRequest,
+    criteria: &SettlementCriteriaRecord,
+    settlement: &SettlementEvent,
+    execution_started_at: &str,
+    verifier_ref: &str,
+    verifier_sha256: &str,
+    workspace_root: &Path,
+    declarer: Declarer,
+    authority: &dyn SettlementAuthority,
+    grant: ActionGrant,
+    authorization: Option<PendingAuthorization<'_>>,
+) -> Result<ResumedArtifactTransition, ForgeError> {
+    if approval.status != ApprovalStatus::Approved
+        || approval.approval_id != pending.approval_ref
+        || approval.resolved_by.as_deref().is_none_or(str::is_empty)
+        || settlement.status != SettlementStatus::Accepted
+        || settlement.run_id != pending.run_id
+        || settlement.criteria_ref.as_deref() != Some(pending.criteria_ref.as_str())
+        || criteria.criteria_id != pending.criteria_ref
+    {
+        return Err(m8_error(
+            "artifact_pending_transition_error",
+            "approved transition records do not match the pending transition",
+        ));
+    }
+    let (registrations, tokens) = load_ledger_records(root, actor)?;
+    let profile = read_gate_profile(
+        root,
+        &pending.proposal.gate_profile_ref,
+        &pending.profile_hash,
+    )?;
+    let planned = plan_resume_declaration(
+        root,
+        actor,
+        pending,
+        criteria,
+        settlement,
+        execution_started_at,
+        verifier_ref,
+        verifier_sha256,
+        &declarer,
+    )?;
+    let manifest = planned.manifest.clone();
     commit_claim_manifest(root, actor, &manifest)?;
 
     let stream = LedgerStream::open(root, format!("case-{}", pending.case_id), actor)?;
@@ -987,33 +1094,68 @@ pub fn resume_pending_transition(
         ));
     }
     let declaration = if let Some(existing) = matching.into_iter().next() {
+        // A declaration already in the case is reused only when it is authorised; an unauthorised one is refused.
+        let verdict = sea_forge_authority::cep::verify_case_declarations(
+            root,
+            std::slice::from_ref(&existing),
+        )
+        .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
+        if !matches!(
+            verdict.first(),
+            Some(
+                sea_forge_authority::cep::DeclarationAuthorization::Local
+                    | sea_forge_authority::cep::DeclarationAuthorization::Authorized { .. }
+            )
+        ) {
+            return Err(m8_error(
+                "settlement_integrity_error",
+                "existing declaration is not authorised by a verified settlement record",
+            ));
+        }
         existing
     } else {
-        let request = SettlementDeclarationRequest {
-            settlement_ref: settlement.settlement_id.clone(),
-            run_id: pending.run_id.clone(),
-            case_id: pending.case_id.clone(),
-            plan_item_id: pending.plan_item_id.clone(),
-            claim_manifest_sha256: manifest.claim_manifest_hash.clone(),
-            criteria_ref: criteria.criteria_id.clone(),
-            criteria_sha256: criteria.criteria_sha256.clone(),
-            criteria_record_hash: criteria.criteria_record_hash.clone(),
-            criteria_declared_at: criteria.declared_at.clone(),
-            execution_started_at: execution_started_at.into(),
-            job_contract_ref: None,
-            origin_refs: criteria.origin_refs.clone(),
-            verifier_ref: verifier_ref.into(),
-            verifier_sha256: verifier_sha256.into(),
-            acting_entity_id: actor.into(),
-            requested_strength: SettlementStrength::Strong,
-            declarer,
-            variation_tags: BTreeMap::new(),
-            disruption_tags: vec![],
-            orchestration_burden: None,
-            source_evidence_refs: evidence_refs.clone(),
-            authored_by: None,
-        };
+        let mut request = planned.request.clone();
+        if let Some(claim) = authorization {
+            // The content this claim is about to declare must be the content the gate approved. Nothing is declared
+            // on a mismatch, and the claim is failed.
+            let declared =
+                sea_forge_authority::cep::settlement_declaration_content_sha256(&request)
+                    .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
+            if declared != claim.declared_content_sha256 {
+                sea_forge_authority::cep::fail_settlement_resume(
+                    root,
+                    claim.pending_id,
+                    claim.attempt,
+                    "content_mismatch",
+                )
+                .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
+                return Err(m8_error(
+                    "settlement_content_mismatch",
+                    "the declaration content differs from the approved request; nothing was declared",
+                ));
+            }
+            request.authorization_ref = Some(claim.pending_id.to_string());
+            request.authorization_request_sha256 = Some(claim.request_sha256.to_string());
+            // Checked equal to the declared content above, so the declaration is bound to the approved content.
+            request.authorization_content_sha256 = Some(claim.declared_content_sha256.to_string());
+        }
+        // The caller decides the class: the only caller, `resume` in sea-forge-cli, passes the SWE_SEED
+        // authority and must gate it as `External` (`authorize_settlement_declaration`) before calling here.
         let declaration = authority.declare(&request)?;
+        if let Err(error) =
+            sea_forge_authority::cep::verify_declaration_echoes_request(&request, &declaration)
+        {
+            if let Some(claim) = authorization {
+                sea_forge_authority::cep::fail_settlement_resume(
+                    root,
+                    claim.pending_id,
+                    claim.attempt,
+                    "content_mismatch",
+                )
+                .map_err(|error| m8_error("settlement_integrity_error", error.to_string()))?;
+            }
+            return Err(m8_error("settlement_content_mismatch", error.to_string()));
+        }
         append_declaration_ledgered_once(
             root,
             &root.join("declarations.jsonl"),
@@ -1090,7 +1232,7 @@ pub fn resume_pending_transition(
     input.approver_id.clone_from(&approval.resolved_by);
     input.approval_ref = Some(approval.approval_id.clone());
     input.criteria_ref = criteria.criteria_id.clone();
-    input.evidence_refs = evidence_refs;
+    input.evidence_refs = manifest.evidence_refs.clone();
     input.settlement_ref = settlement.settlement_id.clone();
     input.strong_declaration_refs = vec![declaration.declaration_id.clone()];
     input.case_id = pending.case_id.clone();

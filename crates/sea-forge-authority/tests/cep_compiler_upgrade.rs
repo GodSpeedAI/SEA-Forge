@@ -135,7 +135,7 @@ fn decision(d: &CepDecision) -> &str {
 }
 
 #[test]
-fn the_recorded_0_21_0_and_the_0_21_1_refs_are_what_these_tests_assume() {
+fn the_recorded_0_21_0_and_the_0_21_2_refs_are_what_these_tests_assume() {
     let (_, old, new) = upgrade_pair();
     assert_eq!(old, OLD_REF);
     assert_eq!(new, NEW_REF);

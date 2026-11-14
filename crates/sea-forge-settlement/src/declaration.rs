@@ -17,9 +17,9 @@ use sea_forge_ledger::{types::hash_canonical, CommittedRecordRef, LedgerStream};
 
 /// Compute the declaration hash over canonical content excluding `declaration_hash`.
 pub fn compute_declaration_hash(decl: &SettlementDeclaration) -> Result<String, ForgeError> {
-    let mut copy = decl.clone();
-    copy.declaration_hash.clear();
-    hash_canonical(&copy)
+    // One definition, shared with the authority verifier that recomputes it on every read.
+    sea_forge_authority::cep::declaration_content_hash(decl)
+        .map_err(|error| ForgeError::Internal(error.to_string()))
 }
 
 /// Append a declaration to a JSONL file.
@@ -36,6 +36,23 @@ pub fn append_declaration(path: &Path, decl: &SettlementDeclaration) -> Result<(
         .map_err(|e| ForgeError::io("append declaration", e))
 }
 
+/// The writer's boundary: an external declaration must name the pending record that authorised it. A writer that
+/// omits it still produces a record, but reconciliation quarantines that record, so refuse it here first.
+fn refuse_unauthorised_external(decl: &SettlementDeclaration) -> Result<(), ForgeError> {
+    if decl.is_external()
+        && (decl.authorization_ref.is_none() || decl.authorization_request_sha256.is_none())
+    {
+        return Err(ForgeError::Plan {
+            class: "settlement_authorization_missing",
+            message: format!(
+                "external declaration {} carries no settlement authorisation",
+                decl.declaration_id
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Commit a declaration to the M0 ledger before appending its compatibility view.
 pub fn append_declaration_ledgered(
     root: &Path,
@@ -43,6 +60,7 @@ pub fn append_declaration_ledgered(
     actor: &str,
     decl: &SettlementDeclaration,
 ) -> Result<(), ForgeError> {
+    refuse_unauthorised_external(decl)?;
     if compute_declaration_hash(decl)? != decl.declaration_hash {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
@@ -68,6 +86,7 @@ pub fn append_declaration_ledgered_once(
     actor: &str,
     decl: &SettlementDeclaration,
 ) -> Result<CommittedRecordRef, ForgeError> {
+    refuse_unauthorised_external(decl)?;
     if compute_declaration_hash(decl)? != decl.declaration_hash {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
@@ -248,6 +267,9 @@ impl SettlementAuthority for LocalSettlementAuthority {
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: None,
             authored_by: req.authored_by.clone(),
+            authorization_ref: req.authorization_ref.clone(),
+            authorization_request_sha256: req.authorization_request_sha256.clone(),
+            authorization_content_sha256: req.authorization_content_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -272,9 +294,28 @@ pub trait SweSeedTransport {
     fn submit(&self, req: &SettlementDeclarationRequest) -> Result<SweSeedResponse, ForgeError>;
 }
 
+/// The external SWE_SEED authority is any command that follows this contract.
+///
+/// - The request on stdin is a `SettlementDeclarationRequest`; the response on stdout is a `SweSeedResponse`.
+/// - **Idempotency (MUST).** An external declaration carries `authorization_request_sha256`. It is identical for
+///   every attempt at the same approved request, including a retry after an operator resolved an earlier attempt
+///   as not declared. The authority MUST treat it as an idempotency key and, in one atomic check-and-append,
+///   refuse (or answer with the existing attestation for) a second declaration for the same key. This is the
+///   only complete defence against the double declaration of issue #86; the checks below only narrow it.
+/// - **Liveness evidence (this crate).** When [`CommandSweSeedTransport::with_launch_evidence`] is set, the
+///   command's process group, leader start time and boot id are recorded on the claimed attempt right after the
+///   spawn, and `resolve_uncertain_settlement` refuses `NotDeclared` while that group is alive. Bounds: a process
+///   that left the group (`setsid`, `setpgid`), a resolver in a different pid namespace on the same boot, and the
+///   instant between `fork` and the ledger write are not covered. Exited-but-unreaped (zombie) members do not count
+///   as alive. A claim with no record keeps the lease-only rule; a record that cannot be read, or a check that
+///   cannot run, refuses with `settlement_command_liveness_unknown`, which only the operator's explicit,
+///   audited `resolve-uncertain --not-declared --attest-command-gone` overrides (never a group that is alive).
+/// - **Containment.** Windows kills the command with the server (Job Object). Under systemd,
+///   `KillMode=control-group` kills a crashed server's leftovers when the unit stops.
 pub struct CommandSweSeedTransport {
     argv: Vec<String>,
     timeout: Duration,
+    launch_evidence_root: Option<std::path::PathBuf>,
 }
 
 impl CommandSweSeedTransport {
@@ -289,7 +330,16 @@ impl CommandSweSeedTransport {
         Ok(Self {
             argv,
             timeout: Duration::from_secs(timeout_secs),
+            launch_evidence_root: None,
         })
+    }
+
+    /// Record the spawned command's process group on the claimed attempt in the settlement ledger under `root`.
+    /// Only a request that carries an `authorization_ref` (a claimed settlement) is recorded.
+    #[must_use]
+    pub fn with_launch_evidence(mut self, root: impl Into<std::path::PathBuf>) -> Self {
+        self.launch_evidence_root = Some(root.into());
+        self
     }
 }
 
@@ -309,10 +359,39 @@ impl SweSeedTransport for CommandSweSeedTransport {
             command.process_group(0);
         }
         let (mut child, tree) = ProcessTree::spawn(&mut command)?;
+        if let Some(root) = &self.launch_evidence_root {
+            if let Some(pending_id) = req.authorization_ref.as_deref() {
+                let launch = sea_forge_authority::cep::CommandLaunch::capture(child.id());
+                if let Err(error) =
+                    sea_forge_authority::cep::record_command_launch(root, pending_id, &launch)
+                {
+                    // Without the evidence the command must not run on: stop it, and keep the claim open.
+                    let stopped = tree.terminate(&child).map_err(|e| e.to_string());
+                    let exited = wait_bounded(&mut child, Duration::from_secs(5));
+                    let still_running = stopped.is_err() || !exited;
+                    return Err(settlement_authority_call_failed(format!(
+                        "could not record the SWE_SEED command launch: {error}{}",
+                        if still_running {
+                            format!(
+                                "; the command (process group {}) could not be confirmed stopped ({}); the claim stays held",
+                                child.id(),
+                                stopped.err().unwrap_or_else(|| "it did not exit in time".into())
+                            )
+                        } else {
+                            String::new()
+                        }
+                    )));
+                }
+            } else {
+                eprintln!(
+                    "warning: SWE_SEED launch evidence is enabled but the request carries no authorization_ref; no launch record was written"
+                );
+            }
+        }
         let mut stdin = child
             .stdin
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdin was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stdin was not piped"))?;
         let request = serde_json::to_vec(req)?;
         let stdin_done = Arc::new(AtomicBool::new(false));
         let stdin_flag = Arc::clone(&stdin_done);
@@ -324,11 +403,11 @@ impl SweSeedTransport for CommandSweSeedTransport {
         let stdout = child
             .stdout
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stdout was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stdout was not piped"))?;
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| settlement_authority_unavailable("SWE_SEED stderr was not piped"))?;
+            .ok_or_else(|| settlement_authority_call_failed("SWE_SEED stderr was not piped"))?;
         let stdout_reader = thread::spawn(move || {
             let mut bytes = Vec::new();
             stdout
@@ -343,13 +422,13 @@ impl SweSeedTransport for CommandSweSeedTransport {
         let started = Instant::now();
         let deadline = started + self.timeout;
         let status = loop {
-            if let Some(status) = child.try_wait().map_err(settlement_authority_unavailable)? {
+            if let Some(status) = child.try_wait().map_err(settlement_authority_call_failed)? {
                 break status;
             }
             if Instant::now() >= deadline {
                 tree.terminate(&child)?;
                 let _ = child.wait();
-                return Err(settlement_authority_unavailable(
+                return Err(settlement_authority_call_failed(
                     "SWE_SEED command timed out",
                 ));
             }
@@ -360,7 +439,7 @@ impl SweSeedTransport for CommandSweSeedTransport {
             if Instant::now() >= deadline {
                 tree.terminate(&child)?;
                 let _ = child.wait();
-                return Err(settlement_authority_unavailable(
+                return Err(settlement_authority_call_failed(
                     "SWE_SEED command timed out",
                 ));
             }
@@ -368,17 +447,17 @@ impl SweSeedTransport for CommandSweSeedTransport {
         }
         stdin_writer
             .join()
-            .map_err(|_| settlement_authority_unavailable("SWE_SEED stdin writer failed"))?
-            .map_err(settlement_authority_unavailable)?;
+            .map_err(|_| settlement_authority_call_failed("SWE_SEED stdin writer failed"))?
+            .map_err(settlement_authority_call_failed)?;
         let stdout = join_reader_within(stdout_reader, deadline, "stdout")?;
         let stderr = join_reader_within(stderr_reader, deadline, "stderr")?;
         if !status.success() || stdout.len() > 1_048_576 || stderr.len() > 65_536 {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED command failed or exceeded output limits",
             ));
         }
         serde_json::from_slice(&stdout).map_err(|_| {
-            settlement_authority_unavailable("SWE_SEED returned an invalid JSON response")
+            settlement_authority_call_failed("SWE_SEED returned an invalid JSON response")
         })
     }
 }
@@ -419,9 +498,9 @@ impl ProcessTree {
             .terminate_and_wait(std::time::Duration::from_secs(5))
             .map_err(|error| match error.kind() {
                 std::io::ErrorKind::TimedOut => {
-                    settlement_authority_unavailable("timed out process group survived termination")
+                    settlement_authority_call_failed("timed out process group survived termination")
                 }
-                _ => settlement_authority_unavailable(error),
+                _ => settlement_authority_call_failed(error),
             })
     }
 }
@@ -433,17 +512,17 @@ fn terminate_process_tree_unix(child: &std::process::Child) -> Result<(), ForgeE
         .args(["-KILL", "--", &group])
         .env_clear()
         .output()
-        .map_err(settlement_authority_unavailable)?;
+        .map_err(settlement_authority_call_failed)?;
     if !group_kill.status.success() {
         let group_still_exists = Command::new("/bin/kill")
             .args(["-0", "--", &group])
             .env_clear()
             .output()
-            .map_err(settlement_authority_unavailable)?
+            .map_err(settlement_authority_call_failed)?
             .status
             .success();
         if group_still_exists {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED process group survived termination",
             ));
         }
@@ -461,12 +540,12 @@ fn join_reader_within(
             return handle
                 .join()
                 .map_err(|_| {
-                    settlement_authority_unavailable(format!("SWE_SEED {label} reader failed"))
+                    settlement_authority_call_failed(format!("SWE_SEED {label} reader failed"))
                 })?
-                .map_err(settlement_authority_unavailable);
+                .map_err(settlement_authority_call_failed);
         }
         if Instant::now() >= deadline {
-            return Err(settlement_authority_unavailable(
+            return Err(settlement_authority_call_failed(
                 "SWE_SEED command timed out",
             ));
         }
@@ -474,9 +553,31 @@ fn join_reader_within(
     }
 }
 
+/// The SWE_SEED command could not be started, so it cannot have received the request or declared anything.
 fn settlement_authority_unavailable(error: impl std::fmt::Display) -> ForgeError {
     ForgeError::Plan {
         class: "settlement_authority_unavailable",
+        message: error.to_string(),
+    }
+}
+
+/// The SWE_SEED command was started and then failed (timeout, nonzero exit, output limits, invalid response). It
+/// may already have appended a declaration, so callers must not treat this as proof that none was made.
+/// Wait for `child` to exit, polling, for at most `limit`. True if it exited.
+fn wait_bounded(child: &mut std::process::Child, limit: Duration) -> bool {
+    let deadline = Instant::now() + limit;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return true,
+            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
+            _ => return false,
+        }
+    }
+}
+
+fn settlement_authority_call_failed(error: impl std::fmt::Display) -> ForgeError {
+    ForgeError::Plan {
+        class: "settlement_authority_call_failed",
         message: error.to_string(),
     }
 }
@@ -577,6 +678,9 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: Some(swe_resp.attestation_ref),
             authored_by: req.authored_by.clone(),
+            authorization_ref: req.authorization_ref.clone(),
+            authorization_request_sha256: req.authorization_request_sha256.clone(),
+            authorization_content_sha256: req.authorization_content_sha256.clone(),
             declaration_hash: String::new(),
         };
         decl.declaration_hash = compute_declaration_hash(&decl)?;
@@ -746,7 +850,36 @@ mod tests {
             orchestration_burden: None,
             source_evidence_refs: vec!["evi_x".into()],
             authored_by: None,
+            // An external declaration must name its authorisation at the writer.
+            authorization_ref: Some(format!("settlement-pending-{}", "a".repeat(32))),
+            authorization_request_sha256: Some("b".repeat(64)),
+            authorization_content_sha256: Some("c".repeat(64)),
         }
+    }
+
+    /// The authorisation a request names is carried into the declaration and covered by its hash, so it cannot be
+    /// relabelled after the authority declared it.
+    #[test]
+    fn request_authorisation_is_carried_into_the_hashed_declaration() {
+        let authority = SweSeedSettlementAuthority::new(CannedSweSeedTransport, "operator_local")
+            .with_adapter_ref("swe_seed_test");
+        let request = swe_seed_declaration_request();
+        let decl = authority.declare(&request).unwrap();
+        assert_eq!(decl.authorization_ref, request.authorization_ref);
+        assert_eq!(
+            decl.authorization_request_sha256,
+            request.authorization_request_sha256
+        );
+        assert_eq!(
+            compute_declaration_hash(&decl).unwrap(),
+            decl.declaration_hash
+        );
+        let mut relabelled = decl.clone();
+        relabelled.authorization_ref = Some(format!("settlement-pending-{}", "c".repeat(32)));
+        assert_ne!(
+            compute_declaration_hash(&relabelled).unwrap(),
+            decl.declaration_hash
+        );
     }
 
     /// Two independent `declare()` calls for the exact same underlying claim
@@ -785,5 +918,45 @@ mod tests {
             conflict.is_err(),
             "a second declaration for the same claim must not append as a distinct record"
         );
+    }
+    #[cfg(unix)]
+    fn class_of(error: &ForgeError) -> &'static str {
+        match error {
+            ForgeError::Plan { class, .. } => class,
+            other => panic!("expected a plan error, got {other:?}"),
+        }
+    }
+
+    /// A command that cannot be started never received the request, so it is the only failure that may be treated
+    /// as "nothing was declared".
+    #[cfg(unix)]
+    #[test]
+    fn a_command_that_cannot_start_is_unavailable() {
+        let transport =
+            CommandSweSeedTransport::new(vec!["/nonexistent/swe-seed".into()], 5).unwrap();
+        let error = transport
+            .submit(&swe_seed_declaration_request())
+            .unwrap_err();
+        assert_eq!(class_of(&error), "settlement_authority_unavailable");
+    }
+
+    /// Once the command has started it may have appended a declaration, so every later failure (nonzero exit,
+    /// invalid response, timeout) must be reported as a failed call, never as "unavailable".
+    #[cfg(unix)]
+    #[test]
+    fn failures_after_the_command_started_are_not_unavailable() {
+        for script in ["exit 3", "cat >/dev/null; echo not-json", "sleep 30"] {
+            let transport =
+                CommandSweSeedTransport::new(vec!["/bin/sh".into(), "-c".into(), script.into()], 1)
+                    .unwrap();
+            let error = transport
+                .submit(&swe_seed_declaration_request())
+                .unwrap_err();
+            assert_eq!(
+                class_of(&error),
+                "settlement_authority_call_failed",
+                "script {script:?}"
+            );
+        }
     }
 }

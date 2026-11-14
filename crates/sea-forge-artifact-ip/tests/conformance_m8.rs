@@ -561,6 +561,9 @@ fn strong_declaration(
         source_evidence_refs: vec!["evi_gate".into()],
         adapter_attestation_ref: Some("attestation:swe-seed:1".into()),
         authored_by: None,
+        authorization_ref: None,
+        authorization_request_sha256: None,
+        authorization_content_sha256: None,
         declaration_hash: String::new(),
     };
     declaration.declaration_hash = hash_canonical(&declaration).unwrap();

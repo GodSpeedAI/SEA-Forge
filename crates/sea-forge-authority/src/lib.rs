@@ -470,6 +470,28 @@ pub struct PermissionGrant {
     pub operation_kind: String,
 }
 
+/// Whether `role` may perform `operation_kind` under the policy's permission matrix.
+///
+/// A declared matrix is always enforced, whatever the policy's `version`: a
+/// version-`0.1` policy that carries a matrix must not have it ignored. A
+/// version-`0.1` policy with no matrix predates RBAC and keeps the legacy grant
+/// (spec §8.2: `0.1` policies load with defaults). Any other policy with no
+/// matrix grants nothing.
+fn permission_granted(
+    version: &str,
+    permissions: &[PermissionGrant],
+    role: &str,
+    operation_kind: &str,
+) -> bool {
+    if permissions.is_empty() {
+        return version == RECORD_VERSION;
+    }
+    permissions.iter().any(|permission| {
+        permission.role == role
+            && (permission.operation_kind == "*" || permission.operation_kind == operation_kind)
+    })
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SodRule {
@@ -1101,7 +1123,10 @@ impl AuthorityPolicyBundle {
                     .iter()
                     .any(String::is_empty)
                 || descriptor.standing_basis.is_empty()
-                || descriptor.timeout_secs == 0;
+                || descriptor.timeout_secs == 0
+                || descriptor.timeout_secs
+                    > (cep::SETTLEMENT_CLAIM_LEASE_SECS - cep::SETTLEMENT_CLAIM_HEADROOM_SECS)
+                        as u64;
             let invalid_adapter = match descriptor.adapter.as_str() {
                 "local" => descriptor.may_issue_strong || !descriptor.command.is_empty(),
                 "swe_seed" => descriptor.command.first().is_none_or(String::is_empty),
@@ -1398,9 +1423,33 @@ impl AuthorityPolicyBundle {
                         | "db_resource"
                         | "db_scope"
                         | "permitted_exposure"
+                        | "settlement_authority_class"
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
+            }
+            if let Some(classes) = rule.boundary_constraints.get("settlement_authority_class") {
+                // Only a settlement_declaration rule can name a class, and only the two known classes.
+                if rule.operation_kind != "settlement_declaration"
+                    || classes.is_empty()
+                    || classes
+                        .iter()
+                        .any(|class| !matches!(class.as_str(), "external" | "local"))
+                {
+                    return Err(schema(
+                        "settlement_authority_class applies only to settlement_declaration and names external or local"
+                            .into(),
+                    ));
+                }
+                // An external settlement is never allowed outright: it must escalate for approval.
+                if classes.iter().any(|class| class == "external")
+                    && rule.verdict == Verdict::Allow
+                    && rule.requires_approval != Some(true)
+                {
+                    return Err(schema(
+                        "external settlement_declaration requires approval".into(),
+                    ));
+                }
             }
             if rule.operation_kind == "transition_artifact_stage" {
                 let transition = rule.transition_kind.as_deref();
@@ -2267,7 +2316,7 @@ impl PolicyAuthorityEngine {
             && binding.principal == actor.actor_id
             && binding.actor_type == actor_type_for_role(&actor.role)
             && binding.identity_binding_source == self.bundle.identity.source
-            && (self.bundle.version == RECORD_VERSION || binding.identity_binding_hash.is_some())
+            && binding.identity_binding_hash.is_some()
             && identity_not_expired
             && (!matches!(actor.role, ActorRole::Agent | ActorRole::AutomatedAgent)
                 || binding.sponsor.is_some());
@@ -2436,12 +2485,12 @@ impl PolicyAuthorityEngine {
                 .as_str()
                 .unwrap_or_default()
                 .to_owned();
-            let has_permission = self.bundle.version == RECORD_VERSION
-                || self.bundle.permissions.iter().any(|permission| {
-                    permission.role == role_name
-                        && (permission.operation_kind == "*"
-                            || permission.operation_kind == rule.operation_kind)
-                });
+            let has_permission = permission_granted(
+                &self.bundle.version,
+                &self.bundle.permissions,
+                &role_name,
+                &rule.operation_kind,
+            );
             let matching_sod = matching_sod_rules(&self.bundle.sod_rules, &role_name, action);
             let sod_requires_approval = !matching_sod.is_empty();
             let effective_verdict = if !has_permission {
@@ -2937,6 +2986,9 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     "approval_resolution" => {
                         matches_approval_resolution_parameters(parameters, actor)
                     }
+                    "settlement_declaration" => {
+                        matches_settlement_authority_class(rule, parameters)
+                    }
                     "recall_memory" => matches_memory_scope(rule, parameters),
                     "cognate_action" | "cognate_capability" => {
                         rule.subjects.as_ref().is_none_or(|allowed| {
@@ -3007,6 +3059,23 @@ fn exposure_permitted(rule: &PolicyRule, parameters: &Value) -> bool {
 
 fn parameter_str<'a>(parameters: &'a Value, name: &str) -> Option<&'a str> {
     parameters.get(name).and_then(Value::as_str)
+}
+
+/// A settlement_declaration action matches only when it carries a known class (fail closed: a missing or
+/// unknown class matches nothing). A rule without a class boundary reaches only `local` declarations; an
+/// `external` declaration needs a rule that names `external` explicitly.
+fn matches_settlement_authority_class(rule: &PolicyRule, parameters: &Value) -> bool {
+    match parameter_str(parameters, "settlement_authority_class") {
+        Some("local") => rule
+            .boundary_constraints
+            .get("settlement_authority_class")
+            .is_none_or(|allowed| allowed.iter().any(|class| class == "local")),
+        Some("external") => rule
+            .boundary_constraints
+            .get("settlement_authority_class")
+            .is_some_and(|allowed| allowed.iter().any(|class| class == "external")),
+        _ => false,
+    }
 }
 
 /// Check if a `memory_scope` rule value allows recalling the target entity.
@@ -4185,6 +4254,44 @@ mod tests {
         assert_eq!(resolved.binding_resolution, BindingResolution::Exact);
         let unknown = bundle.resolve_identity("unknown", ActorRole::Operator);
         assert_eq!(unknown.binding_resolution, BindingResolution::Unresolved);
+    }
+
+    #[test]
+    fn unresolved_identity_is_never_allowed_on_a_v02_bundle() {
+        // The identity check must depend on resolution, not on the bundle version:
+        // an unknown principal on a 0.2 bundle has no binding hash and must not be allowed.
+        let bundle: AuthorityPolicyBundle = complete_v02(sea_forge_core::yaml::from_str(
+            "version: \"0.2\"\nidentity_bindings:\n  - principal: operator_local\n    actor_type: human\n    role: operator\nrules:\n  - name: allow-write\n    verdict: allow\n    actor_role: operator\n    operation_kind: write_file\n    path_prefix: \"\"\n",
+        )
+        .unwrap());
+        let engine = PolicyAuthorityEngine::new(bundle.clone()).unwrap();
+        let actor = Actor {
+            actor_id: "unknown".into(),
+            role: ActorRole::Operator,
+        };
+        let action = AuthorityAction::WriteFile {
+            path: "model.sea".into(),
+            content_hint: "fixed".into(),
+        };
+        let decision = engine
+            .evaluate(AuthorityEvaluation {
+                actor: &actor,
+                binding: bundle.resolve_identity("unknown", ActorRole::Operator),
+                run_id: "run_unknown",
+                case_id: "case_test",
+                plan_item_id: "item_unknown",
+                sequence: 1,
+                action: &action,
+                workspace_root: Path::new("/tmp/workspace"),
+                evidence_refs: vec![],
+                artifacts_root: None,
+                timeout_secs: None,
+                env_keys: Default::default(),
+                opa_candidate: None,
+                environment: None,
+            })
+            .unwrap();
+        assert_ne!(decision.verdict, Verdict::Allow);
     }
 
     #[test]
@@ -5375,5 +5482,101 @@ rules:
                 Path::new("/tmp/workspace"),
             )
             .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod permission_matrix_tests {
+    use super::{permission_granted, PermissionGrant, RECORD_VERSION};
+
+    fn grant(role: &str, operation_kind: &str) -> PermissionGrant {
+        PermissionGrant {
+            role: role.into(),
+            operation_kind: operation_kind.into(),
+        }
+    }
+
+    #[test]
+    fn legacy_0_1_policy_without_a_matrix_keeps_the_legacy_grant() {
+        assert!(permission_granted(
+            RECORD_VERSION,
+            &[],
+            "operator",
+            "write_file"
+        ));
+    }
+
+    #[test]
+    fn version_0_2_policy_without_a_matrix_grants_nothing() {
+        assert!(!permission_granted("0.2", &[], "operator", "write_file"));
+    }
+
+    #[test]
+    fn unknown_or_malformed_versions_without_a_matrix_grant_nothing() {
+        for version in ["0.1.0", "0.1 ", "0.10", "", "1.0"] {
+            assert!(
+                !permission_granted(version, &[], "operator", "write_file"),
+                "version {version:?}"
+            );
+        }
+    }
+
+    /// Regression: a version-0.1 policy with a matrix was granted everything.
+    #[test]
+    fn version_0_1_policy_with_a_matrix_is_enforced_not_ignored() {
+        let matrix = [grant("R-DS", "write_file")];
+        assert!(permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "R-DS",
+            "write_file"
+        ));
+        assert!(!permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "operator",
+            "write_file"
+        ));
+        assert!(!permission_granted(
+            RECORD_VERSION,
+            &matrix,
+            "R-DS",
+            "delete_file"
+        ));
+    }
+
+    #[test]
+    fn explicit_denial_is_the_default_when_the_matrix_names_no_grant() {
+        let matrix = [grant("R-DS", "read_file")];
+        assert!(!permission_granted("0.2", &matrix, "R-DS", "write_file"));
+        assert!(!permission_granted("0.2", &matrix, "R-AG", "read_file"));
+    }
+
+    #[test]
+    fn wildcard_grants_every_operation_for_that_role_only() {
+        let matrix = [grant("R-SO", "*")];
+        assert!(permission_granted(
+            "0.2",
+            &matrix,
+            "R-SO",
+            "settlement_declaration"
+        ));
+        assert!(!permission_granted(
+            "0.2",
+            &matrix,
+            "R-DS",
+            "settlement_declaration"
+        ));
+    }
+
+    #[test]
+    fn a_matrix_cannot_be_widened_by_the_version_string() {
+        let matrix = [grant("R-DS", "read_file")];
+        for version in ["0.1", "0.2", "0.3", "9.9", ""] {
+            assert!(
+                !permission_granted(version, &matrix, "operator", "read_file"),
+                "version {version:?}"
+            );
+        }
     }
 }

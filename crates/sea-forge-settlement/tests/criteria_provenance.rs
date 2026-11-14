@@ -110,6 +110,9 @@ fn declaration_request(
         orchestration_burden: None,
         source_evidence_refs: vec!["evd_thoth_sod".into()],
         authored_by: authored_by.map(String::from),
+        authorization_ref: None,
+        authorization_request_sha256: None,
+        authorization_content_sha256: None,
     }
 }
 

@@ -82,8 +82,9 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
         return Ok(Arc::clone(hit));
     }
     let mut registry = WorldRegistry::new();
+    let mut loaded = Vec::new();
     for (name, entry, files) in sets {
-        registry
+        let world_ref = registry
             .register_source_set(
                 &name,
                 &SeaSourceSet {
@@ -92,11 +93,18 @@ fn load_worlds(config: &ServerConfig, root: &Path) -> Result<Arc<WorldRegistry>,
                 },
             )
             .map_err(|e| format!("world {name}: {e}"))?;
+        loaded.push((name, world_ref));
     }
     for (name, relative, content) in priors {
         registry
             .register_prior_identity_json(&name, &content)
             .map_err(|e| format!("world {name} prior identity {relative}: {e}"))?;
+    }
+    // Logged only once every world and prior identity has registered, since any failure discards the registry. The
+    // configured name and the ref a caller must present differ; logging both lets an "unknown world" refusal be
+    // matched to what was actually loaded.
+    for (name, world_ref) in &loaded {
+        tracing::info!(world = %name, world_ref = %world_ref, "cep_authority world loaded");
     }
     let registry = Arc::new(registry);
     let mut guard = cache()

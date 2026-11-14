@@ -1482,9 +1482,9 @@ checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.38.2"
+version = "0.39.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8"
+checksum = "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3"
 dependencies = [
  "cc",
  "pkg-config",
@@ -2188,9 +2188,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.40.2"
+version = "0.41.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3"
+checksum = "da9bba6f3506135e120a6586df05be18b48d18896600646a4bec8f993d91a594"
 dependencies = [
  "bitflags",
  "fallible-iterator",
@@ -2235,9 +2235,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "891efababe418670775f199f0d233d84843c227a0949a883ce15b37c78d6629d"
+checksum = "e5e76742e5294153d4dde1207dbec5bdd81eef6fabdc0d2118babadabfd858aa"
 dependencies = [
  "bitflags",
  "errno",
@@ -2335,7 +2335,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sea-forge-agent"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "reqwest",
@@ -2354,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-artifact-ip"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "sea-forge-authority",
@@ -2372,13 +2372,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-authority"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
  "sea-forge-core",
  "sea-forge-domainforge",
  "sea-forge-ledger",
+ "sea-forge-settlement",
  "serde",
  "serde_json",
  "sha2 0.11.1",
@@ -2388,12 +2389,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-capability"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
  "rusqlite",
+ "sea-forge-authority",
  "sea-forge-core",
+ "sea-forge-domainforge",
  "sea-forge-ledger",
  "sea-forge-settlement",
  "serde",
@@ -2404,7 +2407,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-case-runner"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2424,7 +2427,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cell"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2439,7 +2442,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-changeset"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "serde",
@@ -2451,7 +2454,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cli"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "clap",
@@ -2486,7 +2489,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-core"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "getrandom 0.4.3",
@@ -2502,14 +2505,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-domain"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "sea-forge-core",
 ]
 
 [[package]]
 name = "sea-forge-domainforge"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "domainforge-core",
  "hex",
@@ -2522,7 +2525,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-evidence"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2535,7 +2538,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-extension"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2550,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-ledger"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -2568,14 +2571,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-os"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "sea-forge-planner"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2589,7 +2592,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-realitytrace"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "hex",
  "jsonschema 0.58.6",
@@ -2606,7 +2609,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-runtime"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2622,7 +2625,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-sandbox"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2645,7 +2648,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-self-model"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2661,7 +2664,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-server"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chacha20poly1305",
  "chrono",
@@ -2698,9 +2701,10 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-settlement"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
+ "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
  "sea-forge-os",
@@ -2712,7 +2716,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-spec-pipeline"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "hex",
@@ -2727,12 +2731,13 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-thoth"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "sea-forge-authority",
  "sea-forge-capability",
  "sea-forge-core",
+ "sea-forge-domainforge",
  "sea-forge-ledger",
  "sea-forge-self-model",
  "serde",
@@ -2743,7 +2748,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-trace"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "chrono",
  "sea-forge-core",
