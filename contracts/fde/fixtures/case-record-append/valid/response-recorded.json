@@ -1,0 +1,11 @@
+{
+  "outcome": "recorded",
+  "kind": "episode.frozen",
+  "record_id": "rec-0001",
+  "episode_key": {
+    "case_id": "case-0001",
+    "plan_item_id": "item-03",
+    "n": 1
+  },
+  "replayed": false
+}

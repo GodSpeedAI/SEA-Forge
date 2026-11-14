@@ -1,0 +1,98 @@
+{
+  "schema": "urn:sea-forge:fde:frozen-reference:v1",
+  "valid": [
+    {
+      "file": "evaluated-program-conforming.json",
+      "def": null
+    },
+    {
+      "file": "exploratory-live.json",
+      "def": null
+    },
+    {
+      "file": "evaluated-revision-n2.json",
+      "def": null
+    }
+  ],
+  "invalid": [
+    {
+      "file": "falsifiers-empty.json",
+      "def": null,
+      "pointer": "/body/criteria/falsifiers",
+      "contains": "has less than 1 item"
+    },
+    {
+      "file": "kind-not-in-enum.json",
+      "def": null,
+      "pointer": "/body/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "executor-provenance-not-in-enum.json",
+      "def": null,
+      "pointer": "/body/executor_provenance",
+      "contains": "is not one of"
+    },
+    {
+      "file": "body-carries-result-field.json",
+      "def": null,
+      "pointer": "/body",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "episode-ref-without-digest.json",
+      "def": null,
+      "pointer": "/episode_ref",
+      "contains": "does not match"
+    },
+    {
+      "file": "episode-counter-zero.json",
+      "def": null,
+      "pointer": "/body/n",
+      "contains": "is less than the minimum of 1"
+    },
+    {
+      "file": "world-ref-alias-not-pinned.json",
+      "def": null,
+      "pointer": "/body/world_ref",
+      "contains": "does not match"
+    },
+    {
+      "file": "coverage-manifest-empty.json",
+      "def": null,
+      "pointer": "/body/coverage_manifest",
+      "contains": "has less than 1 item"
+    },
+    {
+      "file": "evidence-source-without-purpose.json",
+      "def": null,
+      "pointer": "/body/evidence_sources/0",
+      "contains": "\"purpose\" is a required property"
+    },
+    {
+      "file": "decision-maker-missing.json",
+      "def": null,
+      "pointer": "/body",
+      "contains": "\"decision_maker\" is a required property"
+    },
+    {
+      "file": "episode-ref-missing.json",
+      "def": null,
+      "pointer": "",
+      "contains": "\"episode_ref\" is a required property"
+    },
+    {
+      "file": "digest-covers-result-content.json",
+      "def": null,
+      "pointer": "/body",
+      "contains": "Additional properties"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "episode-ref-digest-mismatch.json",
+      "code": "EPISODE_REF_DIGEST_MISMATCH",
+      "rule": "episode_ref digest equals SHA-256 over RFC 8785 canonical body"
+    }
+  ]
+}

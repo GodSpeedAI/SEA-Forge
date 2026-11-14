@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "SCHEMA_INVALID",
+  "message": "payload.reference.body.n must be >= 1"
+}

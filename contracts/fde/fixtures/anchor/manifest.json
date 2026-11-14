@@ -1,0 +1,79 @@
+{
+  "schema": "urn:sea-forge:fde:anchor:v1",
+  "valid": [
+    {
+      "file": "freeze-shared-os-user.json",
+      "def": null
+    },
+    {
+      "file": "model-dedicated-credential.json",
+      "def": null
+    },
+    {
+      "file": "prereg-sha256-tag-object.json",
+      "def": null
+    }
+  ],
+  "invalid": [
+    {
+      "file": "tag-outside-fde-anchor-namespace.json",
+      "def": null,
+      "pointer": "/tag",
+      "contains": "does not match"
+    },
+    {
+      "file": "kind-not-in-enum.json",
+      "def": null,
+      "pointer": "/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "digest-not-lowercase-hex.json",
+      "def": null,
+      "pointer": "/digest",
+      "contains": "does not match"
+    },
+    {
+      "file": "tag-id-is-a-raw-episode-ref.json",
+      "def": null,
+      "pointer": "/id",
+      "contains": "does not match"
+    },
+    {
+      "file": "pusher-credential-scope-missing.json",
+      "def": null,
+      "pointer": "/pusher",
+      "contains": "\"credential_scope\" is a required property"
+    },
+    {
+      "file": "pusher-credential-scope-not-in-enum.json",
+      "def": null,
+      "pointer": "/pusher/credential_scope",
+      "contains": "is not one of"
+    },
+    {
+      "file": "receipt-without-server-push-time.json",
+      "def": null,
+      "pointer": "/verifier_receipt",
+      "contains": "\"server_push_time\" is a required property"
+    },
+    {
+      "file": "receipt-missing.json",
+      "def": null,
+      "pointer": "",
+      "contains": "\"verifier_receipt\" is a required property"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "tag-does-not-match-kind-and-id.json",
+      "code": "ANCHOR_TAG_MISMATCH",
+      "rule": "tag equals fde-anchor/<kind>/<id>"
+    },
+    {
+      "file": "receipt-digest-differs-from-anchor-digest.json",
+      "code": "ANCHOR_RECEIPT_MISMATCH",
+      "rule": "receipt digest equals anchor digest"
+    }
+  ]
+}

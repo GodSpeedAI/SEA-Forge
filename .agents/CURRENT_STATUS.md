@@ -1,23 +1,23 @@
 # Current status
 
-**Status revision:** 237
+**Status revision:** 238
 
-**Stage:** FDE integration branch: GS-FDE-SOP-001 v0.4.1 declared model, translation map and checks (WP-13)
+**Stage:** FDE integration branch: contracts package S1, SEA-Forge contracts (WP-11)
 
-**Summary:** fde/integration: promoted the SOP draft v0.4.1 (pending owner ratification OD-2) to docs/sop with its sha256, and declared its model under .sea/interaction/fde-sop/ (world godspeed-fde-sop): 18 operations, 7 role bindings, Obligation/Prohibition policies for freeze-before-move, no self-settlement and episode identity, and two non-unifying Settlement concepts in separate namespaces. The map has 115 rows over 66 numbered clauses: 60 declared, 23 inferred, 32 unknown, each unknown naming a limitation. Revisions 234 and 235 of this branch were renumbered 235 and 236 so they follow main's 234.
+**Summary:** fde/integration: added contracts/fde with frozen-reference.v1.json (episode_ref digest input = SHA-256 over RFC 8785 of body), anchor.v1.json (fde-anchor tag and verifier receipt) and case-record-append.v1.json (request, response, error tables; kinds episode.frozen and episode.settled; refusal codes FREEZE_KEY_EXISTS I-3, FREEZE_MISSING and FREEZE_INCOMPLETE I-1, SELF_SETTLEMENT_REFUSED I-2, IDEMPOTENCY_CONFLICT), a README of field and error-code tables, fixtures with eight refusal scenarios, a DIGESTS manifest and scripts/check-fde-contract-digests.sh. Schemas only: no runtime behaviour.
 
 **Verified:**
-- scripts/check-fde-sop-model.sh: validate --application 0 violations (18 operations); envelope --emit cep world_ref identical across three runs; two Settlement concepts have different ConceptIds and a same-namespace merge is refused; six negative controls reject for the reason claimed (DomainForge 0.21.2)
-- scripts/check-fde-sop-map.sh: 66 numbered clauses all covered; every excerpt is a verbatim SOP substring; every named element exists in the model
+- cargo test --locked -p sea-forge-realitytrace --test fde_contracts: 7 passed, 0 failed (3 valid-and-invalid fixture sets, scenarios, README codes, DIGESTS, drift detection)
+- cargo clippy --locked -p sea-forge-realitytrace --test fde_contracts -- -D warnings: clean
+- scripts/check-fde-contract-digests.sh: 3 contract digests match
 - scripts/check-agent-context.sh passes
 
 **Limits:**
-- Operation-bound policies are scope-checked by validate, not evaluated; every S2 row is insufficient until the DomainForge evaluator (WP-12) runs it
-- DomainForge 0.21.2 rejects postcondition and invariant enforcement points, so only precondition policies are declared
-- 32 of 115 map rows are unknown; the 4.2 field groups, 7.4 assignment brief and 10.x handoff contents are not declared in this version
-- The SOP is a draft pending owner ratification; the model and map must be re-derived if its hash changes
-- I-3 key (case, plan item, n) comes from the integration architecture, not the SOP text; episode_key_unique tests a caller-supplied count
-- domainforge test was not used as evidence; no cargo build or just ci was run for this change
+- The refusals for I-1, I-2, I-3 and idempotency are specified and have scenario fixtures; nothing enforces them yet (WP-14, WP-21)
+- The anchor errors ANCHOR_PREDATES_FAILED and MODEL_ANCHOR_LATE need a ledger and a remote and are specified, not tested
+- The test digest check canonicalises ASCII-only integer/string values itself; the RFC 8785 rule is verified against a full library in the CEP repository (CEP-0008 section 16.5 vectors)
+- The evaluate facts and output schemas are WP-12 and are not provided
+- The test lives in sea-forge-realitytrace because it already carries jsonschema; no dependency was added
 - Integration branch only: not merged to main, no PR
 
-**Next:** Owner ratifies or amends the SOP (OD-2); WP-12 evaluates the bound policies; WP-11 and WP-20 bind Casework to the model.
+**Next:** WP-12 evaluate schemas; WP-14 case keeper enforces the refusals against the scenario fixtures; WP-20 adds the other four kinds.

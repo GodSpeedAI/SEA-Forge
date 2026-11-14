@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "SCHEMA_INVALID",
+  "message": "x",
+  "invariant": "I-1"
+}

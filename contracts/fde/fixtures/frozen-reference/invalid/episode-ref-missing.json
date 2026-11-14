@@ -1,0 +1,51 @@
+{
+  "body": {
+    "case_id": "case-0001",
+    "plan_item_id": "item-03",
+    "n": 1,
+    "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+    "kind": "evaluated",
+    "executor_provenance": "program",
+    "criteria": {
+      "intention": "Record the verifier's observation before settling the episode.",
+      "expected_change": "An evidence record exists for gate G3 with the verifier as source.",
+      "invariants": [
+        "No frozen criterion is edited after the freeze."
+      ],
+      "predicted_irrelevancies": [
+        "Wall-clock duration of the run."
+      ],
+      "success_region": "Evidence record present, source independent of the executor.",
+      "failure_region": "No evidence record, or the source is the executor only.",
+      "falsifiers": [
+        "Evidence record absent after the executor reports done."
+      ]
+    },
+    "decision_maker": {
+      "principal": "human:operator",
+      "role": "case-lead"
+    },
+    "evidence_sources": [
+      {
+        "source_id": "es-1",
+        "system": "sea-forge-ledger",
+        "purpose": "proves the evidence record exists"
+      }
+    ],
+    "coverage_manifest": [
+      {
+        "emitter": "sea-forge-ledger",
+        "event_kinds": [
+          "evidence.recorded",
+          "authority.decision"
+        ]
+      },
+      {
+        "emitter": "cognate",
+        "event_kinds": [
+          "run.step"
+        ]
+      }
+    ]
+  }
+}

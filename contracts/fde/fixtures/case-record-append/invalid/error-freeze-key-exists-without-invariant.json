@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_KEY_EXISTS",
+  "message": "x"
+}

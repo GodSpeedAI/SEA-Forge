@@ -1,0 +1,162 @@
+{
+  "schema": "urn:sea-forge:fde:case-record-append:v1",
+  "valid": [
+    {
+      "file": "request-episode-frozen.json",
+      "def": "Request"
+    },
+    {
+      "file": "request-episode-settled.json",
+      "def": "Request"
+    },
+    {
+      "file": "request-episode-settled-empty-reliability.json",
+      "def": "Request"
+    },
+    {
+      "file": "response-recorded.json",
+      "def": "Response"
+    },
+    {
+      "file": "response-replayed.json",
+      "def": "Response"
+    },
+    {
+      "file": "error-freeze-key-exists.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-self-settlement-refused.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-freeze-missing.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-schema-invalid.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "request-missing-idempotency-key.json",
+      "def": "Request",
+      "pointer": "",
+      "contains": "\"idempotency_key\" is a required property"
+    },
+    {
+      "file": "request-idempotency-key-has-whitespace.json",
+      "def": "Request",
+      "pointer": "/idempotency_key",
+      "contains": "does not match"
+    },
+    {
+      "file": "request-kind-not-registered.json",
+      "def": "Request",
+      "pointer": "/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "request-carries-case-id-field.json",
+      "def": "Request",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "request-frozen-payload-without-realitytrace-refs.json",
+      "def": "Request",
+      "pointer": "/payload",
+      "contains": "\"realitytrace_refs\" is a required property"
+    },
+    {
+      "file": "request-frozen-payload-digest-not-hex.json",
+      "def": "Request",
+      "pointer": "/payload/digest",
+      "contains": "does not match"
+    },
+    {
+      "file": "request-frozen-reference-body-carries-result.json",
+      "def": "Request",
+      "pointer": "/payload/reference/body",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "request-settled-result-not-sfuc.json",
+      "def": "Request",
+      "pointer": "/payload/result",
+      "contains": "is not one of"
+    },
+    {
+      "file": "request-settled-reliability-merged-into-result.json",
+      "def": "Request",
+      "pointer": "/payload/reliability",
+      "contains": "is not of type"
+    },
+    {
+      "file": "request-settled-reliability-dimension-unknown.json",
+      "def": "Request",
+      "pointer": "/payload/reliability",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "request-settled-independence-missing.json",
+      "def": "Request",
+      "pointer": "/payload",
+      "contains": "\"independence\" is a required property"
+    },
+    {
+      "file": "response-missing-replayed.json",
+      "def": "Response",
+      "pointer": "",
+      "contains": "\"replayed\" is a required property"
+    },
+    {
+      "file": "error-code-not-in-enum.json",
+      "def": "Error",
+      "pointer": "/code",
+      "contains": "is not one of"
+    },
+    {
+      "file": "error-freeze-key-exists-without-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "\"invariant\" is a required property"
+    },
+    {
+      "file": "error-freeze-key-exists-wrong-invariant.json",
+      "def": "Error",
+      "pointer": "/invariant",
+      "contains": "was expected"
+    },
+    {
+      "file": "error-self-settlement-wrong-invariant.json",
+      "def": "Error",
+      "pointer": "/invariant",
+      "contains": "was expected"
+    },
+    {
+      "file": "error-schema-invalid-carries-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "is not allowed for"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "request-frozen-payload-digest-differs-from-episode-ref.json",
+      "code": "EPISODE_REF_DIGEST_MISMATCH",
+      "rule": "payload.digest equals the digest inside episode_ref and the recomputed body digest"
+    }
+  ],
+  "scenarios": [
+    "i3-second-freeze-different-digest.json",
+    "i3-second-freeze-same-digest-new-idempotency-key.json",
+    "i3-changed-criteria-allocate-next-n.json",
+    "idempotent-replay-returns-original.json",
+    "idempotency-key-reused-with-different-body.json",
+    "i1-settle-without-freeze.json",
+    "i1-freeze-references-missing-realitytrace-plan.json",
+    "i2-executor-settles-own-episode.json"
+  ]
+}

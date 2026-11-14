@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_KEY_EXISTS",
+  "message": "a freeze already exists for (case-0001, item-03, 1)",
+  "invariant": "I-3"
+}

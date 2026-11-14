@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_MISSING",
+  "message": "no freeze record for the episode",
+  "invariant": "I-1"
+}

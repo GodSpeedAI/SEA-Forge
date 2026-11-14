@@ -1,0 +1,19 @@
+{
+  "tag": "fde-anchor/prereg/s1-v1",
+  "kind": "prereg",
+  "id": "s1-v1",
+  "subject_ref": "prereg:s1-v1",
+  "digest": "abababababababababababababababababababababababababababababababab",
+  "pusher": {
+    "identity": "service:case-keeper",
+    "credential_scope": "shared_os_user"
+  },
+  "verifier_receipt": {
+    "receipt_id": "rcpt-prereg-001",
+    "verifier": "service:anchor-verifier",
+    "issued_at": "2026-11-13T10:00:05Z",
+    "server_push_time": "2026-11-13T10:00:01Z",
+    "tag_object_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "digest": "abababababababababababababababababababababababababababababababab"
+  }
+}

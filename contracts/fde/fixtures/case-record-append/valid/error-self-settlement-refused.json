@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "SELF_SETTLEMENT_REFUSED",
+  "message": "settling principal's chain contains the executor's identity",
+  "invariant": "I-2"
+}
