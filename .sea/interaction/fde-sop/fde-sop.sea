@@ -1,0 +1,1333 @@
+@namespace "godspeed-fde-sop"
+@version "0.1.0"
+import { Settlement as EvidenceSettlement, EpistemicResult } from "./evidence.sea"
+import { Settlement as OutcomeSettlement } from "./outcome.sea"
+
+// GodSpeed FDE Operating Procedure GS-FDE-SOP-001 v0.4.1: declared model (WP-13).
+//
+// Source: docs/sop/GS-FDE-SOP-001-v0.4.1.md (draft, pending owner ratification
+// OD-2). Every element below is traced to a numbered SOP clause in
+// source-translation-map.md. Anything the SOP says that today's DomainForge
+// grammar cannot express is NOT forced into a policy; it is `unknown` in the
+// map with the limitation named (validation/limitations.md).
+//
+// Two contextual meanings of "settlement" are declared as two concepts in two
+// namespaces that never unify:
+//   godspeed-fde-sop.evidence::Settlement  evidence settlement of a frozen
+//                                          expectation (S/F/U/C, SOP 7.5, 13)
+//   godspeed-fde-sop.outcome::Settlement   the client-outcome / accepted business
+//                                          result (SOP 3.1, 3.3, 10.2, 10.3)
+// They are imported here under distinct local names. Operation-bound policies
+// are scope-checked by `validate --application` (APP007) but evaluated only by
+// the DomainForge evaluator (WP-12); see validation/limitations.md.
+
+// ---------------------------------------------------------------------------
+// Patterns and closed vocabularies
+// ---------------------------------------------------------------------------
+
+pattern "WorldRef" matches "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$"
+
+export enum CaseLifecycle {
+    open = "open",
+    suspended = "suspended",
+    closed = "closed"
+}
+
+export enum ExecutionStatus {
+    planned = "planned",
+    running = "running",
+    completed = "completed",
+    failed = "failed",
+    cancelled = "cancelled"
+}
+
+export enum EpisodeKind {
+    evaluated = "evaluated",
+    exploratory = "exploratory"
+}
+
+export enum DispositionLevel {
+    case_level = "case",
+    episode_level = "episode"
+}
+
+export enum DispositionKind {
+    close_satisfied = "close-satisfied",
+    close_failed = "close-failed",
+    continue_work = "continue",
+    revise = "revise",
+    escalate = "escalate",
+    suspend = "suspend"
+}
+
+export enum GateState {
+    met = "met",
+    blocked = "blocked",
+    unassessed = "unassessed",
+    not_applicable = "not_applicable"
+}
+
+export enum DifferenceDiagnosis {
+    observation_or_instrumentation_problem = "observation_or_instrumentation_problem",
+    mistaken_reference = "mistaken_reference",
+    unsupported_inference = "unsupported_inference",
+    implementation_failure = "implementation_failure",
+    contextual_variation = "contextual_variation",
+    inadequate_declared_structure = "inadequate_declared_structure"
+}
+
+export enum DeliveryActivity {
+    embed = "embed",
+    observe = "observe",
+    map = "map",
+    artifactize = "artifactize",
+    prototype = "prototype",
+    validate = "validate",
+    deploy = "deploy",
+    instrument = "instrument",
+    learn = "learn",
+    compound = "compound"
+}
+
+export enum EvidenceGateName {
+    choose_problem = "choose_problem",
+    discover_reality = "discover_reality",
+    allocate_authority = "allocate_authority",
+    prove_value = "prove_value",
+    prove_reliability = "prove_reliability",
+    integrate_govern = "integrate_govern",
+    earn_trust = "earn_trust",
+    measure = "measure",
+    productize = "productize"
+}
+
+// ---------------------------------------------------------------------------
+// Roles (SOP 3.1, 2.2) and role bindings
+// ---------------------------------------------------------------------------
+
+role "FDE"
+role "Sponsor"
+role "CriterionAuthor"
+role "ExecutionActor"
+role "IndependentVerifier"
+role "DomainPolicyCustodian"
+role "DEADESpecialist"
+role "Approver"
+role "DispositionAuthority"
+
+role_binding "FDE" for "FieldCase"
+role_binding "Sponsor" for "FieldCase"
+role_binding "CriterionAuthor" for "Episode"
+role_binding "ExecutionActor" for "Assignment"
+role_binding "IndependentVerifier" for "Episode"
+role_binding "DEADESpecialist" for "Assignment"
+role_binding "DispositionAuthority" for "Disposition"
+
+relation "VerifierIndependence"
+    subject: "IndependentVerifier"
+    predicate: "independently observes and settles work of"
+    object: "ExecutionActor"
+
+relation "ApprovalAuthority"
+    subject: "Approver"
+    predicate: "authorizes an action or promotion for"
+    object: "ExecutionActor"
+
+relation "DispositionChoice"
+    subject: "DispositionAuthority"
+    predicate: "chooses the section 7.5 disposition after settlement by"
+    object: "IndependentVerifier"
+
+// ---------------------------------------------------------------------------
+// Case, episode and record entities (SOP 1.1, 2.1, 2.2, 4, 7, 8)
+// ---------------------------------------------------------------------------
+
+export entity "FieldCase" {
+    key case_id: string (min_length 1)
+    template_ref: string (min_length 1)
+    lifecycle: CaseLifecycle
+}
+
+export entity "Episode" {
+    key episode_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    plan_item_id: string (min_length 1)
+    n: int (min 1)
+    kind: EpisodeKind
+    world_ref: string (pattern WorldRef)
+}
+
+export entity "Assignment" {
+    key assignment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    episode_ref: string (min_length 1)
+    world_ref: string (pattern WorldRef)
+    criterion_ref: string (min_length 1)
+    authority_ref: string (min_length 1)
+    budget_ref: string (min_length 1)
+}
+
+export entity "ActivityRecord" {
+    key activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+
+export entity "GateAssessment" {
+    key assessment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    gate: EvidenceGateName
+    gate_state: GateState
+}
+
+export entity "Disposition" {
+    key disposition_id: string (min_length 1)
+    case_id: string (min_length 1)
+    level: DispositionLevel
+    disposition: DispositionKind
+    lifecycle_after: CaseLifecycle
+}
+
+// Vocabulary fixed by SOP 2.2 (names only; the definitions stay in the SOP).
+export entity "Framing"
+export entity "Projection"
+export entity "CaseHorizon"
+export entity "Residual"
+export entity "Residue"
+export entity "Checkpoint"
+export entity "Run"
+export entity "Session"
+
+// Navigation vocabulary: the Golden Key steps are flow endpoints (SOP 2, 7).
+export entity "NavListen"
+export entity "NavAim"
+export entity "NavMove"
+export entity "NavClaim"
+
+// ---------------------------------------------------------------------------
+// Definitional tables (SOP 2, 3.4, 5.1, 6, 7.2, 7.7, 8.1, 11)
+// ---------------------------------------------------------------------------
+
+entity "Layer" {
+    key layer_id: string
+    name: string (min_length 1)
+    job: string (min_length 1)
+    question: string (min_length 1)
+}
+
+entity "Component" {
+    key component_id: string
+    name: string (min_length 1)
+    responsibility: string (min_length 1)
+}
+
+entity "DeliveryActivityDef" {
+    key activity_id: string
+    name: string (min_length 1)
+    action: string (min_length 1)
+    durable_output: string (min_length 1)
+}
+
+entity "EvidenceGate" {
+    key gate_id: string
+    name: string (min_length 1)
+    commitment_earned: string (min_length 1)
+    minimum_evidence: string (min_length 1)
+}
+
+entity "PaymentCurrency" {
+    key currency_id: string
+    name: string (min_length 1)
+}
+
+entity "ReliabilityDimension" {
+    key dimension_id: string
+    name: string (min_length 1)
+}
+
+entity "AimDimension" {
+    key dimension_id: string
+    name: string (min_length 1)
+}
+
+entity "RecordOwner" {
+    key record_id: string
+    record: string (min_length 1)
+    canonical_owner: string (min_length 1)
+}
+
+entity "AcceptanceRequirement" {
+    key requirement_id: string
+    statement: string (min_length 1)
+}
+
+instance layer_strategy of "Layer" {
+    layer_id: "strategy",
+    name: "Strategy",
+    job: "choose customer, problem, desired progress, trade-offs, value, abandonment conditions",
+    question: "which outcome is worth pursuing, for whom, why now"
+}
+instance layer_navigation of "Layer" {
+    layer_id: "navigation",
+    name: "Navigation",
+    job: "recurs at every consequential decision",
+    question: "what next, and what did reality establish"
+}
+instance layer_delivery of "Layer" {
+    layer_id: "delivery",
+    name: "Delivery",
+    job: "repertoire of work; overlapping, repeatable, omittable",
+    question: "what work creates or tests the next distinction"
+}
+instance layer_control of "Layer" {
+    layer_id: "control",
+    name: "Control",
+    job: "independent predicates on the case, not a pipeline",
+    question: "what evidence permits the next commitment"
+}
+instance component_domainforge of "Component" {
+    component_id: "domainforge",
+    name: "DomainForge / .sea",
+    responsibility: "versioned domain meaning and Interaction Domain Models"
+}
+instance component_sea_forge_casework of "Component" {
+    component_id: "sea_forge_casework",
+    name: "SEA-Forge / Casework",
+    responsibility: "governed case and action authority, policy, delegation, approval, obligations"
+}
+instance component_cognate of "Component" {
+    component_id: "cognate",
+    name: "Cognate",
+    responsibility: "durable runtime, capabilities, events, projections, continuations"
+}
+instance component_horizon of "Component" {
+    component_id: "horizon",
+    name: "Horizon",
+    responsibility: "human-facing world and case navigation, journal, affordance inspection, decisions, comparisons; presents, never decides"
+}
+instance component_cognate_workbench of "Component" {
+    component_id: "cognate_workbench",
+    name: "Cognate Workbench",
+    responsibility: "agent work environment: assignments, sessions, deep-work execution linked to case and evidence"
+}
+instance component_realitytrace_sxr of "Component" {
+    component_id: "realitytrace_sxr",
+    name: "RealityTrace / SXR",
+    responsibility: "pre-action expectations, observations, typed differences, provenance, residuals, settlement evidence"
+}
+instance component_gauntlet_swe_seed of "Component" {
+    component_id: "gauntlet_swe_seed",
+    name: "Gauntlet / SWE_SEED",
+    responsibility: "bounded difficult execution and software verification against frozen references"
+}
+instance component_context_kernel of "Component" {
+    component_id: "context_kernel",
+    name: "Context Kernel",
+    responsibility: "scoped retrieval with citations; reference material, not canonical truth"
+}
+instance component_ruvector of "Component" {
+    component_id: "ruvector",
+    name: "RuVector / derived indexes",
+    responsibility: "Search and retrieval acceleration, not the record of authority or evidence"
+}
+instance component_godspeed_agent of "Component" {
+    component_id: "godspeed_agent",
+    name: "GodSpeed-Agent",
+    responsibility: "developmental layer over settlement history; proposes, never authorizes"
+}
+instance activity_embed of "DeliveryActivityDef" {
+    activity_id: "embed",
+    name: "Embed",
+    action: "establish sponsor decision, setting, users, incentives, constraints, permission; learn the work vocabulary",
+    durable_output: "purpose, stakeholder/authority map, outcome hypothesis, approved observation access"
+}
+instance activity_observe of "DeliveryActivityDef" {
+    activity_id: "observe",
+    name: "Observe",
+    action: "examine work-as-done: exceptions, workarounds, interruptions, handoffs, statement/operation gaps",
+    durable_output: "source-grounded observations, chronology, contested claims, unknowns, baseline"
+}
+instance activity_map of "DeliveryActivityDef" {
+    activity_id: "map",
+    name: "Map",
+    action: "reconstruct interactions, transitions, decision points, costs, failure paths, causal hypotheses; apply ODI/JTBD",
+    durable_output: "interaction map, outcome measures, smallest consequential experiment candidates"
+}
+instance activity_artifactize of "DeliveryActivityDef" {
+    activity_id: "artifactize",
+    name: "Artifactize",
+    action: "capture minimum reviewable meaning in a validated IDM/.sea with source mappings and unknowns",
+    durable_output: "versioned semantic world, interpretation provenance, model identity"
+}
+instance activity_prototype of "DeliveryActivityDef" {
+    activity_id: "prototype",
+    name: "Prototype",
+    action: "exercise the smallest admitted path that distinguishes hypotheses or produces value",
+    durable_output: "frozen hypothesis, bounded slice, real inputs/outputs, trace identifiers"
+}
+instance activity_validate of "DeliveryActivityDef" {
+    activity_id: "validate",
+    name: "Validate",
+    action: "compare against predeclared expectations; challenge implementation, representation, attribution, recovery; use independent acceptance tests and meaningful variation",
+    durable_output: "RealityTrace evidence, verified/failed/unresolved results, reviewer disposition"
+}
+instance activity_deploy of "DeliveryActivityDef" {
+    activity_id: "deploy",
+    name: "Deploy",
+    action: "bind to real systems, actors, permissions, capacity, monitoring, reversibility",
+    durable_output: "authorized activation record, operational owner, recovery procedure"
+}
+instance activity_instrument of "DeliveryActivityDef" {
+    activity_id: "instrument",
+    name: "Instrument",
+    action: "semantic observation throughout; correlate action to meaning, authority, cost, evidence, consequence",
+    durable_output: "durable semantic exhaust, observed model, burden measures, coverage gaps"
+}
+instance activity_learn of "DeliveryActivityDef" {
+    activity_id: "learn",
+    name: "Learn",
+    action: "diagnose residuals: observation, reference, inference, implementation, or structure; test corrections",
+    durable_output: "diagnostic account, retained residuals, versioned proposals, subsequent-episode tests"
+}
+instance activity_compound of "DeliveryActivityDef" {
+    activity_id: "compound",
+    name: "Compound",
+    action: "preserve what later work can reuse and test its portability",
+    durable_output: "candidate reusable assets, variation/transfer evidence, productization decision"
+}
+instance gate_choose_problem of "EvidenceGate" {
+    gate_id: "choose_problem",
+    name: "Choose Problem",
+    commitment_earned: "invest in discovery",
+    minimum_evidence: "sponsor-owned need, JTBD outcome, plausible value, scope"
+}
+instance gate_discover_reality of "EvidenceGate" {
+    gate_id: "discover_reality",
+    name: "Discover Reality",
+    commitment_earned: "select an intervention or inquiry",
+    minimum_evidence: "work-as-done observations, baseline, exceptions, competing interpretations, missing knowledge"
+}
+instance gate_allocate_authority of "EvidenceGate" {
+    gate_id: "allocate_authority",
+    name: "Allocate Authority",
+    commitment_earned: "delegate or authorize consequential work",
+    minimum_evidence: "roles, scope, policy, approval, recovery ownership, permission boundaries"
+}
+instance gate_prove_value of "EvidenceGate" {
+    gate_id: "prove_value",
+    name: "Prove Value",
+    commitment_earned: "claim pilot benefit",
+    minimum_evidence: "frozen hypothesis and evaluator, representative observation, baseline comparison, measured actual payment"
+}
+instance gate_prove_reliability of "EvidenceGate" {
+    gate_id: "prove_reliability",
+    name: "Prove Reliability",
+    commitment_earned: "expand reliance",
+    minimum_evidence: "independent repeated settlement under variation, edge cases, recovery, known limits"
+}
+instance gate_integrate_govern of "EvidenceGate" {
+    gate_id: "integrate_govern",
+    name: "Integrate/Govern",
+    commitment_earned: "operate in the intended environment",
+    minimum_evidence: "approved real connections, authority enforcement, observability, rollback, security, operational owner"
+}
+instance gate_earn_trust of "EvidenceGate" {
+    gate_id: "earn_trust",
+    name: "Earn Trust",
+    commitment_earned: "expect informed human use",
+    minimum_evidence: "actual operator/client understanding, informed adoption, escalation and recovery behaviour"
+}
+instance gate_measure of "EvidenceGate" {
+    gate_id: "measure",
+    name: "Measure",
+    commitment_earned: "claim attributable improvement",
+    minimum_evidence: "benefit and all payment currencies, debt, externalities, confounders, limits"
+}
+instance gate_productize of "EvidenceGate" {
+    gate_id: "productize",
+    name: "Productize",
+    commitment_earned: "offer a reusable capability",
+    minimum_evidence: "versioned pattern, transfer hypothesis, repeatability/variation/recovery evidence, business case"
+}
+instance currency_time of "PaymentCurrency" {
+    currency_id: "time",
+    name: "time"
+}
+instance currency_attention of "PaymentCurrency" {
+    currency_id: "attention",
+    name: "attention"
+}
+instance currency_money of "PaymentCurrency" {
+    currency_id: "money",
+    name: "money"
+}
+instance currency_risk of "PaymentCurrency" {
+    currency_id: "risk",
+    name: "risk"
+}
+instance currency_recovery of "PaymentCurrency" {
+    currency_id: "recovery",
+    name: "recovery"
+}
+instance reliability_T of "ReliabilityDimension" {
+    dimension_id: "T",
+    name: "timeliness"
+}
+instance reliability_A of "ReliabilityDimension" {
+    dimension_id: "A",
+    name: "attribution"
+}
+instance reliability_I of "ReliabilityDimension" {
+    dimension_id: "I",
+    name: "incentive alignment"
+}
+instance reliability_K of "ReliabilityDimension" {
+    dimension_id: "K",
+    name: "corroboration"
+}
+instance reliability_D of "ReliabilityDimension" {
+    dimension_id: "D",
+    name: "debt visibility"
+}
+instance reliability_X of "ReliabilityDimension" {
+    dimension_id: "X",
+    name: "externality detection"
+}
+instance reliability_N of "ReliabilityDimension" {
+    dimension_id: "N",
+    name: "non-adversariality"
+}
+instance aim_visibility of "AimDimension" {
+    dimension_id: "visibility",
+    name: "visibility"
+}
+instance aim_reach of "AimDimension" {
+    dimension_id: "reach",
+    name: "reach"
+}
+instance aim_payment of "AimDimension" {
+    dimension_id: "payment",
+    name: "payment"
+}
+instance aim_executable_capability of "AimDimension" {
+    dimension_id: "executable_capability",
+    name: "executable capability"
+}
+instance aim_authority of "AimDimension" {
+    dimension_id: "authority",
+    name: "authority"
+}
+instance aim_recovery of "AimDimension" {
+    dimension_id: "recovery",
+    name: "recovery"
+}
+instance aim_settlement_access of "AimDimension" {
+    dimension_id: "settlement_access",
+    name: "settlement access"
+}
+instance owner_case_and_assignments of "RecordOwner" {
+    record_id: "case_and_assignments",
+    record: "Case and assignments",
+    canonical_owner: "Casework/Cognate case and event interfaces; Horizon is the operator view"
+}
+instance owner_declared_interaction_model of "RecordOwner" {
+    record_id: "declared_interaction_model",
+    record: "Declared interaction model",
+    canonical_owner: "validated .sea in the owning domain's .sea/interaction/, with model hash and source translation"
+}
+instance owner_frozen_episode_reference of "RecordOwner" {
+    record_id: "frozen_episode_reference",
+    record: "Frozen episode reference",
+    canonical_owner: "evaluation and execution contract fixed before the act; linked from case events and RealityTrace"
+}
+instance owner_observed_traces of "RecordOwner" {
+    record_id: "observed_traces",
+    record: "Observed traces and comparisons",
+    canonical_owner: "RealityTrace records and derivable observed representation; the case carries references, not a copy"
+}
+instance owner_decision_review_residue of "RecordOwner" {
+    record_id: "decision_review_residue",
+    record: "Decision, review, developmental residue",
+    canonical_owner: "attributable authorization/acceptance, case decisions, candidate revision or reusable artifact"
+}
+instance owner_proof_report of "RecordOwner" {
+    record_id: "proof_report",
+    record: "Proof report",
+    canonical_owner: "reproduction commands, source hashes, positive and adversarial results, uncertainty, verifier identity"
+}
+instance acceptance_1 of "AcceptanceRequirement" {
+    requirement_id: "R1",
+    statement: "reconstruct or validate the initial IDM from this SOP and its source evidence"
+}
+instance acceptance_2 of "AcceptanceRequirement" {
+    requirement_id: "R2",
+    statement: "resume the case from authoritative records and select a real or blocked affordance without reconstructing hidden context"
+}
+instance acceptance_3 of "AcceptanceRequirement" {
+    requirement_id: "R3",
+    statement: "run a bounded governed inquiry against an expectation frozen beforehand and inspect execution and evidence"
+}
+instance acceptance_4 of "AcceptanceRequirement" {
+    requirement_id: "R4",
+    statement: "derive an observed interaction representation, compare it with the declared version, classify at least one difference or evidence gap"
+}
+instance acceptance_5 of "AcceptanceRequirement" {
+    requirement_id: "R5",
+    statement: "independently settle an episode, authorize its disposition, preserve the original reference and all negative or unresolved evidence"
+}
+instance acceptance_6 of "AcceptanceRequirement" {
+    requirement_id: "R6",
+    statement: "where justified, validate and authorize a candidate model and test a subsequent episode under it; where not, retain the divergence and the rationale"
+}
+instance acceptance_7 of "AcceptanceRequirement" {
+    requirement_id: "R7",
+    statement: "inspect the same case, differences, authority and evidence through Horizon and programmatic records without inconsistent verdicts"
+}
+instance acceptance_8 of "AcceptanceRequirement" {
+    requirement_id: "R8",
+    statement: "transfer the templates and instrumentation to a second bounded situation without rewriting the core evidence mechanism"
+}
+
+// ---------------------------------------------------------------------------
+// Navigation flow (SOP 2: Listen, Aim, Move, Claim recurs at every decision)
+// ---------------------------------------------------------------------------
+
+resource "CaseReading"
+resource "FrozenExpectation"
+resource "ExecutionTrace"
+resource "SettlementEvidence"
+
+flow "CaseReading"
+    @phase "listen"
+    from "NavListen" to "NavAim"
+    quantity 1
+
+flow "FrozenExpectation"
+    @phase "aim"
+    from "NavAim" to "NavMove"
+    quantity 1
+
+flow "ExecutionTrace"
+    @phase "move"
+    from "NavMove" to "NavClaim"
+    quantity 1
+
+flow "SettlementEvidence"
+    @phase "claim"
+    from "NavClaim" to "NavListen"
+    quantity 1
+
+record CaseOpenOrResumeInput {
+    case_id: string (min_length 1)
+}
+record CaseOpenOrResumeOutput {
+    case_id: string (min_length 1)
+    template_ref: string (min_length 1)
+    lifecycle: CaseLifecycle
+}
+record NavListenInput {
+    case_id: string (min_length 1)
+}
+record NavListenOutput {
+    case_id: string (min_length 1)
+    lifecycle: CaseLifecycle
+}
+record NavAimInput {
+    episode_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    plan_item_id: string (min_length 1)
+    n: int (min 1)
+    kind: EpisodeKind
+    world_ref: string (pattern WorldRef)
+    prior_freezes_for_key: int (min 0)
+    criteria_editor_ref: string (min_length 1)
+    executor_ref: string (min_length 1)
+}
+record NavAimOutput {
+    episode_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    plan_item_id: string (min_length 1)
+    n: int (min 1)
+    kind: EpisodeKind
+    world_ref: string (pattern WorldRef)
+}
+record NavMoveInput {
+    assignment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    episode_ref: string (min_length 1)
+    world_ref: string (pattern WorldRef)
+    criterion_ref: string (min_length 1)
+    authority_ref: string (min_length 1)
+    budget_ref: string (min_length 1)
+    episode_kind: EpisodeKind
+    freeze_recorded: bool
+    consequential: bool
+    authorization_recorded: bool
+    criteria_changed: bool
+}
+record NavMoveOutput {
+    assignment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    episode_ref: string (min_length 1)
+    world_ref: string (pattern WorldRef)
+    criterion_ref: string (min_length 1)
+    authority_ref: string (min_length 1)
+    budget_ref: string (min_length 1)
+}
+record NavClaimInput {
+    settlement_ref: string (min_length 1)
+    episode_ref: string (min_length 1)
+    result: string (pattern EpistemicResult)
+    reliability: string (min_length 1)
+    source_independence: string (min_length 1)
+    observation_ref: string (min_length 1)
+    executor_ref: string (min_length 1)
+    settler_ref: string (min_length 1)
+    single_person_case: bool
+    verifier_context_fresh: bool
+}
+record NavClaimOutput {
+    settlement_ref: string (min_length 1)
+    episode_ref: string (min_length 1)
+    result: string (pattern EpistemicResult)
+    reliability: string (min_length 1)
+    source_independence: string (min_length 1)
+}
+record RecordDispositionInput {
+    disposition_id: string (min_length 1)
+    case_id: string (min_length 1)
+    level: DispositionLevel
+    disposition: DispositionKind
+    lifecycle_after: CaseLifecycle
+    terminal_case_record: bool
+}
+record RecordDispositionOutput {
+    disposition_id: string (min_length 1)
+    case_id: string (min_length 1)
+    level: DispositionLevel
+    disposition: DispositionKind
+    lifecycle_after: CaseLifecycle
+}
+record AssessGateInput {
+    assessment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    gate: EvidenceGateName
+    gate_state: GateState
+    rationale_authorized: bool
+    hard_governance_condition: bool
+}
+record AssessGateOutput {
+    assessment_id: string (min_length 1)
+    case_id: string (min_length 1)
+    gate: EvidenceGateName
+    gate_state: GateState
+}
+record AcceptClientOutcomeInput {
+    outcome_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    accepted_by_ref: string (min_length 1)
+    account_ref: string (min_length 1)
+}
+record AcceptClientOutcomeOutput {
+    outcome_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    accepted_by_ref: string (min_length 1)
+    account_ref: string (min_length 1)
+}
+record ActEmbedInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActEmbedOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActObserveInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActObserveOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActMapInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActMapOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActArtifactizeInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActArtifactizeOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActPrototypeInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActPrototypeOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActValidateInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+    expectation_predeclared: bool
+}
+record ActValidateOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActDeployInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActDeployOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActInstrumentInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActInstrumentOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActLearnInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActLearnOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActCompoundInput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+record ActCompoundOutput {
+    activity_record_id: string (min_length 1)
+    case_id: string (min_length 1)
+    activity: DeliveryActivity
+    output_ref: string (min_length 1)
+}
+
+// ---------------------------------------------------------------------------
+// Operations: Navigation steps and delivery activities
+//
+// Each is one inbound operation with an operation_trace evidence obligation.
+// Bound policies are Constraint policies over the operation input record, the
+// only scope DomainForge 0.21.2 admits (APP007); `postcondition` and
+// `invariant` enforcement points are rejected, so no policy uses them.
+// ---------------------------------------------------------------------------
+
+operation case_open_or_resume {
+    intent "retrieve a Field Case from the authoritative case record so it can be continued without the previous worker's memory"
+    direction inbound
+    actor FDE
+    access public
+    input CaseOpenOrResumeInput
+    output CaseOpenOrResumeOutput
+    state FieldCase
+    effect reads FieldCase
+    transaction read_only
+    failure case_open_or_resume_invalid_input for input_validation "case_id is empty"
+    failure case_open_or_resume_not_found for missing_state "no such case record"
+    idempotency inherent
+    concurrency read_snapshot
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation nav_listen {
+    intent "read the case, world_ref, checkpoint, decision history and reliable observations before choosing the next move"
+    direction inbound
+    actor FDE
+    access public
+    input NavListenInput
+    output NavListenOutput
+    state FieldCase
+    effect reads FieldCase
+    transaction read_only
+    failure nav_listen_invalid_input for input_validation "case_id is empty"
+    failure nav_listen_not_found for missing_state "no such case record"
+    idempotency inherent
+    concurrency read_snapshot
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation nav_aim {
+    intent "fix and freeze the episode reference and its hash before execution for an evaluated path"
+    direction inbound
+    actor FDE
+    access policy_governed by episode_key_unique at precondition fails with nav_aim_policy_denied, executor_never_rewrites_criteria at precondition fails with nav_aim_policy_denied
+    input NavAimInput
+    output NavAimOutput
+    state Episode
+    effect creates Episode
+    transaction single_aggregate
+    failure nav_aim_invalid_input for input_validation "input failed record validation"
+    failure nav_aim_policy_denied for policy "a bound precondition policy does not hold"
+    failure nav_aim_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by episode_ref
+    concurrency unique_key episode_ref
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation nav_move {
+    intent "bind an assignment to case, world, criterion, authority and budget and record the delegated move"
+    direction inbound
+    actor FDE
+    access policy_governed by freeze_before_move at precondition fails with nav_move_policy_denied, authorize_consequential_action at precondition fails with nav_move_policy_denied, criteria_change_needs_new_version at precondition fails with nav_move_policy_denied
+    input NavMoveInput
+    output NavMoveOutput
+    state Assignment
+    effect creates Assignment
+    transaction single_aggregate
+    failure nav_move_invalid_input for input_validation "input failed record validation"
+    failure nav_move_policy_denied for policy "a bound precondition policy does not hold"
+    failure nav_move_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by assignment_id
+    concurrency unique_key assignment_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation nav_claim {
+    intent "record the independent epistemic settlement of a frozen expectation as S, F, U or C with reliability and source independence"
+    direction inbound
+    actor IndependentVerifier
+    access policy_governed by no_self_settlement at precondition fails with nav_claim_policy_denied, fresh_verifier_in_single_person_case at precondition fails with nav_claim_policy_denied
+    input NavClaimInput
+    output NavClaimOutput
+    state EvidenceSettlement
+    effect creates EvidenceSettlement
+    transaction single_aggregate
+    failure nav_claim_invalid_input for input_validation "input failed record validation"
+    failure nav_claim_policy_denied for policy "a bound precondition policy does not hold"
+    failure nav_claim_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by settlement_ref
+    concurrency unique_key settlement_ref
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation record_disposition {
+    intent "record the authorized disposition chosen after settlement and the resulting case lifecycle state"
+    direction inbound
+    actor DispositionAuthority
+    access policy_governed by episode_level_never_closes_case at precondition fails with record_disposition_policy_denied, closed_requires_terminal_record at precondition fails with record_disposition_policy_denied, close_disposition_sets_closed at precondition fails with record_disposition_policy_denied, closed_only_by_case_level_close at precondition fails with record_disposition_policy_denied, suspend_sets_suspended at precondition fails with record_disposition_policy_denied, continue_revise_escalate_leave_open at precondition fails with record_disposition_policy_denied
+    input RecordDispositionInput
+    output RecordDispositionOutput
+    state Disposition
+    effect creates Disposition
+    transaction single_aggregate
+    failure record_disposition_invalid_input for input_validation "input failed record validation"
+    failure record_disposition_policy_denied for policy "a bound precondition policy does not hold"
+    failure record_disposition_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by disposition_id
+    concurrency unique_key disposition_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation assess_gate {
+    intent "record the state of one evidence gate with its rationale"
+    direction inbound
+    actor FDE
+    access policy_governed by not_applicable_needs_authorized_rationale at precondition fails with assess_gate_policy_denied, not_applicable_never_waives_hard_condition at precondition fails with assess_gate_policy_denied
+    input AssessGateInput
+    output AssessGateOutput
+    state GateAssessment
+    effect creates GateAssessment
+    transaction single_aggregate
+    failure assess_gate_invalid_input for input_validation "input failed record validation"
+    failure assess_gate_policy_denied for policy "a bound precondition policy does not hold"
+    failure assess_gate_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by assessment_id
+    concurrency unique_key assessment_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation accept_client_outcome {
+    intent "record the sponsor's acceptance of a client outcome (the accepted business result), which is not an evidence settlement"
+    direction inbound
+    actor Sponsor
+    access public
+    input AcceptClientOutcomeInput
+    output AcceptClientOutcomeOutput
+    state OutcomeSettlement
+    effect creates OutcomeSettlement
+    transaction single_aggregate
+    failure accept_client_outcome_invalid_input for input_validation "input failed record validation"
+    failure accept_client_outcome_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by outcome_ref
+    concurrency unique_key outcome_ref
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_embed {
+    intent "record one Embed activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_embed at precondition fails with act_embed_policy_denied
+    input ActEmbedInput
+    output ActEmbedOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_embed_invalid_input for input_validation "input failed record validation"
+    failure act_embed_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_embed_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_observe {
+    intent "record one Observe activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_observe at precondition fails with act_observe_policy_denied
+    input ActObserveInput
+    output ActObserveOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_observe_invalid_input for input_validation "input failed record validation"
+    failure act_observe_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_observe_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_map {
+    intent "record one Map activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_map at precondition fails with act_map_policy_denied
+    input ActMapInput
+    output ActMapOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_map_invalid_input for input_validation "input failed record validation"
+    failure act_map_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_map_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_artifactize {
+    intent "record one Artifactize activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_artifactize at precondition fails with act_artifactize_policy_denied
+    input ActArtifactizeInput
+    output ActArtifactizeOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_artifactize_invalid_input for input_validation "input failed record validation"
+    failure act_artifactize_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_artifactize_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_prototype {
+    intent "record one Prototype activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_prototype at precondition fails with act_prototype_policy_denied
+    input ActPrototypeInput
+    output ActPrototypeOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_prototype_invalid_input for input_validation "input failed record validation"
+    failure act_prototype_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_prototype_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_validate {
+    intent "record one Validate activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_validate at precondition fails with act_validate_policy_denied, validate_against_predeclared_expectation at precondition fails with act_validate_policy_denied
+    input ActValidateInput
+    output ActValidateOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_validate_invalid_input for input_validation "input failed record validation"
+    failure act_validate_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_validate_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_deploy {
+    intent "record one Deploy activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_deploy at precondition fails with act_deploy_policy_denied
+    input ActDeployInput
+    output ActDeployOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_deploy_invalid_input for input_validation "input failed record validation"
+    failure act_deploy_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_deploy_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_instrument {
+    intent "record one Instrument activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_instrument at precondition fails with act_instrument_policy_denied
+    input ActInstrumentInput
+    output ActInstrumentOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_instrument_invalid_input for input_validation "input failed record validation"
+    failure act_instrument_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_instrument_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_learn {
+    intent "record one Learn activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_learn at precondition fails with act_learn_policy_denied
+    input ActLearnInput
+    output ActLearnOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_learn_invalid_input for input_validation "input failed record validation"
+    failure act_learn_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_learn_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+operation act_compound {
+    intent "record one Compound activity with its durable output; activities are not chronological and may overlap, repeat or be omitted"
+    direction inbound
+    actor FDE
+    access policy_governed by activity_is_compound at precondition fails with act_compound_policy_denied
+    input ActCompoundInput
+    output ActCompoundOutput
+    state ActivityRecord
+    effect creates ActivityRecord
+    transaction single_aggregate
+    failure act_compound_invalid_input for input_validation "input failed record validation"
+    failure act_compound_policy_denied for policy "a bound precondition policy does not hold"
+    failure act_compound_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
+    idempotency keyed_by activity_record_id
+    concurrency unique_key activity_record_id
+    evidence operation_trace
+    lifecycle synchronous_request_response
+}
+
+// ---------------------------------------------------------------------------
+// Invariant policies (Obligation / Prohibition). Expressions state the
+// PERMITTED condition; modality is metadata (DomainForge policy/core.rs).
+// ---------------------------------------------------------------------------
+
+policy episode_key_unique per Constraint Prohibition priority 9
+    @rationale "SOP 2.2 and 7.2 (design constraint I-3, E 3): one frozen reference per (case, plan item, n). The expression is the permitted state: no earlier freeze exists for the key. The count is supplied by the caller; DomainForge does not check uniqueness itself."
+    as: prior_freezes_for_key = 0
+
+policy executor_never_rewrites_criteria per Constraint Prohibition priority 9
+    @rationale "SOP 3.2: the evaluated executor never rewrites frozen criteria. The expression is the permitted state: the principal freezing a reference is not the executor."
+    as: criteria_editor_ref != executor_ref
+
+policy freeze_before_move per Constraint Obligation priority 9
+    @rationale "SOP 7.2 (design constraint I-1, E 3): for an evaluated path the reference is fixed before execution. No move on an evaluated episode unless its freeze is recorded; an exploratory episode is labelled exploratory instead."
+    as: episode_kind != "evaluated" or freeze_recorded = true
+
+policy authorize_consequential_action per Constraint Obligation priority 9
+    @rationale "SOP 7.3: SEA-Forge authorization is obtained at the action boundary for consequential actions."
+    as: consequential = false or authorization_recorded = true
+
+policy criteria_change_needs_new_version per Constraint Prohibition priority 9
+    @rationale "SOP 7.3: within-reference corrections are allowed; a change to success criteria starts a new authorized evaluation version. A move may not carry changed criteria."
+    as: criteria_changed = false
+
+policy no_self_settlement per Constraint Prohibition priority 9
+    @rationale "SOP 3.2 (design constraint I-2, E 3): the evaluated executor never attests its own independent acceptance. The expression is the permitted state: the settler is not the executor. Delegation-chain containment is a list and is not expressible (L2)."
+    as: settler_ref != executor_ref
+
+policy fresh_verifier_in_single_person_case per Constraint Obligation priority 9
+    @rationale "SOP 3.2: in a one-person case independent settlement is performed by a fresh verifier, recorded as such. Only the recorded attestation is checkable; actual freshness of context is not."
+    as: single_person_case = false or verifier_context_fresh = true
+
+policy episode_level_never_closes_case per Constraint Prohibition priority 9
+    @rationale "SOP 7.6: episode-level outcomes never close a case."
+    as: level != "episode" or lifecycle_after != "closed"
+
+policy closed_requires_terminal_record per Constraint Obligation priority 9
+    @rationale "SOP 7.6: lifecycle closed requires a terminal case record."
+    as: lifecycle_after != "closed" or terminal_case_record = true
+
+policy close_disposition_sets_closed per Constraint Obligation priority 9
+    @rationale "SOP 7.6: close-satisfied and close-failed set lifecycle closed (case-level dispositions only)."
+    as: level != "case" or (disposition != "close-satisfied" and disposition != "close-failed") or lifecycle_after = "closed"
+
+policy closed_only_by_case_level_close per Constraint Obligation priority 9
+    @rationale "SOP 7.6: lifecycle closed requires a recorded case-level close disposition. This record is that disposition, so a closed lifecycle_after is permitted only for a case-level close."
+    as: lifecycle_after != "closed" or (level = "case" and (disposition = "close-satisfied" or disposition = "close-failed"))
+
+policy suspend_sets_suspended per Constraint Obligation priority 9
+    @rationale "SOP 7.6: suspend sets lifecycle suspended (case-level only)."
+    as: level != "case" or disposition != "suspend" or lifecycle_after = "suspended"
+
+policy continue_revise_escalate_leave_open per Constraint Obligation priority 9
+    @rationale "SOP 7.6: continue, revise and escalate leave the case open (case-level only)."
+    as: level != "case" or (disposition != "continue" and disposition != "revise" and disposition != "escalate") or lifecycle_after = "open"
+
+policy not_applicable_needs_authorized_rationale per Constraint Obligation priority 9
+    @rationale "SOP 8.1: a gate is met, blocked, unassessed or not_applicable with authorized rationale."
+    as: gate_state != "not_applicable" or rationale_authorized = true
+
+policy not_applicable_never_waives_hard_condition per Constraint Prohibition priority 9
+    @rationale "SOP 8.1: not applicable never waives a hard governance condition."
+    as: gate_state != "not_applicable" or hard_governance_condition = false
+
+policy activity_is_embed per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Embed activity and no other."
+    as: activity = "embed"
+
+policy activity_is_observe per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Observe activity and no other."
+    as: activity = "observe"
+
+policy activity_is_map per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Map activity and no other."
+    as: activity = "map"
+
+policy activity_is_artifactize per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Artifactize activity and no other."
+    as: activity = "artifactize"
+
+policy activity_is_prototype per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Prototype activity and no other."
+    as: activity = "prototype"
+
+policy activity_is_validate per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Validate activity and no other."
+    as: activity = "validate"
+
+policy validate_against_predeclared_expectation per Constraint Obligation priority 9
+    @rationale "SOP 6 (Validate): compare against predeclared expectations."
+    as: expectation_predeclared = true
+
+policy activity_is_deploy per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Deploy activity and no other."
+    as: activity = "deploy"
+
+policy activity_is_instrument per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Instrument activity and no other."
+    as: activity = "instrument"
+
+policy activity_is_learn per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Learn activity and no other."
+    as: activity = "learn"
+
+policy activity_is_compound per Constraint Obligation priority 9
+    @rationale "SOP 6: this operation records the Compound activity and no other."
+    as: activity = "compound"
+
+// Graph-evaluated structure checks over declared instances.
+policy four_layers as: count(i in entity_instances where i.entity = "Layer": i.layer_id) = 4
+policy ten_components as: count(i in entity_instances where i.entity = "Component": i.component_id) = 10
+policy ten_delivery_activities as: count(i in entity_instances where i.entity = "DeliveryActivityDef": i.activity_id) = 10
+policy nine_evidence_gates as: count(i in entity_instances where i.entity = "EvidenceGate": i.gate_id) = 9
+policy five_payment_currencies as: count(i in entity_instances where i.entity = "PaymentCurrency": i.currency_id) = 5
+policy seven_reliability_dimensions as: count(i in entity_instances where i.entity = "ReliabilityDimension": i.dimension_id) = 7
+policy seven_aim_dimensions as: count(i in entity_instances where i.entity = "AimDimension": i.dimension_id) = 7
+policy six_record_owners as: count(i in entity_instances where i.entity = "RecordOwner": i.record_id) = 6
+policy eight_acceptance_requirements as: count(i in entity_instances where i.entity = "AcceptanceRequirement": i.requirement_id) = 8
+
+// Metrics. Structural only: the SOP's standing criterion needs runtime data a
+// declaration cannot carry (map row A:178 is unknown).
+metric "evidence_gate_count" as: count(i in entity_instances where i.entity = "EvidenceGate": i.gate_id) @unit "count" @target 9
+metric "delivery_activity_count" as: count(i in entity_instances where i.entity = "DeliveryActivityDef": i.activity_id) @unit "count" @target 10
+metric "payment_currency_count" as: count(i in entity_instances where i.entity = "PaymentCurrency": i.currency_id) @unit "count" @target 5
+

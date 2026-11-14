@@ -103,6 +103,7 @@ This document is the navigational index and sitemap for the **SEA Forge Technica
 | [`reference/persisted-record-schemas.md`](reference/persisted-record-schemas.md) | Complete JSON/JSONL field definitions for all 7 persisted governance record kinds | Auditor / tool developer | Reference | `subsystems/kernel-pipeline.md` | `subsystems/settlement-evidence.md` |
 | [`operations/troubleshooting.md`](operations/troubleshooting.md) | Structured symptom-cause-remediation diagnostic matrix | Debugging engineer | Reference | None | `how-to/troubleshoot-cell-failures.md` |
 | [`source-map.md`](source-map.md) | Concept-to-source traceability matrix connecting ideas to code symbols | Codebase explorer / maintainer | Reference | None | All subsystem guides |
+| [`sop/README.md`](sop/README.md) | Status, hash and model location of the GodSpeed FDE operating procedure GS-FDE-SOP-001 v0.4.1 (draft, pending owner ratification) | FDE, case lead, or reviewer needing the declared practice and its declared model | Reference | None | `../.sea/interaction/fde-sop/README.md` |
 
 ### 9. Interactive Explainers (Layer 9)
 

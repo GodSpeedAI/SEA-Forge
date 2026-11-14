@@ -1,0 +1,55 @@
+FDE SOP declared model: DomainForge validation evidence (AT-01)
+Captured: 2026-11-14T00:36:44Z
+
+== toolchain ==
+$ domainforge --version
+domainforge 0.21.2
+source (docs/sop/GS-FDE-SOP-001-v0.4.1.md) sha256: 043ae33ae6001da14f518feeb4ca2d23e280da2769d8378b36827f80d6057001
+model fde-sop.sea sha256: 2b8a8c437389c97ab396ec02a726c5370481ff735b3838da7e07728cb4114cf2
+model evidence.sea sha256: 5e12c45004506bcb255499e22fa513c0123c7d0dd32d1e38a8c81bc035d30054
+model outcome.sea sha256: dfd4a361af2528ad03cb13494fc8d3bbb87548bbc76c12f8eebba04012c92ba5
+
+== 1. validate --application ==
+$ domainforge validate --application .sea/interaction/fde-sop/fde-sop.sea
+Validation succeeded: 0 violations total
+Application contract valid: 18 operation(s), 36 record(s), 9 enum(s), 17 entities
+ok:   validate --application exits 0
+
+== 2. envelope --emit cep, repeated ==
+$ domainforge envelope --emit cep --world-name godspeed-fde-sop .sea/interaction/fde-sop/fde-sop.sea
+ok:   envelope run 1 exits 0
+ok:   envelope run 2 exits 0
+run 1 world_ref: world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
+run 2 world_ref: world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
+run 3 world_ref (representation inlined): world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
+source_set_hash: sha256:d27518fbab63fc3b6b0f3821c15ab7c01a82e1a926f7673fdeabc2b4ac607c25
+semantic_closure_hash: sha256:69bf9da570304c5e599e48e558914bb723238b53613c050012674867ff11f006
+created_by: domainforge 0.21.2
+envelope_id differs between runs (expected, not part of identity): 01a1d77c-39c4-7962-aeed-c21eb7178a5b / 01a1d77c-3a8d-7002-872c-d19b99496d60
+ok:   world_ref has the form world:godspeed-fde-sop@sha256:<64 hex>
+ok:   world_ref identical across three runs
+
+== 3. the two settlement concepts are distinct ==
+$ domainforge parse --format json fde-sop.sea  (entities named Settlement)
+  Settlement  namespace=godspeed-fde-sop.evidence  ConceptId=concept:11fc582b-b054-5386-b245-5a358e3c9327
+  Settlement  namespace=godspeed-fde-sop.outcome  ConceptId=concept:01d8c175-5650-5bb9-811a-a44720e16a94
+  envelope declarations named Settlement: 2, distinct ids: 2
+ok:   two Settlement concepts, different namespaces, different ConceptIds
+$ domainforge validate (outcome.sea moved into the evidence namespace)
+Error: Parse failed for fde-sop.sea: distinct declarations share qualified ID 'godspeed-fde-sop.evidence.entity.Settlement' ('evidence.sea' line 14 and 'outcome.sea' line 12)
+ok:   T4 merging the two namespaces is refused (symbol collision)
+
+== 4. negative controls and capability probes ==
+$ T1 bound policy referencing a field that is not on the input record
+ok:   T1: rejected (does not resolve to a declared input field)
+$ T2 policy bound at postcondition
+ok:   T2: rejected (is reserved; only precondition is executable)
+$ T3 graph policy count broken (nine gates declared as eight)
+ok:   T3: rejected (nine_evidence_gates)
+$ T5 role_binding to an entity imported from another namespace
+ok:   T5: rejected (role_binding references undefined entity)
+$ T6 role_binding on the real model populates entity_roles
+  entity_roles: 4 entities, 7 role bindings
+ok:   T6 role bindings are authored and recorded (7 declared)
+
+VERDICT: PASS

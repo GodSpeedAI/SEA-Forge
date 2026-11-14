@@ -1,0 +1,4 @@
+SOP sha256: 043ae33ae6001da14f518feeb4ca2d23e280da2769d8378b36827f80d6057001
+numbered clauses in SOP: 66 (13 sections, 53 subsections/clauses)
+map rows: 115  declared=60 inferred=23 unknown=32
+VERDICT: PASS

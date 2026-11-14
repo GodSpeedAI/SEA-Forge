@@ -1,35 +1,23 @@
 # Current status
 
-**Status revision:** 235
+**Status revision:** 237
 
-**Stage:** FDE integration branch: planner test fix after the Horizon merge
+**Stage:** FDE integration branch: GS-FDE-SOP-001 v0.4.1 declared model, translation map and checks (WP-13)
 
-**Summary:** fde/integration: sea-forge-planner/tests/conformance_m2.rs now sets the new ItemMarkers.review field in its two struct literals; the merge of feat/horizon-desk-support (PR #91) left the test target unable to compile. PR #91 itself has the same defect. Gate results are in the branch ledger.
+**Summary:** fde/integration: promoted the SOP draft v0.4.1 (pending owner ratification OD-2) to docs/sop with its sha256, and declared its model under .sea/interaction/fde-sop/ (world godspeed-fde-sop): 18 operations, 7 role bindings, Obligation/Prohibition policies for freeze-before-move, no self-settlement and episode identity, and two non-unifying Settlement concepts in separate namespaces. The map has 115 rows over 66 numbered clauses: 60 declared, 23 inferred, 32 unknown, each unknown naming a limitation. Revisions 234 and 235 of this branch were renumbered 235 and 236 so they follow main's 234.
 
 **Verified:**
-- cargo fmt --check, cargo check --workspace --locked: ok
-- cargo test -p sea-forge-core, case-runner, cli, server --locked: 0 failures; sea-forge-planner 69 passed 0 failed after the fix
+- scripts/check-fde-sop-model.sh: validate --application 0 violations (18 operations); envelope --emit cep world_ref identical across three runs; two Settlement concepts have different ConceptIds and a same-namespace merge is refused; six negative controls reject for the reason claimed (DomainForge 0.21.2)
+- scripts/check-fde-sop-map.sh: 66 numbered clauses all covered; every excerpt is a verbatim SOP substring; every named element exists in the model
+- scripts/check-agent-context.sh passes
 
 **Limits:**
-- cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
-- 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
-- docs/how-to/upgrade-domainforge-producer.md still records a 0.21.1 check and its a71ff6 digest as history
-- A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
-- --declared <ref> is not checked against a ledger declaration
-- A failure inside declare before the transport spawns is held for an operator, which is conservative
-- The CLI builds an Operator from --actor, the same local trust model as approve
-- The Horizon policy renderer and the sea-rs fixture are not tied by a test (follow-up)
-- The server test covers a nonzero exit only; the timeout variant is covered at the CLI
-- The world-load log is INFO level; SFWP has no way to list loaded worlds
-- The liveness guard sees the recorded process group only: a process that left it (setsid/setpgid), a resolver in another pid namespace on the same boot, and the instant between fork and the ledger write are not seen
-- An Unknown liveness result or a malformed launch record can be overridden only by the operator's audited --attest-command-gone; a group that is positively alive is always refused
-- Exactly-once across an operator NotDeclared and a late declaration still relies on the external authority treating authorization_request_sha256 as an idempotency key (contract documented in sea-forge-settlement declaration.rs)
-- Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
-- An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
-- Only sea-forge-capability was tested (the sole rusqlite user); full workspace tests, CI and MSRV 1.92 job not run locally; rusqlite 0.41.1 declares rust-version 1.89
-- The case.add_item precondition is checked before the write, not under the same lock as the write
-- contracts generated TypeScript under workbench/ is not regenerated here (needs bun)
-- Integration branch only: not merged to main, no PR; PR #91 remains the route for the Horizon work
-- Full workspace tests and just ci not run (host memory); see the branch ledger for what was run
+- Operation-bound policies are scope-checked by validate, not evaluated; every S2 row is insufficient until the DomainForge evaluator (WP-12) runs it
+- DomainForge 0.21.2 rejects postcondition and invariant enforcement points, so only precondition policies are declared
+- 32 of 115 map rows are unknown; the 4.2 field groups, 7.4 assignment brief and 10.x handoff contents are not declared in this version
+- The SOP is a draft pending owner ratification; the model and map must be re-derived if its hash changes
+- I-3 key (case, plan item, n) comes from the integration architecture, not the SOP text; episode_key_unique tests a caller-supplied count
+- domainforge test was not used as evidence; no cargo build or just ci was run for this change
+- Integration branch only: not merged to main, no PR
 
-**Next:** Apply the same one-line test fix to PR #91 (feat/horizon-desk-support) before it merges.
+**Next:** Owner ratifies or amends the SOP (OD-2); WP-12 evaluates the bound policies; WP-11 and WP-20 bind Casework to the model.
