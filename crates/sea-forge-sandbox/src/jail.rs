@@ -952,11 +952,13 @@ mod macos {
     /// Crate-private F08 teardown classification for the macOS backend.
     /// Lifted into `ExecutionResult.lifecycle_containment`:
     /// [`MacTeardown::FullyTerminated`] maps to
-    /// `LifecycleContainment::ProcessGroup`, [`MacTeardown::CagePersists`]
-    /// maps to `LifecycleContainment::SandboxCagePersists`. In both cases
-    /// the verified part is the GROUP teardown; descendant completeness is
-    /// best-effort census only (module doc: a pre-reparent `setsid` daemon
-    /// is uncensused and unobservable).
+    /// `LifecycleContainment::GroupTerminatedDescendantsUnverified`,
+    /// [`MacTeardown::CagePersists`] maps to
+    /// `LifecycleContainment::SandboxCagePersists`. In both cases the
+    /// verified part is the GROUP teardown; descendant completeness is never
+    /// claimed (module doc: a pre-reparent `setsid` daemon is uncensused and
+    /// unobservable, and macOS offers no membership mechanism that survives
+    /// reparenting).
     #[derive(Debug)]
     pub(crate) enum MacTeardown {
         /// The group kill reached every CENSUSED descendant and the group
@@ -1620,14 +1622,16 @@ mod macos {
         report_teardown(&teardown);
 
         // C1: the containment claim is the verified teardown classification.
-        // A fully-reached group kill claims ProcessGroup — a VERIFIED GROUP
-        // TEARDOWN claim, not a descendant-completeness claim: the census is
-        // best-effort, and a pre-reparent `setsid` daemon is uncensused and
-        // unobservable (module doc). Census survivors are reported as the
-        // documented cage-persists residual, never as a full lifecycle
-        // containment.
+        // A fully-reached group kill with no censused survivor claims only
+        // what is known — the group was terminated, descendants unverified:
+        // the census is best-effort and a pre-reparent `setsid` daemon is
+        // uncensused and unobservable (module doc), so `ProcessGroup` (which
+        // reads as a complete teardown) is never claimed here. Census
+        // survivors are reported as the documented cage-persists residual.
         let containment = match teardown {
-            MacTeardown::FullyTerminated => LifecycleContainment::ProcessGroup,
+            MacTeardown::FullyTerminated => {
+                LifecycleContainment::GroupTerminatedDescendantsUnverified
+            }
             MacTeardown::CagePersists { survivor_pids } => {
                 LifecycleContainment::SandboxCagePersists {
                     survivor_count: survivor_pids.len() as u32,

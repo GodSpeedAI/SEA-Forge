@@ -563,13 +563,18 @@ pub enum LifecycleContainment {
     JobObject,
     /// POSIX process-group kill verified; no stronger mechanism was active
     /// (Local/trusted, or cgroup unavailable with a typed degrade already
-    /// reported), or the macOS jail's census found no surviving escapee.
-    /// Completeness caveat: the macOS census observes the workload's ppid
-    /// tree only while the workload lives, so a double-fork+setsid daemon
-    /// that reparents to launchd before any sample is unobservable — group
-    /// teardown is verified, descendant completeness is best-effort (see
-    /// `LifecycleContainment::SandboxCagePersists` for the observable case).
+    /// reported). The group teardown is the whole claim; this variant is
+    /// never used where descendants could have left the group unobserved
+    /// (see `LifecycleContainment::GroupTerminatedDescendantsUnverified`).
     ProcessGroup,
+    /// macOS jail: the process-group kill is verified, but no mechanism that
+    /// survives reparenting tracks the workload's descendants, so a
+    /// double-fork+`setsid` daemon that reparents to launchd before any
+    /// census sample is unobservable. What is known is that the group was
+    /// terminated and that no CENSUSED descendant survived; completeness of
+    /// the descendant set is NOT claimed. Census survivors are reported as
+    /// `LifecycleContainment::SandboxCagePersists` instead.
+    GroupTerminatedDescendantsUnverified,
     /// Isolated: the run was the init of its own PID namespace
     /// (`unshare --pid`). Membership is structural — the namespace is
     /// established before exec and inherited by every descendant, and kernel
@@ -1449,6 +1454,10 @@ mod tests {
         assert_eq!(value["sandbox_cage_persists"]["survivor_count"], 2);
         let value = serde_json::to_value(LifecycleContainment::ProcessGroup).unwrap();
         assert_eq!(value, "process_group");
+        let value =
+            serde_json::to_value(LifecycleContainment::GroupTerminatedDescendantsUnverified)
+                .unwrap();
+        assert_eq!(value, "group_terminated_descendants_unverified");
         let result = ExecutionResult {
             status: ExecutionStatus::Completed,
             exit_code: Some(0),

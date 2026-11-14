@@ -236,12 +236,14 @@ fn background_child_does_not_outlive_completed_execution() {
     let fx = fixture();
     let result = run(&fx, "(sleep 3; echo late > late.txt) & exit 0");
     assert_eq!(result.status, ExecutionStatus::Completed);
-    // C1: no setsid escapee in the census, so the verified group kill claims
-    // ProcessGroup — the strongest mechanism this backend provides.
+    // C1: no setsid escapee in the census. The group kill is verified but
+    // descendant completeness is not (no reparent-surviving membership), so
+    // the claim is the degraded GroupTerminatedDescendantsUnverified, never
+    // ProcessGroup.
     assert_eq!(
         result.lifecycle_containment,
-        LifecycleContainment::ProcessGroup,
-        "a fully terminated macOS jail run must claim the verified group kill"
+        LifecycleContainment::GroupTerminatedDescendantsUnverified,
+        "a macOS jail run must claim only the verified group teardown"
     );
 
     thread::sleep(Duration::from_secs(5));
