@@ -850,3 +850,91 @@ async fn the_verb_answers_over_the_socket_with_the_contract_shapes() {
     assert_eq!(second["record_id"], first["record_id"]);
     let _ = std::fs::remove_file(&socket);
 }
+
+// ---------------------------------------------------------------------------
+// Review fixes: F2 (torn tail, corrupt lines)
+// ---------------------------------------------------------------------------
+
+fn records_path(root: &Path) -> PathBuf {
+    root.join("cases/case-0001/field-records.jsonl")
+}
+
+#[test]
+fn f2_torn_tail_is_repaired_before_append_and_the_answer_is_true() {
+    let root = cell();
+    let freeze = fixture("valid/request-episode-frozen.json");
+    rt_register_for(root.path(), &freeze);
+    assert_eq!(
+        run_as(root.path(), "case-keeper", &freeze)["outcome"],
+        "recorded"
+    );
+    let before = fs::read(records_path(root.path())).unwrap();
+    let mut torn = before.clone();
+    torn.extend_from_slice(br#"{"seq":2,"kind":"episode.sett"#);
+    fs::write(records_path(root.path()), &torn).unwrap();
+    let settle = fixture("valid/request-episode-settled.json");
+    let out = run_as(root.path(), "agent:verifier", &settle);
+    assert_eq!(out["outcome"], "recorded", "{out}");
+    let text = fs::read_to_string(records_path(root.path())).unwrap();
+    let lines: Vec<Value> = text
+        .lines()
+        .map(|l| serde_json::from_str(l).expect("every stored line parses"))
+        .collect();
+    assert_eq!(lines.len(), 2, "{text}");
+    assert_eq!(lines[1]["kind"], "episode.settled");
+    assert_eq!(lines[1]["record_id"], out["record_id"]);
+    // The repair is durable and names what was dropped.
+    let repairs =
+        fs::read_to_string(root.path().join("cases/case-0001/field-repairs.jsonl")).unwrap();
+    assert!(repairs.contains("field-records.jsonl") && repairs.contains("episode.sett"));
+    // The verb's "recorded" is true: a replay finds the record.
+    let again = run_as(root.path(), "agent:verifier", &settle);
+    assert_eq!(
+        (again["outcome"].as_str(), again["replayed"].as_bool()),
+        (Some("recorded"), Some(true))
+    );
+    assert_eq!(again["record_id"], out["record_id"]);
+}
+
+#[test]
+fn f2_a_corrupt_complete_line_refuses_and_writes_nothing() {
+    let root = cell();
+    let freeze = fixture("valid/request-episode-frozen.json");
+    rt_register_for(root.path(), &freeze);
+    run_as(root.path(), "case-keeper", &freeze);
+    let mut bytes = fs::read(records_path(root.path())).unwrap();
+    bytes.extend_from_slice(b"this is not json\n");
+    fs::write(records_path(root.path()), &bytes).unwrap();
+    let dir = root.path().join("cases/case-0001");
+    let snapshot = |d: &Path| {
+        let mut v: Vec<(String, Vec<u8>)> = fs::read_dir(d)
+            .unwrap()
+            .map(|e| {
+                let e = e.unwrap();
+                (
+                    e.file_name().to_string_lossy().to_string(),
+                    fs::read(e.path()).unwrap(),
+                )
+            })
+            .collect();
+        v.sort();
+        v
+    };
+    let before = snapshot(&dir);
+    let settle = fixture("valid/request-episode-settled.json");
+    let out = run_as(root.path(), "agent:verifier", &settle);
+    assert_eq!(out["outcome"], "refused", "{out}");
+    assert!(
+        out["message"].as_str().unwrap().contains("integrity"),
+        "{out}"
+    );
+    assert_eq!(snapshot(&dir), before, "a refused verb writes nothing");
+    assert_eq!(
+        freeze_status(
+            &ctx(root.path(), "x", &[], &FileIndex(root.path().into())),
+            "item-03",
+            1
+        ) == FreezeStatus::Complete,
+        false
+    );
+}

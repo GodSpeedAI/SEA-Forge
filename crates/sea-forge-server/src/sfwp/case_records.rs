@@ -233,7 +233,10 @@ pub(super) fn case_dir(root: &Path, case_id: &str) -> PathBuf {
     root.join("cases").join(case_id)
 }
 
-/// Complete newline-terminated JSON lines; a torn trailing fragment is ignored.
+/// Complete newline-terminated JSON lines; a torn trailing fragment is ignored
+/// and an unparseable complete line is skipped. Only for readers that feed no
+/// invariant (delivery, spool de-duplication); everything that decides an
+/// invariant, an id or idempotency goes through [`integrity`] first.
 pub(super) fn read_lines(path: &Path) -> Vec<Value> {
     let bytes = fs::read(path).unwrap_or_default();
     let end = match bytes.iter().rposition(|b| *b == b'\n') {
@@ -247,17 +250,96 @@ pub(super) fn read_lines(path: &Path) -> Vec<Value> {
         .collect()
 }
 
-pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
+/// As [`read_lines`] but an unreadable file or ANY unparseable complete line is
+/// an error (a torn trailing fragment is still not a line). A missing file is empty.
+pub(super) fn read_lines_strict(path: &Path) -> Result<Vec<Value>, String> {
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(format!("read {}: {e}", path.display())),
+    };
+    let end = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    let mut out = Vec::new();
+    for (i, line) in bytes[..end].split(|b| *b == b'\n').enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+        out.push(
+            serde_json::from_slice(line)
+                .map_err(|e| format!("{} line {} is not valid JSON: {e}", path.display(), i + 1))?,
+        );
+    }
+    Ok(out)
+}
+
+const REPAIRS: &str = "field-repairs.jsonl";
+
+/// Every store file whose lines decide an invariant, an id or idempotency must
+/// parse completely before anything is decided or written.
+pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
+    let dir = case_dir(ctx.root, ctx.case_id);
+    for name in [RECORDS, INTENTS, DECISIONS, RT_OUTBOX, ANCHOR_OUTBOX] {
+        read_lines_strict(&dir.join(name)).map_err(|e| format!("store integrity: {e}"))?;
+    }
+    Ok(())
+}
+
+fn sync_append(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(path)
         .map_err(|e| format!("open {}: {e}", path.display()))?;
-    let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
-    line.push(b'\n');
-    file.write_all(&line)
+    file.write_all(bytes)
         .and_then(|_| file.sync_data())
         .map_err(|e| format!("write {}: {e}", path.display()))
+}
+
+/// A crash mid-append leaves a trailing fragment with no newline. Appending to
+/// it would glue the next record onto the fragment, so before every append the
+/// fragment is cut back to the last newline. The cut is noted durably in
+/// `field-repairs.jsonl` (beside the file, with the dropped text) BEFORE the
+/// truncation, so a repair never silently discards bytes.
+fn repair_torn_tail(path: &Path) -> Result<(), String> {
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(format!("read {}: {e}", path.display())),
+    };
+    if bytes.last().is_none_or(|b| *b == b'\n') {
+        return Ok(());
+    }
+    let keep = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    let fragment = &bytes[keep..];
+    let note = json!({
+        "repaired_at": now_rfc3339(),
+        "file": path.file_name().map(|n| n.to_string_lossy().to_string()),
+        "kept_bytes": keep, "dropped_bytes": fragment.len(),
+        "dropped_sha256": hex::encode(Sha256::digest(fragment)),
+        "dropped_text": String::from_utf8_lossy(&fragment[..fragment.len().min(512)]),
+    });
+    let log = path.with_file_name(REPAIRS);
+    let mut line = serde_json::to_vec(&note).map_err(|e| e.to_string())?;
+    line.push(b'\n');
+    let log_torn = fs::read(&log).is_ok_and(|b| b.last().is_some_and(|c| *c != b'\n'));
+    if log_torn {
+        line.insert(0, b'\n');
+    }
+    sync_append(&log, &line)?;
+    let file = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|e| format!("open {}: {e}", path.display()))?;
+    file.set_len(keep as u64)
+        .and_then(|_| file.sync_all())
+        .map_err(|e| format!("repair {}: {e}", path.display()))
+}
+
+pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
+    repair_torn_tail(path)?;
+    let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
+    line.push(b'\n');
+    sync_append(path, &line)
 }
 
 pub(super) fn records(ctx: &AppendContext) -> Vec<Value> {
@@ -452,6 +534,9 @@ pub fn append_faulted(
 ) -> Result<Value, CrashInjected> {
     if let Err(refusal) = validate_request(request) {
         return Ok(refusal);
+    }
+    if let Err(e) = integrity(ctx) {
+        return Ok(io_refusal(e));
     }
     let kind = request["kind"].as_str().unwrap_or("");
     let payload = &request["payload"];
@@ -851,6 +936,9 @@ pub enum FreezeStatus {
 }
 
 pub fn freeze_status(ctx: &AppendContext, plan_item_id: &str, n: u64) -> FreezeStatus {
+    if integrity(ctx).is_err() {
+        return FreezeStatus::Incomplete(vec!["store_integrity"]);
+    }
     let key = key_json(ctx.case_id, plan_item_id, n);
     let record = records(ctx)
         .into_iter()
@@ -919,6 +1007,9 @@ pub fn require_complete_freeze(
 /// time is not ledger-controlled. `ANCHOR_PREDATES_FAILED` otherwise.
 pub fn verify_freeze_anchor(ctx: &AppendContext, plan_item_id: &str, n: u64) -> Result<(), Value> {
     let fail = |why: &str| Err(refuse_anchor(why));
+    if integrity(ctx).is_err() {
+        return fail("case store integrity check failed");
+    }
     let Some(frozen) = records(ctx).into_iter().find(|r| {
         r["kind"] == "episode.frozen" && r["episode_key"] == key_json(ctx.case_id, plan_item_id, n)
     }) else {
@@ -967,6 +1058,9 @@ pub struct Recovered {
 /// Idempotent. Then retries pending anchors when a publisher is supplied.
 pub fn recover(ctx: &AppendContext) -> Recovered {
     let mut out = Recovered::default();
+    if integrity(ctx).is_err() {
+        return out;
+    }
     for intent in latest_intents(ctx) {
         if intent["state"] != "prepared" {
             continue;
@@ -1002,6 +1096,9 @@ pub fn recover(ctx: &AppendContext) -> Recovered {
 /// case record.
 pub fn deliver_anchors(ctx: &AppendContext, publisher: &dyn AnchorPublisher) -> usize {
     let dir = case_dir(ctx.root, ctx.case_id);
+    if integrity(ctx).is_err() {
+        return 0;
+    }
     let committed: BTreeSet<String> = records(ctx)
         .iter()
         .filter(|r| r["kind"] == "episode.frozen")
