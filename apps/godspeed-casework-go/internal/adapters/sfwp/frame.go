@@ -112,6 +112,7 @@ var mutationVerbs = map[string]bool{
 	"approval_decide":     true,
 	"case_add_item":       true,
 	"case_reopen":         true,
+	"case_record_append":  true,
 	"case_terminate":      true,
 	"case_advance":        true,
 	"item_execute":        true,
@@ -360,6 +361,30 @@ func NewCaseReopen(caseID, reason, policy, requestID string, g Governance) (*Req
 	if policy != "" {
 		r.body["policy"] = policy
 	}
+	r.body["request_id"] = requestID
+	g.apply(r.body)
+	return r, nil
+}
+
+// NewCaseRecordAppend appends one Field Case record (WP-14; contract
+// contracts/fde/case-record-append.v1.json). kind and payload are the contract request; the
+// server validates them against its schema registry, so this builder does not reshape them.
+// Both the idempotency key (contract-level replay) and the request_id (transport-level recovery)
+// are required: the verb is a durable mutation.
+func NewCaseRecordAppend(caseID, kind string, payload map[string]any, idempotencyKey, requestID string, g Governance) (*Request, error) {
+	if requestID == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "case_record_append",
+			"a durable case record append requires a non-empty request_id before it can be sent")
+	}
+	if idempotencyKey == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "case_record_append",
+			"a case record append requires a non-empty idempotency_key")
+	}
+	r := newRequest("case_record_append")
+	r.body["case_id"] = caseID
+	r.body["kind"] = kind
+	r.body["payload"] = payload
+	r.body["idempotency_key"] = idempotencyKey
 	r.body["request_id"] = requestID
 	g.apply(r.body)
 	return r, nil

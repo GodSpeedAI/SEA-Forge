@@ -1,28 +1,27 @@
 # Current status
 
-**Status revision:** 242
+**Status revision:** 243
 
-**Stage:** FDE integration branch: interaction-event outbox for case.record.append (WP-14, part 2, step 1)
+**Stage:** FDE integration branch: case.record.append Go builder, golden frames and spec note (WP-14, part 2, steps 3-4)
 
-**Summary:** fde/integration: every case ledger record and every I-2 authority decision written by case.record.append yields exactly one CEP execution_trace envelope carrying extensions[godspeed.interaction_event] (schema vendored by digest into crates/sea-forge-server/contracts/cep). The event is derived from the stored record (records now carry recorded_at; I-2 decisions are stored as dec-NNNN in field-decisions.jsonl), enqueued right after the ledger line into field-interaction-outbox.jsonl, rebuilt by reconcile_events if the enqueue is lost, and delivered idempotently (default sink: interaction-events/<case>.jsonl). Emitter failure never blocks the case write. semantic_ref comes from the WP-13 map (Episode, evidence::Settlement, no_self_settlement); a world the map does not cover records an unmapped gap row and invents nothing. Events are unsigned (E 5, before WP-33).
+**Summary:** fde/integration: ran the repo's contract generators for the new verb (gen_sfwp_schema and bun run generate:contracts write 64 schema and TypeScript files, byte-identical to the committed ones: the verb's bodies are contracts/fde schemas, not schemars types, so no generated output exists for it). The Go client is hand-written, not generated: added NewCaseRecordAppend and the case_record_append durable-mutation entry in internal/adapters/sfwp/frame.go. Golden frames case.record.append.{freeze, freeze_replayed, refused_free_key, settle} were captured from the real server by a new live-tagged capture test that merges by name into testdata/frames.json (the other 32 frames are untouched) and pinned by a non-live test; the capture also asserts the real server delivered 3 interaction events. Documented the verb and its semantic exhaust in the Workbench API spec method table and method catalog.
 
 **Verified:**
-- cargo test -p sea-forge-server --test conformance_interaction_events: 10 passed, 0 failed
-- cargo test -p sea-forge-server --test conformance_field_case: 18 passed, 0 failed
-- mutation check: disabling the outbox dedupe fails conformance_interaction_events
+- go test ./... in apps/godspeed-casework-go passes (TestGoldenCaseRecordAppend, TestNewCaseRecordAppendRequiresBothKeysAndMarksTheVerbDurable)
+- GOLDEN_CAPTURE_APPEND=testdata go test -tags live -run TestGoldenCaptureCaseRecordAppend: ok
+- cargo run -p sea-forge-server --bin gen_sfwp_schema and bun run generate:contracts: no diff
 - scripts/check-agent-context.sh passes
 
 **Limits:**
-- Unsigned: the schema has no unsigned marker, so the emitter object is omitted and the outbox row records signature absent_before_WP-33
-- No network transport: delivery appends to a local spool for RealityTrace ingest (WP-16)
-- The authority decision on this path is the I-2 check (policy no_self_settlement); a freeze has no authority decision and reports not_required
-- actor.role is the SEA-Forge identity role, not a SOP role
-- Go client, TypeScript contracts, golden frames, SFWP spec note and AT-05 wiring are later steps
+- A repeated request_id is answered from the transport correlation record (replayed as first returned); contract-level replay needs a new request_id with the same idempotency_key, which is what the replay frame records
+- Golden frames embed a case id and digests of the capture run
+- Spec catalog authority class case_control is the nearest existing class; no policy evaluation runs for this verb
+- AT-05 wiring is the next step
 - Integration branch only: not merged to main, no PR
 
-**Next:** WP-14 part 2 steps 3-6: generated contracts and golden frames, SFWP note, AT-05 (PARTIAL until WP-15).
+**Next:** AT-05 SEA-Forge half (PARTIAL until WP-15) and final gates.
 
 **Evidence:**
-- crates/sea-forge-server/src/sfwp/interaction_events.rs
-- crates/sea-forge-server/tests/conformance_interaction_events.rs
-- crates/sea-forge-server/contracts/cep/DIGESTS
+- apps/godspeed-casework-go/internal/adapters/sfwp/record_append_frame_test.go
+- apps/godspeed-casework-go/internal/adapters/sfwp/golden_capture_record_append_test.go
+- .agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md

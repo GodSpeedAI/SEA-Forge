@@ -335,6 +335,12 @@ methods:
   authority: case_control
   mutation: append
   response: CaseTerminationAccepted
+- name: case.record.append
+  cls: command
+  purpose: Append one Field Case record (episode.frozen, episode.settled) to the case record ledger under invariants I-1, I-2 and I-3; emits interaction events through a durable outbox.
+  authority: case_control
+  mutation: append
+  response: CaseRecordAppended
 - name: approval.list
   cls: inspect
   purpose: List approvals visible to the actor, including expiry, impact, and blocked origin.
