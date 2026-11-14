@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.2](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.1...v0.4.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** clear RUSTSEC-2026-0459 (libsqlite3-sys) and RUSTSEC-2026-0486 (rustix) ([#95](https://github.com/GodSpeedAI/SEA-Forge/issues/95)) ([c2d6fbd](https://github.com/GodSpeedAI/SEA-Forge/commit/c2d6fbdce3ff096ae477264ea8ca07b9049ae80a))
+* **e2e:** world loop finds the renamed Context Kernel package and stops on a failed hop ([#97](https://github.com/GodSpeedAI/SEA-Forge/issues/97)) ([09b628e](https://github.com/GodSpeedAI/SEA-Forge/commit/09b628ec08dff996611851eec5bbfceb9ab452b1))
+
 ## [0.4.1](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.0...v0.4.1) (2026-11-06)
 
 
