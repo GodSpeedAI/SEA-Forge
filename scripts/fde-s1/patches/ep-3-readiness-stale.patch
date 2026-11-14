@@ -1,0 +1,116 @@
+--- a/crates/sea-forge-self-model/src/store.rs
++++ b/crates/sea-forge-self-model/src/store.rs
+@@ -556,6 +556,14 @@ pub fn mark_current_stale(root: &Path, reason: &str) -> Result<(), ForgeError> {
+     Ok(())
+ }
+ 
++/// The reason recorded by [`mark_current_stale`], when the current snapshot is
++/// marked stale. `None` when it is current or no reason was recorded.
++pub fn stale_reason(root: &Path) -> Result<Option<String>, ForgeError> {
++    Ok(read_manifest(root)?
++        .filter(|m| m.stale)
++        .and_then(|m| m.stale_reason))
++}
++
+ /// Whether the current snapshot is marked stale.
+ pub fn is_stale(root: &Path) -> Result<bool, ForgeError> {
+     Ok(read_manifest(root)?.map(|m| m.stale).unwrap_or(false))
+--- a/crates/sea-forge-server/src/sfwp/readiness.rs
++++ b/crates/sea-forge-server/src/sfwp/readiness.rs
+@@ -21,10 +21,10 @@
+ //!   kit's `ReadinessConditionTable` / capability-row markup
+ //!   (`.agents/specs/frontend/ui_kits/app/index.html`): `id`, `name`,
+ //!   `category`, `status`, `reason`, and a typed committed source reference.
+-//! - `recent_invalidations` is shipped as an **empty array** in this slice: no
+-//!   honest source for invalidation records exists yet (no cache/invalidation
+-//!   layer). This is intentional partial scope, recorded as `PARTIAL` in the
+-//!   task report — never fabricated.
++//! - `recent_invalidations` lists only invalidations backed by a real record:
++//!   the reason the self-model manifest holds for a snapshot marked stale. With
++//!   no stale marker it is an **empty array**; it is never fabricated. A wider
++//!   cache/invalidation layer does not exist and is not implied.
+ //! - `overall: stale` is derived only from the self-model manifest's explicit
+ //!   stale standing; renderer cache freshness is a separate concern.
+ 
+@@ -294,6 +294,26 @@ pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
+         },
+     };
+ 
++    // `recent_invalidations` is derived only from a record that exists: the
++    // reason `mark_current_stale` wrote to the self-model manifest for the
++    // snapshot the foundation item cites. No stale marker, no invalidation.
++    let recent_invalidations = match (&self_model_item.source, foundation_failure) {
++        (Some(source), Some(OverallReadiness::Stale)) => {
++            sea_forge_self_model::store::stale_reason(&config.root)
++                .ok()
++                .flatten()
++                .map(|reason| {
++                    vec![Invalidation {
++                        item_id: self_model_item.id.clone(),
++                        reason,
++                        source: Some(source.clone()),
++                    }]
++                })
++                .unwrap_or_default()
++        }
++        _ => Vec::new(),
++    };
++
+     let foundations = vec![self_model_item];
+ 
+     // External delegation requires a committed probe/settlement record, not
+@@ -344,8 +364,7 @@ pub fn get(config: &ServerConfig, params: ReadinessGetParams) -> ReadinessView {
+         overall,
+         foundations,
+         operational_capabilities,
+-        // PARTIAL: no invalidation source in this slice — honest empty, never fabricated.
+-        recent_invalidations: Vec::new(),
++        recent_invalidations,
+     }
+ }
+ 
+@@ -472,6 +491,44 @@ mod tests {
+         assert_eq!(source.rebuild_standing, RebuildStanding::Verified);
+     }
+ 
++    #[test]
++    fn a_stale_snapshot_reports_its_recorded_reason_as_the_only_invalidation() {
++        let root = tempfile::tempdir().unwrap();
++        sea_forge_self_model::store::rebuild(
++            root.path(),
++            &sea_forge_self_model::store::RebuildInputs {
++                cell_id: "cell_readiness_test",
++                created_at: "2026-08-02T00:00:00Z",
++                capability_projection_sha256: "sha256:readiness-capability-projection",
++                actor_id: "operator_test",
++                ..Default::default()
++            },
++        )
++        .unwrap();
++        let current = get(&config(root.path()), ReadinessGetParams::default());
++        assert!(
++            current.recent_invalidations.is_empty(),
++            "no invalidation without a stale record"
++        );
++        sea_forge_self_model::store::mark_current_stale(root.path(), "test_drift").unwrap();
++
++        let view = get(&config(root.path()), ReadinessGetParams::default());
++        assert_eq!(view.overall, OverallReadiness::Stale);
++        assert_eq!(view.recent_invalidations.len(), 1);
++        let invalidation = &view.recent_invalidations[0];
++        assert_eq!(invalidation.item_id, "self_model_integrity");
++        assert_eq!(invalidation.reason, "test_drift");
++        assert_eq!(invalidation.source, view.foundations[0].source);
++    }
++
++    #[test]
++    fn an_uninitialized_cell_is_never_stale_and_has_no_invalidations() {
++        let root = tempfile::tempdir().unwrap();
++        let view = get(&config(root.path()), ReadinessGetParams::default());
++        assert_ne!(view.overall, OverallReadiness::Stale);
++        assert!(view.recent_invalidations.is_empty());
++    }
++
+     #[test]
+     fn a_stale_snapshot_never_reports_readiness_as_success() {
+         let root = tempfile::tempdir().unwrap();

@@ -1,0 +1,126 @@
+--- a/crates/sea-forge-server/src/lib.rs
++++ b/crates/sea-forge-server/src/lib.rs
+@@ -407,12 +407,28 @@ impl ServerState {
+         from_cursor: Option<&str>,
+         to_cursor: Option<&str>,
+         limit: Option<u32>,
++        tail: bool,
+     ) -> Result<Vec<EventFrame>, ForgeError> {
++        if tail && (from_cursor.is_some() || to_cursor.is_some()) {
++            return Err(ForgeError::Input(
++                "events_tail_with_cursor: tail cannot be combined with from_cursor or to_cursor"
++                    .into(),
++            ));
++        }
+         let ledger = Arc::clone(&self.events_ledger);
+         let from_cursor = from_cursor.map(str::to_owned);
+         let to_cursor = to_cursor.map(str::to_owned);
+         tokio::task::spawn_blocking(move || {
+-            sfwp::events::get_range(&ledger, from_cursor.as_deref(), to_cursor.as_deref(), limit)
++            if tail {
++                sfwp::events::get_tail(&ledger, limit)
++            } else {
++                sfwp::events::get_range(
++                    &ledger,
++                    from_cursor.as_deref(),
++                    to_cursor.as_deref(),
++                    limit,
++                )
++            }
+         })
+         .await
+         .map_err(|error| ForgeError::Internal(format!("events read task panic: {error}")))?
+@@ -1069,6 +1085,10 @@ pub enum Request {
+         to_cursor: Option<String>,
+         #[serde(default)]
+         limit: Option<u32>,
++        /// Read the most recent `limit` events instead of the earliest.
++        /// Refused together with a cursor.
++        #[serde(default)]
++        tail: bool,
+     },
+     /// Read-only readiness projection (Task 5). Inspect method: shapes proven
+     /// self-model/endpoint truth into a view; introduces no new truth, mutates
+@@ -3424,8 +3444,9 @@ pub async fn handle_request_as(
+             from_cursor,
+             to_cursor,
+             limit,
++            tail,
+         } => match state
+-            .events_get_range(from_cursor.as_deref(), to_cursor.as_deref(), limit)
++            .events_get_range(from_cursor.as_deref(), to_cursor.as_deref(), limit, tail)
+             .await
+         {
+             Ok(events) => serde_json::json!({"events": events}),
+--- a/crates/sea-forge-server/src/sfwp/events.rs
++++ b/crates/sea-forge-server/src/sfwp/events.rs
+@@ -120,6 +120,26 @@ fn unknown_cursor_error(cursor: &str, entries: &[sea_forge_ledger::LedgerEntry])
+     ))
+ }
+ 
++/// Server-side tail read for `events.get_range` (`tail: true`): the most recent
++/// `limit` event frames (default and maximum [`EVENTS_REPLAY_CAP`]) in stream
++/// order. Cursors are not accepted together with `tail`: a tail read is
++/// anchored at the head, so a cursor would be ambiguous.
++pub fn get_tail(ledger: &LedgerStream, limit: Option<u32>) -> Result<Vec<EventFrame>, ForgeError> {
++    let entries = ledger.read_entries()?;
++    let cap = limit
++        .map(|value| (value as usize).min(EVENTS_REPLAY_CAP))
++        .unwrap_or(EVENTS_REPLAY_CAP);
++    let mut frames: Vec<EventFrame> = entries
++        .iter()
++        .rev()
++        .filter(|entry| entry.record_kind == EVENT_RECORD_KIND)
++        .take(cap)
++        .map(frame_from_entry)
++        .collect();
++    frames.reverse();
++    Ok(frames)
++}
++
+ /// Resolve a cursor (`entry_ulid`) to its `append_ordinal` by scanning the
+ /// (bounded) entry list. Returns `None` if the cursor is unknown.
+ fn ordinal_for_cursor(entries: &[sea_forge_ledger::LedgerEntry], cursor: &str) -> Option<u64> {
+--- a/crates/sea-forge-server/tests/conformance_lifecycle.rs
++++ b/crates/sea-forge-server/tests/conformance_lifecycle.rs
+@@ -515,3 +515,40 @@ async fn an_invalid_reload_publishes_an_operator_visible_event() {
+ 
+     listener.abort();
+ }
++
++/// `events.get_range` with `tail: true` returns the most recent events in
++/// stream order, bounded by `limit`; an explicit range is unchanged; a tail
++/// read with a cursor is refused.
++#[tokio::test(flavor = "multi_thread")]
++async fn events_get_range_tail_returns_the_latest_events_in_stream_order() {
++    let (address, listener) = hung_endpoint().await;
++    let (root, socket) = boot_with_hung_endpoint(address.port()).await;
++    fs::write(
++        root.path().join("server.yaml"),
++        "max_concurrent_runs: [oops\n",
++    )
++    .unwrap();
++    for n in 0..3 {
++        let _ = round_trip(
++            &socket,
++            json!({"verb": "submit", "actor": {"actor_id": "operator_local", "role": "operator"}, "intent": "anything", "policy": "policy.yaml", "request_id": format!("req-tail-{n}")}),
++            Duration::from_secs(30),
++        )
++        .await;
++    }
++    let all = round_trip(&socket, json!({"verb": "events_get_range"}), Duration::from_secs(10)).await;
++    let explicit = round_trip(&socket, json!({"verb": "events_get_range", "tail": false}), Duration::from_secs(10)).await;
++    assert_eq!(all, explicit, "an explicit range response is unchanged by the new selector");
++    let frames = all["events"].as_array().unwrap();
++    assert!(frames.len() >= 2, "need at least two events: {all}");
++    let tail_one = round_trip(&socket, json!({"verb": "events_get_range", "tail": true, "limit": 1}), Duration::from_secs(10)).await;
++    assert_eq!(tail_one["events"], json!([frames[frames.len() - 1]]));
++    let tail_two = round_trip(&socket, json!({"verb": "events_get_range", "tail": true, "limit": 2}), Duration::from_secs(10)).await;
++    assert_eq!(tail_two["events"], json!(frames[frames.len() - 2..]), "stream order, not reversed");
++    let capped = round_trip(&socket, json!({"verb": "events_get_range", "tail": true, "limit": 100000}), Duration::from_secs(10)).await;
++    assert!(capped["events"].as_array().unwrap().len() <= 500, "EVENTS_REPLAY_CAP bounds the page");
++    let cursor = frames[0]["cursor"].as_str().or_else(|| frames[0]["event_id"].as_str()).unwrap_or("x");
++    let refused = round_trip(&socket, json!({"verb": "events_get_range", "tail": true, "from_cursor": cursor}), Duration::from_secs(10)).await;
++    assert!(refused["error"].as_str().unwrap_or("").contains("events_tail_with_cursor"), "{refused}");
++    listener.abort();
++}

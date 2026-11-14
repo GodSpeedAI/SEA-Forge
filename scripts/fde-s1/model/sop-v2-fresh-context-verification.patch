@@ -1,0 +1,78 @@
+--- a/fde-sop.sea
++++ b/fde-sop.sea
+@@ -120,6 +120,7 @@
+ role_binding "CriterionAuthor" for "Episode"
+ role_binding "ExecutionActor" for "Assignment"
+ role_binding "IndependentVerifier" for "Episode"
++role_binding "IndependentVerifier" for "FreshContextVerification"
+ role_binding "DEADESpecialist" for "Assignment"
+ role_binding "DispositionAuthority" for "Disposition"
+ 
+@@ -174,6 +175,12 @@
+     output_ref: string (min_length 1)
+ }
+ 
++export entity "FreshContextVerification" {
++    key verification_id: string (min_length 1)
++    case_id: string (min_length 1)
++    episode_ref: string (min_length 1)
++}
++
+ export entity "GateAssessment" {
+     key assessment_id: string (min_length 1)
+     case_id: string (min_length 1)
+@@ -694,6 +701,17 @@
+     reliability: string (min_length 1)
+     source_independence: string (min_length 1)
+ }
++record NavVerifyInput {
++    verification_id: string (min_length 1)
++    case_id: string (min_length 1)
++    episode_ref: string (min_length 1)
++    verifier_role: string (min_length 1)
++}
++record NavVerifyOutput {
++    verification_id: string (min_length 1)
++    case_id: string (min_length 1)
++    episode_ref: string (min_length 1)
++}
+ record RecordDispositionInput {
+     disposition_id: string (min_length 1)
+     case_id: string (min_length 1)
+@@ -959,6 +977,25 @@
+     lifecycle synchronous_request_response
+ }
+ 
++operation nav_verify {
++    intent "record the executor harness's fresh-context verification of the declared command before the episode is claimed"
++    direction inbound
++    actor IndependentVerifier
++    access policy_governed by verification_by_independent_role at precondition fails with nav_verify_policy_denied
++    input NavVerifyInput
++    output NavVerifyOutput
++    state FreshContextVerification
++    effect creates FreshContextVerification
++    transaction single_aggregate
++    failure nav_verify_invalid_input for input_validation "input failed record validation"
++    failure nav_verify_policy_denied for policy "a bound precondition policy does not hold"
++    failure nav_verify_conflict for idempotency_conflict, concurrency_conflict "the key already exists with different content"
++    idempotency keyed_by verification_id
++    concurrency unique_key verification_id
++    evidence operation_trace
++    lifecycle synchronous_request_response
++}
++
+ operation record_disposition {
+     intent "record the authorized disposition chosen after settlement and the resulting case lifecycle state"
+     direction inbound
+@@ -1238,6 +1275,10 @@
+     @rationale "SOP 3.2: in a one-person case independent settlement is performed by a fresh verifier, recorded as such. Only the recorded attestation is checkable; actual freshness of context is not."
+     as: single_person_case = false or verifier_context_fresh = true
+ 
++policy verification_by_independent_role per Constraint Obligation priority 9
++    @rationale "Revision candidate (WP-19, AT-12): the executor harness's fresh-context verification step is declared. The step is performed by a role other than the executor. The expression is the permitted state; only the recorded role is checkable, not the actual freshness of the verifier's context."
++    as: verifier_role != "executor"
++
+ policy episode_level_never_closes_case per Constraint Prohibition priority 9
+     @rationale "SOP 7.6: episode-level outcomes never close a case."
+     as: level != "episode" or lifecycle_after != "closed"

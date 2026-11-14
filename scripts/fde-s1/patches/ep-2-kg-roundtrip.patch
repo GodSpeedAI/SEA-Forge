@@ -1,0 +1,59 @@
+--- a/domainforge-core/tests/kg_uri_encoding_tests.rs
++++ b/domainforge-core/tests/kg_uri_encoding_tests.rs
+@@ -51,3 +51,56 @@
+         }
+     }
+ }
++
++#[test]
++fn kg_round_trip_policy_and_instance() {
++    use domainforge_core::{parser::parse_to_graph, KnowledgeGraph};
++
++    let source = r#"
++@namespace "kg_roundtrip"
++
++export entity "Widget" {
++    key widget_id: string (min_length 1)
++}
++
++instance w1 of "Widget" {
++    widget_id: "W1"
++}
++
++policy widget_id_is_set per Constraint Obligation priority 5
++    @rationale "KG round-trip fixture"
++    as: 1 = 1
++"#;
++    let graph = parse_to_graph(source).expect("fixture parses");
++    assert_eq!(graph.entity_instance_count(), 1);
++    assert_eq!(graph.policy_count(), 1);
++
++    let typed = |kg: &KnowledgeGraph, class: &str| {
++        kg.triples
++            .iter()
++            .filter(|t| t.predicate == "rdf:type" && t.object == class)
++            .count()
++    };
++    let kg = KnowledgeGraph::from_graph(&graph).expect("graph exports to a knowledge graph");
++    let (policies, instances) = (typed(&kg, "sea:Policy"), typed(&kg, "sea:EntityInstance"));
++    assert!(
++        policies >= 1 && instances >= 1,
++        "the fixture must export both triple kinds (policies {policies}, instances {instances})"
++    );
++
++    let round = KnowledgeGraph::from_turtle(&kg.to_turtle())
++        .expect("turtle re-imports")
++        .to_graph()
++        .expect("the knowledge graph converts back");
++    let kg_again = KnowledgeGraph::from_graph(&round).expect("round-tripped graph exports again");
++    assert_eq!(
++        typed(&kg_again, "sea:Policy"),
++        policies,
++        "Policy triples are preserved by the round trip"
++    );
++    assert_eq!(
++        typed(&kg_again, "sea:EntityInstance"),
++        instances,
++        "EntityInstance triples are preserved by the round trip"
++    );
++}
