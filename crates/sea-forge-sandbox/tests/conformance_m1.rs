@@ -55,7 +55,7 @@ fn jail_blocks_write_outside_workspace() {
     let jail = match JailSandbox::new() {
         Ok(j) => j,
         Err(e) => {
-            eprintln!("Skipping jail test: {e}");
+            blocked_or_require("SEA_FORGE_REQUIRE_LANDLOCK_NET", "jail write-escape", &e);
             return;
         }
     };
@@ -98,7 +98,7 @@ fn jail_class_is_jail() {
     let jail = match JailSandbox::new() {
         Ok(j) => j,
         Err(e) => {
-            eprintln!("Skipping jail test: {e}");
+            blocked_or_require("SEA_FORGE_REQUIRE_LANDLOCK_NET", "jail class check", &e);
             return;
         }
     };
@@ -151,7 +151,11 @@ fn run_jailed_stderr_fixture(
     let jail = match JailSandbox::new() {
         Ok(j) => j,
         Err(e) => {
-            eprintln!("Skipping stderr heuristic test ({tag}): {e}");
+            blocked_or_require(
+                "SEA_FORGE_REQUIRE_LANDLOCK_NET",
+                &format!("stderr heuristic test ({tag})"),
+                &e,
+            );
             fs::remove_dir_all(&parent).ok();
             return None;
         }
@@ -178,7 +182,11 @@ fn run_jailed_stderr_fixture(
                 "jail must fail closed, not fall back to local (got {})",
                 e.class
             );
-            eprintln!("Skipping stderr heuristic test ({tag}): {e}");
+            blocked_or_require(
+                "SEA_FORGE_REQUIRE_LANDLOCK_NET",
+                &format!("stderr heuristic test ({tag})"),
+                &e,
+            );
             fs::remove_dir_all(&parent).ok();
             return None;
         }
@@ -437,15 +445,36 @@ impl Drop for FixtureServer {
     }
 }
 
-/// The network jail cannot be enforced on this host. Skipping is not a pass,
-/// so when `SEA_FORGE_REQUIRE_LANDLOCK_NET=1` (required CI lanes) the test
-/// fails instead of returning as if the denial had been observed.
+/// Process-wide tally of scenarios that could not run because a host
+/// enforcement prerequisite is unavailable. A local run stays runnable, but
+/// every blocked scenario is labeled `BLOCKED:` in the output; a required lane
+/// (the matching `SEA_FORGE_REQUIRE_*` variable set) must not skip, so the
+/// helper fails the scenario there (F15: a skip can never count as a pass).
+static BLOCKED_SCENARIOS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Record an unavailable prerequisite for `what`. Under `require_env` this
+/// fails the scenario; otherwise the scenario is tallied and labeled
+/// `BLOCKED:` so it cannot be mistaken for a tested pass
+/// (`no_blocked_scenarios_in_required_mode` fails the suite if a required
+/// lane still finishes with blocked scenarios).
+fn blocked_or_require(require_env: &str, what: &str, why: &dyn std::fmt::Display) {
+    BLOCKED_SCENARIOS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    if std::env::var(require_env).as_deref() == Ok("1") {
+        panic!("{require_env}=1 but {what} is unavailable, not a pass: {why}");
+    }
+    eprintln!("BLOCKED: {what} scenario could not run: {why}");
+}
+
+/// The network jail cannot be enforced on this host. Skipping is not a pass:
+/// delegate to the shared blocked/require harness so a required lane fails
+/// and a local run is labeled `BLOCKED:`.
 #[cfg(target_os = "linux")]
 fn unavailable_network_jail(tag: &str, reason: &dyn std::fmt::Display) {
-    if std::env::var("SEA_FORGE_REQUIRE_LANDLOCK_NET").as_deref() == Ok("1") {
-        panic!("SEA_FORGE_REQUIRE_LANDLOCK_NET=1 but the network jail is unavailable ({tag}): {reason}");
-    }
-    eprintln!("Skipping network jail test ({tag}): {reason}");
+    blocked_or_require(
+        "SEA_FORGE_REQUIRE_LANDLOCK_NET",
+        &format!("network jail ({tag})"),
+        reason,
+    );
 }
 
 /// Run one jailed probe with the given network posture and return the outcome
@@ -522,7 +551,10 @@ fn jail_network_denies_outbound_connect_by_default() {
     // The child's connect must have failed …
     assert!(
         outcome.starts_with("err:"),
-        "default-denied outbound connect unexpectedly succeeded: {outcome:?}"
+        "default-denied outbound connect unexpectedly succeeded: {outcome:?} (an empty \
+         outcome means the jailed probe child terminated before it could write its verdict \
+         at all — a child-lifecycle event, not a network denial; check this run's log for \
+         the child's termination record before reading this as a denial failure)"
     );
     // … and the fixture server must have accepted zero connections. This is the
     // load-bearing assertion: denial is proven by the server observing nothing,
@@ -651,9 +683,10 @@ fn jail_network_setup_fails_closed_never_local() {
             );
         }
         // Not enforceable on this host: `run_probe` already asserted the error
-        // was `jail_unavailable` (fail-closed), never a `local` fallback.
+        // was `jail_unavailable` (fail-closed), never a `local` fallback, and
+        // tallied the scenario as BLOCKED.
         None => {
-            eprintln!("network jail unsupported on this host — reported as skipped");
+            eprintln!("network jail unsupported on this host — scenario BLOCKED, not passed");
         }
     }
 }
@@ -829,23 +862,34 @@ fn collect_artifacts_refuses_instead_of_returning_empty() {
     assert_eq!(error.class, "artifact_collection_unsupported", "{error:?}");
     local.destroy(handle).unwrap();
 
-    if let Ok(jail) = JailSandbox::new() {
-        let parent = temp_dir("collect_jail");
-        let workspace = parent.join("workspace");
-        let artifacts = parent.join("artifacts");
-        fs::create_dir_all(&workspace).unwrap();
-        fs::create_dir_all(&artifacts).unwrap();
-        let spec = SandboxSpec {
-            workspace_root: workspace.clone(),
-            artifacts_root: artifacts.clone(),
-            network: NetworkPosture::Denied,
-        };
-        let handle = jail.prepare(&spec).unwrap();
-        let result = jail.collect_artifacts(&handle, &[RelPath("artifacts/out.txt".into())]);
-        let error = result.expect_err("jail stub must not report empty success");
-        assert_eq!(error.class, "artifact_collection_unsupported", "{error:?}");
-        jail.destroy(handle).unwrap();
-    }
+    let jail = match JailSandbox::new() {
+        Ok(jail) => jail,
+        Err(e) => {
+            // The local half above still ran; the jail half is prerequisite-
+            // dependent and is labeled BLOCKED rather than silently dropped.
+            blocked_or_require(
+                "SEA_FORGE_REQUIRE_LANDLOCK_NET",
+                "collect_artifacts jail case",
+                &e,
+            );
+            return;
+        }
+    };
+    let parent = temp_dir("collect_jail");
+    let workspace = parent.join("workspace");
+    let artifacts = parent.join("artifacts");
+    fs::create_dir_all(&workspace).unwrap();
+    fs::create_dir_all(&artifacts).unwrap();
+    let spec = SandboxSpec {
+        workspace_root: workspace.clone(),
+        artifacts_root: artifacts.clone(),
+        network: NetworkPosture::Denied,
+    };
+    let handle = jail.prepare(&spec).unwrap();
+    let result = jail.collect_artifacts(&handle, &[RelPath("artifacts/out.txt".into())]);
+    let error = result.expect_err("jail stub must not report empty success");
+    assert_eq!(error.class, "artifact_collection_unsupported", "{error:?}");
+    jail.destroy(handle).unwrap();
 }
 
 // ── F-25.i: a symlink swapped in after validation cannot capture the write ──
@@ -889,4 +933,19 @@ fn destination_swapped_to_symlink_between_check_and_write_is_refused() {
     assert_eq!(fs::read_to_string(&plain).unwrap(), "second");
 
     fs::remove_dir_all(parent).unwrap();
+}
+
+/// Required-lane guard (F15): if any scenario above could not run because its
+/// enforcement prerequisite was unavailable while the matching REQUIRE
+/// variable is set, the lane is not verifying what it claims. The tally makes
+/// that a suite failure even though each blocked scenario returned early.
+#[test]
+fn no_blocked_scenarios_in_required_mode() {
+    let blocked = BLOCKED_SCENARIOS.load(std::sync::atomic::Ordering::SeqCst);
+    let required = std::env::var("SEA_FORGE_REQUIRE_LANDLOCK_NET").as_deref() == Ok("1");
+    assert!(
+        !(required && blocked > 0),
+        "required lane (SEA_FORGE_REQUIRE_LANDLOCK_NET=1) finished with {blocked} BLOCKED \
+         scenario(s); required lanes cannot skip enforcement scenarios"
+    );
 }

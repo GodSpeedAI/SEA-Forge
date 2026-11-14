@@ -533,3 +533,31 @@ fn base_with_a_submodule_is_refused() {
         "unsupported_submodule"
     );
 }
+
+/// An interrupted safe write leaves its `.sf-staging-<pid>` directory and
+/// `.sf-tmp-<pid>-<n>` temp files in the workspace (the writer publishes by
+/// rename and removes the staging directory only on success). The scan must
+/// refuse them by name — an internal incomplete write is never a delivered
+/// artifact — and the error must name the leftover and the recovery remedy.
+#[test]
+fn staging_leftovers_fail_the_scan() {
+    let t = tempfile::tempdir().expect("tempdir");
+    let (repo, base, staging, work) = start(t.path());
+    edit_basic(&work);
+    // Control: a workspace with no staging leftover scans clean.
+    collect(&repo, &base, &work, &staging, WHEN).expect("clean workspace collects");
+
+    // The leftover, planted exactly as the interrupted writer leaves it.
+    write(&work, ".sf-staging-123/.x.sf-tmp-1-2", "partial bytes\n");
+    let error = collect(&repo, &base, &work, &staging, WHEN)
+        .expect_err("staging leftovers must fail the scan");
+    assert_eq!(error.class, "staging_leftovers");
+    assert!(
+        error.message.contains(".sf-staging-123"),
+        "the error must name the leftover path: {error}"
+    );
+    assert!(
+        error.message.contains("remove"),
+        "the error must state the recovery remedy: {error}"
+    );
+}

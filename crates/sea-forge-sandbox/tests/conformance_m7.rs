@@ -25,6 +25,7 @@ fn passing_execution() -> ExecutionResult {
         stderr_path: "stderr.txt".into(),
         started_at: "s".into(),
         finished_at: "f".into(),
+        lifecycle_containment: LifecycleContainment::NoProcess,
     }
 }
 
@@ -290,6 +291,7 @@ fn environment_parse_evaluator_score_exit_and_stdout() {
         stderr_path: "err.txt".into(),
         started_at: "".into(),
         finished_at: "".into(),
+        lifecycle_containment: LifecycleContainment::NoProcess,
     };
     let fail = ExecutionResult {
         exit_code: Some(1),

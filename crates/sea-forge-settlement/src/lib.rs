@@ -488,6 +488,7 @@ mod tests {
             stderr_path: "artifacts/stderr.txt".into(),
             started_at: "start".into(),
             finished_at: "finish".into(),
+            lifecycle_containment: LifecycleContainment::NoProcess,
         };
         let claim = SettlementClaim {
             run_id: "run".into(),

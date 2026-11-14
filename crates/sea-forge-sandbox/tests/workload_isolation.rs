@@ -14,8 +14,8 @@
 #![cfg(target_os = "linux")]
 
 use sea_forge_sandbox::workload::{
-    grant_exclusive_access, isolated_command, WorkloadConfinement, WorkloadIdentity,
-    WorkloadIdentityPool, WORKLOAD_INNER_ID,
+    grant_exclusive_access, isolated_command, wait_for_isolation_ack, WorkloadConfinement,
+    WorkloadIdentity, WorkloadIdentityPool, ISOLATION_ACK_TIMEOUT, WORKLOAD_INNER_ID,
 };
 use sea_forge_sandbox::NetworkPosture;
 use std::fs;
@@ -71,7 +71,7 @@ fn workload_dirs(base: &Path, name: &str, identity: &WorkloadIdentity) -> Worklo
 }
 
 fn spawn(identity: &WorkloadIdentity, confinement: &WorkloadConfinement, script: &str) -> Child {
-    let (mut command, lifeline) = isolated_command(
+    let (mut command, lifeline, mut ack) = isolated_command(
         identity,
         Path::new(HELPER),
         confinement,
@@ -81,11 +81,17 @@ fn spawn(identity: &WorkloadIdentity, confinement: &WorkloadConfinement, script:
     // These attacks are about identity, not lifetime: keep each workload's
     // lifeline open for the test process (workload_boundary.rs covers it).
     std::mem::forget(lifeline);
-    command
+    let child = command
         .env("PATH", "/usr/bin:/bin")
         .stdin(Stdio::null())
         .spawn()
-        .expect("spawn isolated workload")
+        .expect("spawn isolated workload");
+    // Review pass 2 (R4): every launcher of the helper consumes the trusted
+    // setup acknowledgement; the helper fails its launch when its launcher
+    // never reads the ack byte.
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
+    child
 }
 
 fn wait_for(path: &Path) -> String {

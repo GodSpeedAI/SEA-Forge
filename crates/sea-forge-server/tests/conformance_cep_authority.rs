@@ -726,7 +726,7 @@ async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and
     assert_eq!(
         world_ref(),
         NEW_REF,
-        "the current world is the 0.21.2 build"
+        "the current world is the linked 0.21.2 build"
     );
 
     // The prior ref resolves: it is the source of the transition.

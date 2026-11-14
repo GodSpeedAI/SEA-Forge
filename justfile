@@ -428,18 +428,101 @@ no-async-kernel:
     status=0
     for crate in "${kernel_crates[@]}"; do
         for dep in "${forbidden_deps[@]}"; do
-            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1) \
-                && echo "$output" | grep -q "^$dep "; then
+            # Review pass 2 (R5): a failing cargo invocation must not read as
+            # "dependency absent" here either. The absence case IS a cargo
+            # failure (an inverted tree of a dep the crate lacks exits
+            # nonzero with the package-ID not-found text), so the failure
+            # status is captured in the `else` of a NON-negated if and
+            # classified by cargo's own text below — the negated
+            # `if ! output=$(...)` shape would set tree_status from the
+            # negation's success and swallow resolution errors.
+            tree_status=0
+            if output=$(cargo tree -i "$dep" -p "$crate" --locked 2>&1); then
+                :
+            else
+                tree_status=$?
+            fi
+            if [ "$tree_status" -ne 0 ]; then
+                if echo "$output" | grep -qE "did not match any packages|package ID specification"; then
+                    continue
+                fi
+                echo "fail: cargo tree -i $dep -p $crate exited $tree_status — treated as a gate failure, not as absence:" >&2
+                echo "$output" >&2
+                status=1
+                continue
+            fi
+            if echo "$output" | grep -q "^$dep "; then
                 echo "fail: kernel crate $crate depends on $dep" >&2
                 status=1
             fi
+        done
+    done
+    # A per-crate pass cannot see feature unification: `-p` resolves the crate
+    # in isolation, so a cfg(windows)-only optional dependency enabled by an
+    # adapter crate (e.g. sea-forge-os/tokio-pipes via sea-forge-server, review
+    # F33) is invisible on every target. Re-check the unified workspace graph
+    # for the host and for the Windows MSVC target (the triple the
+    # package/release workflows use): fail if any kernel crate appears among a
+    # forbidden dep's dependents. `cargo tree --target` resolves from the
+    # lockfile: no target toolchain and no network access are needed.
+    for target in host x86_64-pc-windows-msvc; do
+        if [ "$target" = host ]; then
+            target_args=""
+        else
+            target_args="--target $target"
+        fi
+        for dep in "${forbidden_deps[@]}"; do
+            # Normal edges only: a kernel crate's own direct or dev dependency
+            # on a forbidden dep is already caught by the per-crate pass above.
+            # $target_args is intentionally unquoted: it is either empty or
+            # exactly two words (--target <triple>).
+            #
+            # Fail-closed cargo-tree distinction (review Medium-13): a FAILED
+            # invocation must not read as "dependency absent". The only
+            # acceptable failure is the dependency being genuinely absent from
+            # this target's graph, which cargo reports as a package-ID match
+            # failure ("did not match any packages" / "package ID
+            # specification"). Any other failure — resolution error, lockfile
+            # drift, a broken cargo — prints its stderr and FAILS the gate:
+            # absence is proven only by cargo's own not-found text, never by
+            # an unexamined error status.
+            # `set -e` is active (`{{set}}`), so a failing command must be
+            # part of an `if` condition to be observable: a plain assignment
+            # with a nonzero status aborts the recipe silently. The capture
+            # is a NON-negated if with the failure status taken in `else`
+            # (review pass 2, R5: `if ! output=$(...)` set tree_status from
+            # the negation's SUCCESS, so a resolution failure read as
+            # absence and the gate passed). Absence is then decided by
+            # cargo's own not-found text, and any OTHER failure fails the
+            # gate below.
+            tree_status=0
+            if output=$(cargo tree -i "$dep" -e normal $target_args --locked 2>&1); then
+                :
+            else
+                tree_status=$?
+            fi
+            if [ "$tree_status" -ne 0 ]; then
+                if echo "$output" | grep -qE "did not match any packages|package ID specification"; then
+                    continue
+                fi
+                echo "fail: cargo tree -i $dep (unified graph, target: $target) exited $tree_status — treated as a gate failure, not as absence:" >&2
+                echo "$output" >&2
+                status=1
+                continue
+            fi
+            for crate in "${kernel_crates[@]}"; do
+                if echo "$output" | grep -q "$crate v"; then
+                    echo "fail: kernel crate $crate depends on $dep (unified workspace graph, target: $target)" >&2
+                    status=1
+                fi
+            done
         done
     done
     if [ "$status" -ne 0 ]; then
         echo "fail: forbidden async/HTTP dependency in a kernel crate" >&2
         exit 1
     fi
-    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates"
+    echo "ok: no async runtime or HTTP client in ${#kernel_crates[@]} kernel crates (host and x86_64-pc-windows-msvc graphs)"
 
 # Workbench (Bun workspace) lint + typecheck + build + test. Not part of the
 # kernel `check`/`ci` gates — the frontend is developed and gated separately

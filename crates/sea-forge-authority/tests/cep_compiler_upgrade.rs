@@ -47,7 +47,7 @@ fn in_process(worlds: &mut WorldRegistry, src: &str) -> String {
         .to_string()
 }
 
-/// The 0.21.0 fixture as a prior identity, and the in-process (0.21.2) world for `BASE`.
+/// The 0.21.0 fixture as a prior identity, and the in-process (linked) world for `BASE`.
 fn upgrade_pair() -> (WorldRegistry, String, String) {
     let mut reg = WorldRegistry::new();
     let old = reg
@@ -142,7 +142,8 @@ fn the_recorded_0_21_0_and_the_0_21_2_refs_are_what_these_tests_assume() {
 }
 
 #[test]
-fn a_compiler_upgrade_from_0_21_0_to_0_21_2_is_allowed_and_recorded_with_both_producer_versions() {
+fn a_compiler_upgrade_from_0_21_0_to_the_linked_build_is_allowed_and_recorded_with_both_producer_versions(
+) {
     let root = tempfile::tempdir().unwrap();
     let (reg, old, new) = upgrade_pair();
     let d = with_worlds(root.path(), &reg, OPEN, |s| {
@@ -239,7 +240,8 @@ fn a_compiler_upgrade_is_refused_when_any_meaning_bearing_field_differs() {
 fn a_compiler_upgrade_is_refused_when_the_producer_version_is_equal() {
     let root = tempfile::tempdir().unwrap();
     let mut doc: Value = serde_json::from_str(FIXTURE_0_21_0).unwrap();
-    doc["producer_version"] = json!("0.21.2");
+    // Equality is against the LINKED producer version, so the case survives pin bumps.
+    doc["producer_version"] = json!(sea_forge_domainforge::EXPECTED_DOMAINFORGE_VERSION);
     let mut reg = WorldRegistry::new();
     let old = reg
         .register_prior_identity_json("demo", &doc.to_string())
@@ -333,7 +335,7 @@ fn a_governed_action_in_a_prior_identity_is_refused_and_the_same_action_in_the_c
     assert_eq!(decision(&d), "allow");
 }
 
-/// Work decided in the 0.21.0 world can be cited in the 0.21.2 world only through the allowed upgrade.
+/// Work decided in the 0.21.0 world can be cited in the linked (0.21.2) world only through the allowed upgrade.
 #[test]
 fn lineage_crosses_the_upgrade_only_through_the_allowed_compiler_upgrade() {
     let root = tempfile::tempdir().unwrap();
