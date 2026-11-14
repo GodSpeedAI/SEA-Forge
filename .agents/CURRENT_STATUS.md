@@ -1,8 +1,8 @@
 # Current status
 
-**Status revision:** 268
+**Status revision:** 269
 
-**Stage:** PR #71 review-thread fixes on top of the main merge
+**Stage:** PR #71 CI fixes: server containment assertion and 24.04 launcher-fixture diagnostics
 
 **Summary:** FDE convergence planning baseline recorded under .agents/reports/fde-convergence-2026-11-12/: deliverables A-H for the FDE convergence program (EGM-reviewed, draft 3) and the SOP v0.4.1 draft, with the S0 baseline evidence. S0: readiness GO 30/30 on 2026-11-13 after the DomainForge 0.21.2 lockstep, and the e2e world loop runs OK. The FDE planning baseline itself changed no product code. S1 not started. Owner decisions OD-1 to OD-6 are open (see H-egm-review-record.md). Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device. Review threads: the server dispatch path now records lifecycle_containment in its command_finished trace payload and execution_result evidence (conformance_case_episode asserts it); write_file removes its staging directory when new_temp fails; egress-control.py closes its log and socket via context managers; the live egress allow-control test prints guest output before its status assertion; OBSERVED_DEBT records the WSL2 post_start_internal_error test failure.
 

@@ -455,17 +455,20 @@ async fn an_allowed_episode_records_its_trace_and_evidence() {
         .into_iter()
         .find(|event| event["kind"] == "command_finished")
         .expect("command_finished event");
+    // The verdict is a string for unit variants ("process_group") and an
+    // object for `cgroup_leaf`, depending on what the host can enforce.
+    let traced = &finished["payload"]["lifecycle_containment"];
     assert!(
-        finished["payload"]["lifecycle_containment"].is_string(),
+        traced.is_string() || traced.is_object(),
         "trace dropped lifecycle_containment: {finished}"
     );
     let execution = evidence
         .iter()
         .find(|record| record["kind"] == "execution_result")
         .expect("execution_result evidence");
-    assert!(
-        execution["metadata"]["lifecycle_containment"].is_string(),
-        "evidence dropped lifecycle_containment: {execution}"
+    assert_eq!(
+        &execution["metadata"]["lifecycle_containment"], traced,
+        "evidence and trace disagree on lifecycle_containment: {execution}"
     );
     // Evidence points back at the trace event that produced it, or the two
     // files are parallel logs rather than one linked record.
