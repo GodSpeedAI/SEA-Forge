@@ -249,6 +249,18 @@ fn launcher_fixture_child() {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
+        // `production`'s pre_exec (which re-admits the close-on-exec ack end
+        // in the forked child) does not carry over to a rebuilt command, so
+        // the same re-admission is repeated here for the `--ack-fd` it names.
+        let ack_at = args
+            .iter()
+            .position(|a| *a == "--ack-fd")
+            .expect("launch shape changed");
+        let ack_fd: i32 = args[ack_at + 1]
+            .to_str()
+            .and_then(|fd| fd.parse().ok())
+            .expect("ack fd argument");
+        readmit_across_exec(&mut weakened, ack_fd);
         weakened
     } else {
         production
@@ -315,6 +327,23 @@ fn wait_until_exit(child: &mut Child) -> String {
             Ok(None) => return "still running after 5s".into(),
             Err(error) => return format!("wait failed: {error}"),
         }
+    }
+}
+
+/// Clear close-on-exec on `fd` in the forked child of `command`.
+#[allow(unsafe_code)]
+fn readmit_across_exec(command: &mut Command, fd: i32) {
+    use std::os::unix::process::CommandExt;
+    // SAFETY: the closure runs between fork and exec and only issues one
+    // fcntl on a descriptor the launcher still owns (the ack write end).
+    unsafe {
+        command.pre_exec(move || {
+            rustix::io::fcntl_setfd(
+                rustix::fd::BorrowedFd::borrow_raw(fd),
+                rustix::io::FdFlags::empty(),
+            )
+            .map_err(std::io::Error::other)
+        });
     }
 }
 
