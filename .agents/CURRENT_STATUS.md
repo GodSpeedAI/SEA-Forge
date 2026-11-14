@@ -1,27 +1,25 @@
 # Current status
 
-**Status revision:** 243
+**Status revision:** 244
 
-**Stage:** FDE integration branch: case.record.append Go builder, golden frames and spec note (WP-14, part 2, steps 3-4)
+**Stage:** FDE integration branch: AT-05 SEA-Forge half wired, WP-14 part 2 gates (WP-14, part 2, steps 5-6)
 
-**Summary:** fde/integration: ran the repo's contract generators for the new verb (gen_sfwp_schema and bun run generate:contracts write 64 schema and TypeScript files, byte-identical to the committed ones: the verb's bodies are contracts/fde schemas, not schemars types, so no generated output exists for it). The Go client is hand-written, not generated: added NewCaseRecordAppend and the case_record_append durable-mutation entry in internal/adapters/sfwp/frame.go. Golden frames case.record.append.{freeze, freeze_replayed, refused_free_key, settle} were captured from the real server by a new live-tagged capture test that merges by name into testdata/frames.json (the other 32 frames are untouched) and pinned by a non-live test; the capture also asserts the real server delivered 3 interaction events. Documented the verb and its semantic exhaust in the Workbench API spec method table and method catalog.
+**Summary:** fde/integration: scripts/fde-proof.d/AT-05.sh runs the interaction-event tests (schema-valid event per ledger record and I-2 decision, source.record_id and authority.decision_id resolve, structured correlation, replay and redelivery do not duplicate, emitter failure leaves the write committed) and exits 10, so the runner reports PARTIAL: the Cognate runtime half (WP-15) is absent and nothing is signed before WP-33. Also fixed a clippy collapsible-if in the part 1 conformance_field_case test so clippy -D warnings passes on sea-forge-server.
 
 **Verified:**
-- go test ./... in apps/godspeed-casework-go passes (TestGoldenCaseRecordAppend, TestNewCaseRecordAppendRequiresBothKeysAndMarksTheVerbDurable)
-- GOLDEN_CAPTURE_APPEND=testdata go test -tags live -run TestGoldenCaptureCaseRecordAppend: ok
-- cargo run -p sea-forge-server --bin gen_sfwp_schema and bun run generate:contracts: no diff
-- scripts/check-agent-context.sh passes
+- scripts/fde-proof.sh --slice s1 --only AT-05: PARTIAL
+- cargo test -p sea-forge-server --lib: 189 passed; conformance_field_case 18; conformance_interaction_events 10; conformance_sfwp 23; conformance_identity 15; 0 failed
+- cargo clippy -p sea-forge-server --all-targets -D warnings and cargo fmt --check pass
+- scripts/check-agent-context.sh and scripts/check-fde-contract-digests.sh pass
 
 **Limits:**
-- A repeated request_id is answered from the transport correlation record (replayed as first returned); contract-level replay needs a new request_id with the same idempotency_key, which is what the replay frame records
-- Golden frames embed a case id and digests of the capture run
-- Spec catalog authority class case_control is the nearest existing class; no policy evaluation runs for this verb
-- AT-05 wiring is the next step
+- AT-05 stays PARTIAL until WP-15 emits Cognate run and invocation events; signature check not attempted before WP-33
+- Not done: delegation-side gating (WP-20), in-process RealityTrace writer, new contract error codes (NT-13, NT-17, NT-18, NT-34, NT-48), gateway-hop actor for I-2, independent hardening review
 - Integration branch only: not merged to main, no PR
 
-**Next:** AT-05 SEA-Forge half (PARTIAL until WP-15) and final gates.
+**Next:** WP-15 Cognate runtime events (AT-05 runtime half); WP-20 delegation gating; WP-33 signatures.
 
 **Evidence:**
-- apps/godspeed-casework-go/internal/adapters/sfwp/record_append_frame_test.go
-- apps/godspeed-casework-go/internal/adapters/sfwp/golden_capture_record_append_test.go
-- .agents/specs/frontend/sea-forge-workbench-api-spec-v0.1.md
+- scripts/fde-proof.d/AT-05.sh
+- crates/sea-forge-server/tests/conformance_interaction_events.rs
+- crates/sea-forge-server/src/sfwp/interaction_events.rs

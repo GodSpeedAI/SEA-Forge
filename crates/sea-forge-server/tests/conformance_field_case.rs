@@ -352,10 +352,10 @@ fn every_scenario_in_contracts_fde_produces_its_expected_response() {
         let root = cell();
         seed_ledger(root.path(), &scenario);
         let request = &scenario["request"];
-        if scenario["rule"] != "I-1" || scenario["nt"] != "NT-33" {
-            if request["kind"] == "episode.frozen" {
-                rt_register_for(root.path(), request);
-            }
+        if (scenario["rule"] != "I-1" || scenario["nt"] != "NT-33")
+            && request["kind"] == "episode.frozen"
+        {
+            rt_register_for(root.path(), request);
         }
         let chain: Vec<String> = match scenario.get("authenticated_delegation_chain") {
             Some(c) => c
