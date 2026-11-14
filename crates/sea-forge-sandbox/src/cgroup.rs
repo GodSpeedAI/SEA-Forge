@@ -338,6 +338,61 @@ impl CgroupLease {
             .collect())
     }
 
+    /// Every cgroup directory DESCENDED from the leaf, parents before
+    /// children (reverse it for bottom-up removal). Directory entries are
+    /// classified without following links, and the walk is bounded so a
+    /// pathological tree cannot stall teardown.
+    fn descendant_dirs(&self) -> Vec<PathBuf> {
+        const MAX_DESCENDANTS: usize = 4096;
+        let mut found: Vec<PathBuf> = Vec::new();
+        let mut pending = vec![self.leaf.clone()];
+        while let Some(dir) = pending.pop() {
+            let Ok(entries) = fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                if found.len() >= MAX_DESCENDANTS {
+                    return found;
+                }
+                if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+                    found.push(entry.path());
+                    pending.push(entry.path());
+                }
+            }
+        }
+        found
+    }
+
+    /// The pids listed by the leaf AND every descendant cgroup: the census
+    /// the pidfd fallback sweeps, since `cgroup.procs` of the leaf alone
+    /// lists direct members only. A descendant that vanishes mid-walk reads
+    /// as empty; any other read failure fails closed.
+    fn tree_procs(&self) -> io::Result<Vec<libc::pid_t>> {
+        let mut pids = self.procs()?;
+        for dir in self.descendant_dirs() {
+            match fs::read_to_string(dir.join("cgroup.procs")) {
+                Ok(text) => pids.extend(
+                    text.split_whitespace()
+                        .filter_map(|token| token.parse::<libc::pid_t>().ok())
+                        .filter(|pid| *pid > 0),
+                ),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(pids)
+    }
+
+    /// Remove the leaf's descendant cgroups bottom-up so the leaf's own
+    /// `rmdir` is not refused for a child. A child that still holds members
+    /// is refused by the kernel (EBUSY) and left; the leaf's emptiness check
+    /// then reports it.
+    fn remove_descendants(&self) {
+        for dir in self.descendant_dirs().into_iter().rev() {
+            let _ = fs::remove_dir(dir);
+        }
+    }
+
     /// Whether this cgroup or any cgroup DESCENDED from it still holds
     /// processes: the `populated` flag of `cgroup.events`, which the kernel
     /// documents hierarchically ("1 if the cgroup or its descendants contains
@@ -375,8 +430,10 @@ impl CgroupLease {
     /// hierarchically empty within `deadline` or the kill fails. Hierarchical
     /// emptiness is `cgroup.procs` reading empty AND `cgroup.events` reading
     /// `populated 0`: direct members can hide in child cgroups of the leaf
-    /// (review pass 2, R2), which the fallback sweep cannot address at all —
-    /// such a subtree is a survivor claim, never a verified kill.
+    /// (review pass 2, R2). The fallback sweep censuses the whole subtree
+    /// (every descendant's `cgroup.procs`) and signals each member through a
+    /// pinned pidfd; anything it cannot drain is a survivor claim, never a
+    /// verified kill.
     pub fn kill_verified(&self, deadline: Duration) -> Result<(), KillError> {
         match fs::write(self.leaf.join("cgroup.kill"), b"1") {
             Ok(()) => {}
@@ -395,25 +452,39 @@ impl CgroupLease {
                 self.pidfd_sweep(deadline)?
             }
         }
+        self.verify_drained(deadline)
+    }
+
+    /// Drain the leaf with the membership-scoped pidfd sweep only (the path
+    /// `kill_verified` takes when `cgroup.kill` is missing or denied), then
+    /// verify hierarchical emptiness. Exposed so the fallback is exercised
+    /// deterministically on a host where `cgroup.kill` works.
+    pub fn kill_verified_by_sweep(&self, deadline: Duration) -> Result<(), KillError> {
+        self.pidfd_sweep(deadline)?;
+        self.verify_drained(deadline)
+    }
+
+    /// Wait for the leaf to read hierarchically empty (`cgroup.procs` of the
+    /// leaf and every descendant, AND `cgroup.events` `populated 0`), or
+    /// report survivors.
+    fn verify_drained(&self, deadline: Duration) -> Result<(), KillError> {
         let start = Instant::now();
         loop {
-            let procs = self.procs().map_err(KillError::Io)?;
+            let procs = self.tree_procs().map_err(KillError::Io)?;
             if procs.is_empty() && !self.hierarchically_populated().map_err(KillError::Io)? {
                 return Ok(());
             }
             if start.elapsed() >= deadline {
                 if procs.is_empty() {
-                    // Direct members drained but the hierarchical flag still
-                    // reads populated: a member sits in a CHILD cgroup of this
-                    // leaf, which `cgroup.procs` does not list. The primary
-                    // `cgroup.kill` reaches the whole subtree; the pidfd sweep
-                    // (this path's fallback) cannot address a migrated member
-                    // at all — either way this is a survivor claim, never a
-                    // verified kill.
+                    // No pid is listed anywhere in the subtree but the
+                    // hierarchical flag still reads populated: a member this
+                    // namespace cannot address by pid (a nested pid
+                    // namespace lists it as 0). This is a survivor claim,
+                    // never a verified kill.
                     eprintln!(
-                        "sea-forge-sandbox: cgroup leaf {} drained of direct members but a \
-                         descendant cgroup still holds processes (cgroup.events populated=1); \
-                         the pidfd sweep cannot reach members of child cgroups",
+                        "sea-forge-sandbox: cgroup leaf {} lists no addressable member but \
+                         cgroup.events still reads populated=1 (a member of a nested pid \
+                         namespace, or a process that left the subtree listing)",
                         self.leaf.display()
                     );
                 }
@@ -423,8 +494,9 @@ impl CgroupLease {
         }
     }
 
-    /// Kill the leaf's members one pid at a time when `cgroup.kill` is
-    /// unavailable. Each pid is pinned with `pidfd_open` first and its
+    /// Kill the members of the leaf AND of every descendant cgroup one pid at
+    /// a time when `cgroup.kill` is unavailable (the census walks the subtree,
+    /// so a member migrated into a child cgroup is swept like a direct one). Each pid is pinned with `pidfd_open` first and its
     /// membership re-confirmed after pinning: a pid that exited and was
     /// recycled between the listing and the signal is no longer a member, so
     /// the recycled (unrelated) process is never signalled.
@@ -433,7 +505,7 @@ impl CgroupLease {
 
         let start = Instant::now();
         loop {
-            let procs = self.procs().map_err(KillError::Io)?;
+            let procs = self.tree_procs().map_err(KillError::Io)?;
             if procs.is_empty() {
                 return Ok(());
             }
@@ -458,8 +530,11 @@ impl CgroupLease {
             // Membership re-confirmed AFTER pinning: this is the PID-reuse
             // guard. A pinned pid absent from the re-read either exited or
             // was recycled; in both cases the pidfd must not be signalled.
-            let members: HashSet<libc::pid_t> =
-                self.procs().map_err(KillError::Io)?.into_iter().collect();
+            let members: HashSet<libc::pid_t> = self
+                .tree_procs()
+                .map_err(KillError::Io)?
+                .into_iter()
+                .collect();
             for (pid, fd) in &pinned {
                 if members.contains(pid) {
                     match pidfd_send_signal(fd, Signal::KILL) {
@@ -473,7 +548,9 @@ impl CgroupLease {
                 }
             }
             if start.elapsed() >= deadline {
-                return Err(KillError::Survivors(self.procs().map_err(KillError::Io)?));
+                return Err(KillError::Survivors(
+                    self.tree_procs().map_err(KillError::Io)?,
+                ));
             }
             std::thread::sleep(POLL_INTERVAL);
         }
@@ -497,6 +574,7 @@ impl CgroupLease {
     pub fn remove(&self) -> io::Result<()> {
         let mut last_err: Option<io::Error> = None;
         for attempt in 0..REMOVE_ATTEMPTS {
+            self.remove_descendants();
             match fs::remove_dir(&self.leaf) {
                 Ok(()) => {
                     self.removed.store(true, Ordering::SeqCst);

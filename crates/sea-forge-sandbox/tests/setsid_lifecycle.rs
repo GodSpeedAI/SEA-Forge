@@ -569,6 +569,86 @@ fn destroy_sweeps_a_leaked_leaf() {
     fs::remove_dir_all(parent).ok();
 }
 
+/// The pidfd fallback (used when `cgroup.kill` is denied) must reach a member
+/// that sits in a CHILD cgroup of the leaf, which the leaf's own
+/// `cgroup.procs` does not list. The sweep is driven directly so the
+/// scenario is deterministic on a host where `cgroup.kill` works. The only
+/// acceptable outcomes are "swept" (`Ok` with every member dead and the
+/// leaf, child included, removable) or a `Survivors` report; `Ok` with a
+/// live member would be a false containment claim.
+#[test]
+fn pidfd_sweep_reaches_a_member_in_a_child_cgroup() {
+    let _env = env_lock();
+    let Some(_root) = require_active_root("pidfd sweep reaches a child-cgroup member") else {
+        return;
+    };
+    let lease = match cgroup::acquire_spawn_lease("sweep-child-cgroup-test", std::process::id()) {
+        Ok(Some(lease)) => lease,
+        other => panic!("active containment must yield a lease, got {other:?}"),
+    };
+    let mut command = std::process::Command::new("/bin/sleep");
+    command.arg("600");
+    cgroup::CgroupLease::attach(&mut command, &lease).expect("pre-exec join");
+    let mut direct = command.spawn().expect("spawn the direct member");
+    let mut migrated = command.spawn().expect("spawn the member to migrate");
+    let migrated_pid = migrated.id();
+
+    // Move one member into a child cgroup of the leaf: the leaf's
+    // `cgroup.procs` no longer lists it.
+    let child = lease.leaf().join("child");
+    let moved = fs::create_dir(&child)
+        .and_then(|()| fs::write(child.join("cgroup.procs"), migrated_pid.to_string()));
+    if let Err(error) = moved {
+        // Delegation that cannot create or populate a child cgroup cannot
+        // stage the scenario; self-report instead of passing.
+        let _ = direct.kill();
+        let _ = migrated.kill();
+        let _ = direct.wait();
+        let _ = migrated.wait();
+        let _ = lease.remove();
+        blocked_or_require(
+            cgroup::REQUIRE_ENV,
+            "pidfd sweep child-cgroup member",
+            &format!("cannot stage a member in a child cgroup: {error}"),
+        );
+        return;
+    }
+    assert!(
+        !lease.procs().unwrap().contains(&(migrated_pid as i32)),
+        "the migrated member must be invisible to the leaf's own cgroup.procs"
+    );
+    assert_descendant_alive(migrated_pid as i32);
+
+    // Reap the killed members from a thread so a zombie never reads as a
+    // member while the sweep verifies emptiness.
+    let reaper = std::thread::spawn(move || {
+        let _ = direct.wait();
+        let _ = migrated.wait();
+    });
+    let outcome = lease.kill_verified_by_sweep(Duration::from_secs(10));
+    match &outcome {
+        Ok(()) => {
+            assert_descendant_dead(migrated_pid as i32, Duration::from_secs(5));
+            reaper.join().unwrap();
+            lease
+                .remove()
+                .expect("a swept leaf removes its child cgroup bottom-up, then itself");
+            assert!(!lease.leaf().exists(), "the leaf and its child are gone");
+        }
+        Err(cgroup::KillError::Survivors(pids)) => {
+            assert!(
+                pids.contains(&(migrated_pid as i32)),
+                "a survivor report must name the child-cgroup member: {pids:?}"
+            );
+            // Fail closed is acceptable; clean up with the group kill.
+            let _ = fs::write(lease.leaf().join("cgroup.kill"), b"1");
+            reaper.join().unwrap();
+            let _ = lease.remove();
+        }
+        Err(other) => panic!("unexpected sweep failure: {other:?}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Forced-unavailable scenarios (deterministic on every host).
 // ---------------------------------------------------------------------------
