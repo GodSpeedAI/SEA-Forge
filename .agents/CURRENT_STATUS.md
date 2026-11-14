@@ -1,23 +1,32 @@
 # Current status
 
-**Status revision:** 274
+**Status revision:** 275
 
-**Stage:** PR #71 24.04 fixture: the mutation control's rebuilt command now re-admits the ack fd; it was the fixture, not the launch chain
+**Stage:** PR #71 hardening merged with main (DomainForge 0.22.0 lockstep); 24.04 fixture mutation control fixed
 
-**Summary:** FDE convergence planning baseline recorded under .agents/reports/fde-convergence-2026-11-12/: deliverables A-H for the FDE convergence program (EGM-reviewed, draft 3) and the SOP v0.4.1 draft, with the S0 baseline evidence. S0: readiness GO 30/30 on 2026-11-13 after the DomainForge 0.21.2 lockstep, and the e2e world loop runs OK. The FDE planning baseline itself changed no product code. S1 not started. Owner decisions OD-1 to OD-6 are open (see H-egm-review-record.md). Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device. Review threads: the server dispatch path now records lifecycle_containment in its command_finished trace payload and execution_result evidence (conformance_case_episode asserts it); write_file removes its staging directory when new_temp fails; egress-control.py closes its log and socket via context managers; the live egress allow-control test prints guest output before its status assertion; OBSERVED_DEBT records the WSL2 post_start_internal_error test failure. The 24.04 sandbox-suite defect was the mutation control in workload_boundary: it rebuilds the launch Command without the pre_exec that clears close-on-exec on the ack write end, so the helper never received the ack fd (ENOENT on the /proc/self/fd reopen). The control now repeats that re-admission.
+**Summary:** SEA-Forge moves its DomainForge producer pin from 0.21.2 to 0.22.0 for stack lockstep. Library pin, EXPECTED_DOMAINFORGE_VERSION, devbox CLI install, Cargo.lock (targeted update), fixture provenance and READMEs now say 0.22.0. The demo world_ref changes with producer_version: 7ddedb... becomes 469e93..., minted by the linked compiler and confirmed with the 0.22.0 CLI. The Rego lib.rego fixtures changed (exists_unique is three-valued) so provenance digest 3b25cf21... becomes bff56dc0.... Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device. Review threads: the server dispatch path now records lifecycle_containment in its command_finished trace payload and execution_result evidence (conformance_case_episode asserts it); write_file removes its staging directory when new_temp fails; egress-control.py closes its log and socket via context managers; the live egress allow-control test prints guest output before its status assertion; OBSERVED_DEBT records the WSL2 post_start_internal_error test failure. The 24.04 sandbox-suite defect was the mutation control in workload_boundary: it rebuilds the launch Command without the pre_exec that clears close-on-exec on the ack write end, so the helper never received the ack fd (ENOENT on the /proc/self/fd reopen). The control now repeats that re-admission.
 
 **Verified:**
 
+- cargo update -p domainforge-core --precise 0.22.0: only domainforge-core changed in Cargo.lock
+- cargo test -p sea-forge-domainforge: all suites ok (22, 4, 5, 11 passed; 0 failed)
+- cargo test -p sea-forge-authority --test cep_compiler_upgrade: 9 passed; opa_candidate 22 passed + 7 ignored passed with opa
+- cargo test -p sea-forge-server --test conformance_cep_authority: 13 passed
+- cargo test -p sea-forge-case-runner --test cell_episode: 24 passed + 6 ignored passed with opa
+- fixtures regenerated with the 0.22.0 CLI; cargo fmt --check on touched crates: clean
 - scripts/check-agent-context.sh: ok
 - 2026-11-13 readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main) reported GO 30/30 after the DomainForge 0.21.2 lockstep; evidence in the S0 baseline files under the report directory
 - 2026-11-13 scripts/e2e-world-loop.sh against pinned origin heads: final line 'e2e-world-loop: OK' (revision 233)
 - gitleaks scan of the report directory: no leaks found
 - PR #71 checks: 20+ green incl. gate/test/windows/macos/kernel-22.04; run 40614104830 all four legs success; independent artifact verification
 - sea-forge-server and sea-forge-sandbox tests pass on this WSL2 host (workload isolation and cgroup-delegated lanes report NOT_RUN); fmt and clippy -D warnings clean
+- conformance_case_episode 11 passed (cgroup host verdict is an object; trace and evidence compared for equality)
+- Merged origin/main (be63b711, DomainForge 0.22.0 lockstep); branch assertions compare against EXPECTED_DOMAINFORGE_VERSION
 
 **Limits:**
 
-- cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
+- cargo test --workspace and just ci not run (host memory)
+- Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
 - docs/how-to/upgrade-domainforge-producer.md still records a 0.21.1 check and its a71ff6 digest as history
 - A detached grandchild that survives the process-group kill could append after the operator attests NotDeclared; lease safety assumes the authority call is bounded
@@ -33,13 +42,15 @@
 - Server-crash containment comes from the Horizon systemd unit (KillMode=control-group, Horizon#26); it takes effect once the owner reinstalls the unit
 - An attempt with no launch record keeps the lease-only rule: NotDeclared is accepted after the lease lapses without a liveness check or --attest-command-gone. This covers claims made before launch recording existed, a transport without launch evidence, and a request with no authorization_ref. A failed launch-record write stops the command, so it does not produce such an attempt.
 - Only sea-forge-capability was tested (the sole rusqlite user); full workspace tests, CI and MSRV 1.92 job not run locally; rusqlite 0.41.1 declares rust-version 1.89
-- FDE planning baseline is documents only (S1 not started); the hardening work changes product code
+- The FDE planning baseline on main is documents only; S1 implementation is on the fde/integration branches, not on main
 - Owner decisions OD-1 to OD-6 are open; see .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
 - The planning baseline is draft 3 and the SOP is a v0.4.1 draft; neither is approved
+- cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
+- FDE planning baseline is documents only (S1 not started); the hardening work changes product code
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Owner to answer the open PR #71 review questions; then merge on green. Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged. PR #71: address review threads, then merge on green; Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
+**Next:** Read the captured helper stderr from the 24.04 run and fix the named cause. Owner to answer the open PR #71 review questions; then merge on green. Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged. PR #71: address review threads, then merge on green; Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
 
 **Evidence:**
 
