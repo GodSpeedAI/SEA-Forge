@@ -270,10 +270,22 @@ fn launcher_fixture_child() {
         // The chain closed the pipe without a byte: collect how it ended (a
         // signal here names a kill that leaves no stderr), bounded.
         let ended = wait_until_exit(&mut child);
+        let launcher_fds: Vec<String> = fs::read_dir("/proc/self/fd")
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|entry| {
+                let target = fs::read_link(entry.path())
+                    .map(|t| t.display().to_string())
+                    .unwrap_or_default();
+                format!("{}->{target}", entry.file_name().to_string_lossy())
+            })
+            .collect();
         let captured = fs::read_to_string(&stderr_path).unwrap_or_default();
         panic!(
             "isolated launch acknowledged its setup: {error}; launch chain ended: {ended}; \
-             helper stderr: {captured:?}"
+             helper stderr: {captured:?}; launcher fds: {}",
+            launcher_fds.join(" ")
         );
     });
     wait_until("workload ready", || ready.exists());

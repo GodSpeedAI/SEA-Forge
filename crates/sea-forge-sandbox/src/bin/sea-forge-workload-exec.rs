@@ -199,7 +199,8 @@ fn main() {
                     })
                     .collect();
                 fail(&format!(
-                    "ack pipe unavailable: {e} (ack fd {fd}; held: {})",
+                    "ack pipe unavailable: {e} (ack fd {fd}; argv {:?}; held: {})",
+                    std::env::args().collect::<Vec<_>>(),
                     held.join(" ")
                 ))
             });

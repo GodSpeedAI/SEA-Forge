@@ -677,6 +677,15 @@ fn unshare_binary() -> &'static str {
     UNSHARE
 }
 
+/// First descriptor number the launch-chain pipes are moved to.
+const HIGH_FD_FLOOR: std::os::fd::RawFd = 64;
+
+/// Duplicate `fd` (close-on-exec) at or above [`HIGH_FD_FLOOR`] and close the
+/// original; the same open file description, so a mode granted earlier holds.
+fn fcntl_dupfd_high(fd: std::os::fd::OwnedFd) -> std::os::fd::OwnedFd {
+    rustix::io::fcntl_dupfd_cloexec(&fd, HIGH_FD_FLOOR).unwrap_or(fd)
+}
+
 /// Build the launch command for `argv` under `identity`, the lifeline that
 /// bounds it, and the isolation-acknowledgement pipe the caller must wait on
 /// after spawning ([`wait_for_isolation_ack`]). The caller supplies stdio,
@@ -724,6 +733,12 @@ pub fn isolated_command(
     // mode bits on the pipe description are what the reopen checks.
     rustix::fs::fchmod(&ack_write, rustix::fs::Mode::from_raw_mode(0o222))
         .map_err(|e| unavailable(format!("isolation ack pipe mode: {e}")))?;
+    // Both descriptors that cross exec are moved above the low range: the
+    // launcher's own low numbers are crowded (lock files, the stdio targets
+    // `Command` redirects onto) and the helper receives them by number
+    // through two execs. Keep the original on a refused dup.
+    let read = fcntl_dupfd_high(read);
+    let ack_write = fcntl_dupfd_high(ack_write);
     let mut command = Command::new(unshare_binary());
     command
         .env_clear()
