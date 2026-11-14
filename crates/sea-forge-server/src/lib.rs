@@ -3544,6 +3544,10 @@ pub async fn handle_request_as(
         } => {
             record_pending(state, request_id.as_deref(), "case.record.append");
             let principal = actor_id.unwrap_or("operator_local").to_string();
+            let role = serde_json::to_value(&verified_role)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "operator".to_string());
             let response = {
                 let case_lock = state.acquire_case_lock(&case_id).await;
                 let root = state.root.clone();
@@ -3553,6 +3557,7 @@ pub async fn handle_request_as(
                         &root,
                         &case,
                         &principal,
+                        &role,
                         kind,
                         payload,
                         idempotency_key,

@@ -1,29 +1,28 @@
 # Current status
 
-**Status revision:** 241
+**Status revision:** 242
 
-**Stage:** FDE integration branch: case keeper case.record.append, freeze and invariants (WP-14, part 1)
+**Stage:** FDE integration branch: interaction-event outbox for case.record.append (WP-14, part 2, step 1)
 
-**Summary:** fde/integration: SFWP verb case.record.append (verb case_record_append) in sea-forge-server with a schema registry over schemas vendored by digest into crates/sea-forge-server/contracts/fde; kinds episode.frozen and episode.settled; responses and refusal codes per contracts/fde. Two-phase freeze (prepare writes an intent, the RealityTrace outbox and the anchor outbox; commit appends the hash-chained case record), recover() for a crash between phases, freeze_status/require_complete_freeze and verify_freeze_anchor. Server-side I-1 (settle needs the freeze; a freeze needs its RealityTrace records), I-2 (settling chain must not contain an executor actor of the plan item), I-3 (one freeze per (case, item, n)), idempotent replay, EXPLORATORY_NOT_SETTLEABLE. fde-proof.d wired for AT-04, NT-01, NT-16 (and NT-13, NT-17, NT-42 outside the S1 set).
+**Summary:** fde/integration: every case ledger record and every I-2 authority decision written by case.record.append yields exactly one CEP execution_trace envelope carrying extensions[godspeed.interaction_event] (schema vendored by digest into crates/sea-forge-server/contracts/cep). The event is derived from the stored record (records now carry recorded_at; I-2 decisions are stored as dec-NNNN in field-decisions.jsonl), enqueued right after the ledger line into field-interaction-outbox.jsonl, rebuilt by reconcile_events if the enqueue is lost, and delivered idempotently (default sink: interaction-events/<case>.jsonl). Emitter failure never blocks the case write. semantic_ref comes from the WP-13 map (Episode, evidence::Settlement, no_self_settlement); a world the map does not cover records an unmapped gap row and invents nothing. Events are unsigned (E 5, before WP-33).
 
 **Verified:**
+- cargo test -p sea-forge-server --test conformance_interaction_events: 10 passed, 0 failed
 - cargo test -p sea-forge-server --test conformance_field_case: 18 passed, 0 failed
-- cargo test -p sea-forge-server --lib --test conformance_sfwp --test conformance_identity: 187 + 15 + 23 passed, 0 failed
-- mutation checks: removing the I-3 key check, the I-2 chain check or the I-1 FREEZE_MISSING check each makes conformance_field_case fail
-- scripts/fde-proof.sh --slice s1 --only AT-04, NT-01, NT-16: PASS
+- mutation check: disabling the outbox dedupe fails conformance_interaction_events
 - scripts/check-agent-context.sh passes
 
 **Limits:**
-- RealityTrace records are checked through an index file (realitytrace/records.jsonl) and owed through a durable outbox; no in-process RealityTrace writer or delivery agent exists
-- The anchor is published only when SEA_FORGE_FDE_ANCHOR_SCRIPT names a publisher; the receipt server push time is the publisher's, not read from GitHub (RD-26)
-- I-1 at delegation and governed-operation boundaries (NT-32, NT-33 delegation side) is a library gate (require_complete_freeze) not yet called by any delegation verb: the delegation payload carries no episode_ref until WP-20
-- Signed interaction-event emission, Go client, TypeScript contracts and golden SFWP frames are not done in this commit
-- Digests use a local RFC 8785 implementation (integers, strings, no floats); sea-forge-core canonical_json is a different profile
+- Unsigned: the schema has no unsigned marker, so the emitter object is omitted and the outbox row records signature absent_before_WP-33
+- No network transport: delivery appends to a local spool for RealityTrace ingest (WP-16)
+- The authority decision on this path is the I-2 check (policy no_self_settlement); a freeze has no authority decision and reports not_required
+- actor.role is the SEA-Forge identity role, not a SOP role
+- Go client, TypeScript contracts, golden frames, SFWP spec note and AT-05 wiring are later steps
 - Integration branch only: not merged to main, no PR
 
-**Next:** WP-14 part 2: interaction-event outbox and signing, generated Go/TypeScript contracts and golden frames; WP-20 wires I-1 into delegation.
+**Next:** WP-14 part 2 steps 3-6: generated contracts and golden frames, SFWP note, AT-05 (PARTIAL until WP-15).
 
 **Evidence:**
-- crates/sea-forge-server/src/sfwp/case_records.rs
-- crates/sea-forge-server/tests/conformance_field_case.rs
-- scripts/fde-proof.d/_cargo-test.sh
+- crates/sea-forge-server/src/sfwp/interaction_events.rs
+- crates/sea-forge-server/tests/conformance_interaction_events.rs
+- crates/sea-forge-server/contracts/cep/DIGESTS

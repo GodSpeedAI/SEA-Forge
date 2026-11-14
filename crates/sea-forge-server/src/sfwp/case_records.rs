@@ -215,6 +215,9 @@ pub struct AppendContext<'a> {
     pub case_id: &'a str,
     /// The authenticated principal of the request (the settler for `episode.settled`).
     pub principal: &'a str,
+    /// The principal's SEA-Forge identity role (not a SOP role), for the
+    /// interaction event's `actor.role`.
+    pub role: &'a str,
     /// The principal's authenticated delegation chain, root first, ending at
     /// `principal`. At this stage these are SEA-Forge actor identities (RD-21).
     pub chain: &'a [String],
@@ -226,12 +229,12 @@ pub struct AppendContext<'a> {
 // File helpers
 // ---------------------------------------------------------------------------
 
-fn case_dir(root: &Path, case_id: &str) -> PathBuf {
+pub(super) fn case_dir(root: &Path, case_id: &str) -> PathBuf {
     root.join("cases").join(case_id)
 }
 
 /// Complete newline-terminated JSON lines; a torn trailing fragment is ignored.
-fn read_lines(path: &Path) -> Vec<Value> {
+pub(super) fn read_lines(path: &Path) -> Vec<Value> {
     let bytes = fs::read(path).unwrap_or_default();
     let end = match bytes.iter().rposition(|b| *b == b'\n') {
         Some(i) => i + 1,
@@ -244,7 +247,7 @@ fn read_lines(path: &Path) -> Vec<Value> {
         .collect()
 }
 
-fn append_line(path: &Path, value: &Value) -> Result<(), String> {
+pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -257,8 +260,50 @@ fn append_line(path: &Path, value: &Value) -> Result<(), String> {
         .map_err(|e| format!("write {}: {e}", path.display()))
 }
 
-fn records(ctx: &AppendContext) -> Vec<Value> {
+pub(super) fn records(ctx: &AppendContext) -> Vec<Value> {
     read_lines(&case_dir(ctx.root, ctx.case_id).join(RECORDS))
+}
+
+pub(super) const DECISIONS: &str = "field-decisions.jsonl";
+
+pub(super) fn decisions(ctx: &AppendContext) -> Vec<Value> {
+    read_lines(&case_dir(ctx.root, ctx.case_id).join(DECISIONS))
+}
+
+pub(super) fn now_rfc3339() -> String {
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+}
+
+/// Record the authority decision the I-2 check makes for a settlement attempt.
+/// SEA-Forge is the owner of these records (`dec-NNNN`); the interaction event
+/// for the decision and the settlement's `authority.decision_id` resolve here.
+/// Idempotent on `(idempotency_key, body_digest, decision)`: a crash-retry or
+/// a replayed denial reuses the first record rather than minting another.
+fn record_decision(
+    ctx: &AppendContext,
+    key: &str,
+    body_digest: &str,
+    episode_key: &Value,
+    allowed: bool,
+    executors: &BTreeSet<String>,
+) -> Result<Value, String> {
+    let decision = if allowed { "allow" } else { "deny" };
+    let existing = decisions(ctx);
+    if let Some(found) = existing.iter().find(|d| {
+        d["idempotency_key"] == key && d["body_digest"] == body_digest && d["decision"] == decision
+    }) {
+        return Ok(found.clone());
+    }
+    let seq = existing.len() as u64 + 1;
+    let record = json!({
+        "decision_id": format!("dec-{seq:04}"), "seq": seq, "policy": "no_self_settlement",
+        "invariant": "I-2", "decision": decision, "idempotency_key": key,
+        "body_digest": body_digest, "episode_key": episode_key, "principal": ctx.principal,
+        "role": ctx.role, "chain": ctx.chain, "executors": executors,
+        "recorded_at": now_rfc3339(),
+    });
+    append_line(&case_dir(ctx.root, ctx.case_id).join(DECISIONS), &record)?;
+    Ok(record)
 }
 
 /// Latest intent line per idempotency key.
@@ -484,9 +529,15 @@ fn next_record(ctx: &AppendContext, records: &[Value], mut record: Value) -> Res
     record["seq"] = json!(seq);
     record["record_id"] = json!(format!("rec-{seq:04}"));
     record["prev_hash"] = json!(prev);
+    record["recorded_at"] = json!(now_rfc3339());
     let hash = digest_of(&record).ok_or("record is not canonicalisable")?;
     record["hash"] = json!(hash);
     append_line(&case_dir(ctx.root, ctx.case_id).join(RECORDS), &record)?;
+    // The interaction event is owed from this moment. Enqueueing is best
+    // effort: the record is committed either way, and `reconcile_events`
+    // derives any event the ledger holds but the outbox lacks (WP-14: an
+    // emitter failure never blocks the case write).
+    let _ = super::interaction_events::enqueue_record(ctx, &record);
     Ok(record)
 }
 
@@ -737,12 +788,18 @@ fn settle(
     }
     // I-2: the settling principal's chain must not contain an executor of the item.
     let executors = executors_of(ctx, &item);
-    if ctx
+    let contained = ctx
         .chain
         .iter()
         .chain(std::iter::once(&ctx.principal.to_string()))
-        .any(|c| executors.contains(c))
-    {
+        .any(|c| executors.contains(c));
+    let decision =
+        match record_decision(ctx, key, body_digest, &episode_key, !contained, &executors) {
+            Ok(d) => d,
+            Err(e) => return io_refusal(e),
+        };
+    let _ = super::interaction_events::enqueue_decision(ctx, &decision);
+    if contained {
         return refuse(
             "SELF_SETTLEMENT_REFUSED",
             "settling principal's chain contains the executor's identity",
@@ -752,6 +809,7 @@ fn settle(
     let record = json!({
         "kind": "episode.settled", "idempotency_key": key, "body_digest": body_digest,
         "episode_key": episode_key, "principal": ctx.principal, "chain": ctx.chain, "payload": payload,
+        "decision_id": decision["decision_id"],
     });
     let rec_id = format!("rec-{:04}", records.len() + 1);
     let mut record = record;
@@ -935,6 +993,7 @@ pub fn recover(ctx: &AppendContext) -> Recovered {
     if let Some(publisher) = ctx.anchor {
         let _ = deliver_anchors(ctx, publisher);
     }
+    super::interaction_events::reconcile_events(ctx);
     out
 }
 
@@ -979,6 +1038,7 @@ pub fn run_verb(
     root: &Path,
     case_id: &str,
     principal: &str,
+    role: &str,
     kind: Value,
     payload: Value,
     idempotency_key: Value,
@@ -1000,11 +1060,20 @@ pub fn run_verb(
         root,
         case_id,
         principal,
+        role,
         chain: &chain,
         rt: &index,
         anchor: script.as_ref().map(|s| s as &dyn AnchorPublisher),
     };
-    Ok(append(&ctx, &Value::Object(request)))
+    let result = append(&ctx, &Value::Object(request));
+    // Deliver whatever is owed (this write's events and any earlier backlog).
+    // A failing emitter leaves the events in the outbox; it never changes the
+    // case write's response.
+    let _ = super::interaction_events::deliver_events(
+        &ctx,
+        &super::interaction_events::SpoolSink::new(root),
+    );
+    Ok(result)
 }
 
 fn valid_case_segment(id: &str) -> bool {

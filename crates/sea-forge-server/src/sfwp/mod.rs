@@ -23,6 +23,7 @@ pub mod correlation;
 pub mod delegation_preview;
 pub mod delegations;
 pub mod events;
+pub mod interaction_events;
 pub mod precondition;
 pub mod readiness;
 pub mod run_views;
