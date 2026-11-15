@@ -1,0 +1,89 @@
+{
+  "schema": "urn:sea-forge:fde:case-record-kinds:v1",
+  "valid": [
+    {
+      "file": "registry.json",
+      "def": null
+    }
+  ],
+  "invalid": [
+    {
+      "file": "kind-missing.json",
+      "def": null,
+      "pointer": "/kinds",
+      "contains": "\"gate.assessed\" is a required property"
+    },
+    {
+      "file": "kind-extra.json",
+      "def": null,
+      "pointer": "/kinds",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "refusal-code-not-in-v2.json",
+      "def": null,
+      "pointer": "/kinds/gate.assessed/refusal_codes/7",
+      "contains": "is not one of"
+    },
+    {
+      "file": "payload-schema-wrong.json",
+      "def": null,
+      "pointer": "/kinds/gate.assessed/payload_schema/def",
+      "contains": "was expected"
+    },
+    {
+      "file": "v1-kind-payload-must-stay-v1.json",
+      "def": null,
+      "pointer": "/kinds/episode.frozen/payload_schema/schema",
+      "contains": "was expected"
+    },
+    {
+      "file": "idempotency-rule-changed.json",
+      "def": null,
+      "pointer": "/kinds/strategy.recorded/idempotency_key_rule",
+      "contains": "was expected"
+    },
+    {
+      "file": "refusal-codes-empty.json",
+      "def": null,
+      "pointer": "/kinds/strategy.recorded/refusal_codes",
+      "contains": "has less than"
+    },
+    {
+      "file": "immutability-unknown.json",
+      "def": null,
+      "pointer": "/kinds/strategy.recorded/immutability",
+      "contains": "is not one of"
+    },
+    {
+      "file": "entry-extra-key.json",
+      "def": null,
+      "pointer": "/kinds/strategy.recorded",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "version-2.json",
+      "def": null,
+      "pointer": "/version",
+      "contains": "was expected"
+    },
+    {
+      "file": "kind-key-mismatch.json",
+      "def": null,
+      "pointer": "/kinds/gate.assessed/kind",
+      "contains": "was expected"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "episode-settled-missing-self-settlement-code.json",
+      "def": null,
+      "code": "REGISTRY_INCOMPLETE"
+    },
+    {
+      "file": "field-case-revised-scope-case-but-natural-key-has-episode.json",
+      "def": null,
+      "code": "REGISTRY_NATURAL_KEY_INVALID"
+    }
+  ]
+}

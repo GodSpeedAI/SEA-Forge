@@ -1,0 +1,665 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:case-record-kinds:v1",
+  "title": "Case record-kind registry v1",
+  "description": "The registry behind case.record.append: one entry per kind with its payload schema, idempotency-key rule, natural key, refusal codes and immutability rule. The registry instance is fixtures/case-record-kinds/valid/registry.json; the test checks that every payload_schema resolves, every refusal code is in the case-record-append.v2 Error enum, and the kinds equal the v2 Request kind enum. The registry is closed to exactly these six kinds; a seventh is a new registry version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registry",
+    "version",
+    "kinds"
+  ],
+  "properties": {
+    "registry": {
+      "const": "fde.case-record-kinds"
+    },
+    "version": {
+      "const": 1
+    },
+    "kinds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode.frozen",
+        "episode.settled",
+        "field_case.revised",
+        "strategy.recorded",
+        "gate.assessed",
+        "disposition.recorded"
+      ],
+      "properties": {
+        "episode.frozen": {
+          "$ref": "#/$defs/Entry_0"
+        },
+        "episode.settled": {
+          "$ref": "#/$defs/Entry_1"
+        },
+        "field_case.revised": {
+          "$ref": "#/$defs/Entry_2"
+        },
+        "strategy.recorded": {
+          "$ref": "#/$defs/Entry_3"
+        },
+        "gate.assessed": {
+          "$ref": "#/$defs/Entry_4"
+        },
+        "disposition.recorded": {
+          "$ref": "#/$defs/Entry_5"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Entry_0": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "episode.frozen"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v1"
+            },
+            "def": {
+              "const": "EpisodeFrozenPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Entry_1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "episode.settled"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v1"
+            },
+            "def": {
+              "const": "EpisodeSettledPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Entry_2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "field_case.revised"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v2"
+            },
+            "def": {
+              "const": "FieldCaseRevisedPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Entry_3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "strategy.recorded"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v2"
+            },
+            "def": {
+              "const": "StrategyRecordedPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Entry_4": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "gate.assessed"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v2"
+            },
+            "def": {
+              "const": "GateAssessedPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Entry_5": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "introduced",
+        "scope",
+        "payload_schema",
+        "idempotency_key_rule",
+        "natural_key",
+        "refusal_codes",
+        "immutability",
+        "refused_when_case_suspended"
+      ],
+      "properties": {
+        "kind": {
+          "const": "disposition.recorded"
+        },
+        "introduced": {
+          "enum": [
+            "v1",
+            "v2"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "episode",
+            "case"
+          ]
+        },
+        "payload_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "def"
+          ],
+          "properties": {
+            "schema": {
+              "const": "urn:sea-forge:fde:case-record-append:v2"
+            },
+            "def": {
+              "const": "DispositionRecordedPayload"
+            }
+          }
+        },
+        "idempotency_key_rule": {
+          "const": "token:(system, record_id)",
+          "description": "Caller-chosen, one whitespace-free token of <= 256 characters. Same key and same body replays the original response; same key and a different body is IDEMPOTENCY_CONFLICT."
+        },
+        "natural_key": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+        },
+        "refusal_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "SCHEMA_INVALID",
+              "KIND_UNKNOWN",
+              "IDEMPOTENCY_CONFLICT",
+              "EPISODE_REF_DIGEST_MISMATCH",
+              "RESULT_INVALID",
+              "FREEZE_KEY_EXISTS",
+              "FREEZE_MISSING",
+              "FREEZE_INCOMPLETE",
+              "SELF_SETTLEMENT_REFUSED",
+              "EXPLORATORY_NOT_SETTLEABLE",
+              "WORLD_NOT_PINNED",
+              "SETTLEMENT_EXISTS",
+              "KIND_IMMUTABLE",
+              "REFERENCE_DERIVED_FROM_RESULT",
+              "MODEL_ANCHOR_LATE",
+              "AUTHORITY_DENIED",
+              "ANCHOR_PUBLISHER_INVALID",
+              "STORE_INTEGRITY",
+              "PAYLOAD_TOO_LARGE",
+              "HARD_GATE_NOT_WAIVABLE",
+              "CASE_SUSPENDED",
+              "REVISION_CONFLICT"
+            ]
+          },
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+        },
+        "immutability": {
+          "enum": [
+            "frozen_forever",
+            "single_settlement",
+            "revision_chain",
+            "append_only_history"
+          ]
+        },
+        "refused_when_case_suspended": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
