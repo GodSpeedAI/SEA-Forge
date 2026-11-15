@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 312
+**Status revision:** 313
 
-**Stage:** FDE S2: WP-20 review fixes (schemas, fixtures)
+**Stage:** FDE S2: WP-20 review fixes (tests, README, CHANGELOG)
 
-**Summary:** fde/integration: WP-20 review fixes C1 C2 H1-H7 M1-M9 and owner decisions D8 D12 D23 applied to the S2 contracts in place (contracts only); DIGESTS re-pinned; tests and README follow.
+**Summary:** fde/integration: WP-20 review fixes: rule-table tests extended (34 pass), README sections 5-14 and decisions D4/D8/D12/D17/D23/D25 reversed or replaced, D31-D38 added, CHANGELOG.
 
 **Verified:**
 

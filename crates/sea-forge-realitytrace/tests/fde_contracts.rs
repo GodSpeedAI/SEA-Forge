@@ -414,6 +414,16 @@ fn the_test_canonicaliser_refuses_input_it_cannot_hash_faithfully() {
 mod s2 {
     use super::*;
 
+    /// Principals are compared on canonical actor strings: trimmed and case-folded, as
+    /// `canonical_actor` in crates/sea-forge-server/src/sfwp/case_records.rs does.
+    pub fn canon(s: &str) -> String {
+        s.trim().to_lowercase()
+    }
+
+    fn canon_opt(v: &Value) -> Option<String> {
+        v.as_str().map(canon)
+    }
+
     pub fn strings<'a>(v: &'a Value, out: &mut Vec<&'a str>) {
         match v {
             Value::String(s) => out.push(s),
@@ -424,7 +434,8 @@ mod s2 {
     }
 
     /// A RealityTrace result id (`observation|evidence|settlement|residual:` + 26 ULID characters)
-    /// quoted inside a frozen reference body.
+    /// quoted inside a frozen reference body. Best-effort detection (README decision D6): the real
+    /// protection is ordering (freeze and anchor before the first run event).
     pub fn quotes_result_id(s: &str) -> bool {
         ["observation:", "evidence:", "settlement:", "residual:"]
             .iter()
@@ -461,12 +472,22 @@ mod s2 {
                         return Err("SCHEMA_INVALID");
                     }
                 }
-                let hard = ["allocate_authority", "integrate_govern"];
-                if hard.contains(&p["gate"].as_str().unwrap())
-                    && p["state"] == "not_applicable"
-                    && p.get("approval_ref").is_none()
-                {
-                    return Err("HARD_GATE_NOT_WAIVABLE");
+                if p["gate"] == "prove_reliability" {
+                    // SOP 8.1: independent repeated settlement; the assessor is not the proposer.
+                    let Some(prop) = canon_opt(&p["proposer"]) else {
+                        return Err("SCHEMA_INVALID");
+                    };
+                    if canon_opt(&p["assessor"]) == Some(prop) {
+                        return Err("SELF_SETTLEMENT_REFUSED");
+                    }
+                }
+                if p["state"] == "not_applicable" && p.get("approval_ref").is_none() {
+                    let hard = ["allocate_authority", "integrate_govern"];
+                    return Err(if hard.contains(&p["gate"].as_str().unwrap()) {
+                        "HARD_GATE_NOT_WAIVABLE"
+                    } else {
+                        "AUTHORITY_DENIED"
+                    });
                 }
                 Ok(())
             }
@@ -489,9 +510,13 @@ mod s2 {
                     "SELF_SETTLEMENT_REFUSED",
                     "SETTLEMENT_EXISTS",
                     "FREEZE_MISSING",
+                    "VERIFIER_CONTEXT_MISMATCH",
                 ],
             ),
-            ("field_case.revised", &["REVISION_CONFLICT"]),
+            (
+                "field_case.revised",
+                &["REVISION_CONFLICT", "RESERVED_DECISION_REFUSED"],
+            ),
             ("strategy.recorded", &["REVISION_CONFLICT"]),
             ("gate.assessed", &["HARD_GATE_NOT_WAIVABLE"]),
             ("disposition.recorded", &["AUTHORITY_DENIED"]),
@@ -508,6 +533,17 @@ mod s2 {
             }
         }
         for e in i["kinds"].as_object().unwrap().values() {
+            let have: Vec<&str> = e["refusal_codes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c.as_str().unwrap())
+                .collect();
+            if (e["closed_rule"] == "refuse" && !have.contains(&"CASE_CLOSED"))
+                || (e["suspended_rule"] != "accept" && !have.contains(&"CASE_SUSPENDED"))
+            {
+                return Err("REGISTRY_INCOMPLETE");
+            }
             if e["scope"] == "case"
                 && e["natural_key"]
                     .as_array()
@@ -533,6 +569,9 @@ mod s2 {
 
     /// `assign:<case>:<step>:<n>:<k>` -> (case, step, n, k)
     pub fn parse_assignment(s: &str) -> Option<(String, String, u64, u64)> {
+        if s.len() > 320 {
+            return None;
+        }
         let parts: Vec<&str> = s.strip_prefix("assign:")?.split(':').collect();
         if parts.len() != 4 {
             return None;
@@ -581,9 +620,14 @@ mod s2 {
         Ok(())
     }
 
-    /// Lifecycle of one assignment instance: the id and episode_ref never change; the
-    /// state machine is issued -> started -> (interrupted <-> resumed)* -> terminal.
-    pub fn assignment_sequence(events: &[Value]) -> Result<(), &'static str> {
+    /// Lifecycle of one assignment instance: the id and episode_ref never change; the state
+    /// machine is issued -> started -> (interrupted <-> resumed)* -> terminal; a resume after the
+    /// link expired and spend above a numeric limit are refused.
+    pub fn assignment_sequence(
+        events: &[Value],
+        link_expires_at: Option<&str>,
+        budget: Option<&Value>,
+    ) -> Result<(), &'static str> {
         let first = &events[0];
         let mut state: Option<&str> = None;
         for e in events {
@@ -607,6 +651,26 @@ mod s2 {
             if !ok {
                 return Err("ASSIGNMENT_TRANSITION_INVALID");
             }
+            if next == "resumed" && link_expires_at.is_some_and(|x| e["at"].as_str().unwrap() > x) {
+                return Err("ASSIGNMENT_LINK_EXPIRED");
+            }
+            if let Some(b) = budget {
+                for sp in e["spend"].as_array().unwrap() {
+                    let limit = b
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|x| x["currency"] == sp["currency"])
+                        .map(|x| &x["limit"]);
+                    if let (Some(spent), Some(limit)) =
+                        (sp["spent"].as_f64(), limit.and_then(|l| l.as_f64()))
+                    {
+                        if spent > limit {
+                            return Err("ASSIGNMENT_BUDGET_EXCEEDED");
+                        }
+                    }
+                }
+            }
             state = Some(next);
         }
         Ok(())
@@ -629,6 +693,9 @@ mod s2 {
             }
             "case_advance" if i["case_id"] != epr["case_id"] => Err("SCHEMA_INVALID"),
             "delegate" => {
+                if i["case_id"] != epr["case_id"] {
+                    return Err("SCHEMA_INVALID");
+                }
                 let Some(a) = i["assignment_id"].as_str() else {
                     return Err("SCHEMA_INVALID");
                 };
@@ -647,84 +714,141 @@ mod s2 {
         }
     }
 
-    /// The rule table of execution-episode-ref.v1 (README section 5) over one scenario.
+    fn close_check(case: &Value, terminal: bool) -> Result<(), &'static str> {
+        let closes = case["latest_case_disposition"]
+            .as_str()
+            .is_some_and(|d| d.starts_with("close-"));
+        if terminal && !closes {
+            Err("CLOSE_DISPOSITION_REQUIRED")
+        } else {
+            Ok(())
+        }
+    }
+
+    /// The rule table of execution-episode-ref.v1 (README section 7) over one scenario.
+    /// I-1 is evaluated on the server-resolved case and ledger, never on a caller tag.
     pub fn exec_gate(s: &Value) -> Result<(), &'static str> {
-        let req = &s["request"];
-        let verb = s["verb"].as_str().unwrap();
-        let case = &s["case"];
+        let (req, verb, case, extra) = (
+            &s["request"],
+            s["verb"].as_str().unwrap(),
+            &s["case"],
+            &s["extra"],
+        );
+        if case.is_null() {
+            return Err("CASE_UNRESOLVED"); // R9: fail closed
+        }
         if case["template_ref"] != "fde.field_case@1" {
             return Ok(()); // R9
+        }
+        if case["closed"] == true {
+            return Err("CASE_CLOSED"); // R13
         }
         if case["suspended"] == true {
             return Err("CASE_SUSPENDED"); // R6
         }
-        let executes = !(verb == "case_advance" && s["extra"]["advance_executes"] == false);
-        if verb == "case_advance"
-            && case["advance_reaches"] == "Completed"
-            && !case["latest_case_disposition"]
-                .as_str()
-                .is_some_and(|d| d.starts_with("close-"))
-        {
-            return Err("CLOSE_DISPOSITION_REQUIRED"); // R11
+        let terminal = extra["reaches_terminal"] == true || case["advance_reaches"] == "Completed";
+        if verb == "human_task_complete" {
+            return close_check(case, terminal); // R11
         }
-        if !executes {
-            return Ok(());
+        if verb == "case_advance" && !req["episode_ref"].is_object() {
+            // R14: a transition-only advance must say so per item, and never for an execution item.
+            let Some(items) = req["transition_items"].as_array() else {
+                return Err("FREEZE_MISSING");
+            };
+            let exec_items = extra["items_with_execution_step"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            if items.iter().any(|i| exec_items.contains(&i["item_id"])) {
+                return Err("TRANSITION_ONLY_INVALID");
+            }
+            return close_check(case, terminal);
         }
+        close_check(case, terminal)?; // R11 on every path, before any side effect
         let f = &s["freeze_state"];
-        let parts = [
+        let exists = [
             f["realitytrace"] == true,
             f["case_record"] == true,
-            f["anchor"] != "absent",
+            f["anchor"] == "verified",
         ];
-        if !req["episode_ref"].is_object() || parts.iter().all(|p| !p) {
+        let required = [true, true, f["anchor"] != "not_configured"];
+        if !req["episode_ref"].is_object() || exists.iter().all(|p| !p) {
             return Err("FREEZE_MISSING"); // R1, R2
         }
-        if !parts.iter().all(|p| *p) {
-            return Err("FREEZE_INCOMPLETE"); // R3
+        if exists.iter().zip(required).any(|(e, r)| r && !e) {
+            return Err("FREEZE_INCOMPLETE"); // R3, also the anchor-only state
         }
-        if f["anchor_publisher"] != "svc:case-keeper" {
+        if f["anchor"] == "verified" && f["anchor_publisher"] != "svc:case-keeper" {
             return Err("ANCHOR_PUBLISHER_INVALID"); // R4
         }
-        if req["episode_ref"]["kind"]
-            != f.get("kind")
-                .unwrap_or(&json!("evaluated"))
-                .as_str()
-                .unwrap()
-        {
+        let frozen_kind = f
+            .get("kind")
+            .and_then(|k| k.as_str())
+            .unwrap_or("evaluated");
+        if req["episode_ref"]["kind"] != frozen_kind {
             return Err("KIND_IMMUTABLE"); // R5
+        }
+        let n = req["episode_ref"]["n"].as_u64().unwrap();
+        if extra["latest_n"].as_u64().is_some_and(|l| l > n) {
+            return Err("EPISODE_SUPERSEDED"); // R12
+        }
+        if extra["episode_state"] == "settled" {
+            return Err("EPISODE_SETTLED"); // R12
         }
         exec_request(req)?;
         if matches!(
-            s["extra"]["authority_decision"].as_str(),
+            extra["authority_decision"].as_str(),
             Some("denied" | "absent")
         ) {
             return Err("AUTHORITY_DENIED"); // R7
         }
+        if let (Some(max), Some(used)) = (extra["max_runs"].as_u64(), extra["runs_used"].as_u64()) {
+            if used >= max {
+                return Err("AUTHORITY_DENIED"); // R7: exhausted
+            }
+        }
+        if extra["execution_differs_in"]
+            .as_array()
+            .is_some_and(|d| !d.is_empty())
+        {
+            return Err("AUTHORITY_DENIED"); // R7: not what the decision bound
+        }
         if let Some(a) = req["assignment_id"].as_str() {
             let k = parse_assignment(a).unwrap().3;
-            if s["extra"]["k_used"]
+            let used = extra["k_used"]
                 .as_array()
-                .is_some_and(|u| u.iter().any(|x| *x == k))
-            {
-                return Err("ASSIGNMENT_ID_INVALID"); // R10
+                .is_some_and(|u| u.iter().any(|x| *x == k));
+            if used {
+                let interrupted = extra["interrupted_assignments"]
+                    .as_array()
+                    .is_some_and(|u| u.iter().any(|x| x == a));
+                if !interrupted {
+                    return Err("ASSIGNMENT_ID_INVALID"); // R10: a new delegation needs a new k
+                }
+                if let (Some(exp), Some(now)) =
+                    (extra["link_expires_at"].as_str(), extra["now"].as_str())
+                {
+                    if now > exp {
+                        return Err("ASSIGNMENT_LINK_EXPIRED"); // R10: resume after expiry
+                    }
+                }
             }
         }
         Ok(())
     }
 
+    /// Link, run record and settlement checks (delegation-link.v1).
     pub fn link(i: &Value) -> Result<(), &'static str> {
-        if i.get("links").is_some() {
-            return settlement(
-                i["episode_ref"].as_str().unwrap(),
-                i["settling_principal"].as_str().unwrap(),
-                &i["links"],
-            );
+        if i.get("settling_principal").is_some() {
+            return settlement(i);
         }
         if i.get("delegator").is_none() {
             return Ok(());
         }
         let l = i;
-        if l["expires_at"].as_str() <= l["issued_at"].as_str() || l["delegator"] == l["delegate"] {
+        if l["expires_at"].as_str() <= l["issued_at"].as_str()
+            || canon_opt(&l["delegator"]) == canon_opt(&l["delegate"])
+        {
             return Err("DELEGATION_LINK_INVALID");
         }
         match (
@@ -740,38 +864,114 @@ mod s2 {
         }
     }
 
-    /// I-2 over the delegation links: refused when the settler executed, or delegated (directly or
-    /// through a chain of links) anyone who executed.
-    pub fn settlement(episode_ref: &str, settler: &str, links: &Value) -> Result<(), &'static str> {
-        let links = links.as_array().unwrap();
+    /// I-2 and the verifier-context rule. The executor set is every actor and on_behalf_of
+    /// principal of every executor run of the episode, plus the delegates of its links, plus the
+    /// transitive closure of their delegators. Fail closed on a run with no actor, a delegated run
+    /// with no link, or a link written after its run started.
+    pub fn settlement(i: &Value) -> Result<(), &'static str> {
+        let ep = &i["episode_ref"];
+        let (links, runs) = (
+            i["links"].as_array().unwrap(),
+            i["runs"].as_array().unwrap(),
+        );
         for l in links {
             link(l)?;
-            if l["episode_ref"] != episode_ref {
+            if &l["episode_ref"] != ep {
                 return Err("DELEGATION_LINK_INVALID");
             }
         }
-        let mut closure: Vec<&str> = links
-            .iter()
-            .map(|l| l["delegate"].as_str().unwrap())
-            .collect();
-        loop {
-            let before = closure.len();
-            for l in links {
-                if closure.contains(&l["delegate"].as_str().unwrap())
-                    && !closure.contains(&l["delegator"].as_str().unwrap())
+        for r in runs {
+            if &r["episode_ref"] != ep || r["actor"].is_null() {
+                return Err("DELEGATION_LINK_INVALID");
+            }
+            if r["delegated"] == true {
+                let Some(l) = links.iter().find(|l| l["link_id"] == r["link_id"]) else {
+                    return Err("DELEGATION_LINK_INVALID");
+                };
+                if canon_opt(&l["delegate"]) != canon_opt(&r["actor"])
+                    || l["issued_at"].as_str() > r["started_at"].as_str()
                 {
-                    closure.push(l["delegator"].as_str().unwrap());
+                    return Err("DELEGATION_LINK_INVALID");
                 }
             }
-            if closure.len() == before {
+        }
+        fn add(p: Option<String>, set: &mut Vec<String>) {
+            if let Some(p) = p {
+                if !set.contains(&p) {
+                    set.push(p);
+                }
+            }
+        }
+        let mut exec: Vec<String> = vec![];
+        for r in runs.iter().filter(|r| r["role"] == "executor") {
+            add(canon_opt(&r["actor"]), &mut exec);
+            add(canon_opt(&r["on_behalf_of"]), &mut exec);
+        }
+        for l in links {
+            let referencing: Vec<&Value> = runs
+                .iter()
+                .filter(|r| r["link_id"] == l["link_id"])
+                .collect();
+            let only_verifiers =
+                !referencing.is_empty() && referencing.iter().all(|r| r["role"] == "verifier");
+            if !only_verifiers {
+                add(canon_opt(&l["delegate"]), &mut exec);
+            }
+        }
+        loop {
+            let before = exec.len();
+            for l in links {
+                if exec.contains(&canon(l["delegate"].as_str().unwrap())) {
+                    add(canon_opt(&l["delegator"]), &mut exec);
+                }
+            }
+            if exec.len() == before {
                 break;
             }
         }
-        if closure.contains(&settler) {
-            Err("SELF_SETTLEMENT_REFUSED")
-        } else {
-            Ok(())
+        let settler = canon(i["settling_principal"].as_str().unwrap());
+        if exec.contains(&settler) {
+            return Err("SELF_SETTLEMENT_REFUSED");
         }
+        // Verifier context is derived from run records, never asserted.
+        let exec_ws: Vec<&str> = runs
+            .iter()
+            .filter(|r| r["role"] == "executor")
+            .map(|r| r["workspace_ref"].as_str().unwrap())
+            .collect();
+        let vruns: Vec<&Value> = runs
+            .iter()
+            .filter(|r| r["role"] == "verifier" && canon_opt(&r["actor"]) == Some(settler.clone()))
+            .collect();
+        let derived = if vruns
+            .iter()
+            .any(|r| !exec_ws.contains(&r["workspace_ref"].as_str().unwrap()))
+        {
+            "fresh"
+        } else if !vruns.is_empty() {
+            "shared"
+        } else {
+            "unknown"
+        };
+        if i["declared_verifier_context"] != derived {
+            return Err("VERIFIER_CONTEXT_MISMATCH");
+        }
+        let root_of = |p: &str| {
+            let mut p = p.to_string();
+            while let Some(l) = links
+                .iter()
+                .find(|l| canon(l["delegate"].as_str().unwrap()) == p)
+            {
+                p = canon(l["delegator"].as_str().unwrap());
+            }
+            p
+        };
+        let roots: Vec<String> = exec.iter().map(|e| root_of(e)).collect();
+        let sibling = canon_opt(&i["settler_root"]).is_some_and(|r| roots.contains(&r));
+        if sibling && matches!(i["result"].as_str(), Some("S" | "F")) && derived != "fresh" {
+            return Err("VERIFIER_CONTEXT_MISMATCH");
+        }
+        Ok(())
     }
 
     pub fn continuation(i: &Value) -> Result<(), &'static str> {
@@ -827,6 +1027,51 @@ mod s2 {
         {
             return Err("CONTINUATION_INVALID");
         }
+        // Unknown vs empty (M2): [] never means "source unreachable".
+        let av = &i["availability"];
+        for k in ["case", "pinned_world", "gate_evidence", "episodes", "next"] {
+            if av[k] != "known" {
+                return Err("CONTINUATION_INVALID");
+            }
+        }
+        let empty = |v: &Value| v.as_array().is_some_and(|a| a.is_empty());
+        if i["computed_from"]["realitytrace_snapshot"].is_null()
+            && (av["latest_observations"] != "unknown" || av["disputed_claims"] != "unknown")
+        {
+            return Err("CONTINUATION_INVALID");
+        }
+        if av["disputed_claims"] == "unknown" && !empty(&i["disputed_claims"]) {
+            return Err("CONTINUATION_INVALID");
+        }
+        let lo = &i["latest_observations"];
+        if av["latest_observations"] == "unknown"
+            && !(empty(&lo["observations"])
+                && empty(&lo["unknown_evidence"])
+                && empty(&lo["contradictory_evidence"]))
+        {
+            return Err("CONTINUATION_INVALID");
+        }
+        let a = &i["authority"];
+        if av["authority"] == "unknown"
+            && !(empty(&a["pending_approvals"])
+                && empty(&a["decisions"])
+                && a["a3_channel"] == "unknown")
+        {
+            return Err("CONTINUATION_INVALID");
+        }
+        let w = &i["work"];
+        if av["work"] == "unknown"
+            && !(empty(&w["active_assignments"])
+                && empty(&w["artifact_locations"])
+                && empty(&w["verified_commands"])
+                && w["remaining_budgets"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|b| b["remaining"] == "unknown"))
+        {
+            return Err("CONTINUATION_INVALID");
+        }
         Ok(())
     }
 
@@ -835,10 +1080,10 @@ mod s2 {
     }
 
     pub fn reserved(i: &Value) -> Result<(), &'static str> {
-        if i.get("canonical_operation").is_some() {
-            if operation_digest(&i["canonical_operation"])
-                != i["operation_digest"].as_str().unwrap()
-                || i["canonical_operation"]["operation"] != i["operation"]
+        if let Some(co) = i.get("canonical_operation") {
+            if operation_digest(co) != i["operation_digest"].as_str().unwrap()
+                || co["operation"] != i["operation"]
+                || co["case_id"] != i["case_id"]
             {
                 return Err("RESERVED_DIGEST_MISMATCH");
             }
@@ -847,11 +1092,9 @@ mod s2 {
             }
         }
         if i.get("binds_digest").is_some() {
-            let epr = parse_episode_ref(i["episode_ref"].as_str().unwrap()).unwrap();
-            let want = body_digest(&json!({
-                "episode_ref": i["episode_ref"], "patch_sha256": i["patch_sha256"], "command": i["command"]
-            }));
-            if want != i["binds_digest"].as_str().unwrap()
+            let ex = &i["execution"];
+            let epr = parse_episode_ref(ex["episode_ref"].as_str().unwrap()).unwrap();
+            if body_digest(ex) != i["binds_digest"].as_str().unwrap()
                 || epr.0 != i["case_id"].as_str().unwrap()
             {
                 return Err("RESERVED_DIGEST_MISMATCH");
@@ -859,9 +1102,18 @@ mod s2 {
             if i["expires_at"].as_str() <= i["decided_at"].as_str() {
                 return Err("RESERVED_EXPIRED");
             }
+            if i["runs_used"].as_u64() > i["max_runs"].as_u64() {
+                return Err("AUTHORITY_DENIED");
+            }
         }
-        if i.get("operations").is_some() {
-            let ops: Vec<&str> = i["operations"]
+        if i.get("used_by").is_some()
+            && i.get("approval_ref").is_some()
+            && i["expires_at"].as_str() <= i["issued_at"].as_str()
+        {
+            return Err("RESERVED_EXPIRED");
+        }
+        if let Some(ops) = i.get("operations") {
+            let ops: Vec<&str> = ops
                 .as_array()
                 .unwrap()
                 .iter()
@@ -914,6 +1166,69 @@ mod s2 {
             return Err("AUTHORITY_DENIED");
         }
         Ok(class.into())
+    }
+
+    /// AUTHORITY_DENIED for a record resting on an approval (review H3): the approval's digest must
+    /// equal the digest of the canonical operation built from THIS record, the record_digest must
+    /// cover this payload without approval_ref, the case must match, and the approval must be
+    /// allowed and unused.
+    pub fn approval_ok(s: &Value) -> Result<(), &'static str> {
+        let (op, ap, payload) = (
+            &s["record_operation"],
+            &s["approval"],
+            &s["request"]["payload"],
+        );
+        let mut p = payload.clone();
+        p.as_object_mut().unwrap().remove("approval_ref");
+        if body_digest(op) != ap["operation_digest"].as_str().unwrap()
+            || op["params"]["record_digest"] != body_digest(&p)
+            || op["case_id"] != ap["case_id"]
+            || !ap["used_by"].is_null()
+            || ap["outcome"] != "allow"
+        {
+            return Err("AUTHORITY_DENIED");
+        }
+        Ok(())
+    }
+
+    /// CASE_CLOSED / CASE_SUSPENDED over a ledger and a request (registry rules).
+    pub fn lifecycle_gate(ledger: &Value, req: &Value) -> Option<&'static str> {
+        let mut state = "open";
+        for e in ledger.as_array().unwrap() {
+            if e["kind"] == "disposition.recorded" && e["level"] == "case" {
+                let d = e["disposition"].as_str().unwrap();
+                if state == "closed" {
+                    continue;
+                }
+                state = if d.starts_with("close-") {
+                    "closed"
+                } else if d == "suspend" {
+                    "suspended"
+                } else {
+                    "open"
+                };
+            }
+        }
+        let kind = req["kind"].as_str().unwrap();
+        match (state, kind) {
+            (
+                "closed",
+                "episode.frozen"
+                | "gate.assessed"
+                | "field_case.revised"
+                | "strategy.recorded"
+                | "disposition.recorded",
+            ) => Some("CASE_CLOSED"),
+            ("suspended", "episode.frozen" | "episode.settled") => Some("CASE_SUSPENDED"),
+            ("suspended", "disposition.recorded") => {
+                let p = &req["payload"];
+                let lifts_or_closes = p["level"] == "case"
+                    && (p["disposition"] == "continue"
+                        || p["disposition"].as_str().unwrap().starts_with("close-"));
+                (!lifts_or_closes).then_some("CASE_SUSPENDED")
+            }
+            _ => None,
+        }
     }
 }
 
@@ -975,6 +1290,15 @@ fn reserved_operation_fixtures() {
     run_contract("reserved-operation", 10, 25);
 }
 
+fn registry_paths() -> Vec<String> {
+    fixture("case-record-kinds", "valid", "registry.json")["reserved_paths_after_freeze"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p.as_str().unwrap().to_string())
+        .collect()
+}
+
 #[test]
 fn append_v2_scenarios_validate_and_exercise_every_v2_code() {
     let m = manifest("case-record-append-v2");
@@ -982,6 +1306,7 @@ fn append_v2_scenarios_validate_and_exercise_every_v2_code() {
         m["schema"].as_str().unwrap(),
         "urn:sea-forge:fde:case-record-append:v1",
     );
+    let reserved = registry_paths();
     let mut seen: Vec<String> = vec![];
     for (name, s) in files("case-record-append-v2", "scenarios", "scenarios") {
         let v1 = s["dialect"] == "v1";
@@ -992,41 +1317,153 @@ fn append_v2_scenarios_validate_and_exercise_every_v2_code() {
             "{name}: request"
         );
         let expect = &s["expect"];
-        if expect["outcome"] == "refused" {
+        // H1: the contract marker selects the dialect only; a v1 writer is never accepted where a v2 writer is refused.
+        if v1 {
             assert_eq!(
-                errors(&validator(sid, Some("Error")), expect),
-                vec![],
-                "{name}: expect"
+                expect["outcome"], "refused",
+                "{name}: a v1 writer must still be refused"
             );
+        }
+        // Rules over the ledger and request (M3, D8, M5, M6, H1, H2, H3).
+        let mut got: Option<&str> = s2::lifecycle_gate(&s["ledger_before"], &s["request"]);
+        let has_frozen = s["ledger_before"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["kind"] == "episode.frozen");
+        if got.is_none()
+            && s["request"]["kind"] == "field_case.revised"
+            && has_frozen
+            && s["request"]["payload"].get("approval_ref").is_none()
+        {
+            let touches = s["request"]["payload"]["changes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|c| reserved.contains(&c["path"].as_str().unwrap().to_string()));
+            if touches {
+                got = Some("RESERVED_DECISION_REFUSED");
+            }
+        }
+        if got.is_none() {
+            if let Some(ac) = s.get("anchor_config") {
+                if ac["publisher"] != ac["case_keeper_identity"] {
+                    got = Some("ANCHOR_PUBLISHER_INVALID");
+                    assert!(
+                        s["ledger_after"].as_str().unwrap().contains("unchanged"),
+                        "{name}: a bad anchor must not burn the key"
+                    );
+                }
+            }
+        }
+        if got.is_none() && s.get("approval").is_some() {
+            if let Err(c) = s2::approval_ok(&s) {
+                got = Some(c);
+            }
+        }
+        if got.is_none()
+            && s["principal_kind"] == "human"
+            && s["request"]["kind"] == "episode.settled"
+            && s["approval_found"] == false
+        {
+            got = Some("AUTHORITY_DENIED");
+        }
+        if got.is_none() && s.get("declared_verifier_context").is_some() {
+            let (decl, der) = (
+                s["declared_verifier_context"].as_str().unwrap(),
+                s["derived_verifier_context"].as_str().unwrap(),
+            );
+            let sib = s["shares_root_with_executor"] == true;
+            let sf = matches!(s["request"]["payload"]["result"].as_str(), Some("S" | "F"));
+            if decl != der || (sib && sf && der != "fresh") {
+                got = Some("VERIFIER_CONTEXT_MISMATCH");
+            }
+        }
+        if expect["outcome"] == "refused" {
             let code = expect["code"].as_str().unwrap();
             if !v1 {
+                assert_eq!(
+                    errors(&validator(sid, Some("Error")), expect),
+                    vec![],
+                    "{name}: expect"
+                );
                 seen.push(code.to_string());
+            } else {
+                assert_eq!(
+                    errors(&validator(sid, Some("Error")), expect),
+                    vec![],
+                    "{name}: expect (v1 dialect)"
+                );
+                assert!(
+                    expect["message"].as_str().unwrap().contains(':')
+                        || code == "FREEZE_KEY_EXISTS",
+                    "{name}: a v1 fallback carries the v2 code in its message"
+                );
             }
-            // The semantic rules a scenario's request can already show.
+            let wanted_by_rules = [
+                "CASE_CLOSED",
+                "CASE_SUSPENDED",
+                "RESERVED_DECISION_REFUSED",
+                "VERIFIER_CONTEXT_MISMATCH",
+                "ANCHOR_PUBLISHER_INVALID",
+                "AUTHORITY_DENIED",
+            ];
+            let v2code = if v1 {
+                expect["message"]
+                    .as_str()
+                    .unwrap()
+                    .split(':')
+                    .next()
+                    .unwrap()
+            } else {
+                code
+            };
+            let _ = wanted_by_rules;
+            let expects_rule = ["CASE_CLOSED", "CASE_SUSPENDED", "RESERVED_DECISION_REFUSED"]
+                .contains(&v2code)
+                || (v2code == "AUTHORITY_DENIED"
+                    && (s.get("approval").is_some() || s.get("approval_found").is_some()))
+                || (v2code == "VERIFIER_CONTEXT_MISMATCH"
+                    && s.get("declared_verifier_context").is_some())
+                || (v2code == "ANCHOR_PUBLISHER_INVALID" && s.get("anchor_config").is_some());
+            if expects_rule {
+                assert_eq!(
+                    got,
+                    Some(v2code),
+                    "{name}: rules over the scenario give another answer"
+                );
+            }
             let sem = semantic("case-record-append-v2", &s["request"]);
-            if ["REFERENCE_DERIVED_FROM_RESULT", "HARD_GATE_NOT_WAIVABLE"].contains(&code) {
-                assert_eq!(sem, Err(code), "{name}");
+            if ["REFERENCE_DERIVED_FROM_RESULT", "HARD_GATE_NOT_WAIVABLE"].contains(&v2code) {
+                assert_eq!(sem, Err(v2code), "{name}");
             } else {
                 assert_eq!(sem, Ok(()), "{name}");
             }
-            if code == "PAYLOAD_TOO_LARGE" {
+            if v2code == "PAYLOAD_TOO_LARGE" {
                 assert!(
                     s["transport"]["encoded_bytes"].as_u64().unwrap() > 1_048_576,
                     "{name}"
                 );
             }
-            if v1 {
-                assert!(
-                    s["expect"]["message"].as_str().unwrap().contains(':')
-                        || code == "FREEZE_KEY_EXISTS",
-                    "{name}: a v1 fallback carries the v2 code in its message"
-                );
-            }
         } else {
             assert_eq!(
-                errors(&validator(sid, Some("Response")), expect),
+                errors(
+                    &validator(
+                        if s["dialect"] == "v1-accepted" {
+                            id
+                        } else {
+                            sid
+                        },
+                        Some("Response")
+                    ),
+                    expect
+                ),
                 vec![],
                 "{name}: expect"
+            );
+            assert_eq!(
+                got, None,
+                "{name}: a rule over the scenario refuses what the scenario accepts"
             );
         }
     }
@@ -1043,10 +1480,13 @@ fn append_v2_scenarios_validate_and_exercise_every_v2_code() {
         "PAYLOAD_TOO_LARGE",
         "HARD_GATE_NOT_WAIVABLE",
         "CASE_SUSPENDED",
+        "CASE_CLOSED",
         "REVISION_CONFLICT",
         "SELF_SETTLEMENT_REFUSED",
         "FREEZE_MISSING",
         "FREEZE_KEY_EXISTS",
+        "VERIFIER_CONTEXT_MISMATCH",
+        "RESERVED_DECISION_REFUSED",
     ];
     for code in v2_only {
         assert!(
@@ -1080,7 +1520,60 @@ fn v2_error_enum_is_the_v1_enum_plus_the_new_codes() {
         &v1[..],
         "v1 codes keep their order at the head"
     );
-    assert_eq!(v2.len() - v1.len(), 12);
+    assert_eq!(v2.len() - v1.len(), 15);
+}
+
+#[test]
+fn no_v2_refusal_becomes_an_acceptance_for_a_v1_writer() {
+    // H1: oracle-codes.json says, per code, what a v1 writer receives. Only codes that need a v2-only
+    // kind may be unreachable; every other v2-only code has a fallback that is itself a v1 refusal.
+    let m = read(&dir().join("oracle-codes.json"));
+    let v1: Vec<String> = schemas()["urn:sea-forge:fde:case-record-append:v1"]["$defs"]["Error"]
+        ["properties"]["code"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c.as_str().unwrap().to_string())
+        .collect();
+    let v2_kind_only = [
+        "HARD_GATE_NOT_WAIVABLE",
+        "REVISION_CONFLICT",
+        "RESERVED_DECISION_REFUSED",
+    ];
+    for e in m["codes"].as_array().unwrap() {
+        let code = e["code"].as_str().unwrap();
+        let w = e["v1_writers"].as_str().unwrap();
+        if e["home"]
+            .as_str()
+            .unwrap()
+            .starts_with("case-record-append.v2")
+            && !v1.contains(&code.to_string())
+        {
+            if let Some(f) = w.strip_prefix("fallback:") {
+                assert!(
+                    v1.contains(&f.to_string()),
+                    "{code}: fallback {f} is not a v1 refusal code"
+                );
+            } else if w.starts_with("unreachable") {
+                assert!(
+                    v2_kind_only.contains(&code),
+                    "{code}: only codes raised by v2-only kinds may be unreachable for v1 writers"
+                );
+            } else {
+                assert!(w.starts_with("sfwp_error_frame"), "{code}: {w}");
+            }
+        }
+    }
+    let ad = m["codes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["code"] == "AUTHORITY_DENIED")
+        .unwrap();
+    assert!(
+        ad["v1_writers"].as_str().unwrap().starts_with("fallback:"),
+        "AUTHORITY_DENIED must reach a v1 writer as a refusal"
+    );
 }
 
 #[test]
@@ -1111,7 +1604,6 @@ fn the_registry_matches_the_v2_request_and_error_schemas() {
         let target = &all[e["payload_schema"]["schema"].as_str().unwrap()]["$defs"]
             [e["payload_schema"]["def"].as_str().unwrap()];
         assert!(target.is_object(), "{k}: payload schema does not resolve");
-        // each kind's Request branch references exactly this payload def
         let reference = format!(
             "{}#/$defs/{}",
             e["payload_schema"]["schema"].as_str().unwrap(),
@@ -1141,11 +1633,19 @@ fn the_registry_matches_the_v2_request_and_error_schemas() {
             "{k}"
         );
     }
+    // M5: the read-only boundary paths exist in field-case.v1 and each is revisable only through the reserved operation.
+    let fc = &all["urn:sea-forge:fde:field-case:v1"]["properties"]["fields"]["properties"];
+    for p in registry_paths() {
+        let (g, f) = p.split_once('.').unwrap();
+        assert!(
+            fc[g]["properties"][f].is_object(),
+            "{p} is not a field-case.v1 path"
+        );
+    }
 }
 
 #[test]
 fn field_case_paths_are_the_revision_paths() {
-    // run again the script check, which compares the schema with SOP 4.2 and the model
     let out = Command::new("sh")
         .arg(
             Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1211,7 +1711,7 @@ fn assignment_lifecycles_follow_the_rules() {
                 "{name}"
             );
         }
-        let got = s2::assignment_sequence(events);
+        let got = s2::assignment_sequence(events, s["link_expires_at"].as_str(), s.get("budget"));
         match s["expect"]["outcome"].as_str().unwrap() {
             "ok" => assert_eq!(got, Ok(()), "{name}"),
             _ => {
@@ -1224,11 +1724,22 @@ fn assignment_lifecycles_follow_the_rules() {
         "ASSIGNMENT_ID_INVALID",
         "ASSIGNMENT_EPISODE_CHANGED",
         "ASSIGNMENT_TRANSITION_INVALID",
+        "ASSIGNMENT_LINK_EXPIRED",
+        "ASSIGNMENT_BUDGET_EXCEEDED",
     ] {
         assert!(
             codes.iter().any(|x| x == c),
             "no lifecycle scenario for {c}"
         );
+    }
+}
+
+fn exec_def(verb: &str) -> &'static str {
+    match verb {
+        "item_execute" => "ItemExecuteRequest",
+        "case_advance" => "CaseAdvanceRequest",
+        "human_task_complete" => "HumanTaskCompleteRequest",
+        _ => "DelegateRequest",
     }
 }
 
@@ -1238,13 +1749,9 @@ fn the_execution_gate_rule_table_gives_each_scenario_its_answer() {
     let mut rules = std::collections::BTreeSet::new();
     let mut verbs_refused = std::collections::BTreeSet::new();
     for (name, s) in files("execution-episode-ref", "scenarios", "scenarios") {
-        let def = match s["verb"].as_str().unwrap() {
-            "item_execute" => "ItemExecuteRequest",
-            "case_advance" => "CaseAdvanceRequest",
-            _ => "DelegateRequest",
-        };
+        let verb = s["verb"].as_str().unwrap();
         assert_eq!(
-            errors(&validator(id, Some(def)), &s["request"]),
+            errors(&validator(id, Some(exec_def(verb))), &s["request"]),
             vec![],
             "{name}: request"
         );
@@ -1258,15 +1765,11 @@ fn the_execution_gate_rule_table_gives_each_scenario_its_answer() {
                 "{name}: expect"
             );
             assert_eq!(got, Err(s["expect"]["code"].as_str().unwrap()), "{name}");
-            verbs_refused.insert(format!(
-                "{}:{}",
-                s["verb"].as_str().unwrap(),
-                s["expect"]["code"].as_str().unwrap()
-            ));
+            verbs_refused.insert(format!("{verb}:{}", s["expect"]["code"].as_str().unwrap()));
         }
         rules.insert(s["rule"].as_str().unwrap().to_string());
     }
-    for r in (1..=11).map(|n| format!("R{n}")) {
+    for r in (1..=14).map(|n| format!("R{n}")) {
         assert!(rules.contains(&r), "no scenario for rule {r}");
     }
     for verb in ["item_execute", "case_advance", "delegate"] {
@@ -1275,8 +1778,12 @@ fn the_execution_gate_rule_table_gives_each_scenario_its_answer() {
             "FREEZE_INCOMPLETE",
             "KIND_IMMUTABLE",
             "CASE_SUSPENDED",
+            "CASE_CLOSED",
             "AUTHORITY_DENIED",
             "ANCHOR_PUBLISHER_INVALID",
+            "EPISODE_SUPERSEDED",
+            "EPISODE_SETTLED",
+            "CLOSE_DISPOSITION_REQUIRED",
         ] {
             assert!(
                 verbs_refused.contains(&format!("{verb}:{code}")),
@@ -1284,6 +1791,43 @@ fn the_execution_gate_rule_table_gives_each_scenario_its_answer() {
             );
         }
     }
+    for code in [
+        "CASE_UNRESOLVED",
+        "TRANSITION_ONLY_INVALID",
+        "ASSIGNMENT_LINK_EXPIRED",
+        "ASSIGNMENT_ID_INVALID",
+    ] {
+        assert!(
+            verbs_refused.iter().any(|v| v.ends_with(code)),
+            "no scenario for {code}"
+        );
+    }
+    assert!(verbs_refused.contains("human_task_complete:CLOSE_DISPOSITION_REQUIRED"));
+}
+
+#[test]
+fn a_delegate_is_bound_to_its_case_so_it_cannot_pass_as_a_plain_one() {
+    // C1: two delegates that differ only by the field that makes them Field Case delegates.
+    let plain = fixture(
+        "execution-episode-ref",
+        "valid",
+        "delegate-without-episode-ref.json",
+    );
+    assert!(
+        plain.get("case_id").is_some(),
+        "a delegate carries the case it belongs to"
+    );
+    let (mut fc, mut other) = (None, None);
+    for (name, s) in files("execution-episode-ref", "scenarios", "scenarios") {
+        if name == "delegate-field-case-no-episode-ref.json" {
+            fc = Some(s2::exec_gate(&s));
+        }
+        if name == "delegate-non-field-case-unaffected.json" {
+            other = Some(s2::exec_gate(&s));
+        }
+    }
+    assert_eq!(fc, Some(Err("FREEZE_MISSING")));
+    assert_eq!(other, Some(Ok(())));
 }
 
 #[test]
@@ -1296,13 +1840,8 @@ fn execution_frames_cover_the_three_verbs_with_and_without_the_field() {
             "{name}: goldens are captured by WP-21"
         );
         let verb = f["verb"].as_str().unwrap();
-        let def = match verb {
-            "item_execute" => "ItemExecuteRequest",
-            "case_advance" => "CaseAdvanceRequest",
-            _ => "DelegateRequest",
-        };
         assert_eq!(
-            errors(&validator(id, Some(def)), &f["request"]),
+            errors(&validator(id, Some(exec_def(verb))), &f["request"]),
             vec![],
             "{name}"
         );
@@ -1361,24 +1900,38 @@ fn read_verb_frames_validate() {
 
 #[test]
 fn delegation_link_scenarios_follow_i2() {
+    let id = "urn:sea-forge:fde:delegation-link:v1";
+    let mut codes = vec![];
     for (name, s) in files("delegation-link", "scenarios", "scenarios") {
-        let ep = s["links"][0]["episode_ref"].as_str().unwrap();
-        let got = s2::settlement(ep, s["settling_principal"].as_str().unwrap(), &s["links"]);
+        assert_eq!(
+            errors(&validator(id, Some("Settlement")), &s["settlement"]),
+            vec![],
+            "{name}"
+        );
+        let got = s2::settlement(&s["settlement"]);
         match s["expect"]["outcome"].as_str().unwrap() {
             "ok" => assert_eq!(got, Ok(()), "{name}"),
             _ => {
-                assert_eq!(got, Err("SELF_SETTLEMENT_REFUSED"), "{name}");
+                let code = s["expect"]["code"].as_str().unwrap();
+                assert_eq!(got, Err(code), "{name}");
                 assert_eq!(
                     errors(
-                        &validator("urn:sea-forge:fde:delegation-link:v1", Some("Error")),
-                        &json!({
-                    "outcome": "refused", "code": s["expect"]["code"], "message": "m", "invariant": s["expect"]["invariant"]})
+                        &validator(id, Some("Error")),
+                        &json!({"outcome": "refused", "code": code, "message": "m", "invariant": s["expect"]["invariant"]})
                     ),
                     vec![],
                     "{name}"
                 );
+                codes.push(code.to_string());
             }
         }
+    }
+    for c in [
+        "SELF_SETTLEMENT_REFUSED",
+        "DELEGATION_LINK_INVALID",
+        "VERIFIER_CONTEXT_MISMATCH",
+    ] {
+        assert!(codes.iter().any(|x| x == c), "no link scenario for {c}");
     }
 }
 
@@ -1438,7 +1991,40 @@ fn reserved_decision_scenarios_follow_the_rules() {
 }
 
 #[test]
-fn the_program_execution_decision_binds_episode_patch_and_command() {
+fn the_reserved_table_follows_the_owner_decision_on_classes() {
+    // D23: case-level close dispositions and every hard-gate waiver are P3 (A3-T never); episode-level P2.
+    let t = fixture("reserved-operation", "valid", "operation-table.json");
+    let row = |op: &str| {
+        t["operations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["operation"] == op)
+            .unwrap()
+            .clone()
+    };
+    for op in [
+        "set_case_close_disposition",
+        "set_hard_gate_not_applicable",
+        "promote_world",
+    ] {
+        assert_eq!(
+            (row(op)["class"].as_str(), row(op)["a3_t"].as_str()),
+            (Some("P3"), Some("never")),
+            "{op}"
+        );
+    }
+    assert_eq!(row("set_episode_disposition")["class"], "P2");
+    // H4: agent settlement is not reserved and needs no A3; human settlement is reserved.
+    assert_eq!(row("settle_episode_agent")["reserved"], false);
+    assert_eq!(row("settle_episode_human")["reserved"], true);
+    for alt in row("settle_episode_agent")["evidence"].as_array().unwrap() {
+        assert!(!alt.as_array().unwrap().iter().any(|e| e == "a3_proof"));
+    }
+}
+
+#[test]
+fn the_program_execution_decision_binds_the_whole_execution() {
     let d = fixture(
         "reserved-operation",
         "valid",
@@ -1447,16 +2033,28 @@ fn the_program_execution_decision_binds_episode_patch_and_command() {
     assert_eq!(semantic("reserved-operation", &d), Ok(()));
     for (field, other) in [
         ("patch_sha256", json!("cd".repeat(32))),
-        ("command", json!({"argv": ["x"]})),
+        ("argv", json!(["x"])),
+        ("cwd", json!("/elsewhere")),
+        ("env_digest", json!("ee".repeat(32))),
+        ("workspace_ref", json!("ws:other")),
+        ("sandbox_profile", json!("host")),
+        (
+            "world_ref",
+            json!(format!("world:godspeed-fde-sop@sha256:{}", "ab".repeat(32))),
+        ),
+        ("timeout_s", json!(99999)),
     ] {
         let mut m = d.clone();
-        m[field] = other;
+        m["execution"][field] = other;
         assert_eq!(
             semantic("reserved-operation", &m),
             Err("RESERVED_DIGEST_MISMATCH"),
             "{field}"
         );
     }
+    let mut m = d.clone();
+    m["runs_used"] = json!(2);
+    assert_eq!(semantic("reserved-operation", &m), Err("AUTHORITY_DENIED"));
 }
 
 #[test]
@@ -1497,7 +2095,10 @@ fn independent_observation_events_come_from_sea_forge_emitters() {
             "{}",
             e["file"]
         );
-        assert_eq!(ev["context"]["episode_ref"], decision["episode_ref"]);
+        assert_eq!(
+            ev["context"]["episode_ref"],
+            decision["execution"]["episode_ref"]
+        );
         let system = ev["source"]["system"].as_str().unwrap();
         assert_eq!(system, e["emitter"].as_str().unwrap());
         if e["independent_of_executor"] == true {
@@ -1510,4 +2111,44 @@ fn independent_observation_events_come_from_sea_forge_emitters() {
         }
     }
     assert!(independent >= 2 && executor_only == 1);
+}
+
+#[test]
+fn every_s2_string_and_array_is_bounded() {
+    // LOW: maxLength on strings, maxItems on arrays, in every S2 schema (free-form objects and
+    // `value` of a field are the documented exceptions).
+    fn walk(v: &Value, path: &str, bad: &mut Vec<String>) {
+        if let Some(o) = v.as_object() {
+            let t = o.get("type").unwrap_or(&Value::Null);
+            let has = |ty: &str| t == ty || t.as_array().is_some_and(|a| a.iter().any(|x| x == ty));
+            if has("array") && !o.contains_key("maxItems") {
+                bad.push(format!("{path}: array without maxItems"));
+            }
+            if has("string")
+                && !(o.contains_key("maxLength")
+                    || o.contains_key("enum")
+                    || o.contains_key("const"))
+            {
+                bad.push(format!("{path}: string without maxLength"));
+            }
+            for (k, c) in o {
+                walk(c, &format!("{path}/{k}"), bad);
+            }
+        } else if let Some(a) = v.as_array() {
+            for (n, c) in a.iter().enumerate() {
+                walk(c, &format!("{path}/{n}"), bad);
+            }
+        }
+    }
+    let mut bad = vec![];
+    for (id, s) in schemas() {
+        let v1 = id.ends_with(":v1")
+            && ["frozen-reference", "anchor", "case-record-append"]
+                .iter()
+                .any(|n| id.contains(n));
+        if !v1 {
+            walk(&s, &id, &mut bad);
+        }
+    }
+    assert!(bad.is_empty(), "{bad:?}");
 }

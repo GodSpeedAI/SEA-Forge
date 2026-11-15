@@ -2,6 +2,33 @@
 
 The v1 files (`frozen-reference`, `anchor`, `case-record-append`) are closed and digest-pinned. A change is a new file and a new `DIGESTS` line. Newest first.
 
+## S2 review fixes (independent review of d2f8189e..6c633811; contracts only, edited in place)
+
+The S2 contracts were not yet consumed, so they are changed in place and re-pinned in `DIGESTS`. v1 files unchanged.
+
+| Finding | Change | Contract(s) |
+|---|---|---|
+| C1 | `delegate` has a required `case_id`; the case template is resolved by the server; `CASE_UNRESOLVED` fails closed; I-1 is checked on the server-resolved identity | execution-episode-ref |
+| C2 | executor set = actor and on_behalf_of of every executor run, link delegates and the delegator closure; `RunRecord`; link written before the run; run with no actor or delegated run with no link refuses settlement | delegation-link |
+| H1 | the `contract` marker selects the response dialect only; every v2-only code has a refusal fallback (`AUTHORITY_DENIED` included); test that no v1-dialect scenario is accepted | case-record-append.v2, oracle-codes |
+| H2 | verifier context derived from run records; `VERIFIER_CONTEXT_MISMATCH`; sibling cannot settle S or F without derived `fresh` | delegation-link, case-record-append.v2 |
+| H3 | per-operation required `params` with `record_digest` in the digest; `ApprovalRecord`; single-use, same case, digest-bound approvals | reserved-operation, case-record-append.v2 |
+| H4 | `settle_episode` split into `settle_episode_agent` (not reserved) and `settle_episode_human` (reserved) | reserved-operation |
+| H5 | program decision binds the nine-member execution object; `max_runs` and `runs_used` | reserved-operation |
+| H6 | R12: `EPISODE_SUPERSEDED`, `EPISODE_SETTLED` | execution-episode-ref |
+| H7 | `transition_items` with `transition_only: true`; `TRANSITION_ONLY_INVALID`; `CLOSE_DISPOSITION_REQUIRED` on every terminal path; `HumanTaskCompleteRequest` | execution-episode-ref |
+| M1 | read verbs: `actor` required, `AUTHORITY_DENIED`, unknown-case answer for unauthorized callers, `pending_id` only to case lead and approver | continuation |
+| M2 | per-section `availability`; `allow`/`deny` spelling | continuation, reserved-operation |
+| M3 | `CASE_CLOSED`; closed is final; registry `suspended_rule` and `closed_rule` | case-record-append.v2, case-record-kinds |
+| M4 | `REFERENCE_DERIVED_FROM_RESULT` documented as best-effort | README |
+| M5 | pin source named (world pin record); read-only boundary paths, `revise_frozen_boundary_field` | case-record-kinds, case-record-append.v2, reserved-operation |
+| M6 | anchor publisher checked at freeze when configured | case-record-append.v2 |
+| M7 | gateway actor and on-behalf-of recorded; canonical actor comparison | delegation-link |
+| M8 | one definition of `FREEZE_MISSING` and `FREEZE_INCOMPLETE`; anchor-only fixture | README, execution-episode-ref |
+| M9 | resume versus new `k`; resume after link expiry; id length; `ASSIGNMENT_BUDGET_EXCEEDED`; `unit` enum per currency | assignment, execution-episode-ref |
+| LOW | `maxLength`, `maxItems` everywhere; non-hard `not_applicable` needs an approval; `observed` cannot cite operator or SOP | all S2 |
+| Owner D23, D12, D8 | P3 for case-level close dispositions and hard-gate waivers; `assessor` back in the payload; suspended case refuses settlement and new dispositions except lift or close | reserved-operation, case-record-append.v2 |
+
 ## S2: WP-20 contracts package (contracts only; no server behaviour changed)
 
 New files. No v1 byte changed.
@@ -32,7 +59,7 @@ Still open after WP-20 (not contract gaps): remote push time of anchors (OD-6); 
 | `execution-episode-ref.v1` | WP-21 (gate on the three verbs); WP-23 (Workbench sends the field) | NT-32, NT-33 (a, b, c), NT-22, NT-23, NT-13, NT-34, NT-48; AT-17; the I-1 half of AT-04 |
 | `delegation-link.v1` | WP-21 (I-2 on the SEA-Forge delegation chain) | NT-10, AT-09 |
 | `continuation.v1` (`case.field.get`, `case.continuation`) | WP-21 (read model); WP-41 (Horizon consumes) | AT-03, AT-10, AT-15 |
-| `reserved-operation.v1` | WP-31 (A3 check, decision API); WP-21 (program-execution decision on the existing approval path); WP-32 (Horizon surface) | NT-12, NT-24, NT-34; AT-09 (human settlement, PARTIAL until S3) |
+| `reserved-operation.v1` | WP-31 (A3 check, decision API); WP-21 (program-execution decision on the existing approval path, approval records); WP-32 (Horizon surface) | NT-12, NT-24, NT-34; AT-09 (human settlement, PARTIAL until S3) |
 | `assignment.v1` | WP-23 (session binding, budgets, resume); WP-21 (id validation, `k` allocation) | AT-17 |
 | Independent-observation fixtures | WP-21 (emits the SEA-Forge events), WP-17 (rule already in RealityTrace) | NT-19 and NT-20 context; AT-09 |
 
