@@ -1,0 +1,129 @@
+{
+  "table": "fde.reserved-operations",
+  "version": 1,
+  "operations": [
+    {
+      "operation": "delete_case",
+      "class": "P1",
+      "reserved": false,
+      "evidence": [
+        [
+          "session"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
+      "operation": "freeze_episode",
+      "class": "P1",
+      "reserved": false,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "preview_check_code"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
+      "operation": "assign_within_grant",
+      "class": "P1",
+      "reserved": false,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "preview_check_code"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
+      "operation": "program_execution",
+      "class": "P1",
+      "reserved": false,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "authority_decision_bound_to_digest"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
+      "operation": "settle_episode",
+      "class": "P2",
+      "reserved": true,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "verifier_not_executor"
+        ],
+        [
+          "a3_proof",
+          "verifier_not_executor"
+        ]
+      ],
+      "a3_t": "policy"
+    },
+    {
+      "operation": "set_case_disposition",
+      "class": "P2",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "sea_forge_approval"
+        ]
+      ],
+      "a3_t": "policy"
+    },
+    {
+      "operation": "set_hard_gate_not_applicable",
+      "class": "P2",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "sea_forge_approval"
+        ]
+      ],
+      "a3_t": "policy"
+    },
+    {
+      "operation": "promote_world",
+      "class": "P3",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "online_decision_bound_to_digest_and_expiry"
+        ]
+      ],
+      "a3_t": "never"
+    },
+    {
+      "operation": "bootstrap_controller",
+      "class": "P3",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "online_decision_bound_to_digest_and_expiry"
+        ]
+      ],
+      "a3_t": "never"
+    },
+    {
+      "operation": "recover_controller",
+      "class": "P3",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "online_decision_bound_to_digest_and_expiry"
+        ]
+      ],
+      "a3_t": "never"
+    }
+  ]
+}

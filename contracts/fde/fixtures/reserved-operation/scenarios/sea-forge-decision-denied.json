@@ -1,0 +1,61 @@
+{
+  "id": "sea-forge-decision-denied",
+  "rule": "WP-31",
+  "nt": "NT-34",
+  "pending": {
+    "pending_id": "pending-0007",
+    "operation": "set_case_disposition",
+    "class": "P2",
+    "case_id": "case-0001",
+    "subject_ref": "case-0001",
+    "canonical_operation": {
+      "operation": "set_case_disposition",
+      "subject_ref": "case-0001",
+      "case_id": "case-0001",
+      "params": {
+        "level": "case",
+        "disposition": "close-satisfied"
+      }
+    },
+    "operation_digest": "1536938d3f4a44c1e971a2978be0c86fbd053b64336942f4523899304bcb8910",
+    "issued_at": "2026-11-15T10:00:00Z",
+    "expires_at": "2026-11-15T10:10:00Z",
+    "evidence_required": [
+      "a3_proof",
+      "sea_forge_approval"
+    ]
+  },
+  "submission": {
+    "via": "paired_phone",
+    "proof": {
+      "pending_id": "pending-0007",
+      "challenge": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "operation_digest": "1536938d3f4a44c1e971a2978be0c86fbd053b64336942f4523899304bcb8910",
+      "authenticator_assertion": {
+        "credential_id": "IIIIIIIIIIIIIIIIIIIIIIII",
+        "authenticator_data": "DDDDDDDDDDDDDDDDDDDDDDDD",
+        "client_data_json": "JJJJJJJJJJJJJJJJJJJJJJJJ",
+        "signature": "SSSSSSSSSSSSSSSSSSSSSSSS"
+      },
+      "confirmation_surface_id": "surface:paired-phone-1",
+      "expires_at": "2026-11-15T10:10:00Z"
+    }
+  },
+  "state": {
+    "enforcement": "on",
+    "a3_channel": "available",
+    "now": "2026-11-15T10:05:00Z",
+    "surfaces": {
+      "surface:paired-phone-1": "A3-UV",
+      "surface:desk-page": "none",
+      "surface:term-1": "A3-T"
+    },
+    "approval": "denied"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "AUTHORITY_DENIED",
+    "message": "authority denied",
+    "pending_id": "pending-0007"
+  }
+}

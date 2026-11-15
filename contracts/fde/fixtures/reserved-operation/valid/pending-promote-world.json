@@ -1,0 +1,20 @@
+{
+  "pending_id": "pending-0008",
+  "operation": "promote_world",
+  "class": "P3",
+  "case_id": null,
+  "subject_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+  "canonical_operation": {
+    "operation": "promote_world",
+    "subject_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+    "case_id": null,
+    "params": {}
+  },
+  "operation_digest": "316d5d93385eb0e98f74547af6d951b5963aedb8a7d789ff68eb5131879d619a",
+  "issued_at": "2026-11-15T10:00:00Z",
+  "expires_at": "2026-11-15T10:10:00Z",
+  "evidence_required": [
+    "a3_proof",
+    "online_decision_bound_to_digest_and_expiry"
+  ]
+}

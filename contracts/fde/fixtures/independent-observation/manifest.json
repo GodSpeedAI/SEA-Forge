@@ -1,0 +1,21 @@
+{
+  "note": "Expected event shapes only (E section 5 fields; the schema is CEP's godspeed.interaction_event.v1). semantic_ref and declaration_key are copied from the CEP fixture. The test checks the shape, that the independent events come from SEA-Forge emitters (not the executor's), and that authority.decision_id equals the program-execution decision.",
+  "executor_emitter": "cognate",
+  "events": [
+    {
+      "file": "authority-decision-event.json",
+      "emitter": "sea-forge-authority",
+      "independent_of_executor": true
+    },
+    {
+      "file": "ledger-run-event.json",
+      "emitter": "sea-forge-ledger",
+      "independent_of_executor": true
+    },
+    {
+      "file": "executor-run-event.json",
+      "emitter": "cognate",
+      "independent_of_executor": false
+    }
+  ]
+}

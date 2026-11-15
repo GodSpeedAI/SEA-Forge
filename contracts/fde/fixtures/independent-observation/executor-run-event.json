@@ -1,0 +1,42 @@
+{
+  "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+  "semantic_ref": "godspeed-fde-sop.evidence::Settlement",
+  "declaration_key": "concept:11fc582b-b054-5386-b245-5a358e3c9327",
+  "actor": {
+    "principal": "agent:builder-01",
+    "role": "executor"
+  },
+  "operation": "run_command",
+  "resource": "cases/case-0001/worktree",
+  "context": {
+    "case_id": "case-0001",
+    "plan_item_id": "item-03",
+    "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+    "assignment_id": "assign:case-0001:item-03:1:1"
+  },
+  "correlation": {
+    "case_id": "case-0001",
+    "assignment_id": "assign:case-0001:item-03:1:1",
+    "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+    "run_id": "run-0001"
+  },
+  "authority": {
+    "decision_id": "dec-0099"
+  },
+  "expectation_refs": [
+    "question:01JABCDEF0000000000000000A"
+  ],
+  "outcome": {
+    "status": "succeeded",
+    "effect_refs": []
+  },
+  "evidence_refs": [],
+  "source": {
+    "system": "cognate",
+    "record_id": "run-step-0001",
+    "sequence": 3,
+    "recorded_at": "2026-11-15T09:04:00Z"
+  },
+  "executor_provenance": "program",
+  "kind": "evaluated"
+}

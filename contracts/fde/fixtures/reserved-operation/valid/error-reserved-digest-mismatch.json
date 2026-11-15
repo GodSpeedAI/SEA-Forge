@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "RESERVED_DIGEST_MISMATCH",
+  "message": "reserved digest mismatch"
+}

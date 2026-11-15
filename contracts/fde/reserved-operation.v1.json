@@ -1,0 +1,553 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:reserved-operation:v1",
+  "title": "Reserved operation v1",
+  "description": "The reserved-operation interface (E section 8, RD-06, RD-21): operation to class to evidence; the pending operation SEA-Forge issues for a human-reserved decision; the A3 proof minimum (SEA-Forge challenge, operation digest, authenticator assertion, confirmation-surface id, expiry); the decision record; and the program-execution decision that gives RealityTrace an authority.decision_id for execution events. Staged enforcement (RD-21): the A3 check arrives with WP-31 and is off before it; until then these records are written with assurance session and every row that depends on a human-reserved decision is PARTIAL until S3. Shape only; WP-31 implements the check.",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "episode_ref": {
+      "$ref": "urn:sea-forge:fde:frozen-reference:v1#/$defs/episode_ref"
+    },
+    "Operation": {
+      "enum": [
+        "session_work",
+        "freeze_episode",
+        "assign_within_grant",
+        "program_execution",
+        "settle_episode",
+        "set_case_disposition",
+        "set_hard_gate_not_applicable",
+        "promote_world",
+        "bootstrap_controller",
+        "recover_controller"
+      ]
+    },
+    "Evidence": {
+      "enum": [
+        "session",
+        "authenticated_principal",
+        "preview_check_code",
+        "authority_decision_bound_to_digest",
+        "verifier_not_executor",
+        "a3_proof",
+        "sea_forge_approval",
+        "online_decision_bound_to_digest_and_expiry"
+      ]
+    },
+    "OperationEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "class",
+        "reserved",
+        "evidence",
+        "a3_t"
+      ],
+      "properties": {
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "class": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "reserved": {
+          "type": "boolean",
+          "description": "true: a human-reserved decision, refused without an A3 proof once enforcement is on."
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/Evidence"
+            }
+          },
+          "description": "Alternatives; the inner list is the evidence required together."
+        },
+        "a3_t": {
+          "enum": [
+            "not_applicable",
+            "policy",
+            "never"
+          ],
+          "description": "Whether the protected-terminal surface A3-T may confirm: never for P3 (RD-21); only where policy explicitly accepts it for P2; not_applicable when the operation is not reserved."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reserved": {
+                "const": true
+              }
+            },
+            "required": [
+              "reserved"
+            ]
+          },
+          "then": {
+            "properties": {
+              "class": {
+                "enum": [
+                  "P2",
+                  "P3"
+                ]
+              },
+              "a3_t": {
+                "enum": [
+                  "policy",
+                  "never"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "a3_t": {
+                "const": "not_applicable"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "class": {
+                "const": "P3"
+              }
+            },
+            "required": [
+              "class"
+            ]
+          },
+          "then": {
+            "properties": {
+              "a3_t": {
+                "const": "never"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "OperationTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table",
+        "version",
+        "operations"
+      ],
+      "properties": {
+        "table": {
+          "const": "fde.reserved-operations"
+        },
+        "version": {
+          "const": 1
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/OperationEntry"
+          }
+        }
+      }
+    },
+    "PendingOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pending_id",
+        "operation",
+        "class",
+        "case_id",
+        "subject_ref",
+        "canonical_operation",
+        "operation_digest",
+        "issued_at",
+        "expires_at",
+        "evidence_required"
+      ],
+      "properties": {
+        "pending_id": {
+          "$ref": "#/$defs/text"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "class": {
+          "enum": [
+            "P2",
+            "P3"
+          ]
+        },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "subject_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the operation acts on: an episode_ref, a gate, a case, a candidate world_ref, a controller id."
+        },
+        "canonical_operation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "subject_ref",
+            "case_id",
+            "params"
+          ],
+          "properties": {
+            "operation": {
+              "$ref": "#/$defs/Operation"
+            },
+            "subject_ref": {
+              "$ref": "#/$defs/text"
+            },
+            "case_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "params": {
+              "type": "object"
+            }
+          },
+          "description": "The value the A3 surface shows and the digest covers; the A3 surface receives it from SEA-Forge by pending_id, never from the page."
+        },
+        "operation_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 over RFC 8785 canonical JSON of canonical_operation."
+        },
+        "issued_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "evidence_required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        }
+      }
+    },
+    "A3Proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pending_id",
+        "challenge",
+        "operation_digest",
+        "authenticator_assertion",
+        "confirmation_surface_id",
+        "expires_at"
+      ],
+      "properties": {
+        "pending_id": {
+          "$ref": "#/$defs/text"
+        },
+        "challenge": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16,4096}$",
+          "description": "Issued by SEA-Forge for this pending_id and digest; single use."
+        },
+        "operation_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "authenticator_assertion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "credential_id",
+            "authenticator_data",
+            "client_data_json",
+            "signature"
+          ],
+          "properties": {
+            "credential_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+            },
+            "authenticator_data": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+            },
+            "client_data_json": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+            },
+            "signature": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+            }
+          },
+          "description": "WebAuthn assertion; client_data_json carries the challenge. SEA-Forge, not Horizon, verifies it."
+        },
+        "confirmation_surface_id": {
+          "type": "string",
+          "pattern": "^surface:[A-Za-z0-9._-]{1,64}$",
+          "description": "Resolved by SEA-Forge against its registry of A3 surfaces to A3-UV (the paired phone) or A3-T; an id it does not know is not an A3 surface."
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        }
+      }
+    },
+    "Decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "decision_id",
+        "pending_id",
+        "operation",
+        "operation_digest",
+        "assurance",
+        "decided_at",
+        "expires_at"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "confirmed"
+        },
+        "decision_id": {
+          "$ref": "#/$defs/text"
+        },
+        "pending_id": {
+          "$ref": "#/$defs/text"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "operation_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "assurance": {
+          "enum": [
+            "session",
+            "A3-UV",
+            "A3-T"
+          ]
+        },
+        "decided_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        }
+      }
+    },
+    "ProgramExecutionDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "operation_id",
+        "case_id",
+        "episode_ref",
+        "patch_sha256",
+        "command",
+        "binds_digest",
+        "decided_by",
+        "outcome",
+        "assurance",
+        "decided_at",
+        "expires_at"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The value RealityTrace resolves for authority.decision_id on execution events; scoped by operation_id."
+        },
+        "operation_id": {
+          "$ref": "#/$defs/text"
+        },
+        "case_id": {
+          "type": "string",
+          "pattern": "^[^\\s:@]{1,128}$"
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref"
+        },
+        "patch_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the patch bytes the program applies; of the empty string when it applies none."
+        },
+        "command": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "argv"
+          ],
+          "properties": {
+            "argv": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        },
+        "binds_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 over RFC 8785 canonical JSON of {episode_ref, patch_sha256, command}."
+        },
+        "decided_by": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "principal",
+            "role"
+          ],
+          "properties": {
+            "principal": {
+              "type": "string",
+              "pattern": "^[^\\s]{1,256}$"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "outcome": {
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "assurance": {
+          "enum": [
+            "session",
+            "A3-UV",
+            "A3-T"
+          ]
+        },
+        "decided_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "AUTHORITY_DENIED",
+            "RESERVED_DECISION_REFUSED",
+            "A3_SURFACE_REQUIRED",
+            "A3_CHANNEL_UNAVAILABLE",
+            "RESERVED_EXPIRED",
+            "RESERVED_DIGEST_MISMATCH",
+            "A3_PROOF_INVALID",
+            "A3_PROOF_REPLAYED"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        },
+        "pending_id": {
+          "$ref": "#/$defs/text"
+        },
+        "how_to_restore": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "A3_CHANNEL_UNAVAILABLE"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "how_to_restore"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "how_to_restore"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/OperationTable"
+    },
+    {
+      "$ref": "#/$defs/PendingOperation"
+    },
+    {
+      "$ref": "#/$defs/A3Proof"
+    },
+    {
+      "$ref": "#/$defs/Decision"
+    },
+    {
+      "$ref": "#/$defs/ProgramExecutionDecision"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

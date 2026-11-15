@@ -1,0 +1,22 @@
+{
+  "pending_id": "pending-0007",
+  "operation": "set_case_disposition",
+  "class": "P2",
+  "case_id": "case-0001",
+  "subject_ref": "case-0001",
+  "canonical_operation": {
+    "operation": "set_case_disposition",
+    "subject_ref": "case-0001",
+    "case_id": "case-0001",
+    "params": {
+      "level": "case",
+      "disposition": "close-satisfied"
+    }
+  },
+  "operation_digest": "1536938d3f4a44c1e971a2978be0c86fbd053b64336942f4523899304bcb8910",
+  "issued_at": "2026-11-15T10:00:00Z",
+  "evidence_required": [
+    "a3_proof",
+    "sea_forge_approval"
+  ]
+}

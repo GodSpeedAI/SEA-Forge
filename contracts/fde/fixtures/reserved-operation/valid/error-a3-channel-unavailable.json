@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "A3_CHANNEL_UNAVAILABLE",
+  "message": "a3 channel unavailable",
+  "how_to_restore": "Pair the phone in Horizon settings, then retry; the desk cannot confirm."
+}

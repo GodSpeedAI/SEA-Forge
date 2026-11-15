@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 308
+**Status revision:** 309
 
-**Stage:** FDE S2: WP-20 continuation.v1 and read verbs
+**Stage:** FDE S2: WP-20 reserved-operation.v1, independent-observation fixtures
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): continuation.v1 and read verbs.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): reserved-operation.v1, independent-observation fixtures.
 
 **Verified:**
 

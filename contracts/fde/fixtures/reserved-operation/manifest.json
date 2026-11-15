@@ -1,0 +1,328 @@
+{
+  "schema": "urn:sea-forge:fde:reserved-operation:v1",
+  "valid": [
+    {
+      "file": "operation-table.json",
+      "def": "OperationTable"
+    },
+    {
+      "file": "pending-set-case-disposition.json",
+      "def": "PendingOperation"
+    },
+    {
+      "file": "pending-promote-world.json",
+      "def": "PendingOperation"
+    },
+    {
+      "file": "a3-proof-paired-phone.json",
+      "def": "A3Proof"
+    },
+    {
+      "file": "decision-confirmed-a3-uv.json",
+      "def": "Decision"
+    },
+    {
+      "file": "decision-confirmed-session-before-wp-31.json",
+      "def": "Decision"
+    },
+    {
+      "file": "program-execution-decision-allow.json",
+      "def": "ProgramExecutionDecision"
+    },
+    {
+      "file": "program-execution-decision-deny.json",
+      "def": "ProgramExecutionDecision"
+    },
+    {
+      "file": "program-execution-decision-no-patch.json",
+      "def": "ProgramExecutionDecision"
+    },
+    {
+      "file": "error-authority-denied.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-reserved-decision-refused.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-a3-surface-required.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-a3-channel-unavailable.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-reserved-expired.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-reserved-digest-mismatch.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-a3-proof-invalid.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-a3-proof-replayed.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "table-nine-operations.json",
+      "def": "OperationTable",
+      "pointer": "/operations",
+      "contains": "has less than"
+    },
+    {
+      "file": "table-p3-allows-a3-t.json",
+      "def": "OperationTable",
+      "pointer": "/operations/7/a3_t",
+      "contains": "was expected"
+    },
+    {
+      "file": "table-reserved-p1.json",
+      "def": "OperationTable",
+      "pointer": "/operations/4/class",
+      "contains": "is not one of"
+    },
+    {
+      "file": "table-not-reserved-with-a3-t-policy.json",
+      "def": "OperationTable",
+      "pointer": "/operations/1/a3_t",
+      "contains": "was expected"
+    },
+    {
+      "file": "table-evidence-kind-unknown.json",
+      "def": "OperationTable",
+      "pointer": "/operations/1/evidence/0/2",
+      "contains": "is not one of"
+    },
+    {
+      "file": "table-evidence-empty.json",
+      "def": "OperationTable",
+      "pointer": "/operations/1/evidence",
+      "contains": "has less than"
+    },
+    {
+      "file": "table-operation-unknown.json",
+      "def": "OperationTable",
+      "pointer": "/operations/0/operation",
+      "contains": "is not one of"
+    },
+    {
+      "file": "pending-class-p1.json",
+      "def": "PendingOperation",
+      "pointer": "/class",
+      "contains": "is not one of"
+    },
+    {
+      "file": "pending-without-digest.json",
+      "def": "PendingOperation",
+      "pointer": "",
+      "contains": "\"operation_digest\" is a required property"
+    },
+    {
+      "file": "pending-digest-uppercase.json",
+      "def": "PendingOperation",
+      "pointer": "/operation_digest",
+      "contains": "does not match"
+    },
+    {
+      "file": "pending-without-expiry.json",
+      "def": "PendingOperation",
+      "pointer": "",
+      "contains": "\"expires_at\" is a required property"
+    },
+    {
+      "file": "pending-canonical-operation-extra-key.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "proof-without-challenge.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "\"challenge\" is a required property"
+    },
+    {
+      "file": "proof-without-operation-digest.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "\"operation_digest\" is a required property"
+    },
+    {
+      "file": "proof-without-assertion.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "\"authenticator_assertion\" is a required property"
+    },
+    {
+      "file": "proof-without-surface-id.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "\"confirmation_surface_id\" is a required property"
+    },
+    {
+      "file": "proof-without-expiry.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "\"expires_at\" is a required property"
+    },
+    {
+      "file": "proof-surface-id-not-prefixed.json",
+      "def": "A3Proof",
+      "pointer": "/confirmation_surface_id",
+      "contains": "does not match"
+    },
+    {
+      "file": "proof-assertion-missing-signature.json",
+      "def": "A3Proof",
+      "pointer": "/authenticator_assertion",
+      "contains": "\"signature\" is a required property"
+    },
+    {
+      "file": "proof-challenge-too-short.json",
+      "def": "A3Proof",
+      "pointer": "/challenge",
+      "contains": "does not match"
+    },
+    {
+      "file": "proof-extra-key.json",
+      "def": "A3Proof",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "decision-assurance-passkey-desk.json",
+      "def": "Decision",
+      "pointer": "/assurance",
+      "contains": "is not one of"
+    },
+    {
+      "file": "decision-outcome-denied-not-a-decision.json",
+      "def": "Decision",
+      "pointer": "/outcome",
+      "contains": "was expected"
+    },
+    {
+      "file": "program-decision-without-patch-sha.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "",
+      "contains": "\"patch_sha256\" is a required property"
+    },
+    {
+      "file": "program-decision-empty-argv.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/command/argv",
+      "contains": "has less than"
+    },
+    {
+      "file": "program-decision-without-episode-ref.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "",
+      "contains": "\"episode_ref\" is a required property"
+    },
+    {
+      "file": "program-decision-without-binds-digest.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "",
+      "contains": "\"binds_digest\" is a required property"
+    },
+    {
+      "file": "program-decision-outcome-maybe.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/outcome",
+      "contains": "is not one of"
+    },
+    {
+      "file": "program-decision-command-string.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/command",
+      "contains": "is not of type"
+    },
+    {
+      "file": "error-channel-unavailable-without-restore-hint.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "\"how_to_restore\" is a required property"
+    },
+    {
+      "file": "error-restore-hint-on-other-code.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "error-code-not-in-enum.json",
+      "def": "Error",
+      "pointer": "/code",
+      "contains": "is not one of"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "pending-digest-does-not-cover-canonical-operation.json",
+      "def": "PendingOperation",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "pending-operation-differs-from-canonical.json",
+      "def": "PendingOperation",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "pending-expires-before-issued.json",
+      "def": "PendingOperation",
+      "code": "RESERVED_EXPIRED"
+    },
+    {
+      "file": "proof-digest-differs-from-pending.json",
+      "def": "A3Proof",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-patch.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-command.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-episode.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-expires-before-decided.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_EXPIRED"
+    },
+    {
+      "file": "program-decision-case-differs-from-episode.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    }
+  ],
+  "scenarios": [
+    "agent-session-cannot-decide.json",
+    "paired-browser-without-agent-header-cannot-decide.json",
+    "desk-passkey-assertion-refused.json",
+    "a3-t-refused-for-p3.json",
+    "phone-proof-confirms.json",
+    "no-a3-channel-refuses-with-restore-hint.json",
+    "proof-after-expiry.json",
+    "proof-for-another-operation.json",
+    "proof-signature-fails.json",
+    "proof-replayed.json",
+    "sea-forge-decision-denied.json",
+    "enforcement-off-session-recorded-partial.json"
+  ]
+}

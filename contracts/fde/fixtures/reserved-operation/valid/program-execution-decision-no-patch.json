@@ -1,0 +1,24 @@
+{
+  "decision_id": "dec-0103",
+  "operation_id": "op-0042",
+  "case_id": "case-0001",
+  "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+  "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "command": {
+    "argv": [
+      "cargo",
+      "test",
+      "-p",
+      "demo"
+    ]
+  },
+  "binds_digest": "ed46f4ff481b614d38f8c6eb127a3fa1e5b89b8c5d27cd8a60b65d98e5870708",
+  "decided_by": {
+    "principal": "human:operator",
+    "role": "case-lead"
+  },
+  "outcome": "allow",
+  "assurance": "session",
+  "decided_at": "2026-11-15T09:00:00Z",
+  "expires_at": "2026-11-15T17:00:00Z"
+}
