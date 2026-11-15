@@ -25,6 +25,7 @@ use sea_forge_server::identity::{IdentityBinding, IdentityBindings};
 use sea_forge_server::sfwp::case_records::digest_of;
 use sea_forge_server::ServerConfig;
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -43,6 +44,18 @@ const FINAL_REASONS: &[&str] = &["part-B", "wp-31", "contract"];
 /// Scenarios the server satisfies (it grows as the steps of WP-21 part A land;
 /// an acceptance listed here stays green as the gate lands).
 const PASSES_TODAY: &[&str] = &[
+    "execution-episode-ref/delegate-decision-binds-another-cwd",
+    "execution-episode-ref/delegate-decision-exhausted-runs-used-equals-max-runs",
+    "execution-episode-ref/delegate-consequential-action-without-decision",
+    "execution-episode-ref/delegate-consequential-action-denied",
+    "execution-episode-ref/case_advance-decision-binds-another-cwd",
+    "execution-episode-ref/case_advance-decision-exhausted-runs-used-equals-max-runs",
+    "execution-episode-ref/case_advance-consequential-action-without-decision",
+    "execution-episode-ref/case_advance-consequential-action-denied",
+    "execution-episode-ref/item_execute-decision-binds-another-cwd",
+    "execution-episode-ref/item_execute-decision-exhausted-runs-used-equals-max-runs",
+    "execution-episode-ref/item_execute-consequential-action-without-decision",
+    "execution-episode-ref/item_execute-consequential-action-denied",
     "delegation-link/delegated-run-without-link",
     "delegation-link/executor-reuses-identity-as-verifier",
     "delegation-link/item-execute-only-then-settle-by-the-executor",
@@ -500,7 +513,8 @@ impl Seed {
         let payload = json!({
             "episode_ref": episode_ref,
             "reference": {"episode_ref": episode_ref, "body": {
-                "case_id": case, "plan_item_id": item, "n": n, "world_ref": world_ref, "kind": kind}},
+                "case_id": case, "plan_item_id": item, "n": n, "world_ref": world_ref, "kind": kind,
+                "executor_provenance": "program"}},
             "digest": digest,
             "realitytrace_refs": {"plan_id": plan, "question_ids": [q], "threshold_ids": [t]},
         });
@@ -917,7 +931,7 @@ async fn run_gate(s: &Value) -> Result<(), String> {
             seed.freeze(
                 &key,
                 stored_kind,
-                "world:seed@sha256:00",
+                s["freeze_world"].as_str().unwrap_or("world:seed@sha256:00"),
                 "case-keeper/rec-seed",
                 &digest,
             );
@@ -999,6 +1013,18 @@ async fn run_gate(s: &Value) -> Result<(), String> {
     let keeper = (state["anchor"] != "not_configured").then_some(KEEPER);
     let cfg = config(root.path(), &actors);
     write_fde_config(root.path(), keeper, None);
+    if let Some(max) = extra["max_runs"].as_u64() {
+        let path = root.path().join("fde-config.json");
+        let mut cfg: Value = fs::read_to_string(&path)
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_else(|| json!({}));
+        cfg["execution_max_runs"] = json!(max);
+        fs::write(path, cfg.to_string()).unwrap();
+    }
+    if !case.is_null() && request["episode_ref"].is_object() {
+        seed_decision(root.path(), s);
+    }
     let mut cell = authenticated::Cell::start(cfg).await;
     let got = cell
         .call_for(
@@ -1007,6 +1033,27 @@ async fn run_gate(s: &Value) -> Result<(), String> {
         )
         .await;
     cell.shutdown().await;
+    if s["inspect_decision_event"] == true {
+        // The run's interaction event carries the decision that authorized it.
+        let spool = root
+            .path()
+            .join("interaction-events")
+            .join(format!("{CASE}.jsonl"));
+        let text = fs::read_to_string(&spool).map_err(|e| format!("no interaction events: {e}"))?;
+        let found = text
+            .lines()
+            .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+            .any(|e| {
+                e["extensions"]["godspeed.interaction_event"]["authority"]["decision_id"]
+                    == "dec-seed-1"
+            });
+        if !found {
+            return Err(format!(
+                "no interaction event carries authority.decision_id dec-seed-1: {text}"
+            ));
+        }
+        return Ok(());
+    }
     let expect = &s["expect"];
     if expect["outcome"] == "refused" {
         compare(expect, &got)?;
@@ -1268,6 +1315,98 @@ async fn nt_33_scenarios() {
     nt_subset("NT-33", 5).await;
 }
 #[tokio::test(flavor = "multi_thread")]
+async fn nt_34_scenarios() {
+    nt_subset("NT-34", 12).await;
+}
+#[tokio::test(flavor = "multi_thread")]
 async fn nt_48_scenarios() {
     nt_subset("NT-48", 4).await;
+}
+
+/// The program-execution decision of a gate scenario, written to the CEP
+/// authority ledger the way the authority path records it (README §10, D39):
+/// resource_id `execution:sha256:<digest of the nine-member execution object>`.
+fn seed_decision(root: &Path, s: &Value) {
+    let request = &s["request"];
+    let extra = &s["extra"];
+    let outcome = match extra["authority_decision"].as_str() {
+        Some("absent") => return,
+        Some("denied") => "deny",
+        _ => "allow",
+    };
+    let ep = &request["episode_ref"];
+    let item = ep["plan_item_id"].as_str().unwrap();
+    let digest = "cd".repeat(32);
+    let delegate = request["verb"] == "delegate";
+    let (argv, profile, workspace, timeout) = if delegate {
+        (
+            json!([request["endpoint"]]),
+            "agent",
+            format!("ws:agent:{}", request["endpoint"].as_str().unwrap()),
+            request["max_turns"].as_u64().unwrap(),
+        )
+    } else {
+        (
+            json!([item]),
+            "default",
+            format!("ws:case:{CASE}:{item}"),
+            request["timeout"].as_u64().unwrap_or(60),
+        )
+    };
+    let cwd = if extra["execution_differs_in"]
+        .as_array()
+        .is_some_and(|d| d.iter().any(|x| x == "cwd"))
+    {
+        "/elsewhere"
+    } else {
+        "."
+    };
+    let object = json!({
+        "episode_ref": format!("episode:{CASE}:{item}:{}@sha256:{digest}", ep["n"]),
+        "patch_sha256": hex::encode(<Sha256 as Digest>::digest(b"")),
+        "argv": argv, "cwd": cwd, "env_digest": digest_of(&json!({})).unwrap(),
+        "workspace_ref": workspace, "sandbox_profile": profile,
+        "world_ref": s["freeze_world"].as_str().unwrap_or("world:seed@sha256:00"),
+        "timeout_s": timeout.max(1),
+    });
+    let resource = format!("execution:sha256:{}", digest_of(&object).unwrap());
+    let ledger = sea_forge_ledger::LedgerStream::open(
+        root,
+        sea_forge_authority::cep::LEDGER_ID,
+        "sea-forge-cep-authority",
+    )
+    .unwrap();
+    let committed = ledger
+        .commit_typed(
+            "authority_decision",
+            vec!["cognate".into(), "op-seed".into()],
+            &json!({"decision_id": "dec-seed-1", "outcome": outcome,
+                    "decided_at": chrono::Utc::now().to_rfc3339(),
+                    "operation": {"kind": "reserved", "resource_type": "cognate_action",
+                                  "resource_id": resource, "parameters": {}}}),
+            vec![],
+        )
+        .unwrap();
+    for i in 0..extra["runs_used"].as_u64().unwrap_or(0) {
+        write_lines(
+            &case_dir(root).join("field-exec-decisions.jsonl"),
+            &[
+                json!({"decision_key": committed.entry_ulid(), "decision_id": "dec-seed-1",
+                     "run_id": format!("run-seed-{i}"), "at": "2026-11-15T08:00:00Z"}),
+            ],
+        );
+    }
+}
+
+/// D39: the interaction event of an authorized run carries the decision id, so
+/// RealityTrace can resolve `authority.decision_id` (the independent, non-executor record).
+#[tokio::test(flavor = "multi_thread")]
+async fn run_event_carries_the_program_execution_decision_id() {
+    let mut s = read(
+        &fixtures("execution-episode-ref")
+            .join("scenarios/item_execute-complete-freeze-accepted.json"),
+    );
+    s["freeze_world"] = json!("world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b");
+    s["inspect_decision_event"] = json!(true);
+    run_gate(&s).await.unwrap();
 }

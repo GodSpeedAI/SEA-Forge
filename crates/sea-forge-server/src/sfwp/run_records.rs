@@ -37,6 +37,8 @@ pub struct RunInput<'a> {
     pub workspace_ref: &'a str,
     /// A delegated run: the link written before it.
     pub link: Option<LinkInput<'a>>,
+    /// The program-execution decision that authorized the run (README §10).
+    pub decision_id: Option<&'a str>,
 }
 
 pub struct LinkInput<'a> {
@@ -54,7 +56,7 @@ fn stamp(t: chrono::DateTime<chrono::Utc>) -> String {
 
 /// Write the run record (and, for a delegated run, the link first). Returns the
 /// run id. The caller holds the case lock.
-pub fn record_run(root: &Path, input: &RunInput) -> Result<String, String> {
+pub fn record_run(root: &Path, input: &RunInput) -> Result<(String, Value), String> {
     let dir = case_dir(root, input.case_id);
     let runs = read_lines_strict(&dir.join(RUNS))?;
     let links = read_lines_strict(&dir.join(LINKS))?;
@@ -77,17 +79,15 @@ pub fn record_run(root: &Path, input: &RunInput) -> Result<String, String> {
     }
     // The run starts after the link: a strictly later timestamp, never equal.
     let started = chrono::Utc::now().max(issued + chrono::Duration::milliseconds(1));
-    append_line(
-        &dir.join(RUNS),
-        &json!({
-            "run_id": run_id, "case_id": input.case_id, "episode_ref": input.episode_ref,
+    let record = json!({
+            "run_id": run_id, "decision_id": input.decision_id, "case_id": input.case_id, "episode_ref": input.episode_ref,
             "verb": input.verb, "role": input.role, "actor": input.actor,
             "on_behalf_of": input.on_behalf_of, "delegated": input.link.is_some(),
             "link_id": link_id, "workspace_ref": input.workspace_ref,
             "started_at": stamp(started), "recorded_at": now_rfc3339(),
-        }),
-    )?;
-    Ok(run_id)
+    });
+    append_line(&dir.join(RUNS), &record)?;
+    Ok((run_id, record))
 }
 
 /// What settlement needs to know about the episode's executions.

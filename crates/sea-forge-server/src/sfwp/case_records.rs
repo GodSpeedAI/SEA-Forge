@@ -2019,6 +2019,8 @@ pub struct EpisodeFacts {
     pub latest_disposition: Option<String>,
     /// The frozen `episode_ref` (`episode:<case>:<item>:<n>@sha256:<digest>`).
     pub episode_ref: Option<String>,
+    /// The world the episode froze.
+    pub world_ref: Option<String>,
 }
 
 /// Read [`EpisodeFacts`] from the case store: `Err` when it fails its integrity
@@ -2107,6 +2109,9 @@ pub fn episode_facts(
         settled: all
             .iter()
             .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == key),
+        world_ref: source
+            .and_then(|src| src["payload"]["reference"]["body"]["world_ref"].as_str())
+            .map(String::from),
         episode_ref: source
             .and_then(|src| src["digest"].as_str())
             .map(|d| format!("episode:{case_id}:{plan_item_id}:{n}@sha256:{d}")),
@@ -2129,6 +2134,22 @@ fn published_anchor_for(ctx: &AppendContext, subject_prefix: &str, digest: &str)
                     .is_some_and(|r| r.starts_with(subject_prefix))
                     || (!digest.is_empty() && a["digest"] == digest))
         })
+}
+
+/// Owe (and try to deliver) the interaction event of a run record. Best effort,
+/// as for every record: the run record is already durable and the event is
+/// derived from it. The caller holds the case lock.
+pub fn enqueue_run_event(root: &Path, case_id: &str, run: &Value) {
+    if !valid_case_segment(case_id) {
+        return;
+    }
+    with_store_ctx(root, case_id, |ctx| {
+        let _ = super::interaction_events::enqueue_run(ctx, run);
+        let _ = super::interaction_events::deliver_events(
+            ctx,
+            &super::interaction_events::SpoolSink::new(root),
+        );
+    });
 }
 
 /// The wire-level helper the SFWP verb uses: build the context from server state.

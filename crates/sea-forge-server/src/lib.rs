@@ -3355,6 +3355,7 @@ pub async fn handle_request_as(
                         .and_then(|a| a.delegation())
                         .map(|d| d.gateway_actor_id()),
                     endpoint: Some(&endpoint),
+                    timeout_s: u64::from(max_turns),
                 },
             )
             .await;
@@ -3911,6 +3912,7 @@ pub async fn handle_request_as(
                         .and_then(|a| a.delegation())
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
+                    timeout_s: timeout,
                 },
             )
             .await
@@ -3967,6 +3969,7 @@ pub async fn handle_request_as(
                         .and_then(|a| a.delegation())
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
+                    timeout_s: timeout,
                 },
             )
             .await
@@ -4011,6 +4014,7 @@ pub async fn handle_request_as(
                         .and_then(|a| a.delegation())
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
+                    timeout_s: 0,
                 },
             )
             .await;
@@ -4076,6 +4080,7 @@ struct GateActor<'a> {
     actor: Option<&'a str>,
     gateway: Option<&'a str>,
     endpoint: Option<&'a str>,
+    timeout_s: u64,
 }
 
 /// The execution gate (WP-21, README §7) for one request, under the case's
@@ -4104,6 +4109,7 @@ async fn admit_episode(
         who.actor.map(str::to_string),
         who.gateway.map(str::to_string),
     );
+    let timeout_s = who.timeout_s;
     let (episode_ref, transition_items) = (episode_ref.clone(), transition_items.clone());
     let result = tokio::task::spawn_blocking(move || {
         sfwp::episode_gate::admit(
@@ -4118,6 +4124,7 @@ async fn admit_episode(
                 endpoint: endpoint.as_deref(),
                 actor: actor.as_deref(),
                 gateway_actor: gateway.as_deref(),
+                timeout_s,
             },
         )
     })

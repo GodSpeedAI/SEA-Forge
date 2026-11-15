@@ -72,6 +72,13 @@ fn map_row(what: &str) -> Option<MapRow> {
             semantic_ref: "godspeed-fde-sop.evidence::Settlement",
             operation: "nav_claim",
         }),
+        // An execution of the episode (WP-21a): reported against the Episode like its freeze;
+        // the decision that authorized it travels as `authority.decision_id`.
+        "run.started" => Some(MapRow {
+            clause: "7.2d",
+            semantic_ref: "godspeed-fde-sop::Episode",
+            operation: "nav_aim",
+        }),
         "decision.no_self_settlement" => Some(MapRow {
             clause: "3.2b",
             semantic_ref: "godspeed-fde-sop::no_self_settlement",
@@ -524,6 +531,48 @@ pub fn deliver_events(ctx: &AppendContext, sink: &dyn InteractionSink) -> usize 
         }
     }
     sent
+}
+
+/// Owe the event for one run record (an execution of the episode). The event's
+/// `authority.decision_id` is the program-execution decision (README §10), or
+/// `not_required` when the run needed none. Idempotent.
+pub(super) fn enqueue_run(ctx: &AppendContext, run: &Value) -> Result<(), String> {
+    let Some(run_id) = run["run_id"].as_str() else {
+        return Err("run has no id".into());
+    };
+    let all = records(ctx);
+    let source = json!({"system": SOURCE_LEDGER, "record_id": run_id});
+    let id = event_id(ctx.case_id, run_id);
+    let key = parse_key(run["episode_ref"].as_str().unwrap_or(""));
+    let Some(ep) = key.and_then(|k| episode_of(&all, &k)) else {
+        return enqueue(ctx, id, source, Err("freeze record not found".into()));
+    };
+    let decision_id = run["decision_id"].as_str().unwrap_or("not_required");
+    let src = Source {
+        what: "run.started",
+        system: SOURCE_LEDGER,
+        record_id: run_id,
+        sequence: 0,
+        recorded_at: run["started_at"].as_str().unwrap_or(""),
+        decision_id,
+        causation_id: None,
+        outcome: "unknown",
+        effect_refs: vec![],
+        settlement_ref: None,
+    };
+    let built = build(ctx, &ep, &src);
+    enqueue(ctx, id, source, built)
+}
+
+fn parse_key(episode_ref: &str) -> Option<Value> {
+    let rest = episode_ref.strip_prefix("episode:")?;
+    let (head, _) = rest.split_once("@sha256:")?;
+    let p: Vec<&str> = head.split(':').collect();
+    if p.len() != 3 {
+        return None;
+    }
+    let n = p[2].parse::<u64>().ok()?;
+    Some(json!({"case_id": p[0], "plan_item_id": p[1], "n": n}))
 }
 
 #[cfg(test)]

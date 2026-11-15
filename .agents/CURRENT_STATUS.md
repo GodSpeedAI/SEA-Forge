@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 316
+**Status revision:** 317
 
-**Stage:** FDE S2: WP-21a steps 3-4 execution gate, run records and links, proof runner
+**Stage:** FDE S2: WP-21a step 5 program-execution decision (D39)
 
-**Summary:** fde/integration: WP-21 part A steps 3,4,6: execution gate R1-R14 on item_execute/case_advance/delegate/human_task_complete (case resolved server-side), run records and delegation links written before execution under the case lock, executor set and verifier context at settlement, Go builders and golden frames, fde-proof slice s2 (NT-13,17,18,32,33,48 PASS; NT-34 NOT_RUN).
+**Summary:** fde/integration: WP-21 part A step 5: Field Case executions need an allow decision of the CEP authority path whose resource_id is execution:sha256:<digest of the nine-member execution object>; runs_used counted in the case store; decision_id on the run record and its interaction event. 114 of 156 scenarios pass; NT-34 PASS.
 
 **Verified:**
 

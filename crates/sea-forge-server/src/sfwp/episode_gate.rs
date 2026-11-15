@@ -26,6 +26,8 @@ use std::path::Path;
 /// The template of a Field Case.
 pub const FIELD_CASE_TEMPLATE: &str = "fde.field_case@1";
 const ASSIGNMENTS: &str = "field-assignments.jsonl";
+/// Runs started under each program-execution decision (README §10 `runs_used`).
+const EXEC_RUNS: &str = "field-exec-decisions.jsonl";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Verb {
@@ -52,6 +54,8 @@ pub struct GateInput<'a> {
     pub actor: Option<&'a str>,
     /// The gateway that spoke for the actor, when the request was delegated.
     pub gateway_actor: Option<&'a str>,
+    /// The execution's time bound: the request's `timeout`, or `max_turns` for a delegation.
+    pub timeout_s: u64,
 }
 
 /// An episode the gate resolved on the server.
@@ -420,7 +424,35 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     if delegate && input.assignment_id.is_none() {
         return Err(schema("a Field Case delegate needs an assignment_id"));
     }
-    // R7 (the program-execution decision) is added with the authority step.
+    // R7: the program-execution decision (README §10), D39: the CEP decision of
+    // the existing authority path whose resource_id is `execution:sha256:<digest>`
+    // of the nine-member execution object built HERE from the ledger and the plan,
+    // never from the request.
+    let config = case_records::fde_config(root).map_err(|why| {
+        refuse(
+            "FREEZE_INCOMPLETE",
+            &format!("store integrity: {why}"),
+            Some("I-1"),
+        )
+    })?;
+    let workspace = workspace_of(input, &item);
+    let frozen_ref = facts.episode_ref.clone().unwrap_or_default();
+    let object = execution_object(
+        root,
+        input,
+        &item,
+        &frozen_ref,
+        facts.world_ref.as_deref().unwrap_or(""),
+        &workspace,
+    )
+    .map_err(|why| {
+        refuse(
+            "AUTHORITY_DENIED",
+            &format!("the execution cannot be bound: {why}"),
+            None,
+        )
+    })?;
+    let decision = find_decision(root, input.case_id, &object, &config)?;
     // R10: the assignment.
     let mut assignment: Option<(String, &str)> = None;
     if let Some(id) = input.assignment_id.filter(|_| delegate) {
@@ -491,16 +523,13 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             )
         })?;
         let agent = input.endpoint.map(|e| format!("agent:{e}"));
+        let _ = &workspace;
         let verifier = delegate
             && input.endpoint.is_some_and(|e| {
                 config["verifier_endpoints"]
                     .as_array()
                     .is_some_and(|l| l.iter().any(|v| v == e))
             });
-        let workspace = match &agent {
-            Some(a) if delegate => format!("ws:{a}"),
-            _ => format!("ws:case:{}:{}", input.case_id, item),
-        };
         let link = match (delegate, input.actor, &agent, input.assignment_id) {
             (true, Some(actor), Some(agent), Some(assignment)) => Some(run_records::LinkInput {
                 assignment_id: assignment,
@@ -517,7 +546,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             input.actor
         };
         let on_behalf_of = if delegate { input.actor } else { None };
-        run_records::record_run(
+        let (run_id, run_record) = run_records::record_run(
             root,
             &run_records::RunInput {
                 case_id: input.case_id,
@@ -532,6 +561,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                 on_behalf_of,
                 workspace_ref: &workspace,
                 link,
+                decision_id: Some(decision.decision_id.as_str()),
             },
         )
         .map_err(|why| {
@@ -541,6 +571,21 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                 Some("I-1"),
             )
         })?;
+        // `runs_used` + 1, in the same critical section as the check above.
+        case_records::append_line(
+            &root.join("cases").join(input.case_id).join(EXEC_RUNS),
+            &json!({"decision_key": decision.key, "decision_id": decision.decision_id,
+                    "run_id": run_id, "at": case_records::now_rfc3339()}),
+        )
+        .map_err(|why| {
+            refuse(
+                "FREEZE_INCOMPLETE",
+                &format!("store integrity: {why}"),
+                Some("I-1"),
+            )
+        })?;
+        // The interaction event carries `authority.decision_id` for RealityTrace.
+        case_records::enqueue_run_event(root, input.case_id, &run_record);
     }
     Ok(Admission {
         field_case: true,
@@ -568,4 +613,129 @@ fn scope_item_scope(
         }
         _ => Vec::new(),
     }
+}
+
+/// The workspace a run uses (also the sixth member of the bound execution).
+fn workspace_of(input: &GateInput, item: &str) -> String {
+    match (input.verb, input.endpoint) {
+        (Verb::Delegate, Some(endpoint)) => format!("ws:agent:{endpoint}"),
+        _ => format!("ws:case:{}:{item}", input.case_id),
+    }
+}
+
+/// The nine-member execution object of `reserved-operation.v1` `BoundExecution`,
+/// built from what the server knows: the frozen episode and world, the plan
+/// item's command, the request's time bound. A delegation has no command: its
+/// argv is the endpoint and its sandbox profile `agent`.
+fn execution_object(
+    root: &Path,
+    input: &GateInput,
+    item: &str,
+    episode_ref: &str,
+    world_ref: &str,
+    workspace: &str,
+) -> Result<Value, String> {
+    use sea_forge_core::types::Operation;
+    let plan: CasePlan = serde_json::from_slice(
+        &std::fs::read(root.join("cases").join(input.case_id).join("plan.json"))
+            .map_err(|e| format!("read plan.json: {e}"))?,
+    )
+    .map_err(|e| format!("plan.json: {e}"))?;
+    let plan_item = plan.items.iter().find(|i| i.plan_item_id == item);
+    let (argv, cwd, profile) = if input.verb == Verb::Delegate {
+        (
+            vec![input.endpoint.unwrap_or("").to_string()],
+            ".".to_string(),
+            "agent".to_string(),
+        )
+    } else {
+        let command = plan_item.and_then(|i| {
+            i.operations.iter().find_map(|o| match o {
+                Operation::ExecuteCommand { argv, cwd } => Some((argv.clone(), cwd.clone())),
+                _ => None,
+            })
+        });
+        let (argv, cwd) = command.unwrap_or_else(|| (vec![item.to_string()], ".".to_string()));
+        let profile = plan_item
+            .and_then(|i| i.sandbox_class.clone())
+            .unwrap_or_else(|| "default".to_string());
+        (argv, cwd, profile)
+    };
+    let empty_env = case_records::digest_of(&json!({})).ok_or("env digest")?;
+    let patch = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(b""));
+    Ok(json!({
+        "episode_ref": episode_ref, "patch_sha256": patch, "argv": argv, "cwd": cwd,
+        "env_digest": empty_env, "workspace_ref": workspace, "sandbox_profile": profile,
+        "world_ref": world_ref, "timeout_s": input.timeout_s.max(1),
+    }))
+}
+
+struct Decision {
+    /// The ledger entry of the decision (unique; `decision_id` is only unique per operation).
+    key: String,
+    decision_id: String,
+}
+
+/// Find an unexpired `allow` decision of the CEP authority path for exactly this
+/// execution and take the first one with runs left. Missing, denied, expired,
+/// exhausted, or any unreadable record is `AUTHORITY_DENIED` (fail closed).
+fn find_decision(
+    root: &Path,
+    case_id: &str,
+    object: &Value,
+    config: &Value,
+) -> Result<Decision, Value> {
+    let denied = |why: &str| refuse("AUTHORITY_DENIED", why, None);
+    let digest = case_records::digest_of(object)
+        .ok_or_else(|| denied("the execution object cannot be canonicalised"))?;
+    let resource = format!("execution:sha256:{digest}");
+    let ledger = sea_forge_ledger::LedgerStream::open(
+        root,
+        sea_forge_authority::cep::LEDGER_ID,
+        "execution-gate",
+    )
+    .map_err(|e| denied(&format!("the authority ledger cannot be opened: {e}")))?;
+    let entries = ledger
+        .read_entries()
+        .map_err(|e| denied(&format!("the authority ledger cannot be read: {e}")))?;
+    let runs = case_records::read_lines_strict(&root.join("cases").join(case_id).join(EXEC_RUNS))
+        .map_err(|e| denied(&format!("the run counter cannot be read: {e}")))?;
+    let max_runs = config["execution_max_runs"].as_u64().unwrap_or(1).max(1);
+    let ttl = config["execution_decision_ttl_secs"]
+        .as_i64()
+        .unwrap_or(86_400);
+    let now = chrono::Utc::now();
+    let mut seen_allow = false;
+    for e in entries
+        .iter()
+        .filter(|e| e.record_kind == "authority_decision")
+    {
+        let p = &e.payload;
+        if p["operation"]["resource_id"] != resource.as_str() || p["outcome"] != "allow" {
+            continue;
+        }
+        let fresh = p["decided_at"]
+            .as_str()
+            .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+            .is_some_and(|t| (now - t.with_timezone(&chrono::Utc)).num_seconds() <= ttl);
+        if !fresh {
+            continue;
+        }
+        seen_allow = true;
+        let used = runs
+            .iter()
+            .filter(|r| r["decision_key"] == e.entry_ulid.as_str())
+            .count() as u64;
+        if used < max_runs {
+            return Ok(Decision {
+                key: e.entry_ulid.clone(),
+                decision_id: p["decision_id"].as_str().unwrap_or("").to_string(),
+            });
+        }
+    }
+    Err(denied(if seen_allow {
+        "the program-execution decision is exhausted (runs_used reached max_runs)"
+    } else {
+        "no unexpired allow decision binds this execution (denied, absent, expired or another execution)"
+    }))
 }
