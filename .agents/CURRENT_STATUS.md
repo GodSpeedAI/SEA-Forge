@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 309
+**Status revision:** 310
 
-**Stage:** FDE S2: WP-20 reserved-operation.v1, independent-observation fixtures
+**Stage:** FDE S2: WP-20 oracle codes and model-drift checks
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): reserved-operation.v1, independent-observation fixtures.
+**Summary:** fde/integration: WP-20 (contracts only): oracle-codes.json mapping with check script, field-case/model drift check, digest script covers oracle-codes.json.
 
 **Verified:**
 

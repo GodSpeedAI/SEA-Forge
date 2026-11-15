@@ -1,0 +1,389 @@
+{
+  "version": 1,
+  "source": ".agents/reports/fde-convergence-2026-11-12/G-qualification-plan.md",
+  "meaning_of_home": "Each code is DEFINED (condition stated) in exactly one error table, its home. Another contract's Error enum may list a code it can also return (also_raised_by), by reference to the home's condition; scripts/check-fde-oracle-codes.sh checks that the set of enums containing a code equals {home} + also_raised_by.",
+  "g_rows": {
+    "NT-10": "SELF_SETTLEMENT_REFUSED",
+    "NT-11": "HARD_GATE_NOT_WAIVABLE",
+    "NT-12": "RESERVED_DECISION_REFUSED",
+    "NT-13": "KIND_IMMUTABLE",
+    "NT-17": "REFERENCE_DERIVED_FROM_RESULT",
+    "NT-18": "MODEL_ANCHOR_LATE",
+    "NT-22": "CASE_SUSPENDED",
+    "NT-23": "CLOSE_DISPOSITION_REQUIRED",
+    "NT-24": "A3_SURFACE_REQUIRED",
+    "NT-32": "FREEZE_MISSING",
+    "NT-33": "FREEZE_INCOMPLETE",
+    "NT-34": "AUTHORITY_DENIED",
+    "NT-48": "ANCHOR_PUBLISHER_INVALID"
+  },
+  "at_rows": {
+    "AT-03": [
+      "field-case.v1",
+      "case-record-kinds.v1",
+      "case-record-append.v2",
+      "continuation.v1"
+    ],
+    "AT-09": [
+      "case-record-append.v2",
+      "delegation-link.v1",
+      "reserved-operation.v1",
+      "execution-episode-ref.v1",
+      "independent-observation fixtures"
+    ],
+    "AT-10": [
+      "case-record-append.v2",
+      "continuation.v1"
+    ],
+    "AT-11": [
+      "case-record-append.v2",
+      "continuation.v1"
+    ],
+    "AT-15": [
+      "continuation.v1"
+    ],
+    "AT-17": [
+      "assignment.v1",
+      "execution-episode-ref.v1",
+      "continuation.v1"
+    ]
+  },
+  "codes": [
+    {
+      "code": "SCHEMA_INVALID",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "KIND_UNKNOWN",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "IDEMPOTENCY_CONFLICT",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "EPISODE_REF_DIGEST_MISMATCH",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "RESULT_INVALID",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "FREEZE_KEY_EXISTS",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "EXPLORATORY_NOT_SETTLEABLE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "FREEZE_MISSING",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-32"
+      ],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "FREEZE_INCOMPLETE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-33"
+      ],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "SELF_SETTLEMENT_REFUSED",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "delegation-link.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-10",
+        "AT-09"
+      ],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "WORLD_NOT_PINNED",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "fallback:SCHEMA_INVALID"
+    },
+    {
+      "code": "SETTLEMENT_EXISTS",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "fallback:IDEMPOTENCY_CONFLICT"
+    },
+    {
+      "code": "KIND_IMMUTABLE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-13"
+      ],
+      "v1_writers": "fallback:FREEZE_KEY_EXISTS"
+    },
+    {
+      "code": "REFERENCE_DERIVED_FROM_RESULT",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-17"
+      ],
+      "v1_writers": "fallback:SCHEMA_INVALID"
+    },
+    {
+      "code": "MODEL_ANCHOR_LATE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-18"
+      ],
+      "v1_writers": "fallback:FREEZE_INCOMPLETE"
+    },
+    {
+      "code": "AUTHORITY_DENIED",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json",
+        "reserved-operation.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-34"
+      ],
+      "v1_writers": "unreachable: v1 kinds carry no authority decision; execution verbs are not append verbs"
+    },
+    {
+      "code": "ANCHOR_PUBLISHER_INVALID",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-48"
+      ],
+      "v1_writers": "fallback:FREEZE_INCOMPLETE"
+    },
+    {
+      "code": "STORE_INTEGRITY",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "continuation.v1.json"
+      ],
+      "oracle_rows": [],
+      "v1_writers": "sfwp_error_frame:store_integrity"
+    },
+    {
+      "code": "PAYLOAD_TOO_LARGE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "sfwp_error_frame:input_error"
+    },
+    {
+      "code": "HARD_GATE_NOT_WAIVABLE",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-11",
+        "AT-11"
+      ],
+      "v1_writers": "unreachable: gate.assessed is a v2 kind"
+    },
+    {
+      "code": "CASE_SUSPENDED",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "NT-22"
+      ],
+      "v1_writers": "fallback:SCHEMA_INVALID"
+    },
+    {
+      "code": "REVISION_CONFLICT",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "AT-03"
+      ],
+      "v1_writers": "unreachable: field_case.revised and strategy.recorded are v2 kinds"
+    },
+    {
+      "code": "CLOSE_DISPOSITION_REQUIRED",
+      "home": "execution-episode-ref.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-23"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_ID_INVALID",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [
+        "AT-17"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_EPISODE_CHANGED",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "AT-17"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_TRANSITION_INVALID",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "AT-17"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_BUDGET_INVALID",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "AT-17"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "DELEGATION_LINK_INVALID",
+      "home": "delegation-link.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-10"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "RESERVED_DECISION_REFUSED",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-12"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "A3_SURFACE_REQUIRED",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "NT-24"
+      ],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "A3_CHANNEL_UNAVAILABLE",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "RESERVED_EXPIRED",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "RESERVED_DIGEST_MISMATCH",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "A3_PROOF_INVALID",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "A3_PROOF_REPLAYED",
+      "home": "reserved-operation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "NOT_A_FIELD_CASE",
+      "home": "continuation.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [
+        "AT-03"
+      ],
+      "v1_writers": "not an append code"
+    }
+  ],
+  "conflicts": [
+    {
+      "code": "MODEL_ANCHOR_LATE",
+      "note": "Already named in the v1 anchor README error table as a verification code (not in any schema enum). Same name, same meaning; v2 adds it to the append Error enum. Neither is renamed."
+    },
+    {
+      "code": "KIND_IMMUTABLE",
+      "note": "v1 README (WP-11 decision 8) says KIND_IMMUTABLE is not used because a relabel is a second freeze for the key (FREEZE_KEY_EXISTS). v2 writers now receive KIND_IMMUTABLE for that case, which takes precedence over FREEZE_KEY_EXISTS; v1 writers still receive FREEZE_KEY_EXISTS. A behaviour difference, not a name conflict."
+    },
+    {
+      "code": "FREEZE_INCOMPLETE",
+      "note": "v1 defines it for a freeze naming absent RealityTrace records (NT-33 b). G NT-33 uses it also for (a) RealityTrace records without a case record and (c) a missing anchor; these arise at execution gating (execution-episode-ref.v1), not at append. Extension of the same code, not a rename."
+    },
+    {
+      "code": "FREEZE_MISSING",
+      "note": "v1 defines it for episode.settled with no freeze and mentions the delegation refusal; v2 defines the execution-gate meaning (NT-32) as: no RealityTrace records and no case record. No name conflict."
+    }
+  ],
+  "no_name_conflicts": true
+}

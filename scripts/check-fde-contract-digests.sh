@@ -4,6 +4,7 @@
 # digest, so a changed schema must come with a new manifest line in the same
 # commit.
 #
+# oracle-codes.json (the S2 code mapping) is pinned the same way as the versioned schemas.
 # Usage: scripts/check-fde-contract-digests.sh [--update]
 set -eu
 
@@ -12,7 +13,7 @@ dir=${FDE_CONTRACTS_DIR:-$root/contracts/fde}
 manifest=$dir/DIGESTS
 
 if [ "${1:-}" = "--update" ]; then
-  (cd "$dir" && sha256sum -- *.v*.json) >"$manifest"
+  (cd "$dir" && sha256sum -- *.v*.json oracle-codes.json) >"$manifest"
   exit 0
 fi
 
