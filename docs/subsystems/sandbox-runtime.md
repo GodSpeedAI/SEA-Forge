@@ -122,6 +122,7 @@ Timeouts use `wait_timeout`. On expiry the implementation kills the process grou
 * **TCP-only network enforcement.** UDP and raw sockets are out of scope for the Landlock jail.
 * **`local` is not a security boundary.** Use it only for trusted workloads.
 * **Artifact outputs are launcher-owned.** `stdout.txt` and `stderr.txt` are unlinked without following and recreated exclusively before each run, so a planted symlink or hard link cannot redirect a host write.
+* **The macOS jail never claims a complete descendant teardown.** Its verdict is `group_terminated_descendants_unverified`: the process group was killed and no censused descendant survived, but macOS offers no membership mechanism that survives reparenting, so a double-fork `setsid` daemon that reparents before any census sample is unobservable. Census-observed survivors are reported as `sandbox_cage_persists`. A consumer must not read either verdict as "every descendant is dead".
 * **Process-group cleanup is not a containment boundary.** After completion or timeout the workload's process group is SIGKILLed, so ordinary background children cannot outlive the run. A descendant that calls `setsid()` leaves the group and is not reached; nothing filters `setsid()` on the macOS or Linux jails, so this escape is open and not fixed.
 
 ---

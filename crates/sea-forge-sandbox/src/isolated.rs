@@ -12,7 +12,9 @@ use crate::workload::{
     WorkloadConfinement, WorkloadIdentityPool,
 };
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
-use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::types::{
+    ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment,
+};
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -91,7 +93,7 @@ impl ExecutionSandbox for IsolatedSandbox {
             socket_paths: Vec::new(),
             network: h.spec.network.clone(),
         };
-        let (mut command, lifeline) =
+        let (mut command, lifeline, mut ack) =
             isolated_command(&identity, &self.helper, &confinement, argv)?;
         command
             .current_dir(&cwd)
@@ -100,28 +102,71 @@ impl ExecutionSandbox for IsolatedSandbox {
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
         let started_at = chrono::Utc::now().to_rfc3339();
+        // C1: the run's process tree is the PID namespace established by
+        // `unshare` before exec — membership is structural (inherited by
+        // every descendant) and kernel teardown is unconditional. Per review
+        // pass 2 (R4), the namespace's containment is CLAIMABLE only after
+        // the trusted helper's setup acknowledgement arrives: the helper
+        // writes one byte over the ack pipe after its restrictions are in
+        // force and before any workload code exists. A setup failure inside
+        // `unshare` (or before the helper's restrictions apply) is EOF or
+        // timeout on that pipe and is reported as
+        // `workload_isolation_setup_failed` — never as a contained Completed
+        // run, whose exit status cannot distinguish a failed setup from a
+        // failing workload. The parent performs no emptiness read-back, so
+        // no kill verification is asserted.
         let outcome = match command.spawn() {
-            Err(_) => Ok((ExecutionStatus::SpawnFailed, None)),
-            Ok(mut child) => match child
-                .wait_timeout(Duration::from_secs(req.timeout_secs))
-                .map_err(map_err)
-            {
-                Ok(Some(status)) => Ok((ExecutionStatus::Completed, status.code().map(i64::from))),
-                Ok(None) => {
-                    // Killing `unshare` kills the pid namespace's init and
-                    // with it every workload process.
-                    let _ = child.kill();
-                    child
-                        .wait()
-                        .map(|_| (ExecutionStatus::TimedOut, None))
-                        .map_err(map_err)
-                }
-                Err(error) => {
+            Err(_) => Ok((
+                ExecutionStatus::SpawnFailed,
+                None,
+                // Nothing exec'd: there is no process tree whose lifecycle
+                // could have been contained.
+                LifecycleContainment::NoProcess,
+            )),
+            Ok(mut child) => {
+                if let Err(setup_error) = crate::workload::wait_for_isolation_ack(
+                    &mut ack,
+                    crate::workload::ISOLATION_ACK_TIMEOUT,
+                ) {
+                    // The launch chain never confirmed its setup: kill and
+                    // reap it, and report the failure WITHOUT a containment
+                    // claim (no ExecutionResult is produced at all).
                     let _ = child.kill();
                     let _ = child.wait();
-                    Err(error)
+                    Err(setup_error)
+                } else {
+                    match child
+                        .wait_timeout(Duration::from_secs(req.timeout_secs))
+                        .map_err(map_err)
+                    {
+                        Ok(Some(status)) => Ok((
+                            ExecutionStatus::Completed,
+                            status.code().map(i64::from),
+                            LifecycleContainment::PidNamespace,
+                        )),
+                        Ok(None) => {
+                            // Killing `unshare` kills the pid namespace's init and
+                            // with it every workload process.
+                            let _ = child.kill();
+                            child
+                                .wait()
+                                .map(|_| {
+                                    (
+                                        ExecutionStatus::TimedOut,
+                                        None,
+                                        LifecycleContainment::PidNamespace,
+                                    )
+                                })
+                                .map_err(map_err)
+                        }
+                        Err(error) => {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                            Err(error)
+                        }
+                    }
                 }
-            },
+            }
         };
         // End anything the command left running, then withdraw the
         // identity's reach before its slot can be reissued.
@@ -130,7 +175,7 @@ impl ExecutionSandbox for IsolatedSandbox {
             revoke_exclusive_access(tree)?;
         }
         drop(identity);
-        let (mut status, exit_code) = outcome?;
+        let (mut status, exit_code, containment) = outcome?;
         // As for the jail: a nonzero exit plus a child-written denial is only
         // evidence of a confinement refusal, recorded as suspected.
         if status == ExecutionStatus::Completed && exit_code != Some(0) {
@@ -147,7 +192,10 @@ impl ExecutionSandbox for IsolatedSandbox {
             }
         }
         Ok(crate::local::execution_result(
-            status, exit_code, started_at,
+            status,
+            exit_code,
+            started_at,
+            containment,
         ))
     }
 

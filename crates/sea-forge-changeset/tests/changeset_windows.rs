@@ -1,9 +1,9 @@
 //! Windows reparse-point and hard-link refusal. The Unix equivalents live in
 //! `changeset.rs`. A check that cannot run (for example, symlink creation
-//! without Developer Mode or elevation) prints `SKIPPED: <reason>` and returns
-//! when `SEA_FORGE_REQUIRE_LINK_PRIVILEGE` is unset. When that variable is `1`
-//! (the Portability workflow sets it), the same condition fails the test, so a
-//! blocked prerequisite can never count as a pass.
+//! without Developer Mode or elevation) is labeled `BLOCKED: <reason>` and
+//! tallied when `SEA_FORGE_REQUIRE_LINK_PRIVILEGE` is unset. When that
+//! variable is `1` (the Portability workflow sets it), the same condition
+//! fails the test, so a blocked prerequisite can never count as a pass.
 #![cfg(windows)]
 
 use sea_forge_changeset::{
@@ -16,13 +16,21 @@ use std::process::Command;
 
 const WHEN: &str = "2026-01-02T00:00:00Z";
 
+/// Process-wide tally of scenarios that could not run because a link-creation
+/// prerequisite is missing. A required lane (the REQUIRE variable set) must
+/// not skip; elsewhere the `BLOCKED:` label keeps the skip honest (F15).
+static BLOCKED_SCENARIOS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// Reports a link-creation prerequisite that is missing. Fails under
-/// `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1`; otherwise prints and lets the test return.
+/// `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1`; otherwise tallies the scenario and
+/// labels it `BLOCKED:` so a blocked prerequisite can never read as a pass
+/// (`no_blocked_scenarios_in_required_mode` guards the required lane).
 fn blocked(reason: &str) {
+    BLOCKED_SCENARIOS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     if std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1") {
         panic!("BLOCKED prerequisite, not a pass: {reason}");
     }
-    println!("SKIPPED: {reason}");
+    eprintln!("BLOCKED: {reason}");
 }
 
 fn git(dir: &Path, args: &[&str]) -> String {
@@ -144,4 +152,17 @@ fn hard_link_in_result_is_refused() {
     let (cs, findings) = collect(&repo, &base, &work, &staging, WHEN).expect("collect");
     assert!(has_class(&findings, "hard_link"), "{findings:?}");
     assert_refused(&cs, &findings);
+}
+
+/// Required-lane guard (F15): blocked scenarios must not survive a lane that
+/// requires the link-creation prerequisite.
+#[test]
+fn no_blocked_scenarios_in_required_mode() {
+    let blocked_count = BLOCKED_SCENARIOS.load(std::sync::atomic::Ordering::SeqCst);
+    assert!(
+        !(blocked_count > 0
+            && std::env::var("SEA_FORGE_REQUIRE_LINK_PRIVILEGE").as_deref() == Ok("1")),
+        "required lane (SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1) finished with \
+         {blocked_count} BLOCKED scenario(s); required lanes cannot skip"
+    );
 }

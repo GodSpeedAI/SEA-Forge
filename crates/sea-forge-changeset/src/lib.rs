@@ -37,6 +37,12 @@ const MODE_EXECUTABLE: &str = "100755";
 const MODE_SYMLINK: &str = "120000";
 const MODE_GITLINK: &str = "160000";
 
+/// Destination-directory name prefix of the safe-write staging directories
+/// (`crates/sea-forge-sandbox/src/write_staging.rs`, `STAGING_PREFIX`). An
+/// entry with this prefix inside a returned workspace is an interrupted
+/// writer's leftover; [`scan`] refuses the whole collect on sight.
+const STAGING_LEFTOVER_PREFIX: &str = ".sf-staging-";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangesetError {
     /// Stable machine-readable class, e.g. `stale_base`.
@@ -372,8 +378,9 @@ pub fn export_base(repo: &Path, base: &BaseIdentity, staging: &Path, dest: &Path
     Ok(())
 }
 
-/// Refuse anything Git would not record faithfully or that could alias state
-/// outside the workspace.
+/// Refuse anything Git would not record faithfully, that could alias state
+/// outside the workspace, or that is an interrupted writer's internal
+/// staging leftover (never a deliverable).
 fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
     let entries = fs::read_dir(dir)
         .map_err(|e| ChangesetError::new("workspace_unavailable", e.to_string()))?;
@@ -399,6 +406,25 @@ fn scan(root: &Path, dir: &Path, findings: &mut Vec<Finding>) -> Result<()> {
                 class: "git_metadata".into(),
                 message: "the workspace contains Git metadata".into(),
             });
+        } else if entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with(STAGING_LEFTOVER_PREFIX)
+        {
+            // An interrupted safe write leaves its staging directory and its
+            // temp files inside the destination tree (the writer publishes
+            // by rename and removes the staging directory only on success).
+            // These are internal incomplete writes: they must never become
+            // delivered artifacts, so this is a refusal, not a finding.
+            return Err(ChangesetError::new(
+                "staging_leftovers",
+                format!(
+                    "{relative} is a leftover sea-forge staging entry from an interrupted \
+                     write; internal incomplete writes are never delivered: remove the stale \
+                     staging directory (it contains only temp files; the published files \
+                     live in the workspace) and collect again"
+                ),
+            ));
         } else if is_link_or_reparse(&meta) {
             // Windows: a symlink is a reparse point too, and Git there would
             // record its target's content as a plain file, so both are refused

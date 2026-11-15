@@ -239,7 +239,8 @@ fn a_compiler_upgrade_is_refused_when_any_meaning_bearing_field_differs() {
 fn a_compiler_upgrade_is_refused_when_the_producer_version_is_equal() {
     let root = tempfile::tempdir().unwrap();
     let mut doc: Value = serde_json::from_str(FIXTURE_0_21_0).unwrap();
-    doc["producer_version"] = json!("0.22.0");
+    // Equality is against the LINKED producer version, so the case survives pin bumps.
+    doc["producer_version"] = json!(sea_forge_domainforge::EXPECTED_DOMAINFORGE_VERSION);
     let mut reg = WorldRegistry::new();
     let old = reg
         .register_prior_identity_json("demo", &doc.to_string())
