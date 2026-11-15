@@ -1,0 +1,340 @@
+{
+  "case_id": "case-0001",
+  "template_ref": "fde.field_case@1",
+  "revision": 1,
+  "sop": {
+    "document": "GS-FDE-SOP-001",
+    "version": "0.4.1",
+    "sha256": "043ae33ae6001da14f518feeb4ca2d23e280da2769d8378b36827f80d6057001"
+  },
+  "fields": {
+    "purpose_and_outcome": {
+      "owner_sponsor": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "signal": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "stated_problem": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "adopted_problem": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "problem_class": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "jtbd_outcome": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "business_significance": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "success_direction": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "non_goals": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "constraints": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "decision_this_work_can_unlock": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    },
+    "framing": {
+      "current_framing": {
+        "status": "observed",
+        "source_ref": {
+          "kind": "record",
+          "ref": "r"
+        },
+        "value": null
+      },
+      "what_it_reveals": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "what_it_hides": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "better_question": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "better_problem_if_successful": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    },
+    "world_and_boundary": {
+      "world_ref_and_version": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "checkpoint": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "people_and_systems": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "observed_conditions": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "statements_needing_confirmation": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "known_unknowns": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "interfaces": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "time_horizon": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    },
+    "observer_and_authority": {
+      "case_lead": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "criterion_owner": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "delegated_actors": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "independent_verifier": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "settlement_and_disposition_authority": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "risk_and_external_effect_limits": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "authority_surface": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    },
+    "current_horizon": {
+      "evidence_and_decisions": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "contested_distinctions": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "hypotheses": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "possible_next_moves": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "blocked_moves_with_reason": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "available_and_missing_affordances": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "budgets": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "ignored_payment": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "outstanding_obligations": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    },
+    "continuity": {
+      "previous_episode": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "worktree_session_artifact_links": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "open_questions": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "current_decision": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      },
+      "next_affordable_move": {
+        "status": "unknown",
+        "source_ref": {
+          "kind": "none",
+          "ref": "none"
+        }
+      }
+    }
+  }
+}

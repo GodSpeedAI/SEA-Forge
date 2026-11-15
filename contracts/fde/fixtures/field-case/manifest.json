@@ -1,0 +1,128 @@
+{
+  "schema": "urn:sea-forge:fde:field-case:v1",
+  "valid": [
+    {
+      "file": "opened-all-unknown.json",
+      "def": null
+    },
+    {
+      "file": "revised-mixed-status.json",
+      "def": null
+    },
+    {
+      "file": "observed-from-realitytrace.json",
+      "def": null
+    }
+  ],
+  "invalid": [
+    {
+      "file": "field-missing.json",
+      "def": null,
+      "pointer": "/fields/framing",
+      "contains": "\"better_question\" is a required property"
+    },
+    {
+      "file": "group-missing.json",
+      "def": null,
+      "pointer": "/fields",
+      "contains": "\"continuity\" is a required property"
+    },
+    {
+      "file": "group-extra.json",
+      "def": null,
+      "pointer": "/fields",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "field-extra.json",
+      "def": null,
+      "pointer": "/fields/framing",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "status-not-in-enum.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing",
+      "contains": "\"value\" is a required property"
+    },
+    {
+      "file": "unknown-carries-value.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "unknown-with-source.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/kind",
+      "contains": "was expected"
+    },
+    {
+      "file": "observed-without-value.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing",
+      "contains": "\"value\" is a required property"
+    },
+    {
+      "file": "observed-null-value.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/value",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "observed-with-none-source.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/kind",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "none-source-bad-ref.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/ref",
+      "contains": "was expected"
+    },
+    {
+      "file": "source-ref-missing.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing",
+      "contains": "\"source_ref\" is a required property"
+    },
+    {
+      "file": "source-kind-unknown.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "template-ref-wrong.json",
+      "def": null,
+      "pointer": "/template_ref",
+      "contains": "was expected"
+    },
+    {
+      "file": "revision-zero.json",
+      "def": null,
+      "pointer": "/revision",
+      "contains": "is less than the minimum"
+    },
+    {
+      "file": "sop-hash-wrong.json",
+      "def": null,
+      "pointer": "/sop/sha256",
+      "contains": "was expected"
+    },
+    {
+      "file": "case-id-has-colon.json",
+      "def": null,
+      "pointer": "/case_id",
+      "contains": "does not match"
+    },
+    {
+      "file": "document-extra-key.json",
+      "def": null,
+      "pointer": "",
+      "contains": "Additional properties"
+    }
+  ],
+  "semantic_invalid": []
+}

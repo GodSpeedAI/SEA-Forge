@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 301
+**Status revision:** 302
 
-**Stage:** FDE integration branch: merged origin/main; SOP model re-minted under DomainForge 0.22.0
+**Stage:** FDE S2: WP-20 field-case.v1
 
-**Summary:** fde/integration merged origin/main (DomainForge 0.22.0 lockstep, PR #71 hardening harvest, e2e-world-loop, planning baseline). The FDE SOP model world_ref changes with the compiler from 78eddd4e... (0.21.2) to e3c3d396... (0.22.0 release CLI, tarball sha256 0a976877...); sources unchanged. validation record regenerated, compiler-upgrade-0.22.0.md added, check-fde-sop-model.sh pins the compiler and distinguishes the S1 frozen world from the current world. Pre-registration and S1 evidence bundle untouched.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): field-case.v1.
 
 **Verified:**
 
@@ -52,7 +52,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** WP-20 contract; anchor the results digest under a new kind; re-execution by the verifier; mutation re-application
+**Next:** Remaining WP-20 contracts, README, CHANGELOG, oracle-codes check, then gates
 
 **Evidence:**
 
