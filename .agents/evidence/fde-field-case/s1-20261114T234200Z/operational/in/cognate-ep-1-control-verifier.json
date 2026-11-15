@@ -1,0 +1,36 @@
+{
+ "cognateDir": "/home/sprime01/projects/_wt/fde-cognate-integration",
+ "outDir": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-1-control-verifier",
+ "actor": "fresh-verifier",
+ "role": "verifier",
+ "semanticRef": "godspeed-fde-sop::FreshContextVerification",
+ "worldRef": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+ "caseId": "case-0001",
+ "planItemId": "pi-e2-tail-read",
+ "kind": "evaluated",
+ "episodeRef": "episode:case-0001:pi-e2-tail-read:1@sha256:bcf7f6db9749761ba1803d4a6344610e54f77d2c0f72ee2c99e61282a1e55f35",
+ "assignmentId": "assign:case-0001:pi-e2-tail-read:1:2",
+ "expectationRefs": [
+  "question:01JFB94296D32FF090E88CB840"
+ ],
+ "workspace": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/ws/sea-rs",
+ "patchFile": "/home/sprime01/projects/_wt/fde-sea-rs-integration/scripts/fde-s1/patches/ep-1-events-tail.patch",
+ "argv": [
+  "flock",
+  "-o",
+  "/home/sprime01/projects/_wt/cargo.lock",
+  "env",
+  "RUSTC_WRAPPER=",
+  "CARGO_BUILD_JOBS=1",
+  "CARGO_INCREMENTAL=0",
+  "CARGO_PROFILE_DEV_DEBUG=0",
+  "CARGO_PROFILE_TEST_DEBUG=0",
+  "cargo",
+  "test",
+  "--locked",
+  "-p",
+  "sea-forge-server",
+  "--test",
+  "conformance_lifecycle"
+ ]
+}

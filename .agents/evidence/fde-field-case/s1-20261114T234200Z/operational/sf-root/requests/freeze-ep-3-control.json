@@ -1,0 +1,19 @@
+{
+  "request_id": "freeze-ep-3-control",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:56:10.619127332+00:00",
+  "completed_at": "2026-11-14T23:56:11.054683631+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e1-stale-control"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0006",
+    "replayed": false
+  },
+  "payload_hash": "dbcdc0063568a547b60789521182be8d6a14498a836da6cd641566c07f4b6165"
+}

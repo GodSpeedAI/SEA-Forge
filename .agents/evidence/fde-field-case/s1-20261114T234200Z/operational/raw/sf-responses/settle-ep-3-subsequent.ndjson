@@ -1,0 +1,1 @@
+{"actor":{"actor_id":"independent-settler","role":"operator"},"i":0,"request_id":"settle-ep-3-subsequent","response":{"episode_key":{"case_id":"case-0001","n":1,"plan_item_id":"pi-e1-stale"},"kind":"episode.settled","outcome":"recorded","record_id":"rec-0007","replayed":false}}

@@ -1,0 +1,7 @@
+{"event_id": "cog:ep-1-control:executor", "plan_item_id": "pi-e2-tail-read", "actor_id": "program-executor", "kind": "program.run.executor", "recorded_at": "2026-11-14T23:43:41Z"}
+{"event_id": "cog:ep-1-control:verifier", "plan_item_id": "pi-e2-tail-read", "actor_id": "fresh-verifier", "kind": "program.run.verifier", "recorded_at": "2026-11-14T23:44:40Z"}
+{"event_id": "cog:ep-2-inquiry:executor", "plan_item_id": "pi-e3-kg-roundtrip", "actor_id": "program-executor", "kind": "program.run.executor", "recorded_at": "2026-11-14T23:47:19Z"}
+{"event_id": "cog:ep-2-inquiry:verifier", "plan_item_id": "pi-e3-kg-roundtrip", "actor_id": "fresh-verifier", "kind": "program.run.verifier", "recorded_at": "2026-11-14T23:49:55Z"}
+{"event_id": "cog:ep-3-subsequent:executor", "plan_item_id": "pi-e1-stale", "actor_id": "program-executor", "kind": "program.run.executor", "recorded_at": "2026-11-14T23:52:52Z"}
+{"event_id": "cog:ep-3-subsequent:verifier", "plan_item_id": "pi-e1-stale", "actor_id": "fresh-verifier", "kind": "program.run.verifier", "recorded_at": "2026-11-14T23:56:09Z"}
+{"event_id": "cog:ep-3-control:executor", "plan_item_id": "pi-e1-stale-control", "actor_id": "program-executor", "kind": "program.run.executor", "recorded_at": "2026-11-14T23:59:16Z"}

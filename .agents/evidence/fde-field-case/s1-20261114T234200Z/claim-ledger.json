@@ -1,0 +1,720 @@
+{
+ "areas": [
+  {
+   "area": "initial semantic modelling",
+   "limitation": "none recorded",
+   "status": "PROVEN",
+   "tests": [
+    "AT-01"
+   ]
+  },
+  {
+   "area": "provenance (external 'before')",
+   "limitation": "AT-04 PARTIAL: order check and digest equality pass in the producer tests; anchor time is the local clock only (AnchorTimeLocalOnly, OD-6), execution-side I-1 gate not wired (WP-20), so freeze-before-execution is verified after the fact, not enforced; NT-16 PARTIAL: the tamper/order check refuses as specified; the server push time is not read from the remote (AnchorTimeLocalOnly) and the anchor is a shared-OS-user tag without a protected namespace (RD-26, OD-6)",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-04",
+    "NT-01",
+    "NT-16"
+   ]
+  },
+  {
+   "area": "semantic exhaust",
+   "limitation": "AT-05 PARTIAL: SEA-Forge half and Cognate half pass; emitter signatures arrive with WP-33 so the signature check cannot run; authenticity rests on source-record resolution and the independent-emitter rule",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-05",
+    "NT-02"
+   ]
+  },
+  {
+   "area": "observed-model derivation",
+   "limitation": "NT-03 PARTIAL: producer tests pass; a real re-run with a changed outcome was not run",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-06",
+    "AT-08",
+    "NT-03",
+    "NT-03b"
+   ]
+  },
+  {
+   "area": "divergence classification",
+   "limitation": "AT-07 PARTIAL: classes arose on the real episode set (see cell results); declared_unobserved and any unarising class NOT TESTED; postcondition expectations insufficient (DomainForge accepts only at precondition); NT-04 PARTIAL: both halves pass; the authorizing approval is a session-assurance approval (A3 and a human-reserved decision need S3); NT-06 PARTIAL: producer test passes; a silent source on the real cell was not run",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-07",
+    "NT-04",
+    "NT-06"
+   ]
+  },
+  {
+   "area": "governed revision",
+   "limitation": "AT-12 PARTIAL: see log",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-12",
+    "NT-05",
+    "NT-07",
+    "NT-08"
+   ]
+  },
+  {
+   "area": "subsequent operational capability",
+   "limitation": "AT-13 PARTIAL: see log",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-13"
+   ]
+  },
+  {
+   "area": "Horizon inspection (read adapters)",
+   "limitation": "AT-14 PARTIAL: parity passes on the producer's fixtures (real RealityTrace CLI output and real case_records::append output); the cell's own raw records were not rendered",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-14",
+    "NT-09"
+   ]
+  },
+  {
+   "area": "reproducibility and independent 'before'",
+   "limitation": "AT-18 PARTIAL: anchors verify (prereg by fde-anchor.sh; freeze tags by digest, local clock only), replay hashes and classes equal the recorded ones; re-execution of the program episodes was not repeated by the verifier",
+   "status": "PARTIAL",
+   "tests": [
+    "AT-18"
+   ]
+  }
+ ],
+ "capability_delta": {
+  "classes": {
+   "control_new": "insufficient",
+   "control_old": "absent",
+   "new": "insufficient",
+   "old": "absent"
+  },
+  "code": null,
+  "falsifier_triggered": [
+   "new_world_not_confirmed"
+  ],
+  "predicted": "GAIN",
+  "prediction_met": false,
+  "r58_supported": false,
+  "result": "NO_GAIN"
+ },
+ "cell_gaps": [
+  {
+   "gap": "SEA-Forge freeze does not check the pinned world (WORLD_NOT_PINNED missing in case-record-append.v1): ep-3 froze under v2 by the caller's own declaration; the pin is not consumed on the write path",
+   "tests": "AT-12,NT-07,AT-13"
+  },
+  {
+   "gap": "execution-side I-1 gate is not wired: item_execute/case_advance/agent_run.delegate carry no n or episode_ref; Cognate program.run ran under its own local policy with no SEA-Forge authority decision (authority.decision_id is unknown/not_required)",
+   "tests": "AT-04,NT-16"
+  },
+  {
+   "gap": "no in-process RealityTrace writer/delivery from SEA-Forge: interaction events travel as spool files (interaction-events/<case>.jsonl, Cognate NDJSON) into `observed ingest`; evidence.recorded rows are seeded by rt-seed because no producer writes them",
+   "tests": "AT-05,AT-06"
+  },
+  {
+   "gap": "Cognate's ungoverned run events ride Observation.interactionEvent, not a CEP envelope: wrapped in the minimal execution_trace envelope by cognate_run.ts; only run.invocation is emitted (host outboxFor filter)",
+   "tests": "AT-05"
+  },
+  {
+   "gap": "anchor: scratch git repository with a local bare remote (not the programme origin); time is local-only (OD-6); freeze anchors are not verifiable with fde-anchor.sh verify (refused there by design)",
+   "tests": "AT-04,AT-18"
+  },
+  {
+   "gap": "the non-promotion variant (decline with retained divergence and rationale) was not run; approval is at session assurance, not A3",
+   "tests": "AT-12"
+  },
+  {
+   "gap": "the harness's verification step is emitted only by Cognate (the executor's own emitter): RealityTrace refuses to confirm executor-only evidence, so the declared step stays insufficient under v2",
+   "tests": "AT-13"
+  },
+  {
+   "gap": "no model element or mapping form expresses 'declared command passes' / the ep-2 hypothesis or a postcondition: no contradicted residual arises from ep-2; NT-03 real re-run with a changed value and NT-06 silent source were verified by producer tests only",
+   "tests": "AT-07,NT-03,NT-06"
+  },
+  {
+   "gap": "SEA-Forge embeds DomainForge 0.21.2; the stack ran on the 3960326 build (0.21.2 line, world_ref 78ed... equals the frozen episodes.yaml world); DomainForge 0.22.0 gives world_ref e3c3... for the same sources",
+   "tests": "AT-01,AT-12"
+  }
+ ],
+ "claim": "the Mission \u00a71\u20137 path exists and runs once on program execution. It is not evidence about organisational behaviour.",
+ "claim_status": "SUPPORTED at bounded-interaction level, once, on program execution; PARTIAL rows: AT-04, AT-05, AT-07, AT-12, AT-13, AT-14, AT-18, NT-03, NT-04, NT-06, NT-16; all other behaviour classes NOT TESTED",
+ "counts": {
+  "FAIL": 0,
+  "NOT_RUN": 0,
+  "NOT_TESTED": 0,
+  "PARTIAL": 11,
+  "PASS": 10
+ },
+ "episodes": [
+  {
+   "episode": "ep-1-control",
+   "executed_by": [
+    "program-executor",
+    "fresh-verifier"
+   ],
+   "executor_run": {
+    "rc": 0,
+    "runId": "f863ac29-f68d-449c-9784-b3811967c70a",
+    "status": "completed"
+   },
+   "observed_classes": [
+    [
+     "confirmed",
+     "policy_true",
+     "freeze_before_move"
+    ],
+    [
+     "insufficient",
+     "policy_unknown",
+     "authorize_consequential_action"
+    ],
+    [
+     "observed_undeclared",
+     "structural_undeclared",
+     "undeclared:undeclared:1f728504dc8cbfa577071e39"
+    ]
+   ],
+   "predicted_classes": [
+    {
+     "class_v1": "confirmed",
+     "expectation": "Freeze recorded before the first run record (precondition policy)"
+    },
+    {
+     "class_v1": "confirmed",
+     "expectation": "Authority decision exists before execute (precondition policy executed_steps_have_approval)"
+    },
+    {
+     "class_v1": "confirmed",
+     "expectation": "Declared command passes (executor's own run, independent verifier's run)"
+    },
+    {
+     "class_v1": "observed_undeclared",
+     "expectation": "Fresh-context verification step performed before the claim (not declared in v1)"
+    },
+    {
+     "basis": "postcondition enforcement is not expressible in DomainForge 0.21.2 (only 'at precondition')",
+     "class_v1": "insufficient",
+     "expectation": "Settlement postcondition (S7.5e: independent result recorded after the run)"
+    },
+    {
+     "class_v1": "not_exercised",
+     "expectation": "Residue capture after settlement (S6.3)",
+     "note": "trigger absent unless the verifier settles F or U; not a divergence class (NT-29)"
+    }
+   ],
+   "predicted_result": "S",
+   "settled_by": "independent-settler",
+   "settled_result": "U",
+   "verifier_run": {
+    "rc": 0,
+    "runId": "249d799a-8962-4e87-9e2b-bf2ba7909191",
+    "status": "completed"
+   }
+  },
+  {
+   "episode": "ep-2-inquiry",
+   "executed_by": [
+    "program-executor",
+    "fresh-verifier"
+   ],
+   "executor_run": {
+    "rc": 3,
+    "runId": "a837a1d1-9fcb-4d29-814d-3479152b8f42",
+    "status": "failed"
+   },
+   "observed_classes": [
+    [
+     "confirmed",
+     "policy_true",
+     "freeze_before_move"
+    ],
+    [
+     "insufficient",
+     "policy_unknown",
+     "authorize_consequential_action"
+    ],
+    [
+     "observed_undeclared",
+     "structural_undeclared",
+     "undeclared:undeclared:1f728504dc8cbfa577071e39"
+    ]
+   ],
+   "predicted_classes": [
+    {
+     "class_v1": "contradicted",
+     "expectation": "Hypothesis: round trip preserves Policy and EntityInstance triples"
+    },
+    {
+     "class_v1": "confirmed",
+     "expectation": "Patch changes no product source (invariant)"
+    }
+   ],
+   "predicted_result": "F",
+   "settled_by": "independent-settler",
+   "settled_result": "F",
+   "verifier_run": {
+    "rc": 3,
+    "runId": "822456e6-ee0c-4b4e-b60a-eee12dc04d9a",
+    "status": "failed"
+   }
+  },
+  {
+   "episode": "ep-3-subsequent",
+   "executed_by": [
+    "program-executor",
+    "fresh-verifier"
+   ],
+   "executor_run": {
+    "rc": 0,
+    "runId": "cf25ec82-ccd0-4703-af57-5584bdfea43b",
+    "status": "completed"
+   },
+   "observed_classes": [
+    [
+     "confirmed",
+     "policy_true",
+     "freeze_before_move"
+    ],
+    [
+     "insufficient",
+     "policy_unknown",
+     "authorize_consequential_action"
+    ],
+    [
+     "insufficient",
+     "executor_only_evidence",
+     "verification_by_independent_role"
+    ]
+   ],
+   "predicted_classes": [
+    {
+     "class_control_variant_v2": "unchanged from v1 (observed_undeclared or undetectable); no gain without the step",
+     "class_v1": "observed_undeclared",
+     "class_v2": "confirmed",
+     "expectation": "Fresh-context verification step performed before the claim"
+    },
+    {
+     "class_v1": "confirmed",
+     "class_v2": "confirmed",
+     "expectation": "Declared command passes (executor and independent verifier)"
+    }
+   ],
+   "predicted_result": "S",
+   "settled_by": "independent-settler",
+   "settled_result": "U",
+   "verifier_run": {
+    "rc": 0,
+    "runId": "3ec67fee-48f2-4781-83e2-be2f56041d4a",
+    "status": "completed"
+   }
+  }
+ ],
+ "evidence_level": "bounded interaction (once, program executors)",
+ "expected_counts": {
+  "FAIL": 0,
+  "NOT_TESTED": 0,
+  "PARTIAL": 9,
+  "PASS": 12
+ },
+ "generated_at": "2026-11-15T00:07:45Z",
+ "mismatches": [
+  "AT-14",
+  "NT-03",
+  "NT-06",
+  "NT-07"
+ ],
+ "open_limits": [
+  "F1(b): execution-side I-1 gate NOT wired \u2014 item_execute/case_advance/agent_run.delegate carry no `n`/`episode_ref`; needs WP-20 contract. I-1 in S1 = settlement requires complete freeze + post-hoc order verification (AT-04/NT-16), NOT prevention of execution before freeze.",
+  "F8: freeze path does not refuse a world_ref \u2260 pinned world (needs code WORLD_NOT_PINNED in case-record-append; closed contract) \u2192 pin not consumed on the write path.",
+  "F7 residual: no record links an agent run's actor to its delegator \u2192 delegate-then-settle by the delegator not caught; gateway hop only when a gateway is configured.",
+  "F5: remote push time unobtainable with plain git \u2192 every real receipt is AnchorTimeLocalOnly (never ExternallyVerified) \u2014 ties to OD-6.",
+  "F3 residual: SEA-Forge cannot recompute matrix rows; approver-bound matrix_id only.",
+  "F2 residual: single-process case lock only.",
+  "Anchor required for settlement only when SEA_FORGE_FDE_ANCHOR_SCRIPT is configured."
+ ],
+ "repos": {
+  "cognate": {
+   "branch": "fde/integration",
+   "commit": "db788d108dad9667b2523f32de4ad9c530df51b0",
+   "path": "/home/sprime01/projects/_wt/fde-cognate-integration",
+   "present": true,
+   "tracked_changes": 0
+  },
+  "domainforge": {
+   "branch": "main",
+   "commit": "ac8c4218d76cc39e759eba148919d35830f52dca",
+   "path": "/home/sprime01/projects/domainforge",
+   "present": true,
+   "tag_v0.22.0": "ac8c4218d76cc39e759eba148919d35830f52dca",
+   "tracked_changes": 5
+  },
+  "horizon": {
+   "branch": "fde/integration",
+   "commit": "fd2e19bceb7dba61b4cd21dffc3367f72aff2445",
+   "path": "/home/sprime01/projects/_wt/fde-horizon-integration",
+   "present": true,
+   "tracked_changes": 0
+  },
+  "realitytrace": {
+   "branch": "fde/integration",
+   "commit": "4930b7d6704dc5572b2cb0d4fa83a0a751b095e9",
+   "path": "/home/sprime01/projects/_wt/fde-sxr-integration",
+   "present": true,
+   "tracked_changes": 4
+  },
+  "sea-forge": {
+   "branch": "fde/integration",
+   "commit": "fef0d900ecacf62628e19b6a4d2475be9eff11c8",
+   "path": "/home/sprime01/projects/_wt/fde-sea-rs-integration",
+   "present": true,
+   "tracked_changes": 0
+  }
+ },
+ "revision": {
+  "approval": {
+   "approver": "op-alice",
+   "assurance": "session",
+   "proposer": "cognate-service",
+   "state": "approved"
+  },
+  "early_promote": {
+   "code": "AUTHORITY_UNAVAILABLE",
+   "error_class": "cep_promotion_refused"
+  },
+  "matrix_id": "matrix:20ec2032f2ba8f71a5d07d62c5514cc6a39e6c21d98e49a65eb82dbeb2b26df4",
+  "matrix_summary": {
+   "escalated": 0,
+   "fail": 0,
+   "gains": 0,
+   "pass": 8
+  },
+  "matrix_verdict": "pass",
+  "proposal_id": "proposal:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+  "regression_rc": 0,
+  "rows": 8,
+  "rule_sha256": "sha256:f5837ed9293634465ccb7a37833e0cbedc2a1e7ec40cf31f45bbcb0ccb4bc96b",
+  "self_approval_refused": true
+ },
+ "tests": [
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-01",
+   "duration_s": 4.26,
+   "evidence": ".tmp/fde-proof/s1/AT-01.log",
+   "exit_code": 0,
+   "id": "AT-01",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "high",
+   "prediction_reason": "scripts/check-fde-sop-model.sh already passes on this branch (WP-13 evidence); the criterion needs no postcondition, human decision or anchor.",
+   "reason": "",
+   "statement": "model valid, identified, contexts kept distinct"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-04",
+   "duration_s": 0.91,
+   "evidence": ".tmp/fde-proof/s1/AT-04.log",
+   "exit_code": 10,
+   "id": "AT-04",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "The order check and digest equality are expected to hold, but the 'externally anchored, push time earlier than first run, verifier receipt' part rests on the shared-OS-user anchor without a protected tag namespace (RD-26, OD-6) and on no GitHub server push time being read: anchoring rows are PARTIAL.",
+   "reason": "order check and digest equality pass in the producer tests; anchor time is the local clock only (AnchorTimeLocalOnly, OD-6), execution-side I-1 gate not wired (WP-20), so freeze-before-execution is verified after the fact, not enforced",
+   "statement": "freeze precedes execution, externally"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-05",
+   "duration_s": 8.69,
+   "evidence": ".tmp/fde-proof/s1/AT-05.log",
+   "exit_code": 10,
+   "id": "AT-05",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Field completeness and source.record_id / authority.decision_id resolution are expected to pass, but the 'check signature' step cannot run: emitter signatures arrive with WP-33 (S3); before that authenticity is record resolution plus the independent-emitter rule only.",
+   "reason": "SEA-Forge half and Cognate half pass; emitter signatures arrive with WP-33 so the signature check cannot run; authenticity rests on source-record resolution and the independent-emitter rule",
+   "statement": "semantic exhaust complete and authentic"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-06",
+   "duration_s": 2.15,
+   "evidence": ".tmp/fde-proof/s1/AT-06.log",
+   "exit_code": 0,
+   "id": "AT-06",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Derivation is a deterministic computation over the ledger; no postcondition, human or anchor dependency.",
+   "reason": "",
+   "statement": "observed representation computed"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-07",
+   "duration_s": 3.11,
+   "evidence": ".tmp/fde-proof/s1/AT-07.log",
+   "exit_code": 10,
+   "id": "AT-07",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "medium",
+   "prediction_reason": "confirmed and observed_undeclared are predicted to arise (ep-1) and contradicted (ep-2), which meets the S1 requirement; but expectations whose evidence is a postcondition (S7.5e) cannot be evaluated by DomainForge 0.21.2 and are classed insufficient, and `evaluate` binds the outermost quantifier only, so the 'all elements classified' reading holds for precondition-evaluable elements only. declared_unobserved and any unarising class are NOT_TESTED, which does not fail the S1 gate.",
+   "reason": "classes arose on the real episode set (see cell results); declared_unobserved and any unarising class NOT TESTED; postcondition expectations insufficient (DomainForge accepts only at precondition)",
+   "statement": "five classes"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-08",
+   "duration_s": 1.77,
+   "evidence": ".tmp/fde-proof/s1/AT-08.log",
+   "exit_code": 0,
+   "id": "AT-08",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "A real re-run with one changed input and `--until` is a deterministic derive/compare check; no postcondition, human or anchor dependency.",
+   "reason": "",
+   "statement": "input sensitivity"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-12",
+   "duration_s": 6.51,
+   "evidence": ".tmp/fde-proof/s1/AT-12.log",
+   "exit_code": 10,
+   "id": "AT-12",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "Promotion approval is a human-reserved decision; before S3 it uses the existing approval path with distinct actor ids at assurance `session` (RD-21), so the proposer-not-approver and promotion rows are PARTIAL. The regression matrix is limited to precondition-evaluable elements.",
+   "reason": "",
+   "statement": "governed revision"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-13",
+   "duration_s": 5.41,
+   "evidence": ".tmp/fde-proof/s1/AT-13.log",
+   "exit_code": 10,
+   "id": "AT-13",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "low",
+   "prediction_reason": "Predicted result GAIN (old world observed_undeclared, new world confirmed, control variant shows no gain). The row is PARTIAL because the new world exists only through a human-reserved promotion approved under pre-S3 identity, and because ordering of the declared step is `unknown` in the model. R-58 is PROVEN only on GAIN and is not claimed beyond that.",
+   "reason": "",
+   "statement": "capability delta"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-14",
+   "duration_s": 19.38,
+   "evidence": ".tmp/fde-proof/s1/AT-14.log",
+   "exit_code": 10,
+   "id": "AT-14",
+   "match": "MISMATCH",
+   "observed": "PARTIAL",
+   "prediction": "PASS",
+   "prediction_confidence": "low",
+   "prediction_reason": "Read-adapter parity (rendered DOM text equals the independently computed ledger value; absent source renders 'not connected') is a pure rendering check; human settlement, when shown, is shown with its PARTIAL assurance label and is not part of the criterion.",
+   "reason": "parity passes on the producer's fixtures (real RealityTrace CLI output and real case_records::append output); the cell's own raw records were not rendered",
+   "statement": "Horizon shows the source result"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only AT-18",
+   "duration_s": 8.53,
+   "evidence": ".tmp/fde-proof/s1/AT-18.log",
+   "exit_code": 10,
+   "id": "AT-18",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "Replay hashes and class-level re-execution are expected to match, but 'anchors verify' is PARTIAL without OD-6 and offline verification covers the recorded receipt only (RD-26); human-reserved rows stay PARTIAL.",
+   "reason": "anchors verify (prereg by fde-anchor.sh; freeze tags by digest, local clock only), replay hashes and classes equal the recorded ones; re-execution of the program episodes was not repeated by the verifier",
+   "statement": "reproducibility and independent \"before\""
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-01",
+   "duration_s": 0.42,
+   "evidence": ".tmp/fde-proof/s1/NT-01.log",
+   "exit_code": 0,
+   "id": "NT-01",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "A refusal on the I-3 key check; contract fixtures already specify FREEZE_KEY_EXISTS; no postcondition, human or anchor dependency.",
+   "reason": "",
+   "statement": "frozen reference cannot be rewritten (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-02",
+   "duration_s": 1.38,
+   "evidence": ".tmp/fde-proof/s1/NT-02.log",
+   "exit_code": 0,
+   "id": "NT-02",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Two refusals (a) INGEST_REJECTED_IDENTITY and (b) INGEST_REJECTED_EVIDENCE at ingest; one code each.",
+   "reason": "",
+   "statement": "no verified conclusion without identity or evidence (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-03",
+   "duration_s": 1.36,
+   "evidence": ".tmp/fde-proof/s1/NT-03.log",
+   "exit_code": 10,
+   "id": "NT-03",
+   "match": "MISMATCH",
+   "observed": "PARTIAL",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Input-variation on a real re-run with a violating value; class changes to contradicted and the hash changes.",
+   "reason": "producer tests pass; a real re-run with a changed outcome was not run",
+   "statement": "changed record changes the result (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-03b",
+   "duration_s": 1.54,
+   "evidence": ".tmp/fde-proof/s1/NT-03b.log",
+   "exit_code": 0,
+   "id": "NT-03b",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Chain verification fails on a deleted occurrence with CHAIN_VERIFY_FAILED.",
+   "reason": "",
+   "statement": "missing or tampered record is detected (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-04",
+   "duration_s": 4.25,
+   "evidence": ".tmp/fde-proof/s1/NT-04.log",
+   "exit_code": 10,
+   "id": "NT-04",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "The 'after an authorized promotion' half needs a promotion authorization, a human-reserved decision under pre-S3 identity; the 'before' half is expected to behave as specified.",
+   "reason": "both halves pass; the authorizing approval is a session-assurance approval (A3 and a human-reserved decision need S3)",
+   "statement": "undeclared occurrence \u2260 authorized change (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-05",
+   "duration_s": 0.76,
+   "evidence": ".tmp/fde-proof/s1/NT-05.log",
+   "exit_code": 0,
+   "id": "NT-05",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Four refusal cases (denied, unavailable, expired, digest mismatch), one code each; refusals do not need a granted human decision.",
+   "reason": "",
+   "statement": "denied or unknown authority cannot promote (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-06",
+   "duration_s": 1.23,
+   "evidence": ".tmp/fde-proof/s1/NT-06.log",
+   "exit_code": 10,
+   "id": "NT-06",
+   "match": "MISMATCH",
+   "observed": "PARTIAL",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "A silent frozen evidence source yields insufficient with basis evidence_source_silent and result U; no postcondition needed.",
+   "reason": "producer test passes; a silent source on the real cell was not run",
+   "statement": "missing observation stays unresolved (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-07",
+   "duration_s": 2.09,
+   "evidence": ".tmp/fde-proof/s1/NT-07.log",
+   "exit_code": 0,
+   "id": "NT-07",
+   "match": "MISMATCH",
+   "observed": "PASS",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "The S1 gate covers the promotion half only; the re-pin variant belongs to S2 (WP-22) and is not run in S1.",
+   "reason": "",
+   "statement": "settled evidence stays with its world (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-08",
+   "duration_s": 1.65,
+   "evidence": ".tmp/fde-proof/s1/NT-08.log",
+   "exit_code": 0,
+   "id": "NT-08",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "low",
+   "prediction_reason": "A candidate breaking a prior confirmed element is refused with REGRESSION_FAILED, provided the fixture's prior confirmed element is precondition-evaluable. If the fixture element depends on a postcondition the row is PARTIAL instead.",
+   "reason": "",
+   "statement": "failing regression blocks success (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-09",
+   "duration_s": 2.93,
+   "evidence": ".tmp/fde-proof/s1/NT-09.log",
+   "exit_code": 0,
+   "id": "NT-09",
+   "match": "match",
+   "observed": "PASS",
+   "prediction": "PASS",
+   "prediction_confidence": "medium",
+   "prediction_reason": "Altering the adapter mapping must make rendered text differ from the ledger value (PARITY_MISMATCH).",
+   "reason": "",
+   "statement": "Horizon equals programmatic result (M\u00a77)"
+  },
+  {
+   "command": "scripts/fde-proof.sh --slice s1 --only NT-16",
+   "duration_s": 0.41,
+   "evidence": ".tmp/fde-proof/s1/NT-16.log",
+   "exit_code": 10,
+   "id": "NT-16",
+   "match": "match",
+   "observed": "PARTIAL",
+   "prediction": "PARTIAL",
+   "prediction_confidence": "high",
+   "prediction_reason": "Anchoring row: the tamper check is expected to detect a chain regenerated with the freeze inserted, but the server-side push time is not read from GitHub and the anchor is a shared-OS-user tag without a protected namespace (RD-26, OD-6).",
+   "reason": "the tamper/order check refuses as specified; the server push time is not read from the remote (AnchorTimeLocalOnly) and the anchor is a shared-OS-user tag without a protected namespace (RD-26, OD-6)",
+   "statement": "\"before\" is externally anchored (M\u00a73, F1)"
+  }
+ ],
+ "tools": {
+  "bun": "1.4.0",
+  "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+  "domainforge_dev_3960326": {
+   "path": "/home/sprime01/projects/_wt/tmp/df-3960326/domainforge",
+   "sha256": "67559ad8b5def99b1cdb0dd6d65521abeb635b937cbeca69a6513522d4719d52",
+   "version": "domainforge 0.21.2"
+  },
+  "domainforge_release": {
+   "path": "/home/sprime01/projects/_wt/tmp/df022-cli/domainforge-0.22.0-x86_64-unknown-linux-gnu/domainforge",
+   "sha256": "2d0822810644746417cfb82065472baac11296e2a6ab2ba94d95196e428d5d14",
+   "version": "domainforge 0.22.0"
+  },
+  "git": "git version 2.53.0",
+  "node": "v26.8.2",
+  "python3": "Python 3.14.4",
+  "realitytrace_bin": {
+   "path": "/home/sprime01/projects/_wt/fde-sxr-integration/target/debug/realitytrace",
+   "sha256": "dab4d8e80072c06149f9333e25b64d4fea4fafbf62fc2a3df36f4f4e2e6fb30f",
+   "version": "realitytrace 0.4.0"
+  },
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)"
+ }
+}

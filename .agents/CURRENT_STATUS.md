@@ -1,19 +1,19 @@
 # Current status
 
-**Status revision:** 255
+**Status revision:** 256
 
-**Stage:** WP-19 S1 gate: anchoring rows reported PARTIAL
+**Stage:** WP-19 S1 gate: results, claim ledger, evidence bundle
 
-**Summary:** fde/integration: AT-04 and NT-16 wrappers report PARTIAL after their producer tests pass (anchor time is local-only, OD-6; I-1 execution gate unwired).
+**Summary:** fde/integration: S1 proof run on a clean tree: 21 frozen tests, 12 PASS / 9 PARTIAL / 0 FAIL; three real program episodes (settled U, F, U), approved promotion, capability delta NO_GAIN; claim ledger and raw-record manifest committed under .agents/evidence/fde-field-case/s1-20261114T234200Z.
 
 **Verified:**
-- producer tests unchanged
+- scripts/fde-proof.sh --slice s1 on a clean tree: 0 FAIL; fde-s1-verify.sh: anchors, manifest, replay bytes and classes agree
 
 **Limits:**
-- None new
+- Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Final proof run and evidence commit
+**Next:** WP-20 contract; anchor the results digest under a new kind; re-execution by the verifier; mutation re-application
 
 **Evidence:**
-- scripts/fde-proof.d/AT-04.sh
-- scripts/fde-proof.d/NT-16.sh
+- .agents/reports/fde-convergence-2026-11-12/evidence/s1/wp-19-gate.md
+- .agents/evidence/fde-field-case/s1-20261114T234200Z/claim-ledger.md

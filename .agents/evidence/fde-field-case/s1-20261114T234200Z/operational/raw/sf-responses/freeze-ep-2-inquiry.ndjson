@@ -1,0 +1,1 @@
+{"actor":{"actor_id":"case-keeper","role":"operator"},"i":0,"request_id":"freeze-ep-2-inquiry","response":{"episode_key":{"case_id":"case-0001","n":1,"plan_item_id":"pi-e3-kg-roundtrip"},"kind":"episode.frozen","outcome":"recorded","record_id":"rec-0003","replayed":false}}

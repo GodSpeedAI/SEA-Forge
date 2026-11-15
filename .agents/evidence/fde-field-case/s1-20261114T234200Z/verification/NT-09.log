@@ -1,0 +1,8 @@
+bun test v1.4.0 (34cbb9a40)
+
+ 2 pass
+ 28 filtered out
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [2.90s]
+fde-parity: PASS (NT-09, 2 tests)

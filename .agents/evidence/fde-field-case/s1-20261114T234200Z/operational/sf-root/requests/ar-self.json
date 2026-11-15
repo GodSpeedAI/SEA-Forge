@@ -1,0 +1,13 @@
+{
+  "request_id": "ar-self",
+  "method": "authority.approval",
+  "status": "failed",
+  "submitted_at": "2026-11-14T23:50:02.772715533+00:00",
+  "completed_at": "2026-11-14T23:50:02.781518370+00:00",
+  "outcome": {
+    "error": "approval refused: self_approval_refused: cognate-service requested apr-op-p1 and may not resolve it",
+    "error_class": "cep_approval_refused",
+    "no_side_effect": true
+  },
+  "payload_hash": "98de627e2e0502584a248ca6b239a4c7c918421ec9b7a1123529b280ae1643fe"
+}

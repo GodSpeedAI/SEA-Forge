@@ -1,0 +1,20 @@
+@namespace "godspeed-fde-sop.evidence"
+@version "0.1.0"
+
+// Semantic pack: evidence settlement.
+//
+// "Settlement" here is the epistemic result of an episode: RealityTrace links
+// a frozen expectation to independent observation and the result is S, F, U or
+// C, with reliability and source independence recorded separately (SOP 7.5,
+// 13). It is NOT the client-outcome sense declared in outcome.sea; the two are
+// separate concepts in separate namespaces and must never unify.
+
+export pattern "EpistemicResult" matches "^[SFUC]$"
+
+export entity "Settlement" {
+    key settlement_ref: string (min_length 1)
+    episode_ref: string (min_length 1)
+    result: string (pattern EpistemicResult)
+    reliability: string (min_length 1)
+    source_independence: string (min_length 1)
+}

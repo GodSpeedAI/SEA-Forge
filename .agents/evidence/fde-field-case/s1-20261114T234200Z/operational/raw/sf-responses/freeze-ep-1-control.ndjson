@@ -1,0 +1,1 @@
+{"actor":{"actor_id":"case-keeper","role":"operator"},"i":0,"request_id":"freeze-ep-1-control","response":{"episode_key":{"case_id":"case-0001","n":1,"plan_item_id":"pi-e2-tail-read"},"kind":"episode.frozen","outcome":"recorded","record_id":"rec-0001","replayed":false}}

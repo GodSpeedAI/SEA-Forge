@@ -1,0 +1,14 @@
+{
+ "contract": "capability-frozen.v1",
+ "frozen_id": "frozen:s1-at13",
+ "episode_key": "episode:case-0001:pi-e1-stale:1",
+ "comparison": "episode",
+ "old_expectation": "verification_by_independent_role",
+ "new_expectation": "verification_by_independent_role",
+ "prediction": "GAIN",
+ "falsifier": [
+  "old_world_confirmed",
+  "new_world_not_confirmed",
+  "control_shows_gain"
+ ]
+}

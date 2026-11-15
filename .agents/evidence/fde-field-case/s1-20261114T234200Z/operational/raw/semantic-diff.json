@@ -1,0 +1,12 @@
+{
+ "added": [
+  "{\"data\":{\"id\":\"36d30451-76d4-5b64-9d06-64f9cbfa6757\"},\"kind\":\"concept\"}",
+  "{\"data\":{\"id\":\"36f60473-21f4-5140-8a98-224e33548ece\"},\"kind\":\"concept\"}",
+  "{\"data\":{\"id\":\"e9702bc5-f0f3-5693-a552-bc2fb855896f\"},\"kind\":\"concept\"}",
+  "{\"data\":{\"id\":\"godspeed-fde-sop.operation.nav_verify\"},\"kind\":\"application\"}",
+  "{\"data\":{\"id\":\"godspeed-fde-sop.record.NavVerifyInput\"},\"kind\":\"application\"}",
+  "{\"data\":{\"id\":\"godspeed-fde-sop.record.NavVerifyOutput\"},\"kind\":\"application\"}"
+ ],
+ "changed": [],
+ "removed": []
+}

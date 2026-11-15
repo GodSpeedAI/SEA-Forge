@@ -1,0 +1,13 @@
+{
+  "request_id": "pr-early",
+  "method": "authority.promote",
+  "status": "failed",
+  "submitted_at": "2026-11-14T23:50:02.148759943+00:00",
+  "completed_at": "2026-11-14T23:50:02.760474363+00:00",
+  "outcome": {
+    "code": "AUTHORITY_UNAVAILABLE",
+    "error": "AUTHORITY_UNAVAILABLE: apr-op-p1 is still pending: no decision yet",
+    "error_class": "cep_promotion_refused"
+  },
+  "payload_hash": "3920f8ca87aa1ed19cbe821ce84f1850ba8bee7b17e7825d684f9b822add63fc"
+}

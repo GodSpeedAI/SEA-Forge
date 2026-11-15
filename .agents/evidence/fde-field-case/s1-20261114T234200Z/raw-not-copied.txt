@@ -1,0 +1,4 @@
+# path<TAB>bytes<TAB>cell directory (scratch; kept outside git)
+rt-home/data/sxr/repos/01M7E7123QKWWP84DK0CZB451T/ledger.db	114688	/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z
+rt-home/data/sxr/repos/01M7E7123QKWWP84DK0CZB451T/registry.json	712	/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z
+rt-home/data/sxr/repos/01M7E7123QKWWP84DK0CZB451T/writer.lock	0	/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z

@@ -1,0 +1,35 @@
+{
+ "cognateDir": "/home/sprime01/projects/_wt/fde-cognate-integration",
+ "outDir": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-3-subsequent-executor",
+ "actor": "program-executor",
+ "role": "executor",
+ "semanticRef": "godspeed-fde-sop::Assignment",
+ "worldRef": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+ "caseId": "case-0001",
+ "planItemId": "pi-e1-stale",
+ "kind": "evaluated",
+ "episodeRef": "episode:case-0001:pi-e1-stale:1@sha256:7ebaa7e4a3b5735dd4f31d3e4c2ef988939722cbe435a2077fd9c5bae29dbded",
+ "assignmentId": "assign:case-0001:pi-e1-stale:1:1",
+ "expectationRefs": [
+  "question:01J687237CAED480A38FAC676A"
+ ],
+ "workspace": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/ws/sea-rs",
+ "patchFile": "/home/sprime01/projects/_wt/fde-sea-rs-integration/scripts/fde-s1/patches/ep-3-readiness-stale.patch",
+ "argv": [
+  "flock",
+  "-o",
+  "/home/sprime01/projects/_wt/cargo.lock",
+  "env",
+  "RUSTC_WRAPPER=",
+  "CARGO_BUILD_JOBS=1",
+  "CARGO_INCREMENTAL=0",
+  "CARGO_PROFILE_DEV_DEBUG=0",
+  "CARGO_PROFILE_TEST_DEBUG=0",
+  "cargo",
+  "test",
+  "--locked",
+  "-p",
+  "sea-forge-server",
+  "readiness"
+ ]
+}

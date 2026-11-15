@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized] target(s) in 0.18s
+     Running tests/wp16.rs (target/debug/deps/wp16-d9b45c177c9a3557)
+
+running 1 test
+test at08_one_more_input_changes_the_hash_and_until_excludes_later_records ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.17s
+
+    Finished `test` profile [unoptimized] target(s) in 0.14s
+     Running tests/wp17.rs (target/debug/deps/wp17-429fef4c5693169f)
+
+running 1 test
+test at08_nt03_one_changed_input_changes_class_and_hash_without_editing_a_file ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.77s
+

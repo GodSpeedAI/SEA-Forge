@@ -1,0 +1,19 @@
+{
+  "request_id": "freeze-ep-2-inquiry",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:44:42.125093428+00:00",
+  "completed_at": "2026-11-14T23:44:42.436448032+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e3-kg-roundtrip"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0003",
+    "replayed": false
+  },
+  "payload_hash": "8cb09cfbdf7d551e23d16313da7646ed9dd1650600e4b91f490602737d64f5c5"
+}

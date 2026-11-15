@@ -1,0 +1,51 @@
+{
+ "spec": {
+  "cognateDir": "/home/sprime01/projects/_wt/fde-cognate-integration",
+  "outDir": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-2-inquiry-verifier",
+  "actor": "fresh-verifier",
+  "role": "verifier",
+  "semanticRef": "godspeed-fde-sop::FreshContextVerification",
+  "worldRef": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+  "caseId": "case-0001",
+  "planItemId": "pi-e3-kg-roundtrip",
+  "kind": "evaluated",
+  "episodeRef": "episode:case-0001:pi-e3-kg-roundtrip:1@sha256:be163389ee5bf3e9742506286c45d32ffad5c1ca24e02b466151d866c9d00ac3",
+  "assignmentId": "assign:case-0001:pi-e3-kg-roundtrip:1:2",
+  "expectationRefs": [
+   "question:01J5273CD38B7A6C32378B9A51"
+  ],
+  "workspace": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/ws/domainforge",
+  "patchFile": "/home/sprime01/projects/_wt/fde-sea-rs-integration/scripts/fde-s1/patches/ep-2-kg-roundtrip.patch",
+  "argv": [
+   "flock",
+   "-o",
+   "/home/sprime01/projects/_wt/cargo.lock",
+   "env",
+   "RUSTC_WRAPPER=",
+   "CARGO_BUILD_JOBS=1",
+   "CARGO_INCREMENTAL=0",
+   "CARGO_PROFILE_DEV_DEBUG=0",
+   "CARGO_PROFILE_TEST_DEBUG=0",
+   "cargo",
+   "test",
+   "-p",
+   "domainforge-core",
+   "--features",
+   "cli",
+   "kg_round_trip_policy_and_instance"
+  ],
+  "patchSha256": "297b9203db75c4a0a21d827283d5e5bc4ccaa02fa7e082f8818f94337b0898ee"
+ },
+ "view": {
+  "runId": "822456e6-ee0c-4b4e-b60a-eee12dc04d9a",
+  "agent": "agent.program",
+  "tenant": "fde-s1",
+  "status": "failed",
+  "input": {},
+  "output": null,
+  "error": "Invocation of program.run failed: {\"kind\":\"failed\",\"message\":\"program.run command exited 101\",\"name\":\"ProgramCommandFailedError\",\"details\":{\"exitCode\":101,\"timedOut\":false,\"patchSha256\":\"297b9203db75c4a0a21d827283d5e5bc4ccaa02fa7e082f8818f94337b0898ee\",\"command\":\"[\\\"flock\\\",\\\"-o\\\",\\\"/home/sprime01/projects/_wt/cargo.lock\\\",\\\"env\\\",\\\"RUSTC_WRAPPER=\\\",\\\"CARGO_BUILD_JOBS=1\\\",\\\"CARGO_INCREMENTAL=0\\\",\\\"CARGO_PROFILE_DEV_DEBUG=0\\\",\\\"CARGO_PROFILE_TEST_DEBUG=0\\\",\\\"cargo\\\",\\\"test\\\",\\\"-p\\\",\\\"domainforge-core\\\",\\\"--features\\\",\\\"cli\\\",\\\"kg_round_trip_policy_and_instance\\\"]\",\"outputDigest\":\"3a3115797f6fc06792a91a9ee6d3f18321a3e298518331905a67768c568ebcf7\",\"name\":\"ProgramCommandFailedError\",\"patchApplied\":true}}",
+  "correlationId": "037436c6-6d75-41ce-9e3e-85f5bd266140",
+  "startedBy": "fresh-verifier",
+  "waitingOn": []
+ }
+}

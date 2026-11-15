@@ -1,0 +1,1 @@
+{"actor":{"actor_id":"independent-settler","role":"operator"},"i":0,"request_id":"settle-ep-1-control","response":{"episode_key":{"case_id":"case-0001","n":1,"plan_item_id":"pi-e2-tail-read"},"kind":"episode.settled","outcome":"recorded","record_id":"rec-0002","replayed":false}}

@@ -1,0 +1,7 @@
+ok   anchor:prereg/fde-s1
+ok   anchor:freeze tags carry the freeze record digests
+ok   raw-record manifest sha256s
+ok   replay: derive/compare/propose/regression/capability-delta over a copy of the kept ledger reproduce the recorded bytes
+ok   replay: DomainForge envelope reproduces each world_ref
+ok   class level: replayed classes equal the recorded classes
+REASON: anchors verify (prereg by fde-anchor.sh; freeze tags by digest, local clock only), replay hashes and classes equal the recorded ones; re-execution of the program episodes was not repeated by the verifier

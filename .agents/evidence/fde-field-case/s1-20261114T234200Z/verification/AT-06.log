@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized] target(s) in 0.34s
+     Running tests/wp16.rs (target/debug/deps/wp16-d9b45c177c9a3557)
+
+running 1 test
+test at06_two_derives_are_byte_identical_and_list_real_occurrences ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.26s
+
+    Finished `test` profile [unoptimized] target(s) in 0.15s
+     Running tests/observed.rs (target/debug/deps/observed-540d8a0bfd81a0c8)
+
+running 1 test
+test ingest_records_rejections_and_derive_is_deterministic_bounded_and_tamper_evident ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+

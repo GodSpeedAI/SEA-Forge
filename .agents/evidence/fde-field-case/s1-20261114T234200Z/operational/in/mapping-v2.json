@@ -1,0 +1,75 @@
+{
+ "contract": "compare-mapping.v1",
+ "undeclared_question": "question:q1",
+ "operations": {
+  "nav_move": {
+   "node": "concept:ca48aba2-a4cb-5c02-96cd-4b0e178704ae",
+   "input": {
+    "assignment_id": {
+     "kind": "string",
+     "pointer": "/source/record_id"
+    },
+    "case_id": {
+     "kind": "string",
+     "pointer": "/context/case_id"
+    },
+    "episode_ref": {
+     "kind": "string",
+     "pointer": "/context/episode_ref"
+    },
+    "episode_kind": {
+     "typed": {
+      "kind": "enum",
+      "data": {
+       "symbol": "godspeed-fde-sop.enum.EpisodeKind",
+       "wire": "evaluated"
+      }
+     }
+    },
+    "freeze_recorded": {
+     "kind": "bool",
+     "nonempty": "/context/episode_ref"
+    },
+    "consequential": {
+     "kind": "bool",
+     "const": true
+    }
+   }
+  },
+  "nav_verify": {
+   "node": "concept:e9702bc5-f0f3-5693-a552-bc2fb855896f",
+   "input": {
+    "verifier_role": {
+     "kind": "string",
+     "pointer": "/actor/role"
+    }
+   }
+  }
+ },
+ "expectations": [
+  {
+   "id": "freeze_before_move",
+   "kind": "policy_evaluable",
+   "policy": "freeze_before_move",
+   "operation": "nav_move",
+   "node": "concept:ca48aba2-a4cb-5c02-96cd-4b0e178704ae",
+   "question": "question:q1"
+  },
+  {
+   "id": "authorize_consequential_action",
+   "kind": "policy_evaluable",
+   "policy": "authorize_consequential_action",
+   "operation": "nav_move",
+   "node": "concept:ca48aba2-a4cb-5c02-96cd-4b0e178704ae",
+   "question": "question:q1"
+  },
+  {
+   "id": "verification_by_independent_role",
+   "kind": "policy_evaluable",
+   "policy": "verification_by_independent_role",
+   "operation": "nav_verify",
+   "node": "concept:e9702bc5-f0f3-5693-a552-bc2fb855896f",
+   "question": "question:q1"
+  }
+ ]
+}

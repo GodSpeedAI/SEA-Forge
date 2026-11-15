@@ -1,0 +1,7 @@
+{
+ "deleted_ordinal": 4,
+ "id": "NT-03b",
+ "rc": 5,
+ "status": "ok",
+ "stderr": "realitytrace: CHAIN_VERIFY_FAILED: append_ordinal not dense at (01M7E7123QKWWP84DK0CZB451T, 5): expected 4\n"
+}

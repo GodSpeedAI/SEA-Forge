@@ -1,0 +1,22 @@
+    Finished `test` profile [unoptimized] target(s) in 0.12s
+     Running tests/wp17.rs (target/debug/deps/wp17-429fef4c5693169f)
+
+running 3 tests
+test at07_contradicted_arises_when_a_move_precedes_its_freeze ... ok
+test at07_each_arising_class_carries_every_required_field ... ok
+test at07_policy_results_map_true_false_unknown_and_both_lists_are_filled ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 1.66s
+
+    Finished `test` profile [unoptimized] target(s) in 0.13s
+     Running tests/compare.rs (target/debug/deps/compare-79da6d2b4c7b243d)
+
+running 3 tests
+test a_configured_binary_that_is_missing_fails_and_never_falls_back ... ok
+test compare_with_domainforge_evaluate_decides_a_policy_expectation ... ok
+test compare_is_read_only_deterministic_pinned_and_checks_the_tail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
+
+REASON: classes arose on the real episode set (see cell results); declared_unobserved and any unarising class NOT TESTED; postcondition expectations insufficient (DomainForge accepts only at precondition)
+PARTIAL: classes arose on the real episode set (see cell results); declared_unobserved and any unarising class NOT TESTED; postcondition expectations insufficient (DomainForge accepts only at precondition)

@@ -1,0 +1,27 @@
+{
+  "request_id": "pr-final",
+  "method": "authority.promote",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:50:02.815211642+00:00",
+  "completed_at": "2026-11-14T23:50:02.838486330+00:00",
+  "outcome": {
+    "ok": true,
+    "pin": {
+      "approval_id": "apr-op-p1",
+      "approver": "op-alice",
+      "bound_digest": "sha256:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+      "from_world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "kind": "promoted",
+      "matrix_id": "matrix:20ec2032f2ba8f71a5d07d62c5514cc6a39e6c21d98e49a65eb82dbeb2b26df4",
+      "operation_id": "op-p1-b",
+      "pin_id": "pin-op-p1-b",
+      "proposal_id": "proposal:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+      "proposer": "cognate-service",
+      "requester": "cognate-service",
+      "supersedes_pin": null,
+      "to_world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+      "transition_ref": "01M7E7FMTC16B8YNJ0T5N05M7Y"
+    }
+  },
+  "payload_hash": "3920f8ca87aa1ed19cbe821ce84f1850ba8bee7b17e7825d684f9b822add63fc"
+}

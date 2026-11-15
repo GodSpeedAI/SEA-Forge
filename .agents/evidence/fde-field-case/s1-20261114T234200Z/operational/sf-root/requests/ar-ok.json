@@ -1,0 +1,15 @@
+{
+  "request_id": "ar-ok",
+  "method": "authority.approval",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:50:02.791486571+00:00",
+  "completed_at": "2026-11-14T23:50:02.802265378+00:00",
+  "outcome": {
+    "approval_id": "apr-op-p1",
+    "ledger_entry": "01M7E7FMSFHMPMCN8JYTB90MHK",
+    "ok": true,
+    "resolved_by": "op-alice",
+    "state": "approved"
+  },
+  "payload_hash": "47f39a2d64c299505d24234f3717fa343b998b673b69e11f99999bcb9d029039"
+}

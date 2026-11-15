@@ -1,0 +1,10 @@
+{
+ "hash_cut": "sha256:ee8a2efcb5a09695acf8316eaa1516a5581d4338065f21ad8773680130f05b21",
+ "hash_full": "sha256:4d2ba6e9d1e727d5abac9c867ef7f4c5f92b17c08baa995fd2929f0c965d2d3b",
+ "id": "AT-08",
+ "note": "the variant is a real earlier cut of the same append-only ledger; no file was edited",
+ "status": "ok",
+ "undeclared_cut": 0,
+ "undeclared_full": 1,
+ "until_ordinal": 5
+}

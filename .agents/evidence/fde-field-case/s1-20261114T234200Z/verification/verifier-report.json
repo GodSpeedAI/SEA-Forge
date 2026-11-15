@@ -1,0 +1,77 @@
+{
+ "cell": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z",
+ "verifier_dir": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z-verify",
+ "checks": [
+  {
+   "name": "anchor:prereg/fde-s1",
+   "ok": true,
+   "rc": 0,
+   "out": "\": \"Sam Prime\"}}\nlimit (RD-26): shared_os_user; pusher and verifier are one principal. Proves not changed since publication, not independence. server_push_time not read; anchoring rows PARTIAL (OD-6)."
+  },
+  {
+   "name": "anchor:freeze tags carry the freeze record digests",
+   "ok": true,
+   "tags": [
+    {
+     "tag": "fde-anchor/freeze/case-0001-pi-e1-stale-1-7ebaa7e4a3b5",
+     "digest": "7ebaa7e4a3b5735dd4f31d3e4c2ef988939722cbe435a2077fd9c5bae29dbded",
+     "matches_a_freeze_record": true
+    },
+    {
+     "tag": "fde-anchor/freeze/case-0001-pi-e1-stale-control-1-a9c761a607e1",
+     "digest": "a9c761a607e1fb1f6703500a6bbc20a18556a338f28b6fc8bca3f4953b1ddf08",
+     "matches_a_freeze_record": true
+    },
+    {
+     "tag": "fde-anchor/freeze/case-0001-pi-e2-tail-read-1-bcf7f6db9749",
+     "digest": "bcf7f6db9749761ba1803d4a6344610e54f77d2c0f72ee2c99e61282a1e55f35",
+     "matches_a_freeze_record": true
+    },
+    {
+     "tag": "fde-anchor/freeze/case-0001-pi-e3-kg-roundtrip-1-be163389ee5b",
+     "digest": "be163389ee5bf3e9742506286c45d32ffad5c1ca24e02b466151d866c9d00ac3",
+     "matches_a_freeze_record": true
+    }
+   ],
+   "note": "fde-anchor.sh verify does not verify freeze anchors (WP-14 case keeper needed); push time is the local clock (OD-6)"
+  },
+  {
+   "name": "raw-record manifest sha256s",
+   "ok": true,
+   "files": 198,
+   "mismatched": []
+  },
+  {
+   "name": "replay: derive/compare/propose/regression/capability-delta over a copy of the kept ledger reproduce the recorded bytes",
+   "ok": true,
+   "replayed": 23,
+   "mismatches": []
+  },
+  {
+   "name": "replay: DomainForge envelope reproduces each world_ref",
+   "ok": true,
+   "worlds": [
+    {
+     "world": "v1",
+     "ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+     "recorded": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b"
+    },
+    {
+     "world": "v2",
+     "ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+     "recorded": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4"
+    }
+   ]
+  },
+  {
+   "name": "class level: replayed classes equal the recorded classes",
+   "ok": true,
+   "compared": 9
+  }
+ ],
+ "not_done": [
+  "re-execution of the three program episodes (declared cargo commands) was not repeated by the verifier",
+  "verifier is the same OS user on the same host (no independence beyond a fresh process and directory)"
+ ],
+ "verdict": "agrees (PARTIAL: re-execution not done; anchors local-only)"
+}

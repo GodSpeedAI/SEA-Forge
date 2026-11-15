@@ -1,0 +1,693 @@
+{
+ "anchor_script": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/anchor-repo/scripts/fde-anchor.sh",
+ "capability_delta": {
+  "classes": {
+   "control_new": "insufficient",
+   "control_old": "absent",
+   "new": "insufficient",
+   "old": "absent"
+  },
+  "code": null,
+  "falsifier_triggered": [
+   "new_world_not_confirmed"
+  ],
+  "prediction_met": false,
+  "r58_supported": false,
+  "result": "NO_GAIN"
+ },
+ "capability_frozen": {
+  "frozen_at": "2026-11-14T23:42:04Z",
+  "prediction": "GAIN",
+  "sha256": "sha256:6a315b667207cb28152a807e1e28c1f5313b109a0c8fff6284de3baf86c77c5a"
+ },
+ "episodes": {
+  "ep-1-control": {
+   "analysis": {
+    "classes": [
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:ad657b8b6de06b55de7ee8b2ac91d2a838f8d23df1fe51cb34746a94268f14f5",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     },
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:cbfc567b262179616548ea1c1bae6d03f92998c604a6a4549f8f3fe9d09003cb",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     },
+     {
+      "basis": "structural_undeclared",
+      "class": "observed_undeclared",
+      "expectation": "undeclared:undeclared:1f728504dc8cbfa577071e39c2baf3e665d935bd64379462ec52edd8c5edc43b",
+      "list": "structural",
+      "occurrences": 1,
+      "residual_id": "residual:891459b90d765819a4d0e5c3446679c1b77727109e847b882a2be04d17333a54",
+      "rule": {
+       "kind": "structural",
+       "ref": "declared_model_closure"
+      }
+     }
+    ],
+    "comparison_id": "comparison:072d36190fe5798ccd907c1d21ecdbf1137ca082b07d3ed96f532010c48c7473",
+    "derive_byte_identical": true,
+    "flags": [],
+    "not_exercised": 0,
+    "proposed_result": {
+     "basis": "an expectation is insufficient or a frozen evidence source emitted nothing",
+     "result": "U"
+    },
+    "representation_hash": "sha256:4d2ba6e9d1e727d5abac9c867ef7f4c5f92b17c08baa995fd2929f0c965d2d3b",
+    "representation_id": "representation:sha256:4d2ba6e9d1e727d5abac9c867ef7f4c5f92b17c08baa995fd2929f0c965d2d3b",
+    "settleable": true,
+    "window": {
+     "first_ordinal": 1,
+     "head_entry_hash": "sha256:9a35766105fab70f3c5d378dfdc4aa3847fe4afec8f3c8145c37e85cda18013b",
+     "last_ordinal": 7,
+     "record_count": 7,
+     "tail_verification": {
+      "reason": "no expected head supplied: deletion of the last ledger records is not detectable by the hash chain alone",
+      "status": "unverified"
+     },
+     "until": "ordinal:7"
+    }
+   },
+   "episode_ref": "episode:case-0001:pi-e2-tail-read:1@sha256:bcf7f6db9749761ba1803d4a6344610e54f77d2c0f72ee2c99e61282a1e55f35",
+   "executor_base_commit": "6d08c0e3d9875dcc46e5e3bd14a2c36b5803e1a6",
+   "executor_run": {
+    "rc": 0,
+    "runId": "f863ac29-f68d-449c-9784-b3811967c70a",
+    "status": "completed"
+   },
+   "freeze_response": {
+    "episode_key": {
+     "case_id": "case-0001",
+     "n": 1,
+     "plan_item_id": "pi-e2-tail-read"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0001",
+    "replayed": false
+   },
+   "item": "pi-e2-tail-read",
+   "patch_sha256": "de9ca613904dd1ea6123d4cba9a053b8931454246211f1a3c2757ac86acd2e81",
+   "question": "question:01JFB94296D32FF090E88CB840",
+   "settlement": {
+    "actor": "independent-settler",
+    "executors": [
+     "program-executor",
+     "fresh-verifier"
+    ],
+    "response": {
+     "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e2-tail-read"
+     },
+     "kind": "episode.settled",
+     "outcome": "recorded",
+     "record_id": "rec-0002",
+     "replayed": false
+    },
+    "result": "U"
+   },
+   "settlement_rule": "F when the declared command failed in the executor's or the independent verifier's own run; otherwise the compare proposed_result",
+   "verifier_base_commit": "6d08c0e3d9875dcc46e5e3bd14a2c36b5803e1a6",
+   "verifier_run": {
+    "rc": 0,
+    "runId": "249d799a-8962-4e87-9e2b-bf2ba7909191",
+    "status": "completed"
+   },
+   "world": "v1"
+  },
+  "ep-2-inquiry": {
+   "analysis": {
+    "classes": [
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:b9da49aff85f22a9542af5c4e22def4755cd0ec492ed33b545a7af3564875c44",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     },
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:d8b0fab08910646af3de05001ababeeebc94e90929f16e62696d2a27686ae098",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     },
+     {
+      "basis": "structural_undeclared",
+      "class": "observed_undeclared",
+      "expectation": "undeclared:undeclared:1f728504dc8cbfa577071e39c2baf3e665d935bd64379462ec52edd8c5edc43b",
+      "list": "structural",
+      "occurrences": 1,
+      "residual_id": "residual:9767ddbf8412059d7c72ccb88abc90a47cea6a71324c22f86886d183da84383c",
+      "rule": {
+       "kind": "structural",
+       "ref": "declared_model_closure"
+      }
+     }
+    ],
+    "comparison_id": "comparison:6acb13c697964b4c346ff9b42bdf8d682df2adab51e162edcf8b4834ec4f3ee0",
+    "derive_byte_identical": true,
+    "flags": [],
+    "not_exercised": 0,
+    "proposed_result": {
+     "basis": "an expectation is insufficient or a frozen evidence source emitted nothing",
+     "result": "U"
+    },
+    "representation_hash": "sha256:ee30d520eb726d757c73a195e7fbf0443edaa6ae21c269c90c854dc60a5679ec",
+    "representation_id": "representation:sha256:ee30d520eb726d757c73a195e7fbf0443edaa6ae21c269c90c854dc60a5679ec",
+    "settleable": true,
+    "window": {
+     "first_ordinal": 1,
+     "head_entry_hash": "sha256:0da9ac25b49953c6d22ab2893e855f2c65ca692db65817fc3dc5d42530232653",
+     "last_ordinal": 17,
+     "record_count": 17,
+     "tail_verification": {
+      "reason": "no expected head supplied: deletion of the last ledger records is not detectable by the hash chain alone",
+      "status": "unverified"
+     },
+     "until": "ordinal:17"
+    }
+   },
+   "episode_ref": "episode:case-0001:pi-e3-kg-roundtrip:1@sha256:be163389ee5bf3e9742506286c45d32ffad5c1ca24e02b466151d866c9d00ac3",
+   "executor_base_commit": "ac8c4218d76cc39e759eba148919d35830f52dca",
+   "executor_run": {
+    "rc": 3,
+    "runId": "a837a1d1-9fcb-4d29-814d-3479152b8f42",
+    "status": "failed"
+   },
+   "freeze_response": {
+    "episode_key": {
+     "case_id": "case-0001",
+     "n": 1,
+     "plan_item_id": "pi-e3-kg-roundtrip"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0003",
+    "replayed": false
+   },
+   "item": "pi-e3-kg-roundtrip",
+   "patch_sha256": "297b9203db75c4a0a21d827283d5e5bc4ccaa02fa7e082f8818f94337b0898ee",
+   "question": "question:01J5273CD38B7A6C32378B9A51",
+   "settlement": {
+    "actor": "independent-settler",
+    "executors": [
+     "program-executor",
+     "fresh-verifier"
+    ],
+    "response": {
+     "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e3-kg-roundtrip"
+     },
+     "kind": "episode.settled",
+     "outcome": "recorded",
+     "record_id": "rec-0004",
+     "replayed": false
+    },
+    "result": "F"
+   },
+   "settlement_rule": "F when the declared command failed in the executor's or the independent verifier's own run; otherwise the compare proposed_result",
+   "verifier_base_commit": "ac8c4218d76cc39e759eba148919d35830f52dca",
+   "verifier_run": {
+    "rc": 3,
+    "runId": "822456e6-ee0c-4b4e-b60a-eee12dc04d9a",
+    "status": "failed"
+   },
+   "world": "v1"
+  },
+  "ep-3-control": {
+   "analysis": {
+    "classes_v1": [
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:91dfc76b09c53c3255067306fa69dd8a4471ca38ed3b37f9943e9bb10d09f83b",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     },
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:f057ac2f3acc5350fa6334e9347bf34206663792924ccaaedc028f85b72337ac",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     }
+    ],
+    "classes_v2": [
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:0da4ac7b29ad9dfc1ebaaf669743c813eaedd647367c49ac00e186bc4bff3c1a",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     },
+     {
+      "basis": "below_minimum_support",
+      "class": "insufficient",
+      "expectation": "verification_by_independent_role",
+      "list": "episode",
+      "occurrences": 0,
+      "residual_id": "residual:d950f25fd1a579b241de3173424873c3f9a5f2cb3b2d0d5fd1966414d470787c",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "verification_by_independent_role"
+      }
+     },
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:e8da893ddb0ba38f43fc131c886b85a4a54ba991060df7b9aee57306f62b7c75",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     }
+    ],
+    "comparison_id": "comparison:168b71d70f89d43c27f7ef0fb804bada63ea6f6051c1272eddf0947380f82c9a",
+    "proposed_result": {
+     "basis": "an expectation is insufficient or a frozen evidence source emitted nothing",
+     "result": "U"
+    },
+    "representation_hash": "sha256:d884fb55d3e5b94dc38da8c69a873684453e138bed01e33ea1170874eedafb18"
+   },
+   "episode_ref": "episode:case-0001:pi-e1-stale-control:1@sha256:a9c761a607e1fb1f6703500a6bbc20a18556a338f28b6fc8bca3f4953b1ddf08",
+   "executor_base_commit": "6d08c0e3d9875dcc46e5e3bd14a2c36b5803e1a6",
+   "executor_run": {
+    "rc": 0,
+    "runId": "d0572697-0c20-4ca6-9191-b4e70bf5ef77",
+    "status": "completed"
+   },
+   "freeze_response": {
+    "episode_key": {
+     "case_id": "case-0001",
+     "n": 1,
+     "plan_item_id": "pi-e1-stale-control"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0006",
+    "replayed": false
+   },
+   "item": "pi-e1-stale-control",
+   "patch_sha256": "905a3d176b8ecdb6d7772b2466905ef02c31047857d06eebdf637ed237c8294c",
+   "question": "question:01JB7420759D51014544D736C1",
+   "world": "v2"
+  },
+  "ep-3-subsequent": {
+   "analysis": {
+    "classes_v1": [
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:36f8b83e380fdd7eda65b2de70b4bf7f03368043dff14c28cee9606f40312716",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     },
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:b1bf2c9faff2a2eb029cccce755e2305451bb06cd91359d372c8dc4a99c3e11a",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     },
+     {
+      "basis": "structural_undeclared",
+      "class": "observed_undeclared",
+      "expectation": "undeclared:undeclared:1f728504dc8cbfa577071e39c2baf3e665d935bd64379462ec52edd8c5edc43b",
+      "list": "structural",
+      "occurrences": 1,
+      "residual_id": "residual:d7311f67a347f913785d3eb6c1b6a0396b4cf0d63cc88435b8f76047c9996caa",
+      "rule": {
+       "kind": "structural",
+       "ref": "declared_model_closure"
+      }
+     }
+    ],
+    "classes_v2": [
+     {
+      "basis": "policy_true",
+      "class": "confirmed",
+      "expectation": "freeze_before_move",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:4a5447c87d8c903078f3d8c1475143a7f54ba9ad8513f750ff4e1be251f93655",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "freeze_before_move"
+      }
+     },
+     {
+      "basis": "policy_unknown",
+      "class": "insufficient",
+      "expectation": "authorize_consequential_action",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:57ead97343b1355d0d267bbfffd35350de434e2c5122c0429876e11efb707162",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "authorize_consequential_action"
+      }
+     },
+     {
+      "basis": "executor_only_evidence",
+      "class": "insufficient",
+      "expectation": "verification_by_independent_role",
+      "list": "episode",
+      "occurrences": 1,
+      "residual_id": "residual:dccab706a7e92be9a1492d4924b13c7146e6cae2aa3958c09016faf488bf1d7c",
+      "rule": {
+       "kind": "policy_evaluable",
+       "ref": "verification_by_independent_role"
+      }
+     }
+    ],
+    "comparison_id": "comparison:ea8f540a95e1777b2f334d664ddcc99d6b106c22cf6dedd0beb67f3dee10002f",
+    "proposed_result": {
+     "basis": "an expectation is insufficient or a frozen evidence source emitted nothing",
+     "result": "U"
+    },
+    "representation_hash": "sha256:523503a6b747db8ad35f31ea3d5adc331add34460ced765d3ac72cbb57135ce4"
+   },
+   "episode_ref": "episode:case-0001:pi-e1-stale:1@sha256:7ebaa7e4a3b5735dd4f31d3e4c2ef988939722cbe435a2077fd9c5bae29dbded",
+   "executor_base_commit": "6d08c0e3d9875dcc46e5e3bd14a2c36b5803e1a6",
+   "executor_run": {
+    "rc": 0,
+    "runId": "cf25ec82-ccd0-4703-af57-5584bdfea43b",
+    "status": "completed"
+   },
+   "freeze_response": {
+    "episode_key": {
+     "case_id": "case-0001",
+     "n": 1,
+     "plan_item_id": "pi-e1-stale"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0005",
+    "replayed": false
+   },
+   "item": "pi-e1-stale",
+   "patch_sha256": "905a3d176b8ecdb6d7772b2466905ef02c31047857d06eebdf637ed237c8294c",
+   "question": "question:01J687237CAED480A38FAC676A",
+   "settlement": {
+    "actor": "independent-settler",
+    "executors": [
+     "program-executor",
+     "fresh-verifier"
+    ],
+    "response": {
+     "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e1-stale"
+     },
+     "kind": "episode.settled",
+     "outcome": "recorded",
+     "record_id": "rec-0007",
+     "replayed": false
+    },
+    "result": "U"
+   },
+   "settlement_rule": "F when the declared command failed in the executor's or the independent verifier's own run; otherwise the compare proposed_result",
+   "verifier_base_commit": "6d08c0e3d9875dcc46e5e3bd14a2c36b5803e1a6",
+   "verifier_run": {
+    "rc": 0,
+    "runId": "3ec67fee-48f2-4781-83e2-be2f56041d4a",
+    "status": "completed"
+   },
+   "world": "v2"
+  }
+ },
+ "finished": "2026-11-14T23:59:26Z",
+ "gitenv": {
+  "GIT_AUTHOR_EMAIL": "fde-s1@invalid",
+  "GIT_AUTHOR_NAME": "Sam Prime",
+  "GIT_COMMITTER_EMAIL": "fde-s1@invalid",
+  "GIT_COMMITTER_NAME": "Sam Prime",
+  "GIT_CONFIG_COUNT": "2",
+  "GIT_CONFIG_KEY_0": "user.name",
+  "GIT_CONFIG_KEY_1": "user.email",
+  "GIT_CONFIG_VALUE_0": "Sam Prime",
+  "GIT_CONFIG_VALUE_1": "fde-s1@invalid"
+ },
+ "ingest_status": {
+  "ep-1-control-exec": {
+   "accepted": 1
+  },
+  "ep-1-control-freeze": {
+   "accepted": 1
+  },
+  "ep-1-control-settled": {
+   "accepted": 2
+  },
+  "ep-1-control-verify": {
+   "accepted": 1
+  },
+  "ep-2-inquiry-exec": {
+   "accepted": 1
+  },
+  "ep-2-inquiry-freeze": {
+   "accepted": 1
+  },
+  "ep-2-inquiry-settled": {
+   "accepted": 2
+  },
+  "ep-2-inquiry-verify": {
+   "accepted": 1
+  },
+  "ep-3-control-exec": {
+   "accepted": 1
+  },
+  "ep-3-control-freeze": {
+   "accepted": 1
+  },
+  "ep-3-subsequent-exec": {
+   "accepted": 1
+  },
+  "ep-3-subsequent-freeze": {
+   "accepted": 1
+  },
+  "ep-3-subsequent-settled": {
+   "accepted": 2
+  },
+  "ep-3-subsequent-verify": {
+   "accepted": 1
+  }
+ },
+ "ingested": {
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-1-control-executor/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-1-control-verifier/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-2-inquiry-executor/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-2-inquiry-verifier/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-3-control-executor/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-3-subsequent-executor/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/raw/cognate/ep-3-subsequent-verifier/interaction-events.ndjson": 1,
+  "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/sf-root/interaction-events/case-0001.jsonl": 10
+ },
+ "keys": {
+  "Assignment": "concept:bdda0e59-e588-54ce-8b21-0a5fdf892057",
+  "Episode": "concept:ca48aba2-a4cb-5c02-96cd-4b0e178704ae",
+  "FreshContextVerification": "concept:e9702bc5-f0f3-5693-a552-bc2fb855896f",
+  "Settlement": "concept:11fc582b-b054-5386-b245-5a358e3c9327"
+ },
+ "last_ordinal": {
+  "ep-1-control-exec": 5,
+  "ep-1-control-freeze": 3,
+  "ep-1-control-settled": 11,
+  "ep-1-control-verify": 7,
+  "ep-2-inquiry-exec": 15,
+  "ep-2-inquiry-freeze": 13,
+  "ep-2-inquiry-settled": 21,
+  "ep-2-inquiry-verify": 17,
+  "ep-3-control-exec": 31,
+  "ep-3-control-freeze": 29,
+  "ep-3-subsequent-exec": 25,
+  "ep-3-subsequent-freeze": 23,
+  "ep-3-subsequent-settled": 35,
+  "ep-3-subsequent-verify": 27
+ },
+ "revision": {
+  "approval": {
+   "approver": "op-alice",
+   "assurance": "session",
+   "proposer": "cognate-service",
+   "state": "approved"
+  },
+  "early_promote": {
+   "code": "AUTHORITY_UNAVAILABLE",
+   "error_class": "cep_promotion_refused"
+  },
+  "matrix_id": "matrix:20ec2032f2ba8f71a5d07d62c5514cc6a39e6c21d98e49a65eb82dbeb2b26df4",
+  "matrix_summary": {
+   "escalated": 0,
+   "fail": 0,
+   "gains": 0,
+   "pass": 8
+  },
+  "matrix_verdict": "pass",
+  "pin_after": {
+   "attempts": [
+    {
+     "actor": "cognate-service",
+     "attempt": "promote",
+     "bound_digest": "sha256:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+     "code": "AUTHORITY_UNAVAILABLE",
+     "message": "apr-op-p1 is still pending: no decision yet",
+     "outcome": "refused",
+     "target_world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4"
+    }
+   ],
+   "baseline": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+   "current": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+   "history": [
+    {
+     "approval_id": "apr-op-p1",
+     "approver": "op-alice",
+     "bound_digest": "sha256:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+     "from_world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+     "kind": "promoted",
+     "matrix_id": "matrix:20ec2032f2ba8f71a5d07d62c5514cc6a39e6c21d98e49a65eb82dbeb2b26df4",
+     "operation_id": "op-p1-b",
+     "pin_id": "pin-op-p1-b",
+     "proposal_id": "proposal:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+     "proposer": "cognate-service",
+     "requester": "cognate-service",
+     "supersedes_pin": null,
+     "to_world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+     "transition_ref": "01M7E7FMTC16B8YNJ0T5N05M7Y"
+    }
+   ],
+   "ok": true
+  },
+  "promote": {
+   "ok": true,
+   "pin": {
+    "approval_id": "apr-op-p1",
+    "approver": "op-alice",
+    "bound_digest": "sha256:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+    "from_world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+    "kind": "promoted",
+    "matrix_id": "matrix:20ec2032f2ba8f71a5d07d62c5514cc6a39e6c21d98e49a65eb82dbeb2b26df4",
+    "operation_id": "op-p1-b",
+    "pin_id": "pin-op-p1-b",
+    "proposal_id": "proposal:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+    "proposer": "cognate-service",
+    "requester": "cognate-service",
+    "supersedes_pin": null,
+    "to_world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+    "transition_ref": "01M7E7FMTC16B8YNJ0T5N05M7Y"
+   }
+  },
+  "proposal_id": "proposal:58f0a5e1cef70bf243f3f730dd296949eb821a2ae3affcbf4e19232ae0614779",
+  "regression_rc": 0,
+  "rows": 8,
+  "rule_sha256": "sha256:f5837ed9293634465ccb7a37833e0cbedc2a1e7ec40cf31f45bbcb0ccb4bc96b",
+  "self_approval_refused": true,
+  "transitions": {
+   "ok": true,
+   "transitions": [
+    {
+     "approval_id": "apr-op-p1",
+     "decision_id": "auth_01",
+     "ledger_entry": "01M7E7FMTC16B8YNJ0T5N05M7Y",
+     "operation_id": "op-p1-b",
+     "record": {
+      "authority_decision_ref": "01M7E7FMTC16B8YNJ0T5N05M7Y",
+      "compatibility": "compatible",
+      "reason": "adopt the reviewed model",
+      "semantic_closure_equal": false,
+      "source_world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "target_world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+      "transition_kind": "semantic_change"
+     },
+     "requester": "cognate-service"
+    }
+   ]
+  }
+ },
+ "rt_ledger": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/rt-home/data/sxr/repos/01M7E7123QKWWP84DK0CZB451T/ledger.db",
+ "rt_ledger_sha256": "d6f8a623573bb450888ae0825f5e0e49313bf0515a99afba81af21551daadf76",
+ "rt_repo_id": "01M7E7123QKWWP84DK0CZB451T",
+ "started": "2026-11-14T23:42:00Z",
+ "worlds": {
+  "semantic_diff_sha256": "sha256:dad9eb85595d663c60e080ff232c23973fc673723091eaf8ba955ecf5ae55098",
+  "v1": {
+   "declared_keys": 158,
+   "source_sha256": {
+    "evidence.sea": "5e12c45004506bcb255499e22fa513c0123c7d0dd32d1e38a8c81bc035d30054",
+    "fde-sop.sea": "2b8a8c437389c97ab396ec02a726c5370481ff735b3838da7e07728cb4114cf2",
+    "outcome.sea": "dfd4a361af2528ad03cb13494fc8d3bbb87548bbc76c12f8eebba04012c92ba5"
+   },
+   "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+   "world_ref_df_0_22_0": "world:godspeed-fde-sop@sha256:e3c3d396577159a51581782455b68c30fe353292b6023c24625d28174627cf17"
+  },
+  "v2": {
+   "declared_keys": 161,
+   "source_sha256": {
+    "evidence.sea": "5e12c45004506bcb255499e22fa513c0123c7d0dd32d1e38a8c81bc035d30054",
+    "fde-sop.sea": "2ffb6edeb3e37c48a456ccf4ba2616274973a75d4f7b0a1c4450d397a61d5d21",
+    "outcome.sea": "dfd4a361af2528ad03cb13494fc8d3bbb87548bbc76c12f8eebba04012c92ba5"
+   },
+   "world_ref": "world:godspeed-fde-sop@sha256:0d55378c0a072beb3f136fd2a5be7ac7debdfee42df7cb9d077d2db90bd740b4",
+   "world_ref_df_0_22_0": "world:godspeed-fde-sop@sha256:fde19d7f858f26d78a4f69bf090a2fdb322a26f1a92c0fb98b9110da0c5ef8af"
+  }
+ }
+}

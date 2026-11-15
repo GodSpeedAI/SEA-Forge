@@ -1,0 +1,17 @@
+    Finished `test` profile [unoptimized] target(s) in 0.14s
+     Running tests/wp16.rs (target/debug/deps/wp16-d9b45c177c9a3557)
+
+running 2 tests
+test nt03b_altered_occurrence_is_chain_verify_failed ... ok
+test nt03b_deleted_occurrence_is_chain_verify_failed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.21s
+
+    Finished `test` profile [unoptimized] target(s) in 0.17s
+     Running tests/observed.rs (target/debug/deps/observed-540d8a0bfd81a0c8)
+
+running 1 test
+test ingest_records_rejections_and_derive_is_deterministic_bounded_and_tamper_evident ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+

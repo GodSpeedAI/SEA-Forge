@@ -1,0 +1,9 @@
+{
+ "contract": "heldout-rule.v1",
+ "rule_id": "rule:s1-heldout-by-episode",
+ "kind": "exclude_episodes",
+ "held_out_episodes": [
+  "episode:case-0001:pi-e3-kg-roundtrip:1"
+ ],
+ "statement": "Occurrences of ep-2-inquiry are excluded from diagnosis by episode id (episodes.yaml revision_candidate.held_out_rule)"
+}

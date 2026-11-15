@@ -1,0 +1,1 @@
+{"actor":{"actor_id":"independent-settler","role":"operator"},"i":0,"request_id":"settle-ep-2-inquiry","response":{"episode_key":{"case_id":"case-0001","n":1,"plan_item_id":"pi-e3-kg-roundtrip"},"kind":"episode.settled","outcome":"recorded","record_id":"rec-0004","replayed":false}}

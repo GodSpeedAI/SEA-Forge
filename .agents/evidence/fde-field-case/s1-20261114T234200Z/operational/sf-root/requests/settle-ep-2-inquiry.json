@@ -1,0 +1,19 @@
+{
+  "request_id": "settle-ep-2-inquiry",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:49:59.216185876+00:00",
+  "completed_at": "2026-11-14T23:49:59.482858006+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e3-kg-roundtrip"
+    },
+    "kind": "episode.settled",
+    "outcome": "recorded",
+    "record_id": "rec-0004",
+    "replayed": false
+  },
+  "payload_hash": "5b9d1f281c5a8aedbfabb4e04f5bbd99ed3cbe36273a74e5d5a5dcf22b69d82e"
+}

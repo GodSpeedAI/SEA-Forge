@@ -1,0 +1,19 @@
+{
+  "request_id": "settle-ep-3-subsequent",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:59:21.531236235+00:00",
+  "completed_at": "2026-11-14T23:59:21.646584641+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e1-stale"
+    },
+    "kind": "episode.settled",
+    "outcome": "recorded",
+    "record_id": "rec-0007",
+    "replayed": false
+  },
+  "payload_hash": "dd324bd97fe095cd2c3fce304b5bcb19c2596c0d5ba1e8fed4af0a2410c84035"
+}

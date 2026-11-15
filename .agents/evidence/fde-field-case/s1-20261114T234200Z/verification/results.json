@@ -1,0 +1,267 @@
+{
+  "generated_at": "2026-11-15T00:07:45Z",
+  "note": "skeleton: tests without scripts/fde-proof.d/<ID>.sh are NOT_RUN",
+  "preregistration": "fde-s1",
+  "repos": {
+    "cognate": {
+      "branch": "fde/integration",
+      "commit": "db788d108dad9667b2523f32de4ad9c530df51b0",
+      "path": "/home/sprime01/projects/_wt/fde-cognate-integration",
+      "present": true,
+      "tracked_changes": 0
+    },
+    "domainforge": {
+      "branch": "main",
+      "commit": "ac8c4218d76cc39e759eba148919d35830f52dca",
+      "path": "/home/sprime01/projects/domainforge",
+      "present": true,
+      "tag_v0.22.0": "ac8c4218d76cc39e759eba148919d35830f52dca",
+      "tracked_changes": 5
+    },
+    "horizon": {
+      "branch": "fde/integration",
+      "commit": "fd2e19bceb7dba61b4cd21dffc3367f72aff2445",
+      "path": "/home/sprime01/projects/_wt/fde-horizon-integration",
+      "present": true,
+      "tracked_changes": 0
+    },
+    "realitytrace": {
+      "branch": "fde/integration",
+      "commit": "4930b7d6704dc5572b2cb0d4fa83a0a751b095e9",
+      "path": "/home/sprime01/projects/_wt/fde-sxr-integration",
+      "present": true,
+      "tracked_changes": 4
+    },
+    "sea-forge": {
+      "branch": "fde/integration",
+      "commit": "fef0d900ecacf62628e19b6a4d2475be9eff11c8",
+      "path": "/home/sprime01/projects/_wt/fde-sea-rs-integration",
+      "present": true,
+      "tracked_changes": 0
+    }
+  },
+  "results": [
+    {
+      "command": "scripts/check-fde-contract-digests.sh",
+      "duration_s": 0.0,
+      "evidence": "",
+      "exit_code": 0,
+      "id": "preflight:contract-digests",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-01",
+      "duration_s": 4.26,
+      "evidence": ".tmp/fde-proof/s1/AT-01.log",
+      "exit_code": 0,
+      "id": "AT-01",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-04",
+      "duration_s": 0.91,
+      "evidence": ".tmp/fde-proof/s1/AT-04.log",
+      "exit_code": 10,
+      "id": "AT-04",
+      "reason": "order check and digest equality pass in the producer tests; anchor time is the local clock only (AnchorTimeLocalOnly, OD-6), execution-side I-1 gate not wired (WP-20), so freeze-before-execution is verified after the fact, not enforced",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-05",
+      "duration_s": 8.69,
+      "evidence": ".tmp/fde-proof/s1/AT-05.log",
+      "exit_code": 10,
+      "id": "AT-05",
+      "reason": "SEA-Forge half and Cognate half pass; emitter signatures arrive with WP-33 so the signature check cannot run; authenticity rests on source-record resolution and the independent-emitter rule",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-06",
+      "duration_s": 2.15,
+      "evidence": ".tmp/fde-proof/s1/AT-06.log",
+      "exit_code": 0,
+      "id": "AT-06",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-07",
+      "duration_s": 3.11,
+      "evidence": ".tmp/fde-proof/s1/AT-07.log",
+      "exit_code": 10,
+      "id": "AT-07",
+      "reason": "classes arose on the real episode set (see cell results); declared_unobserved and any unarising class NOT TESTED; postcondition expectations insufficient (DomainForge accepts only at precondition)",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-08",
+      "duration_s": 1.77,
+      "evidence": ".tmp/fde-proof/s1/AT-08.log",
+      "exit_code": 0,
+      "id": "AT-08",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-12",
+      "duration_s": 6.51,
+      "evidence": ".tmp/fde-proof/s1/AT-12.log",
+      "exit_code": 10,
+      "id": "AT-12",
+      "reason": "",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-13",
+      "duration_s": 5.41,
+      "evidence": ".tmp/fde-proof/s1/AT-13.log",
+      "exit_code": 10,
+      "id": "AT-13",
+      "reason": "",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-14",
+      "duration_s": 19.38,
+      "evidence": ".tmp/fde-proof/s1/AT-14.log",
+      "exit_code": 10,
+      "id": "AT-14",
+      "reason": "parity passes on the producer's fixtures (real RealityTrace CLI output and real case_records::append output); the cell's own raw records were not rendered",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only AT-18",
+      "duration_s": 8.53,
+      "evidence": ".tmp/fde-proof/s1/AT-18.log",
+      "exit_code": 10,
+      "id": "AT-18",
+      "reason": "anchors verify (prereg by fde-anchor.sh; freeze tags by digest, local clock only), replay hashes and classes equal the recorded ones; re-execution of the program episodes was not repeated by the verifier",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-01",
+      "duration_s": 0.42,
+      "evidence": ".tmp/fde-proof/s1/NT-01.log",
+      "exit_code": 0,
+      "id": "NT-01",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-02",
+      "duration_s": 1.38,
+      "evidence": ".tmp/fde-proof/s1/NT-02.log",
+      "exit_code": 0,
+      "id": "NT-02",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-03",
+      "duration_s": 1.36,
+      "evidence": ".tmp/fde-proof/s1/NT-03.log",
+      "exit_code": 10,
+      "id": "NT-03",
+      "reason": "producer tests pass; a real re-run with a changed outcome was not run",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-03b",
+      "duration_s": 1.54,
+      "evidence": ".tmp/fde-proof/s1/NT-03b.log",
+      "exit_code": 0,
+      "id": "NT-03b",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-04",
+      "duration_s": 4.25,
+      "evidence": ".tmp/fde-proof/s1/NT-04.log",
+      "exit_code": 10,
+      "id": "NT-04",
+      "reason": "both halves pass; the authorizing approval is a session-assurance approval (A3 and a human-reserved decision need S3)",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-05",
+      "duration_s": 0.76,
+      "evidence": ".tmp/fde-proof/s1/NT-05.log",
+      "exit_code": 0,
+      "id": "NT-05",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-06",
+      "duration_s": 1.23,
+      "evidence": ".tmp/fde-proof/s1/NT-06.log",
+      "exit_code": 10,
+      "id": "NT-06",
+      "reason": "producer test passes; a silent source on the real cell was not run",
+      "status": "PARTIAL"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-07",
+      "duration_s": 2.09,
+      "evidence": ".tmp/fde-proof/s1/NT-07.log",
+      "exit_code": 0,
+      "id": "NT-07",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-08",
+      "duration_s": 1.65,
+      "evidence": ".tmp/fde-proof/s1/NT-08.log",
+      "exit_code": 0,
+      "id": "NT-08",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-09",
+      "duration_s": 2.93,
+      "evidence": ".tmp/fde-proof/s1/NT-09.log",
+      "exit_code": 0,
+      "id": "NT-09",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "command": "scripts/fde-proof.sh --slice s1 --only NT-16",
+      "duration_s": 0.41,
+      "evidence": ".tmp/fde-proof/s1/NT-16.log",
+      "exit_code": 10,
+      "id": "NT-16",
+      "reason": "the tamper/order check refuses as specified; the server push time is not read from the remote (AnchorTimeLocalOnly) and the anchor is a shared-OS-user tag without a protected namespace (RD-26, OD-6)",
+      "status": "PARTIAL"
+    }
+  ],
+  "slice": "s1",
+  "tools": {
+    "bun": "1.4.0",
+    "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+    "domainforge_dev_3960326": {
+      "path": "/home/sprime01/projects/_wt/tmp/df-3960326/domainforge",
+      "sha256": "67559ad8b5def99b1cdb0dd6d65521abeb635b937cbeca69a6513522d4719d52",
+      "version": "domainforge 0.21.2"
+    },
+    "domainforge_release": {
+      "path": "/home/sprime01/projects/_wt/tmp/df022-cli/domainforge-0.22.0-x86_64-unknown-linux-gnu/domainforge",
+      "sha256": "2d0822810644746417cfb82065472baac11296e2a6ab2ba94d95196e428d5d14",
+      "version": "domainforge 0.22.0"
+    },
+    "git": "git version 2.53.0",
+    "node": "v26.8.2",
+    "python3": "Python 3.14.4",
+    "realitytrace_bin": {
+      "path": "/home/sprime01/projects/_wt/fde-sxr-integration/target/debug/realitytrace",
+      "sha256": "dab4d8e80072c06149f9333e25b64d4fea4fafbf62fc2a3df36f4f4e2e6fb30f",
+      "version": "realitytrace 0.4.0"
+    },
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)"
+  }
+}

@@ -1,0 +1,62 @@
+{
+ "episode_ref": "episode:case-0001:pi-e3-kg-roundtrip:1@sha256:be163389ee5bf3e9742506286c45d32ffad5c1ca24e02b466151d866c9d00ac3",
+ "body": {
+  "case_id": "case-0001",
+  "plan_item_id": "pi-e3-kg-roundtrip",
+  "n": 1,
+  "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+  "kind": "evaluated",
+  "executor_provenance": "program",
+  "criteria": {
+   "intention": "Test the frozen hypothesis against the real DomainForge code.",
+   "expected_change": "None to product code; the inquiry adds only a test that asserts the hypothesis.",
+   "invariants": [
+    "No file under domainforge-core/src is changed by the patch.",
+    "Executor program applies the hash-pinned patch sha256:297b9203db75c4a0a21d827283d5e5bc4ccaa02fa7e082f8818f94337b0898ee (ep-2-kg-roundtrip.patch) and runs the declared command: cargo test -p domainforge-core --features cli kg_round_trip_policy_and_instance (test added by the patch)"
+   ],
+   "predicted_irrelevancies": [
+    "Which entity names the fixture uses."
+   ],
+   "success_region": "Hypothesis holds: the round trip preserves both triple kinds (result S).",
+   "failure_region": "Hypothesis fails: a Policy or EntityInstance triple is lost (result F).",
+   "falsifiers": [
+    "The round-tripped graph contains the same Policy and EntityInstance triples as the original."
+   ]
+  },
+  "comparison_profile": {
+   "id": "profile:s1",
+   "sha256": "ab079da4e1064eea25455252caa7c0c584dad2dd12a18ec092a53395acc21f5b"
+  },
+  "decision_maker": {
+   "principal": "independent-settler",
+   "role": "verifier"
+  },
+  "evidence_sources": [
+   {
+    "source_id": "src-case-ledger",
+    "system": "sea-forge.case-ledger",
+    "purpose": "freeze and settlement records"
+   },
+   {
+    "source_id": "src-cognate",
+    "system": "cognate",
+    "purpose": "run and invocation records of the executor and the verifier"
+   }
+  ],
+  "coverage_manifest": [
+   {
+    "emitter": "sea-forge.case-ledger",
+    "event_kinds": [
+     "nav_aim",
+     "nav_claim"
+    ]
+   },
+   {
+    "emitter": "cognate",
+    "event_kinds": [
+     "program.run"
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+    Finished `test` profile [unoptimized] target(s) in 0.25s
+     Running tests/wp17.rs (target/debug/deps/wp17-429fef4c5693169f)
+
+running 1 test
+test nt06_a_frozen_evidence_source_that_emitted_nothing_is_insufficient_and_the_result_is_u ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.68s
+
+REASON: producer test passes; a silent source on the real cell was not run
+PARTIAL: producer test passes; a silent source on the real cell was not run

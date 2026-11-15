@@ -1,0 +1,13 @@
+{
+ "classes_arisen": [
+  "confirmed",
+  "insufficient",
+  "observed_undeclared"
+ ],
+ "id": "AT-07",
+ "not_tested": [
+  "contradicted",
+  "declared_unobserved"
+ ],
+ "status": "ok"
+}

@@ -1,0 +1,19 @@
+{
+  "request_id": "settle-ep-1-control",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:44:41.956149351+00:00",
+  "completed_at": "2026-11-14T23:44:42.005786272+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e2-tail-read"
+    },
+    "kind": "episode.settled",
+    "outcome": "recorded",
+    "record_id": "rec-0002",
+    "replayed": false
+  },
+  "payload_hash": "9cbfe0972572458eaed4b1492e9467c9aba5864e1042044ce8f63e787a905831"
+}

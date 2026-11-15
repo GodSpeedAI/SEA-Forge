@@ -1,0 +1,17 @@
+@namespace "godspeed-fde-sop.outcome"
+@version "0.1.0"
+
+// Semantic pack: client outcome.
+//
+// "Settlement" here is the accepted business result for the client or sponsor:
+// the outcome the sponsor finally accepts and the economic/outcome account a
+// disposition closes against (SOP 3.1, 3.3, 10.2, 10.3). It is NOT an evidence
+// settlement (evidence.sea). SOP 13 rejects equating the two: settlement is
+// independent evidence against a frozen expectation, trust is its own gate.
+
+export entity "Settlement" {
+    key outcome_ref: string (min_length 1)
+    case_id: string (min_length 1)
+    accepted_by_ref: string (min_length 1)
+    account_ref: string (min_length 1)
+}

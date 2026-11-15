@@ -1,0 +1,10 @@
+bun test v1.4.0 (34cbb9a40)
+
+ 28 pass
+ 2 filtered out
+ 0 fail
+ 171 expect() calls
+Ran 28 tests across 1 file. [19.33s]
+fde-parity: PASS (AT-14, 28 tests)
+REASON: parity passes on the producer's fixtures (real RealityTrace CLI output and real case_records::append output); the cell's own raw records were not rendered
+PARTIAL: parity passes on the producer's fixtures (real RealityTrace CLI output and real case_records::append output); the cell's own raw records were not rendered

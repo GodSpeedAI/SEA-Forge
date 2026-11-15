@@ -1,0 +1,86 @@
+{
+ "socket_path": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/sf.sock",
+ "root": "/home/sprime01/projects/_wt/tmp/fde-s1/20261114T234200Z/sf-root",
+ "identity": {
+  "bindings": [
+   {
+    "uid": 1000,
+    "sid": null,
+    "actor_id": "case-keeper",
+    "roles": [
+     "operator"
+    ]
+   },
+   {
+    "uid": null,
+    "sid": null,
+    "actor_id": "program-executor",
+    "roles": [
+     "agent"
+    ]
+   },
+   {
+    "uid": null,
+    "sid": null,
+    "actor_id": "fresh-verifier",
+    "roles": [
+     "operator"
+    ]
+   },
+   {
+    "uid": null,
+    "sid": null,
+    "actor_id": "independent-settler",
+    "roles": [
+     "operator"
+    ]
+   },
+   {
+    "uid": null,
+    "sid": null,
+    "actor_id": "cognate-service",
+    "roles": [
+     "service"
+    ]
+   },
+   {
+    "uid": null,
+    "sid": null,
+    "actor_id": "op-alice",
+    "roles": [
+     "operator"
+    ]
+   }
+  ]
+ },
+ "cep_authority": {
+  "enabled": true,
+  "pinned_baseline": "godspeed-fde-sop",
+  "policy": "sea-forge-policy.yaml",
+  "worlds": [
+   {
+    "name": "godspeed-fde-sop",
+    "base": "worlds/v1",
+    "entry": "fde-sop.sea",
+    "files": [
+     "fde-sop.sea",
+     "evidence.sea",
+     "outcome.sea"
+    ],
+    "prior_identities": []
+   },
+   {
+    "name": "godspeed-fde-sop",
+    "base": "worlds/v2",
+    "entry": "fde-sop.sea",
+    "files": [
+     "fde-sop.sea",
+     "evidence.sea",
+     "outcome.sea"
+    ],
+    "prior_identities": []
+   }
+  ],
+  "approval_ttl_hours": 24
+ }
+}

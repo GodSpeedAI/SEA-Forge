@@ -1,0 +1,92 @@
+{
+  "request_id": "op-p1",
+  "method": "authority.request",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:50:01.404476694+00:00",
+  "completed_at": "2026-11-14T23:50:02.085222060+00:00",
+  "outcome": {
+    "decision_id": "auth_01",
+    "envelope": {
+      "authority": [
+        {
+          "authority_id": "auth_01",
+          "subject_actor_ref": "actor:alice"
+        }
+      ],
+      "boundary_record": {
+        "classification": "internal",
+        "compression_notes": [],
+        "excluded_sections": [],
+        "included_sections": [
+          "authority",
+          "transformations"
+        ],
+        "known_omissions": [
+          "policy evaluation detail is in the committed ledger record"
+        ],
+        "limitations": [],
+        "out_of_scope_entities": [],
+        "redactions": [],
+        "scope": "authority decision for one Cognate operation",
+        "unknowns": []
+      },
+      "cep_version": "1.0.0",
+      "completeness_status": "partial",
+      "created_at": "2026-11-14T23:50:02Z",
+      "created_by": "sea-forge-authority",
+      "envelope_id": "env-authority_decision-op-p1",
+      "envelope_kind": "authority_decision",
+      "envelope_version": "1.0",
+      "extensions": {
+        "cep.profile": {
+          "profile_id": "godspeed.authority_decision",
+          "profile_version": "1.0.0"
+        },
+        "godspeed.authority_decision": {
+          "approval_expires_at": "2026-11-15T23:50:02Z",
+          "approval_id": "apr-op-p1",
+          "decision": "escalate",
+          "decision_id": "auth_01",
+          "ledger_entry": "01M7E7FM2NSPDB127M8AHRE4GB",
+          "operation_id": "op-p1",
+          "policy_bundle_hash": "sha256:9e084ba25af52b85673f1a92ed40a4eb5d6b8bd17a79b693903aa466c45529ec",
+          "request_ref": "env-authority_request-op-p1"
+        }
+      },
+      "lineage_refs": [
+        "env-authority_request-op-p1"
+      ],
+      "omission_status": "marked",
+      "provenance": [
+        {
+          "created_at": "2026-11-14T23:50:02Z",
+          "producer_refs": [
+            "sea-forge-authority"
+          ],
+          "production_method": "authority_evaluation",
+          "provenance_id": "prov-op-p1",
+          "source_system_refs": [
+            "sea-forge"
+          ]
+        }
+      ],
+      "provenance_refs": [
+        "prov-op-p1"
+      ],
+      "scope": {
+        "evaluation_context": "godspeed-authority_decision",
+        "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b"
+      },
+      "transformations": [
+        {
+          "transformation_id": "tr-1",
+          "transformation_type": "capability_invocation"
+        }
+      ],
+      "validation_status": "valid"
+    },
+    "ledger_entry": "01M7E7FM2NSPDB127M8AHRE4GB",
+    "ok": true
+  },
+  "payload_hash": "22fc5c32781d2ae1f1c6b373d4d2b3829ad8d368b16e48d5ab21fda1c84ba425"
+}

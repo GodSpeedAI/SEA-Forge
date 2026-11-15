@@ -1,0 +1,19 @@
+{
+  "request_id": "freeze-ep-3-subsequent",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:50:02.909662398+00:00",
+  "completed_at": "2026-11-14T23:50:03.245131295+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e1-stale"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0005",
+    "replayed": false
+  },
+  "payload_hash": "a3e35375275b972392687eb9c08ffda9b9568fd4e88286dda3fe2030822a3c1d"
+}

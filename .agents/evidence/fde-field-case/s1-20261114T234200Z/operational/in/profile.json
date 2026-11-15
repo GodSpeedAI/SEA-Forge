@@ -1,0 +1,33 @@
+{
+ "contract": "comparison-profile.v1",
+ "profile_id": "profile:s1",
+ "kinds": [
+  {
+   "kind": "policy_evaluable",
+   "comparison": "episode",
+   "quantifier": "universal",
+   "min_support": 1,
+   "allow_vacuous_truth": false,
+   "deadline": null,
+   "class_mapping": {
+    "true": "confirmed",
+    "false": "contradicted",
+    "unknown": "insufficient"
+   }
+  },
+  {
+   "kind": "structural",
+   "comparison": "structural",
+   "quantifier": "universal",
+   "min_support": 1,
+   "allow_vacuous_truth": false,
+   "deadline": null,
+   "class_mapping": {
+    "true": "confirmed",
+    "false": "contradicted",
+    "unknown": "insufficient",
+    "undeclared": "observed_undeclared"
+   }
+  }
+ ]
+}

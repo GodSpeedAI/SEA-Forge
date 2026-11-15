@@ -1,0 +1,16 @@
+{
+ "cases": {
+  "a": {
+   "code_seen": true,
+   "expected": "INGEST_REJECTED_IDENTITY",
+   "rc": 4
+  },
+  "b": {
+   "code_seen": true,
+   "expected": "INGEST_REJECTED_EVIDENCE",
+   "rc": 4
+  }
+ },
+ "id": "NT-02",
+ "status": "ok"
+}

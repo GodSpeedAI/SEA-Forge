@@ -1,0 +1,19 @@
+{
+  "request_id": "freeze-ep-1-control",
+  "method": "case.record.append",
+  "status": "completed",
+  "submitted_at": "2026-11-14T23:42:05.031168547+00:00",
+  "completed_at": "2026-11-14T23:42:05.364411576+00:00",
+  "outcome": {
+    "episode_key": {
+      "case_id": "case-0001",
+      "n": 1,
+      "plan_item_id": "pi-e2-tail-read"
+    },
+    "kind": "episode.frozen",
+    "outcome": "recorded",
+    "record_id": "rec-0001",
+    "replayed": false
+  },
+  "payload_hash": "d3c6e90f2d8ab4776ad86ff85a46e0607c20cee1a10a768e97686b1165a5b6be"
+}
