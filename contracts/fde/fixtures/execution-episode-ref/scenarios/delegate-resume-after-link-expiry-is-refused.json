@@ -1,0 +1,54 @@
+{
+  "id": "delegate-resume-after-link-expiry-is-refused",
+  "rule": "R10",
+  "nt": "AT-17",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "case_id": "case-0001",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-del-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    },
+    "assignment_id": "assign:case-0001:item-03:1:1"
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {
+    "authority_decision": "allowed",
+    "k_used": [
+      1
+    ],
+    "interrupted_assignments": [
+      "assign:case-0001:item-03:1:1"
+    ],
+    "link_expires_at": "2026-11-15T17:00:00Z",
+    "now": "2026-11-15T18:00:00Z"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "ASSIGNMENT_LINK_EXPIRED",
+    "message": "resume needs a new link and a new k",
+    "no_side_effect": true
+  }
+}

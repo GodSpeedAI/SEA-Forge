@@ -1,0 +1,46 @@
+{
+  "id": "frozen-boundary-field-revised-without-approval",
+  "rule": "reserved-path",
+  "nt": "RD-06",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "episode.frozen",
+      "episode_key": {
+        "case_id": "case-0001",
+        "plan_item_id": "item-03",
+        "n": 1
+      },
+      "episode_kind": "evaluated",
+      "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "idempotency_key": "case-keeper/rec-0001"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "field_case.revised",
+    "payload": {
+      "base_revision": 1,
+      "changes": [
+        {
+          "path": "observer_and_authority.independent_verifier",
+          "field": {
+            "status": "declared",
+            "source_ref": {
+              "kind": "operator",
+              "ref": "operator:note-1"
+            },
+            "value": "agent:verifier-01"
+          }
+        }
+      ],
+      "rationale": "intake interview"
+    },
+    "idempotency_key": "operator/rec-0121"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "RESERVED_DECISION_REFUSED",
+    "message": "independent_verifier is read-only after the first freeze; revising it is a reserved operation"
+  }
+}

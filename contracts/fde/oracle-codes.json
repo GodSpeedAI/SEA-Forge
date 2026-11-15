@@ -183,13 +183,14 @@
       "code": "AUTHORITY_DENIED",
       "home": "case-record-append.v2.json#/$defs/Error",
       "also_raised_by": [
+        "continuation.v1.json",
         "execution-episode-ref.v1.json",
         "reserved-operation.v1.json"
       ],
       "oracle_rows": [
         "NT-34"
       ],
-      "v1_writers": "unreachable: v1 kinds carry no authority decision; execution verbs are not append verbs"
+      "v1_writers": "fallback:SCHEMA_INVALID"
     },
     {
       "code": "ANCHOR_PUBLISHER_INVALID",
@@ -247,6 +248,68 @@
         "AT-03"
       ],
       "v1_writers": "unreachable: field_case.revised and strategy.recorded are v2 kinds"
+    },
+    {
+      "code": "VERIFIER_CONTEXT_MISMATCH",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "delegation-link.v1.json"
+      ],
+      "oracle_rows": [],
+      "v1_writers": "fallback:SCHEMA_INVALID"
+    },
+    {
+      "code": "CASE_CLOSED",
+      "home": "case-record-append.v2.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [],
+      "v1_writers": "fallback:SCHEMA_INVALID"
+    },
+    {
+      "code": "EPISODE_SUPERSEDED",
+      "home": "execution-episode-ref.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "EPISODE_SETTLED",
+      "home": "execution-episode-ref.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "CASE_UNRESOLVED",
+      "home": "execution-episode-ref.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "TRANSITION_ONLY_INVALID",
+      "home": "execution-episode-ref.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_LINK_EXPIRED",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [
+        "execution-episode-ref.v1.json"
+      ],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_BUDGET_EXCEEDED",
+      "home": "assignment.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "not an append code"
     },
     {
       "code": "CLOSE_DISPOSITION_REQUIRED",
@@ -307,11 +370,13 @@
     {
       "code": "RESERVED_DECISION_REFUSED",
       "home": "reserved-operation.v1.json#/$defs/Error",
-      "also_raised_by": [],
+      "also_raised_by": [
+        "case-record-append.v2.json"
+      ],
       "oracle_rows": [
         "NT-12"
       ],
-      "v1_writers": "not an append code"
+      "v1_writers": "unreachable: the only append path that raises it is field_case.revised, a v2 kind"
     },
     {
       "code": "A3_SURFACE_REQUIRED",

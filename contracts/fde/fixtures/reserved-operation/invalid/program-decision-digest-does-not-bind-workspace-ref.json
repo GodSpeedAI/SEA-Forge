@@ -1,0 +1,32 @@
+{
+  "decision_id": "dec-0099",
+  "operation_id": "op-0042",
+  "case_id": "case-0001",
+  "execution": {
+    "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+    "patch_sha256": "abababababababababababababababababababababababababababababababab",
+    "argv": [
+      "cargo",
+      "test",
+      "-p",
+      "demo"
+    ],
+    "cwd": "/work/case-0001",
+    "env_digest": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "workspace_ref": "ws:other",
+    "sandbox_profile": "openshell-contained",
+    "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+    "timeout_s": 600
+  },
+  "binds_digest": "aa51ea01d969f23a7b6103f0b4d82093536c92ca2a91911effa4abf8e34527d4",
+  "max_runs": 1,
+  "runs_used": 0,
+  "decided_by": {
+    "principal": "human:operator",
+    "role": "case-lead"
+  },
+  "outcome": "allow",
+  "assurance": "session",
+  "decided_at": "2026-11-15T09:00:00Z",
+  "expires_at": "2026-11-15T17:00:00Z"
+}

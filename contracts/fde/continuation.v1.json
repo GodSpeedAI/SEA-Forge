@@ -6,24 +6,28 @@
   "$defs": {
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "episode_ref": {
       "$ref": "urn:sea-forge:fde:frozen-reference:v1#/$defs/episode_ref"
     },
     "sha256": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 4096
     },
     "Principal": {
       "type": "string",
-      "pattern": "^[^\\s]{1,256}$"
+      "pattern": "^[^\\s]{1,256}$",
+      "maxLength": 4096
     },
     "Continuation": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "computed_from",
+        "availability",
         "case",
         "pinned_world",
         "gate_evidence",
@@ -35,6 +39,78 @@
         "next"
       ],
       "properties": {
+        "availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "case",
+            "pinned_world",
+            "gate_evidence",
+            "episodes",
+            "authority",
+            "disputed_claims",
+            "latest_observations",
+            "work",
+            "next"
+          ],
+          "properties": {
+            "case": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "pinned_world": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "gate_evidence": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "episodes": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "authority": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "disputed_claims": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "latest_observations": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "work": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            },
+            "next": {
+              "enum": [
+                "known",
+                "unknown"
+              ]
+            }
+          },
+          "description": "Per section: known means the source was read and an empty list means none; unknown means the source (RealityTrace, Cognate, an approval store) was unreachable and the section's lists are empty only because nothing could be read. [] never means unreachable. case, pinned_world, gate_evidence, episodes and next come from the ledger and are always known; an unreadable ledger is STORE_INTEGRITY."
+        },
         "computed_from": {
           "type": "object",
           "additionalProperties": false,
@@ -51,7 +127,8 @@
                 "null"
               ],
               "minLength": 1,
-              "description": "record_id of the last case record folded; null for a case with no records."
+              "description": "record_id of the last case record folded; null for a case with no records.",
+              "maxLength": 4096
             },
             "realitytrace_snapshot": {
               "type": [
@@ -59,7 +136,8 @@
                 "null"
               ],
               "minLength": 1,
-              "description": "RealityTrace snapshot id read; null when RealityTrace was unreachable (then observations are 'unknown', never absent)."
+              "description": "RealityTrace snapshot id read; null when RealityTrace was unreachable (then observations are 'unknown', never absent).",
+              "maxLength": 4096
             },
             "cognate_ref": {
               "type": [
@@ -67,11 +145,13 @@
                 "null"
               ],
               "minLength": 1,
-              "description": "Cognate session or run read for assignments; null when none."
+              "description": "Cognate session or run read for assignments; null when none.",
+              "maxLength": 4096
             },
             "computed_at": {
               "type": "string",
-              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+              "maxLength": 4096
             }
           }
         },
@@ -90,7 +170,8 @@
           "properties": {
             "case_id": {
               "type": "string",
-              "pattern": "^[^\\s:@]{1,128}$"
+              "pattern": "^[^\\s:@]{1,128}$",
+              "maxLength": 4096
             },
             "lifecycle": {
               "enum": [
@@ -125,7 +206,8 @@
           "properties": {
             "world_ref": {
               "type": "string",
-              "pattern": "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$"
+              "pattern": "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$",
+              "maxLength": 4096
             },
             "checkpoint": {
               "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue",
@@ -174,14 +256,16 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/$defs/text"
-                }
+                },
+                "maxItems": 256
               },
               "record_id": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "minLength": 1
+                "minLength": 1,
+                "maxLength": 4096
               }
             }
           },
@@ -229,7 +313,8 @@
                   "string",
                   "null"
                 ],
-                "pattern": "^episode:[^:@\\s]+:[^:@\\s]+:[1-9][0-9]*@sha256:[0-9a-f]{64}$"
+                "pattern": "^episode:[^:@\\s]+:[^:@\\s]+:[1-9][0-9]*@sha256:[0-9a-f]{64}$",
+                "maxLength": 4096
               },
               "kind": {
                 "enum": [
@@ -259,7 +344,8 @@
                   "string",
                   "null"
                 ],
-                "minLength": 1
+                "minLength": 1,
+                "maxLength": 4096
               }
             },
             "allOf": [
@@ -285,7 +371,8 @@
                       ]
                     },
                     "settlement_ref": {
-                      "type": "string"
+                      "type": "string",
+                      "maxLength": 4096
                     }
                   }
                 },
@@ -301,7 +388,8 @@
                 }
               }
             ]
-          }
+          },
+          "maxItems": 256
         },
         "authority": {
           "x-sop-item": 5,
@@ -327,7 +415,15 @@
                 ],
                 "properties": {
                   "pending_id": {
-                    "$ref": "#/$defs/text"
+                    "oneOf": [
+                      {
+                        "$ref": "#/$defs/text"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Returned only to the case lead (observer_and_authority.case_lead principal) or the approver of record of that pending operation; null for every other caller (M1)."
                   },
                   "operation": {
                     "$ref": "#/$defs/text"
@@ -342,10 +438,12 @@
                   },
                   "expires_at": {
                     "type": "string",
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+                    "maxLength": 4096
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "decisions": {
               "type": "array",
@@ -367,10 +465,11 @@
                   },
                   "outcome": {
                     "enum": [
-                      "allowed",
-                      "denied",
+                      "allow",
+                      "deny",
                       "expired"
-                    ]
+                    ],
+                    "description": "The CEP/S1 spelling (allow, deny), as authority decisions are emitted."
                   },
                   "assurance": {
                     "enum": [
@@ -380,7 +479,8 @@
                     ]
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "a3_channel": {
               "enum": [
@@ -411,7 +511,8 @@
                 "$ref": "#/$defs/text"
               }
             }
-          }
+          },
+          "maxItems": 256
         },
         "latest_observations": {
           "x-sop-item": 7,
@@ -437,7 +538,8 @@
                 "properties": {
                   "observation_ref": {
                     "type": "string",
-                    "pattern": "^observation:.+$"
+                    "pattern": "^observation:.+$",
+                    "maxLength": 4096
                   },
                   "standing": {
                     "enum": [
@@ -452,22 +554,26 @@
                       "string",
                       "null"
                     ],
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 4096
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "unknown_evidence": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/text"
-              }
+              },
+              "maxItems": 256
             },
             "contradictory_evidence": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/text"
-              }
+              },
+              "maxItems": 256
             }
           }
         },
@@ -514,10 +620,12 @@
                       "string",
                       "null"
                     ],
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 4096
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "artifact_locations": {
               "type": "array",
@@ -536,7 +644,8 @@
                     "$ref": "#/$defs/text"
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "verified_commands": {
               "type": "array",
@@ -553,13 +662,15 @@
                     "minItems": 1,
                     "items": {
                       "$ref": "#/$defs/text"
-                    }
+                    },
+                    "maxItems": 256
                   },
                   "verified_by_record": {
                     "$ref": "#/$defs/text"
                   }
                 }
-              }
+              },
+              "maxItems": 256
             },
             "remaining_budgets": {
               "type": "array",
@@ -625,7 +736,8 @@
                 "null"
               ],
               "minLength": 1,
-              "description": "Principal or role that can authorize it; null only when no one can (then the description says why)."
+              "description": "Principal or role that can authorize it; null only when no one can (then the description says why).",
+              "maxLength": 4096
             },
             "would_settle": {
               "type": [
@@ -633,7 +745,8 @@
                 "null"
               ],
               "minLength": 1,
-              "description": "What would settle the move (the expectation and evidence source)."
+              "description": "What would settle the move (the expectation and evidence source).",
+              "maxLength": 4096
             },
             "dimension": {
               "enum": [
@@ -682,7 +795,8 @@
       "additionalProperties": false,
       "required": [
         "verb",
-        "case_id"
+        "case_id",
+        "actor"
       ],
       "properties": {
         "verb": {
@@ -704,7 +818,8 @@
       "additionalProperties": false,
       "required": [
         "verb",
-        "case_id"
+        "case_id",
+        "actor"
       ],
       "properties": {
         "verb": {
@@ -789,6 +904,7 @@
         },
         "code": {
           "enum": [
+            "AUTHORITY_DENIED",
             "NOT_A_FIELD_CASE",
             "STORE_INTEGRITY"
           ]

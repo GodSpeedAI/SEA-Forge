@@ -104,6 +104,24 @@
       "contains": "is not valid under any of the schemas"
     },
     {
+      "file": "budget-unit-not-a-unit-of-the-currency.json",
+      "def": "Assignment",
+      "pointer": "/budget/0/unit",
+      "contains": "is not one of"
+    },
+    {
+      "file": "budget-money-unit-not-iso.json",
+      "def": "Assignment",
+      "pointer": "/budget/2/unit",
+      "contains": "does not match"
+    },
+    {
+      "file": "id-longer-than-bound.json",
+      "def": "Assignment",
+      "pointer": "/assignment_id",
+      "contains": "does not match"
+    },
+    {
       "file": "brief-without-adoptable-problem.json",
       "def": "Assignment",
       "pointer": "/brief",
@@ -204,6 +222,9 @@
     "lifecycle-complete-before-start.json",
     "lifecycle-event-after-terminal.json",
     "lifecycle-resume-without-interrupt.json",
-    "lifecycle-cancel-while-interrupted.json"
+    "lifecycle-cancel-while-interrupted.json",
+    "lifecycle-resume-after-link-expiry.json",
+    "lifecycle-spend-exceeds-budget.json",
+    "lifecycle-unknown-spend-never-exceeds.json"
   ]
 }

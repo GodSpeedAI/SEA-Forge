@@ -2,6 +2,10 @@
   "schema": "urn:sea-forge:fde:case-record-append:v2",
   "valid": [
     {
+      "file": "request-field-case-revised-frozen-boundary-with-approval.json",
+      "def": "Request"
+    },
+    {
       "file": "request-field-case-revised.json",
       "def": "Request"
     },
@@ -152,6 +156,18 @@
     {
       "file": "error-revision-conflict.json",
       "def": "Error"
+    },
+    {
+      "file": "error-verifier-context-mismatch.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-case-closed.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-reserved-decision-refused.json",
+      "def": "Error"
     }
   ],
   "invalid": [
@@ -252,10 +268,22 @@
       "contains": "has less than"
     },
     {
-      "file": "gate-assessor-in-payload.json",
+      "file": "gate-without-assessor.json",
+      "def": "Request",
+      "pointer": "/payload",
+      "contains": "\"assessor\" is a required property"
+    },
+    {
+      "file": "gate-prove-reliability-without-proposer-is-valid-shape-but-extra-key.json",
       "def": "Request",
       "pointer": "/payload",
       "contains": "Additional properties"
+    },
+    {
+      "file": "field-case-revised-too-many-changes.json",
+      "def": "Request",
+      "pointer": "/payload/changes",
+      "contains": "has more than"
     },
     {
       "file": "disposition-episode-level-without-episode-ref.json",
@@ -354,6 +382,21 @@
       "code": "HARD_GATE_NOT_WAIVABLE"
     },
     {
+      "file": "gate-soft-not-applicable-rationale-only.json",
+      "def": "Request",
+      "code": "AUTHORITY_DENIED"
+    },
+    {
+      "file": "gate-prove-reliability-assessor-is-proposer.json",
+      "def": "Request",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "gate-prove-reliability-assessor-differs-after-case-fold.json",
+      "def": "Request",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
       "file": "gate-evidence-refs-duplicate.json",
       "def": "Request",
       "code": "SCHEMA_INVALID"
@@ -400,6 +443,33 @@
     "self-settlement-executor-settles.json",
     "freeze-missing-settle.json",
     "disposition-close-sets-closed.json",
-    "disposition-episode-level-never-closes.json"
+    "disposition-episode-level-never-closes.json",
+    "authority-denied-human-settles-without-approval.json",
+    "authority-denied-human-settles-v1-writer.json",
+    "v1-writer-agent-settles-with-independent-verifier-accepted.json",
+    "sibling-verifier-self-asserts-fresh-context.json",
+    "sibling-verifier-without-derivable-context-cannot-settle-s.json",
+    "sibling-verifier-with-derived-fresh-context-settles.json",
+    "approval-matches-the-record.json",
+    "approval-already-used-by-another-disposition.json",
+    "approval-bound-to-another-disposition.json",
+    "approval-from-another-case.json",
+    "approval-record-digest-differs-from-payload.json",
+    "approval-denied-outcome.json",
+    "case-closed-refuses-freeze.json",
+    "case-closed-refuses-gate-assessment.json",
+    "case-closed-refuses-field-case-revision.json",
+    "case-closed-refuses-strategy-revision.json",
+    "case-closed-refuses-continue-after-close.json",
+    "case-closed-refuses-suspend-after-close.json",
+    "case-suspended-refuses-settlement.json",
+    "case-suspended-refuses-episode-level-disposition.json",
+    "case-suspended-refuses-case-level-revise-disposition.json",
+    "case-suspended-accepts-continue-that-lifts-it.json",
+    "case-suspended-accepts-close-that-ends-it.json",
+    "frozen-boundary-field-revised-without-approval.json",
+    "boundary-field-revised-before-any-freeze-accepted.json",
+    "world-ref-field-revised-after-freeze-without-approval.json",
+    "anchor-publisher-invalid-at-freeze-does-not-burn-the-key.json"
   ]
 }

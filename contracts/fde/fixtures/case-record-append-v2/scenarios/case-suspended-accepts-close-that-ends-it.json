@@ -1,0 +1,35 @@
+{
+  "id": "case-suspended-accepts-close-that-ends-it",
+  "rule": "lifecycle",
+  "nt": "NT-22",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "disposition.recorded",
+      "level": "case",
+      "disposition": "suspend"
+    },
+    {
+      "kind": "case.state",
+      "state": "terminal"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "disposition.recorded",
+    "payload": {
+      "level": "case",
+      "disposition": "close-satisfied",
+      "rationale": "settled S, outcome accepted",
+      "approval_ref": "approval:appr-0043"
+    },
+    "idempotency_key": "operator/rec-0107"
+  },
+  "expect": {
+    "outcome": "recorded",
+    "kind": "disposition.recorded",
+    "record_id": "rec-0107",
+    "replayed": false,
+    "lifecycle": "closed"
+  }
+}

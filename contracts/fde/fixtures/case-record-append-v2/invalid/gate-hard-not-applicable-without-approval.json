@@ -5,7 +5,8 @@
     "gate": "allocate_authority",
     "state": "not_applicable",
     "evidence_refs": [],
-    "rationale": "single-operator host"
+    "rationale": "single-operator host",
+    "assessor": "human:operator"
   },
   "idempotency_key": "k-1"
 }

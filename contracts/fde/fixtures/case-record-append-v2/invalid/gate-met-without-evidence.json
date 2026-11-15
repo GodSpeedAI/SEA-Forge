@@ -5,7 +5,8 @@
     "gate": "choose_problem",
     "state": "met",
     "evidence_refs": [],
-    "rationale": "sponsor-owned need recorded"
+    "rationale": "sponsor-owned need recorded",
+    "assessor": "human:operator"
   },
   "idempotency_key": "k-1"
 }

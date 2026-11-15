@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "DELEGATION_LINK_INVALID",
+  "message": "delegation link invalid",
+  "invariant": "I-2"
+}

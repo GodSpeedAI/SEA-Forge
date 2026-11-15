@@ -1,0 +1,42 @@
+{
+  "id": "approval-from-another-case",
+  "rule": "approval",
+  "nt": "NT-34",
+  "dialect": "v2",
+  "ledger_before": [],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "disposition.recorded",
+    "payload": {
+      "level": "case",
+      "disposition": "close-satisfied",
+      "rationale": "settled S, outcome accepted",
+      "approval_ref": "approval:appr-0043"
+    },
+    "idempotency_key": "operator/rec-0107"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "AUTHORITY_DENIED",
+    "message": "the approval belongs to case-0002"
+  },
+  "record_operation": {
+    "operation": "set_case_close_disposition",
+    "subject_ref": "case-0001",
+    "case_id": "case-0001",
+    "params": {
+      "level": "case",
+      "disposition": "close-satisfied",
+      "case_id": "case-0001",
+      "episode_ref": null,
+      "record_digest": "bf861508b7c9a56dcd3e56e2426e1bd700b406c792d27a7ddab30a22c92268aa"
+    }
+  },
+  "approval": {
+    "approval_ref": "approval:appr-0043",
+    "operation_digest": "6e62c6dab9fb6cec9a4fdb6348ee8b6268b3d2a47bede5522b9bc5462e6cb4cf",
+    "case_id": "case-0002",
+    "outcome": "allow",
+    "used_by": null
+  }
+}

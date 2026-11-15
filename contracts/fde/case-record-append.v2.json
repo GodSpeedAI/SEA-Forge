@@ -2,18 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:sea-forge:fde:case-record-append:v2",
   "title": "case.record.append v2",
-  "description": "Supersedes case-record-append.v1 for new writers; v1 stays valid and unchanged. A request that carries contract=fde.case-record-append@2 is answered in the v2 dialect (this Error enum); a request without it is a v1 writer and is answered in the v1 dialect (README section 6: each v2-only code has a v1 fallback or is unreachable). Six kinds: the two v1 kinds reference their v1 payload schemas unchanged; four are new. The case is addressed by the SFWP route. Shape only: refusals that depend on ledger state are in the README and the scenario fixtures (implemented by WP-21).",
+  "description": "Supersedes case-record-append.v1 for new writers; v1 stays valid and unchanged. The contract marker selects the RESPONSE DIALECT only: every rule applies to every writer. A request that carries contract=fde.case-record-append@2 is answered with this Error enum; a request without it is a v1 writer, refused under the same rules and answered with a v1 code (README section 6: each v2-only code has a v1 fallback refusal, or is unreachable because only v2 kinds can raise it). Six kinds: the two v1 kinds reference their v1 payload schemas unchanged; four are new. The case is addressed by the SFWP route. Shape only: refusals that depend on ledger state are in the README and the scenario fixtures (implemented by WP-21).",
   "$defs": {
     "episode_ref": {
       "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/episode_ref"
     },
     "sha256": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 4096
     },
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "Request": {
       "type": "object",
@@ -26,7 +28,7 @@
       "properties": {
         "contract": {
           "const": "fde.case-record-append@2",
-          "description": "Marks a v2 writer. Required for the four kinds added in v2."
+          "description": "Selects the response dialect only; never relaxes a rule. Required for the four kinds added in v2."
         },
         "kind": {
           "enum": [
@@ -43,7 +45,8 @@
         },
         "idempotency_key": {
           "type": "string",
-          "pattern": "^[^\\s]{1,256}$"
+          "pattern": "^[^\\s]{1,256}$",
+          "maxLength": 4096
         }
       },
       "allOf": [
@@ -202,12 +205,17 @@
         "changes": {
           "type": "array",
           "minItems": 1,
+          "maxItems": 64,
           "items": {
             "$ref": "#/$defs/FieldChange"
           }
         },
         "rationale": {
           "$ref": "#/$defs/text"
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/text",
+          "description": "Required when a change path is one of the boundary paths that are read-only after the first freeze (case-record-kinds.v1 reserved_paths_after_freeze): revising them is the reserved operation revise_frozen_boundary_field. Without it, RESERVED_DECISION_REFUSED."
         }
       }
     },
@@ -299,7 +307,8 @@
             "string",
             "null"
           ],
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 4096
         },
         "where_to_play": {
           "$ref": "#/$defs/text"
@@ -322,7 +331,8 @@
             "null"
           ],
           "minLength": 1,
-          "description": "What evidence changed the strategy; null for revision 1."
+          "description": "What evidence changed the strategy; null for revision 1.",
+          "maxLength": 4096
         }
       },
       "if": {
@@ -348,10 +358,12 @@
       "else": {
         "properties": {
           "supersedes": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 4096
           },
           "revisit_reason": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 4096
           }
         }
       }
@@ -363,7 +375,8 @@
         "gate",
         "state",
         "evidence_refs",
-        "rationale"
+        "rationale",
+        "assessor"
       ],
       "properties": {
         "gate": {
@@ -392,14 +405,23 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Evidence ids. Duplicates are SCHEMA_INVALID (not expressible: uniqueItems is not used in this repository's validators)."
+          "description": "Evidence ids. Duplicates are SCHEMA_INVALID (not expressible: uniqueItems is not used in this repository's validators).",
+          "maxItems": 256
         },
         "rationale": {
           "$ref": "#/$defs/text"
         },
+        "assessor": {
+          "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/text",
+          "description": "E section 3 lists the assessor in the record. Must equal the authenticated principal of the request (else SCHEMA_INVALID), compared on canonical actor strings."
+        },
+        "proposer": {
+          "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/text",
+          "description": "Principal that produced the work the gate assesses. Required for prove_reliability (SOP 8.1: independent repeated settlement); assessor equal to proposer is SELF_SETTLEMENT_REFUSED (I-2)."
+        },
         "approval_ref": {
           "$ref": "#/$defs/text",
-          "description": "SEA-Forge approval record for a not_applicable assessment of a hard gate (A3 evidence recorded on it). Absent is HARD_GATE_NOT_WAIVABLE when state is not_applicable and the gate is hard."
+          "description": "SEA-Forge approval of a not_applicable assessment (SOP 8.1: authorized rationale). Absent: HARD_GATE_NOT_WAIVABLE for a hard gate, AUTHORITY_DENIED for any other gate. For a hard gate the approval carries A3 evidence."
         }
       },
       "if": {
@@ -643,7 +665,10 @@
             "PAYLOAD_TOO_LARGE",
             "HARD_GATE_NOT_WAIVABLE",
             "CASE_SUSPENDED",
-            "REVISION_CONFLICT"
+            "REVISION_CONFLICT",
+            "VERIFIER_CONTEXT_MISMATCH",
+            "CASE_CLOSED",
+            "RESERVED_DECISION_REFUSED"
           ]
         },
         "message": {
@@ -754,7 +779,10 @@
                   "PAYLOAD_TOO_LARGE",
                   "HARD_GATE_NOT_WAIVABLE",
                   "CASE_SUSPENDED",
-                  "REVISION_CONFLICT"
+                  "REVISION_CONFLICT",
+                  "VERIFIER_CONTEXT_MISMATCH",
+                  "CASE_CLOSED",
+                  "RESERVED_DECISION_REFUSED"
                 ]
               }
             },

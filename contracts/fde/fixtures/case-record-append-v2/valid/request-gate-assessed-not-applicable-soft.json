@@ -5,7 +5,9 @@
     "gate": "productize",
     "state": "not_applicable",
     "evidence_refs": [],
-    "rationale": "internal case, no reuse intended"
+    "rationale": "internal case, no reuse intended",
+    "assessor": "human:operator",
+    "approval_ref": "approval:appr-0041"
   },
   "idempotency_key": "operator/rec-0105"
 }

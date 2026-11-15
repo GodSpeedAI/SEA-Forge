@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "CASE_CLOSED",
+  "message": "case closed",
+  "no_side_effect": true
+}

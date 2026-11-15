@@ -12,9 +12,12 @@
       "operation": "promote_world",
       "subject_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
       "case_id": null,
-      "params": {}
+      "params": {
+        "candidate_world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+        "proposal_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
     },
-    "operation_digest": "316d5d93385eb0e98f74547af6d951b5963aedb8a7d789ff68eb5131879d619a",
+    "operation_digest": "2c9bc5f03a7d79f034a107110bbf77c6fd748981b2e5f0b09cc165c1da8d266c",
     "issued_at": "2026-11-15T10:00:00Z",
     "expires_at": "2026-11-15T10:10:00Z",
     "evidence_required": [
@@ -27,7 +30,7 @@
     "proof": {
       "pending_id": "pending-0008",
       "challenge": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
-      "operation_digest": "316d5d93385eb0e98f74547af6d951b5963aedb8a7d789ff68eb5131879d619a",
+      "operation_digest": "2c9bc5f03a7d79f034a107110bbf77c6fd748981b2e5f0b09cc165c1da8d266c",
       "authenticator_assertion": {
         "credential_id": "IIIIIIIIIIIIIIIIIIIIIIII",
         "authenticator_data": "DDDDDDDDDDDDDDDDDDDDDDDD",

@@ -18,7 +18,8 @@
       "evidence_refs": [
         "evidence:01JABCDEF0000000000000000B"
       ],
-      "rationale": "sponsor-owned need recorded"
+      "rationale": "sponsor-owned need recorded",
+      "assessor": "human:operator"
     },
     "idempotency_key": "operator/rec-0104"
   },

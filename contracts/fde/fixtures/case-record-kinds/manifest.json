@@ -22,7 +22,7 @@
     {
       "file": "refusal-code-not-in-v2.json",
       "def": null,
-      "pointer": "/kinds/gate.assessed/refusal_codes/7",
+      "pointer": "/kinds/gate.assessed/refusal_codes/9",
       "contains": "is not one of"
     },
     {
@@ -60,6 +60,36 @@
       "def": null,
       "pointer": "/kinds/strategy.recorded",
       "contains": "Additional properties"
+    },
+    {
+      "file": "suspended-rule-boolean.json",
+      "def": null,
+      "pointer": "/kinds/gate.assessed/suspended_rule",
+      "contains": "is not one of"
+    },
+    {
+      "file": "closed-rule-missing.json",
+      "def": null,
+      "pointer": "/kinds/gate.assessed",
+      "contains": "\"closed_rule\" is a required property"
+    },
+    {
+      "file": "reserved-paths-missing.json",
+      "def": null,
+      "pointer": "",
+      "contains": "\"reserved_paths_after_freeze\" is a required property"
+    },
+    {
+      "file": "reserved-path-not-a-boundary-path.json",
+      "def": null,
+      "pointer": "/reserved_paths_after_freeze/0",
+      "contains": "is not one of"
+    },
+    {
+      "file": "reserved-paths-four.json",
+      "def": null,
+      "pointer": "/reserved_paths_after_freeze",
+      "contains": "has less than"
     },
     {
       "file": "version-2.json",

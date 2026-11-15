@@ -1,0 +1,29 @@
+{
+  "id": "case-closed-refuses-continue-after-close",
+  "rule": "lifecycle",
+  "nt": "RD-10",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "disposition.recorded",
+      "level": "case",
+      "disposition": "close-satisfied"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "disposition.recorded",
+    "payload": {
+      "level": "case",
+      "disposition": "continue",
+      "rationale": "settled S, outcome accepted",
+      "approval_ref": "approval:appr-0043"
+    },
+    "idempotency_key": "operator/rec-0130"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "CASE_CLOSED",
+    "message": "continue after close-satisfied is refused; closed is final"
+  }
+}

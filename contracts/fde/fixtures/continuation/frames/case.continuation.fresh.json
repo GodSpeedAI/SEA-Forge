@@ -15,6 +15,17 @@
     "response": {
       "case_id": "case-0002",
       "continuation": {
+        "availability": {
+          "case": "known",
+          "pinned_world": "known",
+          "gate_evidence": "known",
+          "episodes": "known",
+          "authority": "unknown",
+          "disputed_claims": "unknown",
+          "latest_observations": "unknown",
+          "work": "unknown",
+          "next": "known"
+        },
         "computed_from": {
           "ledger_head": null,
           "realitytrace_snapshot": null,

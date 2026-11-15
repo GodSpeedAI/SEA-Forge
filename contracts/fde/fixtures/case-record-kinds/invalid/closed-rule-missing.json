@@ -1,0 +1,184 @@
+{
+  "registry": "fde.case-record-kinds",
+  "version": 1,
+  "reserved_paths_after_freeze": [
+    "world_and_boundary.world_ref_and_version",
+    "observer_and_authority.independent_verifier",
+    "observer_and_authority.settlement_and_disposition_authority",
+    "observer_and_authority.delegated_actors",
+    "observer_and_authority.risk_and_external_effect_limits"
+  ],
+  "kinds": {
+    "episode.frozen": {
+      "kind": "episode.frozen",
+      "introduced": "v1",
+      "scope": "episode",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v1",
+        "def": "EpisodeFrozenPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [
+        "case_id",
+        "plan_item_id",
+        "n"
+      ],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "EPISODE_REF_DIGEST_MISMATCH",
+        "REFERENCE_DERIVED_FROM_RESULT",
+        "FREEZE_KEY_EXISTS",
+        "KIND_IMMUTABLE",
+        "FREEZE_INCOMPLETE",
+        "WORLD_NOT_PINNED",
+        "MODEL_ANCHOR_LATE",
+        "ANCHOR_PUBLISHER_INVALID",
+        "CASE_SUSPENDED",
+        "CASE_CLOSED"
+      ],
+      "immutability": "frozen_forever",
+      "suspended_rule": "refuse",
+      "closed_rule": "refuse"
+    },
+    "episode.settled": {
+      "kind": "episode.settled",
+      "introduced": "v1",
+      "scope": "episode",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v1",
+        "def": "EpisodeSettledPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [
+        "episode_ref"
+      ],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "RESULT_INVALID",
+        "EXPLORATORY_NOT_SETTLEABLE",
+        "FREEZE_MISSING",
+        "FREEZE_INCOMPLETE",
+        "SELF_SETTLEMENT_REFUSED",
+        "SETTLEMENT_EXISTS",
+        "MODEL_ANCHOR_LATE",
+        "ANCHOR_PUBLISHER_INVALID",
+        "AUTHORITY_DENIED",
+        "VERIFIER_CONTEXT_MISMATCH",
+        "CASE_SUSPENDED"
+      ],
+      "immutability": "single_settlement",
+      "suspended_rule": "refuse",
+      "closed_rule": "accept"
+    },
+    "field_case.revised": {
+      "kind": "field_case.revised",
+      "introduced": "v2",
+      "scope": "case",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v2",
+        "def": "FieldCaseRevisedPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [
+        "case_id",
+        "base_revision"
+      ],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "REVISION_CONFLICT",
+        "RESERVED_DECISION_REFUSED",
+        "AUTHORITY_DENIED",
+        "CASE_CLOSED"
+      ],
+      "immutability": "revision_chain",
+      "suspended_rule": "accept",
+      "closed_rule": "refuse"
+    },
+    "strategy.recorded": {
+      "kind": "strategy.recorded",
+      "introduced": "v2",
+      "scope": "case",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v2",
+        "def": "StrategyRecordedPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [
+        "case_id",
+        "revision"
+      ],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "REVISION_CONFLICT",
+        "CASE_CLOSED"
+      ],
+      "immutability": "revision_chain",
+      "suspended_rule": "accept",
+      "closed_rule": "refuse"
+    },
+    "gate.assessed": {
+      "kind": "gate.assessed",
+      "introduced": "v2",
+      "scope": "case",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v2",
+        "def": "GateAssessedPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "HARD_GATE_NOT_WAIVABLE",
+        "AUTHORITY_DENIED",
+        "SELF_SETTLEMENT_REFUSED",
+        "CASE_CLOSED"
+      ],
+      "immutability": "append_only_history",
+      "suspended_rule": "accept"
+    },
+    "disposition.recorded": {
+      "kind": "disposition.recorded",
+      "introduced": "v2",
+      "scope": "case",
+      "payload_schema": {
+        "schema": "urn:sea-forge:fde:case-record-append:v2",
+        "def": "DispositionRecordedPayload"
+      },
+      "idempotency_key_rule": "token:(system, record_id)",
+      "natural_key": [],
+      "refusal_codes": [
+        "PAYLOAD_TOO_LARGE",
+        "KIND_UNKNOWN",
+        "SCHEMA_INVALID",
+        "IDEMPOTENCY_CONFLICT",
+        "STORE_INTEGRITY",
+        "AUTHORITY_DENIED",
+        "CASE_SUSPENDED",
+        "CASE_CLOSED"
+      ],
+      "immutability": "append_only_history",
+      "suspended_rule": "accept_lift_or_close_only",
+      "closed_rule": "refuse"
+    }
+  }
+}

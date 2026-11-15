@@ -5,7 +5,8 @@
     "gate": "integrate_govern",
     "state": "not_applicable",
     "evidence_refs": [],
-    "rationale": "r"
+    "rationale": "r",
+    "assessor": "human:operator"
   },
   "idempotency_key": "k-1"
 }

@@ -1,0 +1,45 @@
+{
+  "id": "case-advance-transition-only-on-an-execution-item-skip",
+  "rule": "R14",
+  "nt": "AT-10",
+  "verb": "case_advance",
+  "request": {
+    "verb": "case_advance",
+    "case_id": "case-0001",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-adv-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "transition_items": [
+      {
+        "item_id": "item-05",
+        "transition": "skip",
+        "transition_only": true
+      }
+    ]
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {
+    "items_with_execution_step": [
+      "item-05"
+    ]
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "TRANSITION_ONLY_INVALID",
+    "message": "item-05 has an execution step; skipping it is not a transition-only advance",
+    "no_side_effect": true
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "boundary-field-revised-before-any-freeze-accepted",
+  "rule": "reserved-path",
+  "nt": "RD-06",
+  "dialect": "v2",
+  "ledger_before": [],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "field_case.revised",
+    "payload": {
+      "base_revision": 1,
+      "changes": [
+        {
+          "path": "observer_and_authority.independent_verifier",
+          "field": {
+            "status": "declared",
+            "source_ref": {
+              "kind": "operator",
+              "ref": "operator:note-1"
+            },
+            "value": "agent:verifier-01"
+          }
+        }
+      ],
+      "rationale": "intake interview"
+    },
+    "idempotency_key": "operator/rec-0121"
+  },
+  "expect": {
+    "outcome": "recorded",
+    "kind": "field_case.revised",
+    "record_id": "rec-0121",
+    "replayed": false,
+    "revision": 2
+  }
+}

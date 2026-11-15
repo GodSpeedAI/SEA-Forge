@@ -24,7 +24,7 @@
     {
       "currency": "attention",
       "limit": "unknown",
-      "unit": "operator-minutes"
+      "unit": "operator_minutes"
     },
     {
       "currency": "money",
@@ -39,7 +39,7 @@
     {
       "currency": "recovery",
       "limit": 1,
-      "unit": "revert-steps"
+      "unit": "revert_steps"
     }
   ],
   "issued_at": "2026-11-15T09:00:00Z"

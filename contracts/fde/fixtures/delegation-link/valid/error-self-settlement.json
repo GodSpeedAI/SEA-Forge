@@ -1,6 +1,0 @@
-{
-  "outcome": "refused",
-  "code": "SELF_SETTLEMENT_REFUSED",
-  "message": "the settling principal delegated the executor",
-  "invariant": "I-2"
-}

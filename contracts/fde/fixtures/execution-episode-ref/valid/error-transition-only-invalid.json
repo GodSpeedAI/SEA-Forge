@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "TRANSITION_ONLY_INVALID",
+  "message": "transition only invalid",
+  "no_side_effect": true
+}

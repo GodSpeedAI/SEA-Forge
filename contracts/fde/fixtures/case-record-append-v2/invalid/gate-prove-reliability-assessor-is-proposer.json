@@ -1,0 +1,13 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "prove_reliability",
+    "state": "blocked",
+    "evidence_refs": [],
+    "rationale": "r",
+    "assessor": "agent:builder-01",
+    "proposer": "agent:builder-01"
+  },
+  "idempotency_key": "k-1"
+}

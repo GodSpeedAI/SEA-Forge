@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "EPISODE_SETTLED",
+  "message": "episode settled",
+  "no_side_effect": true
+}

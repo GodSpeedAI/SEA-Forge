@@ -1,6 +1,13 @@
 {
   "registry": "fde.case-record-kinds",
   "version": 1,
+  "reserved_paths_after_freeze": [
+    "world_and_boundary.world_ref_and_version",
+    "observer_and_authority.independent_verifier",
+    "observer_and_authority.settlement_and_disposition_authority",
+    "observer_and_authority.delegated_actors",
+    "observer_and_authority.risk_and_external_effect_limits"
+  ],
   "kinds": {
     "episode.frozen": {
       "kind": "episode.frozen",
@@ -30,10 +37,12 @@
         "WORLD_NOT_PINNED",
         "MODEL_ANCHOR_LATE",
         "ANCHOR_PUBLISHER_INVALID",
-        "CASE_SUSPENDED"
+        "CASE_SUSPENDED",
+        "CASE_CLOSED"
       ],
       "immutability": "frozen_forever",
-      "refused_when_case_suspended": true
+      "suspended_rule": "refuse",
+      "closed_rule": "refuse"
     },
     "episode.settled": {
       "kind": "episode.settled",
@@ -61,10 +70,13 @@
         "SETTLEMENT_EXISTS",
         "MODEL_ANCHOR_LATE",
         "ANCHOR_PUBLISHER_INVALID",
-        "AUTHORITY_DENIED"
+        "AUTHORITY_DENIED",
+        "VERIFIER_CONTEXT_MISMATCH",
+        "CASE_SUSPENDED"
       ],
       "immutability": "single_settlement",
-      "refused_when_case_suspended": false
+      "suspended_rule": "refuse",
+      "closed_rule": "accept"
     },
     "field_case.revised": {
       "kind": "field_case.revised",
@@ -85,10 +97,14 @@
         "SCHEMA_INVALID",
         "IDEMPOTENCY_CONFLICT",
         "STORE_INTEGRITY",
-        "REVISION_CONFLICT"
+        "REVISION_CONFLICT",
+        "RESERVED_DECISION_REFUSED",
+        "AUTHORITY_DENIED",
+        "CASE_CLOSED"
       ],
       "immutability": "revision_chain",
-      "refused_when_case_suspended": false
+      "suspended_rule": "accept",
+      "closed_rule": "refuse"
     },
     "strategy.recorded": {
       "kind": "strategy.recorded",
@@ -109,10 +125,12 @@
         "SCHEMA_INVALID",
         "IDEMPOTENCY_CONFLICT",
         "STORE_INTEGRITY",
-        "REVISION_CONFLICT"
+        "REVISION_CONFLICT",
+        "CASE_CLOSED"
       ],
       "immutability": "revision_chain",
-      "refused_when_case_suspended": false
+      "suspended_rule": "accept",
+      "closed_rule": "refuse"
     },
     "gate.assessed": {
       "kind": "gate.assessed",
@@ -132,10 +150,13 @@
         "STORE_INTEGRITY",
         "HARD_GATE_NOT_WAIVABLE",
         "AUTHORITY_DENIED",
+        "SELF_SETTLEMENT_REFUSED",
+        "CASE_CLOSED",
         "NOPE"
       ],
       "immutability": "append_only_history",
-      "refused_when_case_suspended": false
+      "suspended_rule": "accept",
+      "closed_rule": "refuse"
     },
     "disposition.recorded": {
       "kind": "disposition.recorded",
@@ -153,10 +174,13 @@
         "SCHEMA_INVALID",
         "IDEMPOTENCY_CONFLICT",
         "STORE_INTEGRITY",
-        "AUTHORITY_DENIED"
+        "AUTHORITY_DENIED",
+        "CASE_SUSPENDED",
+        "CASE_CLOSED"
       ],
       "immutability": "append_only_history",
-      "refused_when_case_suspended": false
+      "suspended_rule": "accept_lift_or_close_only",
+      "closed_rule": "refuse"
     }
   }
 }

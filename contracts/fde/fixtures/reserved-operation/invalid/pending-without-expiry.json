@@ -1,19 +1,22 @@
 {
   "pending_id": "pending-0007",
-  "operation": "set_case_disposition",
-  "class": "P2",
+  "operation": "set_case_close_disposition",
+  "class": "P3",
   "case_id": "case-0001",
   "subject_ref": "case-0001",
   "canonical_operation": {
-    "operation": "set_case_disposition",
+    "operation": "set_case_close_disposition",
     "subject_ref": "case-0001",
     "case_id": "case-0001",
     "params": {
       "level": "case",
-      "disposition": "close-satisfied"
+      "disposition": "close-satisfied",
+      "case_id": "case-0001",
+      "episode_ref": null,
+      "record_digest": "bf861508b7c9a56dcd3e56e2426e1bd700b406c792d27a7ddab30a22c92268aa"
     }
   },
-  "operation_digest": "1536938d3f4a44c1e971a2978be0c86fbd053b64336942f4523899304bcb8910",
+  "operation_digest": "6e62c6dab9fb6cec9a4fdb6348ee8b6268b3d2a47bede5522b9bc5462e6cb4cf",
   "issued_at": "2026-11-15T10:00:00Z",
   "evidence_required": [
     "a3_proof",

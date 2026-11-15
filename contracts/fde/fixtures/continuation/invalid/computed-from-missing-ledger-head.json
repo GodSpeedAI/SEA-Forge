@@ -1,4 +1,15 @@
 {
+  "availability": {
+    "case": "known",
+    "pinned_world": "known",
+    "gate_evidence": "known",
+    "episodes": "known",
+    "authority": "known",
+    "disputed_claims": "known",
+    "latest_observations": "known",
+    "work": "known",
+    "next": "known"
+  },
   "computed_from": {
     "realitytrace_snapshot": "snapshot:01JABCDEF0000000000000000S",
     "cognate_ref": "run:run-0001",
@@ -126,7 +137,7 @@
       {
         "decision_id": "dec-0099",
         "operation": "program_execution",
-        "outcome": "allowed",
+        "outcome": "allow",
         "assurance": "session"
       }
     ],

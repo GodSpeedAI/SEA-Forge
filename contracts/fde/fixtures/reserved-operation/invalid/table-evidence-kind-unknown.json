@@ -51,17 +51,38 @@
       "a3_t": "not_applicable"
     },
     {
-      "operation": "settle_episode",
+      "operation": "settle_episode_agent",
+      "class": "P2",
+      "reserved": false,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "verifier_not_executor",
+          "verifier_context_derived"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
+      "operation": "settle_episode_human",
       "class": "P2",
       "reserved": true,
       "evidence": [
         [
-          "authenticated_principal",
-          "verifier_not_executor"
-        ],
-        [
           "a3_proof",
           "verifier_not_executor"
+        ]
+      ],
+      "a3_t": "policy"
+    },
+    {
+      "operation": "set_episode_disposition",
+      "class": "P2",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "sea_forge_approval"
         ]
       ],
       "a3_t": "policy"
@@ -79,7 +100,43 @@
       "a3_t": "policy"
     },
     {
+      "operation": "set_case_close_disposition",
+      "class": "P3",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "sea_forge_approval"
+        ]
+      ],
+      "a3_t": "never"
+    },
+    {
+      "operation": "set_gate_not_applicable",
+      "class": "P2",
+      "reserved": false,
+      "evidence": [
+        [
+          "authenticated_principal",
+          "sea_forge_approval"
+        ]
+      ],
+      "a3_t": "not_applicable"
+    },
+    {
       "operation": "set_hard_gate_not_applicable",
+      "class": "P3",
+      "reserved": true,
+      "evidence": [
+        [
+          "a3_proof",
+          "sea_forge_approval"
+        ]
+      ],
+      "a3_t": "never"
+    },
+    {
+      "operation": "revise_frozen_boundary_field",
       "class": "P2",
       "reserved": true,
       "evidence": [

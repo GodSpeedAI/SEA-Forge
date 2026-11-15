@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "AUTHORITY_DENIED",
+  "message": "actor holds no read grant on this case"
+}

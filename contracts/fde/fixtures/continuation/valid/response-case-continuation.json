@@ -1,6 +1,17 @@
 {
   "case_id": "case-0001",
   "continuation": {
+    "availability": {
+      "case": "known",
+      "pinned_world": "known",
+      "gate_evidence": "known",
+      "episodes": "known",
+      "authority": "known",
+      "disputed_claims": "known",
+      "latest_observations": "known",
+      "work": "known",
+      "next": "known"
+    },
     "computed_from": {
       "ledger_head": "rec-0112",
       "realitytrace_snapshot": "snapshot:01JABCDEF0000000000000000S",
@@ -129,7 +140,7 @@
         {
           "decision_id": "dec-0099",
           "operation": "program_execution",
-          "outcome": "allowed",
+          "outcome": "allow",
           "assurance": "session"
         }
       ],

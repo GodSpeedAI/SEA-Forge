@@ -1,0 +1,46 @@
+{
+  "id": "world-ref-field-revised-after-freeze-without-approval",
+  "rule": "reserved-path",
+  "nt": "RD-06",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "episode.frozen",
+      "episode_key": {
+        "case_id": "case-0001",
+        "plan_item_id": "item-03",
+        "n": 1
+      },
+      "episode_kind": "evaluated",
+      "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "idempotency_key": "case-keeper/rec-0001"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "field_case.revised",
+    "payload": {
+      "base_revision": 1,
+      "changes": [
+        {
+          "path": "world_and_boundary.world_ref_and_version",
+          "field": {
+            "status": "declared",
+            "source_ref": {
+              "kind": "operator",
+              "ref": "operator:note-1"
+            },
+            "value": "x"
+          }
+        }
+      ],
+      "rationale": "intake interview"
+    },
+    "idempotency_key": "operator/rec-0122"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "RESERVED_DECISION_REFUSED",
+    "message": "reserved operation without A3 proof"
+  }
+}

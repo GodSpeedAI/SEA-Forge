@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "SELF_SETTLEMENT_REFUSED",
+  "message": "self settlement refused",
+  "invariant": "I-2"
+}

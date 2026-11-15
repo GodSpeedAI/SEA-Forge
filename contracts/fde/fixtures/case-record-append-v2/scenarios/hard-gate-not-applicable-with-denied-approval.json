@@ -18,6 +18,7 @@
       "state": "not_applicable",
       "evidence_refs": [],
       "rationale": "single-operator host",
+      "assessor": "human:operator",
       "approval_ref": "approval:appr-0042"
     },
     "idempotency_key": "operator/rec-0106"

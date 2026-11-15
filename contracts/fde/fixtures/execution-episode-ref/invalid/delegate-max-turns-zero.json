@@ -1,5 +1,6 @@
 {
   "verb": "delegate",
+  "case_id": "case-0001",
   "endpoint": "http://127.0.0.1:8099/agent",
   "instruction": "Record the verifier's observation for gate G3.",
   "max_turns": 0,

@@ -10,15 +10,31 @@
       "def": "Link"
     },
     {
+      "file": "run-item-execute-under-request-actor.json",
+      "def": "RunRecord"
+    },
+    {
+      "file": "run-delegated-with-link.json",
+      "def": "RunRecord"
+    },
+    {
       "file": "settlement-by-independent-verifier.json",
       "def": "Settlement"
     },
     {
-      "file": "error-self-settlement.json",
+      "file": "settlement-sibling-with-derived-fresh-context.json",
+      "def": "Settlement"
+    },
+    {
+      "file": "error-self-settlement-refused.json",
       "def": "Error"
     },
     {
-      "file": "error-link-invalid.json",
+      "file": "error-delegation-link-invalid.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-verifier-context-mismatch.json",
       "def": "Error"
     }
   ],
@@ -42,10 +58,16 @@
       "contains": "\"episode_ref\" is a required property"
     },
     {
-      "file": "link-without-expiry.json",
+      "file": "link-without-expires-at.json",
       "def": "Link",
       "pointer": "",
       "contains": "\"expires_at\" is a required property"
+    },
+    {
+      "file": "link-without-gateway-actor.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "\"gateway_actor\" is a required property"
     },
     {
       "file": "link-assignment-id-four-part.json",
@@ -78,6 +100,54 @@
       "contains": "is not of type"
     },
     {
+      "file": "run-delegated-without-link-id.json",
+      "def": "RunRecord",
+      "pointer": "/link_id",
+      "contains": "is not of type"
+    },
+    {
+      "file": "run-not-delegated-with-link-id.json",
+      "def": "RunRecord",
+      "pointer": "/link_id",
+      "contains": "is not of type"
+    },
+    {
+      "file": "run-role-unknown.json",
+      "def": "RunRecord",
+      "pointer": "/role",
+      "contains": "is not one of"
+    },
+    {
+      "file": "run-verb-unknown.json",
+      "def": "RunRecord",
+      "pointer": "/verb",
+      "contains": "is not one of"
+    },
+    {
+      "file": "run-without-workspace-ref.json",
+      "def": "RunRecord",
+      "pointer": "",
+      "contains": "\"workspace_ref\" is a required property"
+    },
+    {
+      "file": "run-without-actor-key.json",
+      "def": "RunRecord",
+      "pointer": "",
+      "contains": "\"actor\" is a required property"
+    },
+    {
+      "file": "settlement-without-runs.json",
+      "def": "Settlement",
+      "pointer": "",
+      "contains": "\"runs\" is a required property"
+    },
+    {
+      "file": "settlement-without-result.json",
+      "def": "Settlement",
+      "pointer": "",
+      "contains": "\"result\" is a required property"
+    },
+    {
       "file": "error-self-settlement-without-invariant.json",
       "def": "Error",
       "pointer": "",
@@ -98,6 +168,11 @@
     },
     {
       "file": "link-delegator-is-delegate.json",
+      "def": "Link",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "link-delegator-is-delegate-after-case-fold.json",
       "def": "Link",
       "code": "DELEGATION_LINK_INVALID"
     },
@@ -132,14 +207,78 @@
       "code": "SELF_SETTLEMENT_REFUSED"
     },
     {
-      "file": "settlement-links-name-another-episode.json",
+      "file": "settlement-after-item-execute-only-by-the-settler.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-after-case-advance-only-by-the-settler.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-by-the-principal-a-gateway-acted-for.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-by-the-gateway-actor-itself.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-settler-spelled-with-other-case.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-delegated-run-without-link-record.json",
       "def": "Settlement",
       "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-run-without-resolvable-actor.json",
+      "def": "Settlement",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-link-written-after-the-run-started.json",
+      "def": "Settlement",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-link-names-another-episode.json",
+      "def": "Settlement",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-run-names-another-episode.json",
+      "def": "Settlement",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-sibling-self-asserts-fresh.json",
+      "def": "Settlement",
+      "code": "VERIFIER_CONTEXT_MISMATCH"
+    },
+    {
+      "file": "settlement-sibling-without-derivable-context-settles-s.json",
+      "def": "Settlement",
+      "code": "VERIFIER_CONTEXT_MISMATCH"
+    },
+    {
+      "file": "settlement-verifier-run-in-the-executors-workspace-claims-fresh.json",
+      "def": "Settlement",
+      "code": "VERIFIER_CONTEXT_MISMATCH"
     }
   ],
   "scenarios": [
     "delegate-then-settle-by-delegator.json",
+    "item-execute-only-then-settle-by-the-executor.json",
     "independent-verifier-settles.json",
-    "executor-reuses-identity-as-verifier.json"
+    "executor-reuses-identity-as-verifier.json",
+    "link-written-before-run-start-is-accepted.json",
+    "delegated-run-without-link.json",
+    "sibling-self-asserted-fresh-is-refused.json"
   ]
 }

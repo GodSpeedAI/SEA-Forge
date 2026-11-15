@@ -1,0 +1,26 @@
+{
+  "pending_id": "pending-0009",
+  "operation": "settle_episode_human",
+  "class": "P2",
+  "case_id": "case-0001",
+  "subject_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+  "canonical_operation": {
+    "operation": "settle_episode_human",
+    "subject_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+    "case_id": "case-0001",
+    "params": {
+      "case_id": "case-0001",
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "result": "S",
+      "settlement_ref": "settlement:01JABCDEF0000000000000000C",
+      "record_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "operation_digest": "ca4626261a5ab5818cc1491319a97949c260579f22cb3f16b0357842924101be",
+  "issued_at": "2026-11-15T10:00:00Z",
+  "expires_at": "2026-11-15T10:10:00Z",
+  "evidence_required": [
+    "a3_proof",
+    "verifier_not_executor"
+  ]
+}

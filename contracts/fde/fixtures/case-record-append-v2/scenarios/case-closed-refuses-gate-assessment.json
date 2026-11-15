@@ -1,0 +1,32 @@
+{
+  "id": "case-closed-refuses-gate-assessment",
+  "rule": "lifecycle",
+  "nt": "RD-10",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "disposition.recorded",
+      "level": "case",
+      "disposition": "close-satisfied"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "gate.assessed",
+    "payload": {
+      "gate": "choose_problem",
+      "state": "met",
+      "evidence_refs": [
+        "evidence:01JABCDEF0000000000000000B"
+      ],
+      "rationale": "sponsor-owned need recorded",
+      "assessor": "human:operator"
+    },
+    "idempotency_key": "operator/rec-0104"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "CASE_CLOSED",
+    "message": "case is closed"
+  }
+}

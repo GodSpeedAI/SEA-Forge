@@ -1,0 +1,46 @@
+{
+  "id": "case-suspended-refuses-settlement",
+  "rule": "lifecycle",
+  "nt": "NT-22",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "disposition.recorded",
+      "level": "case",
+      "disposition": "suspend"
+    },
+    {
+      "kind": "episode.frozen",
+      "episode_key": {
+        "case_id": "case-0001",
+        "plan_item_id": "item-03",
+        "n": 1
+      },
+      "episode_kind": "evaluated",
+      "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "idempotency_key": "case-keeper/rec-0001"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "episode.settled",
+    "payload": {
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "result": "S",
+      "reliability": {
+        "K": "two independent sources"
+      },
+      "independence": {
+        "independent_source_count": 2,
+        "verifier_context": "fresh"
+      },
+      "settlement_ref": "settlement:01JABCDEF0000000000000000C"
+    },
+    "idempotency_key": "verifier/rec-0201"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "CASE_SUSPENDED",
+    "message": "case is suspended"
+  }
+}

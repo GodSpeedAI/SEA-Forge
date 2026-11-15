@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "RESERVED_DECISION_REFUSED",
+  "message": "reserved operation without A3 proof"
+}

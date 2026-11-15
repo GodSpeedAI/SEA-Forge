@@ -1,0 +1,23 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "field_case.revised",
+  "payload": {
+    "base_revision": 1,
+    "changes": [
+      {
+        "path": "observer_and_authority.independent_verifier",
+        "field": {
+          "status": "declared",
+          "source_ref": {
+            "kind": "operator",
+            "ref": "operator:note-1"
+          },
+          "value": "agent:verifier-01"
+        }
+      }
+    ],
+    "rationale": "intake interview",
+    "approval_ref": "approval:appr-0050"
+  },
+  "idempotency_key": "operator/rec-0120"
+}

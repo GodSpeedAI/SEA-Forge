@@ -8,6 +8,7 @@
   "required": [
     "registry",
     "version",
+    "reserved_paths_after_freeze",
     "kinds"
   ],
   "properties": {
@@ -16,6 +17,21 @@
     },
     "version": {
       "const": 1
+    },
+    "reserved_paths_after_freeze": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "enum": [
+          "world_and_boundary.world_ref_and_version",
+          "observer_and_authority.independent_verifier",
+          "observer_and_authority.settlement_and_disposition_authority",
+          "observer_and_authority.delegated_actors",
+          "observer_and_authority.risk_and_external_effect_limits"
+        ]
+      },
+      "description": "Field Case paths that are read-only after the first freeze of the case: revising one is the reserved operation revise_frozen_boundary_field, refused at session level with RESERVED_DECISION_REFUSED (scripts/check-fde-field-case-schema.sh checks the paths exist in field-case.v1)."
     },
     "kinds": {
       "type": "object",
@@ -53,7 +69,8 @@
   "$defs": {
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "Entry_0": {
       "type": "object",
@@ -67,7 +84,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -110,7 +128,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -138,10 +157,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -151,8 +174,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     },
@@ -168,7 +203,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -211,7 +247,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -239,10 +276,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -252,8 +293,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     },
@@ -269,7 +322,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -312,7 +366,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -340,10 +395,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -353,8 +412,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     },
@@ -370,7 +441,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -413,7 +485,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -441,10 +514,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -454,8 +531,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     },
@@ -471,7 +560,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -514,7 +604,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -542,10 +633,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -555,8 +650,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     },
@@ -572,7 +679,8 @@
         "natural_key",
         "refusal_codes",
         "immutability",
-        "refused_when_case_suspended"
+        "suspended_rule",
+        "closed_rule"
       ],
       "properties": {
         "kind": {
@@ -615,7 +723,8 @@
           "items": {
             "$ref": "#/$defs/text"
           },
-          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history)."
+          "description": "Fields that identify the thing recorded, checked in addition to the idempotency key; [] means none (append-only history).",
+          "maxItems": 256
         },
         "refusal_codes": {
           "type": "array",
@@ -643,10 +752,14 @@
               "PAYLOAD_TOO_LARGE",
               "HARD_GATE_NOT_WAIVABLE",
               "CASE_SUSPENDED",
-              "REVISION_CONFLICT"
+              "REVISION_CONFLICT",
+              "VERIFIER_CONTEXT_MISMATCH",
+              "CASE_CLOSED",
+              "RESERVED_DECISION_REFUSED"
             ]
           },
-          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds."
+          "description": "Every code this kind can be refused with, a subset of the v2 Error enum. Includes the codes common to all kinds.",
+          "maxItems": 256
         },
         "immutability": {
           "enum": [
@@ -656,8 +769,20 @@
             "append_only_history"
           ]
         },
-        "refused_when_case_suspended": {
-          "type": "boolean"
+        "suspended_rule": {
+          "enum": [
+            "refuse",
+            "accept",
+            "accept_lift_or_close_only"
+          ],
+          "description": "Latest case-level disposition is suspend (NT-22; E: new freezes and delegations; owner decision D8: also settlement and new dispositions except the one that lifts (continue) or closes (close-*) the suspension)."
+        },
+        "closed_rule": {
+          "enum": [
+            "refuse",
+            "accept"
+          ],
+          "description": "A case-level close-* disposition exists: closed is final (CASE_CLOSED)."
         }
       }
     }

@@ -6,12 +6,28 @@
       "def": "OperationTable"
     },
     {
-      "file": "pending-set-case-disposition.json",
+      "file": "pending-set-case-close-disposition.json",
       "def": "PendingOperation"
     },
     {
       "file": "pending-promote-world.json",
       "def": "PendingOperation"
+    },
+    {
+      "file": "pending-settle-episode-human.json",
+      "def": "PendingOperation"
+    },
+    {
+      "file": "pending-revise-frozen-boundary-field.json",
+      "def": "PendingOperation"
+    },
+    {
+      "file": "approval-unused-a3.json",
+      "def": "ApprovalRecord"
+    },
+    {
+      "file": "approval-used.json",
+      "def": "ApprovalRecord"
     },
     {
       "file": "a3-proof-paired-phone.json",
@@ -34,7 +50,15 @@
       "def": "ProgramExecutionDecision"
     },
     {
+      "file": "program-execution-decision-two-runs.json",
+      "def": "ProgramExecutionDecision"
+    },
+    {
       "file": "program-execution-decision-no-patch.json",
+      "def": "ProgramExecutionDecision"
+    },
+    {
+      "file": "program-execution-decision-exhausted.json",
       "def": "ProgramExecutionDecision"
     },
     {
@@ -72,7 +96,7 @@
   ],
   "invalid": [
     {
-      "file": "table-nine-operations.json",
+      "file": "table-fourteen-operations.json",
       "def": "OperationTable",
       "pointer": "/operations",
       "contains": "has less than"
@@ -80,13 +104,13 @@
     {
       "file": "table-p3-allows-a3-t.json",
       "def": "OperationTable",
-      "pointer": "/operations/7/a3_t",
+      "pointer": "/operations/8/a3_t",
       "contains": "was expected"
     },
     {
       "file": "table-reserved-p1.json",
       "def": "OperationTable",
-      "pointer": "/operations/4/class",
+      "pointer": "/operations/5/class",
       "contains": "is not one of"
     },
     {
@@ -114,9 +138,63 @@
       "contains": "is not one of"
     },
     {
+      "file": "table-old-settle-episode-operation.json",
+      "def": "OperationTable",
+      "pointer": "/operations/5/operation",
+      "contains": "is not one of"
+    },
+    {
       "file": "pending-class-p1.json",
       "def": "PendingOperation",
       "pointer": "/class",
+      "contains": "is not one of"
+    },
+    {
+      "file": "pending-close-disposition-as-p2.json",
+      "def": "PendingOperation",
+      "pointer": "/class",
+      "contains": "was expected"
+    },
+    {
+      "file": "pending-episode-disposition-as-p3.json",
+      "def": "PendingOperation",
+      "pointer": "/class",
+      "contains": "was expected"
+    },
+    {
+      "file": "pending-params-empty.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation/params",
+      "contains": "\"level\" is a required property"
+    },
+    {
+      "file": "pending-disposition-params-without-record-digest.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation/params",
+      "contains": "\"record_digest\" is a required property"
+    },
+    {
+      "file": "pending-disposition-params-without-case-id.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation/params",
+      "contains": "\"case_id\" is a required property"
+    },
+    {
+      "file": "pending-disposition-params-extra-key.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation/params",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "pending-gate-params-state-met.json",
+      "def": "PendingOperation",
+      "pointer": "/canonical_operation/params/state",
+      "contains": "was expected"
+    },
+    {
+      "file": "pending-settle-agent-is-not-pending.json",
+      "def": "PendingOperation",
+      "pointer": "/operation",
       "contains": "is not one of"
     },
     {
@@ -142,6 +220,36 @@
       "def": "PendingOperation",
       "pointer": "/canonical_operation",
       "contains": "Additional properties"
+    },
+    {
+      "file": "approval-without-operation-digest.json",
+      "def": "ApprovalRecord",
+      "pointer": "",
+      "contains": "\"operation_digest\" is a required property"
+    },
+    {
+      "file": "approval-without-used-by.json",
+      "def": "ApprovalRecord",
+      "pointer": "",
+      "contains": "\"used_by\" is a required property"
+    },
+    {
+      "file": "approval-outcome-allowed-past-tense.json",
+      "def": "ApprovalRecord",
+      "pointer": "/outcome",
+      "contains": "is not one of"
+    },
+    {
+      "file": "approval-outcome-denied-past-tense.json",
+      "def": "ApprovalRecord",
+      "pointer": "/outcome",
+      "contains": "is not one of"
+    },
+    {
+      "file": "approval-without-case-id-key.json",
+      "def": "ApprovalRecord",
+      "pointer": "",
+      "contains": "\"case_id\" is a required property"
     },
     {
       "file": "proof-without-challenge.json",
@@ -210,28 +318,88 @@
       "contains": "was expected"
     },
     {
-      "file": "program-decision-without-patch-sha.json",
+      "file": "program-decision-execution-without-cwd.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"cwd\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-env-digest.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"env_digest\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-workspace-ref.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"workspace_ref\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-sandbox-profile.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"sandbox_profile\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-world-ref.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"world_ref\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-timeout-s.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"timeout_s\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-argv.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"argv\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-patch-sha256.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"patch_sha256\" is a required property"
+    },
+    {
+      "file": "program-decision-execution-without-episode-ref.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution",
+      "contains": "\"episode_ref\" is a required property"
+    },
+    {
+      "file": "program-decision-without-max-runs.json",
       "def": "ProgramExecutionDecision",
       "pointer": "",
-      "contains": "\"patch_sha256\" is a required property"
+      "contains": "\"max_runs\" is a required property"
+    },
+    {
+      "file": "program-decision-without-runs-used.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "",
+      "contains": "\"runs_used\" is a required property"
+    },
+    {
+      "file": "program-decision-max-runs-zero.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/max_runs",
+      "contains": "is less than the minimum"
     },
     {
       "file": "program-decision-empty-argv.json",
       "def": "ProgramExecutionDecision",
-      "pointer": "/command/argv",
+      "pointer": "/execution/argv",
       "contains": "has less than"
     },
     {
-      "file": "program-decision-without-episode-ref.json",
+      "file": "program-decision-outcome-allowed-past-tense.json",
       "def": "ProgramExecutionDecision",
-      "pointer": "",
-      "contains": "\"episode_ref\" is a required property"
-    },
-    {
-      "file": "program-decision-without-binds-digest.json",
-      "def": "ProgramExecutionDecision",
-      "pointer": "",
-      "contains": "\"binds_digest\" is a required property"
+      "pointer": "/outcome",
+      "contains": "is not one of"
     },
     {
       "file": "program-decision-outcome-maybe.json",
@@ -240,9 +408,15 @@
       "contains": "is not one of"
     },
     {
+      "file": "program-decision-timeout-zero.json",
+      "def": "ProgramExecutionDecision",
+      "pointer": "/execution/timeout_s",
+      "contains": "is less than the minimum"
+    },
+    {
       "file": "program-decision-command-string.json",
       "def": "ProgramExecutionDecision",
-      "pointer": "/command",
+      "pointer": "/execution/argv",
       "contains": "is not of type"
     },
     {
@@ -276,22 +450,57 @@
       "code": "RESERVED_DIGEST_MISMATCH"
     },
     {
+      "file": "pending-case-id-differs-from-canonical.json",
+      "def": "PendingOperation",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
       "file": "pending-expires-before-issued.json",
       "def": "PendingOperation",
       "code": "RESERVED_EXPIRED"
     },
     {
-      "file": "program-decision-digest-does-not-bind-patch.json",
+      "file": "program-decision-digest-does-not-bind-cwd.json",
       "def": "ProgramExecutionDecision",
       "code": "RESERVED_DIGEST_MISMATCH"
     },
     {
-      "file": "program-decision-digest-does-not-bind-command.json",
+      "file": "program-decision-digest-does-not-bind-env-digest.json",
       "def": "ProgramExecutionDecision",
       "code": "RESERVED_DIGEST_MISMATCH"
     },
     {
-      "file": "program-decision-digest-does-not-bind-episode.json",
+      "file": "program-decision-digest-does-not-bind-workspace-ref.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-sandbox-profile.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-world-ref.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-timeout-s.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-patch-sha256.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-argv.json",
+      "def": "ProgramExecutionDecision",
+      "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-digest-does-not-bind-episode-ref.json",
       "def": "ProgramExecutionDecision",
       "code": "RESERVED_DIGEST_MISMATCH"
     },
@@ -304,6 +513,16 @@
       "file": "program-decision-case-differs-from-episode.json",
       "def": "ProgramExecutionDecision",
       "code": "RESERVED_DIGEST_MISMATCH"
+    },
+    {
+      "file": "program-decision-runs-used-exceeds-max-runs.json",
+      "def": "ProgramExecutionDecision",
+      "code": "AUTHORITY_DENIED"
+    },
+    {
+      "file": "approval-expires-before-issued.json",
+      "def": "ApprovalRecord",
+      "code": "RESERVED_EXPIRED"
     }
   ],
   "scenarios": [
@@ -311,6 +530,8 @@
     "paired-browser-without-agent-header-cannot-decide.json",
     "desk-passkey-assertion-refused.json",
     "a3-t-refused-for-p3.json",
+    "a3-t-refused-for-case-close-disposition.json",
+    "a3-t-accepted-for-p2-where-policy-accepts-it.json",
     "phone-proof-confirms.json",
     "no-a3-channel-refuses-with-restore-hint.json",
     "proof-after-expiry.json",

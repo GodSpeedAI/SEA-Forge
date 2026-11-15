@@ -1,0 +1,27 @@
+{
+  "pending_id": "pending-0010",
+  "operation": "revise_frozen_boundary_field",
+  "class": "P2",
+  "case_id": "case-0001",
+  "subject_ref": "case-0001",
+  "canonical_operation": {
+    "operation": "revise_frozen_boundary_field",
+    "subject_ref": "case-0001",
+    "case_id": "case-0001",
+    "params": {
+      "case_id": "case-0001",
+      "paths": [
+        "observer_and_authority.independent_verifier"
+      ],
+      "base_revision": 1,
+      "record_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  },
+  "operation_digest": "2737d950523fc4fcd6f2e17ba5a5550d315b0f793a81221d2832b82ee354b976",
+  "issued_at": "2026-11-15T10:00:00Z",
+  "expires_at": "2026-11-15T10:10:00Z",
+  "evidence_required": [
+    "a3_proof",
+    "sea_forge_approval"
+  ]
+}

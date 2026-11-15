@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "ASSIGNMENT_LINK_EXPIRED",
+  "message": "assignment link expired",
+  "no_side_effect": true
+}

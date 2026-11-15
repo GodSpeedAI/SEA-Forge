@@ -1,0 +1,11 @@
+{
+  "verb": "human_task_complete",
+  "case_id": "case-0001",
+  "item_id": "item-06",
+  "justification": "reviewed",
+  "request_id": "req-ht-1",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  }
+}

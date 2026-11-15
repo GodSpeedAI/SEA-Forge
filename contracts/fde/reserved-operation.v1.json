@@ -6,11 +6,13 @@
   "$defs": {
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "sha256": {
       "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 4096
     },
     "episode_ref": {
       "$ref": "urn:sea-forge:fde:frozen-reference:v1#/$defs/episode_ref"
@@ -21,9 +23,14 @@
         "freeze_episode",
         "assign_within_grant",
         "program_execution",
-        "settle_episode",
+        "settle_episode_agent",
+        "settle_episode_human",
+        "set_episode_disposition",
         "set_case_disposition",
+        "set_case_close_disposition",
+        "set_gate_not_applicable",
         "set_hard_gate_not_applicable",
+        "revise_frozen_boundary_field",
         "promote_world",
         "bootstrap_controller",
         "recover_controller"
@@ -36,6 +43,7 @@
         "preview_check_code",
         "authority_decision_bound_to_digest",
         "verifier_not_executor",
+        "verifier_context_derived",
         "a3_proof",
         "sea_forge_approval",
         "online_decision_bound_to_digest_and_expiry"
@@ -75,9 +83,11 @@
             "minItems": 1,
             "items": {
               "$ref": "#/$defs/Evidence"
-            }
+            },
+            "maxItems": 256
           },
-          "description": "Alternatives; the inner list is the evidence required together."
+          "description": "Alternatives; the inner list is the evidence required together.",
+          "maxItems": 256
         },
         "a3_t": {
           "enum": [
@@ -162,8 +172,8 @@
         },
         "operations": {
           "type": "array",
-          "minItems": 10,
-          "maxItems": 10,
+          "minItems": 15,
+          "maxItems": 15,
           "items": {
             "$ref": "#/$defs/OperationEntry"
           }
@@ -190,7 +200,18 @@
           "$ref": "#/$defs/text"
         },
         "operation": {
-          "$ref": "#/$defs/Operation"
+          "enum": [
+            "settle_episode_human",
+            "set_episode_disposition",
+            "set_case_disposition",
+            "set_case_close_disposition",
+            "set_gate_not_applicable",
+            "set_hard_gate_not_applicable",
+            "revise_frozen_boundary_field",
+            "promote_world",
+            "bootstrap_controller",
+            "recover_controller"
+          ]
         },
         "class": {
           "enum": [
@@ -203,62 +224,500 @@
             "string",
             "null"
           ],
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 4096
         },
         "subject_ref": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 4096,
           "description": "What the operation acts on: an episode_ref, a gate, a case, a candidate world_ref, a controller id."
         },
         "canonical_operation": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "operation",
-            "subject_ref",
-            "case_id",
-            "params"
-          ],
-          "properties": {
-            "operation": {
-              "$ref": "#/$defs/Operation"
-            },
-            "subject_ref": {
-              "$ref": "#/$defs/text"
-            },
-            "case_id": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "params": {
-              "type": "object"
-            }
-          },
-          "description": "The value the A3 surface shows and the digest covers; the A3 surface receives it from SEA-Forge by pending_id, never from the page."
+          "$ref": "#/$defs/CanonicalOperation"
         },
         "operation_digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$",
-          "description": "SHA-256 over RFC 8785 canonical JSON of canonical_operation."
+          "description": "SHA-256 over RFC 8785 canonical JSON of canonical_operation.",
+          "maxLength": 4096
         },
         "issued_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         },
         "expires_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         },
         "evidence_required": {
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/Evidence"
+          },
+          "maxItems": 256
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "set_case_close_disposition",
+                  "set_hard_gate_not_applicable",
+                  "promote_world",
+                  "bootstrap_controller",
+                  "recover_controller"
+                ]
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "class": {
+                "const": "P3"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "class": {
+                "const": "P2"
+              }
+            }
           }
         }
+      ]
+    },
+    "CanonicalParamsDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "disposition",
+        "case_id",
+        "episode_ref",
+        "record_digest"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "case",
+            "episode"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "close-satisfied",
+            "close-failed",
+            "continue",
+            "revise",
+            "escalate",
+            "suspend"
+          ]
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "episode_ref": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/episode_ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "record_digest": {
+          "$ref": "#/$defs/sha256"
+        }
       }
+    },
+    "CanonicalParamsGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "gate",
+        "state",
+        "record_digest"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "gate": {
+          "enum": [
+            "choose_problem",
+            "discover_reality",
+            "allocate_authority",
+            "prove_value",
+            "prove_reliability",
+            "integrate_govern",
+            "earn_trust",
+            "measure",
+            "productize"
+          ]
+        },
+        "state": {
+          "const": "not_applicable"
+        },
+        "record_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "CanonicalParamsSettle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "episode_ref",
+        "result",
+        "settlement_ref",
+        "record_digest"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref"
+        },
+        "result": {
+          "enum": [
+            "S",
+            "F",
+            "U",
+            "C"
+          ]
+        },
+        "settlement_ref": {
+          "$ref": "#/$defs/text"
+        },
+        "record_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "CanonicalParamsRevise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "paths",
+        "base_revision",
+        "record_digest"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "base_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "CanonicalParamsWorld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_world_ref",
+        "proposal_digest"
+      ],
+      "properties": {
+        "candidate_world_ref": {
+          "type": "string",
+          "pattern": "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$",
+          "maxLength": 4096
+        },
+        "proposal_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "CanonicalParamsController": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller_id",
+        "record_digest"
+      ],
+      "properties": {
+        "controller_id": {
+          "$ref": "#/$defs/text"
+        },
+        "record_digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "CanonicalOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "subject_ref",
+        "case_id",
+        "params"
+      ],
+      "properties": {
+        "operation": {
+          "enum": [
+            "settle_episode_human",
+            "set_episode_disposition",
+            "set_case_disposition",
+            "set_case_close_disposition",
+            "set_gate_not_applicable",
+            "set_hard_gate_not_applicable",
+            "revise_frozen_boundary_field",
+            "promote_world",
+            "bootstrap_controller",
+            "recover_controller"
+          ]
+        },
+        "subject_ref": {
+          "$ref": "#/$defs/text"
+        },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "params": {
+          "type": "object",
+          "minProperties": 1
+        }
+      },
+      "description": "The value the A3 surface shows and the digest covers. params are REQUIRED and per operation (review H3): a pending operation with params {} is invalid, and the record_digest binds the exact record the approval authorizes (SHA-256 of RFC 8785 of the append payload without approval_ref).",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "set_case_disposition",
+                  "set_case_close_disposition",
+                  "set_episode_disposition"
+                ]
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsDisposition"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "set_gate_not_applicable",
+                  "set_hard_gate_not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsGate"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "settle_episode_human"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsSettle"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "revise_frozen_boundary_field"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsRevise"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "promote_world"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsWorld"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "bootstrap_controller",
+                  "recover_controller"
+                ]
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/CanonicalParamsController"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ApprovalRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_ref",
+        "operation",
+        "operation_digest",
+        "case_id",
+        "outcome",
+        "assurance",
+        "used_by",
+        "issued_at",
+        "expires_at"
+      ],
+      "properties": {
+        "approval_ref": {
+          "$ref": "#/$defs/text"
+        },
+        "operation": {
+          "enum": [
+            "settle_episode_human",
+            "set_episode_disposition",
+            "set_case_disposition",
+            "set_case_close_disposition",
+            "set_gate_not_applicable",
+            "set_hard_gate_not_applicable",
+            "revise_frozen_boundary_field",
+            "promote_world",
+            "bootstrap_controller",
+            "recover_controller"
+          ]
+        },
+        "operation_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "outcome": {
+          "enum": [
+            "allow",
+            "deny",
+            "expired"
+          ],
+          "description": "The CEP/S1 spelling (allow, deny), not allowed/denied."
+        },
+        "assurance": {
+          "enum": [
+            "session",
+            "A3-UV",
+            "A3-T"
+          ]
+        },
+        "used_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "record_id of the record that consumed the approval; null while unused. Single use.",
+          "maxLength": 4096
+        },
+        "issued_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
+        }
+      },
+      "description": "What AUTHORITY_DENIED checks for any record that rests on an approval (disposition, gate, boundary revision, human settlement): the approval's operation_digest equals the digest of the canonical operation built from THIS record, its case_id equals the case, it is unused, unexpired and allowed. Anything else, or no approval, is AUTHORITY_DENIED (fail closed)."
     },
     "A3Proof": {
       "type": "object",
@@ -278,7 +737,8 @@
         "challenge": {
           "type": "string",
           "pattern": "^[A-Za-z0-9_-]{16,4096}$",
-          "description": "Issued by SEA-Forge for this pending_id and digest; single use."
+          "description": "Issued by SEA-Forge for this pending_id and digest; single use.",
+          "maxLength": 4096
         },
         "operation_digest": {
           "$ref": "#/$defs/sha256"
@@ -295,19 +755,23 @@
           "properties": {
             "credential_id": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$",
+              "maxLength": 4096
             },
             "authenticator_data": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$",
+              "maxLength": 4096
             },
             "client_data_json": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$",
+              "maxLength": 4096
             },
             "signature": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{16,4096}$"
+              "pattern": "^[A-Za-z0-9_-]{16,4096}$",
+              "maxLength": 4096
             }
           },
           "description": "WebAuthn assertion; client_data_json carries the challenge. SEA-Forge, not Horizon, verifies it."
@@ -315,11 +779,13 @@
         "confirmation_surface_id": {
           "type": "string",
           "pattern": "^surface:[A-Za-z0-9._-]{1,64}$",
-          "description": "Resolved by SEA-Forge against its registry of A3 surfaces to A3-UV (the paired phone) or A3-T; an id it does not know is not an A3 surface."
+          "description": "Resolved by SEA-Forge against its registry of A3 surfaces to A3-UV (the paired phone) or A3-T; an id it does not know is not an A3 surface.",
+          "maxLength": 4096
         },
         "expires_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         }
       }
     },
@@ -361,13 +827,74 @@
         },
         "decided_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         },
         "expires_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         }
       }
+    },
+    "BoundExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode_ref",
+        "patch_sha256",
+        "argv",
+        "cwd",
+        "env_digest",
+        "workspace_ref",
+        "sandbox_profile",
+        "world_ref",
+        "timeout_s"
+      ],
+      "properties": {
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref"
+        },
+        "patch_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the patch bytes the program applies; of the empty string when none.",
+          "maxLength": 4096
+        },
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "cwd": {
+          "$ref": "#/$defs/text"
+        },
+        "env_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 over RFC 8785 of the environment the process receives (name to value).",
+          "maxLength": 4096
+        },
+        "workspace_ref": {
+          "$ref": "#/$defs/text"
+        },
+        "sandbox_profile": {
+          "$ref": "#/$defs/text"
+        },
+        "world_ref": {
+          "type": "string",
+          "pattern": "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$",
+          "maxLength": 4096
+        },
+        "timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "Everything the decision authorizes. A run that differs in any member has no decision."
     },
     "ProgramExecutionDecision": {
       "type": "object",
@@ -376,10 +903,10 @@
         "decision_id",
         "operation_id",
         "case_id",
-        "episode_ref",
-        "patch_sha256",
-        "command",
+        "execution",
         "binds_digest",
+        "max_runs",
+        "runs_used",
         "decided_by",
         "outcome",
         "assurance",
@@ -390,6 +917,7 @@
         "decision_id": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 4096,
           "description": "The value RealityTrace resolves for authority.decision_id on execution events; scoped by operation_id."
         },
         "operation_id": {
@@ -397,36 +925,27 @@
         },
         "case_id": {
           "type": "string",
-          "pattern": "^[^\\s:@]{1,128}$"
+          "pattern": "^[^\\s:@]{1,128}$",
+          "maxLength": 4096
         },
-        "episode_ref": {
-          "$ref": "#/$defs/episode_ref"
-        },
-        "patch_sha256": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$",
-          "description": "SHA-256 of the patch bytes the program applies; of the empty string when it applies none."
-        },
-        "command": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "argv"
-          ],
-          "properties": {
-            "argv": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/$defs/text"
-              }
-            }
-          }
+        "execution": {
+          "$ref": "#/$defs/BoundExecution"
         },
         "binds_digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$",
-          "description": "SHA-256 over RFC 8785 canonical JSON of {episode_ref, patch_sha256, command}."
+          "description": "SHA-256 over RFC 8785 canonical JSON of execution (all nine members).",
+          "maxLength": 4096
+        },
+        "max_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Runs this decision authorizes; default 1. A run beyond it is AUTHORITY_DENIED."
+        },
+        "runs_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Counter the case keeper increments when a run starts under the decision. runs_used greater than max_runs is a corrupt record (AUTHORITY_DENIED); runs_used equal to max_runs means exhausted."
         },
         "decided_by": {
           "type": "object",
@@ -438,7 +957,8 @@
           "properties": {
             "principal": {
               "type": "string",
-              "pattern": "^[^\\s]{1,256}$"
+              "pattern": "^[^\\s]{1,256}$",
+              "maxLength": 4096
             },
             "role": {
               "$ref": "#/$defs/text"
@@ -449,7 +969,8 @@
           "enum": [
             "allow",
             "deny"
-          ]
+          ],
+          "description": "The CEP spelling."
         },
         "assurance": {
           "enum": [
@@ -460,11 +981,13 @@
         },
         "decided_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         },
         "expires_at": {
           "type": "string",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "maxLength": 4096
         }
       }
     },
@@ -536,6 +1059,9 @@
     },
     {
       "$ref": "#/$defs/PendingOperation"
+    },
+    {
+      "$ref": "#/$defs/ApprovalRecord"
     },
     {
       "$ref": "#/$defs/A3Proof"

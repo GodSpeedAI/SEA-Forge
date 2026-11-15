@@ -392,7 +392,8 @@
   "$defs": {
     "id_token": {
       "type": "string",
-      "pattern": "^[^\\s:@]{1,128}$"
+      "pattern": "^[^\\s:@]{1,128}$",
+      "maxLength": 4096
     },
     "Status": {
       "enum": [
@@ -447,7 +448,8 @@
     },
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "FieldValue": {
       "type": "object",
@@ -468,6 +470,35 @@
         }
       },
       "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "observed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ref": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "record",
+                      "realitytrace",
+                      "cognate",
+                      "horizon"
+                    ],
+                    "description": "An observed field comes from a source-owned record, never from the operator's say-so or the SOP text."
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": {
             "properties": {

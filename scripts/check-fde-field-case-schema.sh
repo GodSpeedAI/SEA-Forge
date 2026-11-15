@@ -107,9 +107,18 @@ eq(inst("currency_", "currency_id"), cont["Continuation"]["properties"]["work"][
 eq(inst("reliability_", "dimension_id"), list(v1["EpisodeSettledPayload"]["properties"]["reliability"]["properties"]), "reliability dimensions")
 eq(inst("aim_", "dimension_id"), cont["Continuation"]["properties"]["next"]["properties"]["dimension"]["enum"], "aim dimensions (blocker)")
 
+# --- reserved operation params and the registry's read-only paths
+res = load("reserved-operation.v1.json")["$defs"]
+eq(sea_enum("DispositionKind"), res["CanonicalParamsDisposition"]["properties"]["disposition"]["enum"], "disposition kinds (reserved-operation)")
+eq(sea_enum("EvidenceGateName"), res["CanonicalParamsGate"]["properties"]["gate"]["enum"], "gate names (reserved-operation)")
+kinds = load("case-record-kinds.v1.json")
+rp = kinds["properties"]["reserved_paths_after_freeze"]["items"]["enum"]
+
 # --- field_case.revised path enum
 pe = v2["FieldChange"]["properties"]["path"]["enum"]
 if sorted(pe) != sorted(paths): err("case-record-append.v2 FieldChange.path enum differs from field-case.v1 paths")
+for r_ in rp:
+    if r_ not in paths: err(f"reserved path {r_} is not a field-case.v1 path")
 
 # --- SOP 10.1 items
 s101 = sop.split("10.1 Case continuation, derived from source-owned records (A:134-138): ")[1].split("\n10.2")[0]
@@ -119,7 +128,7 @@ items = {p["x-sop-item"]: p["x-sop-segment"] for k, p in props.items() if "x-sop
 if sorted(items) != list(range(1, len(segs) + 1)): err(f"continuation.v1 items {sorted(items)} differ from the {len(segs)} items of SOP 10.1")
 for i, s in enumerate(segs, 1):
     if items.get(i) != s: err(f"continuation.v1 item {i} segment differs from SOP 10.1: {s!r}")
-extra = [k for k, p in props.items() if "x-sop-item" not in p and k != "computed_from"]
+extra = [k for k, p in props.items() if "x-sop-item" not in p and k not in ("computed_from", "availability")]
 if extra: err(f"continuation.v1 properties with no SOP 10.1 item: {extra}")
 
 if errors:

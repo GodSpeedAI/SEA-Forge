@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "VERIFIER_CONTEXT_MISMATCH",
+  "message": "verifier context is not the derived fresh context"
+}

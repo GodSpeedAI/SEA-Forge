@@ -1,0 +1,34 @@
+{
+  "id": "human-task-complete-last-item-with-close-disposition",
+  "rule": "R11",
+  "nt": "NT-23",
+  "verb": "human_task_complete",
+  "request": {
+    "verb": "human_task_complete",
+    "case_id": "case-0001",
+    "item_id": "item-06",
+    "justification": "reviewed",
+    "request_id": "req-ht-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false,
+    "latest_case_disposition": "close-failed"
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {
+    "reaches_terminal": true
+  },
+  "expect": {
+    "outcome": "accepted"
+  }
+}

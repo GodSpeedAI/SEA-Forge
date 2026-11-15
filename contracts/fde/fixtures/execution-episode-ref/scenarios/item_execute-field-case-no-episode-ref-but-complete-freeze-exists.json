@@ -1,0 +1,36 @@
+{
+  "id": "item_execute-field-case-no-episode-ref-but-complete-freeze-exists",
+  "rule": "R1",
+  "nt": "NT-32",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "refused",
+    "code": "FREEZE_MISSING",
+    "message": "without episode_ref the request is not bound to a frozen episode, whatever the ledger holds",
+    "invariant": "I-1",
+    "no_side_effect": true
+  }
+}

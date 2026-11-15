@@ -18,6 +18,10 @@
       "def": "Continuation"
     },
     {
+      "file": "continuation-pending-id-hidden-from-a-non-approver.json",
+      "def": "Continuation"
+    },
+    {
       "file": "request-case-field-get.json",
       "def": "FieldGetRequest"
     },
@@ -32,6 +36,10 @@
     {
       "file": "response-case-field-get.json",
       "def": "FieldGetResponse"
+    },
+    {
+      "file": "error-authority-denied.json",
+      "def": "Error"
     },
     {
       "file": "error-not-a-field-case.json",
@@ -152,10 +160,58 @@
       "contains": "\"ledger_head\" is a required property"
     },
     {
+      "file": "request-field-get-without-actor.json",
+      "def": "FieldGetRequest",
+      "pointer": "",
+      "contains": "\"actor\" is a required property"
+    },
+    {
+      "file": "request-continuation-without-actor.json",
+      "def": "ContinuationRequest",
+      "pointer": "",
+      "contains": "\"actor\" is a required property"
+    },
+    {
+      "file": "availability-missing.json",
+      "def": "Continuation",
+      "pointer": "",
+      "contains": "\"availability\" is a required property"
+    },
+    {
+      "file": "availability-value-partial.json",
+      "def": "Continuation",
+      "pointer": "/availability/work",
+      "contains": "is not one of"
+    },
+    {
+      "file": "availability-section-missing.json",
+      "def": "Continuation",
+      "pointer": "/availability",
+      "contains": "\"next\" is a required property"
+    },
+    {
+      "file": "pending-id-key-missing.json",
+      "def": "Continuation",
+      "pointer": "/authority/pending_approvals/0",
+      "contains": "\"pending_id\" is a required property"
+    },
+    {
+      "file": "decision-outcome-allowed-past-tense.json",
+      "def": "Continuation",
+      "pointer": "/authority/decisions/0/outcome",
+      "contains": "is not one of"
+    },
+    {
+      "file": "decision-outcome-denied-past-tense.json",
+      "def": "Continuation",
+      "pointer": "/authority/decisions/0/outcome",
+      "contains": "is not one of"
+    },
+    {
       "file": "request-field-get-wrong-verb.json",
       "def": "FieldGetRequest",
-      "pointer": "/verb",
-      "contains": "was expected"
+      "pointer": "",
+      "contains": "\"actor\" is a required property"
     },
     {
       "file": "request-continuation-with-case-body.json",
@@ -183,6 +239,26 @@
     }
   ],
   "semantic_invalid": [
+    {
+      "file": "snapshot-null-but-observations-claimed-known.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "unknown-section-with-content.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "ledger-section-claimed-unknown.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "unknown-authority-with-a3-channel-known.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
     {
       "file": "gate-evidence-gate-repeated.json",
       "def": "Continuation",

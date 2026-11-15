@@ -1,0 +1,35 @@
+{
+  "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+  "settling_principal": "agent:verifier-01",
+  "result": "S",
+  "declared_verifier_context": "unknown",
+  "settler_root": "human:operator",
+  "links": [
+    {
+      "link_id": "link-0001",
+      "case_id": "case-0001",
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "assignment_id": "assign:case-0001:item-03:1:1",
+      "delegator": "human:operator",
+      "gateway_actor": "agent:gateway",
+      "delegate": "agent:builder-01",
+      "issued_at": "2026-11-15T09:00:00Z",
+      "expires_at": "2026-11-15T17:00:00Z"
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "run-0001",
+      "case_id": "case-0001",
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "verb": "delegate",
+      "role": "executor",
+      "actor": "agent:builder-01",
+      "on_behalf_of": "human:operator",
+      "delegated": true,
+      "link_id": "link-0001",
+      "workspace_ref": "ws:builder",
+      "started_at": "2026-11-15T09:05:00Z"
+    }
+  ]
+}

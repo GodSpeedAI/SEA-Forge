@@ -5,6 +5,7 @@
   "verb": "delegate",
   "request": {
     "verb": "delegate",
+    "case_id": "case-0001",
     "endpoint": "http://127.0.0.1:8099/agent",
     "instruction": "Record the verifier's observation for gate G3.",
     "max_turns": 8,
@@ -34,7 +35,9 @@
     "anchor_publisher": "svc:case-keeper"
   },
   "extra": {
-    "authority_decision": "allowed"
+    "authority_decision": "allowed",
+    "max_runs": 1,
+    "runs_used": 0
   },
   "expect": {
     "outcome": "accepted"

@@ -1,0 +1,34 @@
+{
+  "id": "delegate-case-unresolved-without-episode-ref",
+  "rule": "R9",
+  "nt": "NT-32",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "case_id": "case-0001",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-del-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "case": null,
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "refused",
+    "code": "CASE_UNRESOLVED",
+    "message": "a plain-looking delegate whose case cannot be resolved is not assumed plain",
+    "no_side_effect": true
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "case_advance-episode-superseded-by-a-later-n",
+  "rule": "R12",
+  "nt": "RD-10",
+  "verb": "case_advance",
+  "request": {
+    "verb": "case_advance",
+    "case_id": "case-0001",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-adv-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {
+    "latest_n": 2,
+    "authority_decision": "allowed"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "EPISODE_SUPERSEDED",
+    "message": "n=1 is superseded by n=2",
+    "no_side_effect": true
+  }
+}

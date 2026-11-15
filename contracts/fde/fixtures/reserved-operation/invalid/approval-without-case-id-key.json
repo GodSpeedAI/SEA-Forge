@@ -1,0 +1,10 @@
+{
+  "approval_ref": "approval:appr-0043",
+  "operation": "set_case_close_disposition",
+  "operation_digest": "6e62c6dab9fb6cec9a4fdb6348ee8b6268b3d2a47bede5522b9bc5462e6cb4cf",
+  "outcome": "allow",
+  "assurance": "A3-UV",
+  "used_by": null,
+  "issued_at": "2026-11-15T10:01:00Z",
+  "expires_at": "2026-11-15T10:10:00Z"
+}

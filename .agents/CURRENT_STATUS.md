@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 311
+**Status revision:** 312
 
-**Stage:** FDE S2: WP-20 fixture validation test, README, CHANGELOG
+**Stage:** FDE S2: WP-20 review fixes (schemas, fixtures)
 
-**Summary:** fde/integration: WP-20 (contracts only): fixture-validation and rule tests for all S2 contracts (30 pass), README sections 4-13 with request/response/error tables and x-decision list, CHANGELOG.
+**Summary:** fde/integration: WP-20 review fixes C1 C2 H1-H7 M1-M9 and owner decisions D8 D12 D23 applied to the S2 contracts in place (contracts only); DIGESTS re-pinned; tests and README follow.
 
 **Verified:**
 

@@ -32,7 +32,9 @@
     "anchor_publisher": "svc:case-keeper"
   },
   "extra": {
-    "authority_decision": "allowed"
+    "authority_decision": "allowed",
+    "max_runs": 1,
+    "runs_used": 0
   },
   "expect": {
     "outcome": "accepted"

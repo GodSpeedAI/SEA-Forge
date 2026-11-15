@@ -6,7 +6,8 @@
   "$defs": {
     "text": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "maxLength": 4096
     },
     "EpisodeRefField": {
       "type": "object",
@@ -20,11 +21,13 @@
       "properties": {
         "case_id": {
           "type": "string",
-          "pattern": "^[^\\s:@]{1,128}$"
+          "pattern": "^[^\\s:@]{1,128}$",
+          "maxLength": 4096
         },
         "plan_item_id": {
           "type": "string",
-          "pattern": "^[^\\s:@]{1,128}$"
+          "pattern": "^[^\\s:@]{1,128}$",
+          "maxLength": 4096
         },
         "n": {
           "type": "integer",
@@ -164,15 +167,113 @@
         },
         "episode_ref": {
           "$ref": "#/$defs/EpisodeRefField"
+        },
+        "transition_items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "item_id",
+              "transition",
+              "transition_only"
+            ],
+            "properties": {
+              "item_id": {
+                "$ref": "#/$defs/text"
+              },
+              "transition": {
+                "enum": [
+                  "skip",
+                  "complete"
+                ]
+              },
+              "transition_only": {
+                "const": true
+              }
+            }
+          },
+          "description": "On a Field Case an advance must either carry episode_ref (it then executes only that episode's item) or state, per affected item, transition_only: true. The server refuses (TRANSITION_ONLY_INVALID) a transition_only entry for an item that has an execution step."
         }
       },
-      "description": "With episode_ref, a Field Case advance executes only the enabled item of that episode's plan_item_id (decision WP-20: one frozen episode per advance); other items are not executed by it."
+      "description": "With episode_ref, a Field Case advance executes only the enabled item of that episode's plan_item_id. Without it, transition_items is required; neither is FREEZE_MISSING."
+    },
+    "HumanTaskCompleteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "case_id",
+        "item_id",
+        "justification",
+        "request_id"
+      ],
+      "properties": {
+        "verb": {
+          "const": "human_task_complete"
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "item_id": {
+          "$ref": "#/$defs/text"
+        },
+        "justification": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "on_behalf_of": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "policy": {
+          "$ref": "#/$defs/text"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "description": "Existing verb; listed because completing the last item is a path to a terminal state and is gated by CLOSE_DISPOSITION_REQUIRED like every other path (R11)."
     },
     "DelegateRequest": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "verb",
+        "case_id",
         "endpoint",
         "instruction",
         "max_turns"
@@ -181,6 +282,10 @@
         "verb": {
           "const": "delegate",
           "description": "Wire verb of the logical operation agent_run.delegate."
+        },
+        "case_id": {
+          "$ref": "#/$defs/text",
+          "description": "The case the run belongs to. REQUIRED (review C1): the case template is resolved by the server from this id, never from the presence of episode_ref; I-1 is checked on this server-resolved identity, not on a caller tag (E section 3, G NT-32). A delegate whose case_id does not resolve is refused (CASE_UNRESOLVED)."
         },
         "endpoint": {
           "$ref": "#/$defs/text"
@@ -261,7 +366,7 @@
           "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/assignment_id"
         }
       },
-      "description": "episode_ref carries the case (delegate has no case_id on the wire). On a Field Case, assignment_id is required with episode_ref, its case, step and n equal to the episode's, and its k the next unused delegation instance (ASSIGNMENT_ID_INVALID)."
+      "description": "case_id is required (the wire verb had none before this contract). On a Field Case, episode_ref and assignment_id are required; episode_ref.case_id equals case_id; the assignment id's case, step and n equal the episode's; k is new for a new delegation (ASSIGNMENT_ID_INVALID) or the id of an interrupted assignment whose link has not expired for a resume (ASSIGNMENT_LINK_EXPIRED otherwise)."
     },
     "Error": {
       "type": "object",
@@ -277,6 +382,12 @@
         },
         "code": {
           "enum": [
+            "EPISODE_SUPERSEDED",
+            "EPISODE_SETTLED",
+            "CASE_CLOSED",
+            "CASE_UNRESOLVED",
+            "TRANSITION_ONLY_INVALID",
+            "ASSIGNMENT_LINK_EXPIRED",
             "FREEZE_MISSING",
             "FREEZE_INCOMPLETE",
             "KIND_IMMUTABLE",
@@ -358,6 +469,12 @@
             "properties": {
               "code": {
                 "enum": [
+                  "EPISODE_SUPERSEDED",
+                  "EPISODE_SETTLED",
+                  "CASE_CLOSED",
+                  "CASE_UNRESOLVED",
+                  "TRANSITION_ONLY_INVALID",
+                  "ASSIGNMENT_LINK_EXPIRED",
                   "SCHEMA_INVALID",
                   "CASE_SUSPENDED",
                   "AUTHORITY_DENIED",
@@ -392,6 +509,9 @@
     },
     {
       "$ref": "#/$defs/CaseAdvanceRequest"
+    },
+    {
+      "$ref": "#/$defs/HumanTaskCompleteRequest"
     },
     {
       "$ref": "#/$defs/DelegateRequest"

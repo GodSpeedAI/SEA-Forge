@@ -1,0 +1,38 @@
+{
+  "id": "case_advance-anchor-not-configured-complete-without-it",
+  "rule": "R3",
+  "nt": "NT-33",
+  "verb": "case_advance",
+  "request": {
+    "verb": "case_advance",
+    "case_id": "case-0001",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-adv-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "not_configured"
+  },
+  "extra": {
+    "authority_decision": "allowed"
+  },
+  "expect": {
+    "outcome": "accepted"
+  }
+}

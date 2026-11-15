@@ -73,7 +73,7 @@
       "file": "observed-with-none-source.json",
       "def": null,
       "pointer": "/fields/framing/current_framing/source_ref/kind",
-      "contains": "is not allowed for"
+      "contains": "is not one of"
     },
     {
       "file": "none-source-bad-ref.json",
@@ -89,6 +89,18 @@
     },
     {
       "file": "source-kind-unknown.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "observed-from-operator.json",
+      "def": null,
+      "pointer": "/fields/framing/current_framing/source_ref/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "observed-from-sop.json",
       "def": null,
       "pointer": "/fields/framing/current_framing/source_ref/kind",
       "contains": "is not one of"

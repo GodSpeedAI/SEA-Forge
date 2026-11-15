@@ -18,6 +18,14 @@
       "def": "CaseAdvanceRequest"
     },
     {
+      "file": "case-advance-transition-only.json",
+      "def": "CaseAdvanceRequest"
+    },
+    {
+      "file": "human-task-complete.json",
+      "def": "HumanTaskCompleteRequest"
+    },
+    {
       "file": "case-advance-with-episode-ref.json",
       "def": "CaseAdvanceRequest"
     },
@@ -32,6 +40,30 @@
     {
       "file": "delegate-on-behalf-of.json",
       "def": "DelegateRequest"
+    },
+    {
+      "file": "error-episode-superseded.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-episode-settled.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-case-closed.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-case-unresolved.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-transition-only-invalid.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-assignment-link-expired.json",
+      "def": "Error"
     },
     {
       "file": "error-freeze-missing.json",
@@ -136,6 +168,42 @@
       "contains": "is not of type"
     },
     {
+      "file": "delegate-without-case-id.json",
+      "def": "DelegateRequest",
+      "pointer": "",
+      "contains": "\"case_id\" is a required property"
+    },
+    {
+      "file": "case-advance-transition-only-false.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "/transition_items/0/transition_only",
+      "contains": "was expected"
+    },
+    {
+      "file": "case-advance-transition-only-missing.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "/transition_items/0",
+      "contains": "\"transition_only\" is a required property"
+    },
+    {
+      "file": "case-advance-transition-unknown.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "/transition_items/0/transition",
+      "contains": "is not one of"
+    },
+    {
+      "file": "case-advance-transition-items-empty.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "/transition_items",
+      "contains": "has less than"
+    },
+    {
+      "file": "human-task-complete-without-justification.json",
+      "def": "HumanTaskCompleteRequest",
+      "pointer": "",
+      "contains": "\"justification\" is a required property"
+    },
+    {
       "file": "case-advance-missing-case-id.json",
       "def": "CaseAdvanceRequest",
       "pointer": "",
@@ -158,12 +226,6 @@
       "def": "DelegateRequest",
       "pointer": "/episode_ref",
       "contains": "\"kind\" is a required property"
-    },
-    {
-      "file": "delegate-case-id-not-allowed-beside-episode-ref.json",
-      "def": "DelegateRequest",
-      "pointer": "",
-      "contains": "Additional properties"
     },
     {
       "file": "error-freeze-missing-without-invariant.json",
@@ -213,6 +275,11 @@
       "code": "ASSIGNMENT_ID_INVALID"
     },
     {
+      "file": "delegate-case-id-differs-from-episode-ref-case.json",
+      "def": "DelegateRequest",
+      "code": "SCHEMA_INVALID"
+    },
+    {
       "file": "delegate-episode-ref-without-assignment-id.json",
       "def": "DelegateRequest",
       "code": "SCHEMA_INVALID"
@@ -235,47 +302,87 @@
   ],
   "scenarios": [
     "item_execute-field-case-no-episode-ref.json",
+    "item_execute-field-case-no-episode-ref-but-complete-freeze-exists.json",
     "item_execute-field-case-no-freeze.json",
     "item_execute-freeze-realitytrace-only.json",
     "item_execute-freeze-record-without-realitytrace.json",
     "item_execute-freeze-anchor-missing.json",
+    "item_execute-freeze-anchor-only.json",
+    "item_execute-anchor-not-configured-complete-without-it.json",
     "item_execute-anchor-published-by-executor.json",
     "item_execute-kind-differs-from-freeze.json",
     "item_execute-case-suspended.json",
+    "item_execute-case-closed.json",
     "item_execute-consequential-action-denied.json",
     "item_execute-consequential-action-without-decision.json",
+    "item_execute-decision-exhausted-runs-used-equals-max-runs.json",
+    "item_execute-decision-binds-another-cwd.json",
+    "item_execute-episode-superseded-by-a-later-n.json",
+    "item_execute-episode-already-settled.json",
     "item_execute-complete-freeze-accepted.json",
     "item_execute-non-field-case-unaffected.json",
     "item_execute-non-field-case-ignores-episode-ref.json",
+    "item_execute-reaches-terminal-without-close-disposition.json",
     "case_advance-field-case-no-episode-ref.json",
+    "case_advance-field-case-no-episode-ref-but-complete-freeze-exists.json",
     "case_advance-field-case-no-freeze.json",
     "case_advance-freeze-realitytrace-only.json",
     "case_advance-freeze-record-without-realitytrace.json",
     "case_advance-freeze-anchor-missing.json",
+    "case_advance-freeze-anchor-only.json",
+    "case_advance-anchor-not-configured-complete-without-it.json",
     "case_advance-anchor-published-by-executor.json",
     "case_advance-kind-differs-from-freeze.json",
     "case_advance-case-suspended.json",
+    "case_advance-case-closed.json",
     "case_advance-consequential-action-denied.json",
     "case_advance-consequential-action-without-decision.json",
+    "case_advance-decision-exhausted-runs-used-equals-max-runs.json",
+    "case_advance-decision-binds-another-cwd.json",
+    "case_advance-episode-superseded-by-a-later-n.json",
+    "case_advance-episode-already-settled.json",
     "case_advance-complete-freeze-accepted.json",
     "case_advance-non-field-case-unaffected.json",
     "case_advance-non-field-case-ignores-episode-ref.json",
+    "case_advance-reaches-terminal-without-close-disposition.json",
     "delegate-field-case-no-episode-ref.json",
+    "delegate-field-case-no-episode-ref-but-complete-freeze-exists.json",
     "delegate-field-case-no-freeze.json",
     "delegate-freeze-realitytrace-only.json",
     "delegate-freeze-record-without-realitytrace.json",
     "delegate-freeze-anchor-missing.json",
+    "delegate-freeze-anchor-only.json",
+    "delegate-anchor-not-configured-complete-without-it.json",
     "delegate-anchor-published-by-executor.json",
     "delegate-kind-differs-from-freeze.json",
     "delegate-case-suspended.json",
+    "delegate-case-closed.json",
     "delegate-consequential-action-denied.json",
     "delegate-consequential-action-without-decision.json",
+    "delegate-decision-exhausted-runs-used-equals-max-runs.json",
+    "delegate-decision-binds-another-cwd.json",
+    "delegate-episode-superseded-by-a-later-n.json",
+    "delegate-episode-already-settled.json",
     "delegate-complete-freeze-accepted.json",
     "delegate-non-field-case-unaffected.json",
     "delegate-non-field-case-ignores-episode-ref.json",
-    "delegate-assignment-k-already-used.json",
+    "delegate-reaches-terminal-without-close-disposition.json",
+    "delegate-case-unresolved.json",
+    "delegate-case-unresolved-without-episode-ref.json",
+    "delegate-assignment-new-k-already-used-by-a-running-assignment.json",
+    "delegate-resume-of-interrupted-assignment-reuses-its-id.json",
+    "delegate-resume-after-link-expiry-is-refused.json",
+    "delegate-new-delegation-takes-k-plus-one.json",
+    "case-advance-transition-only-skip-accepted.json",
+    "case-advance-transition-only-on-an-execution-item-skip.json",
+    "case-advance-transition-only-on-an-execution-item-complete.json",
+    "case-advance-field-case-neither-episode-ref-nor-transition-items.json",
     "case-advance-to-completed-without-close-disposition.json",
-    "case-advance-to-completed-with-close-disposition.json"
+    "case-advance-to-completed-with-close-disposition.json",
+    "human-task-complete-last-item-without-close-disposition.json",
+    "human-task-complete-last-item-with-close-disposition.json",
+    "human-task-complete-not-last-item.json",
+    "item-execute-finishing-last-item-with-close-disposition.json"
   ],
   "frames": [
     "item.execute.fde.without_episode_ref.json",
