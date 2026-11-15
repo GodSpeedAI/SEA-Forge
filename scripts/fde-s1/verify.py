@@ -73,6 +73,10 @@ for s in steps:
             if r.exists(): argv[i + 1] = str(r)
     p = subprocess.run(argv, env=env, capture_output=True, text=True)
     replayed += 1
+    if n.startswith("rt-compare-"):  # compare prints its result document on stdout
+        (out / "raw" / ("out-" + n[len("rt-compare-"):] + "-compare.json")).write_text(p.stdout)
+    if n.startswith("rt-compare-") and sha(p.stdout.encode()) != s["stdout_sha256"]:  # derive/propose print their --out path; their --out files are compared instead
+        mism.append({"step": n, "stdout_sha256_differs": True})
     if p.returncode != s["rc"]: mism.append({"step": n, "rc": p.returncode, "recorded_rc": s["rc"]}); continue
     for orig, new in ([outf] if outf else []) + extra:
         if orig.exists() and (not new.exists() or new.read_bytes() != orig.read_bytes()): mism.append({"step": n, "file": orig.name, "differs": True})

@@ -1,19 +1,18 @@
 # Current status
 
-**Status revision:** 253
+**Status revision:** 254
 
-**Stage:** WP-19 S1 gate: replayable derive windows
+**Stage:** WP-19 S1 gate: verifier replays compare stdout
 
-**Summary:** fde/integration: the S1 episode run pins every derive to an explicit --until ordinal so the AT-18 verifier can replay a recorded derive byte for byte (the default head moves as the ledger grows); AT-06 wrapper minimum corrected.
+**Summary:** fde/integration: the AT-18 verifier now captures compare stdout and compares every replayed derive/compare/propose/regression/delta output byte for byte; the second full cell replays equal.
 
 **Verified:**
-- first full run: AT-18 verifier disagreed because derive used until=head; fixed
+- AT-18 verifier over cell 20261114T234200Z: anchors, manifest, replay bytes and class level agree
 
 **Limits:**
-- Bundle not yet committed
+- Re-execution of the program episodes by the verifier not done
 
-**Next:** Re-run the pipeline, proof runner, bundle
+**Next:** Final proof run, ledger, evidence bundle
 
 **Evidence:**
-- scripts/fde-s1/run.py
-- scripts/fde-proof.d/AT-06.sh
+- scripts/fde-s1/verify.py
