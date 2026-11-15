@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 314
+**Status revision:** 315
 
-**Stage:** FDE S2: WP-21a step 1 scenario harness
+**Stage:** FDE S2: WP-21a step 2 append v2 rules
 
-**Summary:** fde/integration: WP-21 part A step 1: scenario-driven conformance harness over all 156 S2 scenarios (53 append v2, 82 gate, 7 delegation, 14 reserved); pending list with reasons.
+**Summary:** fde/integration: WP-21 part A step 2: case.record.append v2 rules for episode.frozen/settled (contract marker selects dialect only; v1 fallbacks); world pin, settlement-exists, kind-immutable, reference-derived, model/anchor publisher, lifecycle, store integrity, payload size, human settlement approval.
 
 **Verified:**
 

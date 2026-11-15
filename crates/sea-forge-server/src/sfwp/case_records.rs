@@ -281,6 +281,36 @@ pub fn configured_publisher() -> Option<ScriptPublisher> {
     Some(ScriptPublisher(PathBuf::from(script), timeout))
 }
 
+/// What the server knows about the cell that the request cannot say (WP-21):
+/// every field defaults to "not configured", under which the S1 behaviour is
+/// unchanged. A configured value is enforced and fails closed.
+#[derive(Clone, Copy, Debug)]
+pub struct AppendPolicy<'a> {
+    /// The world currently pinned in the WP-18 world pin record. `Some` makes
+    /// a freeze naming another `world_ref` `WORLD_NOT_PINNED`.
+    pub pinned_world: Option<&'a str>,
+    /// The case-keeper service identity. `Some` means anchoring is configured:
+    /// a freeze needs its anchor, the anchor must have been pushed by this
+    /// identity, and the model anchor must precede the first run (NT-18, NT-48).
+    pub case_keeper: Option<&'a str>,
+    /// The identity the configured anchor credential publishes as. Checked at
+    /// freeze against `case_keeper`, before the record is written.
+    pub anchor_publisher: Option<&'a str>,
+    /// The authenticated principal is a human (an operator-role session), not
+    /// an agent or a service: its settlement needs a bound approval.
+    pub principal_human: bool,
+}
+
+impl AppendPolicy<'static> {
+    /// Nothing configured: the S1 behaviour.
+    pub const NONE: AppendPolicy<'static> = AppendPolicy {
+        pinned_world: None,
+        case_keeper: None,
+        anchor_publisher: None,
+        principal_human: false,
+    };
+}
+
 /// Everything one append needs besides the request.
 pub struct AppendContext<'a> {
     pub root: &'a Path,
@@ -295,6 +325,14 @@ pub struct AppendContext<'a> {
     pub chain: &'a [String],
     pub rt: &'a dyn RealityTraceIndex,
     pub anchor: Option<&'a dyn AnchorPublisher>,
+    pub policy: &'a AppendPolicy<'a>,
+}
+
+impl AppendContext<'_> {
+    /// Whether the freeze must be anchored (a publisher or a case keeper is configured).
+    fn anchor_configured(&self) -> bool {
+        self.anchor.is_some() || self.policy.case_keeper.is_some()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -345,12 +383,23 @@ pub(super) fn read_lines_strict(path: &Path) -> Result<Vec<Value>, String> {
 }
 
 const REPAIRS: &str = "field-repairs.jsonl";
+pub(super) const RUNS: &str = "field-runs.jsonl";
+pub(super) const LINKS: &str = "field-links.jsonl";
 
 /// Every store file whose lines decide an invariant, an id or idempotency must
 /// parse completely before anything is decided or written.
 pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
     let dir = case_dir(ctx.root, ctx.case_id);
-    for name in [RECORDS, INTENTS, DECISIONS, RT_OUTBOX, ANCHOR_OUTBOX] {
+    for name in [
+        RECORDS,
+        INTENTS,
+        DECISIONS,
+        RT_OUTBOX,
+        ANCHOR_OUTBOX,
+        RUNS,
+        LINKS,
+        APPROVALS,
+    ] {
         read_lines_strict(&dir.join(name)).map_err(|e| format!("store integrity: {e}"))?;
     }
     Ok(())
@@ -588,12 +637,150 @@ fn check_freeze_digests(payload: &Value) -> Result<(String, String, u64, String)
 // Append
 // ---------------------------------------------------------------------------
 
+/// The `contract` marker that selects the v2 response dialect (README §6). It
+/// selects the dialect only: every rule applies to every writer.
+pub const V2_MARKER: &str = "fde.case-record-append@2";
+/// Largest encoded request (README §6, `PAYLOAD_TOO_LARGE`).
+pub const MAX_REQUEST_BYTES: usize = 1_048_576;
+/// The four kinds only v2 writers may name; part B of WP-21 implements them.
+const V2_ONLY_KINDS: [&str; 4] = [
+    "field_case.revised",
+    "strategy.recorded",
+    "gate.assessed",
+    "disposition.recorded",
+];
+/// README §6 `REFERENCE_DERIVED_FROM_RESULT`: the closed result-field list.
+const RESULT_FIELDS: [&str; 6] = [
+    "result",
+    "outcome",
+    "observation",
+    "settlement",
+    "verdict",
+    "residual",
+];
+
+/// A v2 answer plus the SFWP frame class a v1 writer receives for the two
+/// codes that have no v1 refusal (`STORE_INTEGRITY`, `PAYLOAD_TOO_LARGE`).
+pub struct Answer {
+    pub value: Value,
+    pub frame_class: Option<&'static str>,
+}
+
 /// Run `case.record.append` and return the contract's response or refusal.
 pub fn append(ctx: &AppendContext, request: &Value) -> Value {
-    append_faulted(ctx, request, None).unwrap_or_else(|crash| {
+    append_answer(ctx, request).value
+}
+
+/// [`append`], with the SFWP frame class a v1 writer is owed (the verb turns it
+/// into an error frame; direct callers see the `SCHEMA_INVALID` fallback).
+pub fn append_answer(ctx: &AppendContext, request: &Value) -> Answer {
+    let v2 = request.get("contract").and_then(Value::as_str) == Some(V2_MARKER);
+    let value = append_faulted(ctx, request, None).unwrap_or_else(|crash| {
         // Unreachable without a fault; keep the contract shape if it ever is.
         refuse("SCHEMA_INVALID", &format!("{crash:?}"), None)
-    })
+    });
+    let frame_class = if v2 {
+        None
+    } else {
+        match value["code"].as_str() {
+            Some("STORE_INTEGRITY") => Some("store_integrity"),
+            Some("PAYLOAD_TOO_LARGE") => Some("input_error"),
+            _ => None,
+        }
+    };
+    Answer {
+        value: if v2 { value } else { downgrade(value) },
+        frame_class,
+    }
+}
+
+/// README §6 "v1 writers": each v2-only code replaced by the fallback that is
+/// itself a refusal, the v2 code name prefixing the message.
+fn downgrade(value: Value) -> Value {
+    let Some(code) = value["code"].as_str() else {
+        return value;
+    };
+    let (fallback, invariant) = match code {
+        "WORLD_NOT_PINNED"
+        | "REFERENCE_DERIVED_FROM_RESULT"
+        | "AUTHORITY_DENIED"
+        | "STORE_INTEGRITY"
+        | "PAYLOAD_TOO_LARGE"
+        | "CASE_SUSPENDED"
+        | "CASE_CLOSED"
+        | "VERIFIER_CONTEXT_MISMATCH" => ("SCHEMA_INVALID", None),
+        "SETTLEMENT_EXISTS" => ("IDEMPOTENCY_CONFLICT", None),
+        "KIND_IMMUTABLE" => ("FREEZE_KEY_EXISTS", Some("I-3")),
+        "MODEL_ANCHOR_LATE" | "ANCHOR_PUBLISHER_INVALID" => ("FREEZE_INCOMPLETE", Some("I-1")),
+        _ => return value,
+    };
+    let message = value["message"].as_str().unwrap_or("");
+    refuse(fallback, &format!("{code}: {message}"), invariant)
+}
+
+/// A string quoting a RealityTrace result id (`observation:`, `evidence:`,
+/// `settlement:`, `residual:` + the 26-character id).
+fn quotes_result_id(text: &str) -> bool {
+    ["observation:", "evidence:", "settlement:", "residual:"]
+        .iter()
+        .any(|prefix| {
+            text.match_indices(prefix).any(|(at, _)| {
+                let id: Vec<char> = text[at + prefix.len()..].chars().take(26).collect();
+                id.len() == 26
+                    && id
+                        .iter()
+                        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+            })
+        })
+}
+
+fn strings_quote_result(value: &Value) -> bool {
+    match value {
+        Value::String(s) => quotes_result_id(s),
+        Value::Array(items) => items.iter().any(strings_quote_result),
+        Value::Object(map) => map.values().any(strings_quote_result),
+        _ => false,
+    }
+}
+
+/// Best-effort NT-17 detection (README §6): a frozen reference body carrying a
+/// result field or quoting a RealityTrace result id. A paraphrase passes; the
+/// real protection is ordering (freeze and anchor before the first run).
+fn derived_from_result(payload: &Value) -> Option<String> {
+    let body = payload["reference"]["body"].as_object()?;
+    if let Some(field) = RESULT_FIELDS.iter().find(|f| body.contains_key(**f)) {
+        return Some(format!("reference.body carries the result field {field:?}"));
+    }
+    strings_quote_result(&payload["reference"]["body"])
+        .then(|| "reference.body quotes a RealityTrace result id".to_string())
+}
+
+/// The lifecycle of the case from its case-level dispositions (README §6): a
+/// `close-*` is final; otherwise suspended when the latest one is `suspend`.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(super) enum Lifecycle {
+    Open,
+    Suspended,
+    Closed,
+}
+
+pub(super) fn lifecycle(records: &[Value]) -> Lifecycle {
+    let mut state = Lifecycle::Open;
+    for r in records {
+        if r["kind"] != "disposition.recorded" || r["level"] != "case" {
+            continue;
+        }
+        let d = r["disposition"].as_str().unwrap_or("");
+        if d.starts_with("close-") {
+            return Lifecycle::Closed;
+        }
+        state = if d == "suspend" {
+            Lifecycle::Suspended
+        } else {
+            Lifecycle::Open
+        };
+    }
+    state
 }
 
 /// As [`append`], with a crash injected at a freeze phase boundary. The crash
@@ -604,6 +791,27 @@ pub fn append_faulted(
     request: &Value,
     fault: Option<Fault>,
 ) -> Result<Value, CrashInjected> {
+    // The marker selects the dialect only; an unknown marker is not a dialect.
+    match request.get("contract") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(m)) if m == V2_MARKER => {}
+        Some(_) => {
+            return Ok(refuse(
+                "SCHEMA_INVALID",
+                "contract is not a known case.record.append contract",
+                None,
+            ))
+        }
+    }
+    let v2 = request.get("contract").is_some_and(|c| c == V2_MARKER);
+    // 1. PAYLOAD_TOO_LARGE: nothing is read or written.
+    if serde_json::to_vec(request).map_or(true, |b| b.len() > MAX_REQUEST_BYTES) {
+        return Ok(refuse(
+            "PAYLOAD_TOO_LARGE",
+            &format!("request exceeds {MAX_REQUEST_BYTES} bytes"),
+            None,
+        ));
+    }
     if serde_json::to_vec(&request["payload"]).map_or(true, |b| b.len() > MAX_PAYLOAD_BYTES) {
         return Ok(refuse(
             "SCHEMA_INVALID",
@@ -611,26 +819,34 @@ pub fn append_faulted(
             None,
         ));
     }
-    if let Err(refusal) = validate_request(request) {
-        return Ok(refusal);
-    }
-    if let Err(e) = integrity(ctx) {
-        return Ok(io_refusal(e));
-    }
-    // Every write needs an authenticated principal (E §8: freeze is P1,
-    // settle is P2). The server passes an empty principal when the request
-    // carried no verified identity; the shared `operator_local` fallback is
-    // never invented here.
-    if canonical_actor(ctx.principal).is_err()
-        || ctx.chain.iter().any(|c| canonical_actor(c).is_err())
-    {
+    let kind = request["kind"].as_str().unwrap_or("");
+    // 2. The four v2-only kinds: part B of WP-21 implements them. The checks
+    // every kind shares still apply first (STORE_INTEGRITY); the kind itself is
+    // then refused, never accepted unchecked.
+    if v2 && V2_ONLY_KINDS.contains(&kind) {
+        if let Err(e) = integrity(ctx) {
+            return Ok(store_refusal(e));
+        }
         return Ok(refuse(
-            "SCHEMA_INVALID",
-            "the request carries no verified principal (or chain member)",
+            "KIND_UNKNOWN",
+            "this kind is not implemented by this server version (WP-21 part B)",
             None,
         ));
     }
-    let kind = request["kind"].as_str().unwrap_or("");
+    // 3. SCHEMA_INVALID and its specific forms. The v1 schema is closed, so the
+    // marker is not part of what it validates.
+    if kind == "episode.frozen" {
+        if let Some(why) = derived_from_result(&request["payload"]) {
+            return Ok(refuse("REFERENCE_DERIVED_FROM_RESULT", &why, None));
+        }
+    }
+    let mut stripped = request.clone();
+    if let Some(map) = stripped.as_object_mut() {
+        map.remove("contract");
+    }
+    if let Err(refusal) = validate_request(&stripped) {
+        return Ok(refusal);
+    }
     let payload = &request["payload"];
     let key = request["idempotency_key"].as_str().unwrap_or("");
     // The payload's episode_ref must name the addressed case.
@@ -648,6 +864,23 @@ pub fn append_faulted(
             None,
         ));
     }
+    // 4. STORE_INTEGRITY: any read the following need fails.
+    if let Err(e) = integrity(ctx) {
+        return Ok(store_refusal(e));
+    }
+    // Every write needs an authenticated principal (E §8: freeze is P1,
+    // settle is P2). The server passes an empty principal when the request
+    // carried no verified identity; the shared `operator_local` fallback is
+    // never invented here.
+    if canonical_actor(ctx.principal).is_err()
+        || ctx.chain.iter().any(|c| canonical_actor(c).is_err())
+    {
+        return Ok(refuse(
+            "SCHEMA_INVALID",
+            "the request carries no verified principal (or chain member)",
+            None,
+        ));
+    }
     let Some(body_digest) = digest_of(&json!({"kind": kind, "payload": payload})) else {
         return Ok(refuse(
             "SCHEMA_INVALID",
@@ -656,7 +889,7 @@ pub fn append_faulted(
         ));
     };
 
-    // Idempotency first: a replay must return the original, not trip I-3.
+    // 5. Idempotency first: a replay must return the original, not trip I-3.
     let records = records(ctx);
     if let Some(done) = records.iter().find(|r| r["idempotency_key"] == key) {
         if done["body_digest"] == body_digest.as_str() {
@@ -697,6 +930,22 @@ pub fn append_faulted(
             ));
         }
     }
+    // 6. CASE_CLOSED, CASE_SUSPENDED (settlement is the one kind a closed
+    // case still accepts: late evidence, M3).
+    match (lifecycle(&records), kind) {
+        (Lifecycle::Closed, "episode.settled") => {}
+        (Lifecycle::Closed, _) => {
+            return Ok(refuse(
+                "CASE_CLOSED",
+                "the case has a close disposition; closed is final",
+                None,
+            ))
+        }
+        (Lifecycle::Suspended, _) => {
+            return Ok(refuse("CASE_SUSPENDED", "the case is suspended", None))
+        }
+        (Lifecycle::Open, _) => {}
+    }
 
     match kind {
         "episode.frozen" => freeze(ctx, payload, key, &body_digest, &records, &intents, fault),
@@ -707,6 +956,16 @@ pub fn append_faulted(
             None,
         )),
     }
+}
+
+/// A failed integrity read: `STORE_INTEGRITY` (v1 writers get the `SCHEMA_INVALID`
+/// fallback with the cause in the message, as before WP-21).
+fn store_refusal(error: String) -> Value {
+    refuse(
+        "STORE_INTEGRITY",
+        &format!("case record store failed: {error}"),
+        None,
+    )
 }
 
 fn next_record(ctx: &AppendContext, records: &[Value], mut record: Value) -> Result<Value, String> {
@@ -754,6 +1013,59 @@ fn freeze(
         Ok(parts) => parts,
         Err(refusal) => return Ok(refusal),
     };
+    // WORLD_NOT_PINNED: the frozen world is the world pinned in the WP-18 pin
+    // record (S1 finding F8), not a field of a case document.
+    let world_ref = payload["reference"]["body"]["world_ref"]
+        .as_str()
+        .unwrap_or("");
+    if let Some(pinned) = ctx.policy.pinned_world {
+        if pinned != world_ref {
+            return Ok(refuse(
+                "WORLD_NOT_PINNED",
+                "freeze names a world_ref that is not the pinned world",
+                None,
+            ));
+        }
+    }
+    // ANCHOR_PUBLISHER_INVALID at freeze, before anything is written so the
+    // idempotency key is not burned: the configured credential must publish
+    // as the case-keeper identity (NT-48).
+    if let (Some(keeper), Some(publisher)) = (ctx.policy.case_keeper, ctx.policy.anchor_publisher) {
+        if canonical_actor(keeper) != canonical_actor(publisher) {
+            return Ok(refuse(
+                "ANCHOR_PUBLISHER_INVALID",
+                "the configured anchor credential is not the case-keeper identity",
+                None,
+            ));
+        }
+    }
+    // KIND_IMMUTABLE (I-3, NT-13) precedes FREEZE_KEY_EXISTS: the episode kind
+    // of an existing freeze never changes (an exploratory episode relabelled
+    // evaluated would count as a test).
+    let kind_of_episode = payload["reference"]["body"]["kind"]
+        .as_str()
+        .unwrap_or("evaluated");
+    let existing_kind = records
+        .iter()
+        .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == key_json(&case, &item, n))
+        .map(|r| r["episode_kind"].clone())
+        .or_else(|| {
+            intents
+                .iter()
+                .find(|i| {
+                    i["state"] == "prepared"
+                        && i["idempotency_key"] != key
+                        && i["episode_key"] == key_json(&case, &item, n)
+                })
+                .map(|i| i["episode_kind"].clone())
+        });
+    if existing_kind.is_some_and(|k| k != kind_of_episode) {
+        return Ok(refuse(
+            "KIND_IMMUTABLE",
+            "the episode kind of an existing freeze cannot change",
+            Some("I-3"),
+        ));
+    }
     // I-3: one freeze per (case, item, n), whatever the digest, under a
     // different idempotency key. A prepared (uncommitted, not abandoned)
     // intent under another key also holds the key.
@@ -791,10 +1103,12 @@ fn freeze(
             Some("I-1"),
         ));
     }
+    // MODEL_ANCHOR_LATE at freeze, only when the case already holds a run
+    // event (README §6): the model anchor must precede it.
+    if let Err(why) = model_anchor_check(ctx, world_ref) {
+        return Ok(why);
+    }
     let episode_key = key_json(&case, &item, n);
-    let kind_of_episode = payload["reference"]["body"]["kind"]
-        .as_str()
-        .unwrap_or("evaluated");
 
     // Phase 1: prepare. Intent and the owed outbox entries are durable before
     // the case record exists.
@@ -940,6 +1254,127 @@ fn canonical_actor(raw: &str) -> Result<String, String> {
         .map(|t| t.to_lowercase())
 }
 
+fn parse_time(v: &Value) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    v.as_str()
+        .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+}
+
+/// The earliest run event of the case: any case event with a timestamp and any
+/// run record. `Err` when a line that must carry a timestamp cannot be read.
+fn first_run_event(
+    ctx: &AppendContext,
+) -> Result<Option<chrono::DateTime<chrono::FixedOffset>>, String> {
+    let dir = case_dir(ctx.root, ctx.case_id);
+    let mut first = None;
+    let mut consider = |t: chrono::DateTime<chrono::FixedOffset>| {
+        first = Some(first.map_or(t, |f: chrono::DateTime<chrono::FixedOffset>| f.min(t)));
+    };
+    for event in read_lines_strict(&dir.join("case-events.jsonl"))? {
+        if let Some(t) = parse_time(&event["timestamp"]) {
+            consider(t);
+        }
+    }
+    for run in read_lines_strict(&dir.join(RUNS))? {
+        consider(parse_time(&run["started_at"]).ok_or("a run record has no usable started_at")?);
+    }
+    Ok(first)
+}
+
+/// The published anchor of `kind` whose subject (model) or digest (freeze) matches.
+fn published_anchor(ctx: &AppendContext, kind: &str, subject_or_digest: &str) -> Option<Value> {
+    read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
+        .into_iter()
+        .find(|a| {
+            a["state"] == "published"
+                && a["kind"] == kind
+                && (a["subject_ref"] == subject_or_digest || a["digest"] == subject_or_digest)
+        })
+}
+
+/// NT-18: the `model` anchor of the episode's world must exist and its push
+/// time must precede the first run event. Only when anchoring is configured
+/// (a case keeper is named). An absent anchor is late by definition once a run exists. With no run event at all
+/// nothing can have preceded the anchor, so the check passes (the fixtures
+/// `anchor-publisher-invalid` and the freeze scenarios rely on this reading;
+/// reported as a contract ambiguity in the WP-21a evidence).
+fn model_anchor_check(ctx: &AppendContext, world_ref: &str) -> Result<(), Value> {
+    if ctx.policy.case_keeper.is_none() {
+        return Ok(());
+    }
+    let first = first_run_event(ctx).map_err(store_refusal)?;
+    if first.is_none() {
+        return Ok(());
+    }
+    let late = |why: &str| Err(refuse("MODEL_ANCHOR_LATE", why, None));
+    let Some(anchor) = published_anchor(ctx, "model", world_ref) else {
+        return late("the model anchor for the episode's world is absent");
+    };
+    let receipt = &anchor["receipt"];
+    let Some(pushed) = parse_time(&receipt["server_push_time"])
+        .or_else(|| parse_time(&receipt["local_push_time"]))
+    else {
+        return late("the model anchor has no usable push time");
+    };
+    match first {
+        Some(run) if pushed >= run => late("model anchored after the first run event"),
+        _ => Ok(()),
+    }
+}
+
+/// NT-48 at settlement: the pushed freeze tag was published by the case keeper.
+fn freeze_anchor_publisher(ctx: &AppendContext, digest: &str) -> Result<(), Value> {
+    let Some(keeper) = ctx.policy.case_keeper else {
+        return Ok(());
+    };
+    let invalid = |why: &str| Err(refuse("ANCHOR_PUBLISHER_INVALID", why, None));
+    let Some(anchor) = published_anchor(ctx, "freeze", digest) else {
+        return Ok(()); // an absent anchor is FREEZE_INCOMPLETE, decided earlier
+    };
+    match anchor["receipt"]["pusher_identity"]
+        .as_str()
+        .map(canonical_actor)
+    {
+        Some(Ok(pusher)) if canonical_actor(keeper).is_ok_and(|k| k == pusher) => Ok(()),
+        Some(_) => invalid("the freeze anchor was not published by the case keeper"),
+        None => invalid("the freeze anchor receipt names no publisher"),
+    }
+}
+
+const APPROVALS: &str = "field-approvals.jsonl";
+
+/// README §6 "Approvals": an `ApprovalRecord` bound to this record's canonical
+/// operation, of this case, `allow`, unexpired and not yet used. Returns its
+/// `approval_ref`. Fail closed: no store, no record, any mismatch is `None`.
+fn bound_approval(
+    ctx: &AppendContext,
+    operation: &str,
+    params: Value,
+    subject_ref: &str,
+) -> Option<String> {
+    let digest = digest_of(&json!({
+        "operation": operation, "subject_ref": subject_ref,
+        "case_id": ctx.case_id, "params": params,
+    }))?;
+    let lines = read_lines(&case_dir(ctx.root, ctx.case_id).join(APPROVALS));
+    let used: BTreeSet<String> = lines
+        .iter()
+        .filter_map(|l| l["consumed_by"].as_str().and(l["approval_ref"].as_str()))
+        .map(String::from)
+        .collect();
+    let now = chrono::Utc::now();
+    lines.iter().find_map(|a| {
+        let reference = a["approval_ref"].as_str()?;
+        let live = a["operation"] == operation
+            && a["operation_digest"] == digest.as_str()
+            && a["case_id"] == ctx.case_id
+            && a["outcome"] == "allow"
+            && a["used_by"].is_null()
+            && !used.contains(reference)
+            && parse_time(&a["expires_at"]).is_some_and(|t| t > now);
+        live.then(|| reference.to_string())
+    })
+}
+
 fn settle(
     ctx: &AppendContext,
     payload: &Value,
@@ -953,9 +1388,8 @@ fn settle(
     };
     let episode_key = key_json(&case, &item, n);
     // I-1: a settlement needs a COMPLETE freeze (both phases, the realitytrace
-    // records, and the anchor when an anchor publisher is configured), not
-    // merely a record.
-    match freeze_state(ctx, &item, n, ctx.anchor.is_some()) {
+    // records, and the anchor when anchoring is configured), not merely a record.
+    match freeze_state(ctx, &item, n, ctx.anchor_configured()) {
         FreezeStatus::Complete => {}
         FreezeStatus::Missing => {
             return refuse(
@@ -995,6 +1429,29 @@ fn settle(
             );
         }
     }
+    // NT-18 and NT-48 at settlement (anchoring configured).
+    let world_ref = freeze["payload"]["reference"]["body"]["world_ref"]
+        .as_str()
+        .unwrap_or("");
+    if let Err(refusal) = model_anchor_check(ctx, world_ref) {
+        return refusal;
+    }
+    if let Err(refusal) = freeze_anchor_publisher(ctx, freeze["digest"].as_str().unwrap_or("")) {
+        return refusal;
+    }
+    // One settlement per episode key. The same idempotency key replays before
+    // this point; a different key for a settled episode is SETTLEMENT_EXISTS
+    // (a v1 writer receives IDEMPOTENCY_CONFLICT with that prefix).
+    if records
+        .iter()
+        .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == episode_key)
+    {
+        return refuse(
+            "SETTLEMENT_EXISTS",
+            "the episode already has a settlement",
+            None,
+        );
+    }
     // Exploratory episodes settle only U or C.
     if freeze["episode_kind"] == "exploratory"
         && matches!(payload["result"].as_str(), Some("S") | Some("F"))
@@ -1002,19 +1459,6 @@ fn settle(
         return refuse(
             "EXPLORATORY_NOT_SETTLEABLE",
             "an exploratory episode cannot settle S or F",
-            None,
-        );
-    }
-    // One settlement per episode key. The same idempotency key replays before
-    // this point; a different key for a settled episode is a conflict (the
-    // contract enum has no dedicated code; IDEMPOTENCY_CONFLICT is the closest).
-    if records
-        .iter()
-        .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == episode_key)
-    {
-        return refuse(
-            "IDEMPOTENCY_CONFLICT",
-            "the episode is already settled under another idempotency key",
             None,
         );
     }
@@ -1029,19 +1473,43 @@ fn settle(
         .chain(std::iter::once(&ctx.principal.to_string()))
         .filter_map(|c| canonical_actor(c).ok())
         .any(|c| executors.contains(&c));
-    let decision =
-        match record_decision(ctx, key, body_digest, &episode_key, !contained, &executors) {
-            Ok(d) => d,
-            Err(e) => return io_refusal(e),
-        };
-    let _ = super::interaction_events::enqueue_decision(ctx, &decision);
     if contained {
+        match record_decision(ctx, key, body_digest, &episode_key, false, &executors) {
+            Ok(decision) => {
+                let _ = super::interaction_events::enqueue_decision(ctx, &decision);
+            }
+            Err(e) => return io_refusal(e),
+        }
         return refuse(
             "SELF_SETTLEMENT_REFUSED",
             "settling principal's chain contains the executor's identity",
             Some("I-2"),
         );
     }
+    // A human settlement needs an approval bound to this very record (README
+    // §6 "Approvals"; v1 writers are subject to it too).
+    let mut approval = None;
+    if ctx.policy.principal_human {
+        let episode_ref = payload["episode_ref"].as_str().unwrap_or("");
+        let params = json!({
+            "case_id": ctx.case_id, "episode_ref": episode_ref,
+            "result": payload["result"], "settlement_ref": payload["settlement_ref"],
+            "record_digest": digest_of(payload).unwrap_or_default(),
+        });
+        approval = bound_approval(ctx, "settle_episode_human", params, episode_ref);
+        if approval.is_none() {
+            return refuse(
+                "AUTHORITY_DENIED",
+                "a human settlement needs an approval bound to this record",
+                None,
+            );
+        }
+    }
+    let decision = match record_decision(ctx, key, body_digest, &episode_key, true, &executors) {
+        Ok(d) => d,
+        Err(e) => return io_refusal(e),
+    };
+    let _ = super::interaction_events::enqueue_decision(ctx, &decision);
     let record = json!({
         "kind": "episode.settled", "idempotency_key": key, "body_digest": body_digest,
         "episode_key": episode_key, "principal": ctx.principal, "chain": ctx.chain, "payload": payload,
@@ -1051,12 +1519,21 @@ fn settle(
     let mut record = record;
     record["response"] = response("episode.settled", &rec_id, &episode_key, false);
     match next_record(ctx, records, record) {
-        Ok(stored) => response(
-            "episode.settled",
-            stored["record_id"].as_str().unwrap_or(""),
-            &episode_key,
-            false,
-        ),
+        Ok(stored) => {
+            if let Some(reference) = approval {
+                // Single use: the approval is consumed by the record that used it.
+                let _ = append_line(
+                    &case_dir(ctx.root, ctx.case_id).join(APPROVALS),
+                    &json!({"approval_ref": reference, "consumed_by": stored["record_id"]}),
+                );
+            }
+            response(
+                "episode.settled",
+                stored["record_id"].as_str().unwrap_or(""),
+                &episode_key,
+                false,
+            )
+        }
         Err(e) => io_refusal(e),
     }
 }
@@ -1424,6 +1901,7 @@ fn with_store_ctx<T>(root: &Path, case_id: &str, f: impl FnOnce(&AppendContext) 
         chain: &[],
         rt: &index,
         anchor: None,
+        policy: &AppendPolicy::NONE,
     })
 }
 
@@ -1455,7 +1933,25 @@ pub fn recover_for(root: &Path, case_id: &str) -> Recovered {
     with_store_ctx(root, case_id, recover)
 }
 
+/// `<root>/fde-config.json`: the cell's anchoring configuration (WP-21). Absent
+/// means anchoring is not configured. Keys: `case_keeper_identity` (the service
+/// identity that publishes anchors) and `anchor_publisher_identity` (the
+/// identity the configured anchor credential publishes as, when it is not the
+/// case keeper). An unreadable or malformed file is an error, never "not
+/// configured".
+pub fn fde_config(root: &Path) -> Result<Value, String> {
+    let path = root.join("fde-config.json");
+    match fs::read_to_string(&path) {
+        Ok(text) => serde_json::from_str(&text)
+            .map_err(|e| format!("{} is not valid JSON: {e}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
+        Err(e) => Err(format!("read {}: {e}", path.display())),
+    }
+}
+
 /// The wire-level helper the SFWP verb uses: build the context from server state.
+/// `contract` is the request's dialect marker (or null), `pinned_world` the
+/// world pinned in the WP-18 pin record (`None`: no pin source configured).
 #[allow(clippy::too_many_arguments)]
 pub fn run_verb(
     root: &Path,
@@ -1466,16 +1962,31 @@ pub fn run_verb(
     payload: Value,
     idempotency_key: Value,
     chain: Vec<String>,
+    contract: Value,
+    pinned_world: Option<String>,
 ) -> Result<Value, sea_forge_core::errors::ForgeError> {
+    use sea_forge_core::errors::ForgeError;
     if !valid_case_segment(case_id) || !case_dir(root, case_id).join("case.json").exists() {
-        return Err(sea_forge_core::errors::ForgeError::Input(format!(
-            "unknown case {case_id}"
-        )));
+        return Err(ForgeError::Input(format!("unknown case {case_id}")));
     }
     let mut request = Map::new();
     request.insert("kind".into(), kind);
     request.insert("payload".into(), payload);
     request.insert("idempotency_key".into(), idempotency_key);
+    if !contract.is_null() {
+        request.insert("contract".into(), contract);
+    }
+    let config = fde_config(root).map_err(|e| ForgeError::Plan {
+        class: "store_integrity",
+        message: e,
+    })?;
+    let policy = AppendPolicy {
+        pinned_world: pinned_world.as_deref(),
+        case_keeper: config["case_keeper_identity"].as_str(),
+        anchor_publisher: config["anchor_publisher_identity"].as_str(),
+        // Derived from the authenticated role, never from the id's spelling.
+        principal_human: role == "operator",
+    };
     let index = FileIndex(root.to_path_buf());
     // Inside the case lock the configured publisher is only a marker that an
     // anchor is required; the push runs after the lock is released.
@@ -1495,8 +2006,9 @@ pub fn run_verb(
         chain: &chain,
         rt: &index,
         anchor: script.as_ref().map(|s| s as &dyn AnchorPublisher),
+        policy: &policy,
     };
-    let result = append(&ctx, &Value::Object(request));
+    let answer = append_answer(&ctx, &Value::Object(request));
     // Deliver whatever is owed (this write's events and any earlier backlog).
     // A failing emitter leaves the events in the outbox; it never changes the
     // case write's response.
@@ -1504,7 +2016,13 @@ pub fn run_verb(
         &ctx,
         &super::interaction_events::SpoolSink::new(root),
     );
-    Ok(result)
+    match answer.frame_class {
+        Some(class) => Err(ForgeError::Plan {
+            class,
+            message: answer.value["message"].as_str().unwrap_or("").to_string(),
+        }),
+        None => Ok(answer.value),
+    }
 }
 
 fn valid_case_segment(id: &str) -> bool {

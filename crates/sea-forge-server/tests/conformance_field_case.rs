@@ -83,6 +83,7 @@ fn ctx<'a>(
         chain,
         rt: idx,
         anchor: None,
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     }
 }
 
@@ -696,6 +697,7 @@ fn anchored_freeze(root: &Path, push_time: &str) -> (Value, String) {
         chain: &chain,
         rt: &idx,
         anchor: Some(&publisher),
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     };
     assert_eq!(append(&c, &request)["outcome"], "recorded");
     let item = request["payload"]["reference"]["body"]["plan_item_id"]
@@ -1020,6 +1022,7 @@ fn f1_with_an_anchor_configured_settlement_needs_the_published_anchor() {
         chain: &chain,
         rt: &idx,
         anchor: Some(&failing),
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     };
     assert_eq!(append(&c, &freeze)["outcome"], "recorded");
     let out = append(&c, &settle_request());
@@ -1031,6 +1034,7 @@ fn f1_with_an_anchor_configured_settlement_needs_the_published_anchor() {
     let ok = Published(json!({"server_push_time": "2026-11-12T09:00:00Z"}));
     let c2 = AppendContext {
         anchor: Some(&ok),
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
         ..c
     };
     assert_eq!(deliver_anchors(&c2, &ok), 1);
@@ -1260,6 +1264,7 @@ fn f5_what_the_script_prints_verifies_and_is_reported_local_time_only() {
         chain: &chain,
         rt: &idx,
         anchor: Some(&publisher),
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     };
     assert_eq!(append(&c, &request)["outcome"], "recorded");
     let item = "item-03";

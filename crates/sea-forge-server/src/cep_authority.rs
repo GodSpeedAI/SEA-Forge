@@ -328,6 +328,23 @@ pub fn pin(config: &ServerConfig, root: &Path) -> Value {
     })
 }
 
+/// The world currently pinned to the cell, for the freeze check (WP-21,
+/// `WORLD_NOT_PINNED`). `None`: the CEP authority loop is not enabled, so no pin
+/// source exists and the check is not made. When it is enabled and the pin
+/// cannot be read the answer is a value no world reference equals, so a freeze
+/// fails closed rather than passing unchecked.
+pub fn pinned_world(config: &ServerConfig, root: &Path) -> Option<String> {
+    if !config.cep_authority.enabled {
+        return None;
+    }
+    let state = pin(config, root);
+    Some(
+        state["current"]
+            .as_str()
+            .map_or_else(|| "pin-unavailable".to_string(), String::from),
+    )
+}
+
 /// Resolve an escalation as the verified `resolver` (`authority_approval` verb).
 pub fn resolve(
     config: &ServerConfig,

@@ -63,6 +63,7 @@ fn run(root: &Path, principal: &str, request: &Value) -> Value {
         chain: &chain,
         rt: &idx,
         anchor: None,
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     };
     append(&ctx, request)
 }
@@ -78,6 +79,7 @@ fn with_ctx<T>(root: &Path, f: impl FnOnce(&AppendContext) -> T) -> T {
         chain: &chain,
         rt: &idx,
         anchor: None,
+        policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
     })
 }
 

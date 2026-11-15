@@ -301,6 +301,7 @@ fn write(root: &Path, principal: &str, request: &Value) -> Value {
             chain: &chain,
             rt: &idx,
             anchor: None,
+            policy: &sea_forge_server::sfwp::case_records::AppendPolicy::NONE,
         },
         request,
     )

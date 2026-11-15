@@ -40,9 +40,25 @@ const ZERO: &str = "000000000000000000000000000000000000000000000000000000000000
 /// Reasons a pending scenario may still carry in the final commit.
 const FINAL_REASONS: &[&str] = &["part-B", "wp-31"];
 
-/// Scenarios the server already satisfied before WP-21 part A (an acceptance the
-/// gate must keep: they stay green as the gate lands).
+/// Scenarios the server satisfies (it grows as the steps of WP-21 part A land;
+/// an acceptance listed here stays green as the gate lands).
 const PASSES_TODAY: &[&str] = &[
+    "case-record-append-v2/anchor-publisher-invalid",
+    "case-record-append-v2/anchor-publisher-invalid-at-freeze-does-not-burn-the-key",
+    "case-record-append-v2/case-suspended-refuses-settlement",
+    "case-record-append-v2/case-closed-refuses-freeze",
+    "case-record-append-v2/authority-denied-human-settles-v1-writer",
+    "case-record-append-v2/authority-denied-human-settles-without-approval",
+    "case-record-append-v2/payload-too-large",
+    "case-record-append-v2/store-integrity",
+    "case-record-append-v2/case-suspended-refuses-freeze",
+    "case-record-append-v2/model-anchor-late",
+    "case-record-append-v2/reference-derived-from-result",
+    "case-record-append-v2/kind-immutable-relabel-after-run",
+    "case-record-append-v2/settlement-exists-v1-writer-fallback",
+    "case-record-append-v2/settlement-exists",
+    "case-record-append-v2/world-not-pinned-v1-writer-fallback",
+    "case-record-append-v2/world-not-pinned",
     "case-record-append-v2/freeze-incomplete-realitytrace-plan-absent",
     "case-record-append-v2/freeze-missing-settle",
     "case-record-append-v2/kind-immutable-v1-writer-fallback",
@@ -114,7 +130,18 @@ fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static s
 }
 
 /// Per-scenario temporary reasons beyond the family default (none yet).
-const STEP_PENDING: &[(&str, &str, &str)] = &[];
+const STEP_PENDING: &[(&str, &str, &str)] = &[
+    (
+        "case-record-append-v2",
+        "sibling-verifier-self-asserts-fresh-context",
+        "step4",
+    ),
+    (
+        "case-record-append-v2",
+        "sibling-verifier-without-derivable-context-cannot-settle-s",
+        "step4",
+    ),
+];
 
 // ---------------------------------------------------------------------------
 // Loading
@@ -172,7 +199,64 @@ fn role_wire(role: &ActorRole) -> String {
     sea_forge_server::identity::role_wire_name(role)
 }
 
-fn config(root: &Path, actors: &[Actor], case_keeper: Option<&str>) -> ServerConfig {
+const WORLD_SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
+const PIN_POLICY: &str = "version: \"0.1\"\nrules: []\n";
+
+/// A cell with the CEP authority loop enabled and `pinned` recorded in its
+/// world pin record (the WP-18 source `WORLD_NOT_PINNED` reads).
+fn enable_pin(root: &Path, pinned: &str) -> sea_forge_server::config::CepAuthorityConfig {
+    use sea_forge_server::config::{CepAuthorityConfig, CepWorldConfig};
+    fs::create_dir_all(root.join("worlds")).unwrap();
+    fs::write(root.join("worlds/demo.sea"), WORLD_SRC).unwrap();
+    fs::write(root.join("sea-forge-policy.yaml"), PIN_POLICY).unwrap();
+    let ledger = sea_forge_ledger::LedgerStream::open(
+        root,
+        sea_forge_authority::cep::LEDGER_ID,
+        "sea-forge-cep-authority",
+    )
+    .unwrap();
+    let record = sea_forge_authority::cep::PinRecord {
+        pin_id: "pin-seed".into(),
+        kind: "promoted".into(),
+        from_world_ref: "world:demo@sha256:00".into(),
+        to_world_ref: pinned.into(),
+        bound_digest: "sha256:00".into(),
+        proposal_id: None,
+        matrix_id: None,
+        proposer: "seed".into(),
+        requester: "seed".into(),
+        approver: "seed".into(),
+        approval_id: "approval-seed".into(),
+        operation_id: "op-seed".into(),
+        transition_ref: "entry-seed".into(),
+        supersedes_pin: None,
+    };
+    ledger
+        .commit_typed(
+            sea_forge_authority::cep::PIN_KIND,
+            vec!["world-pin".into(), pinned.into()],
+            &record,
+            vec![],
+        )
+        .unwrap();
+    CepAuthorityConfig {
+        enabled: true,
+        pinned_baseline: Some("demo".into()),
+        policy: "sea-forge-policy.yaml".into(),
+        worlds: vec![CepWorldConfig {
+            name: "demo".into(),
+            base: "worlds".into(),
+            entry: "demo.sea".into(),
+            files: vec!["demo.sea".into()],
+            prior_identities: Vec::new(),
+        }],
+        approval_ttl_hours: 24,
+        realitytrace: None,
+        settlement: Default::default(),
+    }
+}
+
+fn config(root: &Path, actors: &[Actor]) -> ServerConfig {
     let socket = std::env::temp_dir().join(format!(
         "sf-fde-{}-{}.sock",
         std::process::id(),
@@ -189,15 +273,6 @@ fn config(root: &Path, actors: &[Actor], case_keeper: Option<&str>) -> ServerCon
                 roles: vec![a.role.clone()],
             });
     }
-    // The case keeper's identity and whether an anchor is required are read
-    // from `<root>/fde-config.json` (see `sfwp::fde_config`).
-    if let Some(keeper) = case_keeper {
-        fs::write(
-            root.join("fde-config.json"),
-            json!({"case_keeper_identity": keeper}).to_string(),
-        )
-        .unwrap();
-    }
     ServerConfig {
         socket_path: socket,
         root: root.to_path_buf(),
@@ -205,6 +280,21 @@ fn config(root: &Path, actors: &[Actor], case_keeper: Option<&str>) -> ServerCon
             bindings: bindings.into_values().collect(),
         },
         ..ServerConfig::default()
+    }
+}
+
+/// Anchoring configured for the cell: the case keeper, and optionally the
+/// identity the configured anchor credential publishes as.
+fn write_fde_config(root: &Path, keeper: Option<&str>, publisher: Option<&str>) {
+    let mut cfg = json!({});
+    if let Some(k) = keeper {
+        cfg["case_keeper_identity"] = json!(k);
+    }
+    if let Some(p) = publisher {
+        cfg["anchor_publisher_identity"] = json!(p);
+    }
+    if keeper.is_some() {
+        fs::write(root.join("fde-config.json"), cfg.to_string()).unwrap();
     }
 }
 
@@ -436,6 +526,28 @@ async fn run_append(s: &Value) -> Result<(), String> {
     // Digest the seeded freezes carry: the one the request cites, else a fixed one.
     let cited = payload["episode_ref"].as_str().map(|r| parse_ref(r).3);
     let mut runs: Vec<Value> = Vec::new();
+    // A run record names an episode that ran, which I-1 allows only after its
+    // freeze: a scenario that lists runs without the freeze means that freeze.
+    if !ledger.iter().any(|l| l["kind"] == "episode.frozen") {
+        if let Some(run) = ledger
+            .iter()
+            .find(|l| l["kind"].as_str().is_some_and(|k| k.starts_with("run.")))
+        {
+            let world = ledger
+                .iter()
+                .find(|l| l["anchor_kind"] == "model")
+                .and_then(|l| l["subject_ref"].as_str())
+                .unwrap_or("");
+            let digest = cited.clone().unwrap_or_else(|| "ab".repeat(32));
+            seed.freeze(
+                &run["episode_key"],
+                "evaluated",
+                world,
+                "case-keeper/rec-implied",
+                &digest,
+            );
+        }
+    }
     for entry in &ledger {
         match entry["kind"].as_str().unwrap() {
             "episode.frozen" => {
@@ -563,7 +675,16 @@ async fn run_append(s: &Value) -> Result<(), String> {
         id: principal.clone(),
         role: role_for(&principal),
     }];
-    let cfg = config(root.path(), &actors, keeper);
+    let cfg = config(root.path(), &actors);
+    let mut cfg = cfg;
+    write_fde_config(
+        root.path(),
+        keeper,
+        s["anchor_config"]["publisher"].as_str(),
+    );
+    if let Some(pin) = ledger.iter().find(|l| l["kind"] == "case.world_pinned") {
+        cfg.cep_authority = enable_pin(root.path(), pin["world_ref"].as_str().unwrap());
+    }
     let mut cell = authenticated::Cell::start(cfg).await;
     let mut wire = json!({
         "verb": "case_record_append", "case_id": CASE,
@@ -702,7 +823,8 @@ async fn run_gate(s: &Value) -> Result<(), String> {
         role: ActorRole::Operator,
     }];
     let keeper = (state["anchor"] != "not_configured").then_some(KEEPER);
-    let cfg = config(root.path(), &actors, keeper);
+    let cfg = config(root.path(), &actors);
+    write_fde_config(root.path(), keeper, None);
     let mut cell = authenticated::Cell::start(cfg).await;
     let got = cell
         .call_for(
@@ -760,7 +882,7 @@ async fn run_link(s: &Value) -> Result<(), String> {
         id: principal.clone(),
         role: role_for(&principal),
     }];
-    let cfg = config(root.path(), &actors, None);
+    let cfg = config(root.path(), &actors);
     let mut cell = authenticated::Cell::start(cfg).await;
     let wire = json!({
         "verb": "case_record_append", "case_id": CASE, "contract": "fde.case-record-append@2",
@@ -839,6 +961,11 @@ async fn every_scenario_is_driven_and_matches_or_is_listed_pending() {
     let mut by_reason: BTreeMap<&str, usize> = BTreeMap::new();
     for (_, r) in &pending {
         *by_reason.entry(r).or_default() += 1;
+    }
+    if std::env::var_os("FDE_LIST").is_some() {
+        for (id, r) in &pending {
+            println!("PENDING {r}: {id}");
+        }
     }
     println!(
         "FDE scenarios: total {total}, passing {}, pending {} {by_reason:?}",

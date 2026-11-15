@@ -1225,6 +1225,10 @@ pub enum Request {
         payload: serde_json::Value,
         #[serde(default)]
         idempotency_key: serde_json::Value,
+        /// The response-dialect marker (`fde.case-record-append@2`); absent
+        /// for a v1 writer. It selects the dialect only (README §6).
+        #[serde(default)]
+        contract: serde_json::Value,
         #[serde(default)]
         request_id: Option<String>,
     },
@@ -1967,9 +1971,22 @@ where
         // Hitting the cap with no terminator means the line was oversized:
         // reject it and close rather than parsing a truncated request.
         if n as u64 == MAX_REQUEST_BYTES && !line.ends_with('\n') {
-            let resp = serde_json::json!({
-                "error": format!("request line exceeds {MAX_REQUEST_BYTES} bytes")
-            });
+            // A v2 `case.record.append` is owed the contract's refusal
+            // (`PAYLOAD_TOO_LARGE`, README §6); every other oversized line, and a
+            // v1 writer, gets the SFWP error frame.
+            let v2_append = line.contains("\"case_record_append\"")
+                && line.contains(sfwp::case_records::V2_MARKER);
+            let resp = if v2_append {
+                serde_json::json!({
+                    "outcome": "refused", "code": "PAYLOAD_TOO_LARGE",
+                    "message": format!("request exceeds {MAX_REQUEST_BYTES} bytes"),
+                })
+            } else {
+                serde_json::json!({
+                    "error": format!("request line exceeds {MAX_REQUEST_BYTES} bytes"),
+                    "error_class": "input_error",
+                })
+            };
             let _ = tx.send(format!("{resp}\n")).await;
             break Ok(());
         }
@@ -3721,6 +3738,7 @@ pub async fn handle_request_as(
             kind,
             payload,
             idempotency_key,
+            contract,
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.record.append");
@@ -3743,7 +3761,11 @@ pub async fn handle_request_as(
                 let case_lock = state.acquire_case_lock(&case_id).await;
                 let root = state.root.clone();
                 let case = case_id.clone();
+                let config = state.config();
                 let result = tokio::task::spawn_blocking(move || {
+                    // The world pin (WP-18) is read inside the case lock, so the
+                    // freeze check and the write see one pin.
+                    let pinned = cep_authority::pinned_world(&config, &root);
                     sfwp::case_records::run_verb(
                         &root,
                         &case,
@@ -3753,6 +3775,8 @@ pub async fn handle_request_as(
                         payload,
                         idempotency_key,
                         chain,
+                        contract,
+                        pinned,
                     )
                 })
                 .await;
