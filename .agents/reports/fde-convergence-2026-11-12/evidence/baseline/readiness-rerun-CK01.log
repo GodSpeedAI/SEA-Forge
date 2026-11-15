@@ -1,0 +1,20 @@
+2026-11-13T07:27:50Z
+  cep                5111ec3 feat(profiles): godspeed.context_bundle, partial retrieval is never complete (#3)
+  cognate-workbench  74601f3 test(live): require the lockstep DomainForge CLI for the live SEA-Forge tests (#31
+  cognate            bcef663 chore(main): release main (#72)
+  context-kernel     36bd8c8 Merge pull request #11 from GodSpeedAI/fix/crates-content-compare
+  domainforge        f90905a chore(agents): log dead doc pointer in the to_graph API documentation
+  gauntlet           1543cbf fix(state-postgres): drop test namespaces on every exit path (#6)
+  horizon            822e349 Merge pull request #28: Horizon desk v2, merged with origin/main
+  realitytrace       4d154b1 feat(packaging): precompiled native binaries for Linux, macOS, and Windows (#12)
+  sea-forge          595b5270 chore(main): release 0.4.1 (#90)
+  swe-seed           232e02d fix(federation): hash bundle integers exactly as Context Kernel does (#12)
+PASS         CK01   [e2e] SWE_SEED acquires a cited context packet from a real Context Kernel binary, and reports Context Kernel unavailability explicitly, never by fabrication
+
+## Local single operator (Linux / WSL2, loopback only, internal use)	NO-GO — 20/30 gates passed at pinned clean revisions. License: permitted (SEA-Forge Sustainable Use License, internal business use)
+## Self-hosted internal team (several humans, one organization)	WITHHELD — license: permitted for internal use only
+## Hosted, managed or embedded for third parties	NOT SUPPORTED — license: NOT permitted without a SEA-Forge commercial license (LICENSE:48-66)
+## Performance benchmarks	## Pinned revisions
+report: /home/sprime01/projects/godspeed-readiness/evidence/REPORT.md
+exit=1
+2026-11-13T07:28:26Z

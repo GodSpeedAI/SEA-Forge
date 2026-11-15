@@ -1,0 +1,35 @@
+world  world:demo@sha256:6e00ae2db94536199d5820214948cae292b47aa97ba6a90b003365d07732ec96
+model  eb39df6d555747c994496eb4f2c3c136e3f07a8f25799a5635e098f4975911fa
+
+== hop 1  GodSpeed-Agent emits E1 WorkRequested
+.                                                                        [100%]
+1 passed, 2 deselected in 0.06s
+
+== hop 0  Context Kernel retrieves and emits E3 (+ CEP context_bundle)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+== hop 2  SWE_SEED builds E4 GovernedWorkRequest
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.01s
+
+== hop 3  SEA-Forge: verified intake, decision, E5A/E5B, E6 settlement
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+== hop 4  SWE_SEED adjudicates E6 and emits E7 ProofCompleted
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+== hop 5  RealityTrace ingests E7 and emits E8 EvidenceRecorded
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+== hop 6  GodSpeed-Agent ingests E8, bound to the same world
+..                                                                       [100%]
+2 passed, 1 deselected in 0.03s
+
+== cep  the context bundle satisfies godspeed.context_bundle
+valid
+
+== refusals
+refused: E4 in another world than its context packet  [the real E4 passes the verified intake: World { reason: "context packet: expected world:demo@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddd]
+refused: a world SEA-Forge never registered  [the real E4 passes the verified intake: World { reason: "unknown world: world:demo@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd]
+refused: a denied request authorises no invocation and settles nothing
+
+e2e-world-loop: OK. One world (world:demo@sha256:6e00ae2db94536199d5820214948cae292b47aa97ba6a90b003365d07732ec96) from E1 to the evidence the agent records.

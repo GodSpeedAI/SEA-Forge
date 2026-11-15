@@ -27,7 +27,9 @@
 //! isolation, and neither is the enforcement table.
 
 use crate::{ExecutionSandbox, RelPath, SandboxClass, SandboxError, SandboxHandle, SandboxSpec};
-use sea_forge_core::types::{ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus};
+use sea_forge_core::types::{
+    ArtifactRef, ExecutionRequest, ExecutionResult, ExecutionStatus, LifecycleContainment,
+};
 use sea_forge_core::workload_image::WorkloadImage;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -1240,12 +1242,22 @@ impl ExecutionSandbox for OpenShellSandbox {
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
 
-        let result = |status, exit_code| {
-            crate::local::execution_result(status, exit_code, started_at.clone())
+        // C1: the workload's process tree lives inside the OpenShell-managed
+        // sandbox — this process neither performs nor verifies per-run
+        // process-tree teardown, so `ExternalSandbox` is the truthful claim.
+        // A failed spawn ran nothing at all.
+        let result = |status, exit_code, containment| {
+            crate::local::execution_result(status, exit_code, started_at.clone(), containment)
         };
         let mut child = match command.spawn() {
             Ok(child) => child,
-            Err(_) => return Ok(result(ExecutionStatus::SpawnFailed, None)),
+            Err(_) => {
+                return Ok(result(
+                    ExecutionStatus::SpawnFailed,
+                    None,
+                    LifecycleContainment::NoProcess,
+                ))
+            }
         };
         // OpenShell enforces the timeout in the sandbox; the grace period only
         // covers a CLI that stops responding.
@@ -1256,11 +1268,19 @@ impl ExecutionSandbox for OpenShellSandbox {
         let Some(status) = status else {
             let _ = child.kill();
             let _ = child.wait();
-            return Ok(result(ExecutionStatus::TimedOut, None));
+            return Ok(result(
+                ExecutionStatus::TimedOut,
+                None,
+                LifecycleContainment::ExternalSandbox,
+            ));
         };
         let code = status.code().map(i64::from);
         if code == Some(EXIT_TIMED_OUT) {
-            return Ok(result(ExecutionStatus::TimedOut, None));
+            return Ok(result(
+                ExecutionStatus::TimedOut,
+                None,
+                LifecycleContainment::ExternalSandbox,
+            ));
         }
 
         let denials = self.denials(h)?;
@@ -1270,9 +1290,17 @@ impl ExecutionSandbox for OpenShellSandbox {
         )
         .map_err(|e| err("io_error", e.to_string()))?;
         if code != Some(0) && !denials.is_empty() {
-            return Ok(result(ExecutionStatus::SandboxViolation, code));
+            return Ok(result(
+                ExecutionStatus::SandboxViolation,
+                code,
+                LifecycleContainment::ExternalSandbox,
+            ));
         }
-        Ok(result(ExecutionStatus::Completed, code))
+        Ok(result(
+            ExecutionStatus::Completed,
+            code,
+            LifecycleContainment::ExternalSandbox,
+        ))
     }
 
     fn collect_artifacts(

@@ -15,8 +15,8 @@
 #![cfg(target_os = "linux")]
 
 use sea_forge_sandbox::workload::{
-    grant_exclusive_access, isolated_command, processes_of, Lifeline, WorkloadConfinement,
-    WorkloadIdentity, WorkloadIdentityPool,
+    grant_exclusive_access, isolated_command, processes_of, wait_for_isolation_ack, IsolationAck,
+    Lifeline, WorkloadConfinement, WorkloadIdentity, WorkloadIdentityPool, ISOLATION_ACK_TIMEOUT,
 };
 use sea_forge_sandbox::NetworkPosture;
 use std::fs;
@@ -66,8 +66,8 @@ fn command(
     identity: &WorkloadIdentity,
     confinement: &WorkloadConfinement,
     script: &str,
-) -> (Command, Lifeline) {
-    let (mut command, lifeline) = isolated_command(
+) -> (Command, Lifeline, IsolationAck) {
+    let (mut command, lifeline, ack) = isolated_command(
         identity,
         Path::new(HELPER),
         confinement,
@@ -79,7 +79,7 @@ fn command(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    (command, lifeline)
+    (command, lifeline, ack)
 }
 
 fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
@@ -112,8 +112,12 @@ fn probe_reads(
             o = out.display()
         ));
     }
-    let (mut probe, _lifeline) = command(identity, confinement, &script);
+    let (mut probe, _lifeline, mut ack) = command(identity, confinement, &script);
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
     let status = probe.status().unwrap();
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     assert!(status.success());
     fs::read_to_string(&out)
         .unwrap()
@@ -228,7 +232,7 @@ fn launcher_fixture_child() {
     let dirs = confinement(&dir, &identity, Vec::new());
     let ready = dirs.workspace_root.join("ready");
     let script = format!("echo ready > '{}'; exec sleep 600", ready.display());
-    let (production, lifeline) = command(&identity, &dirs, &script);
+    let (production, lifeline, mut ack) = command(&identity, &dirs, &script);
     let mut launch = if std::env::var_os(MUTATION).is_some() {
         // Mutation control: the same launch without the lifeline.
         let args: Vec<_> = production.get_args().collect();
@@ -245,11 +249,57 @@ fn launcher_fixture_child() {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
+        // `production`'s pre_exec (which re-admits the close-on-exec ack end
+        // in the forked child) does not carry over to a rebuilt command, so
+        // the same re-admission is repeated here for the `--ack-fd` it names.
+        let ack_at = args
+            .iter()
+            .position(|a| *a == "--ack-fd")
+            .expect("launch shape changed");
+        let ack_fd: i32 = args[ack_at + 1]
+            .to_str()
+            .and_then(|fd| fd.parse().ok())
+            .expect("ack fd argument");
+        readmit_across_exec(&mut weakened, ack_fd);
         weakened
     } else {
         production
     };
+    // The launch chain's stderr (`unshare` and the helper's `fail()` reason)
+    // goes to a file the failure message below reads back; the inherited
+    // descriptor needs no access for the subordinate identity.
+    let stderr_path = std::env::temp_dir().join(format!(
+        "launcher-fixture-stderr-{}.log",
+        std::process::id()
+    ));
+    launch.stderr(Stdio::from(fs::File::create(&stderr_path).unwrap()));
     let mut child = launch.spawn().unwrap();
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
+    // A failure prints the helper's captured stderr (its only voice — the
+    // launch itself runs with null stdio).
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT).unwrap_or_else(|error| {
+        // The chain closed the pipe without a byte: collect how it ended (a
+        // signal here names a kill that leaves no stderr), bounded.
+        let ended = wait_until_exit(&mut child);
+        let launcher_fds: Vec<String> = fs::read_dir("/proc/self/fd")
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|entry| {
+                let target = fs::read_link(entry.path())
+                    .map(|t| t.display().to_string())
+                    .unwrap_or_default();
+                format!("{}->{target}", entry.file_name().to_string_lossy())
+            })
+            .collect();
+        let captured = fs::read_to_string(&stderr_path).unwrap_or_default();
+        panic!(
+            "isolated launch acknowledged its setup: {error}; launch chain ended: {ended}; \
+             helper stderr: {captured:?}; launcher fds: {}",
+            launcher_fds.join(" ")
+        );
+    });
     wait_until("workload ready", || ready.exists());
     fs::write(
         dir.join("identity"),
@@ -260,6 +310,41 @@ fn launcher_fixture_child() {
     // Killed here by the test; the wait only runs if nobody does.
     std::thread::sleep(Duration::from_secs(600));
     let _ = child.wait();
+}
+
+/// How a launch chain ended, waiting at most 5 s: its exit code or signal.
+fn wait_until_exit(child: &mut Child) -> String {
+    use std::os::unix::process::ExitStatusExt;
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                return format!("code {:?}, signal {:?}", status.code(), status.signal())
+            }
+            Ok(None) if start.elapsed() < Duration::from_secs(5) => {
+                std::thread::sleep(Duration::from_millis(50))
+            }
+            Ok(None) => return "still running after 5s".into(),
+            Err(error) => return format!("wait failed: {error}"),
+        }
+    }
+}
+
+/// Clear close-on-exec on `fd` in the forked child of `command`.
+#[allow(unsafe_code)]
+fn readmit_across_exec(command: &mut Command, fd: i32) {
+    use std::os::unix::process::CommandExt;
+    // SAFETY: the closure runs between fork and exec and only issues one
+    // fcntl on a descriptor the launcher still owns (the ack write end).
+    unsafe {
+        command.pre_exec(move || {
+            rustix::io::fcntl_setfd(
+                rustix::fd::BorrowedFd::borrow_raw(fd),
+                rustix::io::FdFlags::empty(),
+            )
+            .map_err(std::io::Error::other)
+        });
+    }
 }
 
 /// A traversable directory for one launch: a reissued slot must not meet
@@ -366,8 +451,12 @@ fn probe_connects(
             o = out.display()
         ));
     }
-    let (mut probe, _lifeline) = command(identity, confinement, &script);
+    let (mut probe, _lifeline, mut ack) = command(identity, confinement, &script);
+    // Review pass 2 (R4): consume the trusted setup acknowledgement; the
+    // helper fails its launch when its launcher never reads the ack byte.
     assert!(probe.status().unwrap().success());
+    wait_for_isolation_ack(&mut ack, ISOLATION_ACK_TIMEOUT)
+        .expect("isolated launch acknowledged its setup");
     fs::read_to_string(&out)
         .unwrap()
         .lines()

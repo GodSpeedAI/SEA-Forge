@@ -1,0 +1,31 @@
+2026-11-13T17:17:04Z
+  cep                5111ec3 feat(profiles): godspeed.context_bundle, partial retrieval is never complete (#3)
+  cognate-workbench  74601f3 test(live): require the lockstep DomainForge CLI for the live SEA-Forge tests (#31
+  cognate            7356512 build(domainforge): move the binding to 0.21.2 (stack lockstep) (#77)
+  context-kernel     36bd8c8 Merge pull request #11 from GodSpeedAI/fix/crates-content-compare
+  domainforge        f90905a chore(agents): log dead doc pointer in the to_graph API documentation
+  gauntlet           1543cbf fix(state-postgres): drop test namespaces on every exit path (#6)
+  horizon            822e349 Merge pull request #28: Horizon desk v2, merged with origin/main
+  realitytrace       90eff85 fix(ingest): accept the "json" --stdin-format spelling Cognate's outbox sends (#14
+post-checkout: dependency/toolchain files changed since your last HEAD.
+
+  next move: just sync    # re-pins the Rust toolchain and refetches deps
+
+This hook never runs sync for you; review the diff and converge explicitly.
+  sea-forge          0439abb0 build(domainforge): move the producer pin to 0.21.2 (stack lockstep) (#94)
+  swe-seed           232e02d fix(federation): hash bundle integers exactly as Context Kernel does (#12)
+FAIL         C01    [contract] Every product pins the same DomainForge producer version (world identity agreement)
+FAIL         SW01   [e2e] An agent's governed work is settled by SEA-Forge on RealityTrace's evidence, never on Workbench's word
+FAIL         SW02   [e2e] The proof an agent's work is settled on comes from a SWE_SEED contract frozen by digest, not a typed command
+PASS         L01    [live_integration] Cognate governs a consequential action through a live SEA-Forge server and settles via RealityTrace
+PASS         U02d   [contract] SEA-Forge admits a compiler upgrade only when every meaning-bearing field is unchanged, and records both producer versions
+PASS         U01    [e2e] The Workbench UI stays usable under SEA-Forge governance (Playwright, live)
+PASS         BM-STACK [performance] Does the full governed stack fit the declared host with headroom? (docs/benchmarks.md, BM-STACK)
+
+## Local single operator (Linux / WSL2, loopback only, internal use)	NO-GO — 13/30 gates passed at pinned clean revisions. License: permitted (SEA-Forge Sustainable Use License, internal business use)
+## Self-hosted internal team (several humans, one organization)	WITHHELD — license: permitted for internal use only
+## Hosted, managed or embedded for third parties	NOT SUPPORTED — license: NOT permitted without a SEA-Forge commercial license (LICENSE:48-66)
+## Performance benchmarks	## Pinned revisions
+report: /home/sprime01/projects/godspeed-readiness/evidence/REPORT.md
+exit=1
+2026-11-13T17:25:19Z

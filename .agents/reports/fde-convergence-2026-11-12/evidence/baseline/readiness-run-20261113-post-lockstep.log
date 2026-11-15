@@ -1,0 +1,51 @@
+  cep                5111ec3 feat(profiles): godspeed.context_bundle, partial retrieval is never complete (#3)
+  cognate-workbench  d1a7885 fix(deps): move Cognate packages to 0.9.1 (DomainForge 0.21.2 lockstep) (#32)
+  cognate            8c87a1c fix(realitytrace): pin the RealityTrace CLI to 0.4.0 (DomainForge 0.21.2 lockstep)
+  context-kernel     36bd8c8 Merge pull request #11 from GodSpeedAI/fix/crates-content-compare
+  domainforge        f90905a chore(agents): log dead doc pointer in the to_graph API documentation
+  gauntlet           1543cbf fix(state-postgres): drop test namespaces on every exit path (#6)
+  horizon            d9b5869 fix(deps): move Cognate packages to 0.9.1 (DomainForge 0.21.2 lockstep) (#30)
+  realitytrace       5e3a5ea chore: release main (#4)
+post-checkout: dependency/toolchain files changed since your last HEAD.
+
+  next move: just sync    # re-pins the Rust toolchain and refetches deps
+
+This hook never runs sync for you; review the diff and converge explicitly.
+  sea-forge          0439abb0 build(domainforge): move the producer pin to 0.21.2 (stack lockstep) (#94)
+  swe-seed           232e02d fix(federation): hash bundle integers exactly as Context Kernel does (#12)
+PASS         C01    [contract] Every product pins the same DomainForge producer version (world identity agreement)
+PASS         CK01   [e2e] SWE_SEED acquires a cited context packet from a real Context Kernel binary, and reports Context Kernel unavailability explicitly, never by fabrication
+PASS         CK02   [contract] SWE_SEED refuses a tampered, falsely complete, or partial Context Kernel bundle, at the contract boundary (fixtures, no live Context Kernel)
+PASS         G01    [e2e] A Gauntlet run killed mid-execution resumes to exactly one run, with the irreversible unit dispatched once (real binary, SIGKILL)
+PASS         J02    [e2e] Horizon's consequential operation is authorized by SEA-Forge, committed once, observed by RealityTrace and settled by SEA-Forge
+PASS         J02R2  [e2e] Horizon's bound operation is paid for, preregistered, authorized, verified independently and settled by SEA-Forge (HORIZON-001 1.1.0)
+PASS         L01    [live_integration] Cognate governs a consequential action through a live SEA-Forge server and settles via RealityTrace
+PASS         O01    [e2e] Every product's documented install succeeds on a clean machine at the pinned commit
+PASS         O02    [recovery] A settled RealityTrace run survives cold backup, total loss and restore
+PASS         O03    [recovery] Cognate Workbench durable state survives backup, total loss and restore
+PASS         O04    [recovery] A SEA-Forge cell survives the shipped backup and restore scripts
+PASS         R01    [recovery] A crash mid-effect in Workbench's default posture does not repeat the external effect
+PASS         R02    [live_integration] RealityTrace never settles a missing or contradicting observation (supporting control settles)
+PASS         S01    [security] Workbench refuses a foreign Host/Origin (DNS rebinding cannot exfiltrate the operator session)
+PASS         S02    [security] A contained agent command cannot reach RealityTrace or SEA-Forge on the host
+PASS         S03    [security] SWE_SEED artifact_consistency detects an artifact mutated after its proof
+PASS         SW01   [e2e] An agent's governed work is settled by SEA-Forge on RealityTrace's evidence, never on Workbench's word
+PASS         SW02   [e2e] The proof an agent's work is settled on comes from a SWE_SEED contract frozen by digest, not a typed command
+PASS         U01    [e2e] The Workbench UI stays usable under SEA-Forge governance (Playwright, live)
+PASS         U02a   [contract] Horizon's 1.1.0 contract activation suspends v1 runs and the rollback guard refuses a 1.0.1 start against any v2 state
+PASS         U02b   [live_integration] Cognate's SQLite-to-PostgreSQL migration preserves every event, verifies, and refuses a second import (durable data across a store upgrade)
+PASS         U02c   [unit] RealityTrace's ledger refuses to open a store whose user_version is newer than this build understands
+PASS         U02d   [contract] SEA-Forge admits a compiler upgrade only when every meaning-bearing field is unchanged, and records both producer versions
+PASS         U02e   [contract] Horizon's rollback guard script exits 0 for a v1 store, 2 for any v2 state, and 1 for a missing store (real process, exit codes)
+PASS         U02f   [live_integration] Cognate refuses to open a SQLite or PostgreSQL store written by a newer schema version, and writes nothing when it refuses
+PASS         U02g   [live_integration] Workbench refuses to open a store written by a newer schema, and its Experts state refuses unknown or future schemas without writing
+PASS         BM-AUTH [performance] The authority boundary is responsive at its admission limit and explicit beyond it
+PASS         BM-RTO [performance] After a kill -9 the authority boundary recovers on restart, and no answered decision is lost
+PASS         BM-SETTLE [performance] What does one consequential, settled Horizon operation cost, and does the stack leak? (docs/benchmarks.md, BM-SETTLE)
+PASS         BM-STACK [performance] Does the full governed stack fit the declared host with headroom? (docs/benchmarks.md, BM-STACK)
+
+## Local single operator (Linux / WSL2, loopback only, internal use)	GO — 30/30 gates passed at pinned clean revisions. License: permitted (SEA-Forge Sustainable Use License, internal business use)
+## Self-hosted internal team (several humans, one organization)	WITHHELD — license: permitted for internal use only
+## Hosted, managed or embedded for third parties	NOT SUPPORTED — license: NOT permitted without a SEA-Forge commercial license (LICENSE:48-66)
+## Performance benchmarks	## Pinned revisions
+report: /home/sprime01/projects/godspeed-readiness/evidence/REPORT.md

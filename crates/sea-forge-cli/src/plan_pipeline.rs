@@ -788,6 +788,9 @@ fn run_plan_inner(
                             stderr_path: "artifacts/stderr.txt".into(),
                             started_at: Utc::now().to_rfc3339(),
                             finished_at: Utc::now().to_rfc3339(),
+                            // No process ran for this item: there is no
+                            // process tree whose lifecycle was contained.
+                            lifecycle_containment: LifecycleContainment::NoProcess,
                         });
                         fs::write(artifacts.join("stdout.txt"), b"")
                             .map_err(|error| ForgeError::io("write stdout", error))?;

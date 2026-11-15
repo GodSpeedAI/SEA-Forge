@@ -949,14 +949,22 @@ pub(crate) fn execute_sandbox(
                 serde_json::json!({
                     "status": result.status,
                     "exit_code": result.exit_code,
+                    "lifecycle_containment": result.lifecycle_containment,
                 }),
             )?;
+            // Preserve the containment verdict in the evidence record, as the CLI
+            // pipeline does with the full `execution_result`.
+            let mut execution_metadata = BTreeMap::new();
+            execution_metadata.insert(
+                "lifecycle_containment".into(),
+                serde_json::to_value(&result.lifecycle_containment)?,
+            );
             evidence.append(
                 EvidenceKind::ExecutionResult,
                 result.stdout_path.clone(),
                 None,
                 finished,
-                BTreeMap::new(),
+                execution_metadata,
             )?;
             // Capture the execution's own outputs as content-addressed artifacts,
             // exactly as the CLI pipeline does (`cli/src/pipeline.rs`): stdout and

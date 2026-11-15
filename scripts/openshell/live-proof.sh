@@ -5,12 +5,22 @@
 # libkrun MicroVMs, no container engine) can run the sea-forge-case-runner live
 # tests against the RepairAgent projection, including a non-bootstrap image
 # (SECOND_IMAGE). The live tests are the ones in
-# crates/sea-forge-case-runner/tests/cell_episode_live.rs.
+# crates/sea-forge-case-runner/tests/cell_episode_live.rs. It also starts the
+# host-side egress arrival listener (egress-control.py) that the network
+# control tests observe: the denied variant's non-arrival is host-observed
+# evidence (EGRESS_ARRIVAL_LOG). On a gateway with no expressible positive
+# control (OpenShell 0.1.x: no workload-discoverable egress proxy, and the
+# provers refuse tcp rules) the allowed variant prints its full discovery
+# dump and tallies a BLOCKED: scenario instead of failing the ladder — a
+# BLOCKED tally never fails this run. Set
+# SEA_FORGE_REQUIRE_EGRESS_CONTROL=1 to make a blocked positive control fail
+# the lane instead (for platforms where the control becomes expressible).
 #
 # This script is the only place in the repository that starts a real OpenShell
 # gateway and sandboxes for the live proof. Nothing else should.
 #
-# It never reports success unless the live tests ran and passed.
+# It never reports success unless the live tests ran and passed (a BLOCKED
+# tally is an honest, labeled non-run, not a pass).
 #
 # Exit codes:
 #   0  live tests ran and passed
@@ -31,6 +41,15 @@
 #   ALLOW_CONTAINER_SOCKET=1
 #                    proceed even if a Docker or Podman socket exists. The run
 #                    then does NOT establish the Docker-free claim, and it says so.
+#   EGRESS_PORT      arrival listener port (default: 46244; the committed
+#                    fixture's live-egress-control endpoint names this port)
+#   EGRESS_HOST      guest-reachable host address (default: 10.0.2.2, the
+#                    libkrun user-networking host alias the fixture names)
+#   EGRESS_ARRIVAL_LOG  arrival log path (default: $STATE_DIR/egress-arrivals.log)
+#   SEA_FORGE_REQUIRE_EGRESS_CONTROL=1
+#                    fail the run when the egress allow-control could not run
+#                    (a gateway where the positive control is not expressible
+#                    tallies BLOCKED instead, which otherwise passes through)
 
 set -euo pipefail
 
@@ -45,8 +64,19 @@ IMAGE="${IMAGE:-nvcr.io/nvidia/base/ubuntu:24.04}"
 SECOND_IMAGE="${SECOND_IMAGE:-docker.io/library/python:3.13-slim}"
 EXPECTED_VERSION="0.1.3"
 TEST_FILE="$REPO_ROOT/crates/sea-forge-case-runner/tests/cell_episode_live.rs"
+# The egress control. The arrival listener binds 0.0.0.0 on this port; the
+# projection's `live-egress-control` endpoint names the same port and the
+# libkrun user-networking address that reaches the host from the guest. The
+# address default matches the committed fixture; overriding it means the guest
+# target no longer matches the projected endpoint (see the fixture's model.sea).
+EGRESS_PORT="${EGRESS_PORT:-46244}"
+EGRESS_HOST="${EGRESS_HOST:-10.0.2.2}"
+EGRESS_CONTROL_ADDR="${EGRESS_HOST}:${EGRESS_PORT}"
+EGRESS_ARRIVAL_LOG="${EGRESS_ARRIVAL_LOG:-$STATE_DIR/egress-arrivals.log}"
+EGRESS_HELPER="$SCRIPT_DIR/egress-control.py"
 
 GATEWAY_PID=""
+EGRESS_PID=""
 
 blocked() {
     echo "BLOCKED: $*" >&2
@@ -60,6 +90,10 @@ fail() {
 
 cleanup() {
     local rc=$?
+    if [[ -n "$EGRESS_PID" ]]; then
+        kill "$EGRESS_PID" 2>/dev/null || true
+        wait "$EGRESS_PID" 2>/dev/null || true
+    fi
     if [[ -n "$GATEWAY_PID" ]]; then
         kill "$GATEWAY_PID" 2>/dev/null || true
         wait "$GATEWAY_PID" 2>/dev/null || true
@@ -144,6 +178,15 @@ export PATH="$PATH:/usr/sbin:/sbin"
 if [[ ! -f "$TEST_FILE" ]]; then
     blocked "live test target not present: ${TEST_FILE#"$REPO_ROOT"/}"
 fi
+
+# The egress control tests must be part of the ladder this script runs
+# (--include-ignored). A rename that drops them from the file fails here
+# instead of silently shrinking the proof.
+for egress_test in live_network_allow_control_connects live_network_denial_proven; do
+    if ! grep -q "fn $egress_test" "$TEST_FILE"; then
+        blocked "egress control test missing from the ladder: $egress_test"
+    fi
+done
 
 PROJECTION_ABS="$REPO_ROOT/$PROJECTION_DIR"
 if [[ ! -f "$PROJECTION_ABS/sandbox.json" ]]; then
@@ -316,10 +359,47 @@ fi
 echo "OK: gateway answered on https://127.0.0.1:$PORT (mTLS, registered as $GATEWAY_NAME)"
 
 # ---------------------------------------------------------------------------
+# Host-side egress arrival listener. The guest's allowed variant connects to
+# EGRESS_CONTROL_ADDR and the listener records one line per accepted
+# connection, so arrivals and non-arrivals are host-observed evidence. See
+# scripts/openshell/egress-control.py and the live tests it feeds.
+# ---------------------------------------------------------------------------
+
+if [[ ! -f "$EGRESS_HELPER" ]]; then
+    fail "egress control helper missing: $EGRESS_HELPER"
+fi
+: >"$EGRESS_ARRIVAL_LOG"
+EGRESS_READY="$STATE_DIR/egress-listener.ready"
+EGRESS_PIDFILE="$STATE_DIR/egress-listener.pid"
+rm -f "$EGRESS_READY" "$EGRESS_PIDFILE"
+python3 -I "$EGRESS_HELPER" serve --port "$EGRESS_PORT" --log "$EGRESS_ARRIVAL_LOG" \
+    --ready "$EGRESS_READY" --pidfile "$EGRESS_PIDFILE" &
+EGRESS_PID=$!
+ready=0
+for _ in $(seq 1 20); do
+    if ! kill -0 "$EGRESS_PID" 2>/dev/null; then
+        break
+    fi
+    if [[ -s "$EGRESS_READY" ]]; then
+        ready=1
+        break
+    fi
+    sleep 0.5
+done
+if (( ready == 0 )); then
+    fail "egress arrival listener did not start on 0.0.0.0:$EGRESS_PORT"
+fi
+export EGRESS_CONTROL_ADDR EGRESS_ARRIVAL_LOG
+echo "OK: egress arrival listener on 0.0.0.0:$EGRESS_PORT (log $EGRESS_ARRIVAL_LOG); guest target $EGRESS_CONTROL_ADDR"
+
+# ---------------------------------------------------------------------------
 # Live tests. Only cargo's exit status decides success.
 # ---------------------------------------------------------------------------
 
 cd "$REPO_ROOT"
+# The full ladder output is teed to a log: the BLOCKED NOTE below greps it,
+# and the log is next to the gateway log for evidence.
+LIVE_TESTS_LOG="$STATE_DIR/live-tests.log"
 set +e
 SEA_FORGE_OPENSHELL_LIVE=1 \
 SEA_FORGE_OPENSHELL_GATEWAY="$GATEWAY_NAME" \
@@ -327,12 +407,19 @@ SEA_FORGE_OPENSHELL_PROJECTION="$PROJECTION_ABS" \
 SEA_FORGE_OPENSHELL_IMAGE="$IMAGE" \
 SEA_FORGE_OPENSHELL_SECOND_IMAGE="$SECOND_IMAGE" \
 cargo test -p sea-forge-case-runner --test cell_episode_live -j 2 -- \
-    --include-ignored --test-threads 1 --nocapture
-test_rc=$?
+    --include-ignored --test-threads 1 --nocapture 2>&1 | tee "$LIVE_TESTS_LOG"
+test_rc=${PIPESTATUS[0]}
 set -e
 
 echo "--- gateway log (last 20 lines) ---"
 tail -n 20 "$STATE_DIR/gateway.log" || true
+
+# A BLOCKED egress allow-control is the honest upstream disposition and the
+# run stays green (BLOCKED is a labeled non-run, never a tested pass); when
+# its line appears in the ladder output, say so explicitly.
+if grep -q 'BLOCKED: the egress allow-control' "$LIVE_TESTS_LOG"; then
+    echo "NOTE: egress allow-control BLOCKED upstream (no L4/connect vocabulary, no guest proxy); F17 denial remains BLOCKED — see .agents/plans/2026-10-26-capability-harvest.md"
+fi
 
 if (( test_rc != 0 )); then
     fail "live tests exited with status $test_rc"
