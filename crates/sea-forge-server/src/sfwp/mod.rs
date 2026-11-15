@@ -22,10 +22,12 @@ mod continuation_codec;
 pub mod correlation;
 pub mod delegation_preview;
 pub mod delegations;
+pub mod episode_gate;
 pub mod events;
 pub mod interaction_events;
 pub mod precondition;
 pub mod readiness;
+pub mod run_records;
 pub mod run_views;
 pub mod thoth;
 

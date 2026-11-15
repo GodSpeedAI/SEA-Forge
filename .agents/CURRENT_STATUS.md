@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 315
+**Status revision:** 316
 
-**Stage:** FDE S2: WP-21a step 2 append v2 rules
+**Stage:** FDE S2: WP-21a steps 3-4 execution gate, run records and links, proof runner
 
-**Summary:** fde/integration: WP-21 part A step 2: case.record.append v2 rules for episode.frozen/settled (contract marker selects dialect only; v1 fallbacks); world pin, settlement-exists, kind-immutable, reference-derived, model/anchor publisher, lifecycle, store integrity, payload size, human settlement approval.
+**Summary:** fde/integration: WP-21 part A steps 3,4,6: execution gate R1-R14 on item_execute/case_advance/delegate/human_task_complete (case resolved server-side), run records and delegation links written before execution under the case lock, executor set and verifier context at settlement, Go builders and golden frames, fde-proof slice s2 (NT-13,17,18,32,33,48 PASS; NT-34 NOT_RUN).
 
 **Verified:**
 

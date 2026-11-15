@@ -446,6 +446,89 @@ func NewItemExecute(caseID, itemID, policy string, timeoutSec int, requestID str
 	return r, nil
 }
 
+// EpisodeRef names a Field Case episode by key (contracts/fde execution-episode-ref.v1). The
+// server resolves the case, the freeze and the frozen kind from its ledger; this tag is checked
+// against them, never trusted.
+type EpisodeRef struct {
+	CaseID     string
+	PlanItemID string
+	N          int
+	// Kind is "evaluated" or "exploratory".
+	Kind string
+}
+
+func (e EpisodeRef) body() map[string]any {
+	return map[string]any{"case_id": e.CaseID, "plan_item_id": e.PlanItemID, "n": e.N, "kind": e.Kind}
+}
+
+// TransitionItem is one item a Field Case case_advance skips or completes without executing
+// anything ("skip" or "complete"; transition_only is always true on the wire).
+type TransitionItem struct {
+	ItemID     string
+	Transition string
+}
+
+// NewCaseAdvanceEpisode is NewCaseAdvance for a Field Case: it executes only the episode's plan
+// item. Without an episode (nil) it must name transition items.
+func NewCaseAdvanceEpisode(caseID string, episode *EpisodeRef, transitions []TransitionItem, policy string, timeoutSec int, requestID string, g Governance) (*Request, error) {
+	r, err := NewCaseAdvance(caseID, policy, timeoutSec, requestID, g)
+	if err != nil {
+		return nil, err
+	}
+	if episode != nil {
+		r.body["episode_ref"] = episode.body()
+	}
+	if len(transitions) > 0 {
+		items := make([]map[string]any, 0, len(transitions))
+		for _, t := range transitions {
+			items = append(items, map[string]any{"item_id": t.ItemID, "transition": t.Transition, "transition_only": true})
+		}
+		r.body["transition_items"] = items
+	}
+	return r, nil
+}
+
+// NewItemExecuteEpisode is NewItemExecute for a Field Case episode.
+func NewItemExecuteEpisode(caseID, itemID string, episode EpisodeRef, policy string, timeoutSec int, requestID string, g Governance) (*Request, error) {
+	r, err := NewItemExecute(caseID, itemID, policy, timeoutSec, requestID, g)
+	if err != nil {
+		return nil, err
+	}
+	r.body["episode_ref"] = episode.body()
+	return r, nil
+}
+
+// NewDelegate builds an agent_run.delegate request. case_id is required since WP-21: the server
+// resolves the case template from it. episode and assignmentID are set together for a Field Case
+// (assignmentID is assign:<case_id>:<plan_item_id>:<n>:<k>); both may be empty for any other case.
+func NewDelegate(caseID, endpoint, instruction string, maxTurns int, episode *EpisodeRef, assignmentID, policy, requestID string, g Governance) (*Request, error) {
+	if caseID == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "delegate",
+			"a delegation requires a case_id: the server resolves the case from it")
+	}
+	if requestID == "" {
+		return nil, apperr.New(apperr.KindInvalid, "", "delegate",
+			"a durable delegation requires a non-empty request_id before it can be sent")
+	}
+	r := newRequest("delegate")
+	r.body["case_id"] = caseID
+	r.body["endpoint"] = endpoint
+	r.body["instruction"] = instruction
+	r.body["max_turns"] = maxTurns
+	if episode != nil {
+		r.body["episode_ref"] = episode.body()
+	}
+	if assignmentID != "" {
+		r.body["assignment_id"] = assignmentID
+	}
+	if policy != "" {
+		r.body["policy"] = policy
+	}
+	r.body["request_id"] = requestID
+	g.apply(r.body)
+	return r, nil
+}
+
 // NewHumanTaskComplete records a governed human-task completion. A judgment with no recorded
 // justification is not a governed completion, so it is mandatory here as it is on the server.
 func NewHumanTaskComplete(caseID, itemID, justification, policy, requestID string, g Governance) (*Request, error) {

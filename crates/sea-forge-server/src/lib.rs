@@ -984,6 +984,15 @@ pub enum Request {
         request_id: Option<String>,
     },
     Delegate {
+        /// The case the delegation belongs to (required since WP-21: the server
+        /// resolves the case template from it, never from a tag).
+        case_id: String,
+        /// Field Case: the episode this delegation executes (README §7).
+        #[serde(default)]
+        episode_ref: serde_json::Value,
+        /// Field Case: `assign:<case_id>:<plan_item_id>:<n>:<k>`.
+        #[serde(default)]
+        assignment_id: Option<String>,
         endpoint: String,
         instruction: String,
         #[serde(default)]
@@ -1255,6 +1264,12 @@ pub enum Request {
     /// (D-3) scopes the same engine to one item.
     CaseAdvance {
         case_id: String,
+        /// Field Case: the episode this advance executes (README §7).
+        #[serde(default)]
+        episode_ref: serde_json::Value,
+        /// Field Case: items to skip or complete without executing anything.
+        #[serde(default)]
+        transition_items: serde_json::Value,
         #[serde(default = "default_policy")]
         policy: String,
         #[serde(default = "default_timeout")]
@@ -1265,6 +1280,9 @@ pub enum Request {
     ItemExecute {
         case_id: String,
         item_id: String,
+        /// Field Case: the episode this execution belongs to (README §7).
+        #[serde(default)]
+        episode_ref: serde_json::Value,
         #[serde(default = "default_policy")]
         policy: String,
         #[serde(default = "default_timeout")]
@@ -3307,6 +3325,9 @@ pub async fn handle_request_as(
             response
         }
         Request::Delegate {
+            case_id: field_case_id,
+            episode_ref,
+            assignment_id,
             endpoint,
             instruction,
             run_id: requested_run_id,
@@ -3320,21 +3341,43 @@ pub async fn handle_request_as(
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "agent_run.delegate");
-            let response = delegate_inner(
+            let gate = admit_episode(
                 state,
-                &endpoint,
-                &instruction,
-                requested_run_id,
-                model.as_deref(),
-                max_turns,
-                token_budget,
-                criteria,
-                &policy,
-                &entity,
-                &process,
-                verified_role.clone(),
+                sfwp::episode_gate::Verb::Delegate,
+                &field_case_id,
+                None,
+                &episode_ref,
+                &serde_json::Value::Null,
+                assignment_id.as_deref(),
+                GateActor {
+                    actor: actor_id,
+                    gateway: verified
+                        .and_then(|a| a.delegation())
+                        .map(|d| d.gateway_actor_id()),
+                    endpoint: Some(&endpoint),
+                },
             )
             .await;
+            let response = match gate {
+                Err(refusal) => refusal,
+                Ok(_) => {
+                    delegate_inner(
+                        state,
+                        &endpoint,
+                        &instruction,
+                        requested_run_id,
+                        model.as_deref(),
+                        max_turns,
+                        token_budget,
+                        criteria,
+                        &policy,
+                        &entity,
+                        &process,
+                        verified_role.clone(),
+                    )
+                    .await
+                }
+            };
             record_outcome(
                 state,
                 request_id.as_deref(),
@@ -3847,42 +3890,101 @@ pub async fn handle_request_as(
         }
         Request::CaseAdvance {
             case_id,
+            episode_ref,
+            transition_items,
             policy,
             timeout,
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "case.advance");
-            let response = advance_response(
+            let response = match admit_episode(
                 state,
-                actor_id,
-                verified_role,
+                sfwp::episode_gate::Verb::CaseAdvance,
                 &case_id,
                 None,
-                &policy,
-                timeout,
+                &episode_ref,
+                &transition_items,
+                None,
+                GateActor {
+                    actor: actor_id,
+                    gateway: verified
+                        .and_then(|a| a.delegation())
+                        .map(|d| d.gateway_actor_id()),
+                    endpoint: None,
+                },
             )
-            .await;
+            .await
+            {
+                Err(refusal) => refusal,
+                Ok(admission) if !admission.transitions.is_empty() => {
+                    transition_only(
+                        state,
+                        actor_id,
+                        verified_role,
+                        &case_id,
+                        admission.transitions,
+                        &policy,
+                        timeout,
+                    )
+                    .await
+                }
+                Ok(_) => {
+                    advance_response(
+                        state,
+                        actor_id,
+                        verified_role,
+                        &case_id,
+                        episode_scope_item(&episode_ref),
+                        &policy,
+                        timeout,
+                    )
+                    .await
+                }
+            };
             record_outcome(state, request_id.as_deref(), "case.advance", &response);
             response
         }
         Request::ItemExecute {
             case_id,
             item_id,
+            episode_ref,
             policy,
             timeout,
             request_id,
         } => {
             record_pending(state, request_id.as_deref(), "item.execute");
-            let response = advance_response(
+            let response = match admit_episode(
                 state,
-                actor_id,
-                verified_role,
+                sfwp::episode_gate::Verb::ItemExecute,
                 &case_id,
                 Some(&item_id),
-                &policy,
-                timeout,
+                &episode_ref,
+                &serde_json::Value::Null,
+                None,
+                GateActor {
+                    actor: actor_id,
+                    gateway: verified
+                        .and_then(|a| a.delegation())
+                        .map(|d| d.gateway_actor_id()),
+                    endpoint: None,
+                },
             )
-            .await;
+            .await
+            {
+                Err(refusal) => refusal,
+                Ok(_) => {
+                    advance_response(
+                        state,
+                        actor_id,
+                        verified_role,
+                        &case_id,
+                        Some(&item_id),
+                        &policy,
+                        timeout,
+                    )
+                    .await
+                }
+            };
             record_outcome(state, request_id.as_deref(), "item.execute", &response);
             response
         }
@@ -3895,7 +3997,26 @@ pub async fn handle_request_as(
         } => {
             record_pending(state, request_id.as_deref(), "human_task.complete");
             let actor = actor_id.unwrap_or("operator_local").to_string();
-            let response = match sfwp::case_mutations::human_task_complete(
+            let gate = admit_episode(
+                state,
+                sfwp::episode_gate::Verb::HumanTaskComplete,
+                &case_id,
+                Some(&item_id),
+                &serde_json::Value::Null,
+                &serde_json::Value::Null,
+                None,
+                GateActor {
+                    actor: actor_id,
+                    gateway: verified
+                        .and_then(|a| a.delegation())
+                        .map(|d| d.gateway_actor_id()),
+                    endpoint: None,
+                },
+            )
+            .await;
+            let response = match gate {
+                Err(refusal) => refusal,
+                Ok(_) => match sfwp::case_mutations::human_task_complete(
                 state,
                 &actor,
                 &case_id,
@@ -3909,6 +4030,7 @@ pub async fn handle_request_as(
                     |_| serde_json::json!({"error": "human_task_complete serialization failed"}),
                 ),
                 Err(error) => forge_error_response(&error),
+                },
             };
             record_outcome(
                 state,
@@ -3946,6 +4068,139 @@ fn forge_error_response(error: &ForgeError) -> serde_json::Value {
         "error": error.to_string(),
         "error_class": error.class(),
     })
+}
+
+/// Who a gated request is from, as the identity gate established it.
+#[derive(Clone, Copy, Default)]
+struct GateActor<'a> {
+    actor: Option<&'a str>,
+    gateway: Option<&'a str>,
+    endpoint: Option<&'a str>,
+}
+
+/// The execution gate (WP-21, README §7) for one request, under the case's
+/// keyed lock: the check and the records it writes are one critical section.
+/// A Field Case request that is not admitted is answered here, before any run.
+#[allow(clippy::too_many_arguments)]
+async fn admit_episode(
+    state: &Arc<ServerState>,
+    verb: sfwp::episode_gate::Verb,
+    case_id: &str,
+    item_id: Option<&str>,
+    episode_ref: &serde_json::Value,
+    transition_items: &serde_json::Value,
+    assignment_id: Option<&str>,
+    who: GateActor<'_>,
+) -> Result<sfwp::episode_gate::Admission, serde_json::Value> {
+    let lock = state.acquire_case_lock(case_id).await;
+    let root = state.root.clone();
+    let (case, item, assignment) = (
+        case_id.to_string(),
+        item_id.map(str::to_string),
+        assignment_id.map(str::to_string),
+    );
+    let (endpoint, actor, gateway) = (
+        who.endpoint.map(str::to_string),
+        who.actor.map(str::to_string),
+        who.gateway.map(str::to_string),
+    );
+    let (episode_ref, transition_items) = (episode_ref.clone(), transition_items.clone());
+    let result = tokio::task::spawn_blocking(move || {
+        sfwp::episode_gate::admit(
+            &root,
+            &sfwp::episode_gate::GateInput {
+                verb,
+                case_id: &case,
+                item_id: item.as_deref(),
+                episode_ref: &episode_ref,
+                transition_items: &transition_items,
+                assignment_id: assignment.as_deref(),
+                endpoint: endpoint.as_deref(),
+                actor: actor.as_deref(),
+                gateway_actor: gateway.as_deref(),
+            },
+        )
+    })
+    .await;
+    drop(lock);
+    state.prune_case_lock(case_id).await;
+    match result {
+        Ok(outcome) => outcome,
+        Err(error) => Err(serde_json::json!({
+            "outcome": "refused", "code": "FREEZE_INCOMPLETE", "invariant": "I-1",
+            "message": format!("execution gate task failed: {error}"), "no_side_effect": true,
+        })),
+    }
+}
+
+/// The plan item an `episode_ref` names (scopes a Field Case `case_advance`).
+fn episode_scope_item(episode_ref: &serde_json::Value) -> Option<&str> {
+    episode_ref["plan_item_id"].as_str()
+}
+
+/// A transition-only `case_advance` (README §7 R14): each listed item is
+/// skipped or completed by an event; nothing is executed. When that ends the
+/// plan, the engine closes the case (it has nothing left to run).
+async fn transition_only(
+    state: &Arc<ServerState>,
+    actor_id: Option<&str>,
+    verified_role: ActorRole,
+    case_id: &str,
+    transitions: Vec<(String, String)>,
+    policy: &str,
+    timeout: u64,
+) -> serde_json::Value {
+    let actor = actor_id.unwrap_or("operator_local").to_string();
+    let lock = state.acquire_case_lock(case_id).await;
+    let (root, case) = (state.root.clone(), case_id.to_string());
+    let list = transitions.clone();
+    let applied = tokio::task::spawn_blocking(move || {
+        for (item, how) in &list {
+            let kind = if how == "skip" {
+                sea_forge_core::types::TraceKind::ItemTerminated
+            } else {
+                sea_forge_core::types::TraceKind::ItemCompleted
+            };
+            sea_forge_case_runner::case_ops::append_case_event(
+                &root,
+                &case,
+                &actor,
+                kind,
+                Some(item),
+                serde_json::json!({"transition_only": true, "transition": how}),
+            )?;
+        }
+        Ok::<(), ForgeError>(())
+    })
+    .await;
+    drop(lock);
+    state.prune_case_lock(case_id).await;
+    match applied {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => return forge_error_response(&error),
+        Err(error) => {
+            return forge_error_response(&ForgeError::Internal(format!(
+                "transition task panic: {error}"
+            )))
+        }
+    }
+    // The engine runs nothing for finished items; it closes a finished plan.
+    let last = transitions.last().map(|(item, _)| item.clone());
+    let mut response = advance_response(
+        state,
+        actor_id,
+        verified_role,
+        case_id,
+        last.as_deref(),
+        policy,
+        timeout,
+    )
+    .await;
+    response["transitions"] = serde_json::json!(transitions
+        .iter()
+        .map(|(i, how)| serde_json::json!({"item_id": i, "transition": how}))
+        .collect::<Vec<_>>());
+    response
 }
 
 /// `case.advance` / `item.execute` handler: acquire one run-semaphore permit

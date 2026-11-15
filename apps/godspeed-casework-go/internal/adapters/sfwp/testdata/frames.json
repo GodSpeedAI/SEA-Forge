@@ -181,5 +181,40 @@
     "name": "case.record.append.settle",
     "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261114T075552Z_dad70f\",\"idempotency_key\":\"golden-settle-1\",\"kind\":\"episode.settled\",\"payload\":{\"episode_ref\":\"episode:case_20261114T075552Z_dad70f:item-03:1@sha256:4cdb03c9e1f9de2b0488822f1d90e73418b29fd6e5ce20b3f1822f4f37e63ec7\",\"independence\":{\"independent_source_count\":2,\"verifier_context\":\"fresh\"},\"reliability\":{\"K\":\"two independent sources\"},\"result\":\"S\",\"settlement_ref\":\"settlement:01JABCDEF0000000000000000C\"},\"request_id\":\"req-golden-settle-1\",\"verb\":\"case_record_append\"}",
     "response": "{\"episode_key\":{\"case_id\":\"case_20261114T075552Z_dad70f\",\"n\":1,\"plan_item_id\":\"item-03\"},\"kind\":\"episode.settled\",\"outcome\":\"recorded\",\"record_id\":\"rec-0002\",\"replayed\":false}\n"
+  },
+  {
+    "name": "delegate.case_unresolved",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_does_not_exist\",\"endpoint\":\"local-test\",\"instruction\":\"x\",\"max_turns\":1,\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-unresolved\",\"verb\":\"delegate\"}",
+    "response": "{\"code\":\"CASE_UNRESOLVED\",\"message\":\"case_id does not resolve to a case\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "item_execute.field_case.no_episode_ref",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261115T143723Z_34d587\",\"item_id\":\"item-03\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-exec-0\",\"timeout\":60,\"verb\":\"item_execute\"}",
+    "response": "{\"code\":\"FREEZE_MISSING\",\"invariant\":\"I-1\",\"message\":\"a Field Case request needs an episode_ref\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "case_advance.field_case.no_episode_ref",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261115T143723Z_34d587\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-adv-0\",\"timeout\":60,\"verb\":\"case_advance\"}",
+    "response": "{\"code\":\"FREEZE_MISSING\",\"invariant\":\"I-1\",\"message\":\"no episode_ref and no transition_items\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "delegate.field_case.no_episode_ref",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261115T143723Z_34d587\",\"endpoint\":\"local-test\",\"instruction\":\"x\",\"max_turns\":1,\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-del-0\",\"verb\":\"delegate\"}",
+    "response": "{\"code\":\"FREEZE_MISSING\",\"invariant\":\"I-1\",\"message\":\"a Field Case request needs an episode_ref\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "item_execute.field_case.freeze_incomplete",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261115T143723Z_34d587\",\"episode_ref\":{\"case_id\":\"case_20261115T143723Z_34d587\",\"kind\":\"evaluated\",\"n\":1,\"plan_item_id\":\"item-03\"},\"item_id\":\"item-03\",\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-exec-1\",\"timeout\":60,\"verb\":\"item_execute\"}",
+    "response": "{\"code\":\"FREEZE_INCOMPLETE\",\"invariant\":\"I-1\",\"message\":\"the episode's freeze is incomplete\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "case_advance.field_case.freeze_incomplete",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"case_id\":\"case_20261115T143723Z_34d587\",\"episode_ref\":{\"case_id\":\"case_20261115T143723Z_34d587\",\"kind\":\"evaluated\",\"n\":1,\"plan_item_id\":\"item-03\"},\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-adv-1\",\"timeout\":60,\"verb\":\"case_advance\"}",
+    "response": "{\"code\":\"FREEZE_INCOMPLETE\",\"invariant\":\"I-1\",\"message\":\"the episode's freeze is incomplete\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
+  },
+  {
+    "name": "delegate.field_case.freeze_incomplete",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"assignment_id\":\"assign:case_20261115T143723Z_34d587:item-03:1:1\",\"case_id\":\"case_20261115T143723Z_34d587\",\"endpoint\":\"local-test\",\"episode_ref\":{\"case_id\":\"case_20261115T143723Z_34d587\",\"kind\":\"evaluated\",\"n\":1,\"plan_item_id\":\"item-03\"},\"instruction\":\"x\",\"max_turns\":1,\"policy\":\"authority/active-policy.json\",\"request_id\":\"req-gate-del-1\",\"verb\":\"delegate\"}",
+    "response": "{\"code\":\"FREEZE_INCOMPLETE\",\"invariant\":\"I-1\",\"message\":\"the episode's freeze is incomplete\",\"no_side_effect\":true,\"outcome\":\"refused\"}\n"
   }
 ]

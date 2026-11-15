@@ -35,9 +35,17 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$slice" ] || slice=s1
-case "$slice" in s1) ;; *) echo "fde-proof: only slice s1 is registered in WP-09" >&2; exit 2;; esac
+case "$slice" in s1|s2) ;; *) echo "fde-proof: only slices s1 and s2 are registered" >&2; exit 2;; esac
 prereg_id=fde-$slice
 pdir=$root/.agents/preregistrations/$prereg_id
+tests_file=$pdir/tests.yaml
+wrapper_dir=scripts/fde-proof.d
+if [ "$slice" = s2 ]; then
+  # S2-gate tests of WP-21a: a list under scripts/fde-proof.d, wrappers under scripts/fde-proof.d/s2.
+  # There is no anchored S2 pre-registration yet; the S1 one is not touched.
+  tests_file=$root/scripts/fde-proof.d/s2-tests.yaml
+  wrapper_dir=scripts/fde-proof.d/s2
+fi
 out=$root/.tmp/fde-proof/$slice
 mkdir -p "$out"
 
@@ -69,7 +77,9 @@ if [ -n "$replay" ] || [ -n "$mutate" ]; then
 fi
 
 echo "== pre-registration: scripts/fde-anchor.sh verify prereg/$prereg_id ${remote}"
-if ! scripts/fde-anchor.sh verify "prereg/$prereg_id" $remote; then
+if [ "$slice" = s2 ]; then
+  echo "(slice s2 has no anchored pre-registration; skipped)"
+elif ! scripts/fde-anchor.sh verify "prereg/$prereg_id" $remote; then
   rec preflight:prereg FAIL "scripts/fde-anchor.sh verify prereg/$prereg_id" 1 ""
   write_results "$lines" "pre-registration verification failed; no test was run"
   echo "fde-proof: refusing to run: the pre-registration does not verify" >&2
@@ -84,13 +94,13 @@ if ! scripts/check-fde-contract-digests.sh; then
 fi
 rec preflight:contract-digests PASS "scripts/check-fde-contract-digests.sh" 0 ""
 
-ids=$(python3 - "$pdir/tests.yaml" <<'PY'
+ids=$(python3 - "$tests_file" <<'PY'
 import sys, yaml
 for t in yaml.safe_load(open(sys.argv[1]))["tests"]: print(t["id"])
 PY
 )
 if [ -n "$only" ]; then
-  printf '%s\n' "$ids" | grep -Fxq "$only" || { echo "fde-proof: $only is not in $pdir/tests.yaml" >&2; exit 2; }
+  printf '%s\n' "$ids" | grep -Fxq "$only" || { echo "fde-proof: $only is not in $tests_file" >&2; exit 2; }
   ids=$only
 fi
 
@@ -104,7 +114,7 @@ FDE_S1_CELL=${FDE_S1_CELL:-$(readlink -f "$HOME/projects/_wt/tmp/fde-s1/latest" 
 export FDE_S1_CELL
 all_pass=1
 for id in $ids; do
-  d=scripts/fde-proof.d/$id.sh
+  d=$wrapper_dir/$id.sh
   cmd="scripts/fde-proof.sh --slice $slice --only $id"
   if [ -x "$d" ]; then
     log=$out/$id.log
@@ -116,7 +126,7 @@ for id in $ids; do
     rec "$id" "$st" "$cmd" "$code" "${log#"$root"/}" "$dur" "$reason"
   else
     st=NOT_RUN; code=0
-    rec "$id" NOT_RUN "$cmd" 0 "" 0 "no scripts/fde-proof.d/$id.sh"
+    rec "$id" NOT_RUN "$cmd" 0 "" 0 "no $wrapper_dir/$id.sh"
   fi
   [ "$st" = PASS ] || all_pass=0
   printf '%-8s %s\n' "$id" "$st"

@@ -38,11 +38,68 @@ const KEEPER: &str = "svc:case-keeper";
 const ZERO: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 /// Reasons a pending scenario may still carry in the final commit.
-const FINAL_REASONS: &[&str] = &["part-B", "wp-31"];
+const FINAL_REASONS: &[&str] = &["part-B", "wp-31", "contract"];
 
 /// Scenarios the server satisfies (it grows as the steps of WP-21 part A land;
 /// an acceptance listed here stays green as the gate lands).
 const PASSES_TODAY: &[&str] = &[
+    "delegation-link/delegated-run-without-link",
+    "delegation-link/executor-reuses-identity-as-verifier",
+    "delegation-link/item-execute-only-then-settle-by-the-executor",
+    "delegation-link/delegate-then-settle-by-delegator",
+    "case-record-append-v2/sibling-verifier-without-derivable-context-cannot-settle-s",
+    "case-record-append-v2/sibling-verifier-self-asserts-fresh-context",
+    "execution-episode-ref/delegate-kind-differs-from-freeze",
+    "execution-episode-ref/case_advance-kind-differs-from-freeze",
+    "execution-episode-ref/item_execute-kind-differs-from-freeze",
+    "execution-episode-ref/case-advance-transition-only-on-an-execution-item-complete",
+    "execution-episode-ref/case-advance-transition-only-on-an-execution-item-skip",
+    "execution-episode-ref/delegate-resume-after-link-expiry-is-refused",
+    "execution-episode-ref/delegate-assignment-new-k-already-used-by-a-running-assignment",
+    "execution-episode-ref/delegate-episode-already-settled",
+    "execution-episode-ref/delegate-episode-superseded-by-a-later-n",
+    "execution-episode-ref/delegate-case-closed",
+    "execution-episode-ref/delegate-anchor-published-by-executor",
+    "execution-episode-ref/delegate-freeze-anchor-only",
+    "execution-episode-ref/delegate-freeze-anchor-missing",
+    "execution-episode-ref/delegate-freeze-record-without-realitytrace",
+    "execution-episode-ref/delegate-freeze-realitytrace-only",
+    "execution-episode-ref/delegate-field-case-no-freeze",
+    "execution-episode-ref/case_advance-episode-already-settled",
+    "execution-episode-ref/case_advance-episode-superseded-by-a-later-n",
+    "execution-episode-ref/case_advance-case-closed",
+    "execution-episode-ref/case_advance-anchor-published-by-executor",
+    "execution-episode-ref/case_advance-freeze-anchor-only",
+    "execution-episode-ref/case_advance-freeze-anchor-missing",
+    "execution-episode-ref/case_advance-freeze-record-without-realitytrace",
+    "execution-episode-ref/case_advance-freeze-realitytrace-only",
+    "execution-episode-ref/case_advance-field-case-no-freeze",
+    "execution-episode-ref/item_execute-episode-already-settled",
+    "execution-episode-ref/item_execute-episode-superseded-by-a-later-n",
+    "execution-episode-ref/item_execute-case-closed",
+    "execution-episode-ref/item_execute-anchor-published-by-executor",
+    "execution-episode-ref/item_execute-freeze-anchor-only",
+    "execution-episode-ref/item_execute-freeze-anchor-missing",
+    "execution-episode-ref/item_execute-freeze-record-without-realitytrace",
+    "execution-episode-ref/item_execute-freeze-realitytrace-only",
+    "execution-episode-ref/item_execute-field-case-no-freeze",
+    "execution-episode-ref/item_execute-field-case-no-episode-ref-but-complete-freeze-exists",
+    "execution-episode-ref/item_execute-field-case-no-episode-ref",
+    "execution-episode-ref/human-task-complete-last-item-without-close-disposition",
+    "execution-episode-ref/case-advance-to-completed-without-close-disposition",
+    "execution-episode-ref/case-advance-field-case-neither-episode-ref-nor-transition-items",
+    "execution-episode-ref/delegate-case-unresolved-without-episode-ref",
+    "execution-episode-ref/delegate-case-unresolved",
+    "execution-episode-ref/delegate-reaches-terminal-without-close-disposition",
+    "execution-episode-ref/delegate-case-suspended",
+    "execution-episode-ref/delegate-field-case-no-episode-ref-but-complete-freeze-exists",
+    "execution-episode-ref/delegate-field-case-no-episode-ref",
+    "execution-episode-ref/case_advance-reaches-terminal-without-close-disposition",
+    "execution-episode-ref/case_advance-case-suspended",
+    "execution-episode-ref/case_advance-field-case-no-episode-ref-but-complete-freeze-exists",
+    "execution-episode-ref/case_advance-field-case-no-episode-ref",
+    "execution-episode-ref/item_execute-reaches-terminal-without-close-disposition",
+    "execution-episode-ref/item_execute-case-suspended",
     "case-record-append-v2/anchor-publisher-invalid",
     "case-record-append-v2/anchor-publisher-invalid-at-freeze-does-not-burn-the-key",
     "case-record-append-v2/case-suspended-refuses-settlement",
@@ -123,14 +180,29 @@ fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static s
             .iter()
             .find(|(f, i, _)| *f == family && *i == id)
             .map(|(_, _, r)| *r)
-            .or(Some("step3")),
-        "delegation-link" => Some("step4"),
+            .or(Some(if scenario["rule"] == "R7" {
+                "step5"
+            } else {
+                "step3"
+            })),
+        "delegation-link" => STEP_PENDING
+            .iter()
+            .find(|(f, i, _)| *f == family && *i == id)
+            .map(|(_, _, r)| *r),
         _ => None,
     }
 }
 
 /// Per-scenario temporary reasons beyond the family default (none yet).
 const STEP_PENDING: &[(&str, &str, &str)] = &[
+    // contract: delegation-link.v1 expects invariant I-2 on VERIFIER_CONTEXT_MISMATCH;
+    // case-record-append.v2 (the verb's own schema, and its two sibling scenarios)
+    // forbids an invariant on that code. The wire answer follows the verb's schema.
+    (
+        "delegation-link",
+        "sibling-self-asserted-fresh-is-refused",
+        "contract",
+    ),
     (
         "case-record-append-v2",
         "sibling-verifier-self-asserts-fresh-context",
@@ -349,6 +421,34 @@ impl Seed {
             root: root.to_path_buf(),
             records: Vec::new(),
         }
+    }
+
+    /// The case plan: `items` as `(id, execution)`; an execution item is a
+    /// sandboxed task, anything else a human task.
+    fn plan(&self, items: &[(String, bool)]) {
+        let criteria =
+            serde_json::to_value(sea_forge_core::types::SettlementCriteria::default()).unwrap();
+        let items: Vec<Value> = items
+            .iter()
+            .map(|(id, exec)| {
+                json!({"plan_item_id": id, "name": id, "settlement_criteria": criteria,
+                       "item_kind": if *exec { "sandboxed_task" } else { "human_task" },
+                       "markers": {"required": true}})
+            })
+            .collect();
+        let path = case_dir(&self.root).join("plan.json");
+        let mut plan: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        plan["items"] = json!(items);
+        fs::write(path, plan.to_string()).unwrap();
+    }
+
+    /// RealityTrace records of an episode that has no case record yet, found by key.
+    fn rt_register_for_episode(&self, key: &Value) {
+        let lines: Vec<Value> = ["plan:SEED", "question:SEED", "threshold:SEED"]
+            .iter()
+            .map(|id| json!({"record_id": id, "episode_key": key}))
+            .collect();
+        write_lines(&self.root.join("realitytrace/records.jsonl"), &lines);
     }
 
     fn rt_register(&self, ids: &[String]) {
@@ -640,6 +740,34 @@ async fn run_append(s: &Value) -> Result<(), String> {
                        "started_at": format!("2026-11-14T09:0{i}:00Z")})
             })
             .collect();
+        let mut lines = lines;
+        // Scenarios that name a shared delegation root: every run is delegated by
+        // human:operator, through a link written before it; a settler with no
+        // verifier run of its own gets one that shares the executor's workspace.
+        if s["shares_root_with_executor"] == true {
+            if !lines.iter().any(|l| l["actor"] == json!(principal)) {
+                let mut extra = lines[0].clone();
+                extra["run_id"] = json!("run-seed-verifier");
+                extra["role"] = json!("verifier");
+                extra["actor"] = json!(principal);
+                extra["started_at"] = json!("2026-11-14T09:30:00Z");
+                lines.push(extra);
+            }
+            let mut links = Vec::new();
+            for (i, l) in lines.iter_mut().enumerate() {
+                let id = format!("link-seed-{i}");
+                let (eref, actor) = (l["episode_ref"].clone(), l["actor"].clone());
+                let (c, item, n, _) = parse_ref(eref.as_str().unwrap());
+                links.push(json!({"link_id": id, "case_id": c, "episode_ref": eref,
+                    "assignment_id": format!("assign:{c}:{item}:{n}:{}", i + 1),
+                    "delegator": "human:operator", "gateway_actor": null, "delegate": actor,
+                    "issued_at": "2026-11-14T08:00:00Z", "expires_at": "2099-01-01T00:00:00Z"}));
+                l["delegated"] = json!(true);
+                l["link_id"] = json!(id);
+                l["on_behalf_of"] = json!("human:operator");
+            }
+            write_lines(&case_dir(root.path()).join("field-links.jsonl"), &links);
+        }
         write_lines(&case_dir(root.path()).join("field-runs.jsonl"), &lines);
         // The first run event time of the case (model anchor order).
         let first = ledger
@@ -737,6 +865,34 @@ async fn run_gate(s: &Value) -> Result<(), String> {
     }
     let template = case["template_ref"].as_str();
     let mut seed = Seed::new(root.path(), template);
+    let terminal = extra["reaches_terminal"] == true || case["advance_reaches"] == "Completed";
+    let exec_items: Vec<String> = extra["items_with_execution_step"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|v| v.as_str().map(String::from))
+        .collect();
+    if template.is_some() {
+        let mut scope: Vec<String> = Vec::new();
+        for v in [&request["item_id"], &request["episode_ref"]["plan_item_id"]] {
+            if let Some(i) = v.as_str() {
+                scope.push(i.to_string());
+            }
+        }
+        for t in request["transition_items"].as_array().into_iter().flatten() {
+            scope.push(t["item_id"].as_str().unwrap().to_string());
+        }
+        scope.sort();
+        scope.dedup();
+        let mut items: Vec<(String, bool)> = scope
+            .iter()
+            .map(|i| (i.clone(), exec_items.contains(i) || i == "item-03"))
+            .collect();
+        if !terminal || items.is_empty() {
+            items.push(("item-99".into(), true));
+        }
+        seed.plan(&items);
+    }
     if case.is_null() {
         fs::remove_dir_all(case_dir(root.path())).unwrap();
         fs::create_dir_all(root.path().join("cases")).unwrap();
@@ -749,11 +905,7 @@ async fn run_gate(s: &Value) -> Result<(), String> {
         };
         let key = json!({"case_id": CASE, "plan_item_id": ep["plan_item_id"], "n": ep["n"]});
         let digest = "cd".repeat(32);
-        let stored_kind = if s["rule"] == "R5" {
-            "exploratory"
-        } else {
-            ep["kind"].as_str().unwrap_or("evaluated")
-        };
+        let stored_kind = state["kind"].as_str().unwrap_or("evaluated");
         let episode_ref = format!(
             "episode:{CASE}:{}:{}@sha256:{digest}",
             ep["plan_item_id"].as_str().unwrap(),
@@ -773,11 +925,7 @@ async fn run_gate(s: &Value) -> Result<(), String> {
                 fs::remove_file(root.path().join("realitytrace/records.jsonl")).unwrap();
             }
         } else if have_rt {
-            seed.rt_register(&[
-                "plan:SEED".into(),
-                "question:SEED".into(),
-                "threshold:SEED".into(),
-            ]);
+            seed.rt_register_for_episode(&key);
         }
         match state["anchor"].as_str() {
             Some("verified") => seed.anchor(
@@ -794,6 +942,32 @@ async fn run_gate(s: &Value) -> Result<(), String> {
         if let Some(d) = case["latest_case_disposition"].as_str() {
             seed.push(json!({"kind": "disposition.recorded", "level": "case",
                              "disposition": d, "idempotency_key": "seed-disposition"}));
+        }
+        if case["closed"] == true {
+            seed.push(json!({"kind": "disposition.recorded", "level": "case",
+                             "disposition": "close-satisfied", "idempotency_key": "seed-close"}));
+        }
+        // Assignments already issued for the episode.
+        for k in extra["k_used"].as_array().into_iter().flatten() {
+            let id = format!(
+                "assign:{CASE}:{}:{}:{k}",
+                ep["plan_item_id"].as_str().unwrap(),
+                ep["n"]
+            );
+            let interrupted = extra["interrupted_assignments"]
+                .as_array()
+                .is_some_and(|a| a.iter().any(|x| *x == json!(id)));
+            let expired = match (extra["link_expires_at"].as_str(), extra["now"].as_str()) {
+                (Some(exp), Some(now)) => now > exp,
+                _ => false,
+            };
+            write_lines(
+                &case_dir(root.path()).join("field-assignments.jsonl"),
+                &[json!({"assignment_id": id,
+                         "state": if interrupted { "interrupted" } else { "started" },
+                         "link_expires_at": if expired { "2020-01-01T00:00:00Z" } else { "2099-01-01T00:00:00Z" },
+                         "episode_key": key})],
+            );
         }
         if case["suspended"] == true {
             seed.push(json!({"kind": "disposition.recorded", "level": "case",
@@ -954,7 +1128,12 @@ async fn every_scenario_is_driven_and_matches_or_is_listed_pending() {
                     "{family}/{id}: passes but is listed pending ({r}); remove it from the pending list"
                 )),
                 (Err(e), None) => failures.push(format!("{family}/{id}: {e}")),
-                (Err(_), Some(r)) => pending.push((format!("{family}/{id}"), r)),
+                (Err(e), Some(r)) => {
+                    if std::env::var_os("FDE_LIST").is_some() {
+                        println!("WHY {family}/{id}: {e}");
+                    }
+                    pending.push((format!("{family}/{id}"), r))
+                }
             }
         }
     }
@@ -1022,4 +1201,73 @@ async fn final_pending_list_is_only_allowed_reasons() {
         bad.len(),
         bad.join("\n")
     );
+}
+
+// ---------------------------------------------------------------------------
+// Per-NT subsets (scripts/fde-proof.d/s2/<NT>.sh selects these by name)
+// ---------------------------------------------------------------------------
+
+/// Every append, gate and link scenario that carries `nt`: each must pass now,
+/// unless it is listed pending only for a final reason (`part-B`, `wp-31`,
+/// `contract`), which is reported, never silently skipped.
+async fn nt_subset(nt: &str, at_least: usize) {
+    let mut ran = 0;
+    let mut excluded = Vec::new();
+    let mut failed = Vec::new();
+    for family in [
+        "case-record-append-v2",
+        "execution-episode-ref",
+        "delegation-link",
+    ] {
+        for (id, s) in scenarios(family) {
+            if s["nt"] != nt {
+                continue;
+            }
+            match pending_reason(family, &id, &s) {
+                Some(r) if FINAL_REASONS.contains(&r) => {
+                    excluded.push(format!("{family}/{id} ({r})"))
+                }
+                Some(r) => failed.push(format!("{family}/{id}: still pending ({r})")),
+                None => {
+                    ran += 1;
+                    if let Err(e) = drive(family, &s).await {
+                        failed.push(format!("{family}/{id}: {e}"));
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "{nt}: {ran} scenarios passed the real server; excluded for a final reason: {excluded:?}"
+    );
+    assert!(failed.is_empty(), "{nt}:\n{}", failed.join("\n"));
+    assert!(
+        ran >= at_least,
+        "{nt}: only {ran} scenarios ran, need {at_least}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_13_scenarios() {
+    nt_subset("NT-13", 4).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_17_scenarios() {
+    nt_subset("NT-17", 1).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_18_scenarios() {
+    nt_subset("NT-18", 1).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_32_scenarios() {
+    nt_subset("NT-32", 10).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_33_scenarios() {
+    nt_subset("NT-33", 5).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_48_scenarios() {
+    nt_subset("NT-48", 4).await;
 }

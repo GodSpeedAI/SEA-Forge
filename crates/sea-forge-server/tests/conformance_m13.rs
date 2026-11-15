@@ -1171,6 +1171,8 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
         },
         ..ServerConfig::default()
     };
+    std::fs::create_dir_all(root.path().join("cases/legacy-case")).unwrap();
+    std::fs::write(root.path().join("cases/legacy-case/case.json"), "{}").unwrap();
     let state = Arc::new(ServerState::new(config).unwrap());
 
     let mut handles = vec![];
@@ -1180,6 +1182,9 @@ async fn t13_2_server_semaphore_caps_concurrent_delegations() {
         handles.push(tokio::spawn(async move {
             sea_forge_server::handle_request(
                 Request::Delegate {
+                    case_id: "legacy-case".into(),
+                    episode_ref: serde_json::Value::Null,
+                    assignment_id: None,
                     endpoint: "local-test".into(),
                     instruction: "test".into(),
                     run_id: None,
@@ -1286,6 +1291,8 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
         },
         ..ServerConfig::default()
     };
+    std::fs::create_dir_all(root.path().join("cases/legacy-case")).unwrap();
+    std::fs::write(root.path().join("cases/legacy-case/case.json"), "{}").unwrap();
     let state = Arc::new(ServerState::new(config).unwrap());
 
     let run_a = sea_forge_core::ids::run_id().unwrap();
@@ -1300,6 +1307,9 @@ async fn t13_3_cancel_one_of_three_siblings_settle_normally() {
         tokio::spawn(async move {
             sea_forge_server::handle_request(
                 Request::Delegate {
+                    case_id: "legacy-case".into(),
+                    episode_ref: serde_json::Value::Null,
+                    assignment_id: None,
                     endpoint: "local-test".into(),
                     instruction: "test".into(),
                     run_id: Some(rid),
@@ -1626,6 +1636,8 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
     policy(root.path(), true, false);
     let mut agent_endpoint = endpoint(address.port());
     agent_endpoint.credential_ref = None;
+    std::fs::create_dir_all(root.path().join("cases/legacy-case")).unwrap();
+    std::fs::write(root.path().join("cases/legacy-case/case.json"), "{}").unwrap();
     let state = Arc::new(
         ServerState::new(ServerConfig {
             root: root.path().to_path_buf(),
@@ -1643,6 +1655,9 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
     let direct = tokio::spawn(async move {
         handle_request(
             Request::Delegate {
+                case_id: "legacy-case".into(),
+                episode_ref: serde_json::Value::Null,
+                assignment_id: None,
                 endpoint: "local-test".into(),
                 instruction: "hold permit".into(),
                 run_id: None,

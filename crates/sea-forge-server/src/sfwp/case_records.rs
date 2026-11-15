@@ -177,6 +177,12 @@ pub struct CrashInjected(pub Fault);
 /// Existence of RealityTrace records, resolved at their owner.
 pub trait RealityTraceIndex {
     fn exists(&self, record_id: &str) -> bool;
+    /// Whether the plan, a question and a threshold exist for the episode key,
+    /// found by the key the owner records them under (an episode with RealityTrace
+    /// records but no case record yet, README §7 R3). Default: unknown, so none.
+    fn episode_complete(&self, _episode_key: &Value) -> bool {
+        false
+    }
 }
 
 /// Reads `<root>/realitytrace/records.jsonl` (`{"record_id": ...}` per line).
@@ -187,6 +193,18 @@ impl RealityTraceIndex for FileIndex {
         read_lines(&self.0.join("realitytrace").join("records.jsonl"))
             .iter()
             .any(|line| line["record_id"] == record_id)
+    }
+
+    fn episode_complete(&self, key: &Value) -> bool {
+        let lines = read_lines(&self.0.join("realitytrace").join("records.jsonl"));
+        ["plan:", "question:", "threshold:"].iter().all(|prefix| {
+            lines.iter().any(|l| {
+                l["episode_key"] == *key
+                    && l["record_id"]
+                        .as_str()
+                        .is_some_and(|id| id.starts_with(prefix))
+            })
+        })
     }
 }
 
@@ -702,6 +720,7 @@ fn downgrade(value: Value) -> Value {
     };
     let (fallback, invariant) = match code {
         "WORLD_NOT_PINNED"
+        | "DELEGATION_LINK_INVALID"
         | "REFERENCE_DERIVED_FROM_RESULT"
         | "AUTHORITY_DENIED"
         | "STORE_INTEGRITY"
@@ -758,13 +777,13 @@ fn derived_from_result(payload: &Value) -> Option<String> {
 /// The lifecycle of the case from its case-level dispositions (README §6): a
 /// `close-*` is final; otherwise suspended when the latest one is `suspend`.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub(super) enum Lifecycle {
+pub enum Lifecycle {
     Open,
     Suspended,
     Closed,
 }
 
-pub(super) fn lifecycle(records: &[Value]) -> Lifecycle {
+pub fn lifecycle(records: &[Value]) -> Lifecycle {
     let mut state = Lifecycle::Open;
     for r in records {
         if r["kind"] != "disposition.recorded" || r["level"] != "case" {
@@ -1249,12 +1268,12 @@ fn enqueue_freeze_outbox(
 /// placeholder spellings refused), compared case-insensitively. Case folding
 /// can only merge two spellings, so it can only add refusals, never miss one.
 /// (Unicode NFC is not applied: the crate has no normalisation dependency.)
-fn canonical_actor(raw: &str) -> Result<String, String> {
+pub(super) fn canonical_actor(raw: &str) -> Result<String, String> {
     crate::governed_execution_boundary::check_identity_string("actor", raw)
         .map(|t| t.to_lowercase())
 }
 
-fn parse_time(v: &Value) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+pub(super) fn parse_time(v: &Value) -> Option<chrono::DateTime<chrono::FixedOffset>> {
     v.as_str()
         .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
 }
@@ -1462,11 +1481,22 @@ fn settle(
             None,
         );
     }
-    // I-2: the settling principal's chain must not contain an executor of the item.
-    let executors = match executors_of(ctx, &item) {
+    // I-2: the settling principal's chain must not contain an executor of the
+    // item: the actors of its case events (S1) plus the executor set of the run
+    // records and delegation links of the episode (README §8). A malformed
+    // record fails closed (DELEGATION_LINK_INVALID).
+    let mut executors = match executors_of(ctx, &item) {
         Ok(e) => e,
         Err(why) => return io_refusal(why),
     };
+    let episode_ref = payload["episode_ref"].as_str().unwrap_or("");
+    let analysis =
+        match super::run_records::analyse(ctx.root, ctx.case_id, episode_ref, ctx.principal) {
+            Ok(Ok(a)) => a,
+            Ok(Err(why)) => return refuse("DELEGATION_LINK_INVALID", &why, Some("I-2")),
+            Err(why) => return store_refusal(why),
+        };
+    executors.extend(analysis.executors.iter().cloned());
     let contained = ctx
         .chain
         .iter()
@@ -1485,6 +1515,23 @@ fn settle(
             "settling principal's chain contains the executor's identity",
             Some("I-2"),
         );
+    }
+    // The verifier context is derived from run records, never asserted (H2).
+    // Only an episode that has run records can derive one.
+    if analysis.runs_exist {
+        let declared = payload["independence"]["verifier_context"]
+            .as_str()
+            .unwrap_or("");
+        let confirmed = matches!(payload["result"].as_str(), Some("S") | Some("F"));
+        if declared != analysis.derived_context
+            || (analysis.sibling && confirmed && analysis.derived_context != "fresh")
+        {
+            return refuse(
+                "VERIFIER_CONTEXT_MISMATCH",
+                "the declared verifier context differs from the one derived from run records, or a sibling of an executor settles without a fresh context",
+                None,
+            );
+        }
     }
     // A human settlement needs an approval bound to this very record (README
     // §6 "Approvals"; v1 writers are subject to it too).
@@ -1947,6 +1994,141 @@ pub fn fde_config(root: &Path) -> Result<Value, String> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
         Err(e) => Err(format!("read {}: {e}", path.display())),
     }
+}
+
+/// What the execution gate (README §7) reads about one episode and its case.
+#[derive(Debug)]
+pub struct EpisodeFacts {
+    pub lifecycle: Lifecycle,
+    /// RealityTrace plan, question and threshold exist.
+    pub realitytrace: bool,
+    /// The `episode.frozen` record exists and its intent is committed.
+    pub case_record: bool,
+    /// A freeze anchor exists for the episode.
+    pub anchor: bool,
+    /// Anchoring is configured, so the anchor is part of a complete freeze.
+    pub anchor_required: bool,
+    /// The anchor's pusher is the case keeper (true when none is configured).
+    pub anchor_publisher_ok: bool,
+    /// The kind recorded at the freeze.
+    pub frozen_kind: Option<String>,
+    /// The highest `n` allocated for the plan item (0 when none).
+    pub latest_n: u64,
+    pub settled: bool,
+    /// The latest case-level disposition.
+    pub latest_disposition: Option<String>,
+    /// The frozen `episode_ref` (`episode:<case>:<item>:<n>@sha256:<digest>`).
+    pub episode_ref: Option<String>,
+}
+
+/// Read [`EpisodeFacts`] from the case store: `Err` when it fails its integrity
+/// check or the cell's anchoring configuration is unreadable (the gate fails
+/// closed on both).
+pub fn episode_facts(
+    root: &Path,
+    case_id: &str,
+    plan_item_id: &str,
+    n: u64,
+) -> Result<EpisodeFacts, String> {
+    if !valid_case_segment(case_id) {
+        return Err(format!("unsafe case id {case_id}"));
+    }
+    let config = fde_config(root)?;
+    let policy = AppendPolicy {
+        pinned_world: None,
+        case_keeper: config["case_keeper_identity"].as_str(),
+        anchor_publisher: None,
+        principal_human: false,
+    };
+    let index = FileIndex(root.to_path_buf());
+    let ctx = AppendContext {
+        root,
+        case_id,
+        principal: "execution-gate",
+        role: "service",
+        chain: &[],
+        rt: &index,
+        anchor: None,
+        policy: &policy,
+    };
+    integrity(&ctx)?;
+    let key = key_json(case_id, plan_item_id, n);
+    let all = records(&ctx);
+    let intents = latest_intents(&ctx);
+    let record = all
+        .iter()
+        .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == key);
+    let intent = intents
+        .iter()
+        .find(|i| i["episode_key"] == key && i["state"] != "abandoned");
+    let source = record.or(intent);
+    let committed = record.is_some_and(|r| {
+        intents
+            .iter()
+            .any(|i| i["idempotency_key"] == r["idempotency_key"] && i["state"] == "committed")
+    });
+    let refs_exist = source.is_some_and(|src| {
+        let refs = &src["payload"]["realitytrace_refs"];
+        std::iter::once(&refs["plan_id"])
+            .chain(refs["question_ids"].as_array().into_iter().flatten())
+            .chain(refs["threshold_ids"].as_array().into_iter().flatten())
+            .all(|v| v.as_str().is_some_and(|id| ctx.rt.exists(id)))
+    });
+    let prefix = format!("episode:{case_id}:{plan_item_id}:{n}@");
+    let digest = source.and_then(|src| src["digest"].as_str()).unwrap_or("");
+    let anchor = published_anchor_for(&ctx, &prefix, digest);
+    let publisher_ok = match (ctx.policy.case_keeper, &anchor) {
+        (Some(keeper), Some(a)) => a["receipt"]["pusher_identity"]
+            .as_str()
+            .map(canonical_actor)
+            .is_some_and(|p| p.is_ok() && p == canonical_actor(keeper)),
+        _ => true,
+    };
+    let latest_n = all
+        .iter()
+        .filter(|r| r["kind"] == "episode.frozen")
+        .chain(intents.iter().filter(|i| i["state"] != "abandoned"))
+        .filter(|r| {
+            r["episode_key"]["case_id"] == case_id
+                && r["episode_key"]["plan_item_id"] == plan_item_id
+        })
+        .filter_map(|r| r["episode_key"]["n"].as_u64())
+        .max()
+        .unwrap_or(0);
+    Ok(EpisodeFacts {
+        lifecycle: lifecycle(&all),
+        realitytrace: refs_exist || (source.is_none() && ctx.rt.episode_complete(&key)),
+        case_record: committed,
+        anchor: anchor.is_some(),
+        anchor_required: ctx.anchor_configured(),
+        anchor_publisher_ok: publisher_ok,
+        frozen_kind: source.and_then(|src| src["episode_kind"].as_str().map(String::from)),
+        latest_n,
+        settled: all
+            .iter()
+            .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == key),
+        episode_ref: source
+            .and_then(|src| src["digest"].as_str())
+            .map(|d| format!("episode:{case_id}:{plan_item_id}:{n}@sha256:{d}")),
+        latest_disposition: all
+            .iter()
+            .rev()
+            .find(|r| r["kind"] == "disposition.recorded" && r["level"] == "case")
+            .and_then(|r| r["disposition"].as_str().map(String::from)),
+    })
+}
+
+fn published_anchor_for(ctx: &AppendContext, subject_prefix: &str, digest: &str) -> Option<Value> {
+    read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
+        .into_iter()
+        .find(|a| {
+            a["state"] == "published"
+                && a["kind"] == "freeze"
+                && (a["subject_ref"]
+                    .as_str()
+                    .is_some_and(|r| r.starts_with(subject_prefix))
+                    || (!digest.is_empty() && a["digest"] == digest))
+        })
 }
 
 /// The wire-level helper the SFWP verb uses: build the context from server state.

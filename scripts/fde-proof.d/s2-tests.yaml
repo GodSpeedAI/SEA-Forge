@@ -1,0 +1,12 @@
+# S2-gate tests of the episode loop (WP-21a). Not part of the frozen S1 pre-registration
+# (.agents/preregistrations/fde-s1/); the runner reads this list for `--slice s2`, runs
+# scripts/fde-proof.d/s2/<ID>.sh, and does not verify an anchored pre-registration (none exists
+# for S2 yet; the run records that).
+tests:
+  - {id: NT-13, what: "kind of an existing freeze is immutable; exploratory never settles S or F"}
+  - {id: NT-17, what: "a frozen reference derived from a result is refused (best effort)"}
+  - {id: NT-18, what: "model anchored after the first run event is MODEL_ANCHOR_LATE"}
+  - {id: NT-32, what: "no execution without a freeze (I-1 execution gate)"}
+  - {id: NT-33, what: "a partial freeze (record, RealityTrace, anchor) does not run"}
+  - {id: NT-34, what: "program execution needs a decision bound to the execution digest"}
+  - {id: NT-48, what: "an anchor published by an executor credential is refused"}
