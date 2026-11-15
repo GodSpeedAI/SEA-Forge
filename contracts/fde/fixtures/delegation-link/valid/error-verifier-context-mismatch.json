@@ -1,6 +1,5 @@
 {
   "outcome": "refused",
   "code": "VERIFIER_CONTEXT_MISMATCH",
-  "message": "verifier context mismatch",
-  "invariant": "I-2"
+  "message": "verifier context mismatch"
 }

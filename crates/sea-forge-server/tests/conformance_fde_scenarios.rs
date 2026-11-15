@@ -39,11 +39,12 @@ const KEEPER: &str = "svc:case-keeper";
 const ZERO: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 /// Reasons a pending scenario may still carry in the final commit.
-const FINAL_REASONS: &[&str] = &["part-B", "wp-31", "contract"];
+const FINAL_REASONS: &[&str] = &["part-B", "wp-31"];
 
 /// Scenarios the server satisfies (it grows as the steps of WP-21 part A land;
 /// an acceptance listed here stays green as the gate lands).
 const PASSES_TODAY: &[&str] = &[
+    "case-record-append-v2/independent-verifier-declares-fresh-in-shared-workspace",
     "execution-episode-ref/delegate-decision-binds-another-cwd",
     "execution-episode-ref/delegate-decision-exhausted-runs-used-equals-max-runs",
     "execution-episode-ref/delegate-consequential-action-without-decision",
@@ -208,14 +209,6 @@ fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static s
 
 /// Per-scenario temporary reasons beyond the family default (none yet).
 const STEP_PENDING: &[(&str, &str, &str)] = &[
-    // contract: delegation-link.v1 expects invariant I-2 on VERIFIER_CONTEXT_MISMATCH;
-    // case-record-append.v2 (the verb's own schema, and its two sibling scenarios)
-    // forbids an invariant on that code. The wire answer follows the verb's schema.
-    (
-        "delegation-link",
-        "sibling-self-asserted-fresh-is-refused",
-        "contract",
-    ),
     (
         "case-record-append-v2",
         "sibling-verifier-self-asserts-fresh-context",
@@ -1208,7 +1201,7 @@ async fn every_scenario_is_driven_and_matches_or_is_listed_pending() {
 #[test]
 fn scenario_counts_match_the_contract_readme() {
     for (family, count) in [
-        ("case-record-append-v2", 53),
+        ("case-record-append-v2", 54),
         ("execution-episode-ref", 82),
         ("delegation-link", 7),
         ("reserved-operation", 14),
@@ -1255,8 +1248,8 @@ async fn final_pending_list_is_only_allowed_reasons() {
 // ---------------------------------------------------------------------------
 
 /// Every append, gate and link scenario that carries `nt`: each must pass now,
-/// unless it is listed pending only for a final reason (`part-B`, `wp-31`,
-/// `contract`), which is reported, never silently skipped.
+/// unless it is listed pending only for a final reason (`part-B`, `wp-31`),
+/// which is reported, never silently skipped.
 async fn nt_subset(nt: &str, at_least: usize) {
     let mut ran = 0;
     let mut excluded = Vec::new();

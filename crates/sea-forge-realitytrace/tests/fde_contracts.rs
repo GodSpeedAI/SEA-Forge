@@ -1914,11 +1914,12 @@ fn delegation_link_scenarios_follow_i2() {
             _ => {
                 let code = s["expect"]["code"].as_str().unwrap();
                 assert_eq!(got, Err(code), "{name}");
+                let mut answer = json!({"outcome": "refused", "code": code, "message": "m"});
+                if let Some(inv) = s["expect"].get("invariant") {
+                    answer["invariant"] = inv.clone();
+                }
                 assert_eq!(
-                    errors(
-                        &validator(id, Some("Error")),
-                        &json!({"outcome": "refused", "code": code, "message": "m", "invariant": s["expect"]["invariant"]})
-                    ),
+                    errors(&validator(id, Some("Error")), &answer),
                     vec![],
                     "{name}"
                 );

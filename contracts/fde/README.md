@@ -9,9 +9,9 @@ Reviewed-before-code contracts for the Field Case path. JSON Schema draft 2020-1
 | `case.record.append` | `case-record-append.v1.json` | 12 / 18 + 1, 11 scenarios | same |
 | Field Case document | `field-case.v1.json` | 3 / 20 + 0 | same |
 | Record-kind registry | `case-record-kinds.v1.json` | 1 / 16 + 2 | same |
-| `case.record.append` v2 | `case-record-append.v2.json` | 42 / 33 + 9, 53 scenarios | same |
+| `case.record.append` v2 | `case-record-append.v2.json` | 42 / 33 + 9, 54 scenarios | same |
 | Execution `episode_ref` | `execution-episode-ref.v1.json` | 26 / 25 + 8, 82 scenarios, 12 frames | same |
-| Delegation link | `delegation-link.v1.json` | 9 / 20 + 22, 7 scenarios | same |
+| Delegation link | `delegation-link.v1.json` | 9 / 21 + 22, 7 scenarios | same |
 | Continuation and read verbs | `continuation.v1.json` | 12 / 31 + 11, 4 frames | same |
 | Reserved operation | `reserved-operation.v1.json` | 23 / 57 + 17, 14 scenarios | same |
 | Assignment | `assignment.v1.json` | 7 / 26 + 5, 10 scenarios | same |
@@ -251,7 +251,7 @@ Hard gates (`approval_ref` backed by an A3 approval): `allocate_authority`, `int
 | `CASE_CLOSED` |  | a case-level `close-*` disposition exists and the request is `episode.frozen`, `gate.assessed`, `field_case.revised`, `strategy.recorded` or any disposition (including `continue` or `suspend` after a close); closed is final. `episode.settled` is accepted as late evidence (M3) | no; v1 writer gets `SCHEMA_INVALID`, message prefixed `CASE_CLOSED: ` |
 | `RESERVED_DECISION_REFUSED` |  | `field_case.revised` changes a read-only boundary path after the case's first freeze without an `approval_ref` backed by A3 (section 5); defined in section 10 | unreachable: `field_case.revised` is a v2 kind |
 
-**Precedence** (first that applies wins): `PAYLOAD_TOO_LARGE`; `KIND_UNKNOWN`; `SCHEMA_INVALID` and its specific forms (`RESULT_INVALID`, `REFERENCE_DERIVED_FROM_RESULT`); `EPISODE_REF_DIGEST_MISMATCH`; `STORE_INTEGRITY` (any read the following need fails); idempotency (`IDEMPOTENCY_CONFLICT`, replay); `CASE_CLOSED`; `CASE_SUSPENDED`; `RESERVED_DECISION_REFUSED`; `WORLD_NOT_PINNED`; `ANCHOR_PUBLISHER_INVALID` (freeze, anchor configured); `KIND_IMMUTABLE`; `FREEZE_KEY_EXISTS`; `FREEZE_MISSING`; `FREEZE_INCOMPLETE`; `MODEL_ANCHOR_LATE`; `ANCHOR_PUBLISHER_INVALID` (settlement); `SETTLEMENT_EXISTS`; `EXPLORATORY_NOT_SETTLEABLE`; `SELF_SETTLEMENT_REFUSED`; `VERIFIER_CONTEXT_MISMATCH`; `HARD_GATE_NOT_WAIVABLE`; `AUTHORITY_DENIED`; `REVISION_CONFLICT`. The `SCHEMA_INVALID` rule of v1 (specific code when the failing pointer is `/kind`, `/payload/result`, `/payload/reliability`) extends to `/payload/reference/body/<result-field>` (`REFERENCE_DERIVED_FROM_RESULT`).
+**Precedence** (first that applies wins): `PAYLOAD_TOO_LARGE`; `KIND_UNKNOWN`; `SCHEMA_INVALID` and its specific forms (`RESULT_INVALID`, `REFERENCE_DERIVED_FROM_RESULT`); `STORE_INTEGRITY` (any read the following need fails); idempotency (`IDEMPOTENCY_CONFLICT`, replay: a replay returns the original record and is never refused by a later rule, D43); `CASE_CLOSED`; `CASE_SUSPENDED`; `RESERVED_DECISION_REFUSED`; `EPISODE_REF_DIGEST_MISMATCH` (freeze: the payload digests disagree with the recomputed body digest); `WORLD_NOT_PINNED`; `ANCHOR_PUBLISHER_INVALID` (freeze, anchor configured); `KIND_IMMUTABLE`; `FREEZE_KEY_EXISTS`; `FREEZE_MISSING`; `FREEZE_INCOMPLETE`; `EPISODE_REF_DIGEST_MISMATCH` (settlement: the cited digest is not the frozen episode's); `MODEL_ANCHOR_LATE`; `ANCHOR_PUBLISHER_INVALID` (settlement); `SETTLEMENT_EXISTS`; `EXPLORATORY_NOT_SETTLEABLE`; `SELF_SETTLEMENT_REFUSED`; `VERIFIER_CONTEXT_MISMATCH`; `HARD_GATE_NOT_WAIVABLE`; `AUTHORITY_DENIED`; `REVISION_CONFLICT`. The `SCHEMA_INVALID` rule of v1 (specific code when the failing pointer is `/kind`, `/payload/result`, `/payload/reliability`) extends to `/payload/reference/body/<result-field>` (`REFERENCE_DERIVED_FROM_RESULT`).
 
 **Pin source (`WORLD_NOT_PINNED`, M5).** The world a freeze is compared with is the SEA-Forge **world pin record** (the `world-pin:<operation_id>` record in the CEP ledger, `crates/sea-forge-authority/src/cep/world_pin.rs` `pin_state`, WP-18; the current pin is the last `to_world_ref`, else the baseline), never the Field Case's `world_ref_and_version` field, which a session could edit.
 
@@ -309,9 +309,11 @@ Closes the I-2 residual "delegate then settle" (S1 finding F7) and the hole foun
 
 **Identity aliasing (M7).** Principals are compared after the repository's canonicalisation: trimmed and case-folded, as `canonical_actor` in `crates/sea-forge-server/src/sfwp/case_records.rs` does (it adds refusals, never misses one; Unicode NFC is not applied). Residual until S3: two unrelated ids for one human are indistinguishable.
 
-**Verifier context (H2).** Derived from the `RunRecord`s as in section 6; scenario input `Settlement` carries `result`, `declared_verifier_context` and `settler_root` (the root of the settler's own delegation chain).
+**Verifier context (H2).** Derived from the `RunRecord`s as in section 6; scenario input `Settlement` carries `result`, `declared_verifier_context` and `settler_root` (the root of the settler's own delegation chain). `VERIFIER_CONTEXT_MISMATCH` carries no invariant (section 6 error table; D40).
 
-`$defs`: `Link`, `RunRecord`, `Settlement` (the check input), `Error` (`SELF_SETTLEMENT_REFUSED`, `DELEGATION_LINK_INVALID`, `VERIFIER_CONTEXT_MISMATCH`; invariant `I-2`). `DELEGATION_LINK_INVALID` has its home here. `SELF_SETTLEMENT_REFUSED` and `VERIFIER_CONTEXT_MISMATCH` are defined in section 6 and listed here as also raised. v1 writers: the rule applies to every settlement; v1 writers receive the v1 code as before.
+**Verifier runs (D44).** A verifier run is a `delegate` to one of the configured `verifier_endpoints`; its principal is `agent:<endpoint>` and its `role` is `verifier`. A verifier run never adds its actor to the executor set; a verifier endpoint that is also an executor of the episode is in the executor set through its executor run.
+
+`$defs`: `Link`, `RunRecord`, `Settlement` (the check input), `Error` (`SELF_SETTLEMENT_REFUSED`, `DELEGATION_LINK_INVALID`, `VERIFIER_CONTEXT_MISMATCH`; invariant `I-2` on the first two, none on `VERIFIER_CONTEXT_MISMATCH`, D40). `DELEGATION_LINK_INVALID` has its home here. `SELF_SETTLEMENT_REFUSED` and `VERIFIER_CONTEXT_MISMATCH` are defined in section 6 and listed here as also raised. v1 writers: the rule applies to every settlement; v1 writers receive the v1 code as before.
 
 ## 9. Continuation and read verbs (`continuation.v1.json`)
 
@@ -397,6 +399,7 @@ S1 showed SEA-Forge records no authority decision for program execution, so Real
 - **What it binds (H5)**: `binds_digest` = SHA-256(RFC 8785(`execution`)) with `execution` = `{episode_ref, patch_sha256, argv, cwd, env_digest, workspace_ref, sandbox_profile, world_ref, timeout_s}`: the full `episode_ref`, the patch (SHA-256 of the empty string when none), the command argv, working directory, the environment (`env_digest`), the workspace, the sandbox profile, the pinned world and the timeout. An execution that differs in any member has no decision (`AUTHORITY_DENIED`); a record whose digest does not bind its own `execution` is `RESERVED_DIGEST_MISMATCH`.
 - **Use counter**: `max_runs` (default 1, always present) and `runs_used`, incremented by the case keeper when a run starts under the decision. A run when `runs_used >= max_runs` is `AUTHORITY_DENIED`; a record with `runs_used > max_runs` is corrupt (`AUTHORITY_DENIED`).
 - **Resolution**: `decision_id` is the value emitters send as `authority.decision_id` (E section 5); RealityTrace verifies it against SEA-Forge, scoped by `operation_id`. `outcome` uses the CEP/S1 spelling (`allow`, `deny`).
+- **Realisation in SEA-Forge (D39)**: the decision is an existing CEP `authority_decision` entry in the `cognate-authority` ledger whose `operation.resource_id` is `execution:sha256:<binds_digest>`; the CEP profile is unchanged. The server builds `execution` from the frozen record and the plan item, never from the request. A decision is usable for `execution_decision_ttl_secs` (fde-config.json, default 86400) after `decided_at`. `max_runs` is `execution_max_runs` (default 1); `runs_used` is counted per `decision_id` in the case store (`field-exec-decisions.jsonl`) under the case lock. The run record and the `run.started` interaction event carry the `decision_id`.
 
 ## 11. Assignment (`assignment.v1.json`)
 
@@ -475,6 +478,12 @@ Each is the minimal option and is marked `x-decision` for review; none is inside
 | D36 | reserved | `x-decision: "WP-20: non-hard gates may be set not_applicable only with an approval (set_gate_not_applicable, P2, not reserved, SOP 8.1 'authorized'); the pending operation covers ten operations, with params required per operation"` |
 | D37 | all | `x-decision: "WP-20: bounds: maxLength 4096 on every S2 string unless bounded otherwise, maxItems 256 on arrays unless bounded otherwise (changes 64, budget and spend 5); an observed field cannot carry source kind operator or sop"` |
 | D38 | assignment | `x-decision: "WP-20: a resume reuses the id of an interrupted assignment while its link has not expired; a new delegation instance, and a resume after link expiry, take a new k (ASSIGNMENT_LINK_EXPIRED / ASSIGNMENT_ID_INVALID)"` |
+| D39 | reserved | `x-decision: "WP-21a: the program-execution decision is a CEP authority_decision whose operation.resource_id is execution:sha256:<RFC 8785 digest of the nine-member execution object>; no CEP profile change; the server builds the object from the frozen record and the plan; TTL execution_decision_ttl_secs (default 86400); runs_used counted per decision_id in the case store under the case lock; max_runs = execution_max_runs (default 1)"` |
+| D40 | delegation | `x-decision: "WP-21a: VERIFIER_CONTEXT_MISMATCH carries no invariant (section 6 error table); the delegation-link fixture sibling-self-asserted-fresh-is-refused expected I-2 in error and is corrected; a new append-v2 scenario separates declared != derived from the sibling rule"` |
+| D41 | append v2 | `x-decision: "WP-21a: MODEL_ANCHOR_LATE at freeze applies only once the case holds a run; before the first run a model anchor cannot be late"` |
+| D42 | append v2 | `x-decision: "WP-21a: a closed case refuses every write except the action that ends the plan (CASE_CLOSED is final, D32)"` |
+| D43 | append v2 | `x-decision: "WP-21a: idempotency precedes EPISODE_REF_DIGEST_MISMATCH (the S1 order): a replay of an accepted request returns the original record; the precedence list is corrected to the implemented order"` |
+| D44 | delegation | `x-decision: "WP-21a: verifier runs are delegations to the configured verifier_endpoints with principal agent:<endpoint> and role verifier"` |
 
 
 ## 14. Bounds (review LOW)

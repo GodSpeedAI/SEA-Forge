@@ -267,8 +267,7 @@
       "required": [
         "outcome",
         "code",
-        "message",
-        "invariant"
+        "message"
       ],
       "properties": {
         "outcome": {
@@ -287,7 +286,31 @@
         "invariant": {
           "const": "I-2"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "VERIFIER_CONTEXT_MISMATCH"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "invariant"
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "invariant"
+            ]
+          }
+        }
+      ],
+      "x-decision": "WP-21a D40: VERIFIER_CONTEXT_MISMATCH carries no invariant (case-record-append.v2 section 6 error table); SELF_SETTLEMENT_REFUSED and DELEGATION_LINK_INVALID carry I-2"
     }
   },
   "oneOf": [

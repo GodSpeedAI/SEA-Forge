@@ -450,6 +450,7 @@
     "sibling-verifier-self-asserts-fresh-context.json",
     "sibling-verifier-without-derivable-context-cannot-settle-s.json",
     "sibling-verifier-with-derived-fresh-context-settles.json",
+    "independent-verifier-declares-fresh-in-shared-workspace.json",
     "approval-matches-the-record.json",
     "approval-already-used-by-another-disposition.json",
     "approval-bound-to-another-disposition.json",

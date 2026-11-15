@@ -2,6 +2,16 @@
 
 The v1 files (`frozen-reference`, `anchor`, `case-record-append`) are closed and digest-pinned. A change is a new file and a new `DIGESTS` line. Newest first.
 
+## WP-21a owner decisions D39–D44 (contracts edited in place; `delegation-link.v1.json` re-pinned in DIGESTS)
+
+| Decision | Change | Contract(s) |
+|---|---|---|
+| D39 | README: how SEA-Forge realises the program-execution decision (CEP resource_id `execution:sha256:<digest>`, TTL, run counter) | reserved-operation (README only) |
+| D40 | `delegation-link.v1.json` `Error`: `invariant` (I-2) is required except on `VERIFIER_CONTEXT_MISMATCH`, which carries none; fixture `delegation-link/sibling-self-asserted-fresh-is-refused` no longer expects invariant I-2; new scenario `case-record-append-v2/independent-verifier-declares-fresh-in-shared-workspace` (53 → 54) | delegation-link, case-record-append.v2 |
+| D41, D42 | README decision rows | case-record-append.v2 |
+| D43 | README precedence: idempotency before `EPISODE_REF_DIGEST_MISMATCH`, placed where freeze and settlement check it | case-record-append.v2 |
+| D44 | README: verifier runs are delegations to `verifier_endpoints` | delegation-link |
+
 ## S2 review fixes (independent review of d2f8189e..6c633811; contracts only, edited in place)
 
 The S2 contracts were not yet consumed, so they are changed in place and re-pinned in `DIGESTS`. v1 files unchanged.

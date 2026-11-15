@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 317
+**Status revision:** 318
 
-**Stage:** FDE S2: WP-21a step 5 program-execution decision (D39)
+**Stage:** FDE S2: WP-21a contracts aligned with owner decisions D39-D44
 
-**Summary:** fde/integration: WP-21 part A step 5: Field Case executions need an allow decision of the CEP authority path whose resource_id is execution:sha256:<digest of the nine-member execution object>; runs_used counted in the case store; decision_id on the run record and its interaction event. 114 of 156 scenarios pass; NT-34 PASS.
+**Summary:** fde/integration: WP-21 part A contract edits (owner-approved): delegation-link Error has no invariant on VERIFIER_CONTEXT_MISMATCH (re-pinned), new append-v2 verifier-context scenario (54), README precedence D43 and decision rows D39-D44. 115 of 157 scenarios pass; FDE_WP21A_FINAL=1 passes; part A complete.
 
 **Verified:**
 

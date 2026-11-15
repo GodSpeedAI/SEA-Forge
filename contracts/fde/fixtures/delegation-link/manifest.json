@@ -158,6 +158,12 @@
       "def": "Error",
       "pointer": "/code",
       "contains": "is not one of"
+    },
+    {
+      "file": "error-verifier-context-mismatch-with-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "{\"required\":[\"invariant\"]} is not allowed"
     }
   ],
   "semantic_invalid": [
