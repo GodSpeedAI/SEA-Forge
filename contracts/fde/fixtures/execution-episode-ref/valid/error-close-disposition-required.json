@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "CLOSE_DISPOSITION_REQUIRED",
+  "message": "close disposition required",
+  "no_side_effect": true
+}

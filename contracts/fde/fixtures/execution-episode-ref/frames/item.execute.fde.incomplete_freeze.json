@@ -1,0 +1,33 @@
+{
+  "name": "item.execute.fde.incomplete_freeze",
+  "status": "expected",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    }
+  },
+  "expect": {
+    "refused": {
+      "outcome": "refused",
+      "code": "FREEZE_INCOMPLETE",
+      "message": "freeze incomplete",
+      "invariant": "I-1",
+      "no_side_effect": true
+    }
+  },
+  "note": "Field Case, anchor missing"
+}

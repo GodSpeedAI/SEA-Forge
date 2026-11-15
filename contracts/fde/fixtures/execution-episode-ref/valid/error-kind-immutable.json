@@ -1,0 +1,7 @@
+{
+  "outcome": "refused",
+  "code": "KIND_IMMUTABLE",
+  "message": "kind immutable",
+  "invariant": "I-3",
+  "no_side_effect": true
+}

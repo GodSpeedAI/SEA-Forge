@@ -1,0 +1,7 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_INCOMPLETE",
+  "message": "freeze incomplete",
+  "invariant": "I-3",
+  "no_side_effect": true
+}

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 305
+**Status revision:** 306
 
-**Stage:** FDE S2: WP-20 assignment.v1
+**Stage:** FDE S2: WP-20 execution-episode-ref.v1
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): assignment.v1.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): execution-episode-ref.v1.
 
 **Verified:**
 

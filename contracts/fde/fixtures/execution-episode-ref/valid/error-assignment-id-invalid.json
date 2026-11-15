@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "ASSIGNMENT_ID_INVALID",
+  "message": "assignment id invalid",
+  "no_side_effect": true
+}

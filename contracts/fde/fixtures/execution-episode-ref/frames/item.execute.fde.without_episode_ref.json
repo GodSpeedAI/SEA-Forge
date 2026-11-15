@@ -1,0 +1,27 @@
+{
+  "name": "item.execute.fde.without_episode_ref",
+  "status": "expected",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "expect": {
+    "refused": {
+      "outcome": "refused",
+      "code": "FREEZE_MISSING",
+      "message": "freeze missing",
+      "invariant": "I-1",
+      "no_side_effect": true
+    }
+  },
+  "note": "Field Case, no episode_ref"
+}

@@ -1,0 +1,294 @@
+{
+  "schema": "urn:sea-forge:fde:execution-episode-ref:v1",
+  "valid": [
+    {
+      "file": "item-execute-without-episode-ref.json",
+      "def": "ItemExecuteRequest"
+    },
+    {
+      "file": "item-execute-with-episode-ref.json",
+      "def": "ItemExecuteRequest"
+    },
+    {
+      "file": "item-execute-exploratory.json",
+      "def": "ItemExecuteRequest"
+    },
+    {
+      "file": "case-advance-without-episode-ref.json",
+      "def": "CaseAdvanceRequest"
+    },
+    {
+      "file": "case-advance-with-episode-ref.json",
+      "def": "CaseAdvanceRequest"
+    },
+    {
+      "file": "delegate-without-episode-ref.json",
+      "def": "DelegateRequest"
+    },
+    {
+      "file": "delegate-with-episode-ref.json",
+      "def": "DelegateRequest"
+    },
+    {
+      "file": "delegate-on-behalf-of.json",
+      "def": "DelegateRequest"
+    },
+    {
+      "file": "error-freeze-missing.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-freeze-incomplete.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-kind-immutable.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-schema-invalid.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-case-suspended.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-authority-denied.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-anchor-publisher-invalid.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-model-anchor-late.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-close-disposition-required.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-assignment-id-invalid.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "item-execute-episode-ref-not-an-object.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref",
+      "contains": "is not of type"
+    },
+    {
+      "file": "item-execute-episode-ref-without-kind.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref",
+      "contains": "\"kind\" is a required property"
+    },
+    {
+      "file": "item-execute-episode-ref-kind-unknown.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref/kind",
+      "contains": "is not one of"
+    },
+    {
+      "file": "item-execute-episode-ref-n-zero.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref/n",
+      "contains": "is less than the minimum"
+    },
+    {
+      "file": "item-execute-episode-ref-extra-digest.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "item-execute-episode-ref-case-id-colon.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/episode_ref/case_id",
+      "contains": "does not match"
+    },
+    {
+      "file": "item-execute-missing-request-id.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "",
+      "contains": "\"request_id\" is a required property"
+    },
+    {
+      "file": "item-execute-wrong-verb.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "/verb",
+      "contains": "was expected"
+    },
+    {
+      "file": "item-execute-unknown-field.json",
+      "def": "ItemExecuteRequest",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "case-advance-episode-ref-array.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "/episode_ref",
+      "contains": "is not of type"
+    },
+    {
+      "file": "case-advance-missing-case-id.json",
+      "def": "CaseAdvanceRequest",
+      "pointer": "",
+      "contains": "\"case_id\" is a required property"
+    },
+    {
+      "file": "delegate-assignment-id-four-part.json",
+      "def": "DelegateRequest",
+      "pointer": "/assignment_id",
+      "contains": "does not match"
+    },
+    {
+      "file": "delegate-max-turns-zero.json",
+      "def": "DelegateRequest",
+      "pointer": "/max_turns",
+      "contains": "is less than the minimum"
+    },
+    {
+      "file": "delegate-episode-ref-kind-missing.json",
+      "def": "DelegateRequest",
+      "pointer": "/episode_ref",
+      "contains": "\"kind\" is a required property"
+    },
+    {
+      "file": "delegate-case-id-not-allowed-beside-episode-ref.json",
+      "def": "DelegateRequest",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "error-freeze-missing-without-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "\"invariant\" is a required property"
+    },
+    {
+      "file": "error-freeze-incomplete-wrong-invariant.json",
+      "def": "Error",
+      "pointer": "/invariant",
+      "contains": "was expected"
+    },
+    {
+      "file": "error-without-no-side-effect.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "\"no_side_effect\" is a required property"
+    },
+    {
+      "file": "error-case-suspended-carries-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "error-code-not-in-enum.json",
+      "def": "Error",
+      "pointer": "/code",
+      "contains": "is not one of"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "delegate-assignment-n-differs-from-episode-ref.json",
+      "def": "DelegateRequest",
+      "code": "ASSIGNMENT_ID_INVALID"
+    },
+    {
+      "file": "delegate-assignment-step-differs-from-episode-ref.json",
+      "def": "DelegateRequest",
+      "code": "ASSIGNMENT_ID_INVALID"
+    },
+    {
+      "file": "delegate-assignment-case-differs-from-episode-ref.json",
+      "def": "DelegateRequest",
+      "code": "ASSIGNMENT_ID_INVALID"
+    },
+    {
+      "file": "delegate-episode-ref-without-assignment-id.json",
+      "def": "DelegateRequest",
+      "code": "SCHEMA_INVALID"
+    },
+    {
+      "file": "item-execute-item-id-differs-from-episode-ref.json",
+      "def": "ItemExecuteRequest",
+      "code": "SCHEMA_INVALID"
+    },
+    {
+      "file": "item-execute-case-id-differs-from-episode-ref.json",
+      "def": "ItemExecuteRequest",
+      "code": "SCHEMA_INVALID"
+    },
+    {
+      "file": "case-advance-case-id-differs-from-episode-ref.json",
+      "def": "CaseAdvanceRequest",
+      "code": "SCHEMA_INVALID"
+    }
+  ],
+  "scenarios": [
+    "item_execute-field-case-no-episode-ref.json",
+    "item_execute-field-case-no-freeze.json",
+    "item_execute-freeze-realitytrace-only.json",
+    "item_execute-freeze-record-without-realitytrace.json",
+    "item_execute-freeze-anchor-missing.json",
+    "item_execute-anchor-published-by-executor.json",
+    "item_execute-kind-differs-from-freeze.json",
+    "item_execute-case-suspended.json",
+    "item_execute-consequential-action-denied.json",
+    "item_execute-consequential-action-without-decision.json",
+    "item_execute-complete-freeze-accepted.json",
+    "item_execute-non-field-case-unaffected.json",
+    "item_execute-non-field-case-ignores-episode-ref.json",
+    "case_advance-field-case-no-episode-ref.json",
+    "case_advance-field-case-no-freeze.json",
+    "case_advance-freeze-realitytrace-only.json",
+    "case_advance-freeze-record-without-realitytrace.json",
+    "case_advance-freeze-anchor-missing.json",
+    "case_advance-anchor-published-by-executor.json",
+    "case_advance-kind-differs-from-freeze.json",
+    "case_advance-case-suspended.json",
+    "case_advance-consequential-action-denied.json",
+    "case_advance-consequential-action-without-decision.json",
+    "case_advance-complete-freeze-accepted.json",
+    "case_advance-non-field-case-unaffected.json",
+    "case_advance-non-field-case-ignores-episode-ref.json",
+    "delegate-field-case-no-episode-ref.json",
+    "delegate-field-case-no-freeze.json",
+    "delegate-freeze-realitytrace-only.json",
+    "delegate-freeze-record-without-realitytrace.json",
+    "delegate-freeze-anchor-missing.json",
+    "delegate-anchor-published-by-executor.json",
+    "delegate-kind-differs-from-freeze.json",
+    "delegate-case-suspended.json",
+    "delegate-consequential-action-denied.json",
+    "delegate-consequential-action-without-decision.json",
+    "delegate-complete-freeze-accepted.json",
+    "delegate-non-field-case-unaffected.json",
+    "delegate-non-field-case-ignores-episode-ref.json",
+    "delegate-assignment-k-already-used.json",
+    "case-advance-to-completed-without-close-disposition.json",
+    "case-advance-to-completed-with-close-disposition.json"
+  ],
+  "frames": [
+    "item.execute.fde.without_episode_ref.json",
+    "item.execute.fde.with_episode_ref.json",
+    "item.execute.fde.incomplete_freeze.json",
+    "item.execute.plain.without_episode_ref.json",
+    "case.advance.fde.without_episode_ref.json",
+    "case.advance.fde.with_episode_ref.json",
+    "case.advance.fde.incomplete_freeze.json",
+    "case.advance.plain.without_episode_ref.json",
+    "agent_run.delegate.fde.without_episode_ref.json",
+    "agent_run.delegate.fde.with_episode_ref.json",
+    "agent_run.delegate.fde.incomplete_freeze.json",
+    "agent_run.delegate.plain.without_episode_ref.json"
+  ]
+}

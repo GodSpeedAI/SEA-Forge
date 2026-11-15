@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "ANCHOR_PUBLISHER_INVALID",
+  "message": "anchor publisher invalid",
+  "no_side_effect": true
+}

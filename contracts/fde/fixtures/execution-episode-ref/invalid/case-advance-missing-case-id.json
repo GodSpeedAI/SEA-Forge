@@ -1,0 +1,10 @@
+{
+  "verb": "case_advance",
+  "policy": "authority/active-policy.json",
+  "timeout": 60,
+  "request_id": "req-adv-1",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  }
+}

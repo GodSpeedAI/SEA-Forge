@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "AUTHORITY_DENIED",
+  "message": "authority denied",
+  "no_side_effect": true
+}

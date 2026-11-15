@@ -1,0 +1,41 @@
+{
+  "id": "item_execute-case-suspended",
+  "rule": "R6",
+  "nt": "NT-22",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": true
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "refused",
+    "code": "CASE_SUSPENDED",
+    "message": "case suspended",
+    "no_side_effect": true
+  }
+}

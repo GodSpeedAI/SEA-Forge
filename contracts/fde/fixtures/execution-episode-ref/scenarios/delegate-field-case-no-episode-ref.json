@@ -1,0 +1,36 @@
+{
+  "id": "delegate-field-case-no-episode-ref",
+  "rule": "R1",
+  "nt": "NT-32",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-del-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": false,
+    "case_record": false,
+    "anchor": "absent"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "refused",
+    "code": "FREEZE_MISSING",
+    "message": "a Field Case execution names its episode",
+    "invariant": "I-1",
+    "no_side_effect": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "delegate-non-field-case-unaffected",
+  "rule": "R9",
+  "nt": "AT-01",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-del-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "case": {
+    "template_ref": "e2e-sentry-chain@0.1.0",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": false,
+    "case_record": false,
+    "anchor": "absent"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "accepted"
+  }
+}

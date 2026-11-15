@@ -1,0 +1,41 @@
+{
+  "id": "item_execute-anchor-published-by-executor",
+  "rule": "R4",
+  "nt": "NT-48",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "agent:builder-01"
+  },
+  "extra": {},
+  "expect": {
+    "outcome": "refused",
+    "code": "ANCHOR_PUBLISHER_INVALID",
+    "message": "anchor publisher invalid",
+    "no_side_effect": true
+  }
+}

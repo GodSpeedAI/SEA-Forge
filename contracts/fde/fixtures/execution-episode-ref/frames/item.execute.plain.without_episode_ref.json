@@ -1,0 +1,22 @@
+{
+  "name": "item.execute.plain.without_episode_ref",
+  "status": "expected",
+  "verb": "item_execute",
+  "request": {
+    "verb": "item_execute",
+    "case_id": "case-0001",
+    "item_id": "item-03",
+    "policy": "authority/active-policy.json",
+    "timeout": 60,
+    "request_id": "req-exec-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "expect": {
+    "accepted": true,
+    "response": "unchanged existing response of the verb"
+  },
+  "note": "non-Field-Case: byte-identical to today's frame"
+}

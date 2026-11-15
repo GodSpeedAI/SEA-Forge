@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_ABSENT",
+  "message": "case suspended",
+  "no_side_effect": true
+}

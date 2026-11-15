@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "SCHEMA_INVALID",
+  "message": "schema invalid",
+  "no_side_effect": true
+}

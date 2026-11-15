@@ -1,0 +1,20 @@
+{
+  "verb": "delegate",
+  "endpoint": "http://127.0.0.1:8099/agent",
+  "instruction": "Record the verifier's observation for gate G3.",
+  "max_turns": 8,
+  "criteria": {},
+  "policy": "authority/active-policy.json",
+  "request_id": "req-del-1",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "episode_ref": {
+    "case_id": "case-0001",
+    "plan_item_id": "item-03",
+    "n": 1,
+    "kind": "evaluated"
+  },
+  "assignment_id": "assign:case-0001:item-03:1:1"
+}

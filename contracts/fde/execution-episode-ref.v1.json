@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:execution-episode-ref:v1",
+  "title": "Execution episode_ref v1",
+  "description": "Closes S1 finding F1(b), I-1 freeze before move: the field episode_ref on the three execution entry points item_execute, case_advance and agent_run.delegate (wire verb delegate). For a case whose template_ref is fde.field_case@1 a request without episode_ref, or whose episode has no COMPLETE freeze (RealityTrace plan, question and threshold, the episode.frozen record, a verified anchor), is refused with FREEZE_MISSING or FREEZE_INCOMPLETE before any side effect; other cases are unaffected. The request shapes below are the existing SFWP shapes (apps/godspeed-casework-go/internal/adapters/sfwp/frame.go, crates/sea-forge-server Request::Delegate) plus the new fields; the existing response of an accepted request is unchanged. Shape only: the rule table and the scenarios in the README and fixtures are implemented by WP-21.",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "EpisodeRefField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "plan_item_id",
+        "n",
+        "kind"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^[^\\s:@]{1,128}$"
+        },
+        "plan_item_id": {
+          "type": "string",
+          "pattern": "^[^\\s:@]{1,128}$"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "evaluated",
+            "exploratory"
+          ]
+        }
+      },
+      "description": "Names the episode by key; the case keeper resolves the frozen episode_ref (with digest) from the ledger. The kind is checked against the frozen kind, never trusted (KIND_IMMUTABLE)."
+    },
+    "ItemExecuteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "case_id",
+        "item_id",
+        "request_id"
+      ],
+      "properties": {
+        "verb": {
+          "const": "item_execute"
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "item_id": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "on_behalf_of": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "policy": {
+          "$ref": "#/$defs/text"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/EpisodeRefField"
+        }
+      }
+    },
+    "CaseAdvanceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "case_id",
+        "request_id"
+      ],
+      "properties": {
+        "verb": {
+          "const": "case_advance"
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "on_behalf_of": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "policy": {
+          "$ref": "#/$defs/text"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/EpisodeRefField"
+        }
+      },
+      "description": "With episode_ref, a Field Case advance executes only the enabled item of that episode's plan_item_id (decision WP-20: one frozen episode per advance); other items are not executed by it."
+    },
+    "DelegateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "endpoint",
+        "instruction",
+        "max_turns"
+      ],
+      "properties": {
+        "verb": {
+          "const": "delegate",
+          "description": "Wire verb of the logical operation agent_run.delegate."
+        },
+        "endpoint": {
+          "$ref": "#/$defs/text"
+        },
+        "instruction": {
+          "$ref": "#/$defs/text"
+        },
+        "run_id": {
+          "$ref": "#/$defs/text"
+        },
+        "model": {
+          "$ref": "#/$defs/text"
+        },
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "token_budget": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "criteria": {
+          "type": "object",
+          "description": "The existing SettlementCriteria value of the server; not defined here."
+        },
+        "entity": {
+          "$ref": "#/$defs/text"
+        },
+        "process": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "on_behalf_of": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor_id",
+            "role"
+          ],
+          "properties": {
+            "actor_id": {
+              "$ref": "#/$defs/text"
+            },
+            "role": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "policy": {
+          "$ref": "#/$defs/text"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/EpisodeRefField"
+        },
+        "assignment_id": {
+          "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/assignment_id"
+        }
+      },
+      "description": "episode_ref carries the case (delegate has no case_id on the wire). On a Field Case, assignment_id is required with episode_ref, its case, step and n equal to the episode's, and its k the next unused delegation instance (ASSIGNMENT_ID_INVALID)."
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "FREEZE_MISSING",
+            "FREEZE_INCOMPLETE",
+            "KIND_IMMUTABLE",
+            "SCHEMA_INVALID",
+            "CASE_SUSPENDED",
+            "AUTHORITY_DENIED",
+            "ANCHOR_PUBLISHER_INVALID",
+            "MODEL_ANCHOR_LATE",
+            "CLOSE_DISPOSITION_REQUIRED",
+            "ASSIGNMENT_ID_INVALID"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        },
+        "invariant": {
+          "enum": [
+            "I-1",
+            "I-3"
+          ]
+        },
+        "no_side_effect": {
+          "const": true,
+          "description": "Always true: a gate refusal happens before any run, spend or record."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "FREEZE_MISSING",
+                  "FREEZE_INCOMPLETE"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "invariant",
+              "no_side_effect"
+            ],
+            "properties": {
+              "invariant": {
+                "const": "I-1"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "KIND_IMMUTABLE"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "invariant",
+              "no_side_effect"
+            ],
+            "properties": {
+              "invariant": {
+                "const": "I-3"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "SCHEMA_INVALID",
+                  "CASE_SUSPENDED",
+                  "AUTHORITY_DENIED",
+                  "ANCHOR_PUBLISHER_INVALID",
+                  "MODEL_ANCHOR_LATE",
+                  "CLOSE_DISPOSITION_REQUIRED",
+                  "ASSIGNMENT_ID_INVALID"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "invariant"
+              ]
+            },
+            "required": [
+              "no_side_effect"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ItemExecuteRequest"
+    },
+    {
+      "$ref": "#/$defs/CaseAdvanceRequest"
+    },
+    {
+      "$ref": "#/$defs/DelegateRequest"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

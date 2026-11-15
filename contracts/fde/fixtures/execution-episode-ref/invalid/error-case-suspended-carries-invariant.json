@@ -1,0 +1,7 @@
+{
+  "outcome": "refused",
+  "code": "CASE_SUSPENDED",
+  "message": "case suspended",
+  "no_side_effect": true,
+  "invariant": "I-1"
+}

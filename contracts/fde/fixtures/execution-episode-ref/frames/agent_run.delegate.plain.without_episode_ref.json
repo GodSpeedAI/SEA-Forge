@@ -1,0 +1,23 @@
+{
+  "name": "agent_run.delegate.plain.without_episode_ref",
+  "status": "expected",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-del-1",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "expect": {
+    "accepted": true,
+    "response": "unchanged existing response of the verb"
+  },
+  "note": "non-Field-Case: byte-identical to today's frame"
+}

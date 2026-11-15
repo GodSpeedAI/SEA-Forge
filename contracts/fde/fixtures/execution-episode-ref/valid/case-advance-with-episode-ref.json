@@ -1,0 +1,17 @@
+{
+  "verb": "case_advance",
+  "case_id": "case-0001",
+  "policy": "authority/active-policy.json",
+  "timeout": 60,
+  "request_id": "req-adv-1",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  },
+  "episode_ref": {
+    "case_id": "case-0001",
+    "plan_item_id": "item-03",
+    "n": 1,
+    "kind": "evaluated"
+  }
+}

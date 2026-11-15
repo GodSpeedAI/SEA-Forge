@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "MODEL_ANCHOR_LATE",
+  "message": "model anchor late",
+  "no_side_effect": true
+}
