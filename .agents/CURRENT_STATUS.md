@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 310
+**Status revision:** 311
 
-**Stage:** FDE S2: WP-20 oracle codes and model-drift checks
+**Stage:** FDE S2: WP-20 fixture validation test, README, CHANGELOG
 
-**Summary:** fde/integration: WP-20 (contracts only): oracle-codes.json mapping with check script, field-case/model drift check, digest script covers oracle-codes.json.
+**Summary:** fde/integration: WP-20 (contracts only): fixture-validation and rule tests for all S2 contracts (30 pass), README sections 4-13 with request/response/error tables and x-decision list, CHANGELOG.
 
 **Verified:**
 
