@@ -1,18 +1,19 @@
 # Current status
 
-**Status revision:** 254
+**Status revision:** 255
 
-**Stage:** WP-19 S1 gate: verifier replays compare stdout
+**Stage:** WP-19 S1 gate: anchoring rows reported PARTIAL
 
-**Summary:** fde/integration: the AT-18 verifier now captures compare stdout and compares every replayed derive/compare/propose/regression/delta output byte for byte; the second full cell replays equal.
+**Summary:** fde/integration: AT-04 and NT-16 wrappers report PARTIAL after their producer tests pass (anchor time is local-only, OD-6; I-1 execution gate unwired).
 
 **Verified:**
-- AT-18 verifier over cell 20261114T234200Z: anchors, manifest, replay bytes and class level agree
+- producer tests unchanged
 
 **Limits:**
-- Re-execution of the program episodes by the verifier not done
+- None new
 
-**Next:** Final proof run, ledger, evidence bundle
+**Next:** Final proof run and evidence commit
 
 **Evidence:**
-- scripts/fde-s1/verify.py
+- scripts/fde-proof.d/AT-04.sh
+- scripts/fde-proof.d/NT-16.sh

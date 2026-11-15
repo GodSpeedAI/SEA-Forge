@@ -18,11 +18,11 @@ for rel, h in sorted(man.items()):
     if rel.startswith("rt-home/") or src.stat().st_size > 1_000_000:
         skipped.append(f"{rel}\t{src.stat().st_size}\t{cell}")
         continue
-    (dest / "cell" / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(src, dest / "cell" / rel)
+    (dest / "operational" / rel).parent.mkdir(parents=True, exist_ok=True); shutil.copy2(src, dest / "operational" / rel)
 (dest / "raw-manifest.sha256").write_text("\n".join(lines) + "\n")
 (dest / "raw-not-copied.txt").write_text("# path<TAB>bytes<TAB>cell directory (scratch; kept outside git)\n" + "\n".join(skipped) + "\n")
 for f in ("steps.jsonl", "gaps.jsonl", "state.json", "manifest.json"):
-    shutil.copy2(cell / f, dest / "cell" / f)
+    shutil.copy2(cell / f, dest / "operational" / f)
 (dest / "verification").mkdir(exist_ok=True)
 for f in proof.glob("*"):
     if f.is_file(): shutil.copy2(f, dest / "verification" / f.name)
