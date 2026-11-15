@@ -1,0 +1,22 @@
+{
+  "name": "case.field.get.not_a_field_case",
+  "status": "expected",
+  "verb": "case_field_get",
+  "request": {
+    "verb": "case_field_get",
+    "case_id": "case-0009",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "expect": {
+    "response_def": "Error",
+    "response": {
+      "outcome": "refused",
+      "code": "NOT_A_FIELD_CASE",
+      "message": "case template is e2e-sentry-chain@0.1.0"
+    }
+  },
+  "note": "read, other template"
+}

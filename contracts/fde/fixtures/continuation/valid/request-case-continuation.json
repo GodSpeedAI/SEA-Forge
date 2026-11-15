@@ -1,0 +1,8 @@
+{
+  "verb": "case_continuation",
+  "case_id": "case-0001",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  }
+}

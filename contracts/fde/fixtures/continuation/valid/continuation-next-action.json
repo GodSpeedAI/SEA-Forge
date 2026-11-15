@@ -1,0 +1,210 @@
+{
+  "computed_from": {
+    "ledger_head": "rec-0112",
+    "realitytrace_snapshot": "snapshot:01JABCDEF0000000000000000S",
+    "cognate_ref": "run:run-0001",
+    "computed_at": "2026-11-15T10:00:00Z"
+  },
+  "case": {
+    "case_id": "case-0001",
+    "lifecycle": "open",
+    "owner": {
+      "status": "declared",
+      "source_ref": {
+        "kind": "record",
+        "ref": "case-ledger:rec-0007"
+      },
+      "value": "ops lead"
+    },
+    "purpose": {
+      "status": "declared",
+      "source_ref": {
+        "kind": "record",
+        "ref": "case-ledger:rec-0007"
+      },
+      "value": "on-time reports"
+    },
+    "current_decision": {
+      "status": "unknown",
+      "source_ref": {
+        "kind": "none",
+        "ref": "none"
+      }
+    }
+  },
+  "pinned_world": {
+    "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+    "checkpoint": {
+      "status": "unknown",
+      "source_ref": {
+        "kind": "none",
+        "ref": "none"
+      }
+    }
+  },
+  "gate_evidence": [
+    {
+      "gate": "choose_problem",
+      "state": "met",
+      "evidence_refs": [
+        "evidence:01JABCDEF0000000000000000B"
+      ],
+      "record_id": "rec-0104"
+    },
+    {
+      "gate": "discover_reality",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "allocate_authority",
+      "state": "blocked",
+      "evidence_refs": [],
+      "record_id": "rec-0112"
+    },
+    {
+      "gate": "prove_value",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "prove_reliability",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "integrate_govern",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "earn_trust",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "measure",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    },
+    {
+      "gate": "productize",
+      "state": "unassessed",
+      "evidence_refs": [],
+      "record_id": null
+    }
+  ],
+  "episodes": [
+    {
+      "episode_key": {
+        "case_id": "case-0001",
+        "plan_item_id": "item-03",
+        "n": 1
+      },
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "kind": "evaluated",
+      "state": "frozen",
+      "result": null,
+      "settlement_ref": null
+    }
+  ],
+  "authority": {
+    "pending_approvals": [
+      {
+        "pending_id": "pending-0007",
+        "operation": "settle_episode",
+        "class": "P2",
+        "expires_at": "2026-11-15T12:00:00Z"
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "dec-0099",
+        "operation": "program_execution",
+        "outcome": "allowed",
+        "assurance": "session"
+      }
+    ],
+    "a3_channel": "available"
+  },
+  "disputed_claims": [
+    {
+      "ref": "residual:01JABCDEF0000000000000000R",
+      "why": "ordering contradicts the declared model"
+    }
+  ],
+  "latest_observations": {
+    "observations": [
+      {
+        "observation_ref": "observation:01JABCDEF0000000000000000F",
+        "standing": "insufficient",
+        "basis": "executor_only_evidence"
+      }
+    ],
+    "unknown_evidence": [
+      "evidence:01JABCDEF0000000000000000U"
+    ],
+    "contradictory_evidence": []
+  },
+  "work": {
+    "active_assignments": [
+      {
+        "assignment_id": "assign:case-0001:item-03:1:1",
+        "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+        "state": "started",
+        "trajectory_ref": "run:run-0001"
+      }
+    ],
+    "artifact_locations": [
+      {
+        "artifact_id": "art-1",
+        "locator": "cases/case-0001/artifacts/patch-1.diff"
+      }
+    ],
+    "verified_commands": [
+      {
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "demo"
+        ],
+        "verified_by_record": "rec-0110"
+      }
+    ],
+    "remaining_budgets": [
+      {
+        "currency": "time",
+        "remaining": 2
+      },
+      {
+        "currency": "attention",
+        "remaining": "unknown"
+      },
+      {
+        "currency": "money",
+        "remaining": 2
+      },
+      {
+        "currency": "risk",
+        "remaining": "unknown"
+      },
+      {
+        "currency": "recovery",
+        "remaining": 2
+      }
+    ]
+  },
+  "next": {
+    "kind": "action",
+    "description": "Run the verifier command in a clean cell.",
+    "authorizer": "agent:verifier-01",
+    "would_settle": "question:01JABCDEF0000000000000000A"
+  }
+}

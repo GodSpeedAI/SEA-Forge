@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "NOT_A_FIELD_CASE",
+  "message": "case template is e2e-sentry-chain@0.1.0"
+}

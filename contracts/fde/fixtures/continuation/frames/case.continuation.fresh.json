@@ -1,0 +1,164 @@
+{
+  "name": "case.continuation.fresh",
+  "status": "expected",
+  "verb": "case_continuation",
+  "request": {
+    "verb": "case_continuation",
+    "case_id": "case-0002",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    }
+  },
+  "expect": {
+    "response_def": "ContinuationResponse",
+    "response": {
+      "case_id": "case-0002",
+      "continuation": {
+        "computed_from": {
+          "ledger_head": null,
+          "realitytrace_snapshot": null,
+          "cognate_ref": null,
+          "computed_at": "2026-11-15T10:00:00Z"
+        },
+        "case": {
+          "case_id": "case-0002",
+          "lifecycle": "open",
+          "owner": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          },
+          "purpose": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          },
+          "current_decision": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          }
+        },
+        "pinned_world": {
+          "world_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+          "checkpoint": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          }
+        },
+        "gate_evidence": [
+          {
+            "gate": "choose_problem",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "discover_reality",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "allocate_authority",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "prove_value",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "prove_reliability",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "integrate_govern",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "earn_trust",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "measure",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          },
+          {
+            "gate": "productize",
+            "state": "unassessed",
+            "evidence_refs": [],
+            "record_id": null
+          }
+        ],
+        "episodes": [],
+        "authority": {
+          "pending_approvals": [],
+          "decisions": [],
+          "a3_channel": "unknown"
+        },
+        "disputed_claims": [],
+        "latest_observations": {
+          "observations": [],
+          "unknown_evidence": [],
+          "contradictory_evidence": []
+        },
+        "work": {
+          "active_assignments": [],
+          "artifact_locations": [],
+          "verified_commands": [],
+          "remaining_budgets": [
+            {
+              "currency": "time",
+              "remaining": "unknown"
+            },
+            {
+              "currency": "attention",
+              "remaining": "unknown"
+            },
+            {
+              "currency": "money",
+              "remaining": "unknown"
+            },
+            {
+              "currency": "risk",
+              "remaining": "unknown"
+            },
+            {
+              "currency": "recovery",
+              "remaining": "unknown"
+            }
+          ]
+        },
+        "next": {
+          "kind": "action",
+          "description": "Record the stated and adopted problem.",
+          "authorizer": "human:operator",
+          "would_settle": null
+        }
+      }
+    }
+  },
+  "note": "read, fresh case: everything unknown, nothing absent"
+}

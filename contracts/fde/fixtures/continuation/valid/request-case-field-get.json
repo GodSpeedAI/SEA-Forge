@@ -1,0 +1,9 @@
+{
+  "verb": "case_field_get",
+  "case_id": "case-0001",
+  "request_id": "req-fg-1",
+  "actor": {
+    "actor_id": "operator_local",
+    "role": "operator"
+  }
+}

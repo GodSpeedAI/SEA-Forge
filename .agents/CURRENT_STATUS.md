@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 307
+**Status revision:** 308
 
-**Stage:** FDE S2: WP-20 delegation-link.v1
+**Stage:** FDE S2: WP-20 continuation.v1 and read verbs
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): delegation-link.v1.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): continuation.v1 and read verbs.
 
 **Verified:**
 

@@ -1,0 +1,822 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:continuation:v1",
+  "title": "Continuation v1",
+  "description": "The read model case.continuation (SOP 10.1, E section 3): computed on every read from the case ledger plus RealityTrace and Cognate references, never stored. One property per semicolon-separated item of SOP 10.1, carrying the SOP text it implements in x-sop-segment; scripts/check-fde-field-case-schema.sh fails if the SOP items and the properties differ. Also defines the read verbs case.field.get and case.continuation (wire verbs case_field_get, case_continuation): request, response, error. Reads change nothing.",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "episode_ref": {
+      "$ref": "urn:sea-forge:fde:frozen-reference:v1#/$defs/episode_ref"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Principal": {
+      "type": "string",
+      "pattern": "^[^\\s]{1,256}$"
+    },
+    "Continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "computed_from",
+        "case",
+        "pinned_world",
+        "gate_evidence",
+        "episodes",
+        "authority",
+        "disputed_claims",
+        "latest_observations",
+        "work",
+        "next"
+      ],
+      "properties": {
+        "computed_from": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ledger_head",
+            "realitytrace_snapshot",
+            "cognate_ref",
+            "computed_at"
+          ],
+          "properties": {
+            "ledger_head": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "record_id of the last case record folded; null for a case with no records."
+            },
+            "realitytrace_snapshot": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "RealityTrace snapshot id read; null when RealityTrace was unreachable (then observations are 'unknown', never absent)."
+            },
+            "cognate_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "Cognate session or run read for assignments; null when none."
+            },
+            "computed_at": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+            }
+          }
+        },
+        "case": {
+          "x-sop-item": 1,
+          "x-sop-segment": "case ID, owner, purpose, current decision",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "case_id",
+            "lifecycle",
+            "owner",
+            "purpose",
+            "current_decision"
+          ],
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "pattern": "^[^\\s:@]{1,128}$"
+            },
+            "lifecycle": {
+              "enum": [
+                "open",
+                "suspended",
+                "closed"
+              ]
+            },
+            "owner": {
+              "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue",
+              "description": "purpose_and_outcome.owner_sponsor"
+            },
+            "purpose": {
+              "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue",
+              "description": "purpose_and_outcome.jtbd_outcome"
+            },
+            "current_decision": {
+              "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue",
+              "description": "continuity.current_decision"
+            }
+          }
+        },
+        "pinned_world": {
+          "x-sop-item": 2,
+          "x-sop-segment": "pinned world and checkpoint",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "world_ref",
+            "checkpoint"
+          ],
+          "properties": {
+            "world_ref": {
+              "type": "string",
+              "pattern": "^world:[a-z0-9._-]+@sha256:[0-9a-f]{64}$"
+            },
+            "checkpoint": {
+              "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue",
+              "description": "world_and_boundary.checkpoint"
+            }
+          }
+        },
+        "gate_evidence": {
+          "x-sop-item": 3,
+          "x-sop-segment": "gate evidence",
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "gate",
+              "state",
+              "evidence_refs",
+              "record_id"
+            ],
+            "properties": {
+              "gate": {
+                "enum": [
+                  "choose_problem",
+                  "discover_reality",
+                  "allocate_authority",
+                  "prove_value",
+                  "prove_reliability",
+                  "integrate_govern",
+                  "earn_trust",
+                  "measure",
+                  "productize"
+                ]
+              },
+              "state": {
+                "enum": [
+                  "met",
+                  "blocked",
+                  "unassessed",
+                  "not_applicable"
+                ]
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/text"
+                }
+              },
+              "record_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            }
+          },
+          "description": "All nine gates, in SOP order, each once (semantic rule); a gate with no gate.assessed record is unassessed with record_id null."
+        },
+        "episodes": {
+          "x-sop-item": 4,
+          "x-sop-segment": "frozen or pending episodes",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "episode_key",
+              "episode_ref",
+              "kind",
+              "state",
+              "result",
+              "settlement_ref"
+            ],
+            "properties": {
+              "episode_key": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "case_id",
+                  "plan_item_id",
+                  "n"
+                ],
+                "properties": {
+                  "case_id": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "plan_item_id": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "episode_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^episode:[^:@\\s]+:[^:@\\s]+:[1-9][0-9]*@sha256:[0-9a-f]{64}$"
+              },
+              "kind": {
+                "enum": [
+                  "evaluated",
+                  "exploratory"
+                ]
+              },
+              "state": {
+                "enum": [
+                  "pending",
+                  "frozen",
+                  "settled"
+                ],
+                "description": "pending: a freeze is incomplete (some of RealityTrace plan, case record, anchor); frozen: complete, unsettled; settled."
+              },
+              "result": {
+                "enum": [
+                  "S",
+                  "F",
+                  "U",
+                  "C",
+                  null
+                ]
+              },
+              "settlement_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "settled"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "result": {
+                      "enum": [
+                        "S",
+                        "F",
+                        "U",
+                        "C"
+                      ]
+                    },
+                    "settlement_ref": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "result": {
+                      "const": null
+                    },
+                    "settlement_ref": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "authority": {
+          "x-sop-item": 5,
+          "x-sop-segment": "exact authority/approval state",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pending_approvals",
+            "decisions",
+            "a3_channel"
+          ],
+          "properties": {
+            "pending_approvals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "pending_id",
+                  "operation",
+                  "class",
+                  "expires_at"
+                ],
+                "properties": {
+                  "pending_id": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "operation": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "class": {
+                    "enum": [
+                      "P0",
+                      "P1",
+                      "P2",
+                      "P3"
+                    ]
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+                  }
+                }
+              }
+            },
+            "decisions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "decision_id",
+                  "operation",
+                  "outcome",
+                  "assurance"
+                ],
+                "properties": {
+                  "decision_id": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "operation": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "outcome": {
+                    "enum": [
+                      "allowed",
+                      "denied",
+                      "expired"
+                    ]
+                  },
+                  "assurance": {
+                    "enum": [
+                      "session",
+                      "A3-UV",
+                      "A3-T"
+                    ]
+                  }
+                }
+              }
+            },
+            "a3_channel": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ],
+              "description": "With unavailable, reserved decisions are refused and next names how to restore the channel (E section 8)."
+            }
+          }
+        },
+        "disputed_claims": {
+          "x-sop-item": 6,
+          "x-sop-segment": "disputed claims",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ref",
+              "why"
+            ],
+            "properties": {
+              "ref": {
+                "$ref": "#/$defs/text"
+              },
+              "why": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        },
+        "latest_observations": {
+          "x-sop-item": 7,
+          "x-sop-segment": "latest observations with RealityTrace references, unknown and contradictory evidence exposed",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "observations",
+            "unknown_evidence",
+            "contradictory_evidence"
+          ],
+          "properties": {
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "observation_ref",
+                  "standing",
+                  "basis"
+                ],
+                "properties": {
+                  "observation_ref": {
+                    "type": "string",
+                    "pattern": "^observation:.+$"
+                  },
+                  "standing": {
+                    "enum": [
+                      "confirmed",
+                      "contradicted",
+                      "insufficient",
+                      "unknown"
+                    ]
+                  },
+                  "basis": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "unknown_evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "contradictory_evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          }
+        },
+        "work": {
+          "x-sop-item": 8,
+          "x-sop-segment": "active assignments and trajectories, artifact locations, verified commands, remaining budgets",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active_assignments",
+            "artifact_locations",
+            "verified_commands",
+            "remaining_budgets"
+          ],
+          "properties": {
+            "active_assignments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "assignment_id",
+                  "episode_ref",
+                  "state",
+                  "trajectory_ref"
+                ],
+                "properties": {
+                  "assignment_id": {
+                    "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/assignment_id"
+                  },
+                  "episode_ref": {
+                    "$ref": "#/$defs/episode_ref"
+                  },
+                  "state": {
+                    "enum": [
+                      "issued",
+                      "started",
+                      "interrupted",
+                      "resumed"
+                    ]
+                  },
+                  "trajectory_ref": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "artifact_locations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "artifact_id",
+                  "locator"
+                ],
+                "properties": {
+                  "artifact_id": {
+                    "$ref": "#/$defs/text"
+                  },
+                  "locator": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            },
+            "verified_commands": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "argv",
+                  "verified_by_record"
+                ],
+                "properties": {
+                  "argv": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "$ref": "#/$defs/text"
+                    }
+                  },
+                  "verified_by_record": {
+                    "$ref": "#/$defs/text"
+                  }
+                }
+              }
+            },
+            "remaining_budgets": {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "currency",
+                  "remaining"
+                ],
+                "properties": {
+                  "currency": {
+                    "enum": [
+                      "time",
+                      "attention",
+                      "money",
+                      "risk",
+                      "recovery"
+                    ]
+                  },
+                  "remaining": {
+                    "oneOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "const": "unknown"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "next": {
+          "x-sop-item": 9,
+          "x-sop-segment": "next affordable action or blocker, who can authorize it, what would settle it",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "description",
+            "authorizer",
+            "would_settle"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "action",
+                "blocker"
+              ]
+            },
+            "description": {
+              "$ref": "#/$defs/text"
+            },
+            "authorizer": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "Principal or role that can authorize it; null only when no one can (then the description says why)."
+            },
+            "would_settle": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "description": "What would settle the move (the expectation and evidence source)."
+            },
+            "dimension": {
+              "enum": [
+                "visibility",
+                "reach",
+                "payment",
+                "executable_capability",
+                "authority",
+                "recovery",
+                "settlement_access"
+              ],
+              "description": "Blocked only: the SOP 7.2 dimension that blocks the move."
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "blocker"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "required": [
+                  "dimension"
+                ]
+              },
+              "else": {
+                "not": {
+                  "required": [
+                    "dimension"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "FieldGetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "case_id"
+      ],
+      "properties": {
+        "verb": {
+          "const": "case_field_get"
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        }
+      }
+    },
+    "ContinuationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "case_id"
+      ],
+      "properties": {
+        "verb": {
+          "const": "case_continuation"
+        },
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "request_id": {
+          "$ref": "#/$defs/text"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        }
+      }
+    },
+    "Actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "role"
+      ],
+      "properties": {
+        "actor_id": {
+          "$ref": "#/$defs/text"
+        },
+        "role": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "FieldGetResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "revision",
+        "document"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "document": {
+          "$ref": "urn:sea-forge:fde:field-case:v1"
+        }
+      },
+      "description": "document.revision equals revision."
+    },
+    "ContinuationResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "continuation"
+      ],
+      "properties": {
+        "case_id": {
+          "$ref": "#/$defs/text"
+        },
+        "continuation": {
+          "$ref": "#/$defs/Continuation"
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "NOT_A_FIELD_CASE",
+            "STORE_INTEGRITY"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Continuation"
+    },
+    {
+      "$ref": "#/$defs/FieldGetRequest"
+    },
+    {
+      "$ref": "#/$defs/ContinuationRequest"
+    },
+    {
+      "$ref": "#/$defs/FieldGetResponse"
+    },
+    {
+      "$ref": "#/$defs/ContinuationResponse"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

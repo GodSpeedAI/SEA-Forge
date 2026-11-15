@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "STORE_INTEGRITY",
+  "message": "field_case.json missing for a fde.field_case@1 case"
+}

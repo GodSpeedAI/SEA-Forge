@@ -1,0 +1,228 @@
+{
+  "schema": "urn:sea-forge:fde:continuation:v1",
+  "valid": [
+    {
+      "file": "continuation-blocked-open.json",
+      "def": "Continuation"
+    },
+    {
+      "file": "continuation-next-action.json",
+      "def": "Continuation"
+    },
+    {
+      "file": "continuation-closed-settled.json",
+      "def": "Continuation"
+    },
+    {
+      "file": "continuation-fresh-case-all-unknown.json",
+      "def": "Continuation"
+    },
+    {
+      "file": "request-case-field-get.json",
+      "def": "FieldGetRequest"
+    },
+    {
+      "file": "request-case-continuation.json",
+      "def": "ContinuationRequest"
+    },
+    {
+      "file": "response-case-continuation.json",
+      "def": "ContinuationResponse"
+    },
+    {
+      "file": "response-case-field-get.json",
+      "def": "FieldGetResponse"
+    },
+    {
+      "file": "error-not-a-field-case.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-store-integrity.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "gate-evidence-eight-gates.json",
+      "def": "Continuation",
+      "pointer": "/gate_evidence",
+      "contains": "has less than"
+    },
+    {
+      "file": "gate-not-in-the-nine.json",
+      "def": "Continuation",
+      "pointer": "/gate_evidence/0/gate",
+      "contains": "is not one of"
+    },
+    {
+      "file": "item-missing-next.json",
+      "def": "Continuation",
+      "pointer": "",
+      "contains": "\"next\" is a required property"
+    },
+    {
+      "file": "item-missing-latest-observations.json",
+      "def": "Continuation",
+      "pointer": "",
+      "contains": "\"latest_observations\" is a required property"
+    },
+    {
+      "file": "item-extra.json",
+      "def": "Continuation",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "blocker-without-dimension.json",
+      "def": "Continuation",
+      "pointer": "/next",
+      "contains": "\"dimension\" is a required property"
+    },
+    {
+      "file": "action-with-dimension.json",
+      "def": "Continuation",
+      "pointer": "/next",
+      "contains": "is not allowed for"
+    },
+    {
+      "file": "blocker-dimension-not-in-seven.json",
+      "def": "Continuation",
+      "pointer": "/next/dimension",
+      "contains": "is not one of"
+    },
+    {
+      "file": "settled-episode-without-result.json",
+      "def": "Continuation",
+      "pointer": "/episodes/0/result",
+      "contains": "is not one of"
+    },
+    {
+      "file": "frozen-episode-with-result.json",
+      "def": "Continuation",
+      "pointer": "/episodes/0/result",
+      "contains": "was expected"
+    },
+    {
+      "file": "budget-four-currencies.json",
+      "def": "Continuation",
+      "pointer": "/work/remaining_budgets",
+      "contains": "has less than"
+    },
+    {
+      "file": "budget-remaining-zero-string.json",
+      "def": "Continuation",
+      "pointer": "/work/remaining_budgets/0/remaining",
+      "contains": "is not valid under any of the schemas"
+    },
+    {
+      "file": "observation-standing-not-in-enum.json",
+      "def": "Continuation",
+      "pointer": "/latest_observations/observations/0/standing",
+      "contains": "is not one of"
+    },
+    {
+      "file": "observation-ref-not-prefixed.json",
+      "def": "Continuation",
+      "pointer": "/latest_observations/observations/0/observation_ref",
+      "contains": "does not match"
+    },
+    {
+      "file": "authority-a3-channel-bool.json",
+      "def": "Continuation",
+      "pointer": "/authority/a3_channel",
+      "contains": "is not one of"
+    },
+    {
+      "file": "lifecycle-not-in-enum.json",
+      "def": "Continuation",
+      "pointer": "/case/lifecycle",
+      "contains": "is not one of"
+    },
+    {
+      "file": "pinned-world-malformed.json",
+      "def": "Continuation",
+      "pointer": "/pinned_world/world_ref",
+      "contains": "does not match"
+    },
+    {
+      "file": "computed-from-missing-ledger-head.json",
+      "def": "Continuation",
+      "pointer": "/computed_from",
+      "contains": "\"ledger_head\" is a required property"
+    },
+    {
+      "file": "request-field-get-wrong-verb.json",
+      "def": "FieldGetRequest",
+      "pointer": "/verb",
+      "contains": "was expected"
+    },
+    {
+      "file": "request-continuation-with-case-body.json",
+      "def": "ContinuationRequest",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "request-field-get-without-case-id.json",
+      "def": "FieldGetRequest",
+      "pointer": "",
+      "contains": "\"case_id\" is a required property"
+    },
+    {
+      "file": "response-field-get-revision-zero.json",
+      "def": "FieldGetResponse",
+      "pointer": "/revision",
+      "contains": "is less than the minimum"
+    },
+    {
+      "file": "error-code-not-in-enum.json",
+      "def": "Error",
+      "pointer": "/code",
+      "contains": "is not one of"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "gate-evidence-gate-repeated.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "gate-evidence-out-of-sop-order.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "budget-currency-repeated.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "closed-lifecycle-with-active-assignment.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "met-gate-without-evidence-refs.json",
+      "def": "Continuation",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "field-get-document-revision-differs.json",
+      "def": "FieldGetResponse",
+      "code": "CONTINUATION_INVALID"
+    },
+    {
+      "file": "field-get-document-case-differs.json",
+      "def": "FieldGetResponse",
+      "code": "CONTINUATION_INVALID"
+    }
+  ],
+  "frames": [
+    "case.field.get.json",
+    "case.field.get.not_a_field_case.json",
+    "case.continuation.json",
+    "case.continuation.fresh.json"
+  ]
+}
