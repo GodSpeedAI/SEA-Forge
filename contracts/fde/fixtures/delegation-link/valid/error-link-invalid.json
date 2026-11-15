@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "DELEGATION_LINK_INVALID",
+  "message": "expires_at is not after issued_at",
+  "invariant": "I-2"
+}

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:delegation-link:v1",
+  "title": "Delegation link v1",
+  "description": "Closes the I-2 residual 'delegate then settle' (S1 finding F7). Written by the case keeper, never by a client, when agent_run.delegate is accepted for a Field Case episode: it ties the agent run's actor (delegate) to the principal that delegated it (delegator), the episode and the assignment. Settlement of an episode is refused with SELF_SETTLEMENT_REFUSED (the code case-record-append.v1 already uses for I-2) when the settling principal is an executor of the episode, or is the delegator of any executor of the episode, directly or through a chain of links. Stored as an append-only line in cases/<case_id>/delegation_links.jsonl (path is WP-21's; the record shape is this contract's).",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "episode_ref": {
+      "$ref": "urn:sea-forge:fde:frozen-reference:v1#/$defs/episode_ref"
+    },
+    "principal": {
+      "type": "string",
+      "pattern": "^[^\\s]{1,256}$",
+      "description": "A SEA-Forge actor identity (S1-S2) or, from S3, the shared identity principal; compared by exact string equality."
+    },
+    "Link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "link_id",
+        "case_id",
+        "episode_ref",
+        "assignment_id",
+        "delegator",
+        "delegate",
+        "issued_at",
+        "expires_at"
+      ],
+      "properties": {
+        "link_id": {
+          "$ref": "#/$defs/text"
+        },
+        "case_id": {
+          "type": "string",
+          "pattern": "^[^\\s:@]{1,128}$"
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref"
+        },
+        "assignment_id": {
+          "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/assignment_id"
+        },
+        "delegator": {
+          "$ref": "#/$defs/principal",
+          "description": "The authenticated principal on whose authority the run was delegated (the request actor; on_behalf_of when a gateway sent it)."
+        },
+        "delegate": {
+          "$ref": "#/$defs/principal",
+          "description": "The actor identity the agent run executes as."
+        },
+        "issued_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "description": "After this time no new run may start under the link; settlement checks still use it (a link is never deleted)."
+        }
+      }
+    },
+    "Settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode_ref",
+        "settling_principal",
+        "links"
+      ],
+      "description": "The input of the I-2 check, as WP-21 assembles it: the settling principal and every link of the episode.",
+      "properties": {
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref"
+        },
+        "settling_principal": {
+          "$ref": "#/$defs/principal"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Link"
+          }
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "code",
+        "message",
+        "invariant"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "SELF_SETTLEMENT_REFUSED",
+            "DELEGATION_LINK_INVALID"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        },
+        "invariant": {
+          "const": "I-2"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Link"
+    },
+    {
+      "$ref": "#/$defs/Settlement"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

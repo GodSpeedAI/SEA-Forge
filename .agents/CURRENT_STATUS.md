@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 306
+**Status revision:** 307
 
-**Stage:** FDE S2: WP-20 execution-episode-ref.v1
+**Stage:** FDE S2: WP-20 delegation-link.v1
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): execution-episode-ref.v1.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): delegation-link.v1.
 
 **Verified:**
 

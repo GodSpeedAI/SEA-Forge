@@ -1,0 +1,145 @@
+{
+  "schema": "urn:sea-forge:fde:delegation-link:v1",
+  "valid": [
+    {
+      "file": "link-operator-to-agent.json",
+      "def": "Link"
+    },
+    {
+      "file": "link-agent-to-subagent.json",
+      "def": "Link"
+    },
+    {
+      "file": "settlement-by-independent-verifier.json",
+      "def": "Settlement"
+    },
+    {
+      "file": "error-self-settlement.json",
+      "def": "Error"
+    },
+    {
+      "file": "error-link-invalid.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "link-without-delegator.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "\"delegator\" is a required property"
+    },
+    {
+      "file": "link-without-assignment-id.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "\"assignment_id\" is a required property"
+    },
+    {
+      "file": "link-without-episode-ref.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "\"episode_ref\" is a required property"
+    },
+    {
+      "file": "link-without-expiry.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "\"expires_at\" is a required property"
+    },
+    {
+      "file": "link-assignment-id-four-part.json",
+      "def": "Link",
+      "pointer": "/assignment_id",
+      "contains": "does not match"
+    },
+    {
+      "file": "link-delegator-has-whitespace.json",
+      "def": "Link",
+      "pointer": "/delegator",
+      "contains": "does not match"
+    },
+    {
+      "file": "link-timestamp-not-utc.json",
+      "def": "Link",
+      "pointer": "/issued_at",
+      "contains": "does not match"
+    },
+    {
+      "file": "link-extra-field.json",
+      "def": "Link",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "link-delegates-list.json",
+      "def": "Link",
+      "pointer": "/delegate",
+      "contains": "is not of type"
+    },
+    {
+      "file": "error-self-settlement-without-invariant.json",
+      "def": "Error",
+      "pointer": "",
+      "contains": "\"invariant\" is a required property"
+    },
+    {
+      "file": "error-code-not-in-enum.json",
+      "def": "Error",
+      "pointer": "/code",
+      "contains": "is not one of"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "link-expires-before-issued.json",
+      "def": "Link",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "link-delegator-is-delegate.json",
+      "def": "Link",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "link-assignment-n-differs-from-episode.json",
+      "def": "Link",
+      "code": "DELEGATION_LINK_INVALID"
+    },
+    {
+      "file": "settlement-by-executor.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-by-delegator-of-executor.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-by-root-of-chain.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-by-mid-delegator.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-after-link-expiry-still-refused.json",
+      "def": "Settlement",
+      "code": "SELF_SETTLEMENT_REFUSED"
+    },
+    {
+      "file": "settlement-links-name-another-episode.json",
+      "def": "Settlement",
+      "code": "DELEGATION_LINK_INVALID"
+    }
+  ],
+  "scenarios": [
+    "delegate-then-settle-by-delegator.json",
+    "independent-verifier-settles.json",
+    "executor-reuses-identity-as-verifier.json"
+  ]
+}
