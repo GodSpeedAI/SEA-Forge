@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "EPISODE_REF_DIGEST_MISMATCH",
+  "message": "episode ref digest mismatch"
+}

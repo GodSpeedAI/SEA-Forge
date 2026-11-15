@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 302
+**Status revision:** 303
 
-**Stage:** FDE S2: WP-20 field-case.v1
+**Stage:** FDE S2: WP-20 case-record-append.v2
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): field-case.v1.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): case-record-append.v2.
 
 **Verified:**
 

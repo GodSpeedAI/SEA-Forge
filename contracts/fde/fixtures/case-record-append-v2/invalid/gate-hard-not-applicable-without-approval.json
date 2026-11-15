@@ -1,0 +1,11 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "allocate_authority",
+    "state": "not_applicable",
+    "evidence_refs": [],
+    "rationale": "single-operator host"
+  },
+  "idempotency_key": "k-1"
+}

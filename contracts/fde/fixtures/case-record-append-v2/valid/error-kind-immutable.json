@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "KIND_IMMUTABLE",
+  "message": "the episode kind of an existing freeze cannot change",
+  "invariant": "I-3"
+}

@@ -1,0 +1,6 @@
+{
+  "outcome": "refused",
+  "code": "FREEZE_MISSING",
+  "message": "freeze missing",
+  "invariant": "I-1"
+}

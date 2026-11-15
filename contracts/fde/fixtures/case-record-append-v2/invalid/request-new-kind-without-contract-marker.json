@@ -1,0 +1,12 @@
+{
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "choose_problem",
+    "state": "met",
+    "evidence_refs": [
+      "evidence:01JABCDEF0000000000000000B"
+    ],
+    "rationale": "sponsor-owned need recorded"
+  },
+  "idempotency_key": "k-1"
+}

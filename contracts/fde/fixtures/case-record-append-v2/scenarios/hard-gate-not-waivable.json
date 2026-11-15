@@ -1,0 +1,23 @@
+{
+  "id": "hard-gate-not-waivable",
+  "rule": "gate",
+  "nt": "NT-11",
+  "dialect": "v2",
+  "ledger_before": [],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "gate.assessed",
+    "payload": {
+      "gate": "allocate_authority",
+      "state": "not_applicable",
+      "evidence_refs": [],
+      "rationale": "single-operator host"
+    },
+    "idempotency_key": "operator/rec-0106"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "HARD_GATE_NOT_WAIVABLE",
+    "message": "hard gate cannot be set not_applicable without approval"
+  }
+}

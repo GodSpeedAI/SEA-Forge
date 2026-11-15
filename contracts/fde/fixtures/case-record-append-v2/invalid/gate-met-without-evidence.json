@@ -1,0 +1,11 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "choose_problem",
+    "state": "met",
+    "evidence_refs": [],
+    "rationale": "sponsor-owned need recorded"
+  },
+  "idempotency_key": "k-1"
+}

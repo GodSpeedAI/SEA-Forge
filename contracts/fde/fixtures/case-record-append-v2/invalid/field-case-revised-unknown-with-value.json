@@ -1,0 +1,22 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "field_case.revised",
+  "payload": {
+    "base_revision": 1,
+    "changes": [
+      {
+        "path": "framing.better_question",
+        "field": {
+          "status": "unknown",
+          "source_ref": {
+            "kind": "none",
+            "ref": "none"
+          },
+          "value": "x"
+        }
+      }
+    ],
+    "rationale": "intake interview"
+  },
+  "idempotency_key": "k-1"
+}

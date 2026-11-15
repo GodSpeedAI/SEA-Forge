@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "ANCHOR_PUBLISHER_INVALID",
+  "message": "anchor was not published by the case keeper"
+}

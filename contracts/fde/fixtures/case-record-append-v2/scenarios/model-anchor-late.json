@@ -1,0 +1,46 @@
+{
+  "id": "model-anchor-late",
+  "rule": "anchor",
+  "nt": "NT-18",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "run.recorded",
+      "episode_key": {
+        "case_id": "case-0001",
+        "plan_item_id": "item-03",
+        "n": 1
+      },
+      "recorded_seq": 3
+    },
+    {
+      "kind": "anchor.verified",
+      "anchor_kind": "model",
+      "subject_ref": "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b",
+      "server_push_time": "2026-11-14T10:00:00Z",
+      "first_run_event_time": "2026-11-14T09:00:00Z"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "episode.settled",
+    "payload": {
+      "episode_ref": "episode:case-0001:item-03:1@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+      "result": "S",
+      "reliability": {
+        "K": "two independent sources"
+      },
+      "independence": {
+        "independent_source_count": 2,
+        "verifier_context": "fresh"
+      },
+      "settlement_ref": "settlement:01JABCDEF0000000000000000C"
+    },
+    "idempotency_key": "verifier/rec-0201"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "MODEL_ANCHOR_LATE",
+    "message": "model anchored after the first run event"
+  }
+}

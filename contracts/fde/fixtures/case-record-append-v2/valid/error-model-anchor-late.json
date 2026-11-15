@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "MODEL_ANCHOR_LATE",
+  "message": "model anchored after the first run event"
+}

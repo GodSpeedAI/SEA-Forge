@@ -1,0 +1,11 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "disposition.recorded",
+  "payload": {
+    "level": "episode",
+    "disposition": "continue",
+    "rationale": "unresolved, run again",
+    "approval_ref": "approval:appr-0044"
+  },
+  "idempotency_key": "k-1"
+}

@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "IDEMPOTENCY_CONFLICT",
+  "message": "idempotency conflict"
+}

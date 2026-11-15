@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "PAYLOAD_TOO_LARGE",
+  "message": "request exceeds 1048576 bytes"
+}

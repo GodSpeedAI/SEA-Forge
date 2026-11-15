@@ -1,0 +1,30 @@
+{
+  "id": "hard-gate-not-applicable-with-denied-approval",
+  "rule": "gate",
+  "nt": "NT-11",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "approval.recorded",
+      "approval_ref": "approval:appr-0042",
+      "outcome": "denied"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "gate.assessed",
+    "payload": {
+      "gate": "allocate_authority",
+      "state": "not_applicable",
+      "evidence_refs": [],
+      "rationale": "single-operator host",
+      "approval_ref": "approval:appr-0042"
+    },
+    "idempotency_key": "operator/rec-0106"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "AUTHORITY_DENIED",
+    "message": "the authority decision is denied"
+  }
+}

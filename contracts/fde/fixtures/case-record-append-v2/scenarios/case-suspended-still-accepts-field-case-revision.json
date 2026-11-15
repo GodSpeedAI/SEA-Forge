@@ -1,0 +1,64 @@
+{
+  "id": "case-suspended-still-accepts-field-case-revision",
+  "rule": "lifecycle",
+  "nt": "NT-22",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "disposition.recorded",
+      "level": "case",
+      "disposition": "suspend"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "field_case.revised",
+    "payload": {
+      "base_revision": 1,
+      "changes": [
+        {
+          "path": "purpose_and_outcome.stated_problem",
+          "field": {
+            "status": "declared",
+            "source_ref": {
+              "kind": "operator",
+              "ref": "operator:note-1"
+            },
+            "value": "Reports are late"
+          }
+        },
+        {
+          "path": "purpose_and_outcome.adopted_problem",
+          "field": {
+            "status": "inferred",
+            "source_ref": {
+              "kind": "record",
+              "ref": "case-ledger:rec-0007"
+            },
+            "value": "Handoffs lose the due date"
+          }
+        },
+        {
+          "path": "framing.better_question",
+          "field": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          }
+        }
+      ],
+      "rationale": "intake interview"
+    },
+    "idempotency_key": "operator/rec-0101"
+  },
+  "expect": {
+    "outcome": "recorded",
+    "kind": "field_case.revised",
+    "record_id": "rec-0101",
+    "replayed": false,
+    "revision": 2
+  },
+  "base_revision_current": 1
+}

@@ -1,0 +1,6 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "result.recorded",
+  "payload": {},
+  "idempotency_key": "k-1"
+}

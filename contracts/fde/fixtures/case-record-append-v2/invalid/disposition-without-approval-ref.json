@@ -1,0 +1,10 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "disposition.recorded",
+  "payload": {
+    "level": "case",
+    "disposition": "close-satisfied",
+    "rationale": "settled S, outcome accepted"
+  },
+  "idempotency_key": "k-1"
+}

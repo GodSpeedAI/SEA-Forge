@@ -1,0 +1,32 @@
+{
+  "id": "strategy-revision-conflict",
+  "rule": "revision",
+  "nt": "AT-03",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "strategy.recorded",
+      "revision": 1
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "strategy.recorded",
+    "payload": {
+      "revision": 1,
+      "supersedes": null,
+      "where_to_play": "one recurring report",
+      "how_to_win": "make the handoff record the due date",
+      "underserved_outcome": "on-time reports",
+      "tested_assumption": "due date is lost at handoff",
+      "abandonment_trigger": "no loss found in 3 observed handoffs",
+      "revisit_reason": null
+    },
+    "idempotency_key": "operator/rec-0110"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "REVISION_CONFLICT",
+    "message": "base revision is not the current revision"
+  }
+}

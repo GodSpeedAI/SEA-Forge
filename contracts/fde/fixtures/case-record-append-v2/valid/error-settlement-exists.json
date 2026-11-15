@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "SETTLEMENT_EXISTS",
+  "message": "episode already has a settlement"
+}

@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "STORE_INTEGRITY",
+  "message": "case store failed its integrity check"
+}

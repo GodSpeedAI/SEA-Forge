@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "REFERENCE_DERIVED_FROM_RESULT",
+  "message": "frozen reference contains result content"
+}

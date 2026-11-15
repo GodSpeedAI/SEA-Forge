@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "REVISION_CONFLICT",
+  "message": "base revision is not the current revision"
+}

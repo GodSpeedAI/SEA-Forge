@@ -1,0 +1,11 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "integrate_govern",
+    "state": "not_applicable",
+    "evidence_refs": [],
+    "rationale": "r"
+  },
+  "idempotency_key": "k-1"
+}

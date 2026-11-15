@@ -1,0 +1,10 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "field_case.revised",
+  "payload": {
+    "base_revision": 1,
+    "changes": [],
+    "rationale": "intake interview"
+  },
+  "idempotency_key": "k-1"
+}

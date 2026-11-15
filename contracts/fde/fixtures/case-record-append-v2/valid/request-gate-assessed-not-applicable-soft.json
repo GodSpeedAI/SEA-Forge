@@ -1,0 +1,11 @@
+{
+  "contract": "fde.case-record-append@2",
+  "kind": "gate.assessed",
+  "payload": {
+    "gate": "productize",
+    "state": "not_applicable",
+    "evidence_refs": [],
+    "rationale": "internal case, no reuse intended"
+  },
+  "idempotency_key": "operator/rec-0105"
+}

@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "HARD_GATE_NOT_WAIVABLE",
+  "message": "hard gate cannot be set not_applicable without approval"
+}

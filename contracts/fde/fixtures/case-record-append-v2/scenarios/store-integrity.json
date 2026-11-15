@@ -1,0 +1,30 @@
+{
+  "id": "store-integrity",
+  "rule": "store",
+  "nt": "S1",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "store.hash_chain_broken",
+      "at_record": "rec-0042"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "gate.assessed",
+    "payload": {
+      "gate": "choose_problem",
+      "state": "met",
+      "evidence_refs": [
+        "evidence:01JABCDEF0000000000000000B"
+      ],
+      "rationale": "sponsor-owned need recorded"
+    },
+    "idempotency_key": "operator/rec-0104"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "STORE_INTEGRITY",
+    "message": "case store failed its integrity check"
+  }
+}

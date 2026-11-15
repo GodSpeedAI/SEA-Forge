@@ -1,0 +1,29 @@
+{
+  "id": "authority-denied-disposition",
+  "rule": "authority",
+  "nt": "NT-34",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "approval.recorded",
+      "approval_ref": "approval:appr-0043",
+      "outcome": "denied"
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "disposition.recorded",
+    "payload": {
+      "level": "case",
+      "disposition": "close-satisfied",
+      "rationale": "settled S, outcome accepted",
+      "approval_ref": "approval:appr-0043"
+    },
+    "idempotency_key": "operator/rec-0107"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "AUTHORITY_DENIED",
+    "message": "the authority decision is denied"
+  }
+}

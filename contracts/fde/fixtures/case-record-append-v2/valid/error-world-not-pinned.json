@@ -1,0 +1,5 @@
+{
+  "outcome": "refused",
+  "code": "WORLD_NOT_PINNED",
+  "message": "freeze names world_ref that is not the pinned world"
+}

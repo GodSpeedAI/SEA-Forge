@@ -1,0 +1,60 @@
+{
+  "id": "revision-conflict",
+  "rule": "revision",
+  "nt": "AT-03",
+  "dialect": "v2",
+  "ledger_before": [
+    {
+      "kind": "field_case.revised",
+      "revision": 2
+    }
+  ],
+  "request": {
+    "contract": "fde.case-record-append@2",
+    "kind": "field_case.revised",
+    "payload": {
+      "base_revision": 1,
+      "changes": [
+        {
+          "path": "purpose_and_outcome.stated_problem",
+          "field": {
+            "status": "declared",
+            "source_ref": {
+              "kind": "operator",
+              "ref": "operator:note-1"
+            },
+            "value": "Reports are late"
+          }
+        },
+        {
+          "path": "purpose_and_outcome.adopted_problem",
+          "field": {
+            "status": "inferred",
+            "source_ref": {
+              "kind": "record",
+              "ref": "case-ledger:rec-0007"
+            },
+            "value": "Handoffs lose the due date"
+          }
+        },
+        {
+          "path": "framing.better_question",
+          "field": {
+            "status": "unknown",
+            "source_ref": {
+              "kind": "none",
+              "ref": "none"
+            }
+          }
+        }
+      ],
+      "rationale": "intake interview"
+    },
+    "idempotency_key": "operator/rec-0109"
+  },
+  "expect": {
+    "outcome": "refused",
+    "code": "REVISION_CONFLICT",
+    "message": "base revision is not the current revision"
+  }
+}
