@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 300
+**Status revision:** 301
 
-**Stage:** WP-19 S1 gate: results, claim ledger, evidence bundle
+**Stage:** FDE integration branch: merged origin/main; SOP model re-minted under DomainForge 0.22.0
 
-**Summary:** fde/integration: S1 proof run on a clean tree: 21 frozen tests, 12 PASS / 9 PARTIAL / 0 FAIL; three real program episodes (settled U, F, U), approved promotion, capability delta NO_GAIN; claim ledger and raw-record manifest committed under .agents/evidence/fde-field-case/s1-20261114T234200Z.
+**Summary:** fde/integration merged origin/main (DomainForge 0.22.0 lockstep, PR #71 hardening harvest, e2e-world-loop, planning baseline). The FDE SOP model world_ref changes with the compiler from 78eddd4e... (0.21.2) to e3c3d396... (0.22.0 release CLI, tarball sha256 0a976877...); sources unchanged. validation record regenerated, compiler-upgrade-0.22.0.md added, check-fde-sop-model.sh pins the compiler and distinguishes the S1 frozen world from the current world. Pre-registration and S1 evidence bundle untouched.
 
 **Verified:**
 

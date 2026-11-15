@@ -14,6 +14,7 @@ validation evidence.
 | `source-translation-map.md` | One row per numbered SOP clause: excerpt, model element, `declared / inferred / unknown`, limitation, reason. |
 | `assumptions-and-unknowns.md` | Readings the SOP does not settle, and the unknown groups. |
 | `validation/limitations.md` | Limitations re-tested on DomainForge 0.21.2 and model-specific ones (S1-S7). |
+| `validation/compiler-upgrade-0.22.0.md` | world_ref change 0.21.2 to 0.22.0 (sources unchanged), verified with the released CLI. |
 | `validation/domainforge-output.txt` | Captured `validate --application`, `envelope --emit cep` (repeated), distinctness and negative controls. |
 | `validation/map-check-output.txt` | Captured output of the map check. |
 

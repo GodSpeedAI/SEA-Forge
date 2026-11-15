@@ -1,9 +1,10 @@
 FDE SOP declared model: DomainForge validation evidence (AT-01)
-Captured: 2026-11-14T00:36:44Z
+Captured: 2026-11-15T00:12:43Z
 
 == toolchain ==
 $ domainforge --version
-domainforge 0.21.2
+domainforge 0.22.0
+compiler pin: domainforge 0.22.0 (ok)
 source (docs/sop/GS-FDE-SOP-001-v0.4.1.md) sha256: 043ae33ae6001da14f518feeb4ca2d23e280da2769d8378b36827f80d6057001
 model fde-sop.sea sha256: 2b8a8c437389c97ab396ec02a726c5370481ff735b3838da7e07728cb4114cf2
 model evidence.sea sha256: 5e12c45004506bcb255499e22fa513c0123c7d0dd32d1e38a8c81bc035d30054
@@ -19,15 +20,16 @@ ok:   validate --application exits 0
 $ domainforge envelope --emit cep --world-name godspeed-fde-sop .sea/interaction/fde-sop/fde-sop.sea
 ok:   envelope run 1 exits 0
 ok:   envelope run 2 exits 0
-run 1 world_ref: world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
-run 2 world_ref: world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
-run 3 world_ref (representation inlined): world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b
+run 1 world_ref: world:godspeed-fde-sop@sha256:e3c3d396577159a51581782455b68c30fe353292b6023c24625d28174627cf17
+run 2 world_ref: world:godspeed-fde-sop@sha256:e3c3d396577159a51581782455b68c30fe353292b6023c24625d28174627cf17
+run 3 world_ref (representation inlined): world:godspeed-fde-sop@sha256:e3c3d396577159a51581782455b68c30fe353292b6023c24625d28174627cf17
 source_set_hash: sha256:d27518fbab63fc3b6b0f3821c15ab7c01a82e1a926f7673fdeabc2b4ac607c25
 semantic_closure_hash: sha256:69bf9da570304c5e599e48e558914bb723238b53613c050012674867ff11f006
-created_by: domainforge 0.21.2
-envelope_id differs between runs (expected, not part of identity): 01a1d77c-39c4-7962-aeed-c21eb7178a5b / 01a1d77c-3a8d-7002-872c-d19b99496d60
+created_by: domainforge 0.22.0
+envelope_id differs between runs (expected, not part of identity): 01a1dc8c-9816-7af1-9fbd-bbd86e16e99f / 01a1dc8c-984e-72e0-ae3b-11ebf72981bb
 ok:   world_ref has the form world:godspeed-fde-sop@sha256:<64 hex>
 ok:   world_ref identical across three runs
+ok:   current world (0.22.0 compiler) differs from the S1 frozen world (0.21.2 compiler, world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b); expected, the frozen pre-registration keeps its own world
 
 == 3. the two settlement concepts are distinct ==
 $ domainforge parse --format json fde-sop.sea  (entities named Settlement)

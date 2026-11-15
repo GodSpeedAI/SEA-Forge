@@ -13,6 +13,12 @@
 #   scripts/check-fde-sop-model.sh | tee .sea/interaction/fde-sop/validation/domainforge-output.txt
 #
 # Environment: DOMAINFORGE overrides the binary (default: the mise shim).
+#
+# Compiler pin: the model's world_ref depends on the DomainForge compiler version.
+# The S1 pre-registration (.agents/preregistrations/fde-s1, frozen) names the world
+# minted by the 0.21.2 compiler; the current world is minted by 0.22.0. Both are
+# correct; this script fails on any other compiler and says which world it found.
+# See .sea/interaction/fde-sop/validation/compiler-upgrade-0.22.0.md.
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,6 +26,8 @@ model_dir="$root/.sea/interaction/fde-sop"
 model="$model_dir/fde-sop.sea"
 df=${DOMAINFORGE:-$HOME/.local/share/mise/shims/domainforge}
 world_name=godspeed-fde-sop
+expected_df_version=0.22.0
+s1_frozen_world=$(sed -n 's/^world_ref: "\(world:[^"]*\)".*/\1/p' "$root/.agents/preregistrations/fde-s1/episodes.yaml" | head -1)
 
 [ -x "$df" ] || { echo "fail: domainforge not executable at $df" >&2; exit 2; }
 command -v python3 >/dev/null 2>&1 || { echo 'fail: python3 is required' >&2; exit 2; }
@@ -37,6 +45,9 @@ echo
 echo "== toolchain =="
 echo "\$ domainforge --version"
 "$df" --version
+df_version=$("$df" --version | sed 's/^domainforge //')
+[ "$df_version" = "$expected_df_version" ] || { echo "FAIL: compiler pin: expected domainforge $expected_df_version, found $df_version (set DOMAINFORGE)"; exit 1; }
+echo "compiler pin: domainforge $expected_df_version (ok)"
 sop_sha=$(sha256sum "$root/docs/sop/GS-FDE-SOP-001-v0.4.1.md" | cut -d' ' -f1)
 echo "source (docs/sop/GS-FDE-SOP-001-v0.4.1.md) sha256: $sop_sha"
 for f in fde-sop.sea evidence.sea outcome.sea; do
@@ -101,6 +112,11 @@ case "$w1" in
   *) fail "world_ref is malformed: $w1" ;;
 esac
 [ -n "$w1" ] && [ "$w1" = "$w2" ] && [ "$w1" = "$w3" ] && pass "world_ref identical across three runs" || fail "world_ref differs across runs"
+if [ "$w1" = "$s1_frozen_world" ]; then
+  pass "current world equals the S1 frozen world"
+else
+  pass "current world ($expected_df_version compiler) differs from the S1 frozen world (0.21.2 compiler, $s1_frozen_world); expected, the frozen pre-registration keeps its own world"
+fi
 echo
 
 echo "== 3. the two settlement concepts are distinct =="
