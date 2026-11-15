@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 304
+**Status revision:** 305
 
-**Stage:** FDE S2: WP-20 case-record-kinds.v1
+**Stage:** FDE S2: WP-20 assignment.v1
 
-**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): case-record-kinds.v1.
+**Summary:** fde/integration: WP-20 (contracts only, no server behaviour change): assignment.v1.
 
 **Verified:**
 
