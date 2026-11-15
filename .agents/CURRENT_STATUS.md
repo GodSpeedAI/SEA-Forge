@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 313
+**Status revision:** 314
 
-**Stage:** FDE S2: WP-20 review fixes (tests, README, CHANGELOG)
+**Stage:** FDE S2: WP-21a step 1 scenario harness
 
-**Summary:** fde/integration: WP-20 review fixes: rule-table tests extended (34 pass), README sections 5-14 and decisions D4/D8/D12/D17/D23/D25 reversed or replaced, D31-D38 added, CHANGELOG.
+**Summary:** fde/integration: WP-21 part A step 1: scenario-driven conformance harness over all 156 S2 scenarios (53 append v2, 82 gate, 7 delegation, 14 reserved); pending list with reasons.
 
 **Verified:**
 
