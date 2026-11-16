@@ -1,15 +1,15 @@
 # Current status
 
-**Status revision:** 283
+**Status revision:** 284
 
-**Stage:** WP-58 SEA-Forge consolidation: Linux ARM64 (Jetson) packaging
+**Stage:** WP-58 SEA-Forge consolidation: EGM contract READMEs
 
-**Summary:** Linux ARM64 becomes a first-class packaging target: package.yml builds a matrix of amd64 (ubuntu-22.04) and arm64 (ubuntu-22.04-arm) legs with the native rustup toolchain and system glibc 2.35 (the Jetson AGX Orin deployment ABI), refuses strong GLIBC references above 2.35, checks the ELF machine and interpreter per architecture, and uploads per-arch packages; release-please.yml requires the arm64 assets; packaging/deb/build.sh takes the architecture. The squashed port from the old feat/arm64-jetson-packaging branch drops the temporary arm-probe workflow and the dead push trigger on deleted feature branches. Milestone C (on-device install and run on the Jetson) is still pending real-hardware evidence.
+**Summary:** The EGM contract README bootstrap lands on main: directory READMEs across the code tree describe each module's contract, plus the drift-report fixes applied to those contracts and the committed drift report. Rebased from docs/egm-bootstrap-readmes (October 30) onto the current main; documentation only, no code or behaviour change. Statements about modules changed since October 30 (the sandbox containment harvest, DomainForge 0.22.0, case-task rename) were not re-audited line by line and follow the usual drift review.
 
 **Verified:**
 
-- actionlint on package.yml and release-please.yml: only pre-existing shellcheck info notes
-- packaging run on the branch recorded in the PR
+- git diff --name-only origin/main shows only markdown files
+- CI docs and lint gates run on the PR
 
 **Limits:**
 
@@ -38,7 +38,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Dispatch package.yml on the branch for evidence, merge, then the CI optimization PR. On-device Jetson qualification stays a separate real-hardware step.
+**Next:** Merge after CI, then the Jetson packaging and CI optimization PRs.
 
 **Evidence:**
 
