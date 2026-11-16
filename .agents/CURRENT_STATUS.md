@@ -1,15 +1,14 @@
 # Current status
 
-**Status revision:** 285
+**Status revision:** 286
 
-**Stage:** WP-58 SEA-Forge consolidation: graft section in AGENTS.md
+**Stage:** WP-58 SEA-Forge consolidation: EGM README drops the generated-zone README
 
-**Summary:** AGENTS.md gains the graft context-graph section (the graft:start/end block) and the graft skill's wording is refreshed; both were uncommitted edits in the owner's checkout and travel with the EGM README bootstrap PR. Documentation only.
+**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The directory is described in workbench/packages/contracts/README.md instead. Documentation only otherwise.
 
 **Verified:**
 
-- git diff --name-only origin/main shows only markdown files
-- scripts/check-agent-context.sh: ok
+- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed
 
 **Limits:**
 
