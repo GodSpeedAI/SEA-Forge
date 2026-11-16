@@ -350,6 +350,30 @@ workbench-completion-eval-inputs-check:
 test:
     cargo test --workspace --all-features --locked --no-fail-fast
 
+# `server` is sea-forge-server alone, about half the suite; `rest` is every
+# other crate. The union of both shards equals `just test`.
+# One shard of `just test`; CI runs the shards in parallel.
+[group('quality')]
+test-shard shard:
+    #!/usr/bin/env bash
+    {{set}}
+    case "{{shard}}" in
+        server) cargo test -p sea-forge-server --all-features --locked --no-fail-fast ;;
+        rest) cargo test --workspace --exclude sea-forge-server --all-features --locked --no-fail-fast ;;
+        *) echo "unknown shard '{{shard}}' (server|rest)" >&2; exit 2 ;;
+    esac
+
+# Clippy and type-check see cfg(target_os) code. The macOS CI legs run this
+# instead of the whole `ci` recipe; fmt, status and security run once, on Linux.
+# Platform-dependent compile gates plus the no-async-kernel graph.
+[group('quality')]
+ci-platform:
+    #!/usr/bin/env bash
+    {{set}}
+    just lint
+    just typecheck
+    just no-async-kernel
+
 # Test one workspace crate, optionally filtering by test name.
 # Example: `just crate-test sea-forge-core authority`.
 [group('quality')]

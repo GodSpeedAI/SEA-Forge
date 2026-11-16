@@ -1,27 +1,16 @@
 # Current status
 
-**Status revision:** 278
+**Status revision:** 279
 
-**Stage:** PR #71 review: live egress allow-control is a real HTTP GET
+**Stage:** WP-58 SEA-Forge consolidation: CI optimization
 
-**Summary:** SEA-Forge moves its DomainForge producer pin from 0.21.2 to 0.22.0 for stack lockstep. Library pin, EXPECTED_DOMAINFORGE_VERSION, devbox CLI install, Cargo.lock (targeted update), fixture provenance and READMEs now say 0.22.0. The demo world_ref changes with producer_version: 7ddedb... becomes 469e93..., minted by the linked compiler and confirmed with the 0.22.0 CLI. The Rego lib.rego fixtures changed (exists_unique is three-valued) so provenance digest 3b25cf21... becomes bff56dc0.... Security hardening on branch feat/hardening-capability-harvest (PR #71): Final consolidated report published (.agents/plans/2026-10-28-consolidated-final-report.md). Capability harvest: six findings implemented and verified through three independent review passes (final: C0/H0/M2/L4, Mediums fixed); PR #71 checks green at HEAD lineage (required gate, windows, macos, kernel 22.04); one open non-gating lane defect (24.04 workload_boundary fixture ack-EOF) precisely recorded with diagnostics in place. ARM64: artifacts delivered from run 40614104830 (verified hashes, built-from, clean-container installs); release publisher requires arm64 assets; Milestone C pending on-device. Review threads: the server dispatch path now records lifecycle_containment in its command_finished trace payload and execution_result evidence (conformance_case_episode asserts it); write_file removes its staging directory when new_temp fails; egress-control.py closes its log and socket via context managers; the live egress allow-control test prints guest output before its status assertion; OBSERVED_DEBT records the WSL2 post_start_internal_error test failure. The 24.04 sandbox-suite defect was the mutation control in workload_boundary: it rebuilds the launch Command without the pre_exec that clears close-on-exec on the ack write end, so the helper never received the ack fd (ENOENT on the /proc/self/fd reopen). The control now repeats that re-admission. Review thread fix: the pidfd fallback (cgroup.kill denied) now censuses and signals every descendant cgroup's members, verifies recursive emptiness, and removes child cgroups bottom-up before the leaf; the new pidfd_sweep_reaches_a_member_in_a_child_cgroup test needs cgroup delegation and self-reports BLOCKED locally. Review thread fix: the macOS jail no longer claims LifecycleContainment::ProcessGroup; a run whose census found no survivor now reports GroupTerminatedDescendantsUnverified because macOS has no reparent-surviving membership tracking, and docs/subsystems/sandbox-runtime.md states it. Review thread fix: live_network_allow_control_connects now issues an HTTP GET through the discovered proxy (the granted endpoint is a read-only REST flow) and asserts the HTTP status and body; egress-control.py answers HTTP requests with a valid HTTP/1.1 response. The policy fixture is untouched. The live lane runs only by workflow_dispatch or a push to ci/openshell-live, so it was not run here.
+**Summary:** CI is restructured around the measured critical path. Baseline on main (run 43656019461, 2026-11-15): verify (macos) 967 s was the slowest required job, test (ubuntu) 614 s, lint 217 s, MSRV 114 s. Changes: Swatinem/rust-cache (pinned by SHA) in every cargo job, saved from main only; the Linux and macOS test sweeps split into two parallel shards (just test-shard server|rest, the union equals just test); the macOS legs run only the platform-dependent gates (just ci-platform: clippy, type-check, no-async-kernel) because fmt, status, deny and gitleaks already run on Linux; a scope job classifies docs-only pull requests so the heavy jobs skip while gate still runs and only accepts a skipped job for a docs-only change; setup-bun pinned by SHA; Portability runs on pull requests and main pushes only, not feat/** pushes, and skips docs-only changes; the dead ci/openshell-live push trigger is removed. Required checks stay gate and conventional-commit; job display names changed (test and verify (macos) gain a shard suffix) but no ruleset names them.
 
 **Verified:**
 
-- cargo update -p domainforge-core --precise 0.22.0: only domainforge-core changed in Cargo.lock
-- cargo test -p sea-forge-domainforge: all suites ok (22, 4, 5, 11 passed; 0 failed)
-- cargo test -p sea-forge-authority --test cep_compiler_upgrade: 9 passed; opa_candidate 22 passed + 7 ignored passed with opa
-- cargo test -p sea-forge-server --test conformance_cep_authority: 13 passed
-- cargo test -p sea-forge-case-runner --test cell_episode: 24 passed + 6 ignored passed with opa
-- fixtures regenerated with the 0.22.0 CLI; cargo fmt --check on touched crates: clean
-- scripts/check-agent-context.sh: ok
-- 2026-11-13 readiness harness (godspeed-readiness/scripts/readiness.sh, local_operator profile, heads synced to origin main) reported GO 30/30 after the DomainForge 0.21.2 lockstep; evidence in the S0 baseline files under the report directory
-- 2026-11-13 scripts/e2e-world-loop.sh against pinned origin heads: final line 'e2e-world-loop: OK' (revision 233)
-- gitleaks scan of the report directory: no leaks found
-- PR #71 checks: 20+ green incl. gate/test/windows/macos/kernel-22.04; run 40614104830 all four legs success; independent artifact verification
-- sea-forge-server and sea-forge-sandbox tests pass on this WSL2 host (workload isolation and cgroup-delegated lanes report NOT_RUN); fmt and clippy -D warnings clean
-- conformance_case_episode 11 passed (cgroup host verdict is an object; trace and evidence compared for equality)
-- Merged origin/main (be63b711, DomainForge 0.22.0 lockstep); branch assertions compare against EXPECTED_DOMAINFORGE_VERSION
+- actionlint on all workflows: only pre-existing shellcheck info notes
+- just --list shows test-shard and ci-platform; just --dry-run test-shard rest expands as intended
+- before/after wall times are recorded in the PR and the ledger
 
 **Limits:**
 
@@ -50,7 +39,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Read the captured helper stderr from the 24.04 run and fix the named cause. Owner to answer the open PR #71 review questions; then merge on green. Owner to decide OD-1 to OD-6; then start S1 per F-implementation-plan.md. Review and merge the e2e-world-loop fix (revision 233) if not yet merged. PR #71: address review threads, then merge on green; Session terminal. Follow-ups are recorded in OBSERVED_DEBT and the consolidated report §4.
+**Next:** Read the cold and warm run times from the PR and the first main run, and tune the shard split if one shard dominates.
 
 **Evidence:**
 

@@ -5,12 +5,9 @@ name: OpenShell live proof
 # The proof exits 0 only when the live tests ran and passed. 3 means BLOCKED
 # (a prerequisite is missing) and 1 means FAIL. Both fail the linux job.
 #
-# This lane is not a required PR check. It runs on pushes to ci/openshell-live
-# and on manual dispatch.
+# This lane is not a required PR check. It runs on manual dispatch only.
 
 on:
-  push:
-    branches: [ci/openshell-live]
   workflow_dispatch:
 
 permissions:
