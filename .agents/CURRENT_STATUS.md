@@ -1,16 +1,15 @@
 # Current status
 
-**Status revision:** 282
+**Status revision:** 283
 
-**Stage:** WP-58 SEA-Forge consolidation: Horizon desk support rebased on main
+**Stage:** WP-58 SEA-Forge consolidation: Linux ARM64 (Jetson) packaging
 
-**Summary:** Horizon desk support (PR #91, replaced by a rebased branch) lands on main after the hardening harvest and the DomainForge 0.22.0 bump. Plan items carry external_ref and a review marker; case.add_item takes dry_run and returns the plan digest, and the real call takes it as a precondition; case reads return digests; Workbench TypeScript contracts are regenerated. The rebase also repairs the two ItemMarkers initializers in sea-forge-planner conformance_m2, which the review marker had left without the new field (the original PR's lint and test checks were red on that).
+**Summary:** Linux ARM64 becomes a first-class packaging target: package.yml builds a matrix of amd64 (ubuntu-22.04) and arm64 (ubuntu-22.04-arm) legs with the native rustup toolchain and system glibc 2.35 (the Jetson AGX Orin deployment ABI), refuses strong GLIBC references above 2.35, checks the ELF machine and interpreter per architecture, and uploads per-arch packages; release-please.yml requires the arm64 assets; packaging/deb/build.sh takes the architecture. The squashed port from the old feat/arm64-jetson-packaging branch drops the temporary arm-probe workflow and the dead push trigger on deleted feature branches. Milestone C (on-device install and run on the Jetson) is still pending real-hardware evidence.
 
 **Verified:**
 
-- cargo check --workspace --tests: clean
-- cargo test: sea-forge-planner conformance_m2 13 passed; conformance_case_authoring 21 passed; conformance_sfwp 23 passed
-- cargo fmt --all --check: clean
+- actionlint on package.yml and release-please.yml: only pre-existing shellcheck info notes
+- packaging run on the branch recorded in the PR
 
 **Limits:**
 
@@ -39,7 +38,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI is green, then the EGM README bootstrap and ARM64 Jetson packaging PRs, then the CI optimization PR.
+**Next:** Dispatch package.yml on the branch for evidence, merge, then the CI optimization PR. On-device Jetson qualification stays a separate real-hardware step.
 
 **Evidence:**
 
