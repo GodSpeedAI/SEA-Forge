@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.1...v0.5.0) (2026-11-16)
+
+
+### Features
+
+* **packaging:** linux arm64 as a first-class packaging target ([#106](https://github.com/GodSpeedAI/SEA-Forge/issues/106)) ([fce99e3](https://github.com/GodSpeedAI/SEA-Forge/commit/fce99e39dd3dcdd64377311034e1f0ad2cc44891))
+* **sfwp:** desk support with plan digests, add_item dry run and external refs ([#103](https://github.com/GodSpeedAI/SEA-Forge/issues/103)) ([4b42302](https://github.com/GodSpeedAI/SEA-Forge/commit/4b42302f174f33924e94f2fcd7a4f8613ef1b33c))
+
+
+### Bug Fixes
+
+* **deps:** clear RUSTSEC-2026-0459 (libsqlite3-sys) and RUSTSEC-2026-0486 (rustix) ([#95](https://github.com/GodSpeedAI/SEA-Forge/issues/95)) ([c2d6fbd](https://github.com/GodSpeedAI/SEA-Forge/commit/c2d6fbdce3ff096ae477264ea8ca07b9049ae80a))
+* **e2e:** world loop finds the renamed Context Kernel package and stops on a failed hop ([#97](https://github.com/GodSpeedAI/SEA-Forge/issues/97)) ([09b628e](https://github.com/GodSpeedAI/SEA-Forge/commit/09b628ec08dff996611851eec5bbfceb9ab452b1))
+* **security:** harvest hardened containment — F05, F08, F15, F17, F32, F33 closed at the mechanism level ([#71](https://github.com/GodSpeedAI/SEA-Forge/issues/71)) ([7c083c8](https://github.com/GodSpeedAI/SEA-Forge/commit/7c083c86542d97c351f85e01640122a78830990a))
+
 ## [0.4.1](https://github.com/GodSpeedAI/SEA-Forge/compare/v0.4.0...v0.4.1) (2026-11-06)
 
 
