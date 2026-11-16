@@ -420,6 +420,16 @@ async fn t12_6_oversize_response_settles_rejected_with_typed_subcode() {
     let task = tokio::spawn(async move {
         if let Ok((mut stream, _)) = listener.accept().await {
             count.fetch_add(1, Ordering::SeqCst);
+            // Drain the request head first: closing with unread request bytes makes
+            // the kernel reset the connection, which races the oversize check.
+            let mut head = Vec::new();
+            let mut buf = [0u8; 1024];
+            while !head.windows(4).any(|w| w == b"\r\n\r\n") {
+                match stream.read(&mut buf).await {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => head.extend_from_slice(&buf[..n]),
+                }
+            }
             let header =
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 999999\r\nConnection: close\r\n\r\n"
                     .to_string();

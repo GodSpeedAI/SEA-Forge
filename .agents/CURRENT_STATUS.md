@@ -1,16 +1,16 @@
 # Current status
 
-**Status revision:** 280
+**Status revision:** 281
 
-**Stage:** WP-58 SEA-Forge consolidation: CI optimization, server shard builds the CLI
+**Stage:** WP-58 SEA-Forge consolidation: compatible-minor group plus jsonschema 0.60
 
-**Summary:** CI is restructured around the measured critical path. Baseline on main (run 43656019461): verify (macos) 967 s was the slowest required job, test (ubuntu) 614 s, lint 217 s, MSRV 114 s. Changes: Swatinem/rust-cache (pinned by SHA) in every cargo job, saved from main only; the Linux and macOS test sweeps split into two parallel shards (just test-shard server|rest, the union equals just test; the server shard first builds the CLI binary that its tests spawn); the macOS legs run only the platform-dependent gates (just ci-platform) because fmt, status, deny and gitleaks already run on Linux; a scope job classifies docs-only pull requests so the heavy jobs skip while gate still runs and only accepts a skipped job for a docs-only change; setup-bun pinned by SHA; Portability runs on pull requests and main pushes only and skips docs-only changes; the dead ci/openshell-live push trigger is removed. Required checks stay gate and conventional-commit.
+**Summary:** The compatible-minor Dependabot group lands with tokio held at 1.53.3, and the jsonschema bump from Dependabot #70 (0.58.6 to 0.60.0, resolved 0.60.2, used only by sea-forge-realitytrace) joins it. With tokio 1.54.1 the HTTP stub tests in sea-forge-server (conformance_m12 oversize, conformance_m13 endpoint error) failed on hosted runners because the stub closes with the request unread and the client sees a connection reset instead of the HTTP status; the stubs need to drain the request head before tokio 1.54 can land (conformance_m12's oversize stub already does). serde-saphyr 2.1 now rejects tRue and fAlse under flatten and tagged enums, so the case-variant pin table keeps only the four spellings it still accepts.
 
 **Verified:**
 
-- actionlint on all workflows: only pre-existing shellcheck info notes
-- just --dry-run test-shard server and rest expand as intended
-- before/after wall times are recorded in the PR and the ledger
+- cargo test -p sea-forge-realitytrace with jsonschema 0.60.2: all suites passed
+- cargo clippy -p sea-forge-realitytrace --all-targets -D warnings: clean
+- cargo test -p sea-forge-core --test yaml_strictness: 67 passed
 
 **Limits:**
 
@@ -39,7 +39,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Read the cold and warm run times from the PR and the first main run.
+**Next:** Merge, then the Horizon desk support, EGM README, ARM64 packaging and CI optimization PRs. Follow-up: drain the request head in every HTTP stub, then take tokio 1.54.
 
 **Evidence:**
 

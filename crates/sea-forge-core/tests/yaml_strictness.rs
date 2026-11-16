@@ -816,10 +816,8 @@ fn round_trip_preserves_every_field_kind() {
 const CASE_VARIANT_BOOLEANS: &[(&str, bool)] = &[
     ("True", true),
     ("TRUE", true),
-    ("tRue", true),
     ("False", false),
     ("FALSE", false),
-    ("fAlse", false),
 ];
 
 /// Under `flatten` and internally tagged enums, the words that are not booleans
@@ -842,8 +840,8 @@ fn rejects_noncanonical_boolean_words_in_flatten_and_tagged_enum() {
 }
 
 /// Open issue: under `flatten` the boolean is buffered as `Content::Bool`, and the
-/// spelling pass only sees `deserialize_any`, so `True`, `TRUE`, `tRue`, `False`,
-/// `FALSE` and `fAlse` are accepted with their boolean value.
+/// spelling pass only sees `deserialize_any`, so `True`, `TRUE`, `False` and
+/// `FALSE` are accepted (serde-saphyr 2.1 now rejects `tRue` and `fAlse` there) with their boolean value.
 #[test]
 fn open_issue_case_variant_boolean_in_flatten_is_accepted() {
     for (spelling, expected) in CASE_VARIANT_BOOLEANS {
