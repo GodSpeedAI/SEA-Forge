@@ -6,6 +6,7 @@ use sea_forge_planner::case_engine::{evaluate_sentries, validate_proposal};
 
 fn agent_item() -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: "agent".into(),
         name: "agent_task".into(),
         operations: vec![Operation::AgentTask {
@@ -34,6 +35,7 @@ fn agent_item() -> PlanItem {
 
 fn downstream_item() -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: "downstream".into(),
         name: "sandboxed_task".into(),
         operations: vec![Operation::WriteFile {

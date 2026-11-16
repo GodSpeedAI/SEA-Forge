@@ -25,6 +25,17 @@
     "created_at": {
       "type": "string"
     },
+    "digest": {
+      "description": "`{ref: \"case:<case_id>\", expected_digest}` as the precondition check\ncomputes it right now. Absent when the case ledger could not be read.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecordDigest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "item_count": {
       "type": "integer",
       "format": "uint",
@@ -79,6 +90,24 @@
     "run_ids"
   ],
   "$defs": {
+    "RecordDigest": {
+      "description": "A single `{ref, expected_digest}` precondition entry.",
+      "type": "object",
+      "properties": {
+        "expected_digest": {
+          "description": "The sha256 digest the caller expects the referenced record to have.",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "expected_digest"
+      ]
+    },
     "RunSettlement": {
       "description": "A settlement record linked to a run, projected for the overview.",
       "type": "object",

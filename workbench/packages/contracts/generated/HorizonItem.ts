@@ -24,6 +24,11 @@ export interface HorizonItem {
   depends_on?: string[];
   execution: ExecutionStanding;
   /**
+   * Link to an outside record (for example a GitHub issue), when the plan
+   * item carries one.
+   */
+  external_ref?: ExternalRefView | null;
+  /**
    * `sandboxed_task`, `human_task`, `agent_task`, `stage`, `milestone`, …
    */
   item_kind: string;
@@ -43,4 +48,13 @@ export interface HorizonItem {
    */
   run_ids?: string[];
   settlement: SettlementStanding;
+}
+/**
+ * Wire shape of a plan item's `external_ref` (`kind` is `github_issue` or
+ * `ticket`).
+ */
+export interface ExternalRefView {
+  id: string;
+  kind: string;
+  url: string;
 }

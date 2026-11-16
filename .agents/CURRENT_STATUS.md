@@ -1,16 +1,16 @@
 # Current status
 
-**Status revision:** 281
+**Status revision:** 282
 
-**Stage:** WP-58 SEA-Forge consolidation: compatible-minor group plus jsonschema 0.60
+**Stage:** WP-58 SEA-Forge consolidation: Horizon desk support rebased on main
 
-**Summary:** The compatible-minor Dependabot group lands with tokio held at 1.53.3, and the jsonschema bump from Dependabot #70 (0.58.6 to 0.60.0, resolved 0.60.2, used only by sea-forge-realitytrace) joins it. With tokio 1.54.1 the HTTP stub tests in sea-forge-server (conformance_m12 oversize, conformance_m13 endpoint error) failed on hosted runners because the stub closes with the request unread and the client sees a connection reset instead of the HTTP status; the stubs need to drain the request head before tokio 1.54 can land (conformance_m12's oversize stub already does). serde-saphyr 2.1 now rejects tRue and fAlse under flatten and tagged enums, so the case-variant pin table keeps only the four spellings it still accepts.
+**Summary:** Horizon desk support (PR #91, replaced by a rebased branch) lands on main after the hardening harvest and the DomainForge 0.22.0 bump. Plan items carry external_ref and a review marker; case.add_item takes dry_run and returns the plan digest, and the real call takes it as a precondition; case reads return digests; Workbench TypeScript contracts are regenerated. The rebase also repairs the two ItemMarkers initializers in sea-forge-planner conformance_m2, which the review marker had left without the new field (the original PR's lint and test checks were red on that).
 
 **Verified:**
 
-- cargo test -p sea-forge-realitytrace with jsonschema 0.60.2: all suites passed
-- cargo clippy -p sea-forge-realitytrace --all-targets -D warnings: clean
-- cargo test -p sea-forge-core --test yaml_strictness: 67 passed
+- cargo check --workspace --tests: clean
+- cargo test: sea-forge-planner conformance_m2 13 passed; conformance_case_authoring 21 passed; conformance_sfwp 23 passed
+- cargo fmt --all --check: clean
 
 **Limits:**
 
@@ -39,7 +39,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge, then the Horizon desk support, EGM README, ARM64 packaging and CI optimization PRs. Follow-up: drain the request head in every HTTP stub, then take tokio 1.54.
+**Next:** Merge after CI is green, then the EGM README bootstrap and ARM64 Jetson packaging PRs, then the CI optimization PR.
 
 **Evidence:**
 

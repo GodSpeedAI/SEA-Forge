@@ -135,6 +135,95 @@ pub struct PreflightResult {
     /// `None` when the template itself could not be loaded (nothing to pin).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub precondition: Option<RecordDigest>,
+    /// Pins the whole plan this commit would create: the template's bytes, the
+    /// params and the instantiated items. Ref `plan:<template_ref>`. Carry it
+    /// into `case.commit`'s `preconditions.records` alongside (or instead of)
+    /// `precondition`. `None` when the plan could not be built.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_precondition: Option<RecordDigest>,
+}
+
+/// A precondition ref naming the plan a template + params would create.
+pub fn plan_precondition_ref(template_ref: &str) -> String {
+    format!("plan:{template_ref}")
+}
+
+/// A template read exactly once: the sha256 of its raw bytes and the template
+/// parsed from those same bytes. Everything a request shows, pins or commits
+/// comes from one of these, so a template edited mid-request cannot make the
+/// displayed plan, its digests and the committed plan disagree.
+#[derive(Clone, Debug)]
+pub struct LoadedTemplate {
+    pub template_ref: String,
+    /// `sha256:<hex>` of the raw template file bytes.
+    pub sha256: String,
+    pub template: PlanTemplate,
+}
+
+#[cfg(test)]
+pub(crate) static TEST_AFTER_TEMPLATE_READ: std::sync::Mutex<Option<fn(&Path)>> =
+    std::sync::Mutex::new(None);
+
+/// Read and parse `<root>/templates/<name>@<version>.yaml` once.
+pub fn load_template_once(
+    root: &Path,
+    template_ref: &str,
+) -> Result<LoadedTemplate, sea_forge_core::errors::ForgeError> {
+    use sha2::{Digest, Sha256};
+    let (name, version) = templates::parse_template_ref(template_ref)?;
+    let path = root
+        .join("templates")
+        .join(format!("{name}@{version}.yaml"));
+    let bytes = std::fs::read(&path).map_err(|e| {
+        sea_forge_core::errors::ForgeError::io(format!("read template {}", path.display()), e)
+    })?;
+    let sha256 = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
+    // Test seam: lets a unit test change the file right after the read.
+    #[cfg(test)]
+    if let Some(hook) = *TEST_AFTER_TEMPLATE_READ.lock().unwrap() {
+        hook(&path);
+    }
+    let text =
+        std::str::from_utf8(&bytes).map_err(|e| sea_forge_core::errors::ForgeError::Config {
+            class: "schema_error",
+            path: path.clone(),
+            message: e.to_string(),
+        })?;
+    let template = templates::load_from_text(text, &path)?;
+    Ok(LoadedTemplate {
+        template_ref: template_ref.to_string(),
+        sha256,
+        template,
+    })
+}
+
+/// The value whose digest a `template:<ref>` precondition pins: the sha256 of
+/// the template file's bytes, as a JSON string.
+pub fn template_digest_source(loaded: &LoadedTemplate) -> serde_json::Value {
+    serde_json::json!(loaded.sha256)
+}
+
+/// The value whose digest a `plan:<template_ref>` precondition pins: canonical
+/// JSON `{template_sha256, params, items}`, built from `loaded` alone. `None`
+/// if the template cannot be instantiated or validated with `params`.
+pub fn plan_digest_source(
+    loaded: &LoadedTemplate,
+    params: &BTreeMap<String, String>,
+) -> Option<serde_json::Value> {
+    let mut plan = templates::instantiate(
+        &loaded.template,
+        params,
+        "preflight",
+        "preflight",
+        "preflight",
+    )
+    .ok()?;
+    validate_proposal(&mut plan).ok()?;
+    Some(serde_json::json!({
+        "template_sha256": loaded.sha256,
+        "params": params,
+        "items": serde_json::to_value(&plan.items).ok()?,
+    }))
 }
 
 /// A precondition ref naming a template, pinned to its current on-disk bytes.
@@ -142,48 +231,21 @@ pub fn template_precondition_ref(template_ref: &str) -> String {
     format!("template:{template_ref}")
 }
 
-/// The `RecordResolver`-compatible current value for a `template:<ref>`
-/// precondition ref: the sha256 of the template file's current raw bytes,
-/// wrapped as a JSON value so `sfwp::precondition::digest_of` can hash it
-/// exactly the way `case.preflight` computed the expected digest.
-pub fn resolve_template_digest_source(
-    root: &Path,
-    template_ref: &str,
-) -> Option<serde_json::Value> {
-    let (name, version) = sea_forge_planner::templates::parse_template_ref(template_ref).ok()?;
-    let path = root
-        .join("templates")
-        .join(format!("{name}@{version}.yaml"));
-    let bytes = std::fs::read(&path).ok()?;
-    use sha2::{Digest, Sha256};
-    let sha = format!("sha256:{}", hex::encode(Sha256::digest(&bytes)));
-    Some(serde_json::json!(sha))
-}
-
-/// Load a template by ref without pinning it (pinning is a `case.commit`-time
-/// concern via the existing `templates::load_pinned`, not preflight's — a
-/// preflight must be freely repeatable and must not itself create a pin that
-/// could make a *later*, legitimate template content fix look like tampering).
-fn load_template_for_preflight(
-    root: &Path,
-    template_ref: &str,
-) -> Result<PlanTemplate, sea_forge_core::errors::ForgeError> {
-    let (name, version) = templates::parse_template_ref(template_ref)?;
-    let path = root
-        .join("templates")
-        .join(format!("{name}@{version}.yaml"));
-    templates::load(&path)
+fn record_digest(r#ref: String, value: Option<serde_json::Value>) -> Option<RecordDigest> {
+    let expected_digest = digest_of(&value?).ok()?;
+    Some(RecordDigest {
+        r#ref,
+        expected_digest,
+    })
 }
 
 /// Build the `case.preflight` view. Infallible in the sense that a bad
 /// template ref or invalid params is reported as `ok: false` with `errors`,
-/// never propagated as a transport error — mirroring `readiness::get`'s
-/// "an inspect method always answers with a shaped view" discipline, except
-/// preflight's *purpose* is exactly to report validation failure, so `ok`
-/// carries that signal explicitly instead of collapsing it into `unknown`.
+/// never propagated as a transport error. The template is read once: the
+/// items shown and both digests describe the same bytes.
 pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
-    let template = match load_template_for_preflight(root, &params.template_ref) {
-        Ok(template) => template,
+    let loaded = match load_template_once(root, &params.template_ref) {
+        Ok(loaded) => loaded,
         Err(error) => {
             return PreflightResult {
                 ok: false,
@@ -191,6 +253,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
                 errors: vec![error.to_string()],
                 items: Vec::new(),
                 precondition: None,
+                plan_precondition: None,
             }
         }
     };
@@ -199,7 +262,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
     // `case_dispatch::submit`; `validate_proposal` never inspects these
     // fields, only `items`.
     let mut plan: CasePlan = match templates::instantiate(
-        &template,
+        &loaded.template,
         &params.params,
         "preflight",
         "preflight",
@@ -209,10 +272,14 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
         Err(error) => {
             return PreflightResult {
                 ok: false,
-                template_ref: params.template_ref,
+                template_ref: params.template_ref.clone(),
                 errors: vec![error.to_string()],
                 items: Vec::new(),
-                precondition: None,
+                precondition: record_digest(
+                    template_precondition_ref(&params.template_ref),
+                    Some(template_digest_source(&loaded)),
+                ),
+                plan_precondition: None,
             }
         }
     };
@@ -228,14 +295,14 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
         })
         .collect();
 
-    // The precondition pins the template's *current* bytes, computed the same
-    // way `resolve_template_digest_source` recomputes it at commit time.
-    let precondition = resolve_template_digest_source(root, &params.template_ref)
-        .and_then(|value| digest_of(&value).ok())
-        .map(|expected_digest| RecordDigest {
-            r#ref: template_precondition_ref(&params.template_ref),
-            expected_digest,
-        });
+    let precondition = record_digest(
+        template_precondition_ref(&params.template_ref),
+        Some(template_digest_source(&loaded)),
+    );
+    let plan_precondition = record_digest(
+        plan_precondition_ref(&params.template_ref),
+        plan_digest_source(&loaded, &params.params),
+    );
 
     match validation {
         Ok(()) => PreflightResult {
@@ -244,6 +311,7 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
             errors: Vec::new(),
             items,
             precondition,
+            plan_precondition,
         },
         Err(error) => PreflightResult {
             ok: false,
@@ -251,6 +319,72 @@ pub fn preflight(root: &Path, params: PreflightParams) -> PreflightResult {
             errors: vec![error.to_string()],
             items,
             precondition,
+            plan_precondition,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_forge_planner::templates::sequential_agents_template;
+
+    fn write_template(root: &Path) -> std::path::PathBuf {
+        let dir = root.join("templates");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("sequential_agents@0.1.0.yaml");
+        let template = sequential_agents_template("ep").unwrap();
+        std::fs::write(&path, sea_forge_core::yaml::to_string(&template).unwrap()).unwrap();
+        path
+    }
+
+    #[test]
+    fn preflight_digests_describe_the_template_it_displayed() {
+        let root = tempfile::tempdir().unwrap();
+        let path = write_template(root.path());
+        let original = std::fs::read(&path).unwrap();
+        let params = || PreflightParams {
+            template_ref: "sequential_agents@0.1.0".into(),
+            params: BTreeMap::new(),
+        };
+        // The template changes right after preflight reads it.
+        *TEST_AFTER_TEMPLATE_READ.lock().unwrap() = Some(|path| {
+            let mut bytes = std::fs::read(path).unwrap();
+            bytes.extend_from_slice(b"# edited mid-request\n");
+            std::fs::write(path, bytes).unwrap();
+        });
+        let shown = preflight(root.path(), params());
+        *TEST_AFTER_TEMPLATE_READ.lock().unwrap() = None;
+        // Digests computed from the bytes that were displayed.
+        std::fs::write(&path, &original).unwrap();
+        let loaded = load_template_once(root.path(), "sequential_agents@0.1.0").unwrap();
+        let expected_plan = record_digest(
+            plan_precondition_ref("sequential_agents@0.1.0"),
+            plan_digest_source(&loaded, &BTreeMap::new()),
+        )
+        .unwrap();
+        assert_eq!(
+            shown.plan_precondition.unwrap().expected_digest,
+            expected_plan.expected_digest
+        );
+        assert_eq!(
+            shown.precondition.unwrap().expected_digest,
+            digest_of(&template_digest_source(&loaded)).unwrap()
+        );
+    }
+
+    #[test]
+    fn commit_resolvers_use_the_template_already_loaded() {
+        let root = tempfile::tempdir().unwrap();
+        let path = write_template(root.path());
+        let loaded = load_template_once(root.path(), "sequential_agents@0.1.0").unwrap();
+        let before = plan_digest_source(&loaded, &BTreeMap::new());
+        // The file changes after the request read it; the loaded value does not.
+        let mut bytes = std::fs::read(&path).unwrap();
+        bytes.extend_from_slice(b"# edited\n");
+        std::fs::write(&path, bytes).unwrap();
+        assert_eq!(plan_digest_source(&loaded, &BTreeMap::new()), before);
+        let reread = load_template_once(root.path(), "sequential_agents@0.1.0").unwrap();
+        assert_ne!(plan_digest_source(&reread, &BTreeMap::new()), before);
     }
 }
