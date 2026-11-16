@@ -8,7 +8,7 @@ Dependencies: `ajv` (8.20.0) and `json-schema-to-typescript` (15.0.4) [package.j
 
 ## Interface
 
-- [./generated/README.md] — generated zone: 64 `<Name>.ts` interfaces, 64 `<Name>.validator.ts` AJV validators, and the `index.ts` barrel re-exporting `type { Name }` and `validate as validateName` for every schema in `schema/`.
+- `./generated/` — generated zone (no README: the generator owns the directory): 64 `<Name>.ts` interfaces, 64 `<Name>.validator.ts` AJV validators, and the `index.ts` barrel re-exporting `type { Name }` and `validate as validateName` for every schema in `schema/`.
 - [./scripts/README.md] — `generate.ts`, the SFWP contract generator (`bun run generate`).
 - `schema/` — 64 Rust-emitted `*.schema.json` files (not in this contract set's write scope; referenced as the source of truth). Examples: `CaseSummary.schema.json`, `RunRecord.schema.json`, `PreflightResult.schema.json`, `PendingApproval.schema.json`.
 - Package script: `generate` → `bun run scripts/generate.ts` [package.json:scripts].

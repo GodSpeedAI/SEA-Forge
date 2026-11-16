@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build tooling for the `@sea-forge/contracts` package. The single script, `generate.ts`, is the SFWP contract generator: it is the only sanctioned way to produce the contents of `../generated/` (a generated zone, documented in [../generated/README.md]). It reads the Rust-emitted JSON Schemas in `../schema/*.schema.json`, which are the single source of truth and are never hand-edited, and emits a TypeScript interface plus a precompiled AJV validator for each schema, plus an `index.ts` barrel [generate.ts:main].
+Build tooling for the `@sea-forge/contracts` package. The single script, `generate.ts`, is the SFWP contract generator: it is the only sanctioned way to produce the contents of `../generated/` (a generated zone, documented in `../generated/`). It reads the Rust-emitted JSON Schemas in `../schema/*.schema.json`, which are the single source of truth and are never hand-edited, and emits a TypeScript interface plus a precompiled AJV validator for each schema, plus an `index.ts` barrel [generate.ts:main].
 
 ## Interface
 

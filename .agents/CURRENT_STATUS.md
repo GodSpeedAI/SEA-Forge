@@ -1,14 +1,14 @@
 # Current status
 
-**Status revision:** 286
+**Status revision:** 287
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM README drops the generated-zone README
+**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
 
-**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The directory is described in workbench/packages/contracts/README.md instead. Documentation only otherwise.
+**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
 
 **Verified:**
 
-- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed
+- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
 
 **Limits:**
 
