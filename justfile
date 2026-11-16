@@ -358,7 +358,9 @@ test-shard shard:
     #!/usr/bin/env bash
     {{set}}
     case "{{shard}}" in
-        server) cargo test -p sea-forge-server --all-features --locked --no-fail-fast ;;
+        # Server tests spawn the CLI binary, which a workspace test run builds
+        # as a side effect but a single-package run does not.
+        server) cargo build --locked -p sea-forge-cli && cargo test -p sea-forge-server --all-features --locked --no-fail-fast ;;
         rest) cargo test --workspace --exclude sea-forge-server --all-features --locked --no-fail-fast ;;
         *) echo "unknown shard '{{shard}}' (server|rest)" >&2; exit 2 ;;
     esac
