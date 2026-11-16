@@ -50,6 +50,7 @@ pub fn plan(
         run_id: run_id.into(),
         intent_id: intent.intent_id.clone(),
         items: vec![PlanItem {
+            external_ref: None,
             plan_item_id: "item_01".into(),
             name: "generate_and_validate_sea_model".into(),
             operations,
@@ -105,6 +106,7 @@ pub fn stage_case_plan(
             )]
         };
         items.push(PlanItem {
+            external_ref: None,
             plan_item_id: stage.stage_id.clone(),
             name: format!("{:?}", stage.kind),
             operations: vec![Operation::ExecuteCommand {

@@ -296,6 +296,7 @@ pub async fn execute_with_permission_broker(
         ),
     };
     let mut plan_item = PlanItem {
+        external_ref: None,
         plan_item_id: item.into(),
         name: "agent_task".into(),
         operations: vec![operation],

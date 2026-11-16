@@ -624,6 +624,7 @@ async fn t15_case_dispatch_settlement_reuses_real_basis_not_synthetic() {
         run_id: "run_t15".into(),
         intent_id: "int_t15".into(),
         items: vec![PlanItem {
+            external_ref: None,
             plan_item_id: "agent".into(),
             name: "agent_task".into(),
             operations: vec![Operation::AgentTask {
@@ -830,6 +831,7 @@ async fn t16_case_dispatch_retention_precedence_item_endpoint_global_default() {
             run_id: "run_t16".into(),
             intent_id: "int_t16".into(),
             items: vec![PlanItem {
+                external_ref: None,
                 plan_item_id: "agent".into(),
                 name: "agent_task".into(),
                 operations: vec![Operation::AgentTask {
@@ -1441,6 +1443,7 @@ async fn t13_2_mixed_episodes_share_server_cap() {
             intent_id: "int_mixed".into(),
             items: (0..5)
                 .map(|index| PlanItem {
+                    external_ref: None,
                     plan_item_id: format!("item_{index}"),
                     name: format!("item_{index}"),
                     operations: if index % 2 == 0 {
@@ -1673,6 +1676,7 @@ async fn t13_2_submit_waits_for_direct_delegate_permit() {
             run_id: "run_placeholder".into(),
             intent_id: "int_wait".into(),
             items: vec![PlanItem {
+                external_ref: None,
                 plan_item_id: "agent".into(),
                 name: "agent".into(),
                 operations: vec![Operation::AgentTask {
@@ -1744,6 +1748,7 @@ async fn t13_2_post_dispatch_failure_settles_and_drains_siblings() {
             intent_id: "int_failure".into(),
             items: (0..2)
                 .map(|index| PlanItem {
+                    external_ref: None,
                     plan_item_id: format!("agent_{index}"),
                     name: "agent".into(),
                     operations: vec![Operation::AgentTask {
@@ -1856,6 +1861,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
             intent_id: "int_human".into(),
             items: vec![
                 PlanItem {
+                    external_ref: None,
                     plan_item_id: "agent".into(),
                     name: "agent".into(),
                     operations: vec![Operation::AgentTask {
@@ -1884,6 +1890,7 @@ async fn t13_2_human_task_waits_for_dispatched_episode_settlement() {
                     proposed_by: None,
                 },
                 PlanItem {
+                    external_ref: None,
                     plan_item_id: "human".into(),
                     name: "human".into(),
                     operations: vec![],
@@ -1990,6 +1997,7 @@ async fn t13_2_permit_completion_rederives_before_stale_action() {
             intent_id: "int_stale".into(),
             items: (0..2)
                 .map(|index| PlanItem {
+                    external_ref: None,
                     plan_item_id: format!("agent_{index}"),
                     name: "agent".into(),
                     operations: vec![Operation::AgentTask {
@@ -2078,6 +2086,7 @@ async fn t13_2_non_executable_activation_returns_typed_error() {
             run_id: "run_placeholder".into(),
             intent_id: "int_stage".into(),
             items: vec![PlanItem {
+                external_ref: None,
                 plan_item_id: "stage".into(),
                 name: "stage".into(),
                 operations: vec![],
@@ -2139,6 +2148,7 @@ fn t13_3_restart_after_durable_cancellation_settles_once() {
         run_id: run.clone(),
         intent_id: "int_test".into(),
         items: vec![sea_forge_core::types::PlanItem {
+            external_ref: None,
             plan_item_id: "agent".into(),
             name: "agent_task".into(),
             operations: vec![sea_forge_core::types::Operation::AgentTask {

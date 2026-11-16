@@ -27,6 +27,17 @@
     "decision_id": {
       "type": "string"
     },
+    "digest": {
+      "description": "`{ref: \"approval:<approval_id>\", expected_digest}` as the precondition\ncheck computes it right now. Paste it into `approval.decide`'s\n`preconditions.records` unchanged. Absent when the record could not be\nresolved.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecordDigest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "expired": {
       "description": "True when `expires_at` has passed. Reported so the approver sees *why*\na decision may be refused, rather than the row vanishing.",
       "type": "boolean"
@@ -171,6 +182,24 @@
       "enum": [
         "verified",
         "rebuild_required"
+      ]
+    },
+    "RecordDigest": {
+      "description": "A single `{ref, expected_digest}` precondition entry.",
+      "type": "object",
+      "properties": {
+        "expected_digest": {
+          "description": "The sha256 digest the caller expects the referenced record to have.",
+          "type": "string"
+        },
+        "ref": {
+          "description": "Opaque record reference (e.g. `case:<case_id>`, `approval:<id>`).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "expected_digest"
       ]
     },
     "SourceFreshness": {

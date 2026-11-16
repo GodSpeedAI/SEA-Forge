@@ -48,6 +48,7 @@ fn trusted_self_executable(dir: &Path) -> std::path::PathBuf {
 
 fn sandboxed_task(argv: Vec<String>) -> PlanItem {
     PlanItem {
+        external_ref: None,
         plan_item_id: "task_a".into(),
         name: "task_a".into(),
         operations: vec![Operation::ExecuteCommand {

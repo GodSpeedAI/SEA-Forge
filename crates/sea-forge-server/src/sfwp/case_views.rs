@@ -105,6 +105,33 @@ pub struct HorizonItem {
     /// retried as a new episode has more than one.
     #[serde(default)]
     pub run_ids: Vec<String>,
+    /// Link to an outside record (for example a GitHub issue), when the plan
+    /// item carries one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external_ref: Option<ExternalRefView>,
+}
+
+/// Wire shape of a plan item's `external_ref` (`kind` is `github_issue` or
+/// `ticket`).
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ExternalRefView {
+    pub kind: String,
+    pub id: String,
+    pub url: String,
+}
+
+impl From<&sea_forge_core::types::ExternalRef> for ExternalRefView {
+    fn from(value: &sea_forge_core::types::ExternalRef) -> Self {
+        let kind = serde_json::to_value(value.kind)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_string))
+            .unwrap_or_default();
+        Self {
+            kind,
+            id: value.id.clone(),
+            url: value.url.clone(),
+        }
+    }
 }
 
 /// `case.get_horizon` result body.
@@ -190,6 +217,10 @@ pub struct CaseOverview {
     #[serde(default)]
     pub settlements: Vec<RunSettlement>,
     pub run_ids: Vec<String>,
+    /// `{ref: "case:<case_id>", expected_digest}` as the precondition check
+    /// computes it right now. Absent when the case ledger could not be read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<super::precondition::RecordDigest>,
 }
 
 /// Why a case view could not be produced. Mapped to a machine-readable
@@ -379,6 +410,7 @@ pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseView
         stages: case.stages.clone(),
         settlements,
         run_ids: case.run_ids.clone(),
+        digest: None,
     })
 }
 
@@ -439,6 +471,7 @@ pub fn get_horizon(root: &Path, case_id: &str) -> Result<CaseHorizon, CaseViewEr
                     depends_on: item.depends_on.clone(),
                     last_event_at: None,
                     run_ids: Vec::new(),
+                    external_ref: item.external_ref.as_ref().map(ExternalRefView::from),
                 },
             );
         }
