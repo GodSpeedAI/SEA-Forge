@@ -1,15 +1,14 @@
 # Current status
 
-**Status revision:** 283
+**Status revision:** 287
 
-**Stage:** WP-58 SEA-Forge consolidation: Linux ARM64 (Jetson) packaging
+**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
 
-**Summary:** Linux ARM64 becomes a first-class packaging target: package.yml builds a matrix of amd64 (ubuntu-22.04) and arm64 (ubuntu-22.04-arm) legs with the native rustup toolchain and system glibc 2.35 (the Jetson AGX Orin deployment ABI), refuses strong GLIBC references above 2.35, checks the ELF machine and interpreter per architecture, and uploads per-arch packages; release-please.yml requires the arm64 assets; packaging/deb/build.sh takes the architecture. The squashed port from the old feat/arm64-jetson-packaging branch drops the temporary arm-probe workflow and the dead push trigger on deleted feature branches. Milestone C (on-device install and run on the Jetson) is still pending real-hardware evidence.
+**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
 
 **Verified:**
 
-- actionlint on package.yml and release-please.yml: only pre-existing shellcheck info notes
-- packaging run on the branch recorded in the PR
+- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
 
 **Limits:**
 
@@ -38,7 +37,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Dispatch package.yml on the branch for evidence, merge, then the CI optimization PR. On-device Jetson qualification stays a separate real-hardware step.
+**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
 
 **Evidence:**
 

@@ -96,3 +96,76 @@ e2e/           affordance-dependency ladders (agent-browser, real pointer input)
 
 Deep links (verification only; all reachable through the UI): `?focus=`, `surface=causal`, `time=<cursor>`,
 `timeline=1`, `awake=1`, `theme=dark`, `judge=<object>`.
+
+## Subdirectories & Boundaries
+
+- src (source tree): [./src/README.md] - Boot/source selection, contract port, internal model, scene, artifacts, narrative, UI.
+- src/ports: [./src/ports/README.md] - The contract port (`CaseworkPort`, `SessionPort`, `TemplateSourcePort`, `NarrationPort`) and the contract→internal projection.
+- src/adapters: [./src/adapters/README.md] - Live HTTP adapter, local contract adapter, shared port conformance suite.
+- src/app: [./src/app/README.md] - App shell, the one intent path (VAR-007), composer commands, live events, proposal flow.
+- src/artifacts: [./src/artifacts/README.md] - Payload parsing, artifact service, lazy renderer registry; renderers in [./src/artifacts/renderers/README.md].
+- src/model: [./src/model/README.md] - Internal state, reducer/store, derivation, view selection.
+- src/layout: [./src/layout/README.md] - Pure, data-driven surface layouts.
+- src/camera: [./src/camera/README.md] - Pure projection, pan/zoom/tilt, flights.
+- src/scene: [./src/scene/README.md] - Per-frame runtime, CoreCanvas (the only WebGL), ObjectNode, semantic LOD.
+- src/narrative: [./src/narrative/README.md] - Narration conductor, beat player, scripted local agent, Thoth Ask narration.
+- src/ui: [./src/ui/README.md] - React panels and chrome.
+
+Other in-repo assets (not README-linked here): `e2e/` (journey ladders, see `e2e/README.md`), `reference/WIRE.md`,
+`t08c/` (live-stack fixture config), `vite.config.ts` (dev/preview server on 127.0.0.1:4178 with `/api` proxied to
+127.0.0.1:4179 and `rendererChunkContractPlugin`).
+
+## Interface
+
+- `App` — the shell; composes scene, panels, composer, narrative player and live events [src/app/App.tsx:App]
+- `CaseworkPort` (+ `SessionPort`, `TemplateSourcePort`, `NarrationPort`) — the one contract boundary; shapes come
+  verbatim from `.agents/reports/interface-contracts/typescript/types`, spec-04-only shapes declared here
+  [src/ports/contract.ts:CaseworkPort]
+- `HttpCaseworkAdapter` — the live gateway source (fetch + SSE, session identity, typed refusals)
+  [src/adapters/http/httpCaseworkAdapter.ts:HttpCaseworkAdapter]
+- `LocalContractAdapter` — the dev/test contract-conformant fixture source
+  [src/adapters/local/localAdapter.ts:LocalContractAdapter]
+- `runCaseworkPortConformance` — the shared behavioral suite both adapters must pass
+  [src/adapters/conformance/caseworkPortConformance.ts:runCaseworkPortConformance]
+- `createStore` / `reduce` — the internal store and reducer every surface reads [src/model/store.ts:createStore, src/model/store.ts:reduce]
+- `projectSnapshot` / `projectHistory` — contract→internal projection, the only place contract shapes are read
+  [src/ports/project.ts:projectSnapshot, src/ports/project.ts:projectHistory]
+- `createIntentPath` — the one path consequential work takes out of the UI, human or agent (VAR-007)
+  [src/app/intents.ts:createIntentPath]
+- `createArtifactService` / `parseArtifact` — per-ref artifact resolution and payload parsing
+  [src/artifacts/service.ts:createArtifactService, src/artifacts/model.ts:parseArtifact]
+- `assertRendererChunks` — build-time nine-renderer chunk contract [src/build/rendererChunkContract.ts:assertRendererChunks]
+
+## Invariants
+
+- Everything crosses the port in contract shapes; replacing the local adapter with the Go adapter must not change
+  anything above `src/ports/contract.ts` [src/ports/contract.ts:CaseworkPort]
+- The UI never decides authority: refusals surface as the backend phrased them, and world changes arrive only as new
+  snapshots [src/app/intents.ts:createIntentPath]
+- Snapshots append history and never rewrite it; the past is read-only [src/app/live.ts:connectLive, src/model/store.ts:isPast]
+- The client never asserts identity; identity comes from the gateway session or the local fixture's self-report
+  [src/adapters/http/httpCaseworkAdapter.ts:HttpCaseworkAdapter.getSnapshot, src/adapters/local/localAdapter.ts:LOCAL_IDENTITY]
+- Production builds always select the live source; the local adapter is behind a dynamic import and must never ship in
+  production assets [src/main.tsx]
+- The nine source renderers are nine distinct lazy chunks; the build fails otherwise (VAR-006)
+  [src/build/rendererChunkContract.ts:assertRendererChunks]
+- Execution progress is shown only when the stream reported it; an honest pill shows the phase, not a guessed number
+  [src/app/live.ts:connectLive]
+- Narration directives use only the UI's declared vocabulary; grounded Thoth beats never invent claims, citations or
+  directives [src/narrative/conduct.ts:beatFromNarration, src/narrative/thothNarration.ts:beatsOfAnswer]
+
+## Side Effects
+
+- HTTP + SSE to the Go gateway (`/api/world`, `/api/intents`, `/api/events`, `/api/artifacts/{digest}`, `/api/trajectory`,
+  `/api/templates`, `/api/ask`, `/api/auth/*`, `/api/session`) with double-submit CSRF
+  [src/adapters/http/httpCaseworkAdapter.ts:HttpCaseworkAdapter]
+- One WebGL context (CoreCanvas) plus per-frame DOM/SVG writes from the scene runtime
+  [src/scene/coreCanvas.ts:CoreCanvas, src/scene/runtime.ts:SceneRuntime]
+- Timers for simulated local execution, beat playback, outage grace and recovery probes
+  [src/adapters/local/localAdapter.ts:LocalContractAdapter.execute, src/narrative/player.ts:startNarrativePlayer, src/app/live.ts:connectLive]
+
+## Verification
+
+- Run: `bun test` (working directory: `apps/godspeed-cognitive-ui`)
+- Full app gate: `just casework-ui-check` (frozen install, typecheck, build incl. the renderer chunk contract, tests);
+  E2E ladders: `bun run e2e` (local) and `just casework-e2e-live` (live).
