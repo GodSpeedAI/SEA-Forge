@@ -37,7 +37,7 @@
 - cargo test --workspace and just ci not run (host memory); Cognate/Horizon live suites not re-run
 - FDE planning baseline is documents only (S1 not started); the hardening work changes product code
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
-- cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
+- macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
 **Next:** Merge, then the Horizon desk support, EGM README, ARM64 packaging and CI optimization PRs. Follow-up: drain the request head in every HTTP stub, then take tokio 1.54.
 
