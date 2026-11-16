@@ -1,15 +1,15 @@
 # Current status
 
-**Status revision:** 284
+**Status revision:** 285
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM contract READMEs
+**Stage:** WP-58 SEA-Forge consolidation: graft section in AGENTS.md
 
-**Summary:** The EGM contract README bootstrap lands on main: directory READMEs across the code tree describe each module's contract, plus the drift-report fixes applied to those contracts and the committed drift report. Rebased from docs/egm-bootstrap-readmes (October 30) onto the current main; documentation only, no code or behaviour change. Statements about modules changed since October 30 (the sandbox containment harvest, DomainForge 0.22.0, case-task rename) were not re-audited line by line and follow the usual drift review.
+**Summary:** AGENTS.md gains the graft context-graph section (the graft:start/end block) and the graft skill's wording is refreshed; both were uncommitted edits in the owner's checkout and travel with the EGM README bootstrap PR. Documentation only.
 
 **Verified:**
 
 - git diff --name-only origin/main shows only markdown files
-- CI docs and lint gates run on the PR
+- scripts/check-agent-context.sh: ok
 
 **Limits:**
 
@@ -38,7 +38,7 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI, then the Jetson packaging and CI optimization PRs.
+**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
 
 **Evidence:**
 
