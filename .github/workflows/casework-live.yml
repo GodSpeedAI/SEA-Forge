@@ -24,6 +24,7 @@ on:
       - 'apps/godspeed-casework-go/**'
       - 'apps/godspeed-cognitive-ui/**'
       - 'crates/sea-forge-*/**'
+      - '!crates/**/README.md'
       - 'deploy/**'
       - 'Cargo.lock'
       - 'justfile'
@@ -65,6 +66,13 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: go-live
+          # Only main writes the cache; pull requests restore it read-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # The native-events live test drives a real browser through agent-browser
       # and fails (does not skip) when the CLI is missing. Version matches the
@@ -115,6 +123,13 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: ladder
+          # Only main writes the cache; pull requests restore it read-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # No existing job installs bun explicitly; the version follows
       # workbench/package.json (packageManager bun@1.4.0).
@@ -173,6 +188,13 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: load
+          # Only main writes the cache; pull requests restore it read-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build the kernel binary
         run: devbox run -- cargo build --locked -p sea-forge-server --bin sea-forge-server

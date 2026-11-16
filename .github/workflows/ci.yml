@@ -4,7 +4,9 @@ name: CI
 # such as casework/* are where most work lands first), every push to main, and
 # manual runs. Path filters are intentionally NOT used: a path filter can
 # leave a required check permanently pending, which would silently block or
-# silently pass a PR. Every PR runs the full sweep.
+# silently pass a PR. Instead the `scope` job decides whether a pull request
+# changes only documentation; the heavy jobs then skip, `gate` still runs and
+# reports, and only a docs-only scope lets `gate` accept a skipped job.
 on:
   pull_request:
   push:
@@ -24,6 +26,39 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides whether a pull request touches only documentation. Pushes, manual
+  # runs and anything the pattern does not recognise are never docs-only.
+  scope:
+    name: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+    steps:
+      - name: Classify the change
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          docs_only=false
+          if [ "$EVENT" = "pull_request" ]; then
+            files="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename')"
+            # READMEs, root markdown, status ledger and reports only. docs/ and
+            # .agents/specs are inputs to gates, so they are not docs-only.
+            docs_re='(^|/)README\.md$|^[^/]+\.md$|^\.agents/CURRENT_STATUS\.(md|yaml)$|^\.agents/(reports|plans)/'
+            if [ -n "$files" ] && ! grep -Evq "$docs_re" <<<"$files"; then
+              docs_only=true
+            fi
+          fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "scope: docs_only=$docs_only"
+
   # Fast feedback: context + fmt + clippy + check + deny + gitleaks.
   lint:
     name: lint (ubuntu)
@@ -42,6 +77,14 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: lint
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Doctor (environment check)
         run: devbox run -- just doctor
@@ -72,9 +115,17 @@ jobs:
 
   # Slower feedback: tests + build. Runs in parallel with lint.
   test:
-    name: test (ubuntu)
+    name: test (ubuntu, ${{ matrix.shard }})
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # `server` holds about half the test wall time; `rest` the other half
+        # plus the dev build. Shards run in parallel on separate runners.
+        shard: [server, rest]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -92,6 +143,14 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: test-${{ matrix.shard }}
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cgroup-v2 delegation preflight (F08 lane)
         # The lifecycle-containment scenarios (review F08) need a cgroup-v2
@@ -159,6 +218,8 @@ jobs:
   # devbox.json sets RUSTUP_TOOLCHAIN="" and would otherwise win over a step env.
   msrv:
     name: MSRV (1.92)
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -169,6 +230,14 @@ jobs:
         uses: jetify-com/devbox-install-action@05e954310554b6122a26b4880d69937f61b1eb2e # v0.16.0
         with:
           enable-cache: true
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: msrv
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install MSRV toolchain
         run: devbox run -- rustup toolchain install 1.92.0 --profile minimal --no-self-update
@@ -185,6 +254,8 @@ jobs:
   # native toolchain is needed here.
   workbench:
     name: workbench (ubuntu)
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -197,12 +268,20 @@ jobs:
           enable-cache: true
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: workbench/package.json
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: workbench
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Workbench, host, and generated-contract gates
         run: devbox run -- just workbench-check
@@ -210,9 +289,15 @@ jobs:
   # Cross-platform sweep. The proof recipe has a sha256sum/shasum fallback,
   # so macOS is a real (not decorative) second target.
   macos:
-    name: verify (macos)
+    name: verify (macos, ${{ matrix.shard }})
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: macos-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [server, rest]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -231,8 +316,25 @@ jobs:
       - name: Setup pinned toolchain
         run: devbox run -- just setup
 
-      - name: Canonical CI sweep
-        run: devbox run -- just ci
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: macos-${{ matrix.shard }}
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # fmt, status, deny and gitleaks are platform-independent and already run
+      # in `lint (ubuntu)`; the macOS legs carry what depends on the platform:
+      # clippy and type-check over cfg(target_os) code, the tests, and the
+      # no-async-kernel graph. The dev build is covered by clippy --all-targets
+      # plus the test build, and by `test (ubuntu, rest)`.
+      - name: Platform gates
+        if: matrix.shard == 'rest'
+        run: devbox run -- just ci-platform
+
+      - name: Tests (${{ matrix.shard }})
+        run: devbox run -- just test-shard ${{ matrix.shard }}
 
   # OPA candidate: the real pinned opa 1.21.1 over the DomainForge Rego bundle,
   # plus the cell episode tests that are marked #[ignore] (run here with
@@ -242,6 +344,8 @@ jobs:
   # .sha256 file. The pin does not prove the binary matches a source build.
   authority-opa:
     name: authority-opa (ubuntu)
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -257,6 +361,14 @@ jobs:
 
       - name: Setup pinned toolchain
         run: devbox run -- just setup
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: authority-opa
+          # Only main writes the cache; pull requests restore it read-only, so
+          # a PR can never poison what the next run trusts.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install OPA 1.21.1 (release binary, sha256 verified)
         env:
@@ -290,13 +402,15 @@ jobs:
   # `just ci` is equivalent to the union of lint + test + macos.
   gate:
     name: gate
-    needs: [lint, test, msrv, workbench, macos, authority-opa]
+    needs: [scope, lint, test, msrv, workbench, macos, authority-opa]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Evaluate required jobs
         env:
+          DOCS_ONLY: ${{ needs.scope.outputs.docs_only }}
+          SCOPE_RESULT: ${{ needs.scope.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           TEST_RESULT: ${{ needs.test.result }}
           MSRV_RESULT: ${{ needs.msrv.result }}
@@ -320,7 +434,12 @@ jobs:
           echo "workbench: $WORKBENCH_RESULT"
           echo "macos:     $MACOS_RESULT"
           echo "authority-opa: $AUTHORITY_OPA_RESULT"
+          echo "scope:     $SCOPE_RESULT (docs_only=$DOCS_ONLY)"
           fail=0
+          if [ "$SCOPE_RESULT" != "success" ]; then
+            echo "gate: scope returned '$SCOPE_RESULT' — refusing to pass"
+            fail=1
+          fi
           for entry in "lint:$LINT_RESULT" "test:$TEST_RESULT" "msrv:$MSRV_RESULT" \
                        "workbench:$WORKBENCH_RESULT" "macos:$MACOS_RESULT" \
                        "authority-opa:$AUTHORITY_OPA_RESULT"; do
@@ -329,8 +448,14 @@ jobs:
             case "$r" in
               success) ;;
               skipped)
-                echo "gate: $name was skipped without a documented change-detection rule — treating as failure"
-                fail=1
+                # The scope job is the one documented change-detection rule: a
+                # docs-only pull request skips the heavy jobs, and nothing else may.
+                if [ "$DOCS_ONLY" = "true" ] && [ "$name" != "lint" ]; then
+                  echo "gate: $name skipped for a docs-only change"
+                else
+                  echo "gate: $name was skipped outside a docs-only change — treating as failure"
+                  fail=1
+                fi
                 ;;
               *)
                 echo "gate: $name returned '$r' — refusing to pass"
