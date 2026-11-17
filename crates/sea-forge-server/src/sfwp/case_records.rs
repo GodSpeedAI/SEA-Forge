@@ -1370,7 +1370,7 @@ fn bound_approval(
     params: Value,
     subject_ref: &str,
 ) -> Option<String> {
-    bound_approval_named(ctx, operation, params, subject_ref, None)
+    bound_approval_named(ctx, operation, params, subject_ref, None, None)
 }
 
 /// [`bound_approval`], restricted to the approval the request names when
@@ -1381,6 +1381,7 @@ pub(super) fn bound_approval_named(
     params: Value,
     subject_ref: &str,
     named: Option<&str>,
+    resume: Option<&str>,
 ) -> Option<String> {
     let digest = digest_of(&json!({
         "operation": operation, "subject_ref": subject_ref,
@@ -1389,6 +1390,9 @@ pub(super) fn bound_approval_named(
     let lines = read_lines(&case_dir(ctx.root, ctx.case_id).join(APPROVALS));
     let used: BTreeSet<String> = lines
         .iter()
+        // A consumption bound to the record that is being retried does not
+        // count: its write never landed (`resume` is that record's digest).
+        .filter(|l| resume.is_none() || l["record_digest"].as_str() != resume)
         .filter_map(|l| l["consumed_by"].as_str().and(l["approval_ref"].as_str()))
         .map(String::from)
         .collect();

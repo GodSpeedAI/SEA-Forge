@@ -2483,3 +2483,268 @@ async fn nt_22_scenarios() {
 async fn nt_23_scenarios() {
     nt_subset("NT-23", 8).await;
 }
+
+// ---------------------------------------------------------------------------
+// WP-21 part B, review round 1 (blind review): gate items, the check adjacent
+// to a write, approvals bound to their record, the document on every kind.
+// ---------------------------------------------------------------------------
+
+impl FieldCell {
+    async fn advance(&mut self, items: Value) -> Value {
+        self.n += 1;
+        let rid = format!("req-adv-b-{}", self.n);
+        self.call(
+            OPERATOR,
+            json!({"verb": "case_advance", "policy": "authority/active-policy.json",
+                   "timeout": 60, "request_id": rid, "transition_items": items}),
+        )
+        .await
+    }
+
+    fn events(&self) -> Vec<u8> {
+        fs::read(case_dir(&self.root).join("case-events.jsonl")).unwrap_or_default()
+    }
+
+    fn ledger_len(&self) -> usize {
+        self.read_store("field-records.jsonl").len()
+    }
+}
+
+fn transition(item: &str, how: &str, only: bool) -> Value {
+    json!([{"item_id": item, "transition": how, "transition_only": only}])
+}
+
+/// Item 1: a gate item completes only on a passing assessment, by whatever form
+/// of the request; the refusal writes nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn review1_gate_item_moves_only_on_a_passing_assessment() {
+    let mut c = FieldCell::start(|s| {
+        s.plan(&[
+            ("gate_allocate_authority".into(), false),
+            ("gate_prove_value".into(), false),
+            ("task-b".into(), false),
+        ])
+    })
+    .await;
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("allocate_authority", "blocked", &[]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    let before = c.events();
+    // The reviewer's request, and the same with transition_only false.
+    for only in [true, false] {
+        let got = c
+            .advance(transition("gate_allocate_authority", "complete", only))
+            .await;
+        assert_eq!(got["code"], "HARD_GATE_NOT_WAIVABLE", "only={only}: {got}");
+    }
+    let got = c
+        .advance(transition("gate_allocate_authority", "skip", true))
+        .await;
+    assert_eq!(got["code"], "HARD_GATE_NOT_WAIVABLE", "skip: {got}");
+    // A gate never assessed does not complete either.
+    let got = c
+        .advance(transition("gate_prove_value", "complete", true))
+        .await;
+    assert_eq!(got["code"], "AUTHORITY_DENIED", "{got}");
+    assert_eq!(c.events(), before, "a refusal writes nothing");
+    // A passing assessment lets the item complete.
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("allocate_authority", "met", &["evidence:E1"]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    let got = c
+        .advance(transition("gate_allocate_authority", "complete", true))
+        .await;
+    assert!(got["code"].is_null(), "{got}");
+    assert_ne!(c.events(), before);
+}
+
+/// Item 2: a suspension that lands between the admission and the write is
+/// honoured by the write; the operation is refused and nothing is written.
+#[tokio::test(flavor = "multi_thread")]
+async fn review1_suspension_between_admission_and_write() {
+    let mut c =
+        FieldCell::start(|s| s.plan(&[("task-a".into(), false), ("task-b".into(), false)])).await;
+    let before = c.events();
+    let pause = sea_forge_server::pause_after_admission(&c.root);
+    let wire = json!({"verb": "case_advance", "case_id": CASE,
+        "policy": "authority/active-policy.json", "timeout": 60, "request_id": "req-race-1",
+        "transition_items": transition("task-a", "skip", true),
+        "actor": {"actor_id": OPERATOR, "role": "operator"}});
+    let mut client = c
+        .cell
+        .connect_for(
+            &authenticated::principal(OPERATOR, ActorRole::Operator),
+            &wire,
+        )
+        .await;
+    let task = tokio::spawn(async move { client.call(wire).await });
+    pause.reached.notified().await;
+    // The admission passed; now the suspension lands.
+    assert_eq!(
+        c.dispose("case", "suspend", None).await["lifecycle"],
+        "suspended"
+    );
+    pause.resume.notify_one();
+    let got = task.await.unwrap();
+    assert_eq!(got["code"], "CASE_SUSPENDED", "{got}");
+    assert_eq!(c.events(), before, "nothing was written");
+}
+
+/// Item 3: an approval is bound to the record it authorises. A write that fails
+/// after the approval was consumed is completed by the identical retry (once);
+/// any other record with that approval is refused.
+#[tokio::test(flavor = "multi_thread")]
+async fn review1_failed_append_does_not_burn_its_approval() {
+    use std::os::unix::fs::PermissionsExt;
+    let mut c = FieldCell::start(|_| {}).await;
+    let records = case_dir(&c.root).join("field-records.jsonl");
+    fs::write(&records, "").unwrap();
+    let payload = json!({"level": "case", "disposition": "revise", "rationale": "again",
+                         "approval_ref": "approval:flaky"});
+    c.approve("approval:flaky", "disposition.recorded", &payload);
+    fs::set_permissions(&records, fs::Permissions::from_mode(0o444)).unwrap();
+    let failed = c
+        .append_keyed(
+            OPERATOR,
+            "disposition.recorded",
+            payload.clone(),
+            "operator/flaky",
+        )
+        .await;
+    assert_ne!(failed["outcome"], "recorded", "{failed}");
+    assert_eq!(c.ledger_len(), 0);
+    fs::set_permissions(&records, fs::Permissions::from_mode(0o644)).unwrap();
+    // A different record under that approval is refused.
+    let mut other = payload.clone();
+    other["rationale"] = json!("something else");
+    let denied = c.append(OPERATOR, "disposition.recorded", other).await;
+    assert_eq!(denied["code"], "AUTHORITY_DENIED", "{denied}");
+    // The identical retry completes the write.
+    let done = c
+        .append_keyed(
+            OPERATOR,
+            "disposition.recorded",
+            payload.clone(),
+            "operator/flaky",
+        )
+        .await;
+    assert_eq!(done["outcome"], "recorded", "{done}");
+    assert_eq!(c.ledger_len(), 1);
+    // Once: the same record under another key, and a replay.
+    let twice = c
+        .append_keyed(
+            OPERATOR,
+            "disposition.recorded",
+            payload.clone(),
+            "operator/flaky-2",
+        )
+        .await;
+    assert_eq!(twice["code"], "AUTHORITY_DENIED", "{twice}");
+    let replay = c
+        .append_keyed(OPERATOR, "disposition.recorded", payload, "operator/flaky")
+        .await;
+    assert_eq!(replay["replayed"], true, "{replay}");
+    assert_eq!(c.ledger_len(), 1);
+    // A crash between the two writes leaves exactly that state: the consumption
+    // is there, the record is not. The retry completes it without a second line.
+    let payload = json!({"level": "case", "disposition": "escalate", "rationale": "crash",
+                         "approval_ref": "approval:crash"});
+    c.approve("approval:crash", "disposition.recorded", &payload);
+    let body = digest_of(&json!({"kind": "disposition.recorded", "payload": payload})).unwrap();
+    write_lines(
+        &case_dir(&c.root).join("field-approvals.jsonl"),
+        &[
+            json!({"approval_ref": "approval:crash", "consumed_by": "rec-0002", "record_digest": body}),
+        ],
+    );
+    let done = c
+        .append_keyed(OPERATOR, "disposition.recorded", payload, "operator/crash")
+        .await;
+    assert_eq!(done["outcome"], "recorded", "{done}");
+    let consumed = c
+        .read_store("field-approvals.jsonl")
+        .iter()
+        .filter(|l| l["approval_ref"] == "approval:crash" && l["consumed_by"].is_string())
+        .count();
+    assert_eq!(consumed, 1);
+}
+
+/// Item 4: every kind of the family needs the document; missing or invalid is
+/// STORE_INTEGRITY and nothing is written.
+#[tokio::test(flavor = "multi_thread")]
+async fn review1_every_kind_needs_the_document() {
+    for broken in [false, true] {
+        let mut c = FieldCell::start_with(Some("fde.field_case@1"), false, |_| {}).await;
+        if broken {
+            fs::write(
+                case_dir(&c.root).join("field_case.json"),
+                "{\"case_id\": 1}",
+            )
+            .unwrap();
+        }
+        let disp = json!({"level": "case", "disposition": "revise", "rationale": "r",
+                          "approval_ref": "approval:d"});
+        c.approve("approval:d", "disposition.recorded", &disp);
+        for (kind, payload) in [
+            (
+                "field_case.revised",
+                revision_payload(1, "framing.better_question", "proposed", "Why?"),
+            ),
+            ("strategy.recorded", strategy_payload(1, None)),
+            (
+                "gate.assessed",
+                gate_payload("choose_problem", "met", &["evidence:E1"]),
+            ),
+            ("disposition.recorded", disp),
+        ] {
+            let got = c.append(OPERATOR, kind, payload).await;
+            assert_eq!(
+                got["code"], "STORE_INTEGRITY",
+                "broken={broken} {kind}: {got}"
+            );
+        }
+        assert_eq!(c.ledger_len(), 0, "nothing was written");
+    }
+}
+
+/// Item 2, the execution side: a suspension that lands after the transition
+/// write and before the engine pass is honoured by the pass.
+#[tokio::test(flavor = "multi_thread")]
+async fn review1_suspension_before_the_engine_pass() {
+    let mut c =
+        FieldCell::start(|s| s.plan(&[("task-a".into(), false), ("task-b".into(), false)])).await;
+    let first = sea_forge_server::pause_after_admission(&c.root);
+    let wire = json!({"verb": "case_advance", "case_id": CASE,
+        "policy": "authority/active-policy.json", "timeout": 60, "request_id": "req-race-2",
+        "transition_items": transition("task-a", "skip", true),
+        "actor": {"actor_id": OPERATOR, "role": "operator"}});
+    let mut client = c
+        .cell
+        .connect_for(
+            &authenticated::principal(OPERATOR, ActorRole::Operator),
+            &wire,
+        )
+        .await;
+    let task = tokio::spawn(async move { client.call(wire).await });
+    first.reached.notified().await;
+    let second = sea_forge_server::pause_after_admission(&c.root);
+    first.resume.notify_one();
+    second.reached.notified().await;
+    assert_eq!(
+        c.dispose("case", "suspend", None).await["lifecycle"],
+        "suspended"
+    );
+    second.resume.notify_one();
+    let got = task.await.unwrap();
+    assert_eq!(got["code"], "CASE_SUSPENDED", "{got}");
+}

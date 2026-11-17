@@ -26,8 +26,8 @@
 
 use super::case_records::{
     append_line, bound_approval_named, canonical_actor, case_dir, digest_of, integrity, io_refusal,
-    lifecycle, next_record, records, refuse, store_refusal, vendored_schemas, AppendContext,
-    Lifecycle, APPROVALS,
+    lifecycle, next_record, read_lines, records, refuse, store_refusal, vendored_schemas,
+    AppendContext, Lifecycle, APPROVALS,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
@@ -327,6 +327,7 @@ fn require_approval(
     operation: &str,
     mut params: Value,
     payload: &Value,
+    resume: Option<&str>,
 ) -> Result<String, Value> {
     let denied = |why: &str| Err(refuse("AUTHORITY_DENIED", why, None));
     let Some(named) = payload["approval_ref"].as_str() else {
@@ -336,7 +337,7 @@ fn require_approval(
         return denied("the payload is not canonicalisable, so no approval can bind it");
     };
     params["record_digest"] = json!(digest);
-    match bound_approval_named(ctx, operation, params, ctx.case_id, Some(named)) {
+    match bound_approval_named(ctx, operation, params, ctx.case_id, Some(named), resume) {
         Some(reference) => Ok(reference),
         None => {
             denied("no allow-approval of this case is bound to this record, unexpired and unused")
@@ -347,11 +348,28 @@ fn require_approval(
 /// Single use: the approval is consumed by the record that uses it. Written
 /// before the record, so a crash wastes an approval and never lets one
 /// authorise two records.
-fn consume(ctx: &AppendContext, reference: &str, record_id: &str) -> Result<(), String> {
+fn consume(
+    ctx: &AppendContext,
+    reference: &str,
+    record_id: &str,
+    record_digest: &str,
+) -> Result<(), String> {
     append_line(
         &case_dir(ctx.root, ctx.case_id).join(APPROVALS),
-        &json!({"approval_ref": reference, "consumed_by": record_id}),
+        &json!({"approval_ref": reference, "consumed_by": record_id,
+                "record_digest": record_digest}),
     )
+}
+
+/// Whether `reference` was consumed for exactly the record `body_digest`.
+fn consumed_for(ctx: &AppendContext, reference: &str, body_digest: &str) -> bool {
+    read_lines(&case_dir(ctx.root, ctx.case_id).join(APPROVALS))
+        .iter()
+        .any(|l| {
+            l["approval_ref"] == reference
+                && l["consumed_by"].is_string()
+                && l["record_digest"] == body_digest
+        })
 }
 
 /// Run one of the four part-B kinds. `request` carries the v2 `contract`
@@ -381,13 +399,11 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
         Err(e) => return store_refusal(e),
     }
     let all = records(ctx);
-    let document = if kind == "field_case.revised" {
-        match load_document(ctx, &all) {
-            Ok(d) => Some(d),
-            Err(e) => return store_refusal(e),
-        }
-    } else {
-        None
+    // Every kind of this family rests on the document: missing or invalid is
+    // STORE_INTEGRITY and nothing is written (README section 6).
+    let document = match load_document(ctx, &all) {
+        Ok(d) => Some(d),
+        Err(e) => return store_refusal(e),
     };
     let Some(body_digest) = digest_of(&json!({"kind": kind, "payload": payload})) else {
         return schema_invalid("payload is not canonicalisable (float or unsupported value)");
@@ -428,11 +444,15 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
         }
         _ => {}
     }
+    // A consumption bound to this very record whose write never landed (a failed
+    // write, a crash between the two writes) is completed by the retry, once.
+    let resume = (!all.iter().any(|r| r["body_digest"] == body_digest.as_str()))
+        .then_some(body_digest.as_str());
     let outcome = match kind {
-        "field_case.revised" => revised(ctx, payload, &all, document),
+        "field_case.revised" => revised(ctx, payload, &all, document, resume),
         "strategy.recorded" => strategy(payload, &all),
-        "gate.assessed" => gate(ctx, payload),
-        _ => disposition(ctx, payload),
+        "gate.assessed" => gate(ctx, payload, resume),
+        _ => disposition(ctx, payload, resume),
     };
     let plan = match outcome {
         Ok(p) => p,
@@ -441,8 +461,11 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     // Write: the approval's consumption, the record, then the projection.
     let record_id = format!("rec-{:04}", all.len() + 1);
     if let Some(reference) = &plan.approval {
-        if let Err(e) = consume(ctx, reference, &record_id) {
-            return io_refusal(e);
+        let resumed = resume.is_some_and(|d| consumed_for(ctx, reference, d));
+        if !resumed {
+            if let Err(e) = consume(ctx, reference, &record_id, &body_digest) {
+                return io_refusal(e);
+            }
         }
     }
     let mut resp = response(kind, &record_id, false);
@@ -504,6 +527,7 @@ fn revised(
     payload: &Value,
     all: &[Value],
     document: Option<Value>,
+    resume: Option<&str>,
 ) -> Result<Plan, Value> {
     let mut document = document.ok_or_else(|| schema_invalid("no document"))?;
     let current = ledger_revision(all);
@@ -542,6 +566,7 @@ fn revised(
             "revise_frozen_boundary_field",
             params,
             payload,
+            resume,
         )?);
     }
     if payload["base_revision"].as_u64() != Some(current) {
@@ -590,7 +615,7 @@ fn strategy(payload: &Value, all: &[Value]) -> Result<Plan, Value> {
     })
 }
 
-fn gate(ctx: &AppendContext, payload: &Value) -> Result<Plan, Value> {
+fn gate(ctx: &AppendContext, payload: &Value, resume: Option<&str>) -> Result<Plan, Value> {
     let gate = payload["gate"].as_str().unwrap_or("");
     // I-2 on the delegation chain: whoever the request speaks for, the assessor
     // may not be the proposer of the work (or stand behind it).
@@ -637,7 +662,7 @@ fn gate(ctx: &AppendContext, payload: &Value) -> Result<Plan, Value> {
             "set_gate_not_applicable"
         };
         let params = json!({"case_id": ctx.case_id, "gate": gate, "state": "not_applicable"});
-        approval = Some(require_approval(ctx, operation, params, payload)?);
+        approval = Some(require_approval(ctx, operation, params, payload, resume)?);
     }
     Ok(Plan {
         revision: None,
@@ -647,7 +672,7 @@ fn gate(ctx: &AppendContext, payload: &Value) -> Result<Plan, Value> {
     })
 }
 
-fn disposition(ctx: &AppendContext, payload: &Value) -> Result<Plan, Value> {
+fn disposition(ctx: &AppendContext, payload: &Value, resume: Option<&str>) -> Result<Plan, Value> {
     let level = payload["level"].as_str().unwrap_or("");
     let d = payload["disposition"].as_str().unwrap_or("");
     let operation = if level == "episode" {
@@ -661,7 +686,7 @@ fn disposition(ctx: &AppendContext, payload: &Value) -> Result<Plan, Value> {
         "level": level, "disposition": d, "case_id": ctx.case_id,
         "episode_ref": payload.get("episode_ref").cloned().unwrap_or(Value::Null),
     });
-    let approval = require_approval(ctx, operation, params, payload)?;
+    let approval = require_approval(ctx, operation, params, payload, resume)?;
     let mut fields = json!({"level": level, "disposition": d});
     if let Some(r) = payload.get("episode_ref") {
         fields["episode_ref"] = r.clone();

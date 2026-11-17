@@ -80,6 +80,100 @@ pub struct Admission {
     pub transitions: Vec<(String, String)>,
 }
 
+/// The gate a plan item stands for (`gate_<id>` of the template), if any.
+fn gate_of_item(item: &str) -> Option<&str> {
+    let g = item.strip_prefix("gate_")?;
+    super::field_continuation::GATES.contains(&g).then_some(g)
+}
+
+/// A gate item completes only when its latest `gate.assessed` is passing (`met`,
+/// or `not_applicable` which already rests on its approval); a hard gate (D12)
+/// is not skipped either unless it passes. Refused with the contract's code and
+/// no side effect: nothing is written.
+fn gate_item_check(root: &Path, case_id: &str, item: &str, how: &str) -> Result<(), Value> {
+    let Some(gate) = gate_of_item(item) else {
+        return Ok(());
+    };
+    let hard = super::field_case_kinds::HARD_GATES.contains(&gate);
+    if how == "skip" && !hard {
+        return Ok(());
+    }
+    let state = case_records::with_store_ctx(root, case_id, |ctx| {
+        case_records::records(ctx)
+            .iter()
+            .rfind(|r| r["kind"] == "gate.assessed" && r["gate"] == gate)
+            .and_then(|r| r["state"].as_str().map(String::from))
+    });
+    if matches!(state.as_deref(), Some("met" | "not_applicable")) {
+        return Ok(());
+    }
+    let seen = state.as_deref().unwrap_or("unassessed");
+    Err(if hard {
+        refuse(
+            "HARD_GATE_NOT_WAIVABLE",
+            &format!("hard gate {gate} is {seen}: its item moves only on a passing assessment"),
+            None,
+        )
+    } else {
+        refuse(
+            "AUTHORITY_DENIED",
+            &format!("gate {gate} is {seen}: its item moves only on a passing assessment"),
+            None,
+        )
+    })
+}
+
+/// The check adjacent to an execution (item 2 of the WP-21b review): under the
+/// SAME lock acquisition as the execution, the case is read again and a
+/// suspension is refused. A close is not refused here: an execution that
+/// finishes the plan is the one action a closed case still takes (R13), and
+/// the admission decided that on the plan. Not a Field Case: nothing to check.
+pub fn recheck_lifecycle(root: &Path, case_id: &str) -> Result<(), Value> {
+    if !matches!(template_of(root, case_id), Ok(Some(t)) if t == FIELD_CASE_TEMPLATE) {
+        return Ok(());
+    }
+    let facts = case_records::episode_facts(root, case_id, "-", 0).map_err(|why| {
+        refuse(
+            "FREEZE_INCOMPLETE",
+            &format!("store integrity: {why}"),
+            Some("I-1"),
+        )
+    })?;
+    match facts.lifecycle {
+        Lifecycle::Suspended => Err(refuse("CASE_SUSPENDED", "the case is suspended", None)),
+        _ => Ok(()),
+    }
+}
+
+/// [`admit`] again for a transition-only advance, at the write: the lifecycle,
+/// the close rule and the gate rule are decided on the state the write sees.
+pub fn recheck_transitions(
+    root: &Path,
+    case_id: &str,
+    transitions: &[(String, String)],
+) -> Result<(), Value> {
+    let items: Vec<Value> = transitions
+        .iter()
+        .map(|(i, how)| json!({"item_id": i, "transition": how, "transition_only": true}))
+        .collect();
+    admit(
+        root,
+        &GateInput {
+            verb: Verb::CaseAdvance,
+            case_id,
+            item_id: None,
+            episode_ref: &Value::Null,
+            transition_items: &Value::Array(items),
+            assignment_id: None,
+            endpoint: None,
+            actor: None,
+            gateway_actor: None,
+            timeout_s: 0,
+        },
+    )
+    .map(|_| ())
+}
+
 fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
     let mut out = json!({"outcome": "refused", "code": code, "message": message,
                          "no_side_effect": true});
@@ -327,6 +421,9 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         ));
     }
     if input.verb == Verb::HumanTaskComplete {
+        if let Some(item) = input.item_id {
+            gate_item_check(root, input.case_id, item, "complete")?;
+        }
         return Ok(Admission {
             field_case: true,
             ..Admission::default()
@@ -341,6 +438,13 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                 "no episode_ref and no transition_items",
                 Some("I-1"),
             ));
+        }
+        // A gate item moves only on its assessment (SOP 8.1), never by a bare
+        // transition, whatever the request says about transition_only.
+        for item in input.transition_items.as_array().into_iter().flatten() {
+            if let (Some(i), Some(how)) = (item["item_id"].as_str(), item["transition"].as_str()) {
+                gate_item_check(root, input.case_id, i, how)?;
+            }
         }
         let exec = execution_items(root, input.case_id).map_err(|why| {
             refuse(

@@ -3,5 +3,5 @@
 # Exit 0 is PASS.
 set -eu
 h="$(cd "$(dirname "$0")/.." && pwd)/_cargo-test.sh"
-"$h" sea-forge-server conformance_fde_scenarios 1 nt_22_scenarios nt_22_suspended_case_end_to_end
+"$h" sea-forge-server conformance_fde_scenarios 1 nt_22_scenarios nt_22_suspended_case_end_to_end review1_suspension_between_admission_and_write review1_suspension_before_the_engine_pass
 "$h" sea-forge-server lib 1 lifecycle_golden

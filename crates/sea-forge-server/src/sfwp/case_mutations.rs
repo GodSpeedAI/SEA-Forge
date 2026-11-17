@@ -564,6 +564,17 @@ pub(crate) async fn advance(
     let policy_for_task = policy.to_string();
     let case_id_for_task = case_id.clone();
     let case_lock = state.acquire_case_lock(&case_id).await;
+    // The check adjacent to the execution, under this same lock acquisition
+    // (WP-21b review item 2): the admission released its lock before this point,
+    // so a suspension may have landed since.
+    if let Err(refusal) = crate::sfwp::episode_gate::recheck_lifecycle(&root, &case_id) {
+        drop(case_lock);
+        state.prune_case_lock(&case_id).await;
+        return Err(ForgeError::Plan {
+            class: "episode_gate_refused",
+            message: refusal.to_string(),
+        });
+    }
     let result = run_case_mutation(state, &case_id, move |notify| {
         let mut execute_episode = |item: &PlanItem, run_id: &str| {
             // F-08: the episode's authority decision is evaluated for the

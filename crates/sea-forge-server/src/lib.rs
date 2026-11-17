@@ -4153,12 +4153,54 @@ async fn admit_episode(
     .await;
     drop(lock);
     state.prune_case_lock(case_id).await;
+    if matches!(result, Ok(Ok(_))) {
+        admission_pause(&state.root).await;
+    }
     match result {
         Ok(outcome) => outcome,
         Err(error) => Err(serde_json::json!({
             "outcome": "refused", "code": "FREEZE_INCOMPLETE", "invariant": "I-1",
             "message": format!("execution gate task failed: {error}"), "no_side_effect": true,
         })),
+    }
+}
+
+/// Test hook (WP-21b review item 2): a cell whose root is registered here parks
+/// after an admission until the test resumes it, so a test can land a
+/// suspension between the admission and the write. Unregistered cells (every
+/// production cell) never wait.
+#[doc(hidden)]
+pub struct AdmissionPause {
+    pub reached: tokio::sync::Notify,
+    pub resume: tokio::sync::Notify,
+}
+
+static ADMISSION_PAUSES: std::sync::Mutex<Vec<(std::path::PathBuf, Arc<AdmissionPause>)>> =
+    std::sync::Mutex::new(Vec::new());
+
+#[doc(hidden)]
+pub fn pause_after_admission(root: &std::path::Path) -> Arc<AdmissionPause> {
+    let pause = Arc::new(AdmissionPause {
+        reached: tokio::sync::Notify::new(),
+        resume: tokio::sync::Notify::new(),
+    });
+    ADMISSION_PAUSES
+        .lock()
+        .unwrap()
+        .push((root.to_path_buf(), pause.clone()));
+    pause
+}
+
+async fn admission_pause(root: &std::path::Path) {
+    let pause = {
+        let mut all = ADMISSION_PAUSES.lock().unwrap();
+        all.iter()
+            .position(|(r, _)| r == root)
+            .map(|i| all.remove(i).1)
+    };
+    if let Some(p) = pause {
+        p.reached.notify_one();
+        p.resume.notified().await;
     }
 }
 
@@ -4184,6 +4226,12 @@ async fn transition_only(
     let (root, case) = (state.root.clone(), case_id.to_string());
     let list = transitions.clone();
     let applied = tokio::task::spawn_blocking(move || {
+        // The check adjacent to the write, under this same lock acquisition: the
+        // admission above released its lock, so a suspension, a close or a
+        // failing gate may have landed since.
+        if let Err(refusal) = sfwp::episode_gate::recheck_transitions(&root, &case, &list) {
+            return Ok::<Result<(), serde_json::Value>, ForgeError>(Err(refusal));
+        }
         for (item, how) in &list {
             let kind = if how == "skip" {
                 sea_forge_core::types::TraceKind::ItemTerminated
@@ -4199,13 +4247,14 @@ async fn transition_only(
                 serde_json::json!({"transition_only": true, "transition": how}),
             )?;
         }
-        Ok::<(), ForgeError>(())
+        Ok(Ok(()))
     })
     .await;
     drop(lock);
     state.prune_case_lock(case_id).await;
     match applied {
-        Ok(Ok(())) => {}
+        Ok(Ok(Ok(()))) => {}
+        Ok(Ok(Err(refusal))) => return refusal,
         Ok(Err(error)) => return forge_error_response(&error),
         Err(error) => {
             return forge_error_response(&ForgeError::Internal(format!(
@@ -4214,6 +4263,8 @@ async fn transition_only(
         }
     }
     // The engine runs nothing for finished items; it closes a finished plan.
+    // (Test hook: parks here, between the transition write and the engine pass.)
+    admission_pause(&state.root).await;
     let last = transitions.last().map(|(item, _)| item.clone());
     let mut response = advance_response(
         state,
@@ -4273,6 +4324,14 @@ async fn advance_response(
     {
         Ok(result) => serde_json::to_value(result)
             .unwrap_or_else(|_| serde_json::json!({"error": "advance serialization failed"})),
+        // The re-check adjacent to the execution refused (suspended): answer
+        // with the contract's refusal, as the admission would have.
+        Err(ForgeError::Plan {
+            class: "episode_gate_refused",
+            message,
+        }) => serde_json::from_str(&message).unwrap_or_else(
+            |_| serde_json::json!({"error": message, "error_class": "episode_gate_refused"}),
+        ),
         Err(error) => forge_error_response(&error),
     }
 }
