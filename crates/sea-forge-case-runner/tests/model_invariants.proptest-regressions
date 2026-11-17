@@ -9,3 +9,6 @@ cc 14c0c6731b245359777f1f791f58e5ea35b46bc0a858d69745b5130953605fa0 # shrinks to
 cc f57e30c35f5496b4f9f00c29017949c525a154a355f2ec5466c6c8632d1ab843 # shrinks to steps = [Dispose(0), Terminate]
 cc 85ff1039e3748a3744cf205ddf7ca9d7f6cdc7c925cae9a2198293d3213a168e # shrinks to steps = [Human(1), Assess(1, 0), Human(0), Human(3), Assess(0, 0), Advance]
 cc dfac6979e0a5e816c538455d5d504ff1954b5e2b20821bf94affed1b52340bc1 # shrinks to steps = [Human(0), Assess(0, 0), Assess(1, 0), Human(3), Terminate, Dispose(0), Advance]
+cc 8e46b7771e9726394c2024dda9a029bfee3b477ea42ee832525dcd8d29a6f109 # shrinks to steps = [Corrupt(0), Assess(0, 0)]
+cc 00beb67ef4636fc15386adaf14744207c84c7f71f69cd50feffbb06a9f641f39 # shrinks to steps = [Corrupt(0), Assess(0, 0)]
+cc 13a2eb812d27c130a5a0636ae45fbd91274024d23b8be57a0ca735936c2af75d # shrinks to steps = [Dispose(2), Terminate]

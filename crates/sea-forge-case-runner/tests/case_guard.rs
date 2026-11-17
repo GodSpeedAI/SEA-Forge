@@ -574,3 +574,52 @@ fn the_lock_nests_on_one_thread_and_excludes_another() {
     waiter.join().unwrap();
     assert!(try_lock(&c.path));
 }
+
+#[test]
+fn a_token_writes_only_inside_its_own_case() {
+    let a = Case::new(vec![]);
+    let b = Case::new(vec![]);
+    let token = admit_write(
+        &a.path,
+        &Proposed::Store {
+            file: "field-approvals.jsonl",
+        },
+    )
+    .unwrap();
+    assert!(token
+        .append(&a.path.join("field-approvals.jsonl"), b"{}\n")
+        .is_ok());
+    assert!(
+        token
+            .append(&b.path.join("field-approvals.jsonl"), b"{}\n")
+            .is_err(),
+        "a token is for one case directory"
+    );
+    assert!(token.replace(&b.path.join("x.json"), b"{}").is_err());
+}
+
+#[test]
+fn a_document_with_another_member_is_corrupt() {
+    let mut c = Case::new(vec![item("task-a", "human_task")]);
+    c.disposition("case", "continue");
+    let mut doc = sea_forge_core::field_case::opened_document("case-0001");
+    doc["extra"] = json!(1);
+    fs::write(c.path.join("field_case.json"), doc.to_string()).unwrap();
+    assert_eq!(
+        c.admit(TraceKind::ItemActivated, Some("task-a")),
+        err("STORE_INTEGRITY")
+    );
+}
+
+#[test]
+fn a_case_record_store_alone_marks_a_field_case() {
+    // No document, a plan that does not parse: only the records say Field Case.
+    let mut c = Case::new(vec![item("task-a", "human_task")]);
+    c.disposition("case", "continue");
+    fs::remove_file(c.path.join("field_case.json")).unwrap();
+    fs::write(c.path.join("plan.json"), "{not json").unwrap();
+    assert_eq!(
+        c.admit(TraceKind::ItemActivated, Some("task-a")),
+        err("STORE_INTEGRITY")
+    );
+}

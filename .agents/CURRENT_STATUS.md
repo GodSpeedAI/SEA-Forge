@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 328
+**Status revision:** 329
 
-**Stage:** FDE S2: WP-21 part B review round 4
+**Stage:** FDE S2: WP-21 part B review round 4 mutation checks
 
-**Summary:** Review round 4: load_verified and a pure decide on the post-state, token-required file writers, whole-batch admission for the human completion and the engine's milestone cascade, closed-case engine pass refused unless it ends the plan, and a proptest model of every verb with corruption injection (C1 to C6)
+**Summary:** Review round 4 mutation checks: 18 of 18 mutants of the new rules killed (two after added tests), regression seeds saved for the model test
 
 **Verified:**
 
