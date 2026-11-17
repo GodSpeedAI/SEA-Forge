@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 333
+**Status revision:** 334
 
-**Stage:** FDE S2: WP-21 part B round 6 (classes)
+**Stage:** FDE S2: WP-22 promotion saga
 
-**Summary:** Round 6: raw ops path-contained, strict tail, refusal as one batch, one field classifier with index authority, run workspaces outside the case dir; case-runner, server, clippy and proof s2 green; CLI m13/lifecycle failures pre-exist
+**Summary:** WP-22 saga state machine, reconciler as the same machine, W1-W6 proptests (256 cases) and per-invariant mutation checks; s2 proof 15 PASS plus AT-09 PARTIAL
 
 **Verified:**
 
