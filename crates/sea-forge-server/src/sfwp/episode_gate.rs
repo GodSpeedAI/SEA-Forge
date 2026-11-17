@@ -80,55 +80,26 @@ pub struct Admission {
     pub transitions: Vec<(String, String)>,
 }
 
-/// The gate a plan item stands for (`gate_<id>` of the template), if any.
-fn gate_of_item(item: &str) -> Option<&str> {
-    let g = item.strip_prefix("gate_")?;
-    super::field_continuation::GATES.contains(&g).then_some(g)
-}
-
-/// A gate item completes only when its latest `gate.assessed` is passing (`met`,
-/// or `not_applicable` which already rests on its approval); a hard gate (D12)
-/// is not skipped either unless it passes. Refused with the contract's code and
-/// no side effect: nothing is written.
+/// A gate item completes only on a passing assessment, and a hard gate is not
+/// skipped either: the rule lives in ONE function, `case_ops::field_guard`, which
+/// every writer (this admission, the transition writer, the engine, the human
+/// completion) calls. Refused with the contract's code and no side effect.
 fn gate_item_check(root: &Path, case_id: &str, item: &str, how: &str) -> Result<(), Value> {
-    let Some(gate) = gate_of_item(item) else {
-        return Ok(());
-    };
-    let hard = super::field_case_kinds::HARD_GATES.contains(&gate);
-    if how == "skip" && !hard {
-        return Ok(());
-    }
-    let state = case_records::with_store_ctx(root, case_id, |ctx| {
-        case_records::records(ctx)
-            .iter()
-            .rfind(|r| r["kind"] == "gate.assessed" && r["gate"] == gate)
-            .and_then(|r| r["state"].as_str().map(String::from))
-    });
-    if matches!(state.as_deref(), Some("met" | "not_applicable")) {
-        return Ok(());
-    }
-    let seen = state.as_deref().unwrap_or("unassessed");
-    Err(if hard {
-        refuse(
-            "HARD_GATE_NOT_WAIVABLE",
-            &format!("hard gate {gate} is {seen}: its item moves only on a passing assessment"),
-            None,
-        )
-    } else {
-        refuse(
-            "AUTHORITY_DENIED",
-            &format!("gate {gate} is {seen}: its item moves only on a passing assessment"),
-            None,
-        )
-    })
+    sea_forge_case_runner::case_ops::field_guard::gate_item_check(
+        &root.join("cases").join(case_id),
+        item,
+        how,
+    )
+    .map_err(|r| r.to_value())
 }
 
-/// The check adjacent to an execution (item 2 of the WP-21b review): under the
-/// SAME lock acquisition as the execution, the case is read again and a
-/// suspension is refused. A close is not refused here: an execution that
-/// finishes the plan is the one action a closed case still takes (R13), and
-/// the admission decided that on the plan. Not a Field Case: nothing to check.
-pub fn recheck_lifecycle(root: &Path, case_id: &str) -> Result<(), Value> {
+/// The check adjacent to an execution (item 2 of the WP-21b review, item 4 of
+/// round 2): under the SAME lock acquisition as the execution, the case is read
+/// again. A suspension is refused. A closed case runs only the action that ends
+/// the plan (R13, D42): the execution on `item` must leave nothing to do; any
+/// other pass (another item, the supervisor) is `CASE_CLOSED`. Not a Field
+/// Case: nothing to check.
+pub fn recheck_lifecycle(root: &Path, case_id: &str, item: Option<&str>) -> Result<(), Value> {
     if !matches!(template_of(root, case_id), Ok(Some(t)) if t == FIELD_CASE_TEMPLATE) {
         return Ok(());
     }
@@ -141,8 +112,51 @@ pub fn recheck_lifecycle(root: &Path, case_id: &str) -> Result<(), Value> {
     })?;
     match facts.lifecycle {
         Lifecycle::Suspended => Err(refuse("CASE_SUSPENDED", "the case is suspended", None)),
-        _ => Ok(()),
+        Lifecycle::Closed => {
+            let ends_plan = match item {
+                Some(item) => reaches_terminal(root, case_id, &[(item.to_string(), "complete")])
+                    .map_err(|why| {
+                        refuse(
+                            "FREEZE_INCOMPLETE",
+                            &format!("the plan cannot be read: {why}"),
+                            Some("I-1"),
+                        )
+                    })?,
+                None => false,
+            };
+            if ends_plan {
+                Ok(())
+            } else {
+                Err(refuse(
+                    "CASE_CLOSED",
+                    "the case has a close disposition; closed is final",
+                    None,
+                ))
+            }
+        }
+        Lifecycle::Open => Ok(()),
     }
+}
+
+/// [`admit`] again for a human completion, at the write: the lifecycle, the
+/// close rule and the gate rule are decided on the state the write sees.
+pub fn recheck_human_completion(root: &Path, case_id: &str, item: &str) -> Result<(), Value> {
+    admit(
+        root,
+        &GateInput {
+            verb: Verb::HumanTaskComplete,
+            case_id,
+            item_id: Some(item),
+            episode_ref: &Value::Null,
+            transition_items: &Value::Null,
+            assignment_id: None,
+            endpoint: None,
+            actor: None,
+            gateway_actor: None,
+            timeout_s: 0,
+        },
+    )
+    .map(|_| ())
 }
 
 /// [`admit`] again for a transition-only advance, at the write: the lifecycle,
@@ -239,8 +253,37 @@ fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Res
         });
     }
     use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction, ItemStatus};
-    // Nothing left to do: every item finished, skipped or failed, or the engine
-    // itself would complete or terminate the case.
+    // The engine's automatic milestones cascade: a milestone that would be
+    // achieved next (its gate passing, read now) is part of what this action
+    // leads to, so a close behind it is seen here and refused before a write.
+    let case_dir = root.join("cases").join(case_id);
+    for _ in 0..plan.items.len() {
+        let Some(id) = next_case_actions(&plan.items, &events)
+            .iter()
+            .find_map(|a| match a {
+                CaseAction::AchieveMilestone(id) => Some(id.clone()),
+                _ => None,
+            })
+        else {
+            break;
+        };
+        if sea_forge_case_runner::case_ops::field_guard::gate_item_check(&case_dir, &id, "complete")
+            .is_err()
+        {
+            break;
+        }
+        events.push(TraceEvent {
+            version: "0.2".into(),
+            event_id: format!("gate-hypothetical-{id}"),
+            run_id: plan.run_id.clone(),
+            plan_item_id: Some(id),
+            kind: TraceKind::MilestoneAchieved,
+            actor_id: "execution-gate".into(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            payload: json!({}),
+            cell_id: None,
+        });
+    }
     let projection = replay_case(&plan.items, &events);
     let finished = projection.items.iter().all(|s| {
         matches!(

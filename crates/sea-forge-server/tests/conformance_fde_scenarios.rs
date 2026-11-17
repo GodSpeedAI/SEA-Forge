@@ -661,7 +661,8 @@ async fn run_append(s: &Value) -> Result<(), String> {
         .or(anchored.then_some(KEEPER));
     let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
     let part_b = is_part_b_kind(request["kind"].as_str().unwrap_or(""));
-    if part_b {
+    // README section 6: every v2 append on a Field Case rests on the document.
+    if part_b || request["contract"] == V2 {
         let revised = ledger
             .iter()
             .filter(|l| l["kind"] == "field_case.revised")
@@ -1221,6 +1222,8 @@ async fn run_link(s: &Value) -> Result<(), String> {
     let (case, item, n, digest) = parse_ref(st["episode_ref"].as_str().unwrap());
     let key = json!({"case_id": case, "plan_item_id": item, "n": n});
     let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
+    // README section 6: a v2 append on a Field Case rests on its document.
+    seed.field_case_document(1);
     seed.freeze(
         &key,
         "evaluated",
@@ -1626,6 +1629,10 @@ impl FieldCell {
             Actor {
                 id: OPERATOR.into(),
                 role: ActorRole::Operator,
+            },
+            Actor {
+                id: KEEPER.into(),
+                role: ActorRole::Service,
             },
             Actor {
                 id: "agent:builder-01".into(),
@@ -2747,4 +2754,284 @@ async fn review1_suspension_before_the_engine_pass() {
     second.resume.notify_one();
     let got = task.await.unwrap();
     assert_eq!(got["code"], "CASE_SUSPENDED", "{got}");
+}
+
+// ---------------------------------------------------------------------------
+// WP-21 part B, review round 2 (blind review).
+// ---------------------------------------------------------------------------
+
+impl FieldCell {
+    /// A real case record and a plan of `items` (raw plan items), with the
+    /// policy that lets an operator complete a human task: what the engine and
+    /// the human completion read.
+    fn runnable(&self, items: Value) {
+        let dir = case_dir(&self.root);
+        fs::write(
+            dir.join("case.json"),
+            json!({"version": "0.2", "case_id": CASE,
+                   "intent": {"intent_id": "int_seed", "summary": "seed", "actor_id": OPERATOR,
+                              "process_id": "proc_seed", "created_at": "2026-11-15T08:00:00Z"},
+                   "state": "active", "plan_ref": "plan.json", "run_ids": [], "stages": [],
+                   "close_reason": null, "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+            .to_string(),
+        )
+        .unwrap();
+        let path = dir.join("plan.json");
+        let mut plan: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        plan["items"] = items;
+        fs::write(path, plan.to_string()).unwrap();
+        fs::write(
+            self.root.join("policy.yaml"),
+            "version: \"0.1\"\nrules:\n  - name: allow-human-task\n    verdict: allow\n    actor_role: operator\n    operation_kind: human_task_completion\n",
+        )
+        .unwrap();
+    }
+
+    fn wire_human_complete(&mut self, item: &str) -> Value {
+        json!({"verb": "human_task_complete", "case_id": CASE, "item_id": item,
+               "justification": "reviewed", "policy": "policy.yaml",
+               "request_id": format!("req-htc-{}-{}", item, self.rid.fetch_add(1, std::sync::atomic::Ordering::SeqCst)),
+               "actor": {"actor_id": OPERATOR, "role": "operator"}})
+    }
+
+    async fn human_complete(&mut self, item: &str) -> Value {
+        let wire = self.wire_human_complete(item);
+        self.call(OPERATOR, wire).await
+    }
+
+    fn event_kinds(&self) -> Vec<String> {
+        String::from_utf8(self.events())
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str::<Value>(l).unwrap()["kind"].to_string())
+            .collect()
+    }
+}
+
+fn human(id: &str) -> Value {
+    let criteria =
+        serde_json::to_value(sea_forge_core::types::SettlementCriteria::default()).unwrap();
+    json!({"plan_item_id": id, "name": id, "settlement_criteria": criteria,
+           "item_kind": "human_task", "markers": {"required": true}})
+}
+
+fn milestone(id: &str, after: &str) -> Value {
+    let criteria =
+        serde_json::to_value(sea_forge_core::types::SettlementCriteria::default()).unwrap();
+    json!({"plan_item_id": id, "name": id, "settlement_criteria": criteria,
+           "item_kind": "milestone", "markers": {"required": true}, "depends_on": [after]})
+}
+
+/// Finding 1: a human completion followed by an automatic gate milestone and no
+/// assessment writes neither `milestone_achieved` nor a `case_closed` (R11).
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_automatic_milestone_cannot_bypass_a_gate() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([
+        human("task-a"),
+        milestone("gate_prove_value", "task-a")
+    ]));
+    let got = c.human_complete("task-a").await;
+    let kinds = c.event_kinds();
+    assert!(
+        !kinds.iter().any(|k| k.contains("milestone_achieved")),
+        "{got} {kinds:?}"
+    );
+    assert!(
+        !kinds.iter().any(|k| k.contains("case_closed")),
+        "{got} {kinds:?}"
+    );
+    // With a passing assessment the milestone follows, and the close still
+    // waits for its case-level disposition.
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("prove_value", "met", &["evidence:E1"]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+}
+
+/// Finding 1, second half: a `met` assessment changed to `blocked` after the
+/// completion's admission still stops the milestone at the write.
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_assessment_changed_after_admission_stops_the_milestone() {
+    let mut c = FieldCell::start(|_| {}).await;
+    // `task-z` keeps the plan open (a plan that ends needs its close disposition)
+    // and waits for the gate, so the milestone is the only thing the engine has
+    // to do after the completion.
+    let mut z = human("task-z");
+    z["entry_criteria"] =
+        json!([{"on": {"source": "gate_prove_value", "event": "milestone_achieved"}}]);
+    c.runnable(json!([
+        human("task-a"),
+        milestone("gate_prove_value", "task-a"),
+        z
+    ]));
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("prove_value", "met", &["evidence:E1"]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    let pause = sea_forge_server::pause_after_admission(&c.root);
+    let wire = c.wire_human_complete("task-a");
+    let mut client = c
+        .cell
+        .connect_for(
+            &authenticated::principal(OPERATOR, ActorRole::Operator),
+            &wire,
+        )
+        .await;
+    let task = tokio::spawn(async move { client.call(wire).await });
+    tokio::time::timeout(std::time::Duration::from_secs(30), pause.reached.notified())
+        .await
+        .expect("the request reached its pause");
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("prove_value", "blocked", &[]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    pause.resume.notify_one();
+    let got = task.await.unwrap();
+    let kinds = c.event_kinds();
+    assert!(
+        kinds.iter().any(|k| k.contains("human_task_completed")),
+        "the completion itself is not blocked: {got} {kinds:?}"
+    );
+    assert!(
+        !kinds.iter().any(|k| k.contains("milestone_achieved")),
+        "{got} {kinds:?}"
+    );
+}
+
+/// Finding 1, R11 through an automatic milestone: the completion that would
+/// cascade to a close is refused before anything is written.
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_cascading_close_is_refused_before_any_write() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a"), milestone("ms-plain", "task-a")]));
+    let got = c.human_complete("task-a").await;
+    assert_eq!(got["code"], "CLOSE_DISPOSITION_REQUIRED", "{got}");
+    assert!(c.events().is_empty(), "nothing was written");
+}
+
+/// Finding 2: a suspension that lands after the human completion's admission is
+/// honoured at the write; nothing is written.
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_human_completion_honours_a_suspension_after_admission() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a"), human("task-b")]));
+    let pause = sea_forge_server::pause_after_admission(&c.root);
+    let wire = c.wire_human_complete("task-a");
+    let mut client = c
+        .cell
+        .connect_for(
+            &authenticated::principal(OPERATOR, ActorRole::Operator),
+            &wire,
+        )
+        .await;
+    let task = tokio::spawn(async move { client.call(wire).await });
+    tokio::time::timeout(std::time::Duration::from_secs(30), pause.reached.notified())
+        .await
+        .expect("the request reached its pause");
+    assert_eq!(
+        c.dispose("case", "suspend", None).await["lifecycle"],
+        "suspended"
+    );
+    pause.resume.notify_one();
+    let got = task.await.unwrap();
+    assert_eq!(got["code"], "CASE_SUSPENDED", "{got}");
+    assert!(c.events().is_empty(), "nothing was written");
+}
+
+/// Finding 3: an episode kind needs the document like every other kind: a valid
+/// request with no `field_case.json` (or an invalid one) is STORE_INTEGRITY and
+/// writes nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_episode_kind_needs_the_document() {
+    let fixture =
+        read(&fixtures("case-record-append-v2/valid").join("request-episode-frozen-v2.json"));
+    for broken in [false, true] {
+        let refs = &fixture["payload"]["realitytrace_refs"];
+        let mut ids: Vec<String> = vec![refs["plan_id"].as_str().unwrap().into()];
+        for list in ["question_ids", "threshold_ids"] {
+            ids.extend(
+                refs[list]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().into()),
+            );
+        }
+        let mut c =
+            FieldCell::start_with(Some("fde.field_case@1"), false, |s| s.rt_register(&ids)).await;
+        if broken {
+            fs::write(
+                case_dir(&c.root).join("field_case.json"),
+                "{\"case_id\": 1}",
+            )
+            .unwrap();
+        }
+        let got = c
+            .append_keyed(
+                KEEPER,
+                "episode.frozen",
+                fixture["payload"].clone(),
+                "operator/doc-1",
+            )
+            .await;
+        assert_eq!(got["code"], "STORE_INTEGRITY", "broken={broken}: {got}");
+        assert_eq!(c.ledger_len(), 0, "broken={broken}: nothing was written");
+    }
+}
+
+/// Finding 4: a closed case runs only the action that ends the plan. A
+/// transition written before the close, the case closed before the engine pass:
+/// the pass must not activate the next task.
+#[tokio::test(flavor = "multi_thread")]
+async fn review2_closed_case_refuses_the_engine_pass_that_does_not_end_the_plan() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a"), human("task-b")]));
+    let first = sea_forge_server::pause_after_admission(&c.root);
+    let wire = json!({"verb": "case_advance", "case_id": CASE,
+        "policy": "authority/active-policy.json", "timeout": 60, "request_id": "req-race-3",
+        "transition_items": transition("task-a", "skip", true),
+        "actor": {"actor_id": OPERATOR, "role": "operator"}});
+    let mut client = c
+        .cell
+        .connect_for(
+            &authenticated::principal(OPERATOR, ActorRole::Operator),
+            &wire,
+        )
+        .await;
+    let task = tokio::spawn(async move { client.call(wire).await });
+    tokio::time::timeout(std::time::Duration::from_secs(30), first.reached.notified())
+        .await
+        .expect("the request reached its pause");
+    let second = sea_forge_server::pause_after_admission(&c.root);
+    first.resume.notify_one();
+    tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        second.reached.notified(),
+    )
+    .await
+    .expect("the request reached its pause");
+    // The transition is written; now the case closes before the engine pass.
+    let closed = c.dispose("case", "close-satisfied", None).await;
+    assert_eq!(closed["lifecycle"], "closed", "{closed}");
+    second.resume.notify_one();
+    let got = task.await.unwrap();
+    let kinds = c.event_kinds();
+    assert!(
+        !kinds.iter().any(|k| k.contains("item_activated")),
+        "task-b must not be activated: {got} {kinds:?}"
+    );
+    assert_eq!(got["code"], "CASE_CLOSED", "{got}");
 }

@@ -37,6 +37,10 @@ impl CaseRunner {
         item_id: Option<&str>,
         mut payload: serde_json::Value,
     ) -> Result<(), ForgeError> {
+        // The Field Case write rules, at the write (nothing is written on a refusal).
+        if let Some(case_dir) = path.parent() {
+            case_ops::field_guard::guard_event(case_dir, &kind, item_id)?;
+        }
         // Additive persisted ordinals (spec §17.2 T13.2): each dispatch/
         // activation and settlement gets a 1-based monotonic ordinal derived
         // from prior persisted events. Additive only — old readers ignore it.

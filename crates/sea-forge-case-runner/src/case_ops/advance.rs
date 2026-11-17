@@ -206,6 +206,14 @@ pub fn advance_case(
                     progressed = true;
                 }
                 CaseAction::AchieveMilestone(item) => {
+                    // An automatic milestone is no way around a gate: it is
+                    // achieved only on a passing assessment, read now.
+                    let case_dir = root.join("cases").join(case_id);
+                    if super::field_guard::is_field_case(&case_dir)
+                        && super::field_guard::gate_item_check(&case_dir, item, "complete").is_err()
+                    {
+                        continue;
+                    }
                     append_notify(
                         &case_events,
                         &stream,

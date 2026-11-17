@@ -21,6 +21,7 @@ fn noop_notifier(_: &TraceEvent) {}
 
 pub mod advance;
 pub mod authority_views;
+pub mod field_guard;
 pub mod mediation;
 
 use chrono::Utc;
@@ -97,6 +98,8 @@ pub fn append_case_event_with(
     notify: CaseEventNotifier<'_>,
 ) -> Result<(), ForgeError> {
     let (_, _, events_path) = paths(root, case_id);
+    // The Field Case write rules, at the write (nothing is written on a refusal).
+    field_guard::guard_event(&root.join("cases").join(case_id), &kind, item_id)?;
     let count = fs::read_to_string(&events_path)
         .map(|value| value.lines().count())
         .unwrap_or(0);
@@ -460,6 +463,18 @@ pub fn complete_human_task_with(
     loop {
         match sea_forge_planner::case_engine::next_case_actions(&plan.items, &events).as_slice() {
             [sea_forge_planner::case_engine::CaseAction::AchieveMilestone(id)] => {
+                // An automatic milestone is no way around a gate: it is achieved
+                // only on a passing assessment, read now, at the write.
+                if field_guard::is_field_case(&root.join("cases").join(case_id))
+                    && field_guard::gate_item_check(
+                        &root.join("cases").join(case_id),
+                        id,
+                        "complete",
+                    )
+                    .is_err()
+                {
+                    return Ok(5);
+                }
                 append_case_event_with(
                     root,
                     case_id,

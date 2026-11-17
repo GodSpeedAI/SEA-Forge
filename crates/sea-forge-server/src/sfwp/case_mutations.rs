@@ -383,7 +383,9 @@ pub(crate) async fn reopen(
     let case_id = case_id.to_string();
     let case_id_for_task = case_id.clone();
     let reason = reason.map(str::to_string);
-    run_case_mutation(state, &case_id, move |notify| {
+    // Every case write is one critical section under the case's keyed lock.
+    let case_lock = state.acquire_case_lock(&case_id).await;
+    let result = run_case_mutation(state, &case_id, move |notify| {
         sea_forge_case_runner::case_ops::reopen_with_reason(
             &root,
             &policy_path,
@@ -393,7 +395,10 @@ pub(crate) async fn reopen(
             notify,
         )
     })
-    .await?;
+    .await;
+    drop(case_lock);
+    state.prune_case_lock(&case_id).await;
+    result?;
     Ok(CaseReopenResult {
         ok: true,
         case_state: "active".into(),
@@ -421,7 +426,8 @@ pub(crate) async fn terminate(
     let reason = reason.to_string();
     let close_reason = format!("operator_terminated:{reason}");
     let case_id_for_task = case_id.clone();
-    run_case_mutation(state, &case_id, move |notify| {
+    let case_lock = state.acquire_case_lock(&case_id).await;
+    let result = run_case_mutation(state, &case_id, move |notify| {
         sea_forge_case_runner::case_ops::terminate_with(
             &root,
             &policy_path,
@@ -431,7 +437,10 @@ pub(crate) async fn terminate(
             notify,
         )
     })
-    .await?;
+    .await;
+    drop(case_lock);
+    state.prune_case_lock(&case_id).await;
+    result?;
     Ok(CaseTerminateResult {
         ok: true,
         case_state: "terminated".into(),
@@ -464,6 +473,21 @@ pub(crate) async fn human_task_complete(
     let note = justification.to_string();
     let item_id_for_result = item_id.clone();
     let case_id_for_task = case_id.clone();
+    // The whole completion runs under this case's keyed lock, and the case is
+    // read again under it (WP-21b review round 2, item 2): the admission
+    // released its lock before this point, so a suspension, a close or a failing
+    // gate may have landed since. Nothing is written on a refusal.
+    let case_lock = state.acquire_case_lock(&case_id).await;
+    if let Err(refusal) =
+        crate::sfwp::episode_gate::recheck_human_completion(&root, &case_id, &item_id)
+    {
+        drop(case_lock);
+        state.prune_case_lock(&case_id).await;
+        return Err(ForgeError::Plan {
+            class: "episode_gate_refused",
+            message: refusal.to_string(),
+        });
+    }
     let exit_code = run_case_mutation(state, &case_id, move |notify| {
         sea_forge_case_runner::case_ops::complete_human_task_with(
             &root,
@@ -475,7 +499,10 @@ pub(crate) async fn human_task_complete(
             notify,
         )
     })
-    .await?;
+    .await;
+    drop(case_lock);
+    state.prune_case_lock(&case_id).await;
+    let exit_code = exit_code?;
     Ok(HumanTaskCompleteResult {
         ok: true,
         case_id,
@@ -567,7 +594,12 @@ pub(crate) async fn advance(
     // The check adjacent to the execution, under this same lock acquisition
     // (WP-21b review item 2): the admission released its lock before this point,
     // so a suspension may have landed since.
-    if let Err(refusal) = crate::sfwp::episode_gate::recheck_lifecycle(&root, &case_id) {
+    let scope_item = match &scope {
+        AdvanceScope::Item(item) => Some(item.as_str()),
+        _ => None,
+    };
+    if let Err(refusal) = crate::sfwp::episode_gate::recheck_lifecycle(&root, &case_id, scope_item)
+    {
         drop(case_lock);
         state.prune_case_lock(&case_id).await;
         return Err(ForgeError::Plan {

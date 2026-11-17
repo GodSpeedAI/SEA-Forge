@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 323
+**Status revision:** 324
 
-**Stage:** FDE S2: WP-21 part B review round 1 fixes
+**Stage:** FDE S2: WP-21 part B review round 2 fixes
 
-**Summary:** Blind review round 1: gate items move only on a passing assessment, lifecycle re-checked at the write, approvals bound to their record (retry completes once), document required for every v2 kind
+**Summary:** Blind review round 2: one hard-gate rule at every write (transitions, engine, human completion, dispatcher), R11 on every close path, case verbs under the case lock, document required on episode kinds, closed-case exception narrowed to the action that ends the plan
 
 **Verified:**
 

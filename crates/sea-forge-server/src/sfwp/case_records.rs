@@ -883,6 +883,20 @@ pub fn append_faulted(
     if let Err(e) = integrity(ctx) {
         return Ok(store_refusal(e));
     }
+    // README section 6: every v2 append on a Field Case, the episode kinds
+    // included, rests on the document; missing or invalid is STORE_INTEGRITY
+    // and nothing is written.
+    if v2 {
+        match super::field_case_kinds::is_field_case(ctx.root, ctx.case_id) {
+            Ok(true) => {
+                if let Err(e) = super::field_case_kinds::load_document(ctx, &records(ctx)) {
+                    return Ok(store_refusal(e));
+                }
+            }
+            Ok(false) => {}
+            Err(e) => return Ok(store_refusal(e)),
+        }
+    }
     // Every write needs an authenticated principal (E §8: freeze is P1,
     // settle is P2). The server passes an empty principal when the request
     // carried no verified identity; the shared `operator_local` fallback is

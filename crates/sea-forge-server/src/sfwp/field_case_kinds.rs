@@ -51,7 +51,7 @@ pub const RESERVED_PATHS: [&str; 5] = [
 ];
 
 /// Gates whose `not_applicable` needs the A3-backed approval (D12).
-pub const HARD_GATES: [&str; 2] = ["allocate_authority", "integrate_govern"];
+pub const HARD_GATES: [&str; 2] = sea_forge_case_runner::case_ops::field_guard::HARD_GATES;
 
 // ---------------------------------------------------------------------------
 // Schemas

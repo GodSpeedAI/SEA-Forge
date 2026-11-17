@@ -4090,6 +4090,17 @@ pub async fn handle_request_as(
 /// client can distinguish a refusal (input/policy/SoD) from an internal
 /// failure, matching the rest of the SFWP error vocabulary.
 fn forge_error_response(error: &ForgeError) -> serde_json::Value {
+    // A Field Case rule refused at the write (the execution gate's re-check, or
+    // `case_ops::field_guard` under any writer): answer with the contract's Error.
+    if let ForgeError::Plan {
+        class: "episode_gate_refused",
+        message,
+    } = error
+    {
+        if let Ok(refusal) = serde_json::from_str::<serde_json::Value>(message) {
+            return refusal;
+        }
+    }
     serde_json::json!({
         "error": error.to_string(),
         "error_class": error.class(),
@@ -4744,6 +4755,8 @@ async fn decide(
     let approval = approval_id.to_string();
     let note_owned = note.map(str::to_owned);
     let actor_for_task = actor.clone();
+    // The resolution is a case write: one critical section under the case lock.
+    let case_lock = state.acquire_case_lock(case_id).await;
     let result = tokio::task::spawn_blocking(move || {
         sea_forge_case_runner::case_ops::resolve_approval(
             &root,
@@ -4757,6 +4770,8 @@ async fn decide(
     })
     .await
     .map_err(|error| ForgeError::Internal(format!("approval resolution task panic: {error}")));
+    drop(case_lock);
+    state.prune_case_lock(case_id).await;
     let response = match result {
         Ok(Ok(resolved)) => {
             let _ = state.permission_broker.resolve(approval_id).await;
@@ -5610,6 +5625,76 @@ mod field_recover_tests {
             .expect("recovery runs once the lock is free")
             .unwrap();
         assert_eq!(out, sea_forge_server_recovered_default());
+    }
+
+    /// Finding 2 (round 2): every case-mutating verb is one critical section under
+    /// the case's keyed lock; while it is held, the verb does not run.
+    #[tokio::test]
+    async fn review2_case_mutating_verbs_wait_for_the_case_lock() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(root.path().join("cases/case-0001")).unwrap();
+        std::fs::write(
+            root.path().join("policy.yaml"),
+            "version: \"0.1\"\nrules: []\n",
+        )
+        .unwrap();
+        let config = ServerConfig {
+            root: root.path().to_path_buf(),
+            ..ServerConfig::default()
+        };
+        let state = Arc::new(ServerState::new(config).unwrap());
+        for verb in ["human_task_complete", "reopen", "terminate"] {
+            let held = state.acquire_case_lock("case-0001").await;
+            let task = {
+                let state = Arc::clone(&state);
+                tokio::spawn(async move {
+                    match verb {
+                        "human_task_complete" => sfwp::case_mutations::human_task_complete(
+                            &state,
+                            "op",
+                            "case-0001",
+                            "task-a",
+                            "why",
+                            "policy.yaml",
+                        )
+                        .await
+                        .map(|_| ()),
+                        "reopen" => sfwp::case_mutations::reopen(
+                            &state,
+                            "op",
+                            "case-0001",
+                            "policy.yaml",
+                            None,
+                        )
+                        .await
+                        .map(|_| ()),
+                        _ => sfwp::case_mutations::terminate(
+                            &state,
+                            "op",
+                            "case-0001",
+                            "why",
+                            "policy.yaml",
+                        )
+                        .await
+                        .map(|_| ()),
+                    }
+                })
+            };
+            let early = tokio::time::timeout(std::time::Duration::from_millis(300), async {
+                while !task.is_finished() {
+                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                }
+            })
+            .await;
+            assert!(
+                early.is_err(),
+                "{verb} must not run while the case lock is held"
+            );
+            drop(held);
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(5), task)
+                .await
+                .unwrap_or_else(|_| panic!("{verb} runs once the lock is free"));
+        }
     }
 
     fn sea_forge_server_recovered_default() -> sfwp::case_records::Recovered {
