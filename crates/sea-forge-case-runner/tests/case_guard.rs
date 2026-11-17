@@ -42,7 +42,7 @@ impl Case {
         fs::write(path.join("case-events.jsonl"), "").unwrap();
         fs::write(
             path.join("field_case.json"),
-            json!({"case_id": "case-0001", "revision": 1}).to_string(),
+            sea_forge_core::field_case::opened_document("case-0001").to_string(),
         )
         .unwrap();
         Self {
@@ -371,17 +371,18 @@ fn every_write_needs_the_document() {
     // Another case's document, and a document ahead of its ledger.
     fs::write(
         c.path.join("field_case.json"),
-        json!({"case_id": "other", "revision": 1}).to_string(),
+        sea_forge_core::field_case::opened_document("other").to_string(),
     )
     .unwrap();
     assert_eq!(
         c.admit(TraceKind::ItemActivated, Some("task-a")),
         err("STORE_INTEGRITY")
     );
-    fs::write(
-        c.path.join("field_case.json"),
-        json!({"case_id": "case-0001", "revision": 9}).to_string(),
-    )
+    fs::write(c.path.join("field_case.json"), {
+        let mut d = sea_forge_core::field_case::opened_document("case-0001");
+        d["revision"] = json!(9);
+        d.to_string()
+    })
     .unwrap();
     assert_eq!(
         c.admit(TraceKind::ItemActivated, Some("task-a")),
@@ -486,6 +487,8 @@ fn a_plain_case_is_not_touched() {
         .to_string(),
     )
     .unwrap();
+    // A plain case has no Field Case marker.
+    fs::remove_file(c.path.join("field_case.json")).unwrap();
     assert_eq!(c.admit(TraceKind::CaseReopened, None), Ok(()));
     assert_eq!(c.store("whatever.jsonl"), Ok(()));
 }

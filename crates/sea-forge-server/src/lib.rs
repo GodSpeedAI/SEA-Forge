@@ -354,6 +354,10 @@ impl ServerState {
                 },
             );
         }
+        // The guard checks the Field Case document against the full schema.
+        sea_forge_case_runner::case_ops::case_guard::set_document_validator(
+            sfwp::field_case_kinds::document_is_valid,
+        );
         Ok(Self {
             root: config.root.clone(),
             continuation_signing_key,
@@ -4287,6 +4291,30 @@ async fn transition_only(
         if let Err(refusal) = sfwp::episode_gate::recheck_transitions(&root, &case, &list) {
             return Ok::<Result<(), serde_json::Value>, ForgeError>(Err(refusal));
         }
+        // One transaction: the whole batch is admitted before the first write,
+        // and the case lock is held until the last one.
+        let batch: Vec<(sea_forge_core::types::TraceKind, Option<String>)> = list
+            .iter()
+            .map(|(item, how)| {
+                (
+                    if how == "skip" {
+                        sea_forge_core::types::TraceKind::ItemTerminated
+                    } else {
+                        sea_forge_core::types::TraceKind::ItemCompleted
+                    },
+                    Some(item.clone()),
+                )
+            })
+            .collect();
+        let _batch_token = match sea_forge_case_runner::case_ops::case_guard::admit_write(
+            &root.join("cases").join(&case),
+            &sea_forge_case_runner::case_ops::case_guard::Proposed::Batch { events: &batch },
+        ) {
+            Ok(token) => token,
+            Err(refusal) => {
+                return Ok::<Result<(), serde_json::Value>, ForgeError>(Err(refusal.to_value()))
+            }
+        };
         for (item, how) in &list {
             let kind = if how == "skip" {
                 sea_forge_core::types::TraceKind::ItemTerminated

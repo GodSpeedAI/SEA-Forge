@@ -47,12 +47,22 @@ pub fn gate_of_item(item: &str) -> Option<&str> {
         .then_some(gate)
 }
 
-/// Is the case at `case_dir` a Field Case (its plan carries the template)?
+/// Is the case at `case_dir` a Field Case? Detection does not depend on a
+/// parseable plan: the plan's template says so, and so does any Field Case
+/// marker (the document, a case record). A case with a marker and a plan that
+/// does not parse is a Field Case whose store is corrupt, and fails closed in
+/// the guard's integrity check.
 pub fn is_field_case(case_dir: &Path) -> bool {
-    std::fs::read(case_dir.join("plan.json"))
+    let by_plan = std::fs::read(case_dir.join("plan.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-        .is_some_and(|plan| plan["template_ref"] == FIELD_CASE_TEMPLATE)
+        .is_some_and(|plan| plan["template_ref"] == FIELD_CASE_TEMPLATE);
+    by_plan || has_marker(case_dir)
+}
+
+fn has_marker(case_dir: &Path) -> bool {
+    case_dir.join("field_case.json").exists()
+        || std::fs::metadata(case_dir.join(RECORDS)).is_ok_and(|m| m.len() > 0)
 }
 
 fn records(case_dir: &Path) -> Vec<Value> {

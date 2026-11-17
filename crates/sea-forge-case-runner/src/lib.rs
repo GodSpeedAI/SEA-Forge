@@ -566,7 +566,12 @@ pub fn run_stage_case(
     })
 }
 
+/// Write a JSON file. A file inside a case directory is written only under
+/// the case lock and THE guard's admission (`case_guard::admit_file_write`):
+/// nothing is written before the ledger allows it.
 pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
+    let _token = case_ops::case_guard::admit_file_write(path, &serde_json::to_value(value)?)
+        .map_err(case_ops::field_guard::Refusal::into_error)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| ForgeError::io("create JSON parent", error))?;
     }

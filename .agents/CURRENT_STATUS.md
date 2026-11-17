@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 326
+**Status revision:** 327
 
-**Stage:** FDE S2: WP-21 part B review round 3 mutation checks
+**Stage:** FDE S2: WP-21 part B review round 4 (part 1)
 
-**Summary:** Blind review round 3 mutation checks: 41 of 42 mutants of the guard rules, locks and admissions killed (the survivor is an equivalent pre-check), three tests added for the survivors
+**Summary:** Review round 4, part 1: case.json, plan.json and run files are written only under admission; corrupt plan, aux stores or document fail closed; a closed case admits only the action that finishes the plan; the human completion is one admitted batch
 
 **Verified:**
 

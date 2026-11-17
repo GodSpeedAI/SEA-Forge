@@ -63,6 +63,9 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ForgeErro
 }
 
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
+    // THE guard first, the lock held until the file is replaced.
+    let _token = case_guard::admit_file_write(path, &serde_json::to_value(value)?)
+        .map_err(field_guard::Refusal::into_error)?;
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, serde_json::to_vec_pretty(value)?)
         .map_err(|error| ForgeError::io("write case state", error))?;
@@ -461,6 +464,44 @@ pub fn complete_human_task_with(
     if item.item_kind != ItemKind::HumanTask {
         return Err(ForgeError::Input("item is not a human task".into()));
     }
+    // One transaction: the whole consequence (the completion, the automatic
+    // milestones it unlocks, the close it reaches) is computed and admitted
+    // before anything is written, so a close refused by R11 leaves no
+    // completion behind and a retry cannot append a second one.
+    let case_dir = root.join("cases").join(case_id);
+    let mut batch: Vec<(TraceKind, Option<String>)> =
+        vec![(TraceKind::HumanTaskCompleted, Some(item_id.to_string()))];
+    {
+        let mut sim = events.clone();
+        sim.push(projection_event(
+            actor,
+            item_id,
+            TraceKind::HumanTaskCompleted,
+        ));
+        while let [action] =
+            sea_forge_planner::case_engine::next_case_actions(&plan.items, &sim).as_slice()
+        {
+            match action {
+                sea_forge_planner::case_engine::CaseAction::AchieveMilestone(id) => {
+                    if field_guard::is_field_case(&case_dir)
+                        && field_guard::gate_item_check(&case_dir, id, "complete").is_err()
+                    {
+                        break;
+                    }
+                    batch.push((TraceKind::MilestoneAchieved, Some(id.clone())));
+                    sim.push(projection_event(actor, id, TraceKind::MilestoneAchieved));
+                }
+                sea_forge_planner::case_engine::CaseAction::CompleteCase => {
+                    batch.push((TraceKind::CaseClosed, None));
+                    break;
+                }
+                _ => break,
+            }
+        }
+    }
+    let _batch_token =
+        case_guard::admit_write(&case_dir, &case_guard::Proposed::Batch { events: &batch })
+            .map_err(field_guard::Refusal::into_error)?;
     mediation::authorize_read(
         root,
         policy,
@@ -544,6 +585,20 @@ pub fn complete_human_task_with(
             }
             _ => return Ok(5),
         }
+    }
+}
+
+fn projection_event(actor: &str, item: &str, kind: TraceKind) -> TraceEvent {
+    TraceEvent {
+        version: RECORD_VERSION.into(),
+        event_id: "projection".into(),
+        run_id: "case".into(),
+        plan_item_id: Some(item.into()),
+        kind,
+        actor_id: actor.into(),
+        timestamp: Utc::now().to_rfc3339(),
+        payload: json!({}),
+        cell_id: None,
     }
 }
 
