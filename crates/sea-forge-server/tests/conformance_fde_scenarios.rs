@@ -2360,6 +2360,101 @@ fn i2_gate_assessment_on_the_delegation_chain() {
     assert_eq!(ok["outcome"], "recorded", "{ok}");
 }
 
+/// NT-11: both hard gates (D12) are not waivable by rationale alone, and a
+/// non-hard gate needs an approval too (SOP 8.1: authorized).
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_11_both_hard_gates_and_the_non_hard_waiver() {
+    let mut c = FieldCell::start(|_| {}).await;
+    for gate in ["allocate_authority", "integrate_govern"] {
+        let r = c
+            .append(
+                OPERATOR,
+                "gate.assessed",
+                gate_payload(gate, "not_applicable", &[]),
+            )
+            .await;
+        assert_eq!(r["code"], "HARD_GATE_NOT_WAIVABLE", "{gate}: {r}");
+    }
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("measure", "not_applicable", &[]),
+        )
+        .await;
+    assert_eq!(r["code"], "AUTHORITY_DENIED", "{r}");
+    // With a bound approval the hard gate may be set not_applicable.
+    let mut na = gate_payload("integrate_govern", "not_applicable", &[]);
+    na["approval_ref"] = json!("approval:hard");
+    c.approve("approval:hard", "gate.assessed", &na);
+    assert_eq!(
+        c.append(OPERATOR, "gate.assessed", na).await["outcome"],
+        "recorded"
+    );
+    // An approval bound to another gate does not carry over.
+    let mut other = gate_payload("allocate_authority", "not_applicable", &[]);
+    other["approval_ref"] = json!("approval:hard2");
+    let mut elsewhere = gate_payload("integrate_govern", "not_applicable", &[]);
+    elsewhere["rationale"] = json!("another rationale");
+    c.approve("approval:hard2", "gate.assessed", &elsewhere);
+    assert_eq!(
+        c.append(OPERATOR, "gate.assessed", other).await["code"],
+        "AUTHORITY_DENIED"
+    );
+}
+
+/// Rules the schema cannot say (README section 6): the assessor is the authenticated
+/// principal, an approval the record does not need is refused, and a strategy
+/// revision follows the current one exactly.
+#[tokio::test(flavor = "multi_thread")]
+async fn part_b_rules_beyond_the_schema() {
+    let mut c = FieldCell::start(|_| {}).await;
+    // The assessor is not the caller.
+    let mut p = gate_payload("choose_problem", "met", &["evidence:E1"]);
+    p["assessor"] = json!("agent:builder-01");
+    let r = c.append(OPERATOR, "gate.assessed", p).await;
+    assert_eq!(r["code"], "SCHEMA_INVALID", "{r}");
+    // An approval_ref on a met gate, and on a revision that needs none.
+    let mut p = gate_payload("choose_problem", "met", &["evidence:E1"]);
+    p["approval_ref"] = json!("approval:x");
+    assert_eq!(
+        c.append(OPERATOR, "gate.assessed", p).await["code"],
+        "SCHEMA_INVALID"
+    );
+    let mut p = revision_payload(1, "framing.better_question", "proposed", "Why?");
+    p["approval_ref"] = json!("approval:x");
+    assert_eq!(
+        c.append(OPERATOR, "field_case.revised", p).await["code"],
+        "SCHEMA_INVALID"
+    );
+    // The same path twice in one revision.
+    let mut p = revision_payload(1, "framing.better_question", "proposed", "Why?");
+    let change = p["changes"][0].clone();
+    p["changes"].as_array_mut().unwrap().push(change);
+    assert_eq!(
+        c.append(OPERATOR, "field_case.revised", p).await["code"],
+        "SCHEMA_INVALID"
+    );
+    // A strategy revision skipping one conflicts even when it names the latest record.
+    let s1 = c
+        .append(OPERATOR, "strategy.recorded", strategy_payload(1, None))
+        .await;
+    let id1 = s1["record_id"].as_str().unwrap().to_string();
+    let skip = c
+        .append(
+            OPERATOR,
+            "strategy.recorded",
+            strategy_payload(3, Some(&id1)),
+        )
+        .await;
+    assert_eq!(skip["code"], "REVISION_CONFLICT", "{skip}");
+    // A first strategy cannot be written twice.
+    let again = c
+        .append(OPERATOR, "strategy.recorded", strategy_payload(1, None))
+        .await;
+    assert_eq!(again["code"], "REVISION_CONFLICT", "{again}");
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn at_03_scenarios() {
     nt_subset("AT-03", 2).await;

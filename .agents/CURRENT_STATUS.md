@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 321
+**Status revision:** 322
 
-**Stage:** FDE S2: WP-21 part B step 2, continuation, template, proof rows
+**Stage:** FDE S2: WP-21 part B complete, mutation checks and proof rows
 
-**Summary:** case.field.get and case.continuation read verbs (SOP 10.1 model, unknown sections explicit); template fde.field_case@1 built in and checked against the model; I-2 on the delegation chain for gate assessments; proof rows AT-03/09/10/11/15 and NT-10/11/22/23
+**Summary:** Part B gate: 143 of 157 scenarios pass, 14 pending wp-31 only; FDE_WP21A_FINAL=1 passes; 25 mutants of the new refusal rules all KILLED (3 first survived, tests added); S2 proof rows AT-03/10/11/15 NT-10/11/22/23 PASS, AT-09 PARTIAL (A3 clause WP-31)
 
 **Verified:**
 
@@ -52,7 +52,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** mutation checks, final gate, report
+**Next:** S2 gate merge by the lane; WP-31 authority bridge
 
 **Evidence:**
 
