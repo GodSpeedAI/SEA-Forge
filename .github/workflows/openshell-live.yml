@@ -5,12 +5,9 @@ name: OpenShell live proof
 # The proof exits 0 only when the live tests ran and passed. 3 means BLOCKED
 # (a prerequisite is missing) and 1 means FAIL. Both fail the linux job.
 #
-# This lane is not a required PR check. It runs on pushes to ci/openshell-live
-# and on manual dispatch.
+# This lane is not a required PR check. It runs on manual dispatch only.
 
 on:
-  push:
-    branches: [ci/openshell-live]
   workflow_dispatch:
 
 permissions:
@@ -221,7 +218,7 @@ jobs:
           done
 
       - name: Install Devbox
-        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        uses: jetify-com/devbox-install-action@05e954310554b6122a26b4880d69937f61b1eb2e # v0.16.0
         with:
           enable-cache: true
 
@@ -445,7 +442,7 @@ jobs:
           done
 
       - name: Install Devbox
-        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        uses: jetify-com/devbox-install-action@05e954310554b6122a26b4880d69937f61b1eb2e # v0.16.0
         with:
           enable-cache: true
 

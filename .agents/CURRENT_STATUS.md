@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 318
+**Status revision:** 319
 
-**Stage:** FDE S2: WP-21a contracts aligned with owner decisions D39-D44
+**Stage:** FDE S2: origin/main merged into fde/integration
 
-**Summary:** fde/integration: WP-21 part A contract edits (owner-approved): delegation-link Error has no invariant on VERIFIER_CONTEXT_MISMATCH (re-pinned), new append-v2 verifier-context scenario (54), README precedence D43 and decision rows D39-D44. 115 of 157 scenarios pass; FDE_WP21A_FINAL=1 passes; part A complete.
+**Summary:** Merged origin/main (7 commits); lib.rs CaseRecordAppend variant kept, status files kept ours
 
 **Verified:**
 
@@ -52,7 +52,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Remaining WP-20 contracts, README, CHANGELOG, oracle-codes check, then gates
+**Next:** WP-21 part B
 
 **Evidence:**
 

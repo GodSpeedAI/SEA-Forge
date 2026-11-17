@@ -3,10 +3,24 @@ name: Portability
 # Native Windows and macOS build/test lanes. The Linux sweep runs in ci.yml;
 # this workflow covers the Windows MSVC target (no devbox) and the macOS App
 # Sandbox jail (sea-forge-sandbox on a real macOS runner).
+# Documentation-only changes skip it: it is not a required check, and a pull
+# request is already covered by the pull_request trigger (so no feat/** push).
 on:
   pull_request:
+    paths-ignore:
+      - '**/README.md'
+      - '*.md'
+      - '.agents/CURRENT_STATUS.*'
+      - '.agents/reports/**'
+      - '.agents/plans/**'
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
+    paths-ignore:
+      - '**/README.md'
+      - '*.md'
+      - '.agents/CURRENT_STATUS.*'
+      - '.agents/reports/**'
+      - '.agents/plans/**'
   workflow_dispatch:
 
 permissions:
@@ -38,6 +52,13 @@ jobs:
         run: |
           rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
           rustc -Vv
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: windows
+          # Only main writes the cache; pull requests restore it read-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Workspace check (keep going, all errors)
         shell: bash
@@ -114,6 +135,13 @@ jobs:
         run: |
           rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
           rustc -Vv
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: macos-jail
+          # Only main writes the cache; pull requests restore it read-only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build sandbox binaries (incl. sea-forge-jail-launcher)
         shell: bash

@@ -159,12 +159,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-name = "base64"
-version = "0.23.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
-
-[[package]]
 name = "base64ct"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -626,7 +620,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd2563041989417e6a97bc3dd26e5bab23680099bdf43301c3708047e05808ff"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
+ "base64",
  "chrono",
  "getrandom 0.2.17",
  "getrandom 0.3.4",
@@ -1007,9 +1001,9 @@ dependencies = [
 
 [[package]]
 name = "granit-parser"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da55feca5d1625466bae068f9fd4b87892caeae70c3fe671ddb0f50d41aebf37"
+checksum = "05f05586d4d4df3d47123207826c40b252728b438a1a07bad3c01ee6bea401df"
 dependencies = [
  "arraydeque",
  "smallvec",
@@ -1155,7 +1149,7 @@ version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0"
 dependencies = [
- "base64 0.22.1",
+ "base64",
  "bytes",
  "futures-channel",
  "futures-util",
@@ -1382,7 +1376,7 @@ checksum = "fa0f4bea31643be4c6a678e9aa4ae44f0db9e5609d5ca9dc9083d06eb3e9a27a"
 dependencies = [
  "ahash 0.8.12",
  "anyhow",
- "base64 0.22.1",
+ "base64",
  "bytecount",
  "clap",
  "fancy-regex 0.13.0",
@@ -1406,9 +1400,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.58.6"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f622c574a29fb3034a0a90645afee194dfedc75fc124228801b6e77041075bd1"
+checksum = "a42a11b47492e6a2cc76e9c7bcc8077776cb31dac444e0795d7f61bcc6441c08"
 dependencies = [
  "ahash 0.8.12",
  "bytecount",
@@ -1434,23 +1428,24 @@ dependencies = [
 
 [[package]]
 name = "jsonschema-regex"
-version = "0.58.6"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a968fffd387b2ab005bf00c1851f5d26e90df05b6f7ad609ed0d620033cca5e7"
+checksum = "107aeb6ff14b8deb5610096a8ce5c554ec89806b521147eaeb3cae05b07edb7a"
 dependencies = [
  "regex-syntax",
 ]
 
 [[package]]
 name = "jsonschema-value"
-version = "0.58.6"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39b7670345e5ce87371339d13705dbb9276b7e3e934bbe1efa2c6734a1f65a96"
+checksum = "e281d6b177bb4834f2ffd6f92aa0443cffe29c996b251c8d94eb6f456186feba"
 dependencies = [
  "ahash 0.8.12",
  "bytecount",
  "fraction 0.17.0",
  "getrandom 0.3.4",
+ "memchr",
  "num-cmp",
  "num-traits",
  "serde_json",
@@ -1476,9 +1471,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
-version = "0.2.190"
+version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
+checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
 name = "libsqlite3-sys"
@@ -1888,7 +1883,7 @@ dependencies = [
  "bytes",
  "getrandom 0.4.3",
  "lru-slab",
- "rand 0.10.2",
+ "rand 0.10.4",
  "rand_pcg",
  "ring",
  "rustc-hash",
@@ -1955,9 +1950,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.2"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
+checksum = "8f6fa277c67e6ea590466f04c3fe82cb509f0864fe470643e5570de9514a9b11"
 dependencies = [
  "chacha20",
  "getrandom 0.4.3",
@@ -2029,9 +2024,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.58.6"
+version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "558f3855529c0a7e78a48e409fa653456e55f1b167eab4109c16a255b7727e3f"
+checksum = "f42818036d3b37cda6bd4c494543158a36e431cb717015ef7c93acc6ba214d3b"
 dependencies = [
  "ahash 0.8.12",
  "fluent-uri",
@@ -2088,7 +2083,7 @@ version = "0.12.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
 dependencies = [
- "base64 0.22.1",
+ "base64",
  "bytes",
  "futures-channel",
  "futures-core",
@@ -2335,7 +2330,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sea-forge-agent"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
  "reqwest",
@@ -2354,7 +2349,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-artifact-ip"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
  "sea-forge-authority",
@@ -2372,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-authority"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2389,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-capability"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2407,7 +2402,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-case-runner"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2427,7 +2422,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cell"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2442,7 +2437,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-changeset"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
  "serde",
@@ -2454,7 +2449,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-cli"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "clap",
@@ -2489,13 +2484,13 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "getrandom 0.4.3",
  "hex",
  "serde",
- "serde-saphyr 2.0.0",
+ "serde-saphyr 2.1.1",
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
@@ -2505,14 +2500,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-domain"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "sea-forge-core",
 ]
 
 [[package]]
 name = "sea-forge-domainforge"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "domainforge-core",
  "hex",
@@ -2525,7 +2520,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-evidence"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2538,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-extension"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2553,13 +2548,13 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-ledger"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "ed25519-dalek",
  "getrandom 0.4.3",
  "hex",
- "rand 0.10.2",
+ "rand 0.10.4",
  "sea-forge-core",
  "sea-forge-os",
  "serde",
@@ -2571,14 +2566,14 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-os"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "sea-forge-planner"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
  "sea-forge-core",
@@ -2592,10 +2587,10 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-realitytrace"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "hex",
- "jsonschema 0.58.6",
+ "jsonschema 0.60.2",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
@@ -2609,7 +2604,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-runtime"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2625,7 +2620,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-sandbox"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2648,7 +2643,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-self-model"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2664,7 +2659,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-server"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chacha20poly1305",
  "chrono",
@@ -2702,7 +2697,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-settlement"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2717,7 +2712,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-spec-pipeline"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "hex",
@@ -2732,7 +2727,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-thoth"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "sea-forge-authority",
@@ -2749,7 +2744,7 @@ dependencies = [
 
 [[package]]
 name = "sea-forge-trace"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "sea-forge-core",
@@ -2795,7 +2790,7 @@ version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8050abb251097357e24aff63ba2c52a6309ecb7d23a5474023df960a02694d8"
 dependencies = [
- "base64 0.23.1",
+ "base64",
  "nohash-hasher",
  "num-traits",
  "serde_core",
@@ -2804,12 +2799,12 @@ dependencies = [
 
 [[package]]
 name = "serde-saphyr"
-version = "2.0.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a253edfdea34032da21af84e16fcc94f4c7a6ba237f9f3bc2dbf43cea8535c44"
+checksum = "d43fb82d550b07e6f929a58d7d0935182602f48ddead875f5ee313c41c8f07fe"
 dependencies = [
  "annotate-snippets",
- "base64 0.23.1",
+ "base64",
  "encoding_rs_io",
  "granit-parser",
  "nohash-hasher",
@@ -3489,9 +3484,9 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.25"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
+checksum = "75cd3fb03d5288b3ba9a1ee103ac7e9cbb59f0b03d64f8ddfcc04dd42758a85d"
 dependencies = [
  "tinyvec",
 ]
