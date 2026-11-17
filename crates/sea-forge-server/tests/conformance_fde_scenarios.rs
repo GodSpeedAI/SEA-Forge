@@ -496,6 +496,14 @@ impl Seed {
             .and_then(|r| r["hash"].as_str())
             .unwrap_or(ZERO)
             .to_string();
+        // A stored record's body digest is the digest of its kind and payload
+        // (the guard verifies it: README section 3 STORE_INTEGRITY).
+        if record.get("body_digest").is_some() && record.get("payload").is_some() {
+            record["body_digest"] = json!(digest_of(
+                &json!({"kind": record["kind"], "payload": record["payload"]})
+            )
+            .unwrap());
+        }
         record["seq"] = json!(seq);
         record["record_id"] = json!(format!("rec-{seq:04}"));
         record["prev_hash"] = json!(prev);
@@ -661,8 +669,10 @@ async fn run_append(s: &Value) -> Result<(), String> {
         .or(anchored.then_some(KEEPER));
     let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
     let part_b = is_part_b_kind(request["kind"].as_str().unwrap_or(""));
-    // README section 6: every v2 append on a Field Case rests on the document.
-    if part_b || request["contract"] == V2 {
+    // README section 6: every append on a Field Case rests on the document, in
+    // either dialect (the marker selects the response dialect only).
+    let _ = part_b;
+    {
         let revised = ledger
             .iter()
             .filter(|l| l["kind"] == "field_case.revised")
@@ -1005,6 +1015,12 @@ fn seed_part_b_approval(seed: &Seed, s: &Value, ledger: &[Value]) {
 // ---------------------------------------------------------------------------
 
 async fn run_gate(s: &Value) -> Result<(), String> {
+    run_gate_with(s, false).await
+}
+
+/// [`run_gate`]; with `suspend_after_admission` the request parks after its
+/// admission, a suspension lands, and the request resumes (review round 3).
+async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), String> {
     let root = tempfile::tempdir().unwrap();
     let case = &s["case"];
     let state = &s["freeze_state"];
@@ -1018,6 +1034,10 @@ async fn run_gate(s: &Value) -> Result<(), String> {
     }
     let template = case["template_ref"].as_str();
     let mut seed = Seed::new(root.path(), template);
+    // README section 6: every write on a Field Case rests on its document.
+    if template == Some("fde.field_case@1") {
+        seed.field_case_document(1);
+    }
     let terminal = extra["reaches_terminal"] == true || case["advance_reaches"] == "Completed";
     let exec_items: Vec<String> = extra["items_with_execution_step"]
         .as_array()
@@ -1165,13 +1185,40 @@ async fn run_gate(s: &Value) -> Result<(), String> {
         seed_decision(root.path(), s);
     }
     let mut cell = authenticated::Cell::start(cfg).await;
-    let got = cell
-        .call_for(
+    let got = if suspend_after_admission {
+        let pause = sea_forge_server::pause_after_admission(root.path());
+        let wire = request.clone();
+        let mut client = cell
+            .connect_for(
+                &authenticated::principal("operator_local", ActorRole::Operator),
+                &wire,
+            )
+            .await;
+        let task = tokio::spawn(async move { client.call(wire).await });
+        tokio::time::timeout(std::time::Duration::from_secs(30), pause.reached.notified())
+            .await
+            .expect("the request reached its pause");
+        seed.push(json!({"kind": "disposition.recorded", "level": "case",
+                         "disposition": "suspend", "idempotency_key": "late-suspend"}));
+        pause.resume.notify_one();
+        task.await.unwrap()
+    } else {
+        cell.call_for(
             &authenticated::principal("operator_local", ActorRole::Operator),
             request.clone(),
         )
-        .await;
+        .await
+    };
     cell.shutdown().await;
+    if suspend_after_admission {
+        return if got["code"] == "CASE_SUSPENDED" {
+            Ok(())
+        } else {
+            Err(format!(
+                "the suspension after admission was not honoured: {got}"
+            ))
+        };
+    }
     if s["inspect_decision_event"] == true {
         // The run's interaction event carries the decision that authorized it.
         let spool = root
@@ -3034,4 +3081,229 @@ async fn review2_closed_case_refuses_the_engine_pass_that_does_not_end_the_plan(
         "task-b must not be activated: {got} {kinds:?}"
     );
     assert_eq!(got["code"], "CASE_CLOSED", "{got}");
+}
+
+// ---------------------------------------------------------------------------
+// WP-21 part B, review round 3: ONE guarded choke point for every write
+// (`case_guard::admit_write`). Each test is a reproduced counterexample.
+// ---------------------------------------------------------------------------
+
+impl FieldCell {
+    /// Let the operator do these case operations (policy rules appended).
+    fn allow(&self, operation_kinds: &[&str]) {
+        let path = self.root.join("policy.yaml");
+        let mut text = fs::read_to_string(&path).unwrap();
+        for kind in operation_kinds {
+            text.push_str(&format!(
+                "  - name: allow-{kind}\n    verdict: allow\n    actor_role: operator\n    operation_kind: {kind}\n"
+            ));
+        }
+        fs::write(path, text).unwrap();
+    }
+
+    fn policy(&self) -> PathBuf {
+        self.root.join("policy.yaml")
+    }
+
+    fn case_state(&self) -> String {
+        let case: Value =
+            serde_json::from_slice(&fs::read(case_dir(&self.root).join("case.json")).unwrap())
+                .unwrap();
+        case["state"].as_str().unwrap().to_string()
+    }
+}
+
+/// 1. A human task that IS a gate item, with a `blocked` assessment: the CLI
+/// `task complete` path writes nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_cli_task_complete_cannot_complete_a_gate_item() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("gate_allocate_authority"), human("task-z")]));
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("allocate_authority", "blocked", &[]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    let got = sea_forge_case_runner::case_ops::complete_human_task(
+        &c.root,
+        &c.policy(),
+        OPERATOR,
+        CASE,
+        "gate_allocate_authority",
+        None,
+    );
+    assert!(
+        got.is_err(),
+        "the CLI path completed a blocked gate: {got:?}"
+    );
+    assert!(
+        got.unwrap_err()
+            .to_string()
+            .contains("HARD_GATE_NOT_WAIVABLE"),
+        "the contract's code"
+    );
+    assert!(
+        c.events().is_empty(),
+        "nothing was written: {:?}",
+        c.event_kinds()
+    );
+}
+
+/// 2. Terminate writes `CaseTerminated` only behind R11's close disposition.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_terminate_needs_a_close_disposition() {
+    let c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a")]));
+    c.allow(&["case_terminate"]);
+    let got =
+        sea_forge_case_runner::case_ops::terminate(&c.root, &c.policy(), OPERATOR, CASE, "stop");
+    assert!(
+        got.is_err(),
+        "terminated with no close disposition: {got:?}"
+    );
+    assert!(got
+        .unwrap_err()
+        .to_string()
+        .contains("CLOSE_DISPOSITION_REQUIRED"));
+    assert!(c.events().is_empty(), "{:?}", c.event_kinds());
+    assert_eq!(c.case_state(), "active");
+}
+
+/// 3a. `suspend` then terminate: refused, from the ledger.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_suspended_case_cannot_be_terminated() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a")]));
+    c.allow(&["case_terminate"]);
+    assert_eq!(
+        c.dispose("case", "suspend", None).await["lifecycle"],
+        "suspended"
+    );
+    let got =
+        sea_forge_case_runner::case_ops::terminate(&c.root, &c.policy(), OPERATOR, CASE, "stop");
+    assert!(got.is_err(), "terminated a suspended case: {got:?}");
+    assert!(got.unwrap_err().to_string().contains("CASE_SUSPENDED"));
+    assert!(c.events().is_empty());
+    assert_eq!(c.case_state(), "active");
+}
+
+/// 3b. `close-satisfied`, finish the plan, then `case_reopen`: a closed Field
+/// Case is final (D32, R13); the case stays completed.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_closed_case_cannot_be_reopened() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a")]));
+    c.allow(&["case_reopen"]);
+    assert_eq!(
+        c.dispose("case", "close-satisfied", None).await["lifecycle"],
+        "closed"
+    );
+    let done = c.human_complete("task-a").await;
+    assert!(done["code"].is_null(), "{done}");
+    assert_eq!(c.case_state(), "completed");
+    let before = c.events();
+    let got = sea_forge_case_runner::case_ops::reopen(&c.root, &c.policy(), OPERATOR, CASE);
+    assert!(got.is_err(), "reopened a closed Field Case: {got:?}");
+    assert!(got.unwrap_err().to_string().contains("CASE_CLOSED"));
+    assert_eq!(c.events(), before);
+    assert_eq!(c.case_state(), "completed");
+}
+
+/// 4. A delegation whose case is suspended between its admission and its
+/// execution is re-admitted at the execution write and refused.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_delegation_is_readmitted_at_execution() {
+    let all = scenarios("execution-episode-ref");
+    let (_, s) = all
+        .iter()
+        .find(|(id, _)| id == "delegate-complete-freeze-accepted")
+        .expect("an accepted delegate scenario");
+    run_gate_with(s, true).await.unwrap();
+}
+
+/// 5. After a close disposition and the final human completion, a repeat with a
+/// fresh request id writes no second `human_task_completed`.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_final_completion_is_not_repeated_on_a_closed_case() {
+    let mut c = FieldCell::start(|_| {}).await;
+    c.runnable(json!([human("task-a")]));
+    assert_eq!(
+        c.dispose("case", "close-satisfied", None).await["lifecycle"],
+        "closed"
+    );
+    let first = c.human_complete("task-a").await;
+    assert!(first["code"].is_null(), "{first}");
+    let before = c.events();
+    let again = c.human_complete("task-a").await;
+    assert_eq!(again["code"], "CASE_CLOSED", "{again}");
+    assert_eq!(c.events(), before, "no second event");
+}
+
+/// 6. The v1 dialect (no marker) is held to the same document rule as v2.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_v1_dialect_needs_the_document() {
+    let fixture =
+        read(&fixtures("case-record-append-v2/valid").join("request-episode-frozen-v2.json"));
+    let refs = &fixture["payload"]["realitytrace_refs"];
+    let mut ids: Vec<String> = vec![refs["plan_id"].as_str().unwrap().into()];
+    for list in ["question_ids", "threshold_ids"] {
+        ids.extend(
+            refs[list]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().into()),
+        );
+    }
+    let mut c =
+        FieldCell::start_with(Some("fde.field_case@1"), false, |s| s.rt_register(&ids)).await;
+    let got = c
+        .call(
+            KEEPER,
+            json!({"verb": "case_record_append", "kind": "episode.frozen",
+                   "payload": fixture["payload"].clone(), "idempotency_key": "operator/v1-doc",
+                   "request_id": "req-v1-doc"}),
+        )
+        .await;
+    assert!(
+        got["outcome"] != "recorded" && got.to_string().contains("STORE_INTEGRITY"),
+        "the v1 dialect froze with no document: {got}"
+    );
+    assert_eq!(c.ledger_len(), 0, "nothing was written");
+}
+
+/// 7. A stored record whose hash was corrupted is STORE_INTEGRITY for every
+/// later write; nothing is written.
+#[tokio::test(flavor = "multi_thread")]
+async fn review3_corrupt_record_hash_refuses_every_write() {
+    let mut c = FieldCell::start(|_| {}).await;
+    let r = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("choose_problem", "blocked", &[]),
+        )
+        .await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    let path = case_dir(&c.root).join("field-records.jsonl");
+    let text = fs::read_to_string(&path).unwrap();
+    let mut rec: Value = serde_json::from_str(text.lines().next().unwrap()).unwrap();
+    rec["hash"] = json!("ab".repeat(32));
+    fs::write(&path, format!("{rec}\n")).unwrap();
+    let got = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("choose_problem", "met", &["evidence:E1"]),
+        )
+        .await;
+    assert_eq!(got["code"], "STORE_INTEGRITY", "{got}");
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{rec}\n"),
+        "nothing was written"
+    );
 }

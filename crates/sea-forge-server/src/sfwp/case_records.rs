@@ -424,6 +424,10 @@ pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
     ] {
         read_lines_strict(&dir.join(name)).map_err(|e| format!("store integrity: {e}"))?;
     }
+    // The hash chain and the digests of every stored record, not only that
+    // they parse (README §3 STORE_INTEGRITY).
+    sea_forge_case_runner::case_ops::case_guard::verified_records(&dir)
+        .map_err(|r| format!("store integrity: {}", r.message))?;
     Ok(())
 }
 
@@ -478,7 +482,13 @@ fn repair_torn_tail(path: &Path) -> Result<(), String> {
         .map_err(|e| format!("repair {}: {e}", path.display()))
 }
 
+/// The one primitive every file of a case store is appended through. THE
+/// guard (`case_guard::admit_write`) runs here, with the case lock held until
+/// the line is durable: no writer reaches a case file without it. A refusal is
+/// returned as `GUARD:<CODE>:<message>` (see [`io_refusal`]).
 pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
+    let _token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(path, value)
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
     repair_torn_tail(path)?;
     let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
     line.push(b'\n');
@@ -780,31 +790,7 @@ fn derived_from_result(payload: &Value) -> Option<String> {
 
 /// The lifecycle of the case from its case-level dispositions (README §6): a
 /// `close-*` is final; otherwise suspended when the latest one is `suspend`.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Lifecycle {
-    Open,
-    Suspended,
-    Closed,
-}
-
-pub fn lifecycle(records: &[Value]) -> Lifecycle {
-    let mut state = Lifecycle::Open;
-    for r in records {
-        if r["kind"] != "disposition.recorded" || r["level"] != "case" {
-            continue;
-        }
-        let d = r["disposition"].as_str().unwrap_or("");
-        if d.starts_with("close-") {
-            return Lifecycle::Closed;
-        }
-        state = if d == "suspend" {
-            Lifecycle::Suspended
-        } else {
-            Lifecycle::Open
-        };
-    }
-    state
-}
+pub use sea_forge_case_runner::case_ops::case_guard::{lifecycle, Lifecycle};
 
 /// As [`append`], with a crash injected at a freeze phase boundary. The crash
 /// returns `Err` *after* the named boundary's writes are durable, exactly what
@@ -886,16 +872,15 @@ pub fn append_faulted(
     // README section 6: every v2 append on a Field Case, the episode kinds
     // included, rests on the document; missing or invalid is STORE_INTEGRITY
     // and nothing is written.
-    if v2 {
-        match super::field_case_kinds::is_field_case(ctx.root, ctx.case_id) {
-            Ok(true) => {
-                if let Err(e) = super::field_case_kinds::load_document(ctx, &records(ctx)) {
-                    return Ok(store_refusal(e));
-                }
+    // Either dialect: the marker selects the response dialect only.
+    match super::field_case_kinds::is_field_case(ctx.root, ctx.case_id) {
+        Ok(true) => {
+            if let Err(e) = super::field_case_kinds::load_document(ctx, &records(ctx)) {
+                return Ok(store_refusal(e));
             }
-            Ok(false) => {}
-            Err(e) => return Ok(store_refusal(e)),
         }
+        Ok(false) => {}
+        Err(e) => return Ok(store_refusal(e)),
     }
     // Every write needs an authenticated principal (E §8: freeze is P1,
     // settle is P2). The server passes an empty principal when the request
@@ -1024,6 +1009,12 @@ pub(super) fn next_record(
 }
 
 pub(super) fn io_refusal(error: String) -> Value {
+    // A refusal of THE guard keeps its contract code.
+    if let Some(rest) = error.strip_prefix("GUARD:") {
+        if let Some((code, message)) = rest.split_once(':') {
+            return refuse(code, message, None);
+        }
+    }
     // No contract code exists for a storage failure; fail closed as a schema
     // refusal carrying the cause rather than reporting success.
     refuse(

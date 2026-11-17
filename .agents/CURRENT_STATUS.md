@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 324
+**Status revision:** 325
 
-**Stage:** FDE S2: WP-21 part B review round 2 fixes
+**Stage:** FDE S2: WP-21 part B review round 3 (one guarded choke point)
 
-**Summary:** Blind review round 2: one hard-gate rule at every write (transitions, engine, human completion, dispatcher), R11 on every close path, case verbs under the case lock, document required on episode kinds, closed-case exception narrowed to the action that ends the plan
+**Summary:** Blind review round 3: every Field Case write passes case_guard::admit_write under one cross-process case lock; the guard decides from the verified ledger (lifecycle, hard gate, R11, document, hash chain and digests), deny by default
 
 **Verified:**
 

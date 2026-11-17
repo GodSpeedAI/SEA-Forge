@@ -75,6 +75,12 @@ fn seed(root: &Path, milestone: &str) {
     fs::write(dir.join("case.json"), serde_json::to_vec(&case).unwrap()).unwrap();
     fs::write(dir.join("plan.json"), serde_json::to_vec(&plan).unwrap()).unwrap();
     fs::write(dir.join("case-events.jsonl"), b"").unwrap();
+    // README section 6: every write on a Field Case rests on its document.
+    fs::write(
+        dir.join("field_case.json"),
+        json!({"case_id": CASE, "revision": 1}).to_string(),
+    )
+    .unwrap();
     case_ops::append_case_event(
         root,
         CASE,
@@ -86,8 +92,19 @@ fn seed(root: &Path, milestone: &str) {
     .unwrap();
 }
 
+/// The ledger the server's writer would leave: hash-chained (the guard
+/// verifies the chain before it admits anything).
 fn records(root: &Path, lines: &[serde_json::Value]) {
-    let text: String = lines.iter().map(|l| format!("{l}\n")).collect();
+    let mut prev = "0".repeat(64);
+    let mut text = String::new();
+    for (i, line) in lines.iter().enumerate() {
+        let mut record = line.clone();
+        record["seq"] = json!(i as u64 + 1);
+        record["prev_hash"] = json!(prev);
+        record["hash"] = json!(case_ops::case_guard::digest_of(&record).unwrap());
+        prev = record["hash"].as_str().unwrap().to_string();
+        text.push_str(&format!("{record}\n"));
+    }
     fs::write(
         root.join("cases").join(CASE).join("field-records.jsonl"),
         text,

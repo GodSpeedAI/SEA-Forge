@@ -157,6 +157,9 @@ pub fn ledger_revision(records: &[Value]) -> u64 {
 
 fn write_document(ctx: &AppendContext, document: &Value) -> Result<(), String> {
     let path = document_path(ctx);
+    // THE guard, lock held until the file is replaced.
+    let _token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(&path, document)
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
     let tmp = path.with_extension("json.tmp");
     let mut bytes = serde_json::to_vec_pretty(document).map_err(|e| e.to_string())?;
     bytes.push(b'\n');

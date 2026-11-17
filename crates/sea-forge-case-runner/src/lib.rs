@@ -37,10 +37,21 @@ impl CaseRunner {
         item_id: Option<&str>,
         mut payload: serde_json::Value,
     ) -> Result<(), ForgeError> {
-        // The Field Case write rules, at the write (nothing is written on a refusal).
-        if let Some(case_dir) = path.parent() {
-            case_ops::field_guard::guard_event(case_dir, &kind, item_id)?;
-        }
+        // THE guard, with the case lock held through the commit (nothing is
+        // written on a refusal).
+        let _token = match path.parent() {
+            Some(case_dir) => Some(
+                case_ops::case_guard::admit_write(
+                    case_dir,
+                    &case_ops::case_guard::Proposed::Event {
+                        kind: &kind,
+                        item: item_id,
+                    },
+                )
+                .map_err(case_ops::field_guard::Refusal::into_error)?,
+            ),
+            None => None,
+        };
         // Additive persisted ordinals (spec §17.2 T13.2): each dispatch/
         // activation and settlement gets a 1-based monotonic ordinal derived
         // from prior persisted events. Additive only — old readers ignore it.

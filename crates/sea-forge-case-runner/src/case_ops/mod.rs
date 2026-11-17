@@ -21,6 +21,7 @@ fn noop_notifier(_: &TraceEvent) {}
 
 pub mod advance;
 pub mod authority_views;
+pub mod case_guard;
 pub mod field_guard;
 pub mod mediation;
 
@@ -98,8 +99,16 @@ pub fn append_case_event_with(
     notify: CaseEventNotifier<'_>,
 ) -> Result<(), ForgeError> {
     let (_, _, events_path) = paths(root, case_id);
-    // The Field Case write rules, at the write (nothing is written on a refusal).
-    field_guard::guard_event(&root.join("cases").join(case_id), &kind, item_id)?;
+    // THE guard, with the case lock held through the append (nothing is
+    // written on a refusal).
+    let _token = case_guard::admit_write(
+        &root.join("cases").join(case_id),
+        &case_guard::Proposed::Event {
+            kind: &kind,
+            item: item_id,
+        },
+    )
+    .map_err(field_guard::Refusal::into_error)?;
     let count = fs::read_to_string(&events_path)
         .map(|value| value.lines().count())
         .unwrap_or(0);
@@ -161,6 +170,10 @@ pub fn reopen_with_reason(
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
+    // The cross-process case lock, held from the first read to the last write
+    // (the guard inside the append nests under it).
+    let _case_lock = case_guard::CaseLock::acquire(&root.join("cases").join(case_id))
+        .map_err(field_guard::Refusal::into_error)?;
     let (case_path, _, _) = paths(root, case_id);
     let mut case: Case = read_json(&case_path)?;
     if !matches!(case.state, CaseState::Completed | CaseState::Terminated) {
@@ -225,6 +238,10 @@ pub fn terminate_with(
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
+    // The cross-process case lock, held from the first read to the last write
+    // (the guard inside the append nests under it).
+    let _case_lock = case_guard::CaseLock::acquire(&root.join("cases").join(case_id))
+        .map_err(field_guard::Refusal::into_error)?;
     let (case_path, _, _) = paths(root, case_id);
     let mut case: Case = read_json(&case_path)?;
     if !matches!(case.state, CaseState::Active | CaseState::AwaitingApproval) {
@@ -335,6 +352,16 @@ pub fn commit_staged_plan(
 ) -> Result<u8, ForgeError> {
     let (_, plan_path, _) = paths(root, case_id);
     mediation::authorize_read(root, policy, actor, &add_item_action(case_id, item_id))?;
+    // The plan is rewritten below, before its event: admit the mutation first,
+    // and hold the case lock until the event is appended.
+    let _token = case_guard::admit_write(
+        &root.join("cases").join(case_id),
+        &case_guard::Proposed::Event {
+            kind: &TraceKind::PlanMutated,
+            item: Some(item_id),
+        },
+    )
+    .map_err(field_guard::Refusal::into_error)?;
     let committed = LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
         "case_plan_mutation",
         vec![case_id.into()],
@@ -421,6 +448,10 @@ pub fn complete_human_task_with(
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
+    // The cross-process case lock, held from the first read to the last write
+    // (the guard inside the append nests under it).
+    let _case_lock = case_guard::CaseLock::acquire(&root.join("cases").join(case_id))
+        .map_err(field_guard::Refusal::into_error)?;
     let (mut case, plan, mut events) = load_case_plan(root, case_id)?;
     let item = plan
         .items

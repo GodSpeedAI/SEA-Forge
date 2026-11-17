@@ -3373,6 +3373,15 @@ pub async fn handle_request_as(
                 },
             )
             .await;
+            // The admission released its lock; the execution starts under a
+            // fresh admission of THE guard (a suspension or a close that landed
+            // since is honoured), never on the admission's word.
+            let gate = match gate {
+                Ok(admission) if admission.field_case => readmit_execution(state, &field_case_id)
+                    .await
+                    .map(|()| admission),
+                other => other,
+            };
             let response = match gate {
                 Err(refusal) => refusal,
                 Ok(_) => {
@@ -4172,6 +4181,41 @@ async fn admit_episode(
         Err(error) => Err(serde_json::json!({
             "outcome": "refused", "code": "FREEZE_INCOMPLETE", "invariant": "I-1",
             "message": format!("execution gate task failed: {error}"), "no_side_effect": true,
+        })),
+    }
+}
+
+/// Re-admit an execution at the moment it starts, under the case lock, with
+/// THE guard (`case_guard::admit_write`): the lifecycle is read from the ledger
+/// as it is now. The lock is not held through the run; each write the run makes
+/// is admitted again.
+async fn readmit_execution(
+    state: &Arc<ServerState>,
+    case_id: &str,
+) -> Result<(), serde_json::Value> {
+    let dir = state.root.join("cases").join(case_id);
+    let admitted = tokio::task::spawn_blocking(move || {
+        sea_forge_case_runner::case_ops::case_guard::admit_write(
+            &dir,
+            &sea_forge_case_runner::case_ops::case_guard::Proposed::Store {
+                file: "field-runs.jsonl",
+            },
+        )
+        .map(drop)
+    })
+    .await;
+    match admitted {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(refusal)) => {
+            let mut value = refusal.to_value();
+            // The admission's own records are already written.
+            value["no_side_effect"] = serde_json::json!(false);
+            Err(value)
+        }
+        Err(error) => Err(serde_json::json!({
+            "outcome": "refused", "code": "STORE_INTEGRITY",
+            "message": format!("execution admission task failed: {error}"),
+            "no_side_effect": false,
         })),
     }
 }

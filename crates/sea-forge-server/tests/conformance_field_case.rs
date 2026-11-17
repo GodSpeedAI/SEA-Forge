@@ -310,6 +310,7 @@ fn seed_ledger(root: &Path, scenario: &Value) {
     let request = &scenario["request"];
     let mut text = String::new();
     let mut intents = String::new();
+    let mut prev_hash = "0".repeat(64);
     for (i, entry) in scenario["ledger_before"]
         .as_array()
         .unwrap()
@@ -322,27 +323,34 @@ fn seed_ledger(root: &Path, scenario: &Value) {
         // A seeded entry has no payload; a replay needs the body digest of the
         // request it answered, so it is taken from the request only when the
         // scenario says this key was this exact request.
-        let body_digest = if same_body {
-            sea_forge_server::sfwp::case_records::digest_of(
-                &json!({"kind": request["kind"], "payload": request["payload"]}),
-            )
-            .unwrap()
+        // A stored record's body digest is the digest of its kind and payload
+        // (the guard verifies it, README section 3 STORE_INTEGRITY): a seeded
+        // entry that is not the request carries a stub payload and its digest.
+        let stub = json!({"realitytrace_refs": {"plan_id": "plan:seed", "question_ids": [], "threshold_ids": []}});
+        let payload = if same_body {
+            request["payload"].clone()
         } else {
-            format!("seeded-{key}")
+            stub
         };
+        let body_digest = sea_forge_server::sfwp::case_records::digest_of(
+            &json!({"kind": entry["kind"], "payload": payload}),
+        )
+        .unwrap();
         let rec_id = key.rsplit('/').next().unwrap();
         let mut record = json!({
             "seq": i + 1, "record_id": rec_id, "kind": entry["kind"], "idempotency_key": key,
             "body_digest": body_digest, "episode_key": entry["episode_key"], "digest": entry["digest"],
             "principal": "case-keeper",
-            "payload": {"realitytrace_refs": {"plan_id": "plan:seed", "question_ids": [], "threshold_ids": []}},
+            "payload": payload,
             "response": {"outcome": "recorded", "kind": entry["kind"], "record_id": rec_id,
                          "episode_key": entry["episode_key"], "replayed": false},
-            "prev_hash": "0", "hash": "0",
+            "prev_hash": prev_hash,
         });
         if let Some(kind) = entry.get("episode_kind") {
             record["episode_kind"] = kind.clone();
         }
+        record["hash"] = json!(sea_forge_server::sfwp::case_records::digest_of(&record).unwrap());
+        prev_hash = record["hash"].as_str().unwrap().to_string();
         text.push_str(&format!("{record}\n"));
         if entry["kind"] == "episode.frozen" {
             // A seeded freeze is a complete one: committed intent, RT plan.

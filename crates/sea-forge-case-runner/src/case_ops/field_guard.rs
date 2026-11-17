@@ -1,13 +1,12 @@
 //! The Field Case write rules that live where the events are written
 //! (WP-21 part B, `contracts/fde/README.md` §7 R11 and the hard-gate rule).
 //!
-//! Every append of a case trace event goes through [`guard_event`], so no path
-//! (a transition, the advance engine, a human completion, the dispatcher) can
-//! complete a gate item or close a Field Case on a stale read: the check runs
-//! at the write, on the Field Case records as they are then. A case whose plan
+//! The gate and close rules as functions. They are applied by exactly one
+//! caller, `case_guard::admit_write`, at the write, under the case lock; the
+//! pre-checks elsewhere only decide earlier whether to try. A case whose plan
 //! is not `fde.field_case@1` is not touched.
 
-use sea_forge_core::{errors::ForgeError, types::TraceKind};
+use sea_forge_core::errors::ForgeError;
 use serde_json::{json, Value};
 use std::path::Path;
 
@@ -118,38 +117,4 @@ pub fn close_check(case_dir: &Path) -> Result<(), Refusal> {
             message: "this action ends the case and no case-level close disposition exists".into(),
         })
     }
-}
-
-/// Would an event of `kind` on `item` be refused? Called by every appender
-/// before anything is written.
-pub fn event_check(case_dir: &Path, kind: &TraceKind, item: Option<&str>) -> Result<(), Refusal> {
-    match kind {
-        TraceKind::ItemCompleted | TraceKind::MilestoneAchieved => {
-            if let Some(item) = item.filter(|i| gate_of_item(i).is_some()) {
-                if is_field_case(case_dir) {
-                    gate_item_check(case_dir, item, "complete")?;
-                }
-            }
-            Ok(())
-        }
-        TraceKind::ItemTerminated => {
-            if let Some(item) = item.filter(|i| gate_of_item(i).is_some()) {
-                if is_field_case(case_dir) {
-                    gate_item_check(case_dir, item, "skip")?;
-                }
-            }
-            Ok(())
-        }
-        TraceKind::CaseClosed if is_field_case(case_dir) => close_check(case_dir),
-        _ => Ok(()),
-    }
-}
-
-/// [`event_check`] as the appenders use it.
-pub fn guard_event(
-    case_dir: &Path,
-    kind: &TraceKind,
-    item: Option<&str>,
-) -> Result<(), ForgeError> {
-    event_check(case_dir, kind, item).map_err(Refusal::into_error)
 }

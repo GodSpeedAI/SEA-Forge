@@ -211,6 +211,23 @@ fn template_of(root: &Path, case_id: &str) -> Result<Option<String>, String> {
     }
 }
 
+/// Is every item finished, or does the engine have only the case close or
+/// terminate left?
+fn plan_is_finished(plan: &CasePlan, events: &[TraceEvent]) -> bool {
+    use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction, ItemStatus};
+    replay_case(&plan.items, events).items.iter().all(|s| {
+        matches!(
+            s.status,
+            ItemStatus::Completed | ItemStatus::Terminated | ItemStatus::Failed
+        )
+    }) || next_case_actions(&plan.items, events).iter().any(|a| {
+        matches!(
+            a,
+            CaseAction::CompleteCase | CaseAction::TerminateCase { .. }
+        )
+    })
+}
+
 /// Would the action(s) leave the plan with nothing left to do (the engine would
 /// complete or terminate the case)? Evaluated on the plan and the event ledger
 /// with the scope's items hypothetically finished.
@@ -234,6 +251,14 @@ fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Res
             serde_json::from_str(line)
                 .map_err(|e| format!("case-events.jsonl line {}: {e}", i + 1))?,
         );
+    }
+    // A plan that is already finished has nothing left for an action to end,
+    // except the case close the engine still owes: once that is written, a
+    // repeat of the action that ended the plan is not "the action ending it".
+    if plan_is_finished(&plan, &events) {
+        return Ok(!events
+            .iter()
+            .any(|e| matches!(e.kind, TraceKind::CaseClosed | TraceKind::CaseTerminated)));
     }
     for (item, how) in scope {
         events.push(TraceEvent {
