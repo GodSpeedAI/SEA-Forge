@@ -361,16 +361,28 @@ fn enqueue(
     source: Value,
     built: Result<Value, String>,
 ) -> Result<(), String> {
-    if known(ctx, &id) {
-        return Ok(());
+    match outbox_row(ctx, id, source, built) {
+        Some(row) => append_line(&outbox_path(ctx), &row),
+        None => Ok(()),
     }
-    let row = match built {
+}
+
+/// The outbox row owed for `id`, or `None` when it already exists.
+fn outbox_row(
+    ctx: &AppendContext,
+    id: String,
+    source: Value,
+    built: Result<Value, String>,
+) -> Option<Value> {
+    if known(ctx, &id) {
+        return None;
+    }
+    Some(match built {
         Ok(envelope) => json!({"event_id": id, "state": "pending", "source": source,
                                "signature": "absent_before_WP-33", "envelope": envelope}),
         Err(reason) => json!({"event_id": id, "state": "unmapped", "source": source,
                               "reason": reason}),
-    };
-    append_line(&outbox_path(ctx), &row)
+    })
 }
 
 /// Owe the event for one ledger record. Idempotent.
@@ -411,6 +423,15 @@ pub(super) fn enqueue_record(ctx: &AppendContext, record: &Value) -> Result<(), 
 
 /// Owe the event for one authority decision. Idempotent.
 pub(super) fn enqueue_decision(ctx: &AppendContext, decision: &Value) -> Result<(), String> {
+    match decision_row(ctx, decision)? {
+        Some(row) => append_line(&outbox_path(ctx), &row),
+        None => Ok(()),
+    }
+}
+
+/// The outbox row owed for a decision (`None` when it already exists), for a
+/// caller that commits it in the same batch as the decision.
+pub(super) fn decision_row(ctx: &AppendContext, decision: &Value) -> Result<Option<Value>, String> {
     let Some(decision_id) = decision["decision_id"].as_str() else {
         return Err("decision has no id".into());
     };
@@ -418,7 +439,12 @@ pub(super) fn enqueue_decision(ctx: &AppendContext, decision: &Value) -> Result<
     let source = json!({"system": SOURCE_AUTHORITY, "record_id": decision_id});
     let id = event_id(ctx.case_id, decision_id);
     let Some(ep) = episode_of(&all, &decision["episode_key"]) else {
-        return enqueue(ctx, id, source, Err("freeze record not found".into()));
+        return Ok(outbox_row(
+            ctx,
+            id,
+            source,
+            Err("freeze record not found".into()),
+        ));
     };
     let src = Source {
         what: "decision.no_self_settlement",
@@ -437,8 +463,11 @@ pub(super) fn enqueue_decision(ctx: &AppendContext, decision: &Value) -> Result<
         settlement_ref: None,
     };
     let built = build(ctx, &ep, &src);
-    enqueue(ctx, id, source, built)
+    Ok(outbox_row(ctx, id, source, built))
 }
+
+/// The file name of the interaction outbox.
+pub(super) const OUTBOX_FILE: &str = OUTBOX;
 
 /// Add the outbox row of every ledger record and decision that lacks one (a
 /// crash between the ledger write and the enqueue). Idempotent.

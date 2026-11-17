@@ -51,7 +51,29 @@ fn config() -> (tempfile::TempDir, ServerConfig) {
     std::fs::write(root.path().join("sea-forge-policy.yaml"), POLICY).unwrap();
     let cases = root.path().join("cases/case-0001");
     std::fs::create_dir_all(&cases).unwrap();
-    std::fs::write(cases.join("case.json"), "{}").unwrap();
+    // A valid Field Case: state, Field plan, derived document, event ledger.
+    std::fs::write(
+        cases.join("case.json"),
+        json!({"version": "0.2", "case_id": "case-0001", "state": "active",
+               "plan_ref": "plan_seed", "run_ids": [], "stages": [],
+               "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+        .to_string(),
+    )
+    .unwrap();
+    std::fs::write(
+        cases.join("plan.json"),
+        json!({"version": "0.2", "plan_id": "plan_seed", "case_id": "case-0001",
+               "run_id": "run_seed", "intent_id": "int_seed", "items": [],
+               "template_ref": "fde.field_case@1"})
+        .to_string(),
+    )
+    .unwrap();
+    std::fs::write(
+        cases.join("field_case.json"),
+        serde_json::to_vec_pretty(&sea_forge_core::field_case::opened_document("case-0001"))
+            .unwrap(),
+    )
+    .unwrap();
     std::fs::write(cases.join("case-events.jsonl"), "").unwrap();
     let socket = std::env::temp_dir().join(format!(
         "sf-pin-{}-{}.sock",

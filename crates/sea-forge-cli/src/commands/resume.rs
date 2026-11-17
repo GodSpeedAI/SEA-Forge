@@ -4,7 +4,7 @@ use sea_forge_ledger::{LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::approvals;
 use crate::plan_pipeline::{append_event, write_json};
@@ -348,7 +348,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
             } else {
                 ids::run_id()?
             };
-            let workspace = runs_dir.join(&run_id).join("workspace");
+            let workspace = run_workspace(&case_dir, &run_id);
             let artifacts = runs_dir.join(&run_id).join("artifacts");
             let mut operations = Vec::new();
             for (sequence, operation) in item.operations.iter().enumerate() {
@@ -471,7 +471,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                         .cloned()
                         .ok_or_else(|| ForgeError::Internal("missing allocated episode".into()))?;
                     let run_dir = runs_dir.join(&run_id);
-                    let workspace = run_dir.join("workspace");
+                    let workspace = run_workspace(&case_dir, &run_id);
                     let artifacts = run_dir.join("artifacts");
                     fs::create_dir_all(&workspace)
                         .and_then(|_| fs::create_dir_all(&artifacts))
@@ -905,7 +905,7 @@ fn resume_artifact_transition(
         role: ActorRole::Operator,
     };
     let run_dir = case_dir.join("runs").join(&pending.run_id);
-    let workspace = run_dir.join("workspace");
+    let workspace = run_workspace(&case_dir, &pending.run_id);
     let artifacts = run_dir.join("artifacts");
     fs::create_dir_all(&workspace)
         .and_then(|_| fs::create_dir_all(&artifacts))
@@ -1324,4 +1324,16 @@ fn unique_entry<'a>(
         )));
     }
     Ok(matching[0])
+}
+
+/// Run workspaces are scratch output: they live outside the case directory
+/// (`<root>/.run-workspaces/<case>/<run>`), which holds only committed state.
+fn run_workspace(case_dir: &Path, run_id: &str) -> PathBuf {
+    let root = case_dir
+        .parent()
+        .and_then(Path::parent)
+        .unwrap_or_else(|| Path::new("."));
+    root.join(".run-workspaces")
+        .join(case_dir.file_name().unwrap_or_default())
+        .join(run_id)
 }

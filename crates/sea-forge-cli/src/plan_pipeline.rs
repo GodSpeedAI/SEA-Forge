@@ -223,7 +223,7 @@ fn run_plan_inner(
         for instance in 1..=item.max_instances {
             let mut has_approval_gate = false;
             let run_id = ids::run_id()?;
-            let workspace = runs_dir.join(&run_id).join("workspace");
+            let workspace = root.join(".run-workspaces").join(&case_id).join(&run_id);
             let artifacts = runs_dir.join(&run_id).join("artifacts");
             let env_spec = crate::pipeline::load_item_environment(&root, item)?;
             let evaluator = crate::pipeline::resolve_item_evaluator(item, env_spec.as_ref())?;
@@ -571,7 +571,7 @@ fn run_plan_inner(
                             })?
                     };
                     let run_dir = runs_dir.join(&run_id);
-                    let workspace = run_dir.join("workspace");
+                    let workspace = root.join(".run-workspaces").join(&case_id).join(&run_id);
                     let artifacts = run_dir.join("artifacts");
                     fs::create_dir_all(&workspace)
                         .and_then(|_| fs::create_dir_all(&artifacts))

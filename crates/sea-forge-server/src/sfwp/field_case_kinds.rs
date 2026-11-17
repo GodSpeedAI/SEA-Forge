@@ -35,7 +35,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use sea_forge_core::field_case::{is_field_path, TEMPLATE_REF};
+use sea_forge_core::field_case::is_field_path;
 
 /// The document file of a Field Case, inside the case directory.
 pub const DOCUMENT: &str = "field_case.json";
@@ -105,17 +105,15 @@ fn document_path(ctx: &AppendContext) -> PathBuf {
 
 /// Whether the case was opened from the Field Case template.
 pub fn is_field_case(root: &std::path::Path, case_id: &str) -> Result<bool, String> {
-    // As before: the plan's template says so (a v1 ledger alone does not).
-    let path = case_dir(root, case_id).join("plan.json");
-    match fs::read(&path) {
-        Ok(bytes) => {
-            let doc: Value = serde_json::from_slice(&bytes)
-                .map_err(|e| format!("{} is not valid JSON: {e}", path.display()))?;
-            Ok(doc["template_ref"].as_str() == Some(TEMPLATE_REF))
-        }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(e) => Err(format!("read {}: {e}", path.display())),
+    // The one shared classifier (case index first, then the plan, then any
+    // `field*` artifact when the plan is missing).
+    let dir = case_dir(root, case_id);
+    let plan = dir.join("plan.json");
+    if let Ok(bytes) = fs::read(&plan) {
+        serde_json::from_slice::<Value>(&bytes)
+            .map_err(|e| format!("{} is not valid JSON: {e}", plan.display()))?;
     }
+    Ok(sea_forge_case_runner::case_ops::field_guard::is_field_case_authoritative(&dir))
 }
 
 /// Apply the changes of one `field_case.revised` payload to a document and set

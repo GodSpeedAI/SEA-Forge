@@ -26,7 +26,29 @@ fn cell() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     let dir = root.path().join("cases/case-0001");
     fs::create_dir_all(&dir).unwrap();
-    fs::write(dir.join("case.json"), "{}").unwrap();
+    // A valid Field Case: state, Field plan, derived document, event ledger.
+    fs::write(
+        dir.join("case.json"),
+        json!({"version": "0.2", "case_id": "case-0001", "state": "active",
+               "plan_ref": "plan_seed", "run_ids": [], "stages": [],
+               "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+        .to_string(),
+    )
+    .unwrap();
+    fs::write(
+        dir.join("plan.json"),
+        json!({"version": "0.2", "plan_id": "plan_seed", "case_id": "case-0001",
+               "run_id": "run_seed", "intent_id": "int_seed", "items": [],
+               "template_ref": "fde.field_case@1"})
+        .to_string(),
+    )
+    .unwrap();
+    fs::write(
+        dir.join("field_case.json"),
+        serde_json::to_vec_pretty(&sea_forge_core::field_case::opened_document("case-0001"))
+            .unwrap(),
+    )
+    .unwrap();
     fs::write(dir.join("case-events.jsonl"), "").unwrap();
     root
 }
@@ -294,7 +316,8 @@ fn at_05_denied_i2_decision_is_an_event_that_resolves_without_a_ledger_record() 
         root.path().join("cases/case-0001/case-events.jsonl"),
         format!(
             "{}\n",
-            json!({"event_id": "ev-1", "plan_item_id": item, "actor_id": "agent:builder-01",
+            json!({"version": "0.2", "run_id": "run_seed", "payload": {},
+                   "event_id": "ev-1", "plan_item_id": item, "actor_id": "agent:builder-01",
                    "kind": "command_started", "timestamp": "2026-11-12T10:00:00Z"})
         ),
     )
@@ -423,11 +446,31 @@ fn an_episode_in_another_world_records_a_gap_and_invents_no_semantic_ref() {
     let root = freeze_and_settle();
     let dir = root.path().join("cases/case-0001");
     let text = fs::read_to_string(dir.join("field-records.jsonl")).unwrap();
-    fs::write(
-        dir.join("field-records.jsonl"),
-        text.replace("world:godspeed-fde-sop@", "world:other-world@"),
-    )
-    .unwrap();
+    // The ledger is hash-chained: the edit is made the way an honest writer
+    // would leave it, with the chain, the document's index and digests redone.
+    let digest = sea_forge_server::sfwp::case_records::digest_of;
+    let mut prev = "0".repeat(64);
+    let mut out = String::new();
+    for line in text
+        .replace("world:godspeed-fde-sop@", "world:other-world@")
+        .lines()
+    {
+        let mut r: Value = serde_json::from_str(line).unwrap();
+        if let (Some(kind), true) = (
+            r["kind"].as_str().map(String::from),
+            r.get("payload").is_some(),
+        ) {
+            r["body_digest"] =
+                json!(digest(&json!({"kind": kind, "payload": r["payload"]})).unwrap());
+        }
+        r["prev_hash"] = json!(prev);
+        r.as_object_mut().unwrap().remove("hash");
+        r["hash"] = json!(digest(&r).unwrap());
+        prev = r["hash"].as_str().unwrap().to_string();
+        out.push_str(&format!("{r}\n"));
+    }
+    fs::write(dir.join("field-records.jsonl"), out).unwrap();
+    let _ = fs::remove_file(root.path().join(".case-index/case-0001.json"));
     fs::remove_file(dir.join("field-interaction-outbox.jsonl")).unwrap();
     with_ctx(root.path(), reconcile_events);
     let rows = lines(root.path(), "field-interaction-outbox.jsonl");

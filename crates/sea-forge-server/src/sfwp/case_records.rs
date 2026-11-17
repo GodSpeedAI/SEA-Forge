@@ -495,6 +495,46 @@ fn record_decision(
     Ok(record)
 }
 
+/// A refused verb changes no bytes except its declared refusal record: the
+/// deny decision and its interaction-outbox row, committed as ONE batch (the
+/// contract, AT-05 and interaction map 3.2b, requires both).
+fn record_refusal(
+    ctx: &AppendContext,
+    key: &str,
+    body_digest: &str,
+    episode_key: &Value,
+    executors: &BTreeSet<String>,
+) -> Result<(), String> {
+    use sea_forge_case_runner::case_ops::case_guard::{commit, Batch, Op};
+    let existing = decisions(ctx);
+    if existing.iter().any(|d| {
+        d["idempotency_key"] == key && d["body_digest"] == body_digest && d["decision"] == "deny"
+    }) {
+        return Ok(());
+    }
+    let seq = existing.len() as u64 + 1;
+    let record = json!({
+        "decision_id": format!("dec-{seq:04}"), "seq": seq, "policy": "no_self_settlement",
+        "invariant": "I-2", "decision": "deny", "idempotency_key": key,
+        "body_digest": body_digest, "episode_key": episode_key, "principal": ctx.principal,
+        "role": ctx.role, "chain": ctx.chain, "executors": executors,
+        "recorded_at": now_rfc3339(),
+    });
+    let mut batch = Batch::new().with(Op::Append {
+        file: DECISIONS.into(),
+        line: record.clone(),
+    });
+    if let Some(row) = super::interaction_events::decision_row(ctx, &record)? {
+        batch.push(Op::Append {
+            file: super::interaction_events::OUTBOX_FILE.into(),
+            line: row,
+        });
+    }
+    commit(&case_dir(ctx.root, ctx.case_id), batch)
+        .map(|_| ())
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))
+}
+
 /// Latest intent line per idempotency key.
 pub(super) fn latest_intents(ctx: &AppendContext) -> Vec<Value> {
     let mut latest: Vec<Value> = Vec::new();
@@ -1480,11 +1520,8 @@ fn settle(
         .filter_map(|c| canonical_actor(c).ok())
         .any(|c| executors.contains(&c));
     if contained {
-        match record_decision(ctx, key, body_digest, &episode_key, false, &executors) {
-            Ok(decision) => {
-                let _ = super::interaction_events::enqueue_decision(ctx, &decision);
-            }
-            Err(e) => return io_refusal(e),
+        if let Err(e) = record_refusal(ctx, key, body_digest, &episode_key, &executors) {
+            return io_refusal(e);
         }
         return refuse(
             "SELF_SETTLEMENT_REFUSED",

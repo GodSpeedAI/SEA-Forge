@@ -37,8 +37,30 @@ fn cell() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     let dir = root.path().join("cases/case-0001");
     fs::create_dir_all(&dir).unwrap();
-    fs::write(dir.join("case.json"), "{}").unwrap();
-    // A committed case has an event ledger; its absence is a refusal (F7).
+    // A valid Field Case: a case.json with a state, a plan naming the Field
+    // template, the document, and an event ledger (its absence is a refusal, F7).
+    fs::write(
+        dir.join("case.json"),
+        json!({"version": "0.2", "case_id": "case-0001", "state": "active",
+               "plan_ref": "plan_seed", "run_ids": [], "stages": [],
+               "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+        .to_string(),
+    )
+    .unwrap();
+    fs::write(
+        dir.join("plan.json"),
+        json!({"version": "0.2", "plan_id": "plan_seed", "case_id": "case-0001",
+               "run_id": "run_seed", "intent_id": "int_seed", "items": [],
+               "template_ref": "fde.field_case@1"})
+        .to_string(),
+    )
+    .unwrap();
+    fs::write(
+        dir.join("field_case.json"),
+        serde_json::to_vec_pretty(&sea_forge_core::field_case::opened_document("case-0001"))
+            .unwrap(),
+    )
+    .unwrap();
     fs::write(dir.join("case-events.jsonl"), "").unwrap();
     root
 }
@@ -327,7 +349,13 @@ fn seed_ledger(root: &Path, scenario: &Value) {
         // A stored record's body digest is the digest of its kind and payload
         // (the guard verifies it, README section 3 STORE_INTEGRITY): a seeded
         // entry that is not the request carries a stub payload and its digest.
-        let stub = json!({"realitytrace_refs": {"plan_id": "plan:seed", "question_ids": [], "threshold_ids": []}});
+        // A schema-valid stored payload of the entry's kind (the strict load
+        // validates every stored payload).
+        let stub = if entry["kind"] == "episode.settled" {
+            fixture("valid/request-episode-settled.json")["payload"].clone()
+        } else {
+            fixture("valid/request-episode-frozen.json")["payload"].clone()
+        };
         let payload = if same_body {
             request["payload"].clone()
         } else {
@@ -337,6 +365,9 @@ fn seed_ledger(root: &Path, scenario: &Value) {
             &json!({"kind": entry["kind"], "payload": payload}),
         )
         .unwrap();
+        if entry["kind"] != "episode.settled" {
+            rt_register_for(root, &json!({"payload": payload}));
+        }
         let rec_id = key.rsplit('/').next().unwrap();
         let mut record = json!({
             "seq": i + 1, "record_id": rec_id, "kind": entry["kind"], "idempotency_key": key,
@@ -892,7 +923,9 @@ fn records_path(root: &Path) -> PathBuf {
 }
 
 #[test]
-fn f2_torn_tail_is_repaired_before_append_and_the_answer_is_true() {
+fn f2_torn_tail_refuses_and_writes_nothing() {
+    // WP-21B round 6 (C4): the contract is silent on repair, so a trailing
+    // fragment is STORE_INTEGRITY. Repair is an explicit operator act.
     let root = cell();
     let freeze = fixture("valid/request-episode-frozen.json");
     rt_register_for(root.path(), &freeze);
@@ -900,32 +933,24 @@ fn f2_torn_tail_is_repaired_before_append_and_the_answer_is_true() {
         run_as(root.path(), "case-keeper", &freeze)["outcome"],
         "recorded"
     );
-    let before = fs::read(records_path(root.path())).unwrap();
-    let mut torn = before.clone();
+    let mut torn = fs::read(records_path(root.path())).unwrap();
     torn.extend_from_slice(br#"{"seq":2,"kind":"episode.sett"#);
     fs::write(records_path(root.path()), &torn).unwrap();
     let settle = fixture("valid/request-episode-settled.json");
     let out = run_as(root.path(), "agent:verifier", &settle);
-    assert_eq!(out["outcome"], "recorded", "{out}");
-    let text = fs::read_to_string(records_path(root.path())).unwrap();
-    let lines: Vec<Value> = text
-        .lines()
-        .map(|l| serde_json::from_str(l).expect("every stored line parses"))
-        .collect();
-    assert_eq!(lines.len(), 2, "{text}");
-    assert_eq!(lines[1]["kind"], "episode.settled");
-    assert_eq!(lines[1]["record_id"], out["record_id"]);
-    // The repair is durable and names what was dropped.
-    let repairs =
-        fs::read_to_string(root.path().join("cases/case-0001/field-repairs.jsonl")).unwrap();
-    assert!(repairs.contains("field-records.jsonl") && repairs.contains("episode.sett"));
-    // The verb's "recorded" is true: a replay finds the record.
-    let again = run_as(root.path(), "agent:verifier", &settle);
-    assert_eq!(
-        (again["outcome"].as_str(), again["replayed"].as_bool()),
-        (Some("recorded"), Some(true))
+    assert_eq!(out["outcome"], "refused", "{out}");
+    assert!(
+        out["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("STORE_INTEGRITY"),
+        "{out}"
     );
-    assert_eq!(again["record_id"], out["record_id"]);
+    assert_eq!(fs::read(records_path(root.path())).unwrap(), torn);
+    assert!(!root
+        .path()
+        .join("cases/case-0001/field-repairs.jsonl")
+        .exists());
 }
 
 #[test]
@@ -1122,7 +1147,9 @@ fn f7_missing_unreadable_or_identity_less_events_refuse_settlement() {
         events(root.path()),
         format!(
             "{}\n",
-            json!({"event_id": "e1", "plan_item_id": null, "actor_id": "a"})
+            json!({"version": "0.2", "run_id": "run_seed", "payload": {}, "kind": "command_started",
+                   "timestamp": "2026-11-12T10:00:00Z",
+                   "event_id": "e1", "plan_item_id": null, "actor_id": "a"})
         ),
     )
     .unwrap();
@@ -1226,7 +1253,11 @@ async fn f7_production_entry_point_enforces_i_2_and_fails_closed_on_identity_les
     let mut other = settle_request();
     other["idempotency_key"] = json!("verifier/rec-0300");
     let out = send!(other);
-    assert_eq!(out["outcome"], "refused", "{out}");
+    // Refused, as a refusal or as a store-integrity error frame (strict load).
+    assert!(
+        out["outcome"] == "refused" || out["error_class"] == "store_integrity",
+        "{out}"
+    );
     assert_ne!(code(&out), "SELF_SETTLEMENT_REFUSED", "{out}");
     let _ = std::fs::remove_file(&socket);
 }
@@ -1330,15 +1361,17 @@ fn f5_each_failure_of_the_order_check_is_a_distinct_state() {
         format!("{}\n", json!({"plan_item_id": item, "actor_id": "a"})),
     )
     .unwrap();
+    // A Field Case's event log is loaded strictly: an event that is not a
+    // trace event is a store-integrity failure (fail closed).
     assert_eq!(
         anchor_state(&verify_freeze_anchor(&c, &item, 1)),
-        "malformed_run_event"
+        "store_integrity"
     );
     // a corrupt events line
     fs::write(&events, "garbage\n").unwrap();
     assert_eq!(
         anchor_state(&verify_freeze_anchor(&c, &item, 1)),
-        "malformed_run_event"
+        "store_integrity"
     );
     // anchor absent (record only)
     let root2 = cell();

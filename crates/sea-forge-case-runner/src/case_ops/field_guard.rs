@@ -65,6 +65,24 @@ pub fn is_field_case(case_dir: &Path) -> bool {
     by_plan || has_marker(case_dir)
 }
 
+/// THE shared classifier (server, execution gate, CLI): the case index's
+/// `field: true` is authoritative once written; otherwise the plan's template
+/// names it, or, with no readable plan, any `field*` artifact does. A Field
+/// Case whose plan is missing is therefore a Field Case (and STORE_INTEGRITY
+/// in the guard), never a plain one.
+pub fn is_field_case_authoritative(case_dir: &Path) -> bool {
+    if super::case_guard::index_says_field(case_dir) {
+        return true;
+    }
+    match std::fs::read(case_dir.join("plan.json")) {
+        Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
+            Ok(plan) => plan["template_ref"] == FIELD_CASE_TEMPLATE,
+            Err(_) => String::from_utf8_lossy(&bytes).contains(FIELD_CASE_TEMPLATE),
+        },
+        Err(_) => has_marker(case_dir),
+    }
+}
+
 /// ANY `field*` artifact of the case directory (the document, the ledger, an
 /// auxiliary store), whatever its size: deleting the plan and the document
 /// does not make a Field Case look plain.

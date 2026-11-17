@@ -98,6 +98,10 @@ enum Step {
     CaseWrite(usize),
     Corrupt(usize),
     DeleteMarker(usize),
+    /// A raw run-output write whose path may try to escape `runs/` (round 6).
+    RawRun(usize),
+    /// A torn trailing fragment (no newline) on a store (round 6).
+    Torn(usize),
 }
 
 fn step() -> impl Strategy<Value = Step> {
@@ -113,6 +117,8 @@ fn step() -> impl Strategy<Value = Step> {
         2 => (0..4usize).prop_map(Step::CaseWrite),
         2 => (0..16usize).prop_map(Step::Corrupt),
         1 => (0..4usize).prop_map(Step::DeleteMarker),
+        3 => (0..6usize).prop_map(Step::RawRun),
+        2 => (0..16usize).prop_map(Step::Torn),
     ]
 }
 
@@ -451,7 +457,28 @@ fn run(w: &World, s: &Step, n: usize) -> Result<(), String> {
             sea_forge_case_runner::write_json(&w.case_dir.join("case.json"), &case)
                 .map_err(|e| e.to_string())
         }
-        Step::Corrupt(_) | Step::DeleteMarker(_) => unreachable!("handled by the caller"),
+        Step::RawRun(k) => {
+            let rel = [
+                "../plan.json",
+                "../case-events.jsonl",
+                "../case.json",
+                "x/../../plan.json",
+                "/etc/model-escape",
+                "ok.txt",
+            ][*k];
+            commit(
+                &w.case_dir,
+                Batch::new().with(Op::RunFile {
+                    rel: rel.into(),
+                    bytes: b"{\"escaped\": true}".to_vec(),
+                }),
+            )
+            .map(drop)
+            .map_err(|r| r.code.to_string())
+        }
+        Step::Corrupt(_) | Step::DeleteMarker(_) | Step::Torn(_) => {
+            unreachable!("handled by the caller")
+        }
     }
 }
 
@@ -493,6 +520,20 @@ fn corrupt(w: &mut World, k: usize) {
         }
         _ => append_garbage(d.join(STORES[(k - 5) % STORES.len()])),
     }
+    w.corrupted = true;
+}
+
+/// A torn trailing fragment: bytes after the last newline of one store.
+fn torn(w: &mut World, k: usize) {
+    let name = match k {
+        0 => "case-events.jsonl",
+        1 => "field-records.jsonl",
+        _ => STORES[(k - 2) % STORES.len()],
+    };
+    let path = w.case_dir.join(name);
+    let mut bytes = fs::read(&path).unwrap_or_default();
+    bytes.extend_from_slice(b"{\"torn");
+    fs::write(path, bytes).unwrap();
     w.corrupted = true;
 }
 
@@ -766,6 +807,13 @@ fn run_sequence(steps: &[Step]) -> Result<(), String> {
                 }
                 continue;
             }
+            Step::Torn(k) => {
+                if std::env::var_os("MODEL_NO_CORRUPT").is_none() {
+                    torn(&mut w, *k);
+                    watcher.drain();
+                }
+                continue;
+            }
             Step::DeleteMarker(k) => {
                 if std::env::var_os("MODEL_NO_CORRUPT").is_none() {
                     delete_marker(&mut w, *k);
@@ -841,4 +889,80 @@ fn close_failed_then_terminate_stops_the_case() {
     .unwrap();
     case_ops::terminate(&w.root, &w.policy(), "operator_local", CASE, "stop").unwrap();
     assert_eq!(w.case_state(), "terminated");
+}
+
+// --- WP-21B round 6 regressions (each red on 81a99fd0) --------------------------
+
+/// C1, C2, C3: a raw run-file path cannot leave `runs/`; nothing is written.
+#[test]
+fn r6_run_file_paths_are_contained() {
+    let w = World::new();
+    for rel in [
+        "../case.json",
+        "../plan.json",
+        "../case-events.jsonl",
+        "a/../../plan.json",
+        "/etc/escape",
+    ] {
+        let before = w.tree_hash();
+        let out = commit(
+            &w.case_dir,
+            Batch::new().with(Op::RunFile {
+                rel: rel.into(),
+                bytes: b"{}".to_vec(),
+            }),
+        );
+        assert_eq!(
+            out.map(drop).map_err(|r| r.code),
+            Err("PATH_ESCAPE"),
+            "{rel}"
+        );
+        assert_eq!(w.tree_hash(), before, "{rel} changed bytes");
+    }
+    // a symlink under runs/ does not widen the path either
+    #[cfg(unix)]
+    {
+        fs::create_dir_all(w.case_dir.join("runs")).unwrap();
+        std::os::unix::fs::symlink(&w.root, w.case_dir.join("runs/link")).unwrap();
+        let out = commit(
+            &w.case_dir,
+            Batch::new().with(Op::RunFile {
+                rel: "link/x".into(),
+                bytes: b"{}".to_vec(),
+            }),
+        );
+        assert_eq!(out.map(drop).map_err(|r| r.code), Err("PATH_ESCAPE"));
+    }
+}
+
+/// C4: a torn trailing fragment is STORE_INTEGRITY, never repaired by a write.
+#[test]
+fn r6_torn_tail_is_refused_not_repaired() {
+    for k in 0..4 {
+        let mut w = World::new();
+        torn(&mut w, k);
+        let before = w.tree_hash();
+        let out = w.append_record(json!({"kind": "strategy.recorded"}));
+        assert!(out.is_err(), "store {k} accepted a write over a torn tail");
+        assert_eq!(w.tree_hash(), before, "store {k}: bytes changed");
+    }
+}
+
+/// C6: one classifier; the index is authoritative, a missing plan stays Field.
+#[test]
+fn r6_classifier_survives_a_missing_plan_and_markers() {
+    use sea_forge_case_runner::case_ops::field_guard::is_field_case_authoritative;
+    let w = World::new();
+    assert!(is_field_case_authoritative(&w.case_dir));
+    fs::remove_file(w.case_dir.join("plan.json")).unwrap();
+    assert!(is_field_case_authoritative(&w.case_dir), "plan removed");
+    for e in fs::read_dir(&w.case_dir).unwrap().flatten() {
+        if e.file_name().to_string_lossy().starts_with("field") {
+            fs::remove_file(e.path()).unwrap();
+        }
+    }
+    assert!(
+        is_field_case_authoritative(&w.case_dir),
+        "markers removed: the index decides"
+    );
 }

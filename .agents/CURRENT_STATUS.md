@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 332
+**Status revision:** 333
 
-**Stage:** FDE S2: WP-22 promotion saga (in progress)
+**Stage:** FDE S2: WP-21 part B round 6 (classes)
 
-**Summary:** WP-22 saga state machine and W1-W6 proptests landed in case-runner; mutation checks and proof run pending
+**Summary:** Round 6: raw ops path-contained, strict tail, refusal as one batch, one field classifier with index authority, run workspaces outside the case dir; case-runner, server, clippy and proof s2 green; CLI m13/lifecycle failures pre-exist
 
 **Verified:**
 

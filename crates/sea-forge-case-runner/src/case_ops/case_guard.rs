@@ -402,8 +402,14 @@ pub fn verified_records(case_dir: &Path) -> Result<Vec<Value>, ContractError> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(e) => return Err(integrity(format!("read {RECORDS}: {e}"))),
     };
-    // A torn trailing fragment is not a line (the appender repairs it).
-    let end = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    // Strict to the last byte: anything after the last newline-terminated
+    // record is STORE_INTEGRITY. Repair is an explicit operator act.
+    if bytes.last().is_some_and(|b| *b != b'\n') {
+        return Err(integrity(format!(
+            "{RECORDS} ends with a torn fragment (no newline)"
+        )));
+    }
+    let end = bytes.len();
     let mut out: Vec<Value> = Vec::new();
     let mut prev = ZERO_HASH.to_string();
     for (i, line) in bytes[..end].split(|b| *b == b'\n').enumerate() {
@@ -945,7 +951,7 @@ fn plan_says_field(case_dir: &Path) -> bool {
     })
 }
 
-fn index_says_field(case_dir: &Path) -> bool {
+pub fn index_says_field(case_dir: &Path) -> bool {
     std::fs::read(index_path(case_dir))
         .ok()
         .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
@@ -1019,6 +1025,17 @@ pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, Contr
             ));
         }
     }
+    if strict {
+        for name in std::iter::once(EVENTS).chain(STORE_SHAPES.iter().map(|(n, _)| *n)) {
+            if std::fs::read(case_dir.join(name))
+                .is_ok_and(|b| b.last().is_some_and(|c| *c != b'\n'))
+            {
+                return Err(integrity(format!(
+                    "{name} ends with a torn fragment (no newline)"
+                )));
+            }
+        }
+    }
     let events = events_of(case_dir, strict)?;
     let records = if strict {
         verified_records(case_dir)?
@@ -1050,6 +1067,11 @@ pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, Contr
         .iter()
         .filter(|(n, _)| strict || PLAIN_STORES.contains(n) || *n == "field-links.jsonl")
     {
+        // An outbox carries no case state: one that cannot be read as a file
+        // never blocks the case write (the outbox write fails and is reconciled).
+        if name.contains("outbox") && case_dir.join(name).is_dir() {
+            continue;
+        }
         for (i, line) in complete_lines(&case_dir.join(name))?.iter().enumerate() {
             let value: Value = serde_json::from_slice(line)
                 .map_err(|e| integrity(format!("{name} line {} is not JSON: {e}", i + 1)))?;
@@ -1273,6 +1295,7 @@ fn creating_field(case_dir: &Path, batch: &Batch) -> bool {
 /// writing anything: the pre-admission of a verb that has effects of its own
 /// (a ledger commit, a run) to order before its write. `commit` decides again.
 pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
+    contained(case_dir, batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
     let creating = creating_field(case_dir, batch);
     let st = load_verified(case_dir, creating)?;
@@ -1282,10 +1305,42 @@ pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
     Ok(())
 }
 
+/// Raw-file ops are contained: a `RunFile` path is relative, made of plain
+/// names only (no `..`, no root, no prefix), and no existing component of it
+/// under `runs/` is a symlink. It therefore cannot reach a store file, and the
+/// effect `decide` judges is the effect that is written.
+fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
+    use std::path::Component;
+    for op in &batch.ops {
+        let Op::RunFile { rel, .. } = op else {
+            continue;
+        };
+        let escape = |why: &str| refuse("PATH_ESCAPE", &format!("run file {rel:?}: {why}"));
+        let mut at = case_dir.join("runs");
+        if std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(escape("the runs directory is a symlink"));
+        }
+        for part in Path::new(rel).components() {
+            let Component::Normal(name) = part else {
+                return Err(escape("only plain relative names are allowed"));
+            };
+            at.push(name);
+            if std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink()) {
+                return Err(escape("a path component is a symlink"));
+            }
+        }
+        if rel.contains('\\') || rel.contains('\0') {
+            return Err(escape("illegal character"));
+        }
+    }
+    Ok(())
+}
+
 /// Admit-and-apply: lock, load verified, decide on the post-state of the whole
 /// batch, write exactly the batch (and the projections the ledger derives),
 /// release. `Err` is the contract's refusal; nothing was written.
 pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
+    contained(case_dir, &batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
     let creating = creating_field(case_dir, &batch);
     let st = load_verified(case_dir, creating)?;
