@@ -99,6 +99,12 @@ pub fn append_case_event_with(
     commit_case_event(root, case_id, actor, kind, item_id, payload, None, notify)
 }
 
+/// A caller's own write to order inside an event append, with its effect.
+type ExtraWrite<'a> = (
+    case_guard::Op,
+    &'a mut dyn FnMut() -> Result<(), ForgeError>,
+);
+
 /// One case event as one guarded commit: the event (and `extra` ops that must
 /// land with it, such as the plan a `PlanMutated` event announces) is decided
 /// before anything is written; `before` (a ledger commit) runs after the
@@ -111,7 +117,7 @@ fn commit_case_event(
     kind: TraceKind,
     item_id: Option<&str>,
     payload: serde_json::Value,
-    extra: Option<(case_guard::Op, &mut dyn FnMut() -> Result<(), ForgeError>)>,
+    extra: Option<ExtraWrite<'_>>,
     notify: CaseEventNotifier<'_>,
 ) -> Result<(), ForgeError> {
     let (_, _, events_path) = paths(root, case_id);

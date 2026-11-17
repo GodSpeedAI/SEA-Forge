@@ -43,11 +43,6 @@ const ITEMS: [&str; 4] = [
     "gate_prove_value",
     "gate_allocate_authority",
 ];
-const OUTBOXES: [&str; 3] = [
-    "field-rt-outbox.jsonl",
-    "field-anchor-outbox.jsonl",
-    "field-interaction-outbox.jsonl",
-];
 /// Every auxiliary store: the file and a valid line.
 const STORES: [&str; 11] = [
     "field-freeze-intents.jsonl",
@@ -543,23 +538,18 @@ impl Watcher {
     fn drain(&mut self) -> BTreeSet<String> {
         let mut out = BTreeSet::new();
         let mut buf = [0u8; 8192];
-        loop {
-            match self.ino.read_events(&mut buf) {
-                Ok(events) => {
-                    let mut any = false;
-                    for e in events {
-                        any = true;
-                        if !e.mask.contains(inotify::EventMask::ISDIR) {
-                            if let Some(name) = e.name {
-                                out.insert(name.to_string_lossy().to_string());
-                            }
-                        }
-                    }
-                    if !any {
-                        break;
+        while let Ok(events) = self.ino.read_events(&mut buf) {
+            let mut any = false;
+            for e in events {
+                any = true;
+                if !e.mask.contains(inotify::EventMask::ISDIR) {
+                    if let Some(name) = e.name {
+                        out.insert(name.to_string_lossy().to_string());
                     }
                 }
-                Err(_) => break,
+            }
+            if !any {
+                break;
             }
         }
         out

@@ -101,7 +101,8 @@ fn write_event(root: &Path, plan_item: &str, actor: &str, timestamp: &str) {
     let mut text = fs::read_to_string(&path).unwrap_or_default();
     text.push_str(&format!(
         "{}\n",
-        json!({"event_id": format!("ev-{actor}-{timestamp}"), "plan_item_id": plan_item,
+        json!({"version": "0.2", "run_id": "run_seed", "payload": {},
+               "event_id": format!("ev-{actor}-{timestamp}"), "plan_item_id": plan_item,
                "actor_id": actor, "kind": "command_started", "timestamp": timestamp})
     ));
     fs::write(path, text).unwrap();

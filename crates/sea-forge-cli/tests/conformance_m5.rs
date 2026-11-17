@@ -147,7 +147,13 @@ fn cli_project_runs_full_m5_chain_and_settles_independent_projections() {
         assert!(
             matches!(
                 name.as_str(),
-                "ledgers" | "cases" | "spec-pipelines" | "policy.yaml" | "model.sea"
+                "ledgers"
+                    | "cases"
+                    | ".case-locks"
+                    | ".case-index"
+                    | "spec-pipelines"
+                    | "policy.yaml"
+                    | "model.sea"
             ),
             "unexpected top-level entry {name} suggests an uncontrolled side effect"
         );

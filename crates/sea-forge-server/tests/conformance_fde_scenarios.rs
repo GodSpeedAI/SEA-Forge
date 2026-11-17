@@ -410,7 +410,17 @@ impl Seed {
     fn new(root: &Path, template: Option<&str>) -> Self {
         let dir = case_dir(root);
         fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("case.json"), "{}").unwrap();
+        // A Field Case has a case.json with a lifecycle state (the guard's
+        // strict load); a plain case keeps the bare file.
+        let case_json = if template.is_some() {
+            json!({"version": "0.2", "case_id": CASE, "state": "active",
+                   "plan_ref": "plan_seed", "run_ids": [], "stages": [],
+                   "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+            .to_string()
+        } else {
+            "{}".to_string()
+        };
+        fs::write(dir.join("case.json"), case_json).unwrap();
         fs::write(dir.join("case-events.jsonl"), "").unwrap();
         if let Some(t) = template {
             fs::write(
@@ -496,6 +506,7 @@ impl Seed {
             .and_then(|r| r["hash"].as_str())
             .unwrap_or(ZERO)
             .to_string();
+        complete_payload(&mut record);
         // A stored record's body digest is the digest of its kind and payload
         // (the guard verifies it: README section 3 STORE_INTEGRITY).
         if record.get("body_digest").is_some() && record.get("payload").is_some() {
@@ -514,6 +525,16 @@ impl Seed {
             &[record.clone()],
         );
         self.records.push(record.clone());
+        if record["kind"] == "field_case.revised" {
+            // The document is what the ledger derives (the commit's projection).
+            let doc =
+                sea_forge_case_runner::case_ops::case_guard::derived_document(CASE, &self.records);
+            fs::write(
+                case_dir(&self.root).join("field_case.json"),
+                serde_json::to_vec_pretty(&doc).unwrap(),
+            )
+            .unwrap();
+        }
         record["record_id"].as_str().unwrap().to_string()
     }
 
@@ -574,6 +595,56 @@ impl Seed {
                                  "server_push_time": push}})],
         );
     }
+}
+
+/// The guard's strict load validates every stored payload against the
+/// registry's schema, so a seeded record carries a schema-valid one: a payload
+/// the scenario leaves out, or leaves incomplete, is the contract's valid
+/// fixture of that kind (members the seed does set are kept where they fit).
+fn complete_payload(record: &mut Value) {
+    let kind = record["kind"].as_str().unwrap_or("").to_string();
+    let valid = |name: &str| -> Value {
+        read(&fixtures("case-record-append").join("valid").join(name))["payload"].clone()
+    };
+    if kind == "episode.frozen" {
+        let template = valid("request-episode-frozen.json");
+        if let (Some(body), Some(t)) = (
+            record["payload"]["reference"]["body"].as_object_mut(),
+            template["reference"]["body"].as_object(),
+        ) {
+            for (k, v) in t {
+                body.entry(k.clone()).or_insert_with(|| v.clone());
+            }
+        }
+    }
+    if sea_forge_case_runner::case_ops::contract::payload_is_valid(&kind, &record["payload"])
+        .is_ok()
+    {
+        return;
+    }
+    let canonical = match kind.as_str() {
+        "episode.frozen" => valid("request-episode-frozen.json"),
+        "episode.settled" => valid("request-episode-settled.json"),
+        "field_case.revised" => json!({"base_revision": 1, "rationale": "seed",
+            "changes": [{"path": "purpose_and_outcome.signal",
+                "field": {"status": "declared", "source_ref": {"kind": "operator", "ref": "o"}, "value": "x"}}]}),
+        "strategy.recorded" => json!({"revision": 1, "supersedes": null, "where_to_play": "w",
+            "how_to_win": "h", "underserved_outcome": "u", "tested_assumption": "t",
+            "abandonment_trigger": "a", "revisit_reason": null}),
+        "gate.assessed" => json!({"gate": record["gate"], "state": record["state"],
+            "evidence_refs": ["ev-seed"], "rationale": "seed", "assessor": "assessor-a"}),
+        "disposition.recorded" => {
+            let mut p = json!({"level": record["level"],
+                "disposition": if record["disposition"].is_null() { json!("continue") } else { record["disposition"].clone() },
+                "rationale": "seed", "approval_ref": "appr-seed"});
+            if record["level"] == "episode" {
+                p["episode_ref"] = record["episode_ref"].clone();
+            }
+            p
+        }
+        _ => return,
+    };
+    record["payload"] = canonical;
 }
 
 fn kind_of_principal(id: &str) -> &'static str {
@@ -845,8 +916,11 @@ async fn run_append(s: &Value) -> Result<(), String> {
             .unwrap_or("2026-11-14T09:00:00Z");
         write_lines(
             &case_dir(root.path()).join("case-events.jsonl"),
-            &[json!({"event_id": "ev-seed", "plan_item_id": "item-03",
-                     "actor_id": "agent:builder-01", "kind": "command_started", "timestamp": first})],
+            &[
+                json!({"version": "0.2", "run_id": "run_seed", "payload": {},
+                     "event_id": "ev-seed", "plan_item_id": "item-03",
+                     "actor_id": "agent:builder-01", "kind": "command_started", "timestamp": first}),
+            ],
         );
     }
     // RealityTrace records the request itself names, unless the scenario says
@@ -1090,7 +1164,7 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
             seed.freeze(
                 &key,
                 stored_kind,
-                s["freeze_world"].as_str().unwrap_or("world:seed@sha256:00"),
+                s["freeze_world"].as_str().unwrap_or("world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000"),
                 "case-keeper/rec-seed",
                 &digest,
             );
@@ -1151,7 +1225,7 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
             seed.freeze(
                 &k2,
                 "evaluated",
-                "world:seed@sha256:00",
+                "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000",
                 "case-keeper/rec-seed-n",
                 &"ef".repeat(32),
             );
@@ -1274,7 +1348,7 @@ async fn run_link(s: &Value) -> Result<(), String> {
     seed.freeze(
         &key,
         "evaluated",
-        "world:seed@sha256:00",
+        "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000",
         "case-keeper/rec-0001",
         &digest,
     );
@@ -1554,7 +1628,7 @@ fn seed_decision(root: &Path, s: &Value) {
         "patch_sha256": hex::encode(<Sha256 as Digest>::digest(b"")),
         "argv": argv, "cwd": cwd, "env_digest": digest_of(&json!({})).unwrap(),
         "workspace_ref": workspace, "sandbox_profile": profile,
-        "world_ref": s["freeze_world"].as_str().unwrap_or("world:seed@sha256:00"),
+        "world_ref": s["freeze_world"].as_str().unwrap_or("world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000"),
         "timeout_s": timeout.max(1),
     });
     let resource = format!("execution:sha256:{}", digest_of(&object).unwrap());
@@ -2205,7 +2279,7 @@ async fn at_11_gates() {
     // Evidence change: a settlement after the assessment marks the gate to reassess
     // (the gate itself is not touched).
     let mut r = FieldCell::start(|s| {
-        s.freeze(&key, "evaluated", "world:seed@sha256:00", "case-keeper/rec-0001", &digest);
+        s.freeze(&key, "evaluated", "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000", "case-keeper/rec-0001", &digest);
         s.push(json!({"kind": "gate.assessed", "gate": "choose_problem", "state": "met",
             "idempotency_key": "seed-gate", "body_digest": "seed-gate",
             "payload": {"gate": "choose_problem", "state": "met", "evidence_refs": ["evidence:E1"]}}));

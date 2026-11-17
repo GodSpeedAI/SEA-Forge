@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 330
+**Status revision:** 331
 
-**Stage:** FDE S2: WP-21 part B round 5 (admit-and-apply commit), in progress
+**Stage:** FDE S2: WP-21 part B round 5 (admit-and-apply commit)
 
-**Summary:** Round 5 redesign: commit(case_dir, Batch) admits and applies under a lock outside the case, strict load, registry-driven lifecycle, case index; case-runner tests ok, server field-case fixtures still being converted
+**Summary:** Round 5: commit(case_dir, Batch) admits and applies under a lock outside the case, strict load for Field Cases, registry-driven lifecycle, case index; plain cases unchanged; case-runner, server and proof s2 green
 
 **Verified:**
 

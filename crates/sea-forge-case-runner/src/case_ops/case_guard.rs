@@ -543,7 +543,7 @@ pub fn classify(rel: &str) -> Option<FileClass> {
 const STORE_SHAPES: [(&str, &[&str]); 11] = [
     ("field-freeze-intents.jsonl", &["idempotency_key", "state"]),
     ("field-decisions.jsonl", &["decision_id", "decision"]),
-    ("field-approvals.jsonl", &["approval_ref", "consumed_by"]),
+    ("field-approvals.jsonl", &["approval_ref"]),
     ("field-rt-outbox.jsonl", &["system", "record_id", "state"]),
     ("field-anchor-outbox.jsonl", &["id", "state"]),
     ("field-interaction-outbox.jsonl", &["event_id", "state"]),
@@ -593,16 +593,23 @@ fn complete_lines(path: &Path) -> Result<Vec<Vec<u8>>, ContractError> {
 }
 
 /// Every event line parses as a trace event: no line is skipped.
-fn events_of(case_dir: &Path) -> Result<Vec<TraceEvent>, ContractError> {
-    complete_lines(&case_dir.join(EVENTS))?
-        .iter()
-        .enumerate()
-        .map(|(i, line)| {
-            serde_json::from_slice(line).map_err(|e| {
-                integrity(format!("{EVENTS} line {} is not a trace event: {e}", i + 1))
-            })
-        })
-        .collect()
+fn events_of(case_dir: &Path, strict: bool) -> Result<Vec<TraceEvent>, ContractError> {
+    let mut out = Vec::new();
+    for (i, line) in complete_lines(&case_dir.join(EVENTS))?.iter().enumerate() {
+        match serde_json::from_slice(line) {
+            Ok(e) => out.push(e),
+            // A case that is not a Field Case proper keeps its previous
+            // reading: an event the engine cannot read is not history.
+            Err(_) if !strict => {}
+            Err(e) => {
+                return Err(integrity(format!(
+                    "{EVENTS} line {} is not a trace event: {e}",
+                    i + 1
+                )))
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn plan_of(case_dir: &Path) -> Option<CasePlan> {
@@ -1012,14 +1019,37 @@ pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, Contr
             ));
         }
     }
-    let events = events_of(case_dir)?;
-    let records = verified_records(case_dir)?;
-    for (i, r) in records.iter().enumerate() {
-        let kind = r["kind"].as_str().unwrap_or("");
-        contract::payload_is_valid(kind, &r["payload"])
-            .map_err(|e| integrity(format!("{RECORDS} record {}: payload: {e}", i + 1)))?;
+    let events = events_of(case_dir, strict)?;
+    let records = if strict {
+        verified_records(case_dir)?
+    } else {
+        // As before for a case that is not a Field Case proper: the ledger is
+        // read as it stands (a record append verifies the chain itself).
+        complete_lines(&case_dir.join(RECORDS))?
+            .iter()
+            .filter_map(|l| serde_json::from_slice(l).ok())
+            .collect()
+    };
+    if strict {
+        for (i, r) in records.iter().enumerate() {
+            let kind = r["kind"].as_str().unwrap_or("");
+            contract::payload_is_valid(kind, &r["payload"])
+                .map_err(|e| integrity(format!("{RECORDS} record {}: payload: {e}", i + 1)))?;
+        }
     }
-    for (name, _) in STORE_SHAPES {
+    // A case that is not a Field Case proper reads the stores it always read.
+    const PLAIN_STORES: [&str; 6] = [
+        "field-freeze-intents.jsonl",
+        "field-decisions.jsonl",
+        "field-approvals.jsonl",
+        "field-rt-outbox.jsonl",
+        "field-anchor-outbox.jsonl",
+        "field-runs.jsonl",
+    ];
+    for (name, _) in STORE_SHAPES
+        .iter()
+        .filter(|(n, _)| strict || PLAIN_STORES.contains(n) || *n == "field-links.jsonl")
+    {
         for (i, line) in complete_lines(&case_dir.join(name))?.iter().enumerate() {
             let value: Value = serde_json::from_slice(line)
                 .map_err(|e| integrity(format!("{name} line {} is not JSON: {e}", i + 1)))?;

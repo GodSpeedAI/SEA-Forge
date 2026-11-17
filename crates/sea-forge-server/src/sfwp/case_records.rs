@@ -416,8 +416,12 @@ pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
         &case_dir(ctx.root, ctx.case_id),
         false,
     )
-    .map(drop)
-    .map_err(|r| format!("store integrity: {}", r.message))
+    .map_err(|r| format!("store integrity: {}", r.message))?;
+    // The hash chain and the digests of every stored record (README section 3
+    // STORE_INTEGRITY), also for a case that is not a Field Case proper.
+    sea_forge_case_runner::case_ops::case_guard::verified_records(&case_dir(ctx.root, ctx.case_id))
+        .map(drop)
+        .map_err(|r| format!("store integrity: {}", r.message))
 }
 
 /// The one primitive every file of a case store is appended through. THE
