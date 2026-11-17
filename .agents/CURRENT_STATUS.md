@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 335
+**Status revision:** 336
 
-**Stage:** FDE S2: round 7 recovery checkpoint
+**Stage:** FDE S2: terminal lifecycle checkpoint
 
-**Summary:** Preserve the recovered WP-21B case guard and WP-22 promotion saga changes after both crate suites passed.
+**Summary:** Preserve a Field Case terminal state across successive writes in one batch and across later commits.
 
 **Verified:**
 
+- On checkpoint 9cbc3e16, S2 proof recorded 15 scenario passes and AT-09 partial. All 12 frozen contract digests matched.
+- With the terminal lifecycle change, just crate-test sea-forge-case-runner passed 94 tests with 19 ignored, including the new positive termination test.
 - just crate-test sea-forge-case-runner passed 93 tests with 19 ignored, including 9 model and 12 promotion saga tests.
 - just crate-test sea-forge-server passed 687 tests with 2 ignored.
 - git diff --check passed for the recovered worktree changes.
@@ -29,8 +31,8 @@
 
 **Limits:**
 
-- This is a rollback checkpoint. The S2 proof, workspace tests, and independent review are pending for these changes.
-- The round 7 review also flagged terminal-state preservation (C2). Staged post-state verification and comparison of observed runtime writes with the committed batch still need coverage.
+- The S2 proof and server suite have not been rerun after this two-file lifecycle change. Full workspace tests and independent review remain pending.
+- AT-09 awaits the WP-31 human A3 settlement proof. Staged versioned publication and runtime write comparison remain open.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -57,7 +59,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish WP-21B terminal-state preservation and staged commit verification, then run the S2 proof and workspace tests before independent review.
+**Next:** Implement the owner-approved versioned Field Case storage and atomic selector across Linux, macOS, and Windows. Preserve plain cases and legacy Field Case data.
 
 **Evidence:**
 

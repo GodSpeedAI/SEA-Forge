@@ -291,6 +291,23 @@ fn closed_takes_the_action_that_ends_the_plan_once() {
 }
 
 #[test]
+fn closed_case_can_commit_termination_and_its_projection() {
+    let mut c = Case::new(vec![item("task-a", "human_task")]);
+    c.disposition("case", "close-failed");
+    let mut projection: Value =
+        serde_json::from_slice(&fs::read(c.path.join("case.json")).unwrap()).unwrap();
+    projection["state"] = json!("terminated");
+    let batch = Batch::of_events(&[(TraceKind::CaseTerminated, None)])
+        .with(Op::Case(projection.clone()))
+        .with(Op::Case(projection.clone()));
+
+    commit(&c.path, batch).unwrap();
+    let stored: Value =
+        serde_json::from_slice(&fs::read(c.path.join("case.json")).unwrap()).unwrap();
+    assert_eq!(stored, projection);
+}
+
+#[test]
 fn closed_does_not_repeat_an_item_already_done() {
     let mut c = Case::new(vec![
         item("task-a", "human_task"),

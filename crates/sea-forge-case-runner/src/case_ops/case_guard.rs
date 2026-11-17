@@ -1175,6 +1175,10 @@ fn admit_owned(st: &CaseState, kinds: &[&str]) -> Result<(), ContractError> {
 fn admit_case(st: &CaseState, value: &Value) -> Result<(), ContractError> {
     let new = value["state"].as_str().unwrap_or("");
     let over = ended(&st.events);
+    if st.case_state.as_deref().is_some_and(terminal_state) && st.case_state.as_deref() != Some(new)
+    {
+        return Err(closed());
+    }
     if terminal_state(new) {
         if !over {
             return Err(match st.life {
@@ -1254,8 +1258,10 @@ pub fn decide(st: &CaseState, batch: &Batch) -> Result<(), ContractError> {
     }
     for op in &batch.ops {
         if let Op::Case(v) = op {
-            if st.case_json.as_ref() != Some(v) {
+            if sim.case_json.as_ref() != Some(v) {
                 admit_case(&sim, v)?;
+                sim.case_state = v["state"].as_str().map(String::from);
+                sim.case_json = Some(v.clone());
             }
         }
     }
@@ -1458,6 +1464,7 @@ fn apply(
     let mut repaired = HashSet::new();
     let mut committed = Committed::default();
     let mut records = st.records.clone();
+    let mut case_json = st.case_json.clone();
     for op in batch.ops {
         match op {
             Op::Record(r) => {
@@ -1477,10 +1484,18 @@ fn apply(
                 repair_tail(case_dir, &file, &mut repaired)?;
                 append_value(&case_dir.join(&file), &line)?;
             }
-            Op::Case(v) if st.case_json.as_ref() == Some(&v) => {}
             Op::Case(v) => {
+                let previous = if field {
+                    case_json.as_ref()
+                } else {
+                    st.case_json.as_ref()
+                };
+                if previous == Some(&v) {
+                    continue;
+                }
                 let bytes = serde_json::to_vec_pretty(&v).map_err(|e| integrity(e.to_string()))?;
                 replace_bytes(case_dir, &case_dir.join("case.json"), &bytes)?;
+                case_json = Some(v);
             }
             Op::Plan(v) => {
                 let bytes = serde_json::to_vec_pretty(&v).map_err(|e| integrity(e.to_string()))?;
