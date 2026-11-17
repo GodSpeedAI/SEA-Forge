@@ -60,29 +60,56 @@ fn guarded(body: &str) -> bool {
         || body.contains("CaseLock::acquire(")
 }
 
-/// The raw sinks: the calls that put bytes into a case store file.
-const SINKS: [&str; 5] = [
-    "sync_append(",
-    ".append(true)",
-    "commit_event(",
-    "fs::rename(&tmp",
-    "case_event\"",
+/// The raw filesystem writes. Under a case directory they exist only inside
+/// `WriteToken` (the guard module) or in a function that holds a token.
+const RAW: [&str; 7] = [
+    "fs::write(",
+    "File::create(",
+    "OpenOptions::new()",
+    "fs::rename(",
+    ".set_len(",
+    "fs::remove_file(",
+    "fs::copy(",
 ];
 
-/// Functions that contain a sink and are NOT guarded themselves, with the
-/// reason each is sound. Every one is reachable only from a guarded writer.
-const SINK_ALLOWED: [(&str, &str); 3] = [
-    (
-        "repair_torn_tail",
-        "called only from append_line, after its admission, under its token",
-    ),
+/// A body that names a case directory or one of its files.
+fn case_dir_body(body: &str) -> bool {
+    [
+        "case_dir",
+        "run_dir",
+        "\"cases\"",
+        "case.json",
+        "case-events",
+        "plan.json",
+        "field_case.json",
+        "document_path",
+        "events_path",
+        "case_events",
+        "RECORDS",
+    ]
+    .iter()
+    .any(|n| body.contains(n))
+}
+
+/// Functions that make a raw write and are NOT guarded themselves, with why
+/// each is sound. Everything else that writes under a case directory holds a
+/// token (`admit_write`, `admit_file_write` or `CaseLock`).
+const RAW_ALLOWED: [(&str, &str); 4] = [
     (
         "sync_append",
-        "the byte-level primitive, called only by append_line and repair_torn_tail",
+        "the byte primitive; called only by append_line and repair_torn_tail, which hold the token",
     ),
     (
         "commit_event",
-        "the commit half of CaseRunner::append_event, which admits before calling it",
+        "appends through the token it is handed; the plain branch is for a path that is not a case directory",
+    ),
+    (
+        "append_case_event_with",
+        "appends through its token",
+    ),
+    (
+        "write_json",
+        "admits first (admit_file_write), then replaces through the token",
     ),
 ];
 
@@ -96,6 +123,8 @@ fn scanned_files() -> Vec<PathBuf> {
         rust_files(&root().join(dir), &mut files);
     }
     files.push(root().join("sea-forge-server/src/lib.rs"));
+    files.push(root().join("sea-forge-server/src/case_dispatch.rs"));
+    files.push(root().join("sea-forge-server/src/delegation.rs"));
     // The guard defines the primitives the others use.
     files.retain(|f| !f.ends_with("case_guard.rs"));
     // The correlation index is the server's own store, not a case's.
@@ -104,37 +133,30 @@ fn scanned_files() -> Vec<PathBuf> {
 }
 
 #[test]
-fn every_sink_of_a_case_file_is_guarded_or_listed() {
-    let mut sinks: Vec<String> = Vec::new();
+fn every_raw_write_under_a_case_dir_holds_a_token() {
+    let mut found = 0;
+    let mut unguarded: Vec<String> = Vec::new();
     for file in scanned_files() {
         let text = fs::read_to_string(&file).unwrap();
         for (name, body) in functions(&text) {
-            if !SINKS.iter().any(|s| body.contains(s)) {
+            if !RAW.iter().any(|r| body.contains(r)) || !case_dir_body(&body) {
                 continue;
             }
-            sinks.push(name.clone());
-            let allowed = SINK_ALLOWED.iter().any(|(n, _)| *n == name);
-            assert!(
-                guarded(&body) || allowed,
-                "{}: fn {name} writes a case store file and does not call case_guard::admit_write",
-                file.display()
-            );
+            found += 1;
+            let allowed = RAW_ALLOWED.iter().any(|(n, _)| *n == name);
+            if !(guarded(&body) || body.contains("token") || allowed) {
+                unguarded.push(format!("{}: fn {name}", file.display()));
+            }
         }
     }
-    sinks.sort();
-    // The sinks that exist today: a new one fails here until it is guarded.
-    assert_eq!(
-        sinks,
-        [
-            "append_case_event_with",
-            "append_event",
-            "append_line",
-            "commit_event",
-            "repair_torn_tail",
-            "sync_append",
-            "write_document"
-        ],
-        "the set of case-store sinks changed: guard the new writer, then list it"
+    assert!(
+        found >= 4,
+        "the scan found only {found} raw writers: it is blind"
+    );
+    assert!(
+        unguarded.is_empty(),
+        "raw writes under a case directory with no token (take one from case_guard::admit_write):\n{}",
+        unguarded.join("\n")
     );
 }
 

@@ -279,7 +279,7 @@ fn case_json(root: &Path) -> serde_json::Value {
         .unwrap()
 }
 
-/// 1. A state write that ends the case, before its guarded event (CLI resume,
+/// Case 1: A state write that ends the case, before its guarded event (CLI resume,
 /// server submission), is refused: the helper every writer uses admits first.
 #[test]
 fn review4_case_json_is_not_written_ahead_of_admission() {
@@ -321,7 +321,7 @@ fn review4_case_json_is_not_written_ahead_of_admission() {
     assert!(!case_dir.join("runs").exists());
 }
 
-/// 2. Corruption fails closed whatever the plan says.
+/// Case 2: Corruption fails closed whatever the plan says.
 #[test]
 fn review4_corrupt_stores_fail_closed() {
     for what in ["plan", "aux", "document", "document-schema"] {
@@ -362,7 +362,7 @@ fn review4_corrupt_stores_fail_closed() {
     }
 }
 
-/// 3. After a close disposition only an action that FINISHES the plan is
+/// Case 3: After a close disposition only an action that FINISHES the plan is
 /// admitted: progress that leaves the plan unfinished is refused.
 #[test]
 fn review4_closed_case_admits_only_the_finishing_action() {
@@ -407,7 +407,7 @@ fn review4_closed_case_admits_only_the_finishing_action() {
     .expect_err("terminating task-a does not finish the plan either");
 }
 
-/// 4. One transaction per verb: the completion that would reach a close with
+/// Case 4: One transaction per verb: the completion that would reach a close with
 /// no disposition writes nothing, and a retry writes nothing either.
 #[test]
 fn review4_completion_that_reaches_a_close_writes_nothing() {

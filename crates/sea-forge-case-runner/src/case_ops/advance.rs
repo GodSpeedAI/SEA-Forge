@@ -117,6 +117,24 @@ pub fn advance_case(
             )));
         }
     }
+    // A pass is a sequence of writes: on a closed Field Case it is admitted as
+    // a whole (the engine alone must end the plan) or refused before any write.
+    {
+        let state = super::case_guard::load_verified(&root.join("cases").join(case_id), false)
+            .map_err(super::field_guard::Refusal::into_error)?;
+        if state.field
+            && state.life == super::case_guard::Lifecycle::Closed
+            && !super::case_guard::engine_pass_finishes(&state)
+        {
+            return Err(super::field_guard::Refusal {
+                code: "CASE_CLOSED",
+                message:
+                    "the case has a close disposition; a pass that does not end the plan is refused"
+                        .into(),
+            }
+            .into_error());
+        }
+    }
     let (_, _, case_events) = paths(root, case_id);
     let stream = LedgerStream::open(root, format!("case-{case_id}"), actor)?;
     let mut episodes: Vec<EpisodeOutcome> = Vec::new();
@@ -214,6 +232,19 @@ pub fn advance_case(
                     {
                         continue;
                     }
+                    // One transaction: the milestone and what it leads to (a
+                    // close with no disposition) are admitted before it is written.
+                    let batch = super::case_guard::cascade_batch(
+                        &case_dir,
+                        &plan.items,
+                        &events,
+                        (TraceKind::MilestoneAchieved, Some(item.clone())),
+                    );
+                    let _batch_token = super::case_guard::admit_write(
+                        &case_dir,
+                        &super::case_guard::Proposed::Batch { events: &batch },
+                    )
+                    .map_err(super::field_guard::Refusal::into_error)?;
                     append_notify(
                         &case_events,
                         &stream,

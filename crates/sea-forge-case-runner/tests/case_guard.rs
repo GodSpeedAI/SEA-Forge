@@ -349,6 +349,9 @@ fn close_and_terminate_need_a_case_level_close_disposition() {
         err("CLOSE_DISPOSITION_REQUIRED")
     );
     c.disposition("case", "close-failed");
+    // Closed: only a write that ends a FINISHED plan is admitted (C2).
+    assert_eq!(c.admit(TraceKind::CaseTerminated, None), err("CASE_CLOSED"));
+    c.event("human_task_completed", "task-a");
     assert_eq!(c.admit(TraceKind::CaseTerminated, None), Ok(()));
 }
 

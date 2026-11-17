@@ -39,8 +39,7 @@ use sea_forge_core::{
 use sea_forge_ledger::LedgerStream;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::Path;
 
 fn paths(
@@ -63,13 +62,8 @@ fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ForgeErro
 }
 
 fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    // THE guard first, the lock held until the file is replaced.
-    let _token = case_guard::admit_file_write(path, &serde_json::to_value(value)?)
-        .map_err(field_guard::Refusal::into_error)?;
-    let temporary = path.with_extension("tmp");
-    fs::write(&temporary, serde_json::to_vec_pretty(value)?)
-        .map_err(|error| ForgeError::io("write case state", error))?;
-    fs::rename(temporary, path).map_err(|error| ForgeError::io("replace case state", error))
+    // THE guard, then the token's write (see `crate::write_json`).
+    crate::write_json(path, value)
 }
 
 pub fn append_case_event(
@@ -104,7 +98,7 @@ pub fn append_case_event_with(
     let (_, _, events_path) = paths(root, case_id);
     // THE guard, with the case lock held through the append (nothing is
     // written on a refusal).
-    let _token = case_guard::admit_write(
+    let token = case_guard::admit_write(
         &root.join("cases").join(case_id),
         &case_guard::Proposed::Event {
             kind: &kind,
@@ -132,13 +126,10 @@ pub fn append_case_event_with(
         &event,
         vec![],
     )?;
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(events_path)
-        .map_err(|error| ForgeError::io("open case events", error))?;
-    serde_json::to_writer(&mut file, &event)?;
-    file.write_all(b"\n")
+    let mut line = serde_json::to_vec(&event)?;
+    line.push(b'\n');
+    token
+        .append(&events_path, &line)
         .map_err(|error| ForgeError::io("append case event", error))?;
     notify(&event);
     Ok(())
@@ -469,36 +460,12 @@ pub fn complete_human_task_with(
     // before anything is written, so a close refused by R11 leaves no
     // completion behind and a retry cannot append a second one.
     let case_dir = root.join("cases").join(case_id);
-    let mut batch: Vec<(TraceKind, Option<String>)> =
-        vec![(TraceKind::HumanTaskCompleted, Some(item_id.to_string()))];
-    {
-        let mut sim = events.clone();
-        sim.push(projection_event(
-            actor,
-            item_id,
-            TraceKind::HumanTaskCompleted,
-        ));
-        while let [action] =
-            sea_forge_planner::case_engine::next_case_actions(&plan.items, &sim).as_slice()
-        {
-            match action {
-                sea_forge_planner::case_engine::CaseAction::AchieveMilestone(id) => {
-                    if field_guard::is_field_case(&case_dir)
-                        && field_guard::gate_item_check(&case_dir, id, "complete").is_err()
-                    {
-                        break;
-                    }
-                    batch.push((TraceKind::MilestoneAchieved, Some(id.clone())));
-                    sim.push(projection_event(actor, id, TraceKind::MilestoneAchieved));
-                }
-                sea_forge_planner::case_engine::CaseAction::CompleteCase => {
-                    batch.push((TraceKind::CaseClosed, None));
-                    break;
-                }
-                _ => break,
-            }
-        }
-    }
+    let batch = case_guard::cascade_batch(
+        &case_dir,
+        &plan.items,
+        &events,
+        (TraceKind::HumanTaskCompleted, Some(item_id.to_string())),
+    );
     let _batch_token =
         case_guard::admit_write(&case_dir, &case_guard::Proposed::Batch { events: &batch })
             .map_err(field_guard::Refusal::into_error)?;
@@ -585,20 +552,6 @@ pub fn complete_human_task_with(
             }
             _ => return Ok(5),
         }
-    }
-}
-
-fn projection_event(actor: &str, item: &str, kind: TraceKind) -> TraceEvent {
-    TraceEvent {
-        version: RECORD_VERSION.into(),
-        event_id: "projection".into(),
-        run_id: "case".into(),
-        plan_item_id: Some(item.into()),
-        kind,
-        actor_id: actor.into(),
-        timestamp: Utc::now().to_rfc3339(),
-        payload: json!({}),
-        cell_id: None,
     }
 }
 

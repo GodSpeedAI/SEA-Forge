@@ -32,7 +32,7 @@
 //! A case whose plan is not `fde.field_case@1` takes the lock and is otherwise
 //! not touched.
 
-use super::field_guard::{gate_item_check, is_field_case, Refusal};
+use super::field_guard::{gate_check_records, is_field_case, Refusal};
 use sea_forge_core::types::{CasePlan, TraceEvent, TraceKind};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -120,6 +120,53 @@ impl Drop for CaseLock {
 /// until the append is done.
 pub struct WriteToken {
     _lock: CaseLock,
+    case_dir: PathBuf,
+}
+
+impl WriteToken {
+    fn check(&self, path: &Path) -> std::io::Result<()> {
+        let inside = path.starts_with(&self.case_dir)
+            || std::fs::canonicalize(path.parent().unwrap_or(path))
+                .ok()
+                .zip(std::fs::canonicalize(&self.case_dir).ok())
+                .is_some_and(|(p, c)| p.starts_with(c));
+        if inside {
+            Ok(())
+        } else {
+            Err(std::io::Error::other(
+                "the write token is for another case directory",
+            ))
+        }
+    }
+
+    /// Replace `path` with `bytes` (temp file, then rename). The only way to
+    /// put a file into a case directory: it needs this token.
+    pub fn replace(&self, path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+        self.check(path)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let tmp = path.with_extension("tmp");
+        std::fs::write(&tmp, bytes)?;
+        std::fs::rename(&tmp, path)
+    }
+
+    /// Append `bytes` to `path`, durably.
+    pub fn append(&self, path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+        use std::io::Write;
+        self.check(path)?;
+        let mut file = OpenOptions::new().create(true).append(true).open(path)?;
+        file.write_all(bytes)?;
+        file.sync_data()
+    }
+
+    /// Cut `path` back to `len` bytes (the repair of a torn tail).
+    pub fn truncate(&self, path: &Path, len: u64) -> std::io::Result<()> {
+        self.check(path)?;
+        let file = OpenOptions::new().write(true).open(path)?;
+        file.set_len(len)?;
+        file.sync_all()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -309,9 +356,9 @@ fn plan_of(case_dir: &Path) -> Option<CasePlan> {
 
 /// Has the plan run out of things to do? Every item is finished, or the engine
 /// has only the case close or terminate left.
-fn plan_finished(case_dir: &Path, events: &[TraceEvent]) -> bool {
+fn plan_finished(plan: &Option<CasePlan>, events: &[TraceEvent]) -> bool {
     use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction, ItemStatus};
-    let Some(plan) = plan_of(case_dir) else {
+    let Some(plan) = plan else {
         return false;
     };
     let projection = replay_case(&plan.items, events);
@@ -540,9 +587,9 @@ fn hypothetical(kind: &TraceKind, item: Option<&str>) -> TraceEvent {
 
 /// Does the plan finish when `added` has happened, with the engine's automatic
 /// milestones that follow (an unassessed gate stops the cascade)?
-fn finishes_with(case_dir: &Path, events: &[TraceEvent], added: Vec<TraceEvent>) -> bool {
+fn finishes_with(st: &CaseState, events: &[TraceEvent], added: Vec<TraceEvent>) -> bool {
     use sea_forge_planner::case_engine::{next_case_actions, CaseAction};
-    let Some(plan) = plan_of(case_dir) else {
+    let Some(plan) = st.plan.clone() else {
         return false;
     };
     let mut sim = events.to_vec();
@@ -557,44 +604,39 @@ fn finishes_with(case_dir: &Path, events: &[TraceEvent], added: Vec<TraceEvent>)
         else {
             break;
         };
-        if gate_item_check(case_dir, &id, "complete").is_err() {
+        if gate_check_records(&st.records, &id, "complete").is_err() {
             break;
         }
         sim.push(hypothetical(&TraceKind::MilestoneAchieved, Some(&id)));
     }
-    plan_finished(case_dir, &sim)
+    plan_finished(&st.plan, &sim)
 }
 
 /// The lifecycle for a write that is part of the action that ends the plan.
 /// A closed case admits only an action whose RESULT finishes the plan,
 /// computed by simulating it (README §7 R13, D42); anything else, and any
 /// repeat once the case has ended, is `CASE_CLOSED`.
-fn in_flight(
-    life: Lifecycle,
-    case_dir: &Path,
-    events: &[TraceEvent],
-    hypo: Hypo,
-) -> Result<(), ContractError> {
-    match life {
+fn in_flight(st: &CaseState, events: &[TraceEvent], hypo: Hypo) -> Result<(), ContractError> {
+    match st.life {
         Lifecycle::Open => Ok(()),
         Lifecycle::Suspended => Err(suspended()),
         Lifecycle::Closed => {
-            if ended(events) || plan_finished(case_dir, events) {
+            if ended(events) || plan_finished(&st.plan, events) {
                 return Err(closed());
             }
             let ok = match hypo {
                 Hypo::Finishing(kind, item) => {
-                    finishes_with(case_dir, events, vec![hypothetical(kind, item)])
+                    finishes_with(st, events, vec![hypothetical(kind, item)])
                 }
                 Hypo::InFlight(Some(item)) => finishes_with(
-                    case_dir,
+                    st,
                     events,
                     vec![hypothetical(&TraceKind::ItemCompleted, Some(item))],
                 ),
-                Hypo::InFlight(None) => plan_of(case_dir).is_some_and(|plan| {
+                Hypo::InFlight(None) => st.plan.as_ref().is_some_and(|plan| {
                     plan.items.iter().any(|i| {
                         finishes_with(
-                            case_dir,
+                            st,
                             events,
                             vec![hypothetical(
                                 &TraceKind::ItemCompleted,
@@ -621,12 +663,12 @@ fn ended(events: &[TraceEvent]) -> bool {
 }
 
 fn admit_event(
-    case_dir: &Path,
+    st: &CaseState,
     kind: &TraceKind,
     item: Option<&str>,
-    life: Lifecycle,
     events: &[TraceEvent],
 ) -> Result<(), ContractError> {
+    let life = st.life;
     match event_class(kind) {
         EventClass::Creation => {
             if life == Lifecycle::Open && !events.iter().any(|e| &e.kind == kind) {
@@ -641,7 +683,7 @@ fn admit_event(
             } else {
                 Hypo::InFlight(item)
             };
-            in_flight(life, case_dir, events, hypo)?;
+            in_flight(st, events, hypo)?;
             // A closed case takes the action that ends the plan once: an item
             // that is already done is not done again.
             if life == Lifecycle::Closed && finishes {
@@ -663,11 +705,11 @@ fn admit_event(
                 }
             }
             if let (Some(how), Some(item)) = (gate, item) {
-                gate_item_check(case_dir, item, how)?;
+                gate_check_records(&st.records, item, how)?;
             }
             Ok(())
         }
-        EventClass::Telemetry => in_flight(life, case_dir, events, Hypo::InFlight(None)),
+        EventClass::Telemetry => in_flight(st, events, Hypo::InFlight(None)),
         EventClass::Structure => match life {
             Lifecycle::Open => Ok(()),
             Lifecycle::Suspended => Err(suspended()),
@@ -683,8 +725,9 @@ fn admit_event(
                 "CLOSE_DISPOSITION_REQUIRED",
                 "this action ends the case and no case-level close disposition exists",
             )),
+            // C2: once closed, only the write that ends a finished plan, once.
             Lifecycle::Closed => {
-                if ended(events) {
+                if ended(events) || !plan_finished(&st.plan, events) {
                     Err(closed())
                 } else {
                     Ok(())
@@ -706,12 +749,8 @@ fn admit_event(
     }
 }
 
-fn admit_record(
-    case_dir: &Path,
-    record: &Value,
-    records: &[Value],
-    life: Lifecycle,
-) -> Result<(), ContractError> {
+fn admit_record(st: &CaseState, record: &Value) -> Result<(), ContractError> {
+    let (records, life) = (&st.records[..], st.life);
     let kind = record["kind"].as_str().unwrap_or("");
     let Some(class) = record_class(kind) else {
         return Err(refuse(
@@ -730,7 +769,6 @@ fn admit_record(
             "the record does not extend the ledger as it is now (stale write)".into(),
         ));
     }
-    let _ = case_dir;
     match (life, class) {
         (Lifecycle::Open, _) => Ok(()),
         (Lifecycle::Closed, RecordClass::Settlement) => Ok(()),
@@ -799,52 +837,69 @@ fn verify_stores(case_dir: &Path, creating: bool) -> Result<Vec<Value>, Contract
     Ok(records)
 }
 
-fn proposed_event_check(
-    case_dir: &Path,
-    proposed: &Proposed,
-    life: Lifecycle,
-) -> Result<(), ContractError> {
+/// Everything a decision rests on, loaded all-or-nothing from every store of
+/// the case (see [`load_verified`]).
+pub struct CaseState {
+    /// A Field Case (by the plan or by any marker).
+    pub field: bool,
+    pub records: Vec<Value>,
+    pub life: Lifecycle,
+    pub events: Vec<TraceEvent>,
+    pub plan: Option<CasePlan>,
+    /// `case.json`'s `state`.
+    pub case_state: Option<String>,
+}
+
+/// The verified state of the case at `case_dir`: the plan, every auxiliary
+/// store, the document (structure and, when installed, the full schema) and
+/// the record chain, or `STORE_INTEGRITY`. Any marker makes it a Field Case;
+/// a plain case is returned unverified with `field: false`.
+pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, ContractError> {
+    let field = is_field_case(case_dir);
+    let case_state = std::fs::read(case_dir.join("case.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+        .and_then(|c| c["state"].as_str().map(String::from));
+    if !field {
+        return Ok(CaseState {
+            field,
+            records: Vec::new(),
+            life: Lifecycle::Open,
+            events: Vec::new(),
+            plan: None,
+            case_state,
+        });
+    }
+    let records = verify_stores(case_dir, creating)?;
+    Ok(CaseState {
+        field,
+        life: lifecycle(&records),
+        records,
+        events: events_of(case_dir),
+        plan: plan_of(case_dir),
+        case_state,
+    })
+}
+
+/// THE decision, pure: fold the whole proposed batch onto the verified state
+/// and check the invariants on the RESULT. Nothing is read or written here.
+/// C1 terminal only behind a close disposition; C2 a closed case admits only
+/// a batch that finishes the plan; C3 no gate item or milestone completes
+/// without a passing assessment; C6 a suspended case admits only the
+/// contract's permitted writes. Event, record and store-file kinds the guard
+/// has no rule for are refused.
+pub fn decide(st: &CaseState, proposed: &Proposed) -> Result<(), ContractError> {
     match proposed {
-        Proposed::Event { kind, item } => {
-            admit_event(case_dir, kind, *item, life, &events_of(case_dir))
-        }
+        Proposed::Event { kind, item } => admit_event(st, kind, *item, &st.events),
         Proposed::Batch { events: batch } => {
-            let mut sim = events_of(case_dir);
+            let mut sim = st.events.clone();
             for (kind, item) in batch.iter() {
-                admit_event(case_dir, kind, item.as_deref(), life, &sim)?;
+                admit_event(st, kind, item.as_deref(), &sim)?;
                 sim.push(hypothetical(kind, item.as_deref()));
             }
             Ok(())
         }
-        _ => Ok(()),
-    }
-}
-
-/// Admit one write on the case at `case_dir`: take the case lock, decide from
-/// the ledger, and return the token that holds the lock. Call it immediately
-/// before the append and keep the token until the append is done. `Err` is the
-/// contract's refusal; nothing is to be written.
-pub fn admit_write(case_dir: &Path, proposed: &Proposed) -> Result<WriteToken, ContractError> {
-    let lock = CaseLock::acquire(case_dir)?;
-    let token = WriteToken { _lock: lock };
-    if !is_field_case(case_dir) {
-        return Ok(token);
-    }
-    let creating = matches!(
-        proposed,
-        Proposed::Event {
-            kind: TraceKind::CaseCreated | TraceKind::PlanCreated,
-            ..
-        }
-    );
-    // (e) full store integrity and (d) the document, in either dialect.
-    let records = verify_stores(case_dir, creating)?;
-    let life = lifecycle(&records);
-    match proposed {
-        Proposed::Event { .. } | Proposed::Batch { .. } => {
-            proposed_event_check(case_dir, proposed, life)?
-        }
-        Proposed::Record { record } => admit_record(case_dir, record, &records, life)?,
+        Proposed::Record { record } => admit_record(st, record),
         Proposed::Store { file } => {
             let Some(class) = store_class(file) else {
                 return Err(refuse(
@@ -853,13 +908,34 @@ pub fn admit_write(case_dir: &Path, proposed: &Proposed) -> Result<WriteToken, C
                 ));
             };
             match class {
-                StoreClass::Bookkeeping => {}
-                StoreClass::Execution => {
-                    in_flight(life, case_dir, &events_of(case_dir), Hypo::InFlight(None))?
-                }
+                StoreClass::Bookkeeping => Ok(()),
+                StoreClass::Execution => in_flight(st, &st.events, Hypo::InFlight(None)),
             }
         }
-        Proposed::Projection { file, value } => admit_projection(case_dir, file, value, life)?,
+        Proposed::Projection { file, value } => admit_projection(st, file, value),
+    }
+}
+
+/// Admit one write on the case at `case_dir`: take the case lock, load the
+/// verified state, decide, and return the token that holds the lock. Call it
+/// immediately before the write and keep the token until the write is done.
+/// `Err` is the contract's refusal; nothing is to be written.
+pub fn admit_write(case_dir: &Path, proposed: &Proposed) -> Result<WriteToken, ContractError> {
+    let lock = CaseLock::acquire(case_dir)?;
+    let token = WriteToken {
+        _lock: lock,
+        case_dir: case_dir.to_path_buf(),
+    };
+    let creating = matches!(
+        proposed,
+        Proposed::Event {
+            kind: TraceKind::CaseCreated | TraceKind::PlanCreated,
+            ..
+        }
+    );
+    let state = load_verified(case_dir, creating)?;
+    if state.field {
+        decide(&state, proposed)?;
     }
     Ok(token)
 }
@@ -870,12 +946,8 @@ fn terminal_state(state: &str) -> bool {
 
 /// `case.json`, `plan.json` and the run files under `runs/`: projections and
 /// outputs of the ledger, written only while the ledger allows them.
-fn admit_projection(
-    case_dir: &Path,
-    file: &str,
-    value: &Value,
-    life: Lifecycle,
-) -> Result<(), ContractError> {
+fn admit_projection(st: &CaseState, file: &str, value: &Value) -> Result<(), ContractError> {
+    let life = st.life;
     match file {
         // A Field Case's plan is rewritten only by its plan mutation (an
         // event), never by a submission over it.
@@ -896,16 +968,13 @@ fn admit_projection(
                     )),
                 };
             }
-            let current: Value = std::fs::read(case_dir.join("case.json"))
-                .ok()
-                .and_then(|b| serde_json::from_slice(&b).ok())
-                .unwrap_or(Value::Null);
+            let current = st.case_state.as_deref().unwrap_or("");
             match life {
                 Lifecycle::Open => Ok(()),
                 Lifecycle::Suspended => Err(suspended()),
                 // A closed case is not reopened by a state write.
                 Lifecycle::Closed => {
-                    if terminal_state(current["state"].as_str().unwrap_or("")) {
+                    if terminal_state(current) {
                         Err(closed())
                     } else {
                         Ok(())
@@ -913,7 +982,7 @@ fn admit_projection(
                 }
             }
         }
-        _ => in_flight(life, case_dir, &events_of(case_dir), Hypo::InFlight(None)),
+        _ => in_flight(st, &st.events, Hypo::InFlight(None)),
     }
 }
 
@@ -957,4 +1026,82 @@ pub fn admit_file_write(path: &Path, value: &Value) -> Result<Option<WriteToken>
     } else {
         admit_write(&dir, &Proposed::Store { file: &name }).map(Some)
     }
+}
+
+/// The whole consequence of `first` for the engine: `first` itself, the
+/// automatic milestones that follow (an unassessed gate stops the cascade),
+/// and the case close when the plan is then finished. A verb admits this
+/// batch BEFORE it writes the first event, so a close refused by R11 leaves
+/// nothing behind and a retry cannot append a second completion.
+pub fn cascade_batch(
+    case_dir: &Path,
+    items: &[sea_forge_core::types::PlanItem],
+    events: &[TraceEvent],
+    first: (TraceKind, Option<String>),
+) -> Vec<(TraceKind, Option<String>)> {
+    use sea_forge_planner::case_engine::{next_case_actions, CaseAction};
+    let mut sim = events.to_vec();
+    sim.push(hypothetical(&first.0, first.1.as_deref()));
+    let mut batch = vec![first];
+    let field = is_field_case(case_dir);
+    while let [action] = next_case_actions(items, &sim).as_slice() {
+        match action {
+            CaseAction::AchieveMilestone(id) => {
+                if field && super::field_guard::gate_item_check(case_dir, id, "complete").is_err() {
+                    break;
+                }
+                batch.push((TraceKind::MilestoneAchieved, Some(id.clone())));
+                sim.push(hypothetical(&TraceKind::MilestoneAchieved, Some(id)));
+            }
+            CaseAction::CompleteCase => {
+                batch.push((TraceKind::CaseClosed, None));
+                break;
+            }
+            _ => break,
+        }
+    }
+    batch
+}
+
+/// Closed means only the finishing action (C2). An engine pass is a sequence
+/// of writes, so on a closed case it is admitted as a whole or not at all:
+/// does the pass, run by the engine alone (sandboxed and agent items assumed
+/// to complete, human work parks it), end the plan? The caller refuses with
+/// `CASE_CLOSED` before the first write when it does not.
+pub fn engine_pass_finishes(st: &CaseState) -> bool {
+    use sea_forge_core::types::ItemKind;
+    use sea_forge_planner::case_engine::{next_case_actions, CaseAction};
+    let Some(plan) = &st.plan else {
+        return false;
+    };
+    let mut sim = st.events.clone();
+    for _ in 0..(plan.items.len() * 4 + 4) {
+        let actions = next_case_actions(&plan.items, &sim);
+        let Some(action) = actions.first() else {
+            return false;
+        };
+        match action {
+            CaseAction::CompleteCase => return true,
+            CaseAction::TerminateCase { .. } | CaseAction::ParkHumanTask(_) => return false,
+            CaseAction::Enable(id) => sim.push(hypothetical(&TraceKind::ItemEnabled, Some(id))),
+            CaseAction::Activate(id) => {
+                let engine_run = plan.items.iter().any(|i| {
+                    &i.plan_item_id == id
+                        && matches!(i.item_kind, ItemKind::SandboxedTask | ItemKind::AgentTask)
+                });
+                if !engine_run {
+                    return false;
+                }
+                sim.push(hypothetical(&TraceKind::ItemActivated, Some(id)));
+                sim.push(hypothetical(&TraceKind::ItemCompleted, Some(id)));
+            }
+            CaseAction::AchieveMilestone(id) => {
+                if gate_check_records(&st.records, id, "complete").is_err() {
+                    return false;
+                }
+                sim.push(hypothetical(&TraceKind::MilestoneAchieved, Some(id)));
+            }
+        }
+    }
+    false
 }

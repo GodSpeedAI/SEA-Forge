@@ -80,6 +80,12 @@ fn records(case_dir: &Path) -> Vec<Value> {
 /// skipped either unless it passes. `how` is `"complete"` or `"skip"`.
 /// Refused with the contract's code; the caller writes nothing.
 pub fn gate_item_check(case_dir: &Path, item: &str, how: &str) -> Result<(), Refusal> {
+    gate_check_records(&records(case_dir), item, how)
+}
+
+/// [`gate_item_check`] on records already loaded and verified (the pure form
+/// `case_guard::decide` uses).
+pub fn gate_check_records(records: &[Value], item: &str, how: &str) -> Result<(), Refusal> {
     let Some(gate) = gate_of_item(item) else {
         return Ok(());
     };
@@ -87,7 +93,7 @@ pub fn gate_item_check(case_dir: &Path, item: &str, how: &str) -> Result<(), Ref
     if how == "skip" && !hard {
         return Ok(());
     }
-    let state = records(case_dir)
+    let state = records
         .iter()
         .rfind(|r| r["kind"] == "gate.assessed" && r["gate"] == gate)
         .and_then(|r| r["state"].as_str().map(String::from));

@@ -29,6 +29,7 @@
 //! in-process RealityTrace writer or delivery agent exists in this crate yet.
 //! The anchor is published only when an [`AnchorPublisher`] is supplied.
 
+use sea_forge_case_runner::case_ops::case_guard::WriteToken;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -431,7 +432,12 @@ pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
     Ok(())
 }
 
-fn sync_append(path: &Path, bytes: &[u8]) -> Result<(), String> {
+fn sync_append(path: &Path, bytes: &[u8], token: Option<&WriteToken>) -> Result<(), String> {
+    if let Some(token) = token {
+        return token
+            .append(path, bytes)
+            .map_err(|e| format!("write {}: {e}", path.display()));
+    }
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -447,7 +453,7 @@ fn sync_append(path: &Path, bytes: &[u8]) -> Result<(), String> {
 /// fragment is cut back to the last newline. The cut is noted durably in
 /// `field-repairs.jsonl` (beside the file, with the dropped text) BEFORE the
 /// truncation, so a repair never silently discards bytes.
-fn repair_torn_tail(path: &Path) -> Result<(), String> {
+fn repair_torn_tail(path: &Path, token: Option<&WriteToken>) -> Result<(), String> {
     let bytes = match fs::read(path) {
         Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -472,7 +478,12 @@ fn repair_torn_tail(path: &Path) -> Result<(), String> {
     if log_torn {
         line.insert(0, b'\n');
     }
-    sync_append(&log, &line)?;
+    sync_append(&log, &line, token)?;
+    if let Some(token) = token {
+        return token
+            .truncate(path, keep as u64)
+            .map_err(|e| format!("repair {}: {e}", path.display()));
+    }
     let file = OpenOptions::new()
         .write(true)
         .open(path)
@@ -489,10 +500,10 @@ fn repair_torn_tail(path: &Path) -> Result<(), String> {
 pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
     let _token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(path, value)
         .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
-    repair_torn_tail(path)?;
+    repair_torn_tail(path, _token.as_ref())?;
     let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
     line.push(b'\n');
-    sync_append(path, &line)
+    sync_append(path, &line, _token.as_ref())
 }
 
 pub(super) fn records(ctx: &AppendContext) -> Vec<Value> {

@@ -84,6 +84,7 @@ impl CaseRunner {
                 payload,
                 cell_id: None,
             },
+            _token.as_ref(),
         )
     }
 
@@ -97,22 +98,28 @@ impl CaseRunner {
             + 1
     }
 
+    /// Commit and append one event. The token is the admission of this very
+    /// write (it holds the case lock); without one the case is not a case
+    /// directory and the event log is appended plainly.
     pub fn commit_event(
         path: &Path,
         stream: &LedgerStream,
         events: &mut Vec<TraceEvent>,
         event: TraceEvent,
+        token: Option<&case_ops::case_guard::WriteToken>,
     ) -> Result<(), ForgeError> {
         stream.commit_typed("case_event", vec![], &event, vec![])?;
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-            .map_err(|error| ForgeError::io("open case events", error))?;
-        serde_json::to_writer(&mut file, &event)?;
-        file.write_all(b"\n")
-            .and_then(|_| file.flush())
-            .map_err(|error| ForgeError::io("append case event", error))?;
+        let mut line = serde_json::to_vec(&event)?;
+        line.push(b'\n');
+        match token {
+            Some(token) => token.append(path, &line),
+            None => OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .and_then(|mut file| file.write_all(&line).and_then(|()| file.flush())),
+        }
+        .map_err(|error| ForgeError::io("append case event", error))?;
         events.push(event);
         Ok(())
     }
@@ -570,11 +577,20 @@ pub fn run_stage_case(
 /// the case lock and THE guard's admission (`case_guard::admit_file_write`):
 /// nothing is written before the ledger allows it.
 pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    let _token = case_ops::case_guard::admit_file_write(path, &serde_json::to_value(value)?)
-        .map_err(case_ops::field_guard::Refusal::into_error)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| ForgeError::io("create JSON parent", error))?;
+    let bytes = serde_json::to_vec_pretty(value)?;
+    match case_ops::case_guard::admit_file_write(path, &serde_json::to_value(value)?)
+        .map_err(case_ops::field_guard::Refusal::into_error)?
+    {
+        // A file in a case directory goes through the token.
+        Some(token) => token
+            .replace(path, &bytes)
+            .map_err(|error| ForgeError::io("write case JSON", error)),
+        None => {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|error| ForgeError::io("create JSON parent", error))?;
+            }
+            fs::write(path, bytes).map_err(|error| ForgeError::io("write JSON", error))
+        }
     }
-    fs::write(path, serde_json::to_vec_pretty(value)?)
-        .map_err(|error| ForgeError::io("write JSON", error))
 }

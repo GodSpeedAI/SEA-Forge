@@ -157,20 +157,18 @@ pub fn ledger_revision(records: &[Value]) -> u64 {
 
 fn write_document(ctx: &AppendContext, document: &Value) -> Result<(), String> {
     let path = document_path(ctx);
-    // THE guard, lock held until the file is replaced.
-    let _token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(&path, document)
-        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
-    let tmp = path.with_extension("json.tmp");
     let mut bytes = serde_json::to_vec_pretty(document).map_err(|e| e.to_string())?;
     bytes.push(b'\n');
+    // THE guard, then the token's replace: the lock is held until the file is
+    // in place.
+    match sea_forge_case_runner::case_ops::case_guard::admit_file_write(&path, document)
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?
     {
-        use std::io::Write;
-        let mut file =
-            fs::File::create(&tmp).map_err(|e| format!("create {}: {e}", tmp.display()))?;
-        file.write_all(&bytes).map_err(|e| e.to_string())?;
-        file.sync_all().map_err(|e| e.to_string())?;
+        Some(token) => token
+            .replace(&path, &bytes)
+            .map_err(|e| format!("write {}: {e}", path.display())),
+        None => fs::write(&path, bytes).map_err(|e| format!("write {}: {e}", path.display())),
     }
-    fs::rename(&tmp, &path).map_err(|e| format!("rename {}: {e}", path.display()))
 }
 
 /// The case's current document, brought up to the ledger when a crash left the

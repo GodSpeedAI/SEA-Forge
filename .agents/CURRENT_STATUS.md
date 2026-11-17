@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 327
+**Status revision:** 328
 
-**Stage:** FDE S2: WP-21 part B review round 4 (part 1)
+**Stage:** FDE S2: WP-21 part B review round 4
 
-**Summary:** Review round 4, part 1: case.json, plan.json and run files are written only under admission; corrupt plan, aux stores or document fail closed; a closed case admits only the action that finishes the plan; the human completion is one admitted batch
+**Summary:** Review round 4: load_verified and a pure decide on the post-state, token-required file writers, whole-batch admission for the human completion and the engine's milestone cascade, closed-case engine pass refused unless it ends the plan, and a proptest model of every verb with corruption injection (C1 to C6)
 
 **Verified:**
 
