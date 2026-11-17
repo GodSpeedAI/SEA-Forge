@@ -318,14 +318,48 @@ fn cut_torn(at: &Path) -> Result<(), SagaError> {
     Ok(())
 }
 
+/// Create `dir` and every missing ancestor, then fsync each created directory
+/// and its parent, so a crash cannot lose the directory entry.
+fn mkdir_durable(dir: &Path) -> Result<(), SagaError> {
+    let mut missing = Vec::new();
+    let mut cur = Some(dir);
+    while let Some(d) = cur {
+        if d.as_os_str().is_empty() || d.exists() {
+            break;
+        }
+        missing.push(d.to_path_buf());
+        cur = d.parent();
+    }
+    fs::create_dir_all(dir).map_err(|e| io_err("create a directory", e))?;
+    for d in missing.iter() {
+        fsync_dir(d)?;
+        if let Some(p) = d.parent() {
+            fsync_dir(p)?;
+        }
+    }
+    Ok(())
+}
+
+fn fsync_dir(d: &Path) -> Result<(), SagaError> {
+    let d = if d.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        d
+    };
+    fs::File::open(d)
+        .and_then(|f| f.sync_all())
+        .map_err(|e| io_err("fsync a directory", e))
+}
+
 fn append_line(
     at: &Path,
     line: &Value,
     torn_at: Option<&Faults>,
     f: (Step, Phase),
 ) -> Result<(), SagaError> {
+    let created = !at.exists();
     if let Some(parent) = at.parent() {
-        fs::create_dir_all(parent).map_err(|e| io_err("create a directory", e))?;
+        mkdir_durable(parent)?;
     }
     let mut bytes = serde_json::to_vec(line).map_err(|e| io_err("encode", e))?;
     bytes.push(b'\n');
@@ -342,7 +376,13 @@ fn append_line(
         }
     }
     file.write_all(&bytes).map_err(|e| io_err("write", e))?;
-    file.sync_all().map_err(|e| io_err("sync", e))
+    file.sync_all().map_err(|e| io_err("sync", e))?;
+    if created {
+        if let Some(parent) = at.parent() {
+            fsync_dir(parent)?;
+        }
+    }
+    Ok(())
 }
 
 /// Land `bytes` at `at` atomically. An existing file must carry the same
@@ -360,15 +400,20 @@ fn put_whole(at: &Path, bytes: &[u8], mid: Option<(&Faults, Step)>) -> Result<()
         Err(e) => return Err(io_err("read", e)),
     }
     let tmp = at.with_extension("tmp");
-    fs::create_dir_all(at.parent().unwrap_or(Path::new("."))).map_err(|e| io_err("mkdir", e))?;
+    mkdir_durable(at.parent().unwrap_or(Path::new(".")))?;
     if let Some((faults, step)) = mid {
         if faults.at(step, Phase::MidEffect).is_err() {
             fs::write(&tmp, &bytes[..bytes.len() / 2]).map_err(|e| io_err("write", e))?;
             return faults.at(step, Phase::MidEffect);
         }
     }
-    fs::write(&tmp, bytes).map_err(|e| io_err("write", e))?;
-    fs::rename(&tmp, at).map_err(|e| io_err("rename", e))
+    {
+        let mut f = fs::File::create(&tmp).map_err(|e| io_err("write", e))?;
+        f.write_all(bytes).map_err(|e| io_err("write", e))?;
+        f.sync_all().map_err(|e| io_err("sync", e))?;
+    }
+    fs::rename(&tmp, at).map_err(|e| io_err("rename", e))?;
+    fsync_dir(at.parent().unwrap_or(Path::new(".")))
 }
 
 fn clean_tmp(root: &Path, id: &str) {
@@ -775,12 +820,19 @@ pub fn drive(
             return Ok(Outcome::Uncertain(why.clone()));
         }
         let logged = st.req.clone();
-        let Some(r) = logged.as_ref().or(req) else {
-            return Ok(Outcome::PreSaga); // recover: no Begin, nothing to undo
+        let recover_unlogged = st.req.is_none() && mode == Mode::Recover;
+        let Some(r) = logged.as_ref().or(req).filter(|_| !recover_unlogged) else {
+            // No Begin: judge from the effects first. Any effect without a
+            // log is Uncertain (fail closed); only an effect-free store is
+            // PreSaga.
+            return match classify(root, key)? {
+                Outcome::Uncertain(why) => {
+                    mark_uncertain(root, &id, &why)?;
+                    Ok(Outcome::Uncertain(why))
+                }
+                _ => Ok(Outcome::PreSaga),
+            };
         };
-        if st.req.is_none() && mode == Mode::Recover {
-            return Ok(Outcome::PreSaga);
-        }
         match classify(root, key)? {
             Outcome::Promoted => return Ok(Outcome::Promoted),
             Outcome::PreSaga if st.req.is_some() || mode == Mode::Recover => {
@@ -845,6 +897,8 @@ pub fn settle_evidence(
         &json!({"name": name, "world_ref": world_ref, "body": body, "digest": d}),
     )
     .map_err(|e| io_err("encode", e))?;
+    // Check-and-write under one lock: a delayed writer sees the settled file.
+    let _lock = lock_proposal(root, &format!("\0evidence\0{name}"))?;
     put_whole(&evidence_at(root, name), &bytes, None)
 }
 
@@ -886,6 +940,8 @@ pub fn repin(root: &Path, to: &str, reason: &str) -> Result<(), SagaError> {
 /// is kept: a promotion never moves an in-flight case. Written through the
 /// case guard's `commit`.
 pub fn pin_case(root: &Path, case_dir: &Path) -> Result<String, SagaError> {
+    // Check, read the world and write under one per-case lock.
+    let _lock = lock_proposal(root, &format!("\0case\0{}", case_dir.display()))?;
     let existing = case_pin(case_dir);
     if let Some(p) = existing {
         return Ok(p);

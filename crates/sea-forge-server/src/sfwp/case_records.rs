@@ -979,7 +979,18 @@ pub(super) fn store_refusal(error: String) -> Value {
 pub(super) fn next_record(
     ctx: &AppendContext,
     records: &[Value],
+    record: Value,
+) -> Result<Value, String> {
+    next_record_with(ctx, records, record, None)
+}
+
+/// `next_record` plus one more store line (the approval's consumption) that
+/// commits in the SAME batch: the verb's stores change together or not at all.
+pub(super) fn next_record_with(
+    ctx: &AppendContext,
+    records: &[Value],
     mut record: Value,
+    also: Option<(&str, Value)>,
 ) -> Result<Value, String> {
     let seq = records.len() as u64 + 1;
     let prev = records
@@ -993,7 +1004,22 @@ pub(super) fn next_record(
     record["recorded_at"] = json!(now_rfc3339());
     let hash = digest_of(&record).ok_or("record is not canonicalisable")?;
     record["hash"] = json!(hash);
-    append_line(&case_dir(ctx.root, ctx.case_id).join(RECORDS), &record)?;
+    let dir = case_dir(ctx.root, ctx.case_id);
+    match also {
+        None => append_line(&dir.join(RECORDS), &record)?,
+        Some((file, line)) => {
+            let items = [
+                (dir.join(file), line.clone()),
+                (dir.join(RECORDS), record.clone()),
+            ];
+            let done = sea_forge_case_runner::case_ops::case_guard::commit_files(&items)
+                .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
+            if !done {
+                append_line(&dir.join(file), &line)?;
+                append_line(&dir.join(RECORDS), &record)?;
+            }
+        }
+    }
     // The interaction event is owed from this moment. Enqueueing is best
     // effort: the record is committed either way, and `reconcile_events`
     // derives any event the ledger holds but the outbox lacks (WP-14: an

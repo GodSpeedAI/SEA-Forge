@@ -212,7 +212,7 @@ fn template_of(root: &Path, case_id: &str) -> Result<Option<String>, String> {
         // A missing plan of a case the shared classifier calls a Field Case is
         // a Field Case with a corrupt store: the Field admission refuses it.
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(
-            sea_forge_case_runner::case_ops::field_guard::is_field_case_authoritative(&dir)
+            sea_forge_case_runner::case_ops::field_guard::is_field_case(&dir)
                 .then(|| FIELD_CASE_TEMPLATE.to_string()),
         ),
         Err(e) => Err(format!("read {}: {e}", path.display())),

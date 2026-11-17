@@ -1272,7 +1272,11 @@ pub fn decide(st: &CaseState, batch: &Batch) -> Result<(), ContractError> {
 /// The creation of a Field Case: its plan is being written, or its creation
 /// event is (the files creation makes may not exist yet).
 fn creating_field(case_dir: &Path, batch: &Batch) -> bool {
-    let new_plan = !case_dir.join("plan.json").exists()
+    // Creation mode only for a virgin case: no index and no case file at all.
+    // A deleted plan on an existing case is damage, not creation.
+    let virgin = !index_path(case_dir).exists()
+        && std::fs::read_dir(case_dir).map_or(true, |mut d| d.next().is_none());
+    let new_plan = virgin
         && batch.ops.iter().any(|op| {
             matches!(op, Op::Plan(p) if p["template_ref"] == super::field_guard::FIELD_CASE_TEMPLATE)
         });
@@ -1605,6 +1609,28 @@ pub fn commit_file(path: &Path, value: &Value) -> Result<bool, ContractError> {
     };
     commit(&dir, Batch::new().with(op))?;
     Ok(true)
+}
+
+/// Several store lines of ONE case committed as one batch: all or nothing.
+/// `Ok(false)` when the files are not of a case directory (nothing written).
+pub fn commit_files(items: &[(std::path::PathBuf, Value)]) -> Result<bool, ContractError> {
+    let mut dir: Option<std::path::PathBuf> = None;
+    let mut batch = Batch::new();
+    for (path, value) in items {
+        let Some((d, rel)) = case_of(path) else {
+            return Ok(false);
+        };
+        if dir.as_ref().is_some_and(|x| *x != d) {
+            return Ok(false);
+        }
+        let name = rel.to_string_lossy().replace('\\', "/");
+        batch = batch.with(op_for_file(&name, value)?);
+        dir = Some(d);
+    }
+    match dir {
+        Some(d) => commit(&d, batch).map(|_| true),
+        None => Ok(false),
+    }
 }
 
 /// The whole consequence of `first` for the engine: `first` itself, the

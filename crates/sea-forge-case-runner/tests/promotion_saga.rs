@@ -337,3 +337,71 @@ proptest! {
         }
     }
 }
+
+// --- Round 7 classes 4 and 5: real threads, real crash points -------------------
+
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 24, failure_persistence: None, ..ProptestConfig::default() })]
+
+    /// W3 (class 4): N concurrent settlements of one evidence name. Exactly
+    /// one world wins and the bytes on disk are that winner's, never a later
+    /// writer's overwrite.
+    #[test]
+    fn w3_concurrent_settlement_keeps_the_first_writer(n in 2usize..6) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = store(dir.path(), "s");
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(n));
+        let handles: Vec<_> = (0..n).map(|i| {
+            let (root, b) = (root.clone(), barrier.clone());
+            std::thread::spawn(move || {
+                b.wait();
+                settle_evidence(&root, "e1", &format!("w{i}"), &json!({"i": i})).map(|_| i)
+            })
+        }).collect();
+        let won: Vec<usize> = handles.into_iter().filter_map(|h| h.join().unwrap().ok()).collect();
+        prop_assert_eq!(won.len(), 1, "exactly one settlement wins: {:?}", won);
+        let (w, _) = read_evidence(&root, "e1").unwrap();
+        prop_assert_eq!(w, format!("w{}", won[0]));
+    }
+
+    /// W4 (class 4): concurrent pin_case callers while promotion moves the
+    /// pin. Every caller sees the one pin that is on disk.
+    #[test]
+    fn w4_concurrent_pin_case_agree_with_the_disk(n in 2usize..6) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = store(dir.path(), "s");
+        let case = dir.path().join("cases").join("A");
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(n + 1));
+        let mover = { let (root, b) = (root.clone(), barrier.clone()); std::thread::spawn(move || {
+            b.wait();
+            for i in 0..4 { let _ = repin(&root, &format!("m{i}"), "move"); }
+        })};
+        let handles: Vec<_> = (0..n).map(|_| {
+            let (root, case, b) = (root.clone(), case.clone(), barrier.clone());
+            std::thread::spawn(move || { b.wait(); pin_case(&root, &case) })
+        }).collect();
+        let seen: Vec<String> = handles.into_iter().filter_map(|h| h.join().unwrap().ok()).collect();
+        mover.join().unwrap();
+        let on_disk = case_pin(&case).unwrap();
+        for s in &seen { prop_assert_eq!(s, &on_disk); }
+    }
+}
+
+/// W2 (class 5): power loss that drops the Begin log directory while the pin
+/// effect survives. The reconciler judges from the effects first: Uncertain,
+/// never PreSaga.
+#[test]
+fn w2_effects_without_a_log_are_uncertain_not_presaga() {
+    let keys = vec!["a1".to_string()];
+    let dir = tempfile::tempdir().unwrap();
+    let root = store(dir.path(), "s");
+    let req = promotion("p0", "w1", "w0", &keys);
+    let pin_point = FaultPoint::all()
+        .into_iter()
+        .find(|p| p.step == Step::Pin && p.phase == Phase::AfterRecord)
+        .unwrap();
+    let _ = run(&root, &req, Faults(Some(pin_point)));
+    fs::remove_dir_all(root.join("promotions")).unwrap();
+    let out = reconcile(&root, &req.key, Faults::default()).unwrap();
+    assert!(matches!(out, Outcome::Uncertain(_)), "got {out:?}");
+}

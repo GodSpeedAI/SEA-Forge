@@ -47,37 +47,22 @@ pub fn gate_of_item(item: &str) -> Option<&str> {
         .then_some(gate)
 }
 
-/// Is the case at `case_dir` a Field Case? Detection does not depend on a
-/// parseable plan: the plan's template says so, and so does any Field Case
-/// marker (the document, a case record). A case with a marker and a plan that
-/// does not parse is a Field Case whose store is corrupt, and fails closed in
-/// the guard's integrity check.
-pub fn is_field_case(case_dir: &Path) -> bool {
-    let plan = std::fs::read(case_dir.join("plan.json")).ok();
-    let by_plan = plan.as_ref().is_some_and(|bytes| {
-        match serde_json::from_slice::<Value>(bytes) {
-            Ok(plan) => plan["template_ref"] == FIELD_CASE_TEMPLATE,
-            // A plan that does not parse but names the template is a Field
-            // Case with a corrupt plan (it fails closed in the load).
-            Err(_) => String::from_utf8_lossy(bytes).contains(FIELD_CASE_TEMPLATE),
-        }
-    });
-    by_plan || has_marker(case_dir)
-}
-
 /// THE shared classifier (server, execution gate, CLI): the case index's
 /// `field: true` is authoritative once written; otherwise the plan's template
 /// names it, or, with no readable plan, any `field*` artifact does. A Field
 /// Case whose plan is missing is therefore a Field Case (and STORE_INTEGRITY
 /// in the guard), never a plain one.
-pub fn is_field_case_authoritative(case_dir: &Path) -> bool {
+pub fn is_field_case(case_dir: &Path) -> bool {
     if super::case_guard::index_says_field(case_dir) {
         return true;
     }
     match std::fs::read(case_dir.join("plan.json")) {
         Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
             Ok(plan) => plan["template_ref"] == FIELD_CASE_TEMPLATE,
-            Err(_) => String::from_utf8_lossy(&bytes).contains(FIELD_CASE_TEMPLATE),
+            Err(_) => {
+                String::from_utf8_lossy(&bytes).contains(FIELD_CASE_TEMPLATE)
+                    || has_marker(case_dir)
+            }
         },
         Err(_) => has_marker(case_dir),
     }

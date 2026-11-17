@@ -260,13 +260,9 @@ fn run_stage_episode(
         .first()
         .ok_or_else(|| ForgeError::Input("stage episode missing operation".into()))?
         .clone();
-    let workspace = root
-        .join("cases")
-        .join(case_id)
-        .join("runs")
-        .join(run_id)
-        .join("workspace");
-    let run_dir = workspace.parent().unwrap().to_path_buf();
+    // The case dir is pure: sandbox workspace and outputs live outside it.
+    let run_dir = root.join(".run-workspaces").join(case_id).join(run_id);
+    let workspace = run_dir.join("workspace");
     let artifacts = run_dir.join("artifacts");
     // AUTH-01: created below, inside the allow branch. A denied stage must
     // leave nothing behind on the filesystem.

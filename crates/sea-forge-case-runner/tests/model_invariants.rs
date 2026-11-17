@@ -951,18 +951,84 @@ fn r6_torn_tail_is_refused_not_repaired() {
 /// C6: one classifier; the index is authoritative, a missing plan stays Field.
 #[test]
 fn r6_classifier_survives_a_missing_plan_and_markers() {
-    use sea_forge_case_runner::case_ops::field_guard::is_field_case_authoritative;
+    use sea_forge_case_runner::case_ops::field_guard::is_field_case;
     let w = World::new();
-    assert!(is_field_case_authoritative(&w.case_dir));
+    assert!(is_field_case(&w.case_dir));
     fs::remove_file(w.case_dir.join("plan.json")).unwrap();
-    assert!(is_field_case_authoritative(&w.case_dir), "plan removed");
+    assert!(is_field_case(&w.case_dir), "plan removed");
     for e in fs::read_dir(&w.case_dir).unwrap().flatten() {
         if e.file_name().to_string_lossy().starts_with("field") {
             fs::remove_file(e.path()).unwrap();
         }
     }
     assert!(
-        is_field_case_authoritative(&w.case_dir),
+        is_field_case(&w.case_dir),
         "markers removed: the index decides"
     );
+}
+
+/// Round 7 class 2 (C4): deleting an existing Field Case's plan and submitting
+/// `Op::Plan` must not re-enter creation mode. Creation is for a virgin case
+/// only (no index, no case file); the oracle is the tree, byte for byte.
+#[test]
+fn r7_deleted_plan_is_damage_not_creation() {
+    let w = World::new();
+    let plan: Value =
+        serde_json::from_slice(&fs::read(w.case_dir.join("plan.json")).unwrap()).unwrap();
+    fs::remove_file(w.case_dir.join("plan.json")).unwrap();
+    let before = w.tree_hash();
+    let out = commit(&w.case_dir, Batch::new().with(Op::Plan(plan)));
+    assert!(out.is_err(), "a restored plan re-entered creation mode");
+    assert_eq!(w.tree_hash(), before, "bytes changed");
+}
+
+/// Round 7 class 2 (C6): one classifier. A plain plan plus a `field*` marker,
+/// with no index, is plain for every caller (guard included).
+#[test]
+fn r7_one_classifier_for_plain_plan_with_marker() {
+    use sea_forge_case_runner::case_ops::field_guard::is_field_case;
+    let dir = tempfile::tempdir().unwrap();
+    let case = dir.path().join("cases").join("plain");
+    fs::create_dir_all(&case).unwrap();
+    fs::write(case.join("plan.json"), br#"{"template_ref":"other@1"}"#).unwrap();
+    fs::write(case.join("field-notes.txt"), b"x").unwrap();
+    assert!(!is_field_case(&case));
+    // the guard admits a plain write exactly as before
+    let r = commit(
+        &case,
+        Batch::new().with(Op::RunFile {
+            rel: "a.txt".into(),
+            bytes: b"1".to_vec(),
+        }),
+    );
+    assert!(r.is_ok(), "{r:?}");
+}
+
+/// Round 7 class 3 (C7): the case directory is pure. After a stage execution
+/// nothing sandbox-made (stdout/stderr/artifacts, workspace) is under `cases/`.
+#[test]
+fn r7_case_dir_has_no_sandbox_output_paths() {
+    let src = include_str!("../src/lib.rs");
+    assert!(
+        !src.contains(".join(\"runs\")\n        .join(run_id)\n        .join(\"workspace\")"),
+        "run_stage still places the sandbox workspace under the case dir"
+    );
+    assert!(src.contains(".run-workspaces"));
+}
+
+/// Round 7 class 1 (C5): a verb spanning two stores is one batch. A record the
+/// guard refuses leaves the approval store byte-identical (no consumption).
+#[test]
+fn r7_two_store_verb_is_all_or_nothing() {
+    use sea_forge_case_runner::case_ops::case_guard::commit_files;
+    let w = World::new();
+    let before = w.tree_hash();
+    let approval = json!({"approval_ref": "ap-1", "consumed_by": "rec-0001", "record_digest": "d"});
+    let bad_record = json!({"kind": "not.a.kind", "seq": 99});
+    let out = commit_files(&[
+        (w.case_dir.join("field-approvals.jsonl"), approval),
+        (w.case_dir.join("field-records.jsonl"), bad_record),
+    ]);
+    assert!(out.is_err(), "a refused record was accepted");
+    assert_eq!(w.tree_hash(), before, "the approval consumption survived");
 }

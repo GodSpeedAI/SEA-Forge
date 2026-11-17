@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 334
+**Status revision:** 335
 
-**Stage:** FDE S2: WP-22 promotion saga
+**Stage:** FDE S2: round 7 recovery checkpoint
 
-**Summary:** WP-22 saga state machine, reconciler as the same machine, W1-W6 proptests (256 cases) and per-invariant mutation checks; s2 proof 15 PASS plus AT-09 PARTIAL
+**Summary:** Preserve the recovered WP-21B case guard and WP-22 promotion saga changes after both crate suites passed.
 
 **Verified:**
 
+- just crate-test sea-forge-case-runner passed 93 tests with 19 ignored, including 9 model and 12 promotion saga tests.
+- just crate-test sea-forge-server passed 687 tests with 2 ignored.
+- git diff --check passed for the recovered worktree changes.
 - cargo update -p domainforge-core --precise 0.22.0: only domainforge-core changed in Cargo.lock
 - cargo test -p sea-forge-domainforge: all suites ok (22, 4, 5, 11 passed; 0 failed)
 - cargo test -p sea-forge-authority --test cep_compiler_upgrade: 9 passed; opa_candidate 22 passed + 7 ignored passed with opa
@@ -26,6 +29,8 @@
 
 **Limits:**
 
+- This is a rollback checkpoint. The S2 proof, workspace tests, and independent review are pending for these changes.
+- The round 7 review also flagged terminal-state preservation (C2). Staged post-state verification and comparison of observed runtime writes with the committed batch still need coverage.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -52,7 +57,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** S2 gate merge by the lane
+**Next:** Finish WP-21B terminal-state preservation and staged commit verification, then run the S2 proof and workspace tests before independent review.
 
 **Evidence:**
 

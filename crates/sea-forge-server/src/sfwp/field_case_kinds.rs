@@ -25,9 +25,9 @@
 //! not checked (RD-21: enforcement is off until WP-31).
 
 use super::case_records::{
-    append_line, bound_approval_named, canonical_actor, case_dir, digest_of, integrity, io_refusal,
-    lifecycle, next_record, read_lines, records, refuse, store_refusal, vendored_schemas,
-    AppendContext, Lifecycle, APPROVALS,
+    bound_approval_named, canonical_actor, case_dir, digest_of, integrity, io_refusal, lifecycle,
+    next_record_with, read_lines, records, refuse, store_refusal, vendored_schemas, AppendContext,
+    Lifecycle, APPROVALS,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
@@ -113,7 +113,9 @@ pub fn is_field_case(root: &std::path::Path, case_id: &str) -> Result<bool, Stri
         serde_json::from_slice::<Value>(&bytes)
             .map_err(|e| format!("{} is not valid JSON: {e}", plan.display()))?;
     }
-    Ok(sea_forge_case_runner::case_ops::field_guard::is_field_case_authoritative(&dir))
+    Ok(sea_forge_case_runner::case_ops::field_guard::is_field_case(
+        &dir,
+    ))
 }
 
 /// Apply the changes of one `field_case.revised` payload to a document and set
@@ -294,22 +296,8 @@ fn require_approval(
     }
 }
 
-/// Single use: the approval is consumed by the record that uses it. Written
-/// before the record, so a crash wastes an approval and never lets one
-/// authorise two records.
-fn consume(
-    ctx: &AppendContext,
-    reference: &str,
-    record_id: &str,
-    record_digest: &str,
-) -> Result<(), String> {
-    append_line(
-        &case_dir(ctx.root, ctx.case_id).join(APPROVALS),
-        &json!({"approval_ref": reference, "consumed_by": record_id,
-                "record_digest": record_digest}),
-    )
-}
-
+/// Single use: the approval is consumed by the record that uses it, in the
+/// record's own commit batch, so no failure leaves a consumption behind.
 /// Whether `reference` was consumed for exactly the record `body_digest`.
 fn consumed_for(ctx: &AppendContext, reference: &str, body_digest: &str) -> bool {
     read_lines(&case_dir(ctx.root, ctx.case_id).join(APPROVALS))
@@ -409,14 +397,14 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     };
     // Write: the approval's consumption, the record, then the projection.
     let record_id = format!("rec-{:04}", all.len() + 1);
-    if let Some(reference) = &plan.approval {
+    // The consumption commits in the record's own batch (below).
+    let consumption = plan.approval.as_ref().and_then(|reference| {
         let resumed = resume.is_some_and(|d| consumed_for(ctx, reference, d));
-        if !resumed {
-            if let Err(e) = consume(ctx, reference, &record_id, &body_digest) {
-                return io_refusal(e);
-            }
-        }
-    }
+        (!resumed).then(|| {
+            json!({"approval_ref": reference, "consumed_by": record_id,
+                   "record_digest": body_digest})
+        })
+    });
     let mut resp = response(kind, &record_id, false);
     if let Some(n) = plan.revision {
         resp["revision"] = json!(n);
@@ -443,10 +431,11 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     if let Some(n) = plan.revision {
         record["revision"] = json!(n);
     }
-    let stored = match next_record(ctx, &all, record) {
-        Ok(s) => s,
-        Err(e) => return io_refusal(e),
-    };
+    let stored =
+        match next_record_with(ctx, &all, record, consumption.map(|line| (APPROVALS, line))) {
+            Ok(s) => s,
+            Err(e) => return io_refusal(e),
+        };
     // The record commit rewrote the document: it is derived from the ledger.
     // The stored record id is the one predicted above (same lock, same ledger).
     debug_assert_eq!(stored["record_id"], record_id);
