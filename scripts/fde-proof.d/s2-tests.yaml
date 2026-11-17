@@ -10,3 +10,12 @@ tests:
   - {id: NT-33, what: "a partial freeze (record, RealityTrace, anchor) does not run"}
   - {id: NT-34, what: "program execution needs a decision bound to the execution digest"}
   - {id: NT-48, what: "an anchor published by an executor credential is refused"}
+  - {id: AT-03, what: "Field Case open, revise, strategy, activities (document, revisions, template)"}
+  - {id: AT-09, what: "independent settlement by a verifier outside the executor's chain (human-settlement A3 clause is WP-31: PARTIAL)"}
+  - {id: AT-10, what: "dispositions map to lifecycle; episode-level never closes; blocked move names dimension and authorizer"}
+  - {id: AT-11, what: "gates: four states, reassess on evidence change, nothing advances automatically"}
+  - {id: AT-15, what: "continuation states next move, authorizer and settlement condition (programmatic part)"}
+  - {id: NT-10, what: "no self-settlement on the delegation chain (I-2)"}
+  - {id: NT-11, what: "hard gate not waivable without an approval"}
+  - {id: NT-22, what: "suspended case refuses freeze, settlement, delegation and non-lifting dispositions"}
+  - {id: NT-23, what: "no close without a close disposition"}

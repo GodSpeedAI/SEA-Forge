@@ -1241,6 +1241,20 @@ pub enum Request {
         #[serde(default)]
         request_id: Option<String>,
     },
+    /// `case.field.get` (WP-21 part B, `contracts/fde/continuation.v1.json`): the
+    /// Field Case document of a case and its revision. A read; the actor is
+    /// required.
+    CaseFieldGet {
+        case_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// `case.continuation`: the SOP 10.1 read model, computed on every read.
+    CaseContinuation {
+        case_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     CaseReopen {
         case_id: String,
         #[serde(default = "default_policy")]
@@ -3844,6 +3858,14 @@ pub async fn handle_request_as(
             );
             response
         }
+        Request::CaseFieldGet { case_id, .. } => {
+            let viewer = actor_id.unwrap_or("").to_string();
+            field_case_read(state, case_id, viewer, false).await
+        }
+        Request::CaseContinuation { case_id, .. } => {
+            let viewer = actor_id.unwrap_or("").to_string();
+            field_case_read(state, case_id, viewer, true).await
+        }
         Request::CaseReopen {
             case_id,
             policy,
@@ -4416,6 +4438,39 @@ impl sfwp::precondition::RecordResolver for PlanRecordResolver<'_> {
 /// first means "you asked for something that isn't here", the second means
 /// "something that should be readable isn't" — an integrity signal. Collapsing
 /// both into a generic error would hide the second inside the first.
+/// `case.field.get` and `case.continuation`: both read under the case lock, so
+/// the document and the ledger they describe are one state (a read also brings
+/// a document left behind by a crash up to its ledger).
+async fn field_case_read(
+    state: &Arc<ServerState>,
+    case_id: String,
+    viewer: String,
+    continuation: bool,
+) -> serde_json::Value {
+    let case_lock = state.acquire_case_lock(&case_id).await;
+    let root = state.root.clone();
+    let config = state.config();
+    let case = case_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        if continuation {
+            let pinned = cep_authority::pinned_world(&config, &root);
+            sfwp::field_continuation::continuation(&root, &case, &viewer, pinned.as_deref())
+        } else {
+            sfwp::field_continuation::field_get(&root, &case)
+        }
+    })
+    .await;
+    drop(case_lock);
+    state.prune_case_lock(&case_id).await;
+    match result {
+        Ok(Ok(value)) => value,
+        Ok(Err(error)) => forge_error_response(&error),
+        Err(error) => forge_error_response(&ForgeError::Internal(format!(
+            "case read task panic: {error}"
+        ))),
+    }
+}
+
 fn case_view_response<T: serde::Serialize>(
     result: Result<T, sfwp::case_views::CaseViewError>,
 ) -> serde_json::Value {

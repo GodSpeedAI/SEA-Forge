@@ -494,11 +494,7 @@ pub fn load_from_text(text: &str, path: &Path) -> Result<PlanTemplate, ForgeErro
             message: e.to_string(),
         })?;
     // Validate name pattern
-    if !template
-        .name
-        .chars()
-        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
-    {
+    if !valid_template_name(&template.name) {
         return Err(ForgeError::Config {
             class: "schema_error",
             path: path.into(),
@@ -509,6 +505,19 @@ pub fn load_from_text(text: &str, path: &Path) -> Result<PlanTemplate, ForgeErro
     Ok(template)
 }
 
+/// A template name: lowercase letters, digits, `_`, `-` and dots between
+/// segments (`fde.field_case`); never a leading, trailing or doubled dot, so a
+/// name cannot step out of `templates/`.
+fn valid_template_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && !name.ends_with('.')
+        && !name.contains("..")
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '-' | '.'))
+}
+
 /// Parse and validate a `name@version` template reference. Rejects empty
 /// names/versions and characters outside the template grammar, so a
 /// traversal-shaped ref (`../x@1`) can never escape the templates directory.
@@ -516,10 +525,7 @@ pub fn parse_template_ref(reference: &str) -> Result<(&str, &str), ForgeError> {
     let (name, version) = reference
         .split_once('@')
         .ok_or_else(|| ForgeError::Input("template ref must be name@version".into()))?;
-    if name.is_empty()
-        || !name
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
+    if !valid_template_name(name)
         || version.is_empty()
         || !version
             .chars()
@@ -588,6 +594,8 @@ pub fn store_builtin(
     let path = store_template(root, &template)?;
     // Also materialize the M10 ADLC/ODI built-ins.
     store_template(root, &adlc_case_template())?;
+    // The Field Case template (WP-21 part B).
+    store_template(root, &fde_field_case_template())?;
     store_template(
         root,
         &odi_adlc_case_template(seed_domain_model_ref, seed_model_sha256),
@@ -606,6 +614,7 @@ pub fn is_built_in_template_ref(template_ref: &str) -> bool {
     matches!(
         template_ref,
         "sea_model_demo@0.1.0"
+            | "fde.field_case@1"
             | "adlc_case@0.1.0"
             | "odi_adlc_case@0.1.0"
             | "sequential_agents@0.1.0"
@@ -772,6 +781,85 @@ fn milestone_sentry(src: &str) -> Sentry {
             event: "milestone_achieved".into(),
         },
         if_predicate: None,
+    }
+}
+
+/// The nine evidence gates of SOP 8.1, in order. The model declares the same
+/// nine (`.sea/interaction/fde-sop/fde-sop.sea`, `EvidenceGate`); a test in
+/// `sea-forge-server` fails if the two differ.
+pub const FDE_GATES: [&str; 9] = [
+    "choose_problem",
+    "discover_reality",
+    "allocate_authority",
+    "prove_value",
+    "prove_reliability",
+    "integrate_govern",
+    "earn_trust",
+    "measure",
+    "productize",
+];
+
+/// The built-in `fde.field_case@1` template (E section 3): a Field Case is a
+/// case with this template plus the case-scoped Field Case document. One
+/// `Milestone` per evidence gate, each enabled by hand (`manual_activation`:
+/// nothing advances automatically, a gate is a `gate.assessed` record), and one
+/// discretionary, repeatable activity slot (SOP 6: activities repeat through the
+/// `repetition` marker, may be omitted and run in any order). The gate and
+/// activity identities live in records, never in the plan item markers.
+pub fn fde_field_case_template() -> PlanTemplate {
+    let gate = |id: &str| TemplateItem {
+        plan_item_id: format!("gate_{id}"),
+        name: format!("Evidence gate: {}", id.replace('_', " ")),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::Milestone,
+        sandbox_class: None,
+        // Required: the plan cannot complete by itself while a gate is unresolved.
+        markers: ItemMarkers {
+            required: true,
+            manual_activation: true,
+            ..Default::default()
+        },
+        max_instances: 1,
+        environment: None,
+        entry_criteria: vec![],
+        entry_criteria_mode: Default::default(),
+        exit_criteria: vec![],
+        parent_stage: None,
+        depends_on: vec![],
+    };
+    let mut items: Vec<TemplateItem> = FDE_GATES.iter().map(|g| gate(g)).collect();
+    items.push(TemplateItem {
+        plan_item_id: "activity".into(),
+        name: "Activity (discretionary, repeatable)".into(),
+        operations: vec![],
+        settlement_criteria: SettlementCriteria::default(),
+        item_kind: ItemKind::HumanTask,
+        sandbox_class: None,
+        markers: ItemMarkers {
+            repetition: true,
+            manual_activation: true,
+            ..Default::default()
+        },
+        max_instances: 16,
+        environment: None,
+        entry_criteria: vec![],
+        entry_criteria_mode: Default::default(),
+        exit_criteria: vec![],
+        parent_stage: None,
+        depends_on: vec![],
+    });
+    PlanTemplate {
+        name: "fde.field_case".into(),
+        version: "1".into(),
+        description: "Field Case (GS-FDE-SOP-001 v0.4.1): one milestone per evidence gate and a repeatable activity slot".into(),
+        parameters: BTreeMap::new(),
+        origin_refs: vec![],
+        job_contract: None,
+        plan: TemplatePlan {
+            items,
+            repeated: vec![],
+        },
     }
 }
 

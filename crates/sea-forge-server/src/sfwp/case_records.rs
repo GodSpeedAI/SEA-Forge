@@ -532,7 +532,7 @@ fn record_decision(
 }
 
 /// Latest intent line per idempotency key.
-fn latest_intents(ctx: &AppendContext) -> Vec<Value> {
+pub(super) fn latest_intents(ctx: &AppendContext) -> Vec<Value> {
     let mut latest: Vec<Value> = Vec::new();
     for line in read_lines(&case_dir(ctx.root, ctx.case_id).join(INTENTS)) {
         match latest
@@ -1655,7 +1655,7 @@ pub fn freeze_status(ctx: &AppendContext, plan_item_id: &str, n: u64) -> FreezeS
 
 /// [`freeze_status`] with the anchor requirement chosen by the caller:
 /// settlement requires the anchor only when a publisher is configured.
-fn freeze_state(
+pub(super) fn freeze_state(
     ctx: &AppendContext,
     plan_item_id: &str,
     n: u64,
@@ -1951,7 +1951,11 @@ pub fn deliver_anchors(ctx: &AppendContext, publisher: &dyn AnchorPublisher) -> 
     sent
 }
 
-fn with_store_ctx<T>(root: &Path, case_id: &str, f: impl FnOnce(&AppendContext) -> T) -> T {
+pub(super) fn with_store_ctx<T>(
+    root: &Path,
+    case_id: &str,
+    f: impl FnOnce(&AppendContext) -> T,
+) -> T {
     let index = FileIndex(root.to_path_buf());
     f(&AppendContext {
         root,

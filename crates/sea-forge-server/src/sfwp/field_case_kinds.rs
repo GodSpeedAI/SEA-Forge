@@ -451,7 +451,9 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     }
     if kind == "disposition.recorded" {
         let mut after = all.clone();
-        after.push(plan.record_fields.clone());
+        let mut pending = plan.record_fields.clone();
+        pending["kind"] = json!(kind);
+        after.push(pending);
         resp["lifecycle"] = json!(match lifecycle(&after) {
             Lifecycle::Open => "open",
             Lifecycle::Suspended => "suspended",

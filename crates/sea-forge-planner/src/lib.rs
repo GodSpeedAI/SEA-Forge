@@ -12,9 +12,9 @@ pub use criteria::{
     SeedModelResolver,
 };
 pub use templates::{
-    adlc_case_template, instantiate, is_built_in_template_ref, load, load_pinned,
-    odi_adlc_case_template, sea_model_demo_template, store_builtin, PlanTemplate,
-    DEFAULT_TOPOLOGY_ENDPOINT_REF,
+    adlc_case_template, fde_field_case_template, instantiate, is_built_in_template_ref, load,
+    load_pinned, odi_adlc_case_template, sea_model_demo_template, store_builtin, PlanTemplate,
+    DEFAULT_TOPOLOGY_ENDPOINT_REF, FDE_GATES,
 };
 
 pub const DEMO_MODEL: &str = r#"{"domain": "demo", "entities": [{"name": "Sample"}]}"#;

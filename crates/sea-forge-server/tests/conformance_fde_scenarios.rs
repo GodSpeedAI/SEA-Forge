@@ -603,7 +603,8 @@ fn compare(expect: &Value, got: &Value) -> Result<(), String> {
         }
     }
     if expect["outcome"] == "recorded" {
-        for field in ["kind", "replayed", "episode_key"] {
+        // The v2 response members: the revision a record created and the lifecycle after it.
+        for field in ["kind", "replayed", "episode_key", "revision", "lifecycle"] {
             if expect.get(field) != got.get(field) {
                 return Err(format!(
                     "{field}: expected {:?}, got {:?}",
@@ -1546,4 +1547,844 @@ async fn run_event_carries_the_program_execution_decision_id() {
     s["freeze_world"] = json!("world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b");
     s["inspect_decision_event"] = json!(true);
     run_gate(&s).await.unwrap();
+}
+
+// ---------------------------------------------------------------------------
+// WP-21 part B proofs: the Field Case document, strategy, gates, dispositions,
+// the lifecycle and the continuation read model, through the real server.
+// (scripts/fde-proof.d/s2/<AT or NT>.sh selects these by name.)
+// ---------------------------------------------------------------------------
+
+const V2: &str = "fde.case-record-append@2";
+const OPERATOR: &str = "human:operator";
+
+/// The continuation contract's own validator (every contract file by `$id`).
+fn contract_validator(entry: &str) -> jsonschema::Validator {
+    struct Docs(std::collections::HashMap<String, Value>);
+    impl jsonschema::Retrieve for Docs {
+        fn retrieve(
+            &self,
+            uri: &jsonschema::Uri<String>,
+        ) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+            self.0
+                .get(uri.as_str())
+                .cloned()
+                .ok_or_else(|| format!("unknown schema {uri}").into())
+        }
+    }
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../contracts/fde");
+    let mut docs = std::collections::HashMap::new();
+    for e in fs::read_dir(dir).unwrap() {
+        let p = e.unwrap().path();
+        if p.extension().is_some_and(|x| x == "json") && p.to_string_lossy().contains(".v") {
+            let doc = read(&p);
+            docs.insert(doc["$id"].as_str().unwrap().to_string(), doc);
+        }
+    }
+    jsonschema::options()
+        .with_retriever(Docs(docs))
+        .build(&json!({ "$ref": entry }))
+        .unwrap()
+}
+
+fn assert_valid(entry: &str, value: &Value) {
+    let v = contract_validator(entry);
+    let errors: Vec<String> = v
+        .iter_errors(value)
+        .map(|e| format!("{}: {e}", e.instance_path()))
+        .collect();
+    assert!(errors.is_empty(), "{entry}: {errors:?}\n{value}");
+}
+
+/// A running Field Case cell, its store seeded by `setup` before the server starts.
+struct FieldCell {
+    _dir: tempfile::TempDir,
+    root: PathBuf,
+    cell: authenticated::Cell,
+    n: u32,
+    rid: std::sync::atomic::AtomicU32,
+}
+
+impl FieldCell {
+    async fn start(setup: impl FnOnce(&mut Seed)) -> Self {
+        Self::start_with(Some("fde.field_case@1"), true, setup).await
+    }
+
+    async fn start_with(
+        template: Option<&str>,
+        document: bool,
+        setup: impl FnOnce(&mut Seed),
+    ) -> Self {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().to_path_buf();
+        let mut seed = Seed::new(&root, template);
+        if document {
+            seed.field_case_document(1);
+        }
+        setup(&mut seed);
+        let actors = [
+            Actor {
+                id: OPERATOR.into(),
+                role: ActorRole::Operator,
+            },
+            Actor {
+                id: "agent:builder-01".into(),
+                role: ActorRole::Agent,
+            },
+            Actor {
+                id: "agent:verifier-01".into(),
+                role: ActorRole::Agent,
+            },
+        ];
+        let cell = authenticated::Cell::start(config(&root, &actors)).await;
+        Self {
+            _dir: dir,
+            root,
+            cell,
+            n: 0,
+            rid: std::sync::atomic::AtomicU32::new(0),
+        }
+    }
+
+    async fn call(&mut self, who: &str, mut wire: Value) -> Value {
+        wire["case_id"] = json!(CASE);
+        wire["actor"] = json!({"actor_id": who, "role": role_wire(&role_for(who))});
+        self.cell
+            .call_for(&authenticated::principal(who, role_for(who)), wire)
+            .await
+    }
+
+    /// Append a part-B record as `who` under a fresh idempotency key.
+    async fn append(&mut self, who: &str, kind: &str, payload: Value) -> Value {
+        self.n += 1;
+        let key = format!("operator/b-{}", self.n);
+        self.append_keyed(who, kind, payload, &key).await
+    }
+
+    async fn append_keyed(&mut self, who: &str, kind: &str, payload: Value, key: &str) -> Value {
+        self.call(
+            who,
+            json!({"verb": "case_record_append", "kind": kind, "payload": payload,
+                   "idempotency_key": key, "contract": V2,
+                   "request_id": format!("req-b-{}", self.rid.fetch_add(1, std::sync::atomic::Ordering::SeqCst))}),
+        )
+        .await
+    }
+
+    /// An allow-approval bound to exactly this record, written as the approval path would.
+    fn approve(&self, reference: &str, kind: &str, payload: &Value) {
+        let request = json!({"kind": kind, "payload": payload});
+        let (operation, params) = part_b_operation(&request).expect("an approvable record");
+        let digest = operation_digest(&operation, &params);
+        write_lines(
+            &case_dir(&self.root).join("field-approvals.jsonl"),
+            &[json!({
+                "approval_ref": reference, "operation": operation, "operation_digest": digest,
+                "case_id": CASE, "outcome": "allow", "used_by": null,
+                "issued_at": "2026-11-15T08:00:00Z", "expires_at": "2099-01-01T00:00:00Z",
+            })],
+        );
+    }
+
+    /// Approve and append a disposition; returns the response.
+    async fn dispose(
+        &mut self,
+        level: &str,
+        disposition: &str,
+        episode_ref: Option<&str>,
+    ) -> Value {
+        self.n += 1;
+        let reference = format!("approval:b-{}", self.n);
+        let mut payload = json!({"level": level, "disposition": disposition,
+            "rationale": "the case lead decided", "approval_ref": reference});
+        if let Some(r) = episode_ref {
+            payload["episode_ref"] = json!(r);
+        }
+        self.approve(&reference, "disposition.recorded", &payload);
+        self.append(OPERATOR, "disposition.recorded", payload).await
+    }
+
+    async fn field(&mut self) -> Value {
+        self.call(OPERATOR, json!({"verb": "case_field_get"})).await
+    }
+
+    async fn continuation(&mut self) -> Value {
+        let got = self
+            .call(OPERATOR, json!({"verb": "case_continuation"}))
+            .await;
+        if got["continuation"].is_object() {
+            assert_valid(
+                "urn:sea-forge:fde:continuation:v1#/$defs/Continuation",
+                &got["continuation"],
+            );
+        }
+        got
+    }
+
+    async fn next(&mut self) -> Value {
+        self.continuation().await["continuation"]["next"].clone()
+    }
+
+    fn read_store(&self, name: &str) -> Vec<Value> {
+        fs::read_to_string(case_dir(&self.root).join(name))
+            .unwrap_or_default()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect()
+    }
+}
+
+fn revision_payload(base: u64, path: &str, status: &str, value: &str) -> Value {
+    json!({"base_revision": base, "rationale": "intake interview",
+           "changes": [{"path": path, "field": {"status": status,
+               "source_ref": {"kind": "operator", "ref": "operator:note-1"}, "value": value}}]})
+}
+
+fn strategy_payload(revision: u64, supersedes: Option<&str>) -> Value {
+    json!({"revision": revision, "supersedes": supersedes,
+           "where_to_play": "one recurring report", "how_to_win": "record the due date at handoff",
+           "underserved_outcome": "on-time reports", "tested_assumption": "the due date is lost at handoff",
+           "abandonment_trigger": "no loss in 3 observed handoffs",
+           "revisit_reason": if revision == 1 { Value::Null } else { json!("the first test found a second loss point") }})
+}
+
+fn gate_payload(gate: &str, state: &str, evidence: &[&str]) -> Value {
+    json!({"gate": gate, "state": state, "evidence_refs": evidence,
+           "rationale": "assessed", "assessor": OPERATOR})
+}
+
+/// AT-03: a case from the template opens with the document (revision 1, every field
+/// `unknown`), is revised by `field_case.revised` (status and source on every field,
+/// stated and adopted problem kept apart) and records strategy revisions.
+#[tokio::test(flavor = "multi_thread")]
+async fn at_03_open_revise_and_strategy() {
+    let mut c = FieldCell::start(|_| {}).await;
+    let opened = c.field().await;
+    assert_eq!(opened["revision"], 1, "{opened}");
+    assert_valid("urn:sea-forge:fde:field-case:v1", &opened["document"]);
+    let unknown = |d: &Value| {
+        d["fields"]
+            .as_object()
+            .unwrap()
+            .values()
+            .flat_map(|g| g.as_object().unwrap().values())
+            .filter(|f| f["status"] == "unknown")
+            .count()
+    };
+    assert_eq!(unknown(&opened["document"]), 45);
+    // Stated and adopted problem are two fields, recorded apart.
+    let r = c
+        .append(
+            OPERATOR,
+            "field_case.revised",
+            json!({"base_revision": 1, "rationale": "intake interview", "changes": [
+                {"path": "purpose_and_outcome.stated_problem", "field": {"status": "declared",
+                    "source_ref": {"kind": "operator", "ref": "operator:note-1"}, "value": "Reports are late"}},
+                {"path": "purpose_and_outcome.adopted_problem", "field": {"status": "inferred",
+                    "source_ref": {"kind": "record", "ref": "case-ledger:rec-0007"}, "value": "Handoffs lose the due date"}}]}),
+        )
+        .await;
+    assert_eq!(
+        (r["outcome"].as_str(), r["revision"].as_u64()),
+        (Some("recorded"), Some(2)),
+        "{r}"
+    );
+    let got = c.field().await;
+    assert_eq!(got["revision"], 2);
+    let doc = &got["document"];
+    assert_valid("urn:sea-forge:fde:field-case:v1", doc);
+    let p = &doc["fields"]["purpose_and_outcome"];
+    assert_eq!(p["stated_problem"]["value"], "Reports are late");
+    assert_eq!(p["adopted_problem"]["value"], "Handoffs lose the due date");
+    assert_ne!(p["stated_problem"]["value"], p["adopted_problem"]["value"]);
+    assert_eq!(p["adopted_problem"]["status"], "inferred");
+    assert_eq!(p["adopted_problem"]["source_ref"]["kind"], "record");
+    assert_eq!(unknown(doc), 43);
+    // Every field carries a status and a source.
+    for g in doc["fields"].as_object().unwrap().values() {
+        for f in g.as_object().unwrap().values() {
+            assert!(
+                f["status"].is_string() && f["source_ref"]["kind"].is_string(),
+                "{f}"
+            );
+        }
+    }
+    // An observed field cannot rest on the operator's say-so (schema rule).
+    let bad = c
+        .append(
+            OPERATOR,
+            "field_case.revised",
+            revision_payload(2, "framing.current_framing", "observed", "x"),
+        )
+        .await;
+    assert_eq!(bad["code"], "SCHEMA_INVALID", "{bad}");
+    // Strategy: revision 1, then 2 superseding it, a stale one conflicts.
+    let s1 = c
+        .append(OPERATOR, "strategy.recorded", strategy_payload(1, None))
+        .await;
+    assert_eq!(
+        (s1["revision"].as_u64(), s1["outcome"].as_str()),
+        (Some(1), Some("recorded")),
+        "{s1}"
+    );
+    let id1 = s1["record_id"].as_str().unwrap().to_string();
+    let s2 = c
+        .append(
+            OPERATOR,
+            "strategy.recorded",
+            strategy_payload(2, Some(&id1)),
+        )
+        .await;
+    assert_eq!(s2["revision"], 2, "{s2}");
+    let stale = c
+        .append(
+            OPERATOR,
+            "strategy.recorded",
+            strategy_payload(2, Some(&id1)),
+        )
+        .await;
+    assert_eq!(stale["code"], "REVISION_CONFLICT", "{stale}");
+    let wrong = c
+        .append(
+            OPERATOR,
+            "strategy.recorded",
+            strategy_payload(3, Some("rec-9999")),
+        )
+        .await;
+    assert_eq!(wrong["code"], "REVISION_CONFLICT", "{wrong}");
+}
+
+/// The document is a projection of the ledger: a crash after the record and before
+/// the file leaves it behind, and the next read replays the missing record.
+#[tokio::test(flavor = "multi_thread")]
+async fn field_case_document_recovers_from_its_ledger() {
+    let mut c = FieldCell::start(|_| {}).await;
+    let r = c
+        .append(
+            OPERATOR,
+            "field_case.revised",
+            revision_payload(1, "framing.better_question", "proposed", "Why late?"),
+        )
+        .await;
+    assert_eq!(r["revision"], 2, "{r}");
+    // The crash: the file is back at the opened document.
+    let mut opened = sea_forge_core::field_case::opened_document(CASE);
+    opened["revision"] = json!(1);
+    fs::write(
+        case_dir(&c.root).join("field_case.json"),
+        serde_json::to_vec(&opened).unwrap(),
+    )
+    .unwrap();
+    let got = c.field().await;
+    assert_eq!(got["revision"], 2, "{got}");
+    assert_eq!(
+        got["document"]["fields"]["framing"]["better_question"]["value"],
+        "Why late?"
+    );
+    // A document ahead of its ledger, or no document, is STORE_INTEGRITY.
+    let mut ahead = got["document"].clone();
+    ahead["revision"] = json!(9);
+    fs::write(
+        case_dir(&c.root).join("field_case.json"),
+        serde_json::to_vec(&ahead).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(c.field().await["code"], "STORE_INTEGRITY");
+    fs::remove_file(case_dir(&c.root).join("field_case.json")).unwrap();
+    assert_eq!(c.field().await["code"], "STORE_INTEGRITY");
+    let r = c
+        .append(
+            OPERATOR,
+            "field_case.revised",
+            revision_payload(2, "framing.better_question", "proposed", "Why?"),
+        )
+        .await;
+    assert_eq!(r["code"], "STORE_INTEGRITY", "{r}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn read_verbs_answer_unknown_and_non_field_cases() {
+    let mut c = FieldCell::start_with(Some("e2e-sentry-chain@0.1.0"), false, |_| {}).await;
+    let got = c.field().await;
+    assert_eq!(
+        (got["code"].as_str(), got["outcome"].as_str()),
+        (Some("NOT_A_FIELD_CASE"), Some("refused")),
+        "{got}"
+    );
+    assert_valid("urn:sea-forge:fde:continuation:v1#/$defs/Error", &got);
+    assert_eq!(c.continuation().await["code"], "NOT_A_FIELD_CASE");
+    let mut w = json!({"verb": "case_field_get"});
+    w["actor"] = json!({"actor_id": OPERATOR, "role": "operator"});
+    w["case_id"] = json!("case-9999");
+    let r = c
+        .cell
+        .call_for(&authenticated::principal(OPERATOR, ActorRole::Operator), w)
+        .await;
+    assert!(r["error"].is_string(), "{r}");
+    // A v2 kind on a case that is not a Field Case is refused, not recorded.
+    let r = c
+        .append(OPERATOR, "strategy.recorded", strategy_payload(1, None))
+        .await;
+    assert_eq!(r["code"], "SCHEMA_INVALID", "{r}");
+}
+
+/// Replays return the original (never refused by a later rule); a changed body
+/// under a used key is IDEMPOTENCY_CONFLICT.
+#[tokio::test(flavor = "multi_thread")]
+async fn part_b_replay_and_conflict() {
+    let mut c = FieldCell::start(|_| {}).await;
+    let payload = revision_payload(1, "framing.better_question", "proposed", "Why late?");
+    let first = c
+        .append_keyed(
+            OPERATOR,
+            "field_case.revised",
+            payload.clone(),
+            "operator/r1",
+        )
+        .await;
+    assert_eq!(first["replayed"], false, "{first}");
+    let again = c
+        .append_keyed(
+            OPERATOR,
+            "field_case.revised",
+            payload.clone(),
+            "operator/r1",
+        )
+        .await;
+    assert_eq!(
+        (again["record_id"].clone(), again["replayed"].clone()),
+        (first["record_id"].clone(), json!(true)),
+        "{again}"
+    );
+    // Even after the case closed, a replay returns the original.
+    assert_eq!(
+        c.dispose("case", "close-failed", None).await["lifecycle"],
+        "closed"
+    );
+    let late = c
+        .append_keyed(OPERATOR, "field_case.revised", payload, "operator/r1")
+        .await;
+    assert_eq!(late["replayed"], true, "{late}");
+    let other = revision_payload(1, "framing.better_question", "proposed", "Another?");
+    let conflict = c
+        .append_keyed(OPERATOR, "field_case.revised", other, "operator/r1")
+        .await;
+    assert_eq!(conflict["code"], "IDEMPOTENCY_CONFLICT", "{conflict}");
+}
+
+/// AT-10: every case-level disposition yields its mapped lifecycle, an episode-level
+/// outcome never closes a case, the four axes are queryable apart, a run without a
+/// settlement shows its result absent, and a blocked move names its dimension and
+/// authorizer.
+#[tokio::test(flavor = "multi_thread")]
+async fn at_10_dispositions_axes_and_blocked_move() {
+    let key = json!({"case_id": CASE, "plan_item_id": "item-03", "n": 1});
+    let digest = "1f".repeat(32);
+    let world = "world:godspeed-fde-sop@sha256:78eddd4e7e4771caa1c37e8e5fa095c5baa899daccea8fac1f6e969f8f37287b";
+    let ep = format!("episode:{CASE}:item-03:1@sha256:{digest}");
+    let mut c = FieldCell::start(|s| {
+        s.freeze(&key, "evaluated", world, "case-keeper/rec-0001", &digest);
+    })
+    .await;
+    // Axis: the episode is frozen and has no result (a run without a settlement).
+    let cont = c.continuation().await["continuation"].clone();
+    assert_eq!(cont["case"]["lifecycle"], "open");
+    assert_eq!(cont["episodes"][0]["state"], "frozen");
+    assert_eq!(cont["episodes"][0]["result"], Value::Null);
+    assert_eq!(cont["episodes"][0]["settlement_ref"], Value::Null);
+    // The next move settles it, names who authorizes it and what would settle it.
+    let next = &cont["next"];
+    assert_eq!(next["kind"], "action");
+    assert!(
+        next["authorizer"].is_string() && next["would_settle"].as_str().unwrap().contains(&ep),
+        "{next}"
+    );
+    // Episode-level outcomes never close, suspend or lift.
+    for d in [
+        "close-satisfied",
+        "close-failed",
+        "suspend",
+        "continue",
+        "revise",
+        "escalate",
+    ] {
+        let r = c.dispose("episode", d, Some(&ep)).await;
+        assert_eq!(
+            (r["outcome"].as_str(), r["lifecycle"].as_str()),
+            (Some("recorded"), Some("open")),
+            "episode {d}: {r}"
+        );
+    }
+    // Case-level: each disposition's lifecycle.
+    for (d, want) in [
+        ("revise", "open"),
+        ("escalate", "open"),
+        ("suspend", "suspended"),
+    ] {
+        let r = c.dispose("case", d, None).await;
+        assert_eq!(r["lifecycle"], want, "case {d}: {r}");
+        if d == "suspend" {
+            let cont = c.continuation().await["continuation"].clone();
+            assert_eq!(cont["case"]["lifecycle"], "suspended");
+            // Blocked move: names the dimension and the authorizer.
+            assert_eq!(cont["next"]["kind"], "blocker");
+            assert_eq!(cont["next"]["dimension"], "authority");
+            assert!(cont["next"]["authorizer"].is_string(), "{}", cont["next"]);
+        }
+    }
+    assert_eq!(
+        c.dispose("case", "continue", None).await["lifecycle"],
+        "open"
+    );
+    assert_eq!(
+        c.dispose("case", "close-satisfied", None).await["lifecycle"],
+        "closed"
+    );
+    let cont = c.continuation().await["continuation"].clone();
+    assert_eq!(cont["case"]["lifecycle"], "closed");
+    // The axes are independent: closed (lifecycle) says nothing about the episode.
+    assert_eq!(cont["episodes"][0]["state"], "frozen");
+    // Closed is final, for every case-level disposition and kind.
+    for d in ["continue", "suspend", "close-failed"] {
+        assert_eq!(
+            c.dispose("case", d, None).await["code"],
+            "CASE_CLOSED",
+            "{d}"
+        );
+    }
+    // close-failed also closes (a second case).
+    let mut f = FieldCell::start(|_| {}).await;
+    assert_eq!(
+        f.dispose("case", "close-failed", None).await["lifecycle"],
+        "closed"
+    );
+}
+
+/// An approval is single use: the record that used it consumes it.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_approval_authorises_one_record() {
+    let mut c = FieldCell::start(|_| {}).await;
+    let payload = json!({"level": "case", "disposition": "revise", "rationale": "again",
+                         "approval_ref": "approval:once"});
+    c.approve("approval:once", "disposition.recorded", &payload);
+    let first = c
+        .append(OPERATOR, "disposition.recorded", payload.clone())
+        .await;
+    assert_eq!(first["outcome"], "recorded", "{first}");
+    let second = c.append(OPERATOR, "disposition.recorded", payload).await;
+    assert_eq!(second["code"], "AUTHORITY_DENIED", "{second}");
+    // The consumption is a line of the approval store naming the record.
+    let lines = c.read_store("field-approvals.jsonl");
+    assert!(
+        lines.iter().any(|l| l["consumed_by"] == first["record_id"]),
+        "{lines:?}"
+    );
+}
+
+/// AT-11: all four gate states are reachable, an evidence change marks the gate
+/// to reassess, and nothing advances automatically.
+#[tokio::test(flavor = "multi_thread")]
+async fn at_11_gates() {
+    let key = json!({"case_id": CASE, "plan_item_id": "item-03", "n": 1});
+    let digest = "1f".repeat(32);
+    let mut c = FieldCell::start(|_| {}).await;
+    let plan_before = fs::read(case_dir(&c.root).join("plan.json")).unwrap();
+    let doc_before = c.field().await;
+    // met, blocked, unassessed, not_applicable (a non-hard gate with an approval).
+    let met = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("choose_problem", "met", &["evidence:E1"]),
+        )
+        .await;
+    assert_eq!(met["outcome"], "recorded", "{met}");
+    for (gate, state) in [
+        ("discover_reality", "blocked"),
+        ("prove_value", "unassessed"),
+    ] {
+        let r = c
+            .append(OPERATOR, "gate.assessed", gate_payload(gate, state, &[]))
+            .await;
+        assert_eq!(r["outcome"], "recorded", "{gate} {r}");
+    }
+    let mut na = gate_payload("measure", "not_applicable", &[]);
+    na["approval_ref"] = json!("approval:na");
+    c.approve("approval:na", "gate.assessed", &na);
+    let r = c.append(OPERATOR, "gate.assessed", na).await;
+    assert_eq!(r["outcome"], "recorded", "{r}");
+    // A met gate needs evidence (schema rule).
+    let bad = c
+        .append(
+            OPERATOR,
+            "gate.assessed",
+            gate_payload("earn_trust", "met", &[]),
+        )
+        .await;
+    assert_eq!(bad["code"], "SCHEMA_INVALID", "{bad}");
+    let cont = c.continuation().await["continuation"].clone();
+    let state = |g: &str| {
+        cont["gate_evidence"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|x| x["gate"] == g)
+            .unwrap()["state"]
+            .clone()
+    };
+    assert_eq!(state("choose_problem"), "met");
+    assert_eq!(state("discover_reality"), "blocked");
+    assert_eq!(state("prove_value"), "unassessed");
+    assert_eq!(state("measure"), "not_applicable");
+    assert_eq!(state("productize"), "unassessed");
+    assert_eq!(
+        cont["gate_evidence"][0]["evidence_refs"],
+        json!(["evidence:E1"])
+    );
+    // Nothing advanced: no plan change, no document change, still open.
+    assert_eq!(
+        fs::read(case_dir(&c.root).join("plan.json")).unwrap(),
+        plan_before
+    );
+    assert_eq!(c.field().await["document"], doc_before["document"]);
+    assert_eq!(cont["case"]["lifecycle"], "open");
+    // Evidence change: a settlement after the assessment marks the gate to reassess
+    // (the gate itself is not touched).
+    let mut r = FieldCell::start(|s| {
+        s.freeze(&key, "evaluated", "world:seed@sha256:00", "case-keeper/rec-0001", &digest);
+        s.push(json!({"kind": "gate.assessed", "gate": "choose_problem", "state": "met",
+            "idempotency_key": "seed-gate", "body_digest": "seed-gate",
+            "payload": {"gate": "choose_problem", "state": "met", "evidence_refs": ["evidence:E1"]}}));
+        s.push(json!({"kind": "episode.settled", "idempotency_key": "seed-settled",
+            "body_digest": "seed-settled", "episode_key": key,
+            "payload": {"result": "S", "settlement_ref": "settlement:S1"}}));
+    })
+    .await;
+    let cont = r.continuation().await["continuation"].clone();
+    assert_eq!(
+        cont["gate_evidence"][0]["state"], "met",
+        "the gate is untouched"
+    );
+    assert_eq!(cont["episodes"][0]["state"], "settled");
+    assert_eq!(cont["episodes"][0]["result"], "S");
+    let next = r.next().await;
+    assert!(
+        next["description"]
+            .as_str()
+            .unwrap()
+            .contains("Reassess gate choose_problem")
+            || next["description"].as_str().unwrap().contains("problem")
+            || next["description"].as_str().unwrap().contains("strategy"),
+        "{next}"
+    );
+    // The reassess mark itself, as a pure function of the ledger.
+    let ledger = r.read_store("field-records.jsonl");
+    assert_eq!(
+        sea_forge_server::sfwp::field_continuation::gates_to_reassess(&ledger)
+            .into_iter()
+            .map(|(g, _)| g)
+            .collect::<Vec<_>>(),
+        vec!["choose_problem".to_string()]
+    );
+}
+
+/// AT-15 (the programmatic part): given only the continuation, the next move, who
+/// authorizes it and what would settle it are stated, and the answer validates
+/// against `continuation.v1`.
+#[tokio::test(flavor = "multi_thread")]
+async fn at_15_continuation_states_the_next_move() {
+    let mut c = FieldCell::start(|_| {}).await;
+    // A fresh case: all-unknown fields, unknown sections stay unknown (never empty "none").
+    let fresh = c.continuation().await["continuation"].clone();
+    for section in ["disputed_claims", "latest_observations", "work"] {
+        assert_eq!(fresh["availability"][section], "unknown", "{section}");
+    }
+    assert_eq!(fresh["availability"]["case"], "known");
+    assert_eq!(fresh["computed_from"]["ledger_head"], Value::Null);
+    assert_eq!(fresh["gate_evidence"].as_array().unwrap().len(), 9);
+    assert_eq!(
+        fresh["next"]["description"],
+        "Record the stated and adopted problem."
+    );
+    assert!(fresh["next"]["authorizer"].is_string());
+    for budget in fresh["work"]["remaining_budgets"].as_array().unwrap() {
+        assert_eq!(budget["remaining"], "unknown", "unmeasured is never 0");
+    }
+    // The next move moves with the records.
+    c.append(OPERATOR, "field_case.revised", json!({"base_revision": 1, "rationale": "intake", "changes": [
+        {"path": "purpose_and_outcome.stated_problem", "field": {"status": "declared", "source_ref": {"kind": "operator", "ref": "o:1"}, "value": "late"}},
+        {"path": "purpose_and_outcome.adopted_problem", "field": {"status": "inferred", "source_ref": {"kind": "record", "ref": "r:1"}, "value": "handoff"}},
+        {"path": "observer_and_authority.settlement_and_disposition_authority", "field": {"status": "declared", "source_ref": {"kind": "operator", "ref": "o:1"}, "value": "human:operator"}}]})).await;
+    assert_eq!(
+        c.next().await["description"],
+        "Record the strategy (SOP 4.4)."
+    );
+    c.append(OPERATOR, "strategy.recorded", strategy_payload(1, None))
+        .await;
+    let next = c.next().await;
+    assert_eq!(next["description"], "Assess gate choose_problem.");
+    assert_eq!(next["authorizer"], "human:operator");
+    assert!(next["would_settle"].is_string());
+    let cont = c.continuation().await["continuation"].clone();
+    assert_eq!(cont["computed_from"]["ledger_head"], "rec-0002");
+    // The authority section reads the approval store.
+    c.dispose("case", "suspend", None).await;
+    let cont = c.continuation().await["continuation"].clone();
+    assert_eq!(cont["authority"]["decisions"][0]["outcome"], "allow");
+    assert_eq!(cont["authority"]["decisions"][0]["assurance"], "session");
+    assert_eq!(cont["authority"]["a3_channel"], "unknown");
+    assert_eq!(cont["next"]["kind"], "blocker");
+    c.dispose("case", "close-failed", None).await;
+    let closed = c.next().await;
+    assert_eq!(closed["kind"], "action");
+    assert_eq!(closed["authorizer"], Value::Null);
+}
+
+/// The lifecycle function over the real ledger, not only synthetic records: the
+/// golden table is a unit test in `sfwp::field_case_kinds`; this follows one
+/// case through suspend, refused work, lift and close.
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_22_suspended_case_end_to_end() {
+    let mut c = FieldCell::start(|_| {}).await;
+    assert_eq!(
+        c.dispose("case", "suspend", None).await["lifecycle"],
+        "suspended"
+    );
+    // Refused: a case-level revise, an episode-level disposition.
+    assert_eq!(
+        c.dispose("case", "revise", None).await["code"],
+        "CASE_SUSPENDED"
+    );
+    let ep = format!("episode:{CASE}:item-03:1@sha256:{}", "1f".repeat(32));
+    assert_eq!(
+        c.dispose("episode", "continue", Some(&ep)).await["code"],
+        "CASE_SUSPENDED"
+    );
+    // Accepted: revision, strategy, gate (the work that does not move the world).
+    for (kind, payload) in [
+        (
+            "field_case.revised",
+            revision_payload(1, "framing.better_question", "proposed", "Why?"),
+        ),
+        ("strategy.recorded", strategy_payload(1, None)),
+        (
+            "gate.assessed",
+            gate_payload("choose_problem", "met", &["evidence:E1"]),
+        ),
+    ] {
+        assert_eq!(
+            c.append(OPERATOR, kind, payload).await["outcome"],
+            "recorded",
+            "{kind}"
+        );
+    }
+    assert_eq!(
+        c.dispose("case", "continue", None).await["lifecycle"],
+        "open"
+    );
+    assert_eq!(c.dispose("case", "revise", None).await["lifecycle"], "open");
+}
+
+/// I-2 on the SEA-Forge delegation chain: the assessor of `prove_reliability` may
+/// not be the proposer, nor stand behind the proposer's work in the delegation
+/// chain the request carries.
+#[test]
+fn i2_gate_assessment_on_the_delegation_chain() {
+    use sea_forge_server::sfwp::case_records::{append, AppendContext, AppendPolicy, FileIndex};
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    let seed = Seed::new(root, Some("fde.field_case@1"));
+    seed.field_case_document(1);
+    let index = FileIndex(root.to_path_buf());
+    let run = |principal: &str, chain: &[&str], proposer: Option<&str>, key: &str| {
+        let chain: Vec<String> = chain.iter().map(|s| s.to_string()).collect();
+        let ctx = AppendContext {
+            root,
+            case_id: CASE,
+            principal,
+            role: "agent",
+            chain: &chain,
+            rt: &index,
+            anchor: None,
+            policy: &AppendPolicy::NONE,
+        };
+        let mut payload = gate_payload("prove_reliability", "met", &["evidence:E1"]);
+        payload["assessor"] = json!(principal);
+        if let Some(p) = proposer {
+            payload["proposer"] = json!(p);
+        }
+        append(
+            &ctx,
+            &json!({"contract": V2, "kind": "gate.assessed", "payload": payload,
+                    "idempotency_key": key}),
+        )
+    };
+    // The assessor is the proposer: refused (I-2), with the invariant.
+    let own = run(
+        "agent:builder-01",
+        &["agent:builder-01"],
+        Some("agent:builder-01"),
+        "k1",
+    );
+    assert_eq!(
+        (own["code"].as_str(), own["invariant"].as_str()),
+        (Some("SELF_SETTLEMENT_REFUSED"), Some("I-2")),
+        "{own}"
+    );
+    // Spelling does not matter (canonical actor strings).
+    let spelled = run(
+        "agent:builder-01",
+        &["agent:builder-01"],
+        Some(" Agent:Builder-01 "),
+        "k2",
+    );
+    assert_eq!(spelled["code"], "SELF_SETTLEMENT_REFUSED", "{spelled}");
+    // The proposer stands behind the assessor in the delegation chain: refused.
+    let chained = run(
+        "agent:verifier-01",
+        &["agent:builder-01", "agent:verifier-01"],
+        Some("agent:builder-01"),
+        "k3",
+    );
+    assert_eq!(chained["code"], "SELF_SETTLEMENT_REFUSED", "{chained}");
+    // prove_reliability needs a proposer at all.
+    let none = run("agent:verifier-01", &["agent:verifier-01"], None, "k4");
+    assert_eq!(none["code"], "SCHEMA_INVALID", "{none}");
+    // An independent assessor outside the chain is accepted.
+    let ok = run(
+        "agent:verifier-01",
+        &["agent:verifier-01"],
+        Some("agent:builder-01"),
+        "k5",
+    );
+    assert_eq!(ok["outcome"], "recorded", "{ok}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn at_03_scenarios() {
+    nt_subset("AT-03", 2).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn at_09_scenarios() {
+    nt_subset("AT-09", 1).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn at_10_scenarios() {
+    nt_subset("AT-10", 4).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_10_scenarios() {
+    nt_subset("NT-10", 4).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_11_scenarios() {
+    nt_subset("NT-11", 2).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_22_scenarios() {
+    nt_subset("NT-22", 7).await;
+}
+#[tokio::test(flavor = "multi_thread")]
+async fn nt_23_scenarios() {
+    nt_subset("NT-23", 8).await;
 }

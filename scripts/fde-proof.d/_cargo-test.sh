@@ -7,13 +7,15 @@ set -eu
 pkg=$1; target=$2; min=$3; shift 3
 lock=${FDE_CARGO_LOCK:-$HOME/projects/_wt/cargo.lock}
 export RUSTC_WRAPPER= CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
+# <test-target> "lib" runs the package's unit tests (--lib), anything else is an integration test target.
+if [ "$target" = lib ]; then target_args="--lib"; else target_args="--test $target"; fi
 for filter in "$@"; do
   out=$(mktemp "${TMPDIR:-/tmp}/fde-cargo-test.XXXXXX")
   set +e
   if [ -e "$lock" ]; then
-    flock -o "$lock" cargo test -p "$pkg" --test "$target" "$filter" 2>&1 | tee "$out"
+    flock -o "$lock" cargo test -p "$pkg" $target_args "$filter" 2>&1 | tee "$out"
   else
-    cargo test -p "$pkg" --test "$target" "$filter" 2>&1 | tee "$out"
+    cargo test -p "$pkg" $target_args "$filter" 2>&1 | tee "$out"
   fi
   code=$?
   set -e

@@ -25,6 +25,7 @@ pub mod delegations;
 pub mod episode_gate;
 pub mod events;
 pub mod field_case_kinds;
+pub mod field_continuation;
 pub mod interaction_events;
 pub mod precondition;
 pub mod readiness;

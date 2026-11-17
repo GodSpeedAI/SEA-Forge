@@ -398,6 +398,14 @@ fn run_plan_inner(
     };
     write_json(&case_dir.join("case.json"), &case)?;
     write_json(&case_dir.join("plan.json"), &plan)?;
+    // A Field Case opens with its document: revision 1, every SOP 4.2 field
+    // `unknown` (WP-21 part B, E section 3).
+    if plan.template_ref.as_deref() == Some(sea_forge_core::field_case::TEMPLATE_REF) {
+        write_json(
+            &case_dir.join("field_case.json"),
+            &sea_forge_core::field_case::opened_document(&case_id),
+        )?;
+    }
     let mut events = vec![];
     append_event(
         &case_events,

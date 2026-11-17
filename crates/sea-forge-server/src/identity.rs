@@ -1051,6 +1051,10 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::CaseAddItem { .. }
         | Request::CaseReopen { .. }
         | Request::CaseRecordAppend { .. }
+        // Reads that name an actor: the continuation shows the approval id only to
+        // the case lead and the approver of record (README section 9).
+        | Request::CaseFieldGet { .. }
+        | Request::CaseContinuation { .. }
         | Request::CaseTerminate { .. }
         | Request::CaseAdvance { .. }
         | Request::ItemExecute { .. }
