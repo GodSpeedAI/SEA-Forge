@@ -398,6 +398,10 @@ fn only_creation_runs_before_the_document() {
         c.admit(TraceKind::ItemEnabled, Some("x")),
         err("STORE_INTEGRITY")
     );
+    // Creation happens once: a second `case_created` is refused.
+    c.event("case_created", "");
+    assert_eq!(c.admit(TraceKind::CaseCreated, None), err("CASE_CLOSED"));
+    assert_eq!(c.admit(TraceKind::PlanCreated, None), Ok(()));
 }
 
 // (e) full store integrity ---------------------------------------------------
@@ -426,6 +430,18 @@ fn a_corrupt_record_refuses_every_write() {
     mutate(&|r| r[1]["prev_hash"] = json!("cd".repeat(32)));
     mutate(&|r| r[1]["seq"] = json!(7));
     mutate(&|r| r[0]["state"] = json!("met")); // a field changed under its hash
+                                               // A record re-sealed under its own hash with a wrong seq, or a wrong link:
+                                               // only the chain checks catch these, not the digest.
+    mutate(&|r| {
+        r[1]["seq"] = json!(7);
+        r[1].as_object_mut().unwrap().remove("hash");
+        r[1]["hash"] = json!(digest_of(&r[1]).unwrap());
+    });
+    mutate(&|r| {
+        r[1]["prev_hash"] = json!("cd".repeat(32));
+        r[1].as_object_mut().unwrap().remove("hash");
+        r[1]["hash"] = json!(digest_of(&r[1]).unwrap());
+    });
     mutate(&|r| {
         // body_digest no longer the digest of kind and payload, hash re-sealed.
         r[0]["body_digest"] = json!("ef".repeat(32));

@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 325
+**Status revision:** 326
 
-**Stage:** FDE S2: WP-21 part B review round 3 (one guarded choke point)
+**Stage:** FDE S2: WP-21 part B review round 3 mutation checks
 
-**Summary:** Blind review round 3: every Field Case write passes case_guard::admit_write under one cross-process case lock; the guard decides from the verified ledger (lifecycle, hard gate, R11, document, hash chain and digests), deny by default
+**Summary:** Blind review round 3 mutation checks: 41 of 42 mutants of the guard rules, locks and admissions killed (the survivor is an equivalent pre-check), three tests added for the survivors
 
 **Verified:**
 
