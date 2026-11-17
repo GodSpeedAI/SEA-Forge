@@ -2,6 +2,7 @@
 
 pub mod case_ops;
 pub mod cell_episode;
+pub mod promotion;
 
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};

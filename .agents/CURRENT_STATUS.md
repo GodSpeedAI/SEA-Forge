@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 331
+**Status revision:** 332
 
-**Stage:** FDE S2: WP-21 part B round 5 (admit-and-apply commit)
+**Stage:** FDE S2: WP-22 promotion saga (in progress)
 
-**Summary:** Round 5: commit(case_dir, Batch) admits and applies under a lock outside the case, strict load for Field Cases, registry-driven lifecycle, case index; plain cases unchanged; case-runner, server and proof s2 green
+**Summary:** WP-22 saga state machine and W1-W6 proptests landed in case-runner; mutation checks and proof run pending
 
 **Verified:**
 
