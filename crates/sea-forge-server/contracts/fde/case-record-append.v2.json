@@ -1,0 +1,815 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:case-record-append:v2",
+  "title": "case.record.append v2",
+  "description": "Supersedes case-record-append.v1 for new writers; v1 stays valid and unchanged. The contract marker selects the RESPONSE DIALECT only: every rule applies to every writer. A request that carries contract=fde.case-record-append@2 is answered with this Error enum; a request without it is a v1 writer, refused under the same rules and answered with a v1 code (README section 6: each v2-only code has a v1 fallback refusal, or is unreachable because only v2 kinds can raise it). Six kinds: the two v1 kinds reference their v1 payload schemas unchanged; four are new. The case is addressed by the SFWP route. Shape only: refusals that depend on ledger state are in the README and the scenario fixtures (implemented by WP-21).",
+  "$defs": {
+    "episode_ref": {
+      "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/episode_ref"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "maxLength": 4096
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "Request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "payload",
+        "idempotency_key"
+      ],
+      "properties": {
+        "contract": {
+          "const": "fde.case-record-append@2",
+          "description": "Selects the response dialect only; never relaxes a rule. Required for the four kinds added in v2."
+        },
+        "kind": {
+          "enum": [
+            "episode.frozen",
+            "episode.settled",
+            "field_case.revised",
+            "strategy.recorded",
+            "gate.assessed",
+            "disposition.recorded"
+          ]
+        },
+        "payload": {
+          "type": "object"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^[^\\s]{1,256}$",
+          "maxLength": 4096
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "episode.frozen"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/EpisodeFrozenPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "episode.settled"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/EpisodeSettledPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "field_case.revised"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/FieldCaseRevisedPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "strategy.recorded"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/StrategyRecordedPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "gate.assessed"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/GateAssessedPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "disposition.recorded"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/DispositionRecordedPayload"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "field_case.revised",
+                  "strategy.recorded",
+                  "gate.assessed",
+                  "disposition.recorded"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "contract"
+            ]
+          }
+        }
+      ]
+    },
+    "FieldCaseRevisedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_revision",
+        "changes",
+        "rationale"
+      ],
+      "properties": {
+        "base_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The document revision this change was written against; the record creates revision base_revision+1. A different current revision is REVISION_CONFLICT."
+        },
+        "changes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/FieldChange"
+          }
+        },
+        "rationale": {
+          "$ref": "#/$defs/text"
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/text",
+          "description": "Required when a change path is one of the boundary paths that are read-only after the first freeze (case-record-kinds.v1 reserved_paths_after_freeze): revising them is the reserved operation revise_frozen_boundary_field. Without it, RESERVED_DECISION_REFUSED."
+        }
+      }
+    },
+    "FieldChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "field"
+      ],
+      "properties": {
+        "path": {
+          "enum": [
+            "purpose_and_outcome.owner_sponsor",
+            "purpose_and_outcome.signal",
+            "purpose_and_outcome.stated_problem",
+            "purpose_and_outcome.adopted_problem",
+            "purpose_and_outcome.problem_class",
+            "purpose_and_outcome.jtbd_outcome",
+            "purpose_and_outcome.business_significance",
+            "purpose_and_outcome.success_direction",
+            "purpose_and_outcome.non_goals",
+            "purpose_and_outcome.constraints",
+            "purpose_and_outcome.decision_this_work_can_unlock",
+            "framing.current_framing",
+            "framing.what_it_reveals",
+            "framing.what_it_hides",
+            "framing.better_question",
+            "framing.better_problem_if_successful",
+            "world_and_boundary.world_ref_and_version",
+            "world_and_boundary.checkpoint",
+            "world_and_boundary.people_and_systems",
+            "world_and_boundary.observed_conditions",
+            "world_and_boundary.statements_needing_confirmation",
+            "world_and_boundary.known_unknowns",
+            "world_and_boundary.interfaces",
+            "world_and_boundary.time_horizon",
+            "observer_and_authority.case_lead",
+            "observer_and_authority.criterion_owner",
+            "observer_and_authority.delegated_actors",
+            "observer_and_authority.independent_verifier",
+            "observer_and_authority.settlement_and_disposition_authority",
+            "observer_and_authority.risk_and_external_effect_limits",
+            "observer_and_authority.authority_surface",
+            "current_horizon.evidence_and_decisions",
+            "current_horizon.contested_distinctions",
+            "current_horizon.hypotheses",
+            "current_horizon.possible_next_moves",
+            "current_horizon.blocked_moves_with_reason",
+            "current_horizon.available_and_missing_affordances",
+            "current_horizon.budgets",
+            "current_horizon.ignored_payment",
+            "current_horizon.outstanding_obligations",
+            "continuity.previous_episode",
+            "continuity.worktree_session_artifact_links",
+            "continuity.open_questions",
+            "continuity.current_decision",
+            "continuity.next_affordable_move"
+          ],
+          "description": "<group>.<field>, the keys of field-case.v1 fields."
+        },
+        "field": {
+          "$ref": "urn:sea-forge:fde:field-case:v1#/$defs/FieldValue"
+        }
+      }
+    },
+    "StrategyRecordedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "supersedes",
+        "where_to_play",
+        "how_to_win",
+        "underserved_outcome",
+        "tested_assumption",
+        "abandonment_trigger",
+        "revisit_reason"
+      ],
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1 for the first strategy; n+1 for a revision of strategy n."
+        },
+        "supersedes": {
+          "description": "record_id of strategy revision-1; null for revision 1.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "where_to_play": {
+          "$ref": "#/$defs/text"
+        },
+        "how_to_win": {
+          "$ref": "#/$defs/text"
+        },
+        "underserved_outcome": {
+          "$ref": "#/$defs/text"
+        },
+        "tested_assumption": {
+          "$ref": "#/$defs/text"
+        },
+        "abandonment_trigger": {
+          "$ref": "#/$defs/text"
+        },
+        "revisit_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "What evidence changed the strategy; null for revision 1.",
+          "maxLength": 4096
+        }
+      },
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "supersedes": {
+            "type": "null"
+          },
+          "revisit_reason": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "supersedes": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "revisit_reason": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        }
+      }
+    },
+    "GateAssessedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate",
+        "state",
+        "evidence_refs",
+        "rationale",
+        "assessor"
+      ],
+      "properties": {
+        "gate": {
+          "enum": [
+            "choose_problem",
+            "discover_reality",
+            "allocate_authority",
+            "prove_value",
+            "prove_reliability",
+            "integrate_govern",
+            "earn_trust",
+            "measure",
+            "productize"
+          ]
+        },
+        "state": {
+          "enum": [
+            "met",
+            "blocked",
+            "unassessed",
+            "not_applicable"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Evidence ids. Duplicates are SCHEMA_INVALID (not expressible: uniqueItems is not used in this repository's validators).",
+          "maxItems": 256
+        },
+        "rationale": {
+          "$ref": "#/$defs/text"
+        },
+        "assessor": {
+          "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/text",
+          "description": "E section 3 lists the assessor in the record. Must equal the authenticated principal of the request (else SCHEMA_INVALID), compared on canonical actor strings."
+        },
+        "proposer": {
+          "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/text",
+          "description": "Principal that produced the work the gate assesses. Required for prove_reliability (SOP 8.1: independent repeated settlement); assessor equal to proposer is SELF_SETTLEMENT_REFUSED (I-2)."
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/text",
+          "description": "SEA-Forge approval of a not_applicable assessment (SOP 8.1: authorized rationale). Absent: HARD_GATE_NOT_WAIVABLE for a hard gate, AUTHORITY_DENIED for any other gate. For a hard gate the approval carries A3 evidence."
+        }
+      },
+      "if": {
+        "properties": {
+          "state": {
+            "const": "met"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "evidence_refs": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "DispositionRecordedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "disposition",
+        "rationale",
+        "approval_ref"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "case",
+            "episode"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "close-satisfied",
+            "close-failed",
+            "continue",
+            "revise",
+            "escalate",
+            "suspend"
+          ]
+        },
+        "episode_ref": {
+          "$ref": "#/$defs/episode_ref",
+          "description": "Required exactly when level is episode."
+        },
+        "rationale": {
+          "$ref": "#/$defs/text"
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/text",
+          "description": "SEA-Forge approval record the disposition rests on (existing approval path; A3 evidence recorded on it for a human-reserved level)."
+        }
+      },
+      "if": {
+        "properties": {
+          "level": {
+            "const": "episode"
+          }
+        },
+        "required": [
+          "level"
+        ]
+      },
+      "then": {
+        "required": [
+          "episode_ref"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "episode_ref"
+          ]
+        }
+      }
+    },
+    "Response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "kind",
+        "record_id",
+        "replayed"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "recorded"
+        },
+        "kind": {
+          "enum": [
+            "episode.frozen",
+            "episode.settled",
+            "field_case.revised",
+            "strategy.recorded",
+            "gate.assessed",
+            "disposition.recorded"
+          ]
+        },
+        "record_id": {
+          "$ref": "#/$defs/text"
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "episode_key": {
+          "$ref": "urn:sea-forge:fde:case-record-append:v1#/$defs/Response/properties/episode_key"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Document or strategy revision created (field_case.revised, strategy.recorded)."
+        },
+        "lifecycle": {
+          "enum": [
+            "open",
+            "suspended",
+            "closed"
+          ],
+          "description": "Lifecycle after the record (disposition.recorded): the pure function of E section 3."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "episode.frozen",
+                  "episode.settled"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "episode_key"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "episode_key"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "field_case.revised",
+                  "strategy.recorded"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "revision"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "revision"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "disposition.recorded"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "lifecycle"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "lifecycle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "SCHEMA_INVALID",
+            "KIND_UNKNOWN",
+            "IDEMPOTENCY_CONFLICT",
+            "EPISODE_REF_DIGEST_MISMATCH",
+            "RESULT_INVALID",
+            "FREEZE_KEY_EXISTS",
+            "FREEZE_MISSING",
+            "FREEZE_INCOMPLETE",
+            "SELF_SETTLEMENT_REFUSED",
+            "EXPLORATORY_NOT_SETTLEABLE",
+            "WORLD_NOT_PINNED",
+            "SETTLEMENT_EXISTS",
+            "KIND_IMMUTABLE",
+            "REFERENCE_DERIVED_FROM_RESULT",
+            "MODEL_ANCHOR_LATE",
+            "AUTHORITY_DENIED",
+            "ANCHOR_PUBLISHER_INVALID",
+            "STORE_INTEGRITY",
+            "PAYLOAD_TOO_LARGE",
+            "HARD_GATE_NOT_WAIVABLE",
+            "CASE_SUSPENDED",
+            "REVISION_CONFLICT",
+            "VERIFIER_CONTEXT_MISMATCH",
+            "CASE_CLOSED",
+            "RESERVED_DECISION_REFUSED"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        },
+        "invariant": {
+          "enum": [
+            "I-1",
+            "I-2",
+            "I-3"
+          ],
+          "description": "Present exactly for the codes that enforce an invariant."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "FREEZE_MISSING",
+                  "FREEZE_INCOMPLETE"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "invariant"
+            ],
+            "properties": {
+              "invariant": {
+                "const": "I-1"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "SELF_SETTLEMENT_REFUSED"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "invariant"
+            ],
+            "properties": {
+              "invariant": {
+                "const": "I-2"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "FREEZE_KEY_EXISTS",
+                  "KIND_IMMUTABLE"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "required": [
+              "invariant"
+            ],
+            "properties": {
+              "invariant": {
+                "const": "I-3"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "SCHEMA_INVALID",
+                  "KIND_UNKNOWN",
+                  "IDEMPOTENCY_CONFLICT",
+                  "EPISODE_REF_DIGEST_MISMATCH",
+                  "RESULT_INVALID",
+                  "EXPLORATORY_NOT_SETTLEABLE",
+                  "WORLD_NOT_PINNED",
+                  "SETTLEMENT_EXISTS",
+                  "REFERENCE_DERIVED_FROM_RESULT",
+                  "MODEL_ANCHOR_LATE",
+                  "AUTHORITY_DENIED",
+                  "ANCHOR_PUBLISHER_INVALID",
+                  "STORE_INTEGRITY",
+                  "PAYLOAD_TOO_LARGE",
+                  "HARD_GATE_NOT_WAIVABLE",
+                  "CASE_SUSPENDED",
+                  "REVISION_CONFLICT",
+                  "VERIFIER_CONTEXT_MISMATCH",
+                  "CASE_CLOSED",
+                  "RESERVED_DECISION_REFUSED"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "invariant"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

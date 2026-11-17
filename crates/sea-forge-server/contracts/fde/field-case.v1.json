@@ -1,0 +1,554 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:field-case:v1",
+  "title": "Field Case document v1",
+  "description": "The case-scoped document cases/<id>/field_case.json of a Casework case whose template_ref is fde.field_case@1 (E section 3). One object per SOP 4.2 group, one FieldValue per SOP 4.2 field; every field carries a status and a source ref. Revised only by a field_case.revised record (case-record-append.v2). The field list is checked against SOP 4.2 and the source translation map by scripts/check-fde-field-case-schema.sh; x-sop-label and x-sop-dagger carry the SOP text the check compares.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "template_ref",
+    "revision",
+    "sop",
+    "fields"
+  ],
+  "properties": {
+    "case_id": {
+      "$ref": "#/$defs/id_token"
+    },
+    "template_ref": {
+      "const": "fde.field_case@1"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1 at case open; +1 per accepted field_case.revised record."
+    },
+    "sop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "document": {
+          "const": "GS-FDE-SOP-001"
+        },
+        "version": {
+          "const": "0.4.1"
+        },
+        "sha256": {
+          "const": "043ae33ae6001da14f518feeb4ca2d23e280da2769d8378b36827f80d6057001"
+        }
+      }
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose_and_outcome",
+        "framing",
+        "world_and_boundary",
+        "observer_and_authority",
+        "current_horizon",
+        "continuity"
+      ],
+      "properties": {
+        "purpose_and_outcome": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "Purpose and outcome",
+          "x-sop-clause": "4.2",
+          "required": [
+            "owner_sponsor",
+            "signal",
+            "stated_problem",
+            "adopted_problem",
+            "problem_class",
+            "jtbd_outcome",
+            "business_significance",
+            "success_direction",
+            "non_goals",
+            "constraints",
+            "decision_this_work_can_unlock"
+          ],
+          "properties": {
+            "owner_sponsor": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "owner/sponsor",
+              "x-sop-dagger": false
+            },
+            "signal": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "signal",
+              "x-sop-dagger": true
+            },
+            "stated_problem": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "stated problem",
+              "x-sop-dagger": true
+            },
+            "adopted_problem": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "adopted problem",
+              "x-sop-dagger": true
+            },
+            "problem_class": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "problem class",
+              "x-sop-dagger": true
+            },
+            "jtbd_outcome": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "JTBD/outcome",
+              "x-sop-dagger": false
+            },
+            "business_significance": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "business significance",
+              "x-sop-dagger": false
+            },
+            "success_direction": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "success direction",
+              "x-sop-dagger": false
+            },
+            "non_goals": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "non-goals",
+              "x-sop-dagger": false
+            },
+            "constraints": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "constraints",
+              "x-sop-dagger": false
+            },
+            "decision_this_work_can_unlock": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "decision this work can unlock",
+              "x-sop-dagger": false
+            }
+          }
+        },
+        "framing": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "Framing",
+          "x-sop-clause": "4.2",
+          "required": [
+            "current_framing",
+            "what_it_reveals",
+            "what_it_hides",
+            "better_question",
+            "better_problem_if_successful"
+          ],
+          "properties": {
+            "current_framing": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "current framing",
+              "x-sop-dagger": false
+            },
+            "what_it_reveals": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "what it reveals",
+              "x-sop-dagger": false
+            },
+            "what_it_hides": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "what it hides",
+              "x-sop-dagger": false
+            },
+            "better_question": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "better question",
+              "x-sop-dagger": false
+            },
+            "better_problem_if_successful": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "better problem if successful",
+              "x-sop-dagger": false
+            }
+          }
+        },
+        "world_and_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "World and boundary",
+          "x-sop-clause": "4.2",
+          "required": [
+            "world_ref_and_version",
+            "checkpoint",
+            "people_and_systems",
+            "observed_conditions",
+            "statements_needing_confirmation",
+            "known_unknowns",
+            "interfaces",
+            "time_horizon"
+          ],
+          "properties": {
+            "world_ref_and_version": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "world_ref and version",
+              "x-sop-dagger": false
+            },
+            "checkpoint": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "checkpoint",
+              "x-sop-dagger": false
+            },
+            "people_and_systems": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "people and systems",
+              "x-sop-dagger": false
+            },
+            "observed_conditions": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "observed conditions",
+              "x-sop-dagger": false
+            },
+            "statements_needing_confirmation": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "statements needing confirmation",
+              "x-sop-dagger": false
+            },
+            "known_unknowns": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "known unknowns",
+              "x-sop-dagger": false
+            },
+            "interfaces": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "interfaces",
+              "x-sop-dagger": false
+            },
+            "time_horizon": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "time horizon",
+              "x-sop-dagger": false
+            }
+          }
+        },
+        "observer_and_authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "Observer and authority",
+          "x-sop-clause": "4.2",
+          "required": [
+            "case_lead",
+            "criterion_owner",
+            "delegated_actors",
+            "independent_verifier",
+            "settlement_and_disposition_authority",
+            "risk_and_external_effect_limits",
+            "authority_surface"
+          ],
+          "properties": {
+            "case_lead": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "case lead",
+              "x-sop-dagger": false
+            },
+            "criterion_owner": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "criterion owner",
+              "x-sop-dagger": false
+            },
+            "delegated_actors": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "delegated actors",
+              "x-sop-dagger": false
+            },
+            "independent_verifier": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "independent verifier",
+              "x-sop-dagger": false
+            },
+            "settlement_and_disposition_authority": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "settlement and disposition authority",
+              "x-sop-dagger": false
+            },
+            "risk_and_external_effect_limits": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "risk and external-effect limits",
+              "x-sop-dagger": false
+            },
+            "authority_surface": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "authority surface",
+              "x-sop-dagger": true
+            }
+          }
+        },
+        "current_horizon": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "Current horizon",
+          "x-sop-clause": "4.2",
+          "required": [
+            "evidence_and_decisions",
+            "contested_distinctions",
+            "hypotheses",
+            "possible_next_moves",
+            "blocked_moves_with_reason",
+            "available_and_missing_affordances",
+            "budgets",
+            "ignored_payment",
+            "outstanding_obligations"
+          ],
+          "properties": {
+            "evidence_and_decisions": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "evidence and decisions",
+              "x-sop-dagger": false
+            },
+            "contested_distinctions": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "contested distinctions",
+              "x-sop-dagger": false
+            },
+            "hypotheses": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "hypotheses",
+              "x-sop-dagger": false
+            },
+            "possible_next_moves": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "possible next moves",
+              "x-sop-dagger": false
+            },
+            "blocked_moves_with_reason": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "blocked moves with reason",
+              "x-sop-dagger": false
+            },
+            "available_and_missing_affordances": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "available and missing affordances",
+              "x-sop-dagger": true
+            },
+            "budgets": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "budgets",
+              "x-sop-dagger": false
+            },
+            "ignored_payment": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "ignored payment",
+              "x-sop-dagger": true
+            },
+            "outstanding_obligations": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "outstanding obligations",
+              "x-sop-dagger": false
+            }
+          }
+        },
+        "continuity": {
+          "type": "object",
+          "additionalProperties": false,
+          "x-sop-group": "Continuity",
+          "x-sop-clause": "4.2",
+          "required": [
+            "previous_episode",
+            "worktree_session_artifact_links",
+            "open_questions",
+            "current_decision",
+            "next_affordable_move"
+          ],
+          "properties": {
+            "previous_episode": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "previous episode",
+              "x-sop-dagger": false
+            },
+            "worktree_session_artifact_links": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "worktree/session/artifact links",
+              "x-sop-dagger": false
+            },
+            "open_questions": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "open questions",
+              "x-sop-dagger": false
+            },
+            "current_decision": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "current decision",
+              "x-sop-dagger": false
+            },
+            "next_affordable_move": {
+              "$ref": "#/$defs/FieldValue",
+              "x-sop-label": "next affordable move",
+              "x-sop-dagger": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id_token": {
+      "type": "string",
+      "pattern": "^[^\\s:@]{1,128}$",
+      "maxLength": 4096
+    },
+    "Status": {
+      "enum": [
+        "declared",
+        "observed",
+        "inferred",
+        "proposed",
+        "unknown"
+      ],
+      "description": "declared: stated by the operator or the SOP; observed: seen in a source-owned record; inferred: derived by interpretation; proposed: suggested, not accepted; unknown: not known yet (no value)."
+    },
+    "SourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "record",
+            "realitytrace",
+            "cognate",
+            "horizon",
+            "operator",
+            "sop",
+            "none"
+          ]
+        },
+        "ref": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "none"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "ref": {
+            "const": "none"
+          }
+        }
+      }
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "FieldValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_ref"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/SourceRef"
+        },
+        "value": {
+          "description": "Any JSON value; absent exactly when status is unknown."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "observed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ref": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "record",
+                      "realitytrace",
+                      "cognate",
+                      "horizon"
+                    ],
+                    "description": "An observed field comes from a source-owned record, never from the operator's say-so or the SOP text."
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ref": {
+                "properties": {
+                  "kind": {
+                    "const": "none"
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "source_ref": {
+                "properties": {
+                  "kind": {
+                    "not": {
+                      "const": "none"
+                    }
+                  }
+                }
+              },
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

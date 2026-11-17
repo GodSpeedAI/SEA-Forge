@@ -379,6 +379,11 @@ pub(super) fn enqueue_record(ctx: &AppendContext, record: &Value) -> Result<(), 
     else {
         return Err("record has no id or kind".into());
     };
+    // Case-scoped kinds (WP-21 part B) have no episode and no translation-map
+    // row: no interaction event is owed, and none is invented.
+    if !matches!(kind, "episode.frozen" | "episode.settled") {
+        return Err(format!("{kind} owes no interaction event"));
+    }
     let all = records(ctx);
     let source = json!({"system": SOURCE_LEDGER, "record_id": record_id});
     let id = event_id(ctx.case_id, record_id);

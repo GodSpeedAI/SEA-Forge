@@ -41,6 +41,8 @@ use std::sync::OnceLock;
 /// in this crate); `tests/conformance_field_case.rs` fails when a copy differs.
 const CASE_RECORD_APPEND: &str = include_str!("../../contracts/fde/case-record-append.v1.json");
 const FROZEN_REFERENCE: &str = include_str!("../../contracts/fde/frozen-reference.v1.json");
+const CASE_RECORD_APPEND_V2: &str = include_str!("../../contracts/fde/case-record-append.v2.json");
+const FIELD_CASE: &str = include_str!("../../contracts/fde/field-case.v1.json");
 const ANCHOR: &str = include_str!("../../contracts/fde/anchor.v1.json");
 
 const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
@@ -56,10 +58,12 @@ const RT_OUTBOX: &str = "field-rt-outbox.jsonl";
 const ANCHOR_OUTBOX: &str = "field-anchor-outbox.jsonl";
 
 /// The vendored schema texts, for the contract gate test.
-pub fn vendored_schemas() -> [(&'static str, &'static str); 3] {
+pub fn vendored_schemas() -> [(&'static str, &'static str); 5] {
     [
         ("anchor.v1.json", ANCHOR),
         ("case-record-append.v1.json", CASE_RECORD_APPEND),
+        ("case-record-append.v2.json", CASE_RECORD_APPEND_V2),
+        ("field-case.v1.json", FIELD_CASE),
         ("frozen-reference.v1.json", FROZEN_REFERENCE),
     ]
 }
@@ -148,7 +152,7 @@ fn request_validator() -> &'static jsonschema::Validator {
 // Refusals and the response shapes
 // ---------------------------------------------------------------------------
 
-fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
+pub(super) fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
     let mut out = json!({"outcome": "refused", "code": code, "message": message});
     if let Some(invariant) = invariant {
         out["invariant"] = json!(invariant);
@@ -156,7 +160,7 @@ fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
     out
 }
 
-fn is_refusal(v: &Value) -> bool {
+pub(super) fn is_refusal(v: &Value) -> bool {
     v["outcome"] == "refused"
 }
 
@@ -839,18 +843,10 @@ pub fn append_faulted(
         ));
     }
     let kind = request["kind"].as_str().unwrap_or("");
-    // 2. The four v2-only kinds: part B of WP-21 implements them. The checks
-    // every kind shares still apply first (STORE_INTEGRITY); the kind itself is
-    // then refused, never accepted unchecked.
+    // 2. The four v2-only kinds (WP-21 part B) have their own path: the same
+    // precedence, a v2 payload schema and the Field Case document.
     if v2 && V2_ONLY_KINDS.contains(&kind) {
-        if let Err(e) = integrity(ctx) {
-            return Ok(store_refusal(e));
-        }
-        return Ok(refuse(
-            "KIND_UNKNOWN",
-            "this kind is not implemented by this server version (WP-21 part B)",
-            None,
-        ));
+        return Ok(super::field_case_kinds::append(ctx, request));
     }
     // 3. SCHEMA_INVALID and its specific forms. The v1 schema is closed, so the
     // marker is not part of what it validates.
@@ -979,7 +975,7 @@ pub fn append_faulted(
 
 /// A failed integrity read: `STORE_INTEGRITY` (v1 writers get the `SCHEMA_INVALID`
 /// fallback with the cause in the message, as before WP-21).
-fn store_refusal(error: String) -> Value {
+pub(super) fn store_refusal(error: String) -> Value {
     refuse(
         "STORE_INTEGRITY",
         &format!("case record store failed: {error}"),
@@ -987,7 +983,11 @@ fn store_refusal(error: String) -> Value {
     )
 }
 
-fn next_record(ctx: &AppendContext, records: &[Value], mut record: Value) -> Result<Value, String> {
+pub(super) fn next_record(
+    ctx: &AppendContext,
+    records: &[Value],
+    mut record: Value,
+) -> Result<Value, String> {
     let seq = records.len() as u64 + 1;
     let prev = records
         .last()
@@ -1009,7 +1009,7 @@ fn next_record(ctx: &AppendContext, records: &[Value], mut record: Value) -> Res
     Ok(record)
 }
 
-fn io_refusal(error: String) -> Value {
+pub(super) fn io_refusal(error: String) -> Value {
     // No contract code exists for a storage failure; fail closed as a schema
     // refusal carrying the cause rather than reporting success.
     refuse(
@@ -1359,7 +1359,7 @@ fn freeze_anchor_publisher(ctx: &AppendContext, digest: &str) -> Result<(), Valu
     }
 }
 
-const APPROVALS: &str = "field-approvals.jsonl";
+pub(super) const APPROVALS: &str = "field-approvals.jsonl";
 
 /// README §6 "Approvals": an `ApprovalRecord` bound to this record's canonical
 /// operation, of this case, `allow`, unexpired and not yet used. Returns its
@@ -1369,6 +1369,18 @@ fn bound_approval(
     operation: &str,
     params: Value,
     subject_ref: &str,
+) -> Option<String> {
+    bound_approval_named(ctx, operation, params, subject_ref, None)
+}
+
+/// [`bound_approval`], restricted to the approval the request names when
+/// `named` is given (an `approval_ref` in a payload is not free text).
+pub(super) fn bound_approval_named(
+    ctx: &AppendContext,
+    operation: &str,
+    params: Value,
+    subject_ref: &str,
+    named: Option<&str>,
 ) -> Option<String> {
     let digest = digest_of(&json!({
         "operation": operation, "subject_ref": subject_ref,
@@ -1383,7 +1395,8 @@ fn bound_approval(
     let now = chrono::Utc::now();
     lines.iter().find_map(|a| {
         let reference = a["approval_ref"].as_str()?;
-        let live = a["operation"] == operation
+        let live = named.is_none_or(|n| n == reference)
+            && a["operation"] == operation
             && a["operation_digest"] == digest.as_str()
             && a["case_id"] == ctx.case_id
             && a["outcome"] == "allow"

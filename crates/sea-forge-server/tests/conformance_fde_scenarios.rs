@@ -13,9 +13,9 @@
 //! pending fails. [`final_pending_list_is_only_allowed_reasons`] fails while
 //! any reason outside [`FINAL_REASONS`] remains. Reasons:
 //!
-//! - `part-B`: needs the Field Case document, `field_case.revised`,
-//!   `strategy.recorded`, `gate.assessed`, `disposition.recorded` or the
-//!   lifecycle function (WP-21 part B).
+//! - `part-B` (retired: WP-21 part B implements the Field Case document,
+//!   `field_case.revised`, `strategy.recorded`, `gate.assessed`,
+//!   `disposition.recorded` and the lifecycle function).
 //! - `wp-31`: the A3 proof check (`reserved-operation` scenarios other than
 //!   the program-execution decision); the contract says WP-31 implements it.
 //! - `stepN`: temporary, work package part A step N not yet landed.
@@ -39,7 +39,7 @@ const KEEPER: &str = "svc:case-keeper";
 const ZERO: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 /// Reasons a pending scenario may still carry in the final commit.
-const FINAL_REASONS: &[&str] = &["part-B", "wp-31"];
+const FINAL_REASONS: &[&str] = &["wp-31"];
 
 /// Scenarios the server satisfies (it grows as the steps of WP-21 part A land;
 /// an acceptance listed here stays green as the gate lands).
@@ -161,6 +161,14 @@ const PASSES_TODAY: &[&str] = &[
     "execution-episode-ref/item_execute-non-field-case-unaffected",
 ];
 
+/// The four kinds only a v2 writer may name (WP-21 part B).
+fn is_part_b_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "field_case.revised" | "strategy.recorded" | "gate.assessed" | "disposition.recorded"
+    )
+}
+
 // (family/id, reason). Filled in by `pending_reason` below from rules, so a new
 // scenario is never pending by accident: see that function.
 fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static str> {
@@ -170,19 +178,10 @@ fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static s
     match family {
         "reserved-operation" => Some("wp-31"),
         "case-record-append-v2" => {
-            let kind = scenario["request"]["kind"].as_str().unwrap_or("");
-            if matches!(
-                kind,
-                "field_case.revised"
-                    | "strategy.recorded"
-                    | "gate.assessed"
-                    | "disposition.recorded"
-            ) {
-                return Some("part-B");
+            // The four v2-only kinds are WP-21 part B and are driven like any other.
+            if is_part_b_kind(scenario["request"]["kind"].as_str().unwrap_or("")) {
+                return None;
             }
-            // Case-level dispositions are written by part B: a scenario whose
-            // ledger holds one needs the disposition writer only to be seeded,
-            // and is driven by seeding the record directly (not part-B).
             let _ = id;
             STEP_PENDING
                 .iter()
@@ -448,6 +447,32 @@ impl Seed {
         fs::write(path, plan.to_string()).unwrap();
     }
 
+    /// The Field Case document of the case at `revision` (every field unknown).
+    fn field_case_document(&self, revision: u64) {
+        let mut doc = sea_forge_core::field_case::opened_document(CASE);
+        doc["revision"] = json!(revision);
+        fs::write(
+            case_dir(&self.root).join("field_case.json"),
+            serde_json::to_vec_pretty(&doc).unwrap(),
+        )
+        .unwrap();
+    }
+
+    /// One approval line the way the approval path would leave it (README
+    /// section 6 "Approvals"): bound to `operation`/`params` through the digest of
+    /// the canonical operation, of this case, unexpired unless `expired`.
+    fn approval(&self, reference: &str, operation: &str, digest: &str, extra: Value) {
+        let mut line = json!({
+            "approval_ref": reference, "operation": operation, "operation_digest": digest,
+            "case_id": CASE, "outcome": "allow", "used_by": null,
+            "issued_at": "2026-11-15T08:00:00Z", "expires_at": "2099-01-01T00:00:00Z",
+        });
+        for (k, v) in extra.as_object().into_iter().flatten() {
+            line[k] = v.clone();
+        }
+        write_lines(&case_dir(&self.root).join("field-approvals.jsonl"), &[line]);
+    }
+
     /// RealityTrace records of an episode that has no case record yet, found by key.
     fn rt_register_for_episode(&self, key: &Value) {
         let lines: Vec<Value> = ["plan:SEED", "question:SEED", "threshold:SEED"]
@@ -616,6 +641,10 @@ async fn run_append(s: &Value) -> Result<(), String> {
         .map(String::from)
         .unwrap_or_else(|| match request["kind"].as_str() {
             Some("episode.settled") => "agent:verifier-01".into(),
+            // Part-B records are written by the case operator; a gate names its
+            // assessor, who must be the authenticated principal.
+            Some("gate.assessed") => payload["assessor"].as_str().unwrap_or(KEEPER).into(),
+            Some(k) if is_part_b_kind(k) => "human:operator".into(),
             _ => KEEPER.into(),
         });
     let ledger = s["ledger_before"].as_array().cloned().unwrap_or_default();
@@ -630,6 +659,14 @@ async fn run_append(s: &Value) -> Result<(), String> {
         })
         .or(anchored.then_some(KEEPER));
     let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
+    let part_b = is_part_b_kind(request["kind"].as_str().unwrap_or(""));
+    if part_b {
+        let revised = ledger
+            .iter()
+            .filter(|l| l["kind"] == "field_case.revised")
+            .count() as u64;
+        seed.field_case_document(1 + revised);
+    }
     // Digest the seeded freezes carry: the one the request cites, else a fixed one.
     let cited = payload["episode_ref"].as_str().map(|r| parse_ref(r).3);
     let mut runs: Vec<Value> = Vec::new();
@@ -688,6 +725,19 @@ async fn run_append(s: &Value) -> Result<(), String> {
                     "level": entry.get("level").cloned().unwrap_or(json!("case")),
                     "disposition": entry["disposition"], "idempotency_key": "seed-disposition"}));
             }
+            "field_case.revised" => {
+                seed.push(
+                    json!({"kind": "field_case.revised", "revision": entry["revision"],
+                    "idempotency_key": "seed-revised", "body_digest": "seed-revised",
+                    "payload": {"changes": []}}),
+                );
+            }
+            "strategy.recorded" => {
+                seed.push(
+                    json!({"kind": "strategy.recorded", "revision": entry["revision"],
+                    "idempotency_key": "seed-strategy", "body_digest": "seed-strategy"}),
+                );
+            }
             "run.executor" | "run.verifier" | "run.recorded" => runs.push(entry.clone()),
             "anchor.verified" => {
                 let digest = cited.clone().unwrap_or_else(|| "ab".repeat(32));
@@ -704,10 +754,10 @@ async fn run_append(s: &Value) -> Result<(), String> {
                     push,
                 );
             }
-            "case.world_pinned"
-            | "case.state"
-            | "approval.recorded"
-            | "store.hash_chain_broken" => {}
+            // The approval a ledger entry names is seeded below, bound to the
+            // request, with the outcome the entry states.
+            "approval.recorded" => {}
+            "case.world_pinned" | "case.state" | "store.hash_chain_broken" => {}
             other => return Err(format!("driver: unknown ledger kind {other}")),
         }
     }
@@ -806,6 +856,9 @@ async fn run_append(s: &Value) -> Result<(), String> {
         };
         seed.rt_register(&has);
     }
+    if part_b {
+        seed_part_b_approval(&seed, s, &ledger);
+    }
     let actors = [Actor {
         id: principal.clone(),
         role: role_for(&principal),
@@ -852,6 +905,97 @@ async fn run_append(s: &Value) -> Result<(), String> {
         .await;
     cell.shutdown().await;
     compare(&s["expect"], &got)
+}
+
+/// The operation, params and subject the server builds for a part-B record that
+/// rests on an approval (README sections 6 and 10): `(operation, params)`.
+fn part_b_operation(request: &Value) -> Option<(String, Value)> {
+    let payload = &request["payload"];
+    let mut record = payload.clone();
+    record.as_object_mut()?.remove("approval_ref");
+    let record_digest = digest_of(&record)?;
+    match request["kind"].as_str()? {
+        "disposition.recorded" => {
+            let d = payload["disposition"].as_str()?;
+            let operation = if payload["level"] == "episode" {
+                "set_episode_disposition"
+            } else if d.starts_with("close-") {
+                "set_case_close_disposition"
+            } else {
+                "set_case_disposition"
+            };
+            Some((
+                operation.into(),
+                json!({"level": payload["level"], "disposition": d, "case_id": CASE,
+                       "episode_ref": payload.get("episode_ref").cloned().unwrap_or(Value::Null),
+                       "record_digest": record_digest}),
+            ))
+        }
+        "gate.assessed" if payload["state"] == "not_applicable" => {
+            let hard = matches!(
+                payload["gate"].as_str()?,
+                "allocate_authority" | "integrate_govern"
+            );
+            Some((
+                if hard {
+                    "set_hard_gate_not_applicable"
+                } else {
+                    "set_gate_not_applicable"
+                }
+                .into(),
+                json!({"case_id": CASE, "gate": payload["gate"], "state": "not_applicable",
+                       "record_digest": record_digest}),
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn operation_digest(operation: &str, params: &Value) -> String {
+    digest_of(
+        &json!({"operation": operation, "subject_ref": CASE, "case_id": CASE,
+                      "params": params}),
+    )
+    .unwrap()
+}
+
+/// Seed the approval a part-B scenario's request names: the scenario's own
+/// `approval` (with its stated outcome, case, use and digest), else the one a
+/// ledger `approval.recorded` entry describes, else, when the scenario expects
+/// acceptance, a valid approval bound to the request.
+fn seed_part_b_approval(seed: &Seed, s: &Value, ledger: &[Value]) {
+    let request = &s["request"];
+    let Some(reference) = request["payload"]["approval_ref"].as_str() else {
+        return;
+    };
+    let Some((operation, params)) = part_b_operation(request) else {
+        return;
+    };
+    if let Some(a) = s.get("approval") {
+        let operation = s["record_operation"]["operation"]
+            .as_str()
+            .unwrap_or(&operation);
+        seed.approval(
+            reference,
+            operation,
+            a["operation_digest"].as_str().unwrap(),
+            json!({"case_id": a["case_id"], "outcome": a["outcome"], "used_by": a["used_by"]}),
+        );
+        return;
+    }
+    let digest = operation_digest(&operation, &params);
+    if let Some(entry) = ledger.iter().find(|l| l["kind"] == "approval.recorded") {
+        let extra = if entry["outcome"] == "denied" {
+            json!({"outcome": "deny"})
+        } else if entry["expired"] == true {
+            json!({"expires_at": "2026-11-15T09:00:00Z"})
+        } else {
+            json!({})
+        };
+        seed.approval(reference, &operation, &digest, extra);
+    } else if s["expect"]["outcome"] == "recorded" {
+        seed.approval(reference, &operation, &digest, json!({}));
+    }
 }
 
 // ---------------------------------------------------------------------------

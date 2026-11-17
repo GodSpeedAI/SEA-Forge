@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 319
+**Status revision:** 320
 
-**Stage:** FDE S2: origin/main merged into fde/integration
+**Stage:** FDE S2: WP-21 part B step 1, four v2 record kinds
 
-**Summary:** Merged origin/main (7 commits); lib.rs CaseRecordAppend variant kept, status files kept ours
+**Summary:** case.record.append v2 kinds field_case.revised, strategy.recorded, gate.assessed, disposition.recorded: Field Case document and revisions, hard-gate rule, bound single-use approvals, suspended and closed refusals; every part-B scenario passes (143 of 157 pass, 14 wp-31 pending)
 
 **Verified:**
 
@@ -52,7 +52,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** WP-21 part B
+**Next:** continuation read model, case.field.get, template fde.field_case@1, proof rows, mutations
 
 **Evidence:**
 
