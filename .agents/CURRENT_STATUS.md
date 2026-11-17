@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 329
+**Status revision:** 330
 
-**Stage:** FDE S2: WP-21 part B review round 4 mutation checks
+**Stage:** FDE S2: WP-21 part B round 5 (admit-and-apply commit), in progress
 
-**Summary:** Review round 4 mutation checks: 18 of 18 mutants of the new rules killed (two after added tests), regression seeds saved for the model test
+**Summary:** Round 5 redesign: commit(case_dir, Batch) admits and applies under a lock outside the case, strict load, registry-driven lifecycle, case index; case-runner tests ok, server field-case fixtures still being converted
 
 **Verified:**
 

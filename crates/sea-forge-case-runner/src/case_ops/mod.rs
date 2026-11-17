@@ -22,6 +22,7 @@ fn noop_notifier(_: &TraceEvent) {}
 pub mod advance;
 pub mod authority_views;
 pub mod case_guard;
+pub mod contract;
 pub mod field_guard;
 pub mod mediation;
 
@@ -95,17 +96,28 @@ pub fn append_case_event_with(
     payload: serde_json::Value,
     notify: CaseEventNotifier<'_>,
 ) -> Result<(), ForgeError> {
+    commit_case_event(root, case_id, actor, kind, item_id, payload, None, notify)
+}
+
+/// One case event as one guarded commit: the event (and `extra` ops that must
+/// land with it, such as the plan a `PlanMutated` event announces) is decided
+/// before anything is written; `before` (a ledger commit) runs after the
+/// decision and before the write, all under the case lock.
+#[allow(clippy::too_many_arguments)]
+fn commit_case_event(
+    root: &Path,
+    case_id: &str,
+    actor: &str,
+    kind: TraceKind,
+    item_id: Option<&str>,
+    payload: serde_json::Value,
+    extra: Option<(case_guard::Op, &mut dyn FnMut() -> Result<(), ForgeError>)>,
+    notify: CaseEventNotifier<'_>,
+) -> Result<(), ForgeError> {
     let (_, _, events_path) = paths(root, case_id);
-    // THE guard, with the case lock held through the append (nothing is
-    // written on a refusal).
-    let token = case_guard::admit_write(
-        &root.join("cases").join(case_id),
-        &case_guard::Proposed::Event {
-            kind: &kind,
-            item: item_id,
-        },
-    )
-    .map_err(field_guard::Refusal::into_error)?;
+    let case_dir = root.join("cases").join(case_id);
+    let _lock =
+        case_guard::CaseLock::acquire(&case_dir).map_err(field_guard::Refusal::into_error)?;
     let count = fs::read_to_string(&events_path)
         .map(|value| value.lines().count())
         .unwrap_or(0);
@@ -120,17 +132,23 @@ pub fn append_case_event_with(
         payload,
         cell_id: None,
     };
+    let mut batch = case_guard::Batch::new().with(case_guard::Op::Event(event.clone()));
+    let mut before: Option<&mut dyn FnMut() -> Result<(), ForgeError>> = None;
+    if let Some((op, hook)) = extra {
+        batch.push(op);
+        before = Some(hook);
+    }
+    case_guard::check(&case_dir, &batch).map_err(field_guard::Refusal::into_error)?;
+    if let Some(hook) = before {
+        hook()?;
+    }
     LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
         "case_event",
         vec![case_id.into()],
         &event,
         vec![],
     )?;
-    let mut line = serde_json::to_vec(&event)?;
-    line.push(b'\n');
-    token
-        .append(&events_path, &line)
-        .map_err(|error| ForgeError::io("append case event", error))?;
+    case_guard::commit(&case_dir, batch).map_err(field_guard::Refusal::into_error)?;
     notify(&event);
     Ok(())
 }
@@ -346,36 +364,29 @@ pub fn commit_staged_plan(
 ) -> Result<u8, ForgeError> {
     let (_, plan_path, _) = paths(root, case_id);
     mediation::authorize_read(root, policy, actor, &add_item_action(case_id, item_id))?;
-    // The plan is rewritten below, before its event: admit the mutation first,
-    // and hold the case lock until the event is appended.
-    let _token = case_guard::admit_write(
-        &root.join("cases").join(case_id),
-        &case_guard::Proposed::Event {
-            kind: &TraceKind::PlanMutated,
-            item: Some(item_id),
-        },
-    )
-    .map_err(field_guard::Refusal::into_error)?;
-    let committed = LedgerStream::open(root, format!("case-{case_id}"), actor)?.commit_typed(
-        "case_plan_mutation",
-        vec![case_id.into()],
-        plan,
-        vec![],
-    )?;
-    LedgerStream::open(root, format!("case-{case_id}"), actor)?.materialize_view(
-        &committed,
-        &plan_path,
-        &serde_json::to_vec_pretty(plan)?,
-    )?;
-    append_case_event_with(
+    // The plan and its `PlanMutated` event are ONE commit: the guard decides
+    // both before either is written, and writes the plan file itself.
+    let stream = LedgerStream::open(root, format!("case-{case_id}"), actor)?;
+    let plan_value = serde_json::to_value(plan)?;
+    let mut recorded = None;
+    let mut ledger_commit = || -> Result<(), ForgeError> {
+        recorded =
+            Some(stream.commit_typed("case_plan_mutation", vec![case_id.into()], plan, vec![])?);
+        Ok(())
+    };
+    commit_case_event(
         root,
         case_id,
         actor,
         TraceKind::PlanMutated,
         Some(item_id),
         json!({"operation": "add_task"}),
+        Some((case_guard::Op::Plan(plan_value), &mut ledger_commit)),
         notify,
     )?;
+    if let Some(committed) = recorded {
+        stream.record_written_view(&committed, &plan_path, &serde_json::to_vec_pretty(plan)?)?;
+    }
     Ok(0)
 }
 
@@ -466,9 +477,8 @@ pub fn complete_human_task_with(
         &events,
         (TraceKind::HumanTaskCompleted, Some(item_id.to_string())),
     );
-    let _batch_token =
-        case_guard::admit_write(&case_dir, &case_guard::Proposed::Batch { events: &batch })
-            .map_err(field_guard::Refusal::into_error)?;
+    case_guard::check(&case_dir, &case_guard::Batch::of_events(&batch))
+        .map_err(field_guard::Refusal::into_error)?;
     mediation::authorize_read(
         root,
         policy,

@@ -35,7 +35,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use sea_forge_core::field_case::{is_field_path, TEMPLATE_REF};
+use sea_forge_core::field_case::is_field_path;
 
 /// The document file of a Field Case, inside the case directory.
 pub const DOCUMENT: &str = "field_case.json";
@@ -90,22 +90,9 @@ fn request_validator() -> &'static jsonschema::Validator {
     V.get_or_init(|| validator("urn:sea-forge:fde:case-record-append:v2#/$defs/Request"))
 }
 
-fn document_validator() -> &'static jsonschema::Validator {
-    static V: OnceLock<jsonschema::Validator> = OnceLock::new();
-    V.get_or_init(|| validator("urn:sea-forge:fde:field-case:v1"))
-}
-
 /// Whether `document` is a valid `field-case.v1` document.
 pub fn document_is_valid(document: &Value) -> Result<(), String> {
-    let errors: Vec<String> = document_validator()
-        .iter_errors(document)
-        .map(|e| format!("{}: {e}", e.instance_path()))
-        .collect();
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors.join("; "))
-    }
+    sea_forge_case_runner::case_ops::contract::document_is_valid(document)
 }
 
 // ---------------------------------------------------------------------------
@@ -118,16 +105,9 @@ fn document_path(ctx: &AppendContext) -> PathBuf {
 
 /// Whether the case was opened from the Field Case template.
 pub fn is_field_case(root: &std::path::Path, case_id: &str) -> Result<bool, String> {
-    let path = case_dir(root, case_id).join("plan.json");
-    match fs::read(&path) {
-        Ok(bytes) => {
-            let doc: Value = serde_json::from_slice(&bytes)
-                .map_err(|e| format!("{} is not valid JSON: {e}", path.display()))?;
-            Ok(doc["template_ref"].as_str() == Some(TEMPLATE_REF))
-        }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(e) => Err(format!("read {}: {e}", path.display())),
-    }
+    Ok(sea_forge_case_runner::case_ops::field_guard::is_field_case(
+        &case_dir(root, case_id),
+    ))
 }
 
 /// Apply the changes of one `field_case.revised` payload to a document and set
@@ -155,22 +135,6 @@ pub fn ledger_revision(records: &[Value]) -> u64 {
         .unwrap_or(1)
 }
 
-fn write_document(ctx: &AppendContext, document: &Value) -> Result<(), String> {
-    let path = document_path(ctx);
-    let mut bytes = serde_json::to_vec_pretty(document).map_err(|e| e.to_string())?;
-    bytes.push(b'\n');
-    // THE guard, then the token's replace: the lock is held until the file is
-    // in place.
-    match sea_forge_case_runner::case_ops::case_guard::admit_file_write(&path, document)
-        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?
-    {
-        Some(token) => token
-            .replace(&path, &bytes)
-            .map_err(|e| format!("write {}: {e}", path.display())),
-        None => fs::write(&path, bytes).map_err(|e| format!("write {}: {e}", path.display())),
-    }
-}
-
 /// The case's current document, brought up to the ledger when a crash left the
 /// file behind its records. `Err` is `STORE_INTEGRITY`: no file, an invalid
 /// document, a document of another case, or one ahead of its ledger.
@@ -191,34 +155,12 @@ pub fn load_document(ctx: &AppendContext, all: &[Value]) -> Result<Value, String
             "store integrity: field_case.json is at revision {have}, ahead of its ledger ({want})"
         ));
     }
+    // A document behind its ledger is what the ledger derives; the next
+    // commit rewrites the file.
     if have < want {
-        // Replay the records the file is missing, in order.
-        let mut healed = false;
-        for r in all
-            .iter()
-            .filter(|r| r["kind"] == "field_case.revised")
-            .filter(|r| r["revision"].as_u64().is_some_and(|n| n > have))
-        {
-            if !r["payload"]["changes"].is_array() {
-                return Err(
-                    "store integrity: a field_case.revised record carries no changes".into(),
-                );
-            }
-            apply(
-                &mut document,
-                &r["payload"]["changes"],
-                r["revision"].as_u64().unwrap_or(0),
-            );
-            healed = true;
-        }
-        if healed {
-            document_is_valid(&document)
-                .map_err(|e| format!("store integrity: replayed document: {e}"))?;
-            write_document(ctx, &document).map_err(|e| format!("store integrity: {e}"))?;
-        }
-        if document["revision"].as_u64() != Some(want) {
-            return Err("store integrity: field_case.json cannot be brought to its ledger".into());
-        }
+        document = sea_forge_case_runner::case_ops::case_guard::derived_document(ctx.case_id, all);
+        document_is_valid(&document)
+            .map_err(|e| format!("store integrity: derived document: {e}"))?;
     }
     Ok(document)
 }
@@ -499,14 +441,7 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
         Ok(s) => s,
         Err(e) => return io_refusal(e),
     };
-    if let Some(mut next_doc) = plan.document {
-        // The record is durable; the projection follows. A crash here leaves the
-        // file behind its ledger and the next read replays the record.
-        next_doc["revision"] = json!(plan.revision.unwrap_or(0));
-        if let Err(e) = write_document(ctx, &next_doc) {
-            return io_refusal(e);
-        }
-    }
+    // The record commit rewrote the document: it is derived from the ledger.
     // The stored record id is the one predicted above (same lock, same ledger).
     debug_assert_eq!(stored["record_id"], record_id);
     resp
@@ -517,6 +452,8 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
 struct Plan {
     revision: Option<u64>,
     approval: Option<String>,
+    /// Validated by the kind; the commit derives the file from the ledger.
+    #[allow(dead_code)]
     document: Option<Value>,
     /// Top-level members stored on the record (`level` and `disposition`, which
     /// the lifecycle function reads; `gate` and `state`).

@@ -2,6 +2,8 @@
 //! at the write, on every path that completes a gate item or closes the case,
 //! including the advance engine's automatic milestone and close.
 
+mod common;
+
 use sea_forge_case_runner::case_ops::{self, advance::AdvanceScope};
 use sea_forge_core::types::*;
 use sea_forge_core::RECORD_VERSION;
@@ -153,6 +155,13 @@ fn records(root: &Path, lines: &[serde_json::Value]) {
     let mut text = String::new();
     for (i, line) in lines.iter().enumerate() {
         let mut record = line.clone();
+        if record.get("payload").is_none() {
+            record["payload"] = common::payload_for(&record);
+        }
+        record["body_digest"] = json!(case_ops::case_guard::digest_of(
+            &json!({"kind": record["kind"], "payload": record["payload"]})
+        )
+        .unwrap());
         record["seq"] = json!(i as u64 + 1);
         record["prev_hash"] = json!(prev);
         record["hash"] = json!(case_ops::case_guard::digest_of(&record).unwrap());
@@ -232,7 +241,7 @@ fn review2_engine_close_needs_a_close_disposition() {
     records(
         dir.path(),
         &[
-            json!({"kind": "disposition.recorded", "level": "case", "disposition": "close-complete"}),
+            json!({"kind": "disposition.recorded", "level": "case", "disposition": "close-satisfied"}),
         ],
     );
     assert_eq!(pass(dir.path()).unwrap(), "completed");
@@ -247,7 +256,11 @@ fn review2_a_plain_case_closes_as_before() {
     let dir = tempfile::tempdir().unwrap();
     seed(dir.path(), "gate_prove_value");
     // A plain case has no document (a Field Case marker).
-    fs::remove_file(dir.path().join("cases").join(CASE).join("field_case.json")).unwrap();
+    // It was never a Field Case: no ledger, no index entry either.
+    let case_dir = dir.path().join("cases").join(CASE);
+    fs::remove_file(case_dir.join("field_case.json")).unwrap();
+    let _ = fs::remove_file(case_dir.join("field-records.jsonl"));
+    let _ = fs::remove_dir_all(dir.path().join(".case-index"));
     let plan_path = dir.path().join("cases").join(CASE).join("plan.json");
     let mut plan: serde_json::Value =
         serde_json::from_slice(&fs::read(&plan_path).unwrap()).unwrap();

@@ -2642,7 +2642,10 @@ async fn review1_suspension_between_admission_and_write() {
         )
         .await;
     let task = tokio::spawn(async move { client.call(wire).await });
-    pause.reached.notified().await;
+    // A refused admission never reaches the pause: fail fast, never hang.
+    tokio::time::timeout(std::time::Duration::from_secs(10), pause.reached.notified())
+        .await
+        .expect("the admission never reached the pause (refused, or the case lock deadlocked)");
     // The admission passed; now the suspension lands.
     assert_eq!(
         c.dispose("case", "suspend", None).await["lifecycle"],
@@ -2790,10 +2793,17 @@ async fn review1_suspension_before_the_engine_pass() {
         )
         .await;
     let task = tokio::spawn(async move { client.call(wire).await });
-    first.reached.notified().await;
+    tokio::time::timeout(std::time::Duration::from_secs(10), first.reached.notified())
+        .await
+        .expect("the request never reached its pause");
     let second = sea_forge_server::pause_after_admission(&c.root);
     first.resume.notify_one();
-    second.reached.notified().await;
+    tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        second.reached.notified(),
+    )
+    .await
+    .expect("the request never reached its pause");
     assert_eq!(
         c.dispose("case", "suspend", None).await["lifecycle"],
         "suspended"

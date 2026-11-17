@@ -1,44 +1,51 @@
-//! THE choke point of every Field Case mutation (WP-21 part B, review round 3).
+//! THE choke point of every Field Case mutation (WP-21 part B, review round 5).
 //!
-//! Every writer of a case (the two event appenders, the record appender of
-//! every dialect, every other file of the case store, the CLI verbs, the
-//! server verbs, delegation and execution) calls [`admit_write`] immediately
-//! before its append. The call takes the one cross-process case lock (a file
-//! lock on the case directory, shared by the CLI and the server) and the
-//! returned [`WriteToken`] holds it: the guard and the append are one critical
-//! section, with no release in between. A long execution re-admits at each
-//! write.
+//! Nothing writes under a case directory except [`commit`]. A caller builds a
+//! typed [`Batch`] (record appends, event appends, store appends, projection
+//! updates) and `commit` does ALL of it, in one critical section:
 //!
-//! The guard decides from the LEDGER, never from `case.json`: the hash-chained
-//! records (the disposition lifecycle) and the event log. For a Field Case it
-//! applies, in this order:
+//! 1. take the case lock, whose file lives OUTSIDE the case directory
+//!    (`<root>/.case-locks/`), so a refusal creates nothing under the case;
+//! 2. [`load_verified`]: every store of the case, strictly, or STORE_INTEGRITY;
+//! 3. [`decide`] on the post-state of the WHOLE batch (the batch is folded onto
+//!    the verified state; the invariants are checked on the result);
+//! 4. write exactly the batch's operations, then the projections the ledger
+//!    determines (the document `field_case.json` is rebuilt from the record
+//!    chain in the same commit), then release.
 //!
-//! 1. full store integrity (hash chain and digests of every stored record,
-//!    not only that they parse) and the document `field_case.json`, for every
-//!    write in either dialect: otherwise `STORE_INTEGRITY`, nothing written;
-//! 2. the lifecycle (README §6, R6, R13, D8, D32, D42): suspended refuses
-//!    everything except the case-level `continue` and `close-*` records and
-//!    the revision, strategy and gate records; closed refuses everything
-//!    except late settlement and the single action that ends the plan, never
-//!    a repeat of one already done;
-//! 3. the hard-gate rule, for ANY event that completes a gate item or
-//!    milestone, whatever its type (human, automatic, transition);
-//! 4. R11 on every close and on terminate.
+//! There is no token and no raw write method: an unadmitted write cannot be
+//! expressed. The lifecycle rules come from the contract's per-kind registry
+//! ([`super::contract`], README section 5: the `Suspended` and `Closed`
+//! columns), loaded as data. Every file a batch touches must be classified by
+//! [`classify`] (a registry kind's file, an outbox, an execution store, or a
+//! projection); anything else is refused (deny by default).
 //!
-//! Deny by default: [`event_class`], [`record_class`] and [`store_class`] are
-//! matches with no wildcard arm, so a new event type, record kind or store
-//! file fails to compile (or is refused) until it gets a rule.
+//! Contract lines this rests on:
+//! - README section 6: "Lifecycle is the pure function of E section 3 over the
+//!   ledger: `closed` when a case-level `close-*` disposition exists (final,
+//!   `CASE_CLOSED` for anything after it that is refused below)".
+//! - README D42: "a closed case refuses every write except the action that
+//!   ends the plan (CASE_CLOSED is final, D32)". The actions that end the plan
+//!   are finishing it (a completion, `CaseClosed`) and `CaseTerminated`: after
+//!   `close-failed` on an unfinished plan the operator can still stop the case.
+//! - README R11: "any path to a terminal state with no case-level `close-*`
+//!   disposition ... `CLOSE_DISPOSITION_REQUIRED`".
+//! - README section 5, registry table: what a suspended and a closed case do
+//!   with each kind (for example `episode.settled`: suspended refuse, closed
+//!   accept as late evidence; `gate.assessed`: suspended accept, closed refuse).
 //!
-//! A case whose plan is not `fde.field_case@1` takes the lock and is otherwise
-//! not touched.
+//! A case that is not a Field Case (no `field*` artifact, plan not
+//! `fde.field_case@1`) is written without a decision.
 
+use super::contract::{self, Rule};
 use super::field_guard::{gate_check_records, is_field_case, Refusal};
 use sea_forge_core::types::{CasePlan, TraceEvent, TraceKind};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
+use std::io::Write as _;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
@@ -49,9 +56,9 @@ pub type ContractError = Refusal;
 pub const RECORDS: &str = "field-records.jsonl";
 /// The case-event log.
 pub const EVENTS: &str = "case-events.jsonl";
-/// The document of a Field Case.
+/// The document of a Field Case: a projection of the record chain.
 pub const DOCUMENT: &str = "field_case.json";
-const LOCK_FILE: &str = ".case.lock";
+const REPAIRS: &str = "field-repairs.jsonl";
 const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 // ---------------------------------------------------------------------------
@@ -59,36 +66,156 @@ const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000
 // ---------------------------------------------------------------------------
 
 thread_local! {
-    /// The case locks this thread holds: a nested admission (a verb that holds
-    /// the lock and then appends) re-uses it instead of deadlocking on its own
-    /// file lock.
+    /// The case locks this thread holds: a nested acquisition (a verb that
+    /// holds the lock and then commits) re-uses it instead of deadlocking on
+    /// its own file lock.
     static HELD: RefCell<HashMap<PathBuf, (usize, File)>> = RefCell::new(HashMap::new());
+    /// Test builds: every path `commit` writes (see [`journal_begin`]).
+    static JOURNAL: RefCell<Option<Vec<PathBuf>>> = const { RefCell::new(None) };
+}
+
+/// Start journaling the paths `commit` writes on this thread.
+pub fn journal_begin() {
+    JOURNAL.with(|j| *j.borrow_mut() = Some(Vec::new()));
+}
+
+/// Stop journaling and return every path written since [`journal_begin`].
+pub fn journal_end() -> Vec<PathBuf> {
+    JOURNAL.with(|j| j.borrow_mut().take().unwrap_or_default())
+}
+
+fn note(path: &Path) {
+    JOURNAL.with(|j| {
+        if let Some(list) = j.borrow_mut().as_mut() {
+            list.push(path.to_path_buf());
+        }
+    });
+}
+
+/// Where the lock of `case_dir` lives: `<root>/.case-locks/<id>-<hash>.lock`,
+/// never inside the case directory.
+fn lock_file(case_dir: &Path) -> (PathBuf, String) {
+    let parent = case_dir.parent().unwrap_or(Path::new("."));
+    let key = std::fs::canonicalize(parent)
+        .unwrap_or_else(|_| parent.to_path_buf())
+        .join(case_dir.file_name().unwrap_or_default());
+    let root = store_root(case_dir);
+    let dir = root.join(".case-locks");
+    let tag = hex::encode(&Sha256::digest(key.to_string_lossy().as_bytes())[..6]);
+    let name = format!(
+        "{}-{tag}.lock",
+        key.file_name().unwrap_or_default().to_string_lossy()
+    );
+    (dir, name)
+}
+
+/// The root directory of the case store `case_dir` lives in.
+fn store_root(case_dir: &Path) -> PathBuf {
+    let parent = case_dir.parent().unwrap_or(Path::new("."));
+    let key = std::fs::canonicalize(parent)
+        .unwrap_or_else(|_| parent.to_path_buf())
+        .join(case_dir.file_name().unwrap_or_default());
+    let parent = key.parent().unwrap_or(Path::new("."));
+    if parent.file_name().is_some_and(|n| n == "cases") {
+        parent.parent().unwrap_or(parent).to_path_buf()
+    } else {
+        parent.to_path_buf()
+    }
+}
+
+/// The case index entry of `case_dir`: `<root>/.case-index/<case_id>.json`,
+/// outside the case directory. It records what a commit left (`field`, the
+/// ledger head digest, the event count) so a store that lost files or lines
+/// afterwards is detected (residual detection).
+pub fn index_path(case_dir: &Path) -> PathBuf {
+    let id = case_dir.file_name().unwrap_or_default().to_string_lossy();
+    store_root(case_dir)
+        .join(".case-index")
+        .join(format!("{id}.json"))
+}
+
+fn check_index(
+    case_dir: &Path,
+    field: bool,
+    records: &[Value],
+    events: &[TraceEvent],
+) -> Result<(), ContractError> {
+    let Ok(bytes) = std::fs::read(index_path(case_dir)) else {
+        return Ok(());
+    };
+    let idx: Value = serde_json::from_slice(&bytes)
+        .map_err(|e| integrity(format!("the case index does not parse: {e}")))?;
+    if idx["field"] == true && !field {
+        return Err(integrity(
+            "the case index says this is a Field Case but its field artifacts are gone".into(),
+        ));
+    }
+    if !field {
+        return Ok(());
+    }
+    let head = idx["ledger_head_digest"].as_str().unwrap_or(ZERO_HASH);
+    if head != ZERO_HASH && !records.iter().any(|r| r["hash"].as_str() == Some(head)) {
+        return Err(integrity(
+            "the ledger lost records the case index saw (its head digest is gone)".into(),
+        ));
+    }
+    if (events.len() as u64) < idx["event_count"].as_u64().unwrap_or(0) {
+        return Err(integrity(
+            "the event log lost events the case index saw".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn write_index(
+    case_dir: &Path,
+    records: &[Value],
+    event_count: usize,
+) -> Result<(), ContractError> {
+    let head = records
+        .last()
+        .and_then(|r| r["hash"].as_str())
+        .unwrap_or(ZERO_HASH);
+    let bytes = serde_json::to_vec(&json!({
+        "field": true, "ledger_head_digest": head, "event_count": event_count
+    }))
+    .map_err(|e| integrity(e.to_string()))?;
+    replace_bytes(case_dir, &index_path(case_dir), &bytes)
+}
+
+/// The lock file of `case_dir` (outside it).
+pub fn lock_path(case_dir: &Path) -> PathBuf {
+    let (dir, name) = lock_file(case_dir);
+    dir.join(name)
 }
 
 /// The cross-process lock of one case directory. Held until dropped; a thread
-/// that already holds it nests (counted). Not `Send`: it belongs to the
-/// thread that took it.
+/// that already holds it nests (counted). Not `Send`.
 pub struct CaseLock {
     key: PathBuf,
     _thread_bound: PhantomData<*const ()>,
 }
 
 impl CaseLock {
-    /// Block until this thread holds the case lock of `case_dir`.
+    /// Block until this thread holds the case lock of `case_dir`. Creates
+    /// nothing under `case_dir`.
     pub fn acquire(case_dir: &Path) -> Result<Self, ContractError> {
-        let key = std::fs::canonicalize(case_dir).unwrap_or_else(|_| case_dir.to_path_buf());
+        let (dir, name) = lock_file(case_dir);
+        let key = dir.join(name);
         let nested = HELD.with(|held| {
             held.borrow_mut().get_mut(&key).map(|slot| {
                 slot.0 += 1;
             })
         });
         if nested.is_none() {
+            std::fs::create_dir_all(&dir)
+                .map_err(|e| integrity(format!("create the lock directory: {e}")))?;
             let file = OpenOptions::new()
                 .create(true)
                 .truncate(false)
                 .read(true)
                 .write(true)
-                .open(key.join(LOCK_FILE))
+                .open(&key)
                 .map_err(|e| integrity(format!("open the case lock: {e}")))?;
             file.lock()
                 .map_err(|e| integrity(format!("take the case lock: {e}")))?;
@@ -116,84 +243,64 @@ impl Drop for CaseLock {
     }
 }
 
-/// Proof that a write was admitted. It holds the case lock: keep it alive
-/// until the append is done.
-pub struct WriteToken {
-    _lock: CaseLock,
-    case_dir: PathBuf,
-}
-
-impl WriteToken {
-    fn check(&self, path: &Path) -> std::io::Result<()> {
-        let inside = path.starts_with(&self.case_dir)
-            || std::fs::canonicalize(path.parent().unwrap_or(path))
-                .ok()
-                .zip(std::fs::canonicalize(&self.case_dir).ok())
-                .is_some_and(|(p, c)| p.starts_with(c));
-        if inside {
-            Ok(())
-        } else {
-            Err(std::io::Error::other(
-                "the write token is for another case directory",
-            ))
-        }
-    }
-
-    /// Replace `path` with `bytes` (temp file, then rename). The only way to
-    /// put a file into a case directory: it needs this token.
-    pub fn replace(&self, path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-        self.check(path)?;
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, bytes)?;
-        std::fs::rename(&tmp, path)
-    }
-
-    /// Append `bytes` to `path`, durably.
-    pub fn append(&self, path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-        use std::io::Write;
-        self.check(path)?;
-        let mut file = OpenOptions::new().create(true).append(true).open(path)?;
-        file.write_all(bytes)?;
-        file.sync_data()
-    }
-
-    /// Cut `path` back to `len` bytes (the repair of a torn tail).
-    pub fn truncate(&self, path: &Path, len: u64) -> std::io::Result<()> {
-        self.check(path)?;
-        let file = OpenOptions::new().write(true).open(path)?;
-        file.set_len(len)?;
-        file.sync_all()
-    }
-}
-
 // ---------------------------------------------------------------------------
 // What is proposed
 // ---------------------------------------------------------------------------
 
-/// The write a caller is about to make.
-pub enum Proposed<'a> {
-    /// A trace event of `case-events.jsonl`.
-    Event {
-        kind: &'a TraceKind,
-        item: Option<&'a str>,
-    },
-    /// A verb's whole consequence, admitted at once before any of it is
-    /// written: each event is judged on the ledger plus the events before it
-    /// in the batch, so a close that the batch would reach without its
-    /// disposition refuses the batch with nothing written.
-    Batch {
-        events: &'a [(TraceKind, Option<String>)],
-    },
-    /// A line of `field-records.jsonl` (every dialect): the full record.
-    Record { record: &'a Value },
-    /// `case.json`, `plan.json` or a run file (`"runs"`), with the value about
-    /// to be written.
-    Projection { file: &'a str, value: &'a Value },
-    /// Any other file of the case store, by file name.
-    Store { file: &'a str },
+/// One operation of a batch.
+#[derive(Debug, Clone)]
+pub enum Op {
+    /// A line of `field-records.jsonl`: the full, chain-linked record.
+    Record(Value),
+    /// A trace event of `case-events.jsonl`, fully built.
+    Event(TraceEvent),
+    /// A line of a declared auxiliary store (intents, decisions, approvals,
+    /// outboxes, execution stores), by file name.
+    Append { file: String, line: Value },
+    /// `case.json`: a projection; its state must agree with the event log.
+    Case(Value),
+    /// `plan.json`: written at creation, or together with its `PlanMutated`.
+    Plan(Value),
+    /// A file under `runs/` (run outputs), by path inside `runs/`.
+    RunFile { rel: String, bytes: Vec<u8> },
+}
+
+/// A verb's whole consequence, committed all or nothing.
+#[derive(Debug, Clone, Default)]
+pub struct Batch {
+    pub ops: Vec<Op>,
+}
+
+impl Batch {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with(mut self, op: Op) -> Self {
+        self.ops.push(op);
+        self
+    }
+
+    pub fn push(&mut self, op: Op) {
+        self.ops.push(op);
+    }
+
+    /// Events as the engine would append them (kinds and items only): for
+    /// [`check`], where nothing is written.
+    pub fn of_events(events: &[(TraceKind, Option<String>)]) -> Self {
+        Self {
+            ops: events
+                .iter()
+                .map(|(kind, item)| Op::Event(hypothetical(kind, item.as_deref())))
+                .collect(),
+        }
+    }
+}
+
+/// What a commit wrote.
+#[derive(Debug, Default)]
+pub struct Committed {
+    pub events: Vec<TraceEvent>,
 }
 
 fn integrity(message: String) -> ContractError {
@@ -339,21 +446,6 @@ pub fn verified_records(case_dir: &Path) -> Result<Vec<Value>, ContractError> {
     Ok(out)
 }
 
-/// The trace events written so far (a line that does not parse is skipped:
-/// the event log feeds no integrity rule).
-fn events_of(case_dir: &Path) -> Vec<TraceEvent> {
-    let bytes = std::fs::read(case_dir.join(EVENTS)).unwrap_or_default();
-    let end = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
-    bytes[..end]
-        .split(|b| *b == b'\n')
-        .filter_map(|line| serde_json::from_slice(line).ok())
-        .collect()
-}
-
-fn plan_of(case_dir: &Path) -> Option<CasePlan> {
-    serde_json::from_slice(&std::fs::read(case_dir.join("plan.json")).ok()?).ok()
-}
-
 /// Has the plan run out of things to do? Every item is finished, or the engine
 /// has only the case close or terminate left.
 fn plan_finished(plan: &Option<CasePlan>, events: &[TraceEvent]) -> bool {
@@ -384,51 +476,137 @@ fn ledger_revision(records: &[Value]) -> u64 {
         .unwrap_or(1)
 }
 
-/// The document requirement (README §6): `field_case.json` is present, is
-/// JSON, names this case and is not ahead of its ledger. (A document BEHIND
-/// its ledger is healed by the record appender, which owns the replay.)
-fn check_document(case_dir: &Path, records: &[Value]) -> Result<(), ContractError> {
-    let bytes = std::fs::read(case_dir.join(DOCUMENT))
-        .map_err(|e| integrity(format!("{DOCUMENT} of a Field Case: {e}")))?;
-    let doc: Value = serde_json::from_slice(&bytes)
-        .map_err(|e| integrity(format!("{DOCUMENT} is not JSON: {e}")))?;
-    let case_id = case_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if doc["case_id"].as_str() != Some(case_id) {
-        return Err(integrity(format!("{DOCUMENT} names another case")));
+// ---------------------------------------------------------------------------
+// Files: every one belongs to a registry kind, a declared projection, or is
+// refused
+// ---------------------------------------------------------------------------
+
+/// What a file of the case directory is to the guard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileClass {
+    /// `field-records.jsonl`: each line is a registry kind.
+    Ledger,
+    /// `case-events.jsonl`.
+    Events,
+    /// `field_case.json`: derived from the ledger inside the commit; no
+    /// caller writes it.
+    Document,
+    /// `case.json`: a projection whose state must agree with the event log.
+    CaseJson,
+    /// `plan.json`: created, or rewritten with its `PlanMutated` event.
+    PlanJson,
+    /// A store that belongs to registry kinds: a line is admitted when one of
+    /// them is accepted by the lifecycle (their Suspended / Closed columns).
+    Owned(&'static [&'static str]),
+    /// Obligations and deliveries of ledger facts (interaction, RealityTrace
+    /// and anchor outboxes): they carry no case state.
+    Outbox,
+    /// Execution and delegation state: refused when suspended; once closed
+    /// only while the action that ends the plan is in flight.
+    Execution,
+    /// Files under `runs/`: run outputs, same rule as execution state.
+    RunOutput,
+}
+
+/// The file table. `None` is a file the guard has no rule for: refused.
+pub fn classify(rel: &str) -> Option<FileClass> {
+    if rel == "runs" || rel.starts_with("runs/") {
+        return Some(FileClass::RunOutput);
     }
-    // The document's structure: the template's members, every field group and
-    // field present (the schema is closed), and the full schema when the host
-    // installed it.
-    let template = sea_forge_core::field_case::opened_document(case_id);
-    let keys = |v: &Value| -> Vec<String> {
-        v.as_object()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default()
+    Some(match rel {
+        RECORDS => FileClass::Ledger,
+        EVENTS => FileClass::Events,
+        DOCUMENT => FileClass::Document,
+        "case.json" => FileClass::CaseJson,
+        "plan.json" => FileClass::PlanJson,
+        "field-freeze-intents.jsonl" => FileClass::Owned(&["episode.frozen"]),
+        "field-decisions.jsonl" => FileClass::Owned(&["episode.settled"]),
+        "field-approvals.jsonl" => FileClass::Owned(&[
+            "disposition.recorded",
+            "gate.assessed",
+            "field_case.revised",
+            "episode.settled",
+        ]),
+        "field-rt-outbox.jsonl"
+        | "field-anchor-outbox.jsonl"
+        | "field-interaction-outbox.jsonl" => FileClass::Outbox,
+        "field-runs.jsonl"
+        | "field-links.jsonl"
+        | "field-assignments.jsonl"
+        | "field-exec-decisions.jsonl" => FileClass::Execution,
+        _ => return None,
+    })
+}
+
+/// The members every line of a store carries (the shape check of the strict
+/// load, and of an append).
+const STORE_SHAPES: [(&str, &[&str]); 11] = [
+    ("field-freeze-intents.jsonl", &["idempotency_key", "state"]),
+    ("field-decisions.jsonl", &["decision_id", "decision"]),
+    ("field-approvals.jsonl", &["approval_ref", "consumed_by"]),
+    ("field-rt-outbox.jsonl", &["system", "record_id", "state"]),
+    ("field-anchor-outbox.jsonl", &["id", "state"]),
+    ("field-interaction-outbox.jsonl", &["event_id", "state"]),
+    (
+        "field-runs.jsonl",
+        &["run_id", "case_id", "episode_ref", "verb"],
+    ),
+    ("field-links.jsonl", &["link_id", "case_id", "delegate"]),
+    ("field-assignments.jsonl", &["assignment_id", "state"]),
+    ("field-exec-decisions.jsonl", &["decision_id", "run_id"]),
+    (REPAIRS, &["file", "dropped_sha256"]),
+];
+
+fn shape_ok(file: &str, line: &Value) -> Result<(), String> {
+    let Some((_, keys)) = STORE_SHAPES.iter().find(|(n, _)| *n == file) else {
+        return Err(format!("{file} is not a store of the case"));
     };
-    if keys(&doc) != keys(&template) {
-        return Err(integrity(format!(
-            "{DOCUMENT} has other members than field-case.v1"
-        )));
-    }
-    for (group, fields) in template["fields"].as_object().into_iter().flatten() {
-        let have_fields = &doc["fields"][group];
-        if !have_fields.is_object() || keys(have_fields) != keys(fields) {
-            return Err(integrity(format!(
-                "{DOCUMENT} fields.{group} is not field-case.v1"
-            )));
+    let Some(map) = line.as_object() else {
+        return Err("a line is not a JSON object".into());
+    };
+    for key in *keys {
+        if !map.contains_key(*key) {
+            return Err(format!("a line of {file} has no `{key}`"));
         }
     }
-    if let Some(validate) = DOCUMENT_VALIDATOR.get() {
-        validate(&doc).map_err(|e| integrity(format!("{DOCUMENT}: {e}")))?;
-    }
-    let have = doc["revision"].as_u64().unwrap_or(0);
-    let want = ledger_revision(records);
-    if have > want {
-        return Err(integrity(format!(
-            "{DOCUMENT} is at revision {have}, ahead of its ledger ({want})"
-        )));
-    }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Strict load: every line of every store, or STORE_INTEGRITY
+// ---------------------------------------------------------------------------
+
+/// The complete lines of a store file. A torn trailing fragment (a crash
+/// mid-append, no newline) is not a line; the next commit repairs it.
+fn complete_lines(path: &Path) -> Result<Vec<Vec<u8>>, ContractError> {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(integrity(format!("read {}: {e}", path.display()))),
+    };
+    let end = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    Ok(bytes[..end]
+        .split(|b| *b == b'\n')
+        .filter(|l| !l.is_empty())
+        .map(<[u8]>::to_vec)
+        .collect())
+}
+
+/// Every event line parses as a trace event: no line is skipped.
+fn events_of(case_dir: &Path) -> Result<Vec<TraceEvent>, ContractError> {
+    complete_lines(&case_dir.join(EVENTS))?
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            serde_json::from_slice(line).map_err(|e| {
+                integrity(format!("{EVENTS} line {} is not a trace event: {e}", i + 1))
+            })
+        })
+        .collect()
+}
+
+fn plan_of(case_dir: &Path) -> Option<CasePlan> {
+    serde_json::from_slice(&std::fs::read(case_dir.join("plan.json")).ok()?).ok()
 }
 
 // ---------------------------------------------------------------------------
@@ -494,61 +672,6 @@ fn event_class(kind: &TraceKind) -> EventClass {
         TraceKind::CaseClosed => EventClass::Close,
         TraceKind::CaseTerminated => EventClass::Terminate,
         TraceKind::CaseReopened => EventClass::Reopen,
-    }
-}
-
-/// What a record kind means to the guard.
-enum RecordClass {
-    /// `episode.frozen`: refused when suspended or closed.
-    Freeze,
-    /// `episode.settled`: refused when suspended; late evidence once closed.
-    Settlement,
-    /// `gate.assessed`, `field_case.revised`, `strategy.recorded`: accepted
-    /// when suspended, refused once closed.
-    Revision,
-    /// `disposition.recorded`.
-    Disposition,
-}
-
-/// `None` is a record kind the guard has no rule for: refused.
-fn record_class(kind: &str) -> Option<RecordClass> {
-    match kind {
-        "episode.frozen" => Some(RecordClass::Freeze),
-        "episode.settled" => Some(RecordClass::Settlement),
-        "gate.assessed" | "field_case.revised" | "strategy.recorded" => Some(RecordClass::Revision),
-        "disposition.recorded" => Some(RecordClass::Disposition),
-        _ => None,
-    }
-}
-
-/// What a store file means to the guard.
-enum StoreClass {
-    /// Bookkeeping of a record or a request that was admitted on its own
-    /// (intents, decisions, outboxes, approvals, the document projection):
-    /// lifecycle-neutral.
-    Bookkeeping,
-    /// Execution and delegation state (runs, links, assignments, execution
-    /// decisions): refused when suspended; once closed only while the action
-    /// that ends the plan is in flight.
-    Execution,
-}
-
-/// `None` is a store file the guard has no rule for: refused.
-fn store_class(file: &str) -> Option<StoreClass> {
-    match file {
-        "field-freeze-intents.jsonl"
-        | "field-decisions.jsonl"
-        | "field-rt-outbox.jsonl"
-        | "field-anchor-outbox.jsonl"
-        | "field-approvals.jsonl"
-        | "field-repairs.jsonl"
-        | "field-interaction-outbox.jsonl"
-        | DOCUMENT => Some(StoreClass::Bookkeeping),
-        "field-runs.jsonl"
-        | "field-links.jsonl"
-        | "field-assignments.jsonl"
-        | "field-exec-decisions.jsonl" => Some(StoreClass::Execution),
-        _ => None,
     }
 }
 
@@ -716,7 +839,7 @@ fn admit_event(
             Lifecycle::Closed => Err(closed()),
         },
         // R11: any path to a terminal state needs a case-level close-*
-        // disposition (README §7: "any path to a terminal state with no
+        // disposition (README R11: "any path to a terminal state with no
         // case-level close-* disposition ... CLOSE_DISPOSITION_REQUIRED").
         // Both the close and the terminate end the case, once.
         EventClass::Close | EventClass::Terminate => match life {
@@ -725,9 +848,14 @@ fn admit_event(
                 "CLOSE_DISPOSITION_REQUIRED",
                 "this action ends the case and no case-level close disposition exists",
             )),
-            // C2: once closed, only the write that ends a finished plan, once.
+            // C2 / D42 ("a closed case refuses every write except the action
+            // that ends the plan"): once, and while the case has not ended.
+            // `CaseTerminated` IS an action that ends the plan, finished or
+            // not (the operator stops a case whose close was `close-failed`);
+            // `CaseClosed` ends a plan that is finished.
             Lifecycle::Closed => {
-                if ended(events) || !plan_finished(&st.plan, events) {
+                let terminate = matches!(event_class(kind), EventClass::Terminate);
+                if ended(events) || !(terminate || plan_finished(&st.plan, events)) {
                     Err(closed())
                 } else {
                     Ok(())
@@ -749,18 +877,198 @@ fn admit_event(
     }
 }
 
+/// The document of a Field Case, derived from its record chain: the opened
+/// document with every `field_case.revised` applied in order.
+pub fn derived_document(case_id: &str, records: &[Value]) -> Value {
+    let mut doc = sea_forge_core::field_case::opened_document(case_id);
+    for r in records.iter().filter(|r| r["kind"] == "field_case.revised") {
+        for change in r["payload"]["changes"].as_array().into_iter().flatten() {
+            if let (Some(path), field) = (change["path"].as_str(), &change["field"]) {
+                if let Some((group, name)) = path.split_once('.') {
+                    doc["fields"][group][name] = field.clone();
+                }
+            }
+        }
+        if let Some(rev) = r["revision"].as_u64() {
+            doc["revision"] = json!(rev);
+        }
+    }
+    doc
+}
+
+/// The document requirement (README section 6): `field_case.json` is present,
+/// is JSON, validates against `field-case.v1`, names this case, is not ahead
+/// of its ledger and, at the ledger's revision, is what the ledger derives.
+/// (A document BEHIND its ledger is healed by the next commit.)
+fn check_document(case_dir: &Path, records: &[Value]) -> Result<(), ContractError> {
+    let bytes = std::fs::read(case_dir.join(DOCUMENT))
+        .map_err(|e| integrity(format!("{DOCUMENT} of a Field Case: {e}")))?;
+    let doc: Value = serde_json::from_slice(&bytes)
+        .map_err(|e| integrity(format!("{DOCUMENT} is not JSON: {e}")))?;
+    let case_id = case_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    if doc["case_id"].as_str() != Some(case_id) {
+        return Err(integrity(format!("{DOCUMENT} names another case")));
+    }
+    contract::document_is_valid(&doc).map_err(|e| integrity(format!("{DOCUMENT}: {e}")))?;
+    let have = doc["revision"].as_u64().unwrap_or(0);
+    let want = ledger_revision(records);
+    if have > want {
+        return Err(integrity(format!(
+            "{DOCUMENT} is at revision {have}, ahead of its ledger ({want})"
+        )));
+    }
+    if have == want && doc != derived_document(case_id, records) {
+        return Err(integrity(format!("{DOCUMENT} differs from its ledger")));
+    }
+    Ok(())
+}
+
+fn terminal_state(state: &str) -> bool {
+    matches!(state, "completed" | "terminated")
+}
+
+fn plan_says_field(case_dir: &Path) -> bool {
+    std::fs::read(case_dir.join("plan.json")).is_ok_and(|bytes| {
+        match serde_json::from_slice::<Value>(&bytes) {
+            Ok(plan) => plan["template_ref"] == super::field_guard::FIELD_CASE_TEMPLATE,
+            Err(_) => {
+                String::from_utf8_lossy(&bytes).contains(super::field_guard::FIELD_CASE_TEMPLATE)
+            }
+        }
+    })
+}
+
+fn index_says_field(case_dir: &Path) -> bool {
+    std::fs::read(index_path(case_dir))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+        .is_some_and(|i| i["field"] == true)
+}
+
+/// Everything a decision rests on, loaded all-or-nothing from every store of
+/// the case (see [`load_verified`]).
+#[derive(Clone)]
+pub struct CaseState {
+    /// A Field Case (by the plan or by any `field*` artifact).
+    pub field: bool,
+    /// A Field Case proper (its plan names the Field template, or the case
+    /// index recorded it as one): plan, `case.json`, event log and document
+    /// are required and verified. A case that only has a v1 ledger (no Field
+    /// template) keeps its previous, lenient rules.
+    pub strict: bool,
+    pub records: Vec<Value>,
+    pub life: Lifecycle,
+    pub events: Vec<TraceEvent>,
+    pub plan: Option<CasePlan>,
+    /// `case.json`'s `state`.
+    pub case_state: Option<String>,
+    /// `case.json` as stored: a projection write that changes nothing is no
+    /// write.
+    pub case_json: Option<Value>,
+}
+
+/// The verified state of the case at `case_dir`: strictly, from the plan,
+/// `case.json`, the event log, every auxiliary store, the record chain (each
+/// payload validated against the registry's schema) and the document; or
+/// `STORE_INTEGRITY`. Any `field*` artifact makes it a Field Case; a plain
+/// case is returned unverified with `field: false`. `creating` is the
+/// creation of a Field Case: the files it is about to create may be absent.
+pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, ContractError> {
+    let field = creating || is_field_case(case_dir);
+    let case_json = std::fs::read(case_dir.join("case.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Value>(&b).ok());
+    let case_state = case_json
+        .as_ref()
+        .and_then(|c| c["state"].as_str().map(String::from));
+    if !field {
+        check_index(case_dir, false, &[], &[])?;
+        return Ok(CaseState {
+            field,
+            strict: false,
+            records: Vec::new(),
+            life: Lifecycle::Open,
+            events: Vec::new(),
+            plan: None,
+            case_state,
+            case_json,
+        });
+    }
+    let plan = plan_of(case_dir);
+    let strict = !creating
+        && (plan_says_field(case_dir)
+            || index_says_field(case_dir)
+            // A plan that exists and does not parse is corruption, not a bare case.
+            || (case_dir.join("plan.json").exists() && plan.is_none()));
+    if strict {
+        if plan.is_none() {
+            return Err(integrity(
+                "plan.json of a Field Case is missing or does not parse".into(),
+            ));
+        }
+        if case_state.is_none() {
+            return Err(integrity(
+                "case.json of a Field Case is missing or has no state".into(),
+            ));
+        }
+    }
+    let events = events_of(case_dir)?;
+    let records = verified_records(case_dir)?;
+    for (i, r) in records.iter().enumerate() {
+        let kind = r["kind"].as_str().unwrap_or("");
+        contract::payload_is_valid(kind, &r["payload"])
+            .map_err(|e| integrity(format!("{RECORDS} record {}: payload: {e}", i + 1)))?;
+    }
+    for (name, _) in STORE_SHAPES {
+        for (i, line) in complete_lines(&case_dir.join(name))?.iter().enumerate() {
+            let value: Value = serde_json::from_slice(line)
+                .map_err(|e| integrity(format!("{name} line {} is not JSON: {e}", i + 1)))?;
+            shape_ok(name, &value).map_err(|e| integrity(format!("{name} line {}: {e}", i + 1)))?;
+        }
+    }
+    if strict {
+        check_document(case_dir, &records)?;
+    }
+    check_index(case_dir, true, &records, &events)?;
+    let life = lifecycle(&records);
+    if strict && ended(&events) && life != Lifecycle::Closed {
+        return Err(integrity(
+            "the event log ends the case but the ledger holds no close disposition".into(),
+        ));
+    }
+    if strict && case_state.as_deref().is_some_and(terminal_state) && !ended(&events) {
+        return Err(integrity(
+            "case.json is terminal but the event log does not end the case".into(),
+        ));
+    }
+    Ok(CaseState {
+        field,
+        strict,
+        life,
+        records,
+        events,
+        plan,
+        case_state,
+        case_json,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// The decision
+// ---------------------------------------------------------------------------
+
 fn admit_record(st: &CaseState, record: &Value) -> Result<(), ContractError> {
-    let (records, life) = (&st.records[..], st.life);
     let kind = record["kind"].as_str().unwrap_or("");
-    let Some(class) = record_class(kind) else {
+    let Some(rules) = contract::registry().get(kind) else {
         return Err(refuse(
             "KIND_UNKNOWN",
-            "the guard has no rule for this record kind",
+            "the registry has no such record kind",
         ));
     };
     // The record is the next link of the chain, as the ledger is now.
-    let seq = records.len() as u64 + 1;
-    let prev = records
+    let seq = st.records.len() as u64 + 1;
+    let prev = st
+        .records
         .last()
         .and_then(|r| r["hash"].as_str())
         .unwrap_or(ZERO_HASH);
@@ -769,230 +1077,373 @@ fn admit_record(st: &CaseState, record: &Value) -> Result<(), ContractError> {
             "the record does not extend the ledger as it is now (stale write)".into(),
         ));
     }
-    match (life, class) {
-        (Lifecycle::Open, _) => Ok(()),
-        (Lifecycle::Closed, RecordClass::Settlement) => Ok(()),
-        (Lifecycle::Closed, _) => Err(closed()),
-        (Lifecycle::Suspended, RecordClass::Revision) => Ok(()),
-        (Lifecycle::Suspended, RecordClass::Disposition) => {
-            let d = record["disposition"].as_str().unwrap_or("");
-            if record["level"] == "case" && (d == "continue" || d.starts_with("close-")) {
-                Ok(())
-            } else {
-                Err(suspended())
+    contract::payload_is_valid(kind, &record["payload"])
+        .map_err(|e| refuse("SCHEMA_INVALID", &format!("payload: {e}")))?;
+    match st.life {
+        Lifecycle::Open => Ok(()),
+        Lifecycle::Closed => match rules.closed {
+            Rule::Accept => Ok(()),
+            _ => Err(closed()),
+        },
+        Lifecycle::Suspended => match rules.suspended {
+            Rule::Accept => Ok(()),
+            Rule::LiftOrCloseOnly => {
+                let d = record["disposition"].as_str().unwrap_or("");
+                if record["level"] == "case" && (d == "continue" || d.starts_with("close-")) {
+                    Ok(())
+                } else {
+                    Err(suspended())
+                }
+            }
+            Rule::Refuse => Err(suspended()),
+        },
+    }
+}
+
+/// A store line that belongs to registry kinds: admitted when the lifecycle
+/// accepts one of them.
+fn admit_owned(st: &CaseState, kinds: &[&str]) -> Result<(), ContractError> {
+    let ok = kinds.iter().any(|k| {
+        contract::registry().get(*k).is_some_and(|r| match st.life {
+            Lifecycle::Open => true,
+            Lifecycle::Closed => r.closed == Rule::Accept,
+            Lifecycle::Suspended => r.suspended == Rule::Accept,
+        })
+    });
+    match (ok, st.life) {
+        (true, _) => Ok(()),
+        (false, Lifecycle::Closed) => Err(closed()),
+        (false, _) => Err(suspended()),
+    }
+}
+
+/// `case.json`: its state agrees with the event log. Terminal only once the
+/// events end the case (R11, C1); a terminal state is written once; a closed
+/// case is not reopened by a state write (C2).
+fn admit_case(st: &CaseState, value: &Value) -> Result<(), ContractError> {
+    let new = value["state"].as_str().unwrap_or("");
+    let over = ended(&st.events);
+    if terminal_state(new) {
+        if !over {
+            return Err(match st.life {
+                Lifecycle::Open => refuse(
+                    "CLOSE_DISPOSITION_REQUIRED",
+                    "this write ends the case and no case-level close disposition exists",
+                ),
+                Lifecycle::Suspended => suspended(),
+                Lifecycle::Closed => closed(),
+            });
+        }
+        // Terminal and the log agrees: the projection of an ended case (also
+        // its repeat, and the heal of a projection a crash left behind).
+        return Ok(());
+    }
+    if over {
+        return Err(closed());
+    }
+    match st.life {
+        Lifecycle::Open => Ok(()),
+        Lifecycle::Suspended => Err(suspended()),
+        Lifecycle::Closed => Err(closed()),
+    }
+}
+
+/// THE decision, pure: fold the whole batch onto the verified state, op by op,
+/// and check each op and the invariants on the RESULT. Nothing is read or
+/// written here. C1 terminal only behind a close disposition; C2 a closed case
+/// admits only plan-ending actions and the kinds the registry accepts when
+/// closed; C3 no gate item or milestone completes without a passing
+/// assessment; C6 a suspended case admits only what the registry accepts when
+/// suspended. A file or kind the guard has no rule for is refused.
+pub fn decide(st: &CaseState, batch: &Batch) -> Result<(), ContractError> {
+    let mut sim = st.clone();
+    let mutates_plan = batch
+        .ops
+        .iter()
+        .any(|op| matches!(op, Op::Event(e) if e.kind == TraceKind::PlanMutated));
+    for op in batch.ops.iter().filter(|op| !matches!(op, Op::Case(_))) {
+        match op {
+            Op::Record(r) => {
+                admit_record(&sim, r)?;
+                sim.records.push(r.clone());
+                sim.life = lifecycle(&sim.records);
+            }
+            Op::Event(e) => {
+                admit_event(&sim, &e.kind, e.plan_item_id.as_deref(), &sim.events)?;
+                sim.events.push(e.clone());
+            }
+            Op::Append { file, line } => {
+                match classify(file) {
+                    Some(FileClass::Owned(kinds)) => admit_owned(&sim, kinds)?,
+                    Some(FileClass::Outbox) => {}
+                    Some(FileClass::Execution) => {
+                        in_flight(&sim, &sim.events, Hypo::InFlight(None))?
+                    }
+                    _ => {
+                        return Err(refuse(
+                            "KIND_UNKNOWN",
+                            "the guard has no rule for this store file",
+                        ))
+                    }
+                }
+                shape_ok(file, line).map_err(|e| refuse("SCHEMA_INVALID", &e))?;
+            }
+            Op::Plan(_) => {
+                if st.plan.is_some() && !mutates_plan {
+                    return Err(refuse(
+                        "KIND_UNKNOWN",
+                        "the plan of a Field Case is rewritten only with its plan mutation",
+                    ));
+                }
+            }
+            Op::RunFile { .. } => in_flight(&sim, &sim.events, Hypo::InFlight(None))?,
+            Op::Case(_) => {}
+        }
+    }
+    for op in &batch.ops {
+        if let Op::Case(v) = op {
+            if st.case_json.as_ref() != Some(v) {
+                admit_case(&sim, v)?;
             }
         }
-        (Lifecycle::Suspended, RecordClass::Freeze | RecordClass::Settlement) => Err(suspended()),
     }
+    // The result: a terminal event log rests on a close disposition (R11).
+    if !ended(&st.events) && ended(&sim.events) && sim.life != Lifecycle::Closed {
+        return Err(refuse(
+            "CLOSE_DISPOSITION_REQUIRED",
+            "this action ends the case and no case-level close disposition exists",
+        ));
+    }
+    Ok(())
 }
 
-/// The aux stores that decide an invariant: each must parse completely.
-const STRICT_STORES: [&str; 8] = [
-    "field-freeze-intents.jsonl",
-    "field-decisions.jsonl",
-    "field-rt-outbox.jsonl",
-    "field-anchor-outbox.jsonl",
-    "field-runs.jsonl",
-    "field-links.jsonl",
-    "field-approvals.jsonl",
-    "field-assignments.jsonl",
-];
-
-/// Installed by the server: the full `field-case.v1` schema check.
-pub type DocumentValidator = fn(&Value) -> Result<(), String>;
-static DOCUMENT_VALIDATOR: std::sync::OnceLock<DocumentValidator> = std::sync::OnceLock::new();
-
-/// Register the full schema validation of the document (the server owns the
-/// vendored schemas); the guard always also checks the document's structure.
-pub fn set_document_validator(validator: DocumentValidator) {
-    let _ = DOCUMENT_VALIDATOR.set(validator);
-}
-
-/// Every store of a Field Case parses and verifies before any write: the
-/// plan, the aux stores, the document (structure, and the schema when the
-/// host installed it) and the record chain. Corruption of any of them fails
-/// closed with `STORE_INTEGRITY`, whatever the plan says.
-fn verify_stores(case_dir: &Path, creating: bool) -> Result<Vec<Value>, ContractError> {
-    if case_dir.join("plan.json").exists() && plan_of(case_dir).is_none() {
-        return Err(integrity("plan.json does not parse as a case plan".into()));
-    }
-    for name in STRICT_STORES {
-        let path = case_dir.join(name);
-        let bytes = match std::fs::read(&path) {
-            Ok(b) => b,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(integrity(format!("read {name}: {e}"))),
-        };
-        let end = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
-        for (i, line) in bytes[..end].split(|b| *b == b'\n').enumerate() {
-            if !line.is_empty() && serde_json::from_slice::<Value>(line).is_err() {
-                return Err(integrity(format!("{name} line {} is not JSON", i + 1)));
-            }
-        }
-    }
-    let records = verified_records(case_dir)?;
-    if !creating {
-        check_document(case_dir, &records)?;
-    }
-    Ok(records)
-}
-
-/// Everything a decision rests on, loaded all-or-nothing from every store of
-/// the case (see [`load_verified`]).
-pub struct CaseState {
-    /// A Field Case (by the plan or by any marker).
-    pub field: bool,
-    pub records: Vec<Value>,
-    pub life: Lifecycle,
-    pub events: Vec<TraceEvent>,
-    pub plan: Option<CasePlan>,
-    /// `case.json`'s `state`.
-    pub case_state: Option<String>,
-}
-
-/// The verified state of the case at `case_dir`: the plan, every auxiliary
-/// store, the document (structure and, when installed, the full schema) and
-/// the record chain, or `STORE_INTEGRITY`. Any marker makes it a Field Case;
-/// a plain case is returned unverified with `field: false`.
-pub fn load_verified(case_dir: &Path, creating: bool) -> Result<CaseState, ContractError> {
-    let field = is_field_case(case_dir);
-    let case_state = std::fs::read(case_dir.join("case.json"))
-        .ok()
-        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-        .and_then(|c| c["state"].as_str().map(String::from));
-    if !field {
-        return Ok(CaseState {
-            field,
-            records: Vec::new(),
-            life: Lifecycle::Open,
-            events: Vec::new(),
-            plan: None,
-            case_state,
+/// The creation of a Field Case: its plan is being written, or its creation
+/// event is (the files creation makes may not exist yet).
+fn creating_field(case_dir: &Path, batch: &Batch) -> bool {
+    let new_plan = !case_dir.join("plan.json").exists()
+        && batch.ops.iter().any(|op| {
+            matches!(op, Op::Plan(p) if p["template_ref"] == super::field_guard::FIELD_CASE_TEMPLATE)
         });
+    // The first record of the ledger (a v1 kind on a plain case, as before)
+    // makes the case a Field Case: its ledger is the marker.
+    let first_record =
+        batch.ops.iter().any(|op| matches!(op, Op::Record(_))) && !is_field_case(case_dir);
+    // A Field Case whose creation has not made its document yet admits its
+    // creation events (and nothing else) before it.
+    let creation_events = is_field_case(case_dir)
+        && !case_dir.join(DOCUMENT).exists()
+        && !batch.ops.is_empty()
+        && batch.ops.iter().all(|op| {
+            matches!(op, Op::Event(e) if matches!(e.kind, TraceKind::CaseCreated | TraceKind::PlanCreated))
+        });
+    new_plan || first_record || creation_events
+}
+
+/// Decide `batch` on the case at `case_dir` under the case lock without
+/// writing anything: the pre-admission of a verb that has effects of its own
+/// (a ledger commit, a run) to order before its write. `commit` decides again.
+pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
+    let _lock = CaseLock::acquire(case_dir)?;
+    let creating = creating_field(case_dir, batch);
+    let st = load_verified(case_dir, creating)?;
+    if st.field || creating {
+        decide(&st, batch)?;
     }
-    let records = verify_stores(case_dir, creating)?;
-    Ok(CaseState {
-        field,
-        life: lifecycle(&records),
-        records,
-        events: events_of(case_dir),
-        plan: plan_of(case_dir),
-        case_state,
+    Ok(())
+}
+
+/// Admit-and-apply: lock, load verified, decide on the post-state of the whole
+/// batch, write exactly the batch (and the projections the ledger derives),
+/// release. `Err` is the contract's refusal; nothing was written.
+pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
+    let _lock = CaseLock::acquire(case_dir)?;
+    let creating = creating_field(case_dir, &batch);
+    let st = load_verified(case_dir, creating)?;
+    let field = st.field || creating;
+    if field {
+        decide(&st, &batch)?;
+    }
+    let derive = st.strict
+        || batch.ops.iter().any(|op| {
+            matches!(op, Op::Plan(p) if p["template_ref"] == super::field_guard::FIELD_CASE_TEMPLATE)
+        });
+    apply(case_dir, &st, batch, field, derive)
+}
+
+fn io(what: &str, e: std::io::Error) -> ContractError {
+    integrity(format!("{what}: {e}"))
+}
+
+fn append_bytes(path: &Path, bytes: &[u8]) -> Result<(), ContractError> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|e| io(&format!("open {}", path.display()), e))?;
+    note(path);
+    file.write_all(bytes)
+        .and_then(|()| file.sync_data())
+        .map_err(|e| io(&format!("write {}", path.display()), e))
+}
+
+fn append_value(path: &Path, value: &Value) -> Result<(), ContractError> {
+    let mut line = serde_json::to_vec(value).map_err(|e| integrity(e.to_string()))?;
+    line.push(b'\n');
+    append_bytes(path, &line)
+}
+
+/// Replace `path` (temp file OUTSIDE the case directory, then rename).
+fn replace_bytes(case_dir: &Path, path: &Path, bytes: &[u8]) -> Result<(), ContractError> {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let (dir, _) = lock_file(case_dir);
+    let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = dir.join(format!(".tmp-{}-{n}", std::process::id()));
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| io("create directory", e))?;
+    }
+    std::fs::create_dir_all(&dir).map_err(|e| io("create the lock directory", e))?;
+    let mut file = File::create(&tmp).map_err(|e| io("create temp file", e))?;
+    file.write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|e| io("write temp file", e))?;
+    drop(file);
+    note(path);
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        io(&format!("replace {}", path.display()), e)
     })
 }
 
-/// THE decision, pure: fold the whole proposed batch onto the verified state
-/// and check the invariants on the RESULT. Nothing is read or written here.
-/// C1 terminal only behind a close disposition; C2 a closed case admits only
-/// a batch that finishes the plan; C3 no gate item or milestone completes
-/// without a passing assessment; C6 a suspended case admits only the
-/// contract's permitted writes. Event, record and store-file kinds the guard
-/// has no rule for are refused.
-pub fn decide(st: &CaseState, proposed: &Proposed) -> Result<(), ContractError> {
-    match proposed {
-        Proposed::Event { kind, item } => admit_event(st, kind, *item, &st.events),
-        Proposed::Batch { events: batch } => {
-            let mut sim = st.events.clone();
-            for (kind, item) in batch.iter() {
-                admit_event(st, kind, item.as_deref(), &sim)?;
-                sim.push(hypothetical(kind, item.as_deref()));
-            }
-            Ok(())
-        }
-        Proposed::Record { record } => admit_record(st, record),
-        Proposed::Store { file } => {
-            let Some(class) = store_class(file) else {
-                return Err(refuse(
-                    "KIND_UNKNOWN",
-                    "the guard has no rule for this store file",
-                ));
-            };
-            match class {
-                StoreClass::Bookkeeping => Ok(()),
-                StoreClass::Execution => in_flight(st, &st.events, Hypo::InFlight(None)),
-            }
-        }
-        Proposed::Projection { file, value } => admit_projection(st, file, value),
+/// A crash mid-append leaves a trailing fragment with no newline. Appending
+/// to it would glue the next line onto it, so the fragment is cut back to the
+/// last newline, and the cut is noted durably in `field-repairs.jsonl` BEFORE
+/// the truncation: a repair never silently discards bytes.
+fn repair_tail(
+    case_dir: &Path,
+    name: &str,
+    done: &mut HashSet<String>,
+) -> Result<(), ContractError> {
+    if !done.insert(name.to_string()) {
+        return Ok(());
     }
-}
-
-/// Admit one write on the case at `case_dir`: take the case lock, load the
-/// verified state, decide, and return the token that holds the lock. Call it
-/// immediately before the write and keep the token until the write is done.
-/// `Err` is the contract's refusal; nothing is to be written.
-pub fn admit_write(case_dir: &Path, proposed: &Proposed) -> Result<WriteToken, ContractError> {
-    let lock = CaseLock::acquire(case_dir)?;
-    let token = WriteToken {
-        _lock: lock,
-        case_dir: case_dir.to_path_buf(),
+    let path = case_dir.join(name);
+    let bytes = match std::fs::read(&path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(io(&format!("read {}", path.display()), e)),
     };
-    let creating = matches!(
-        proposed,
-        Proposed::Event {
-            kind: TraceKind::CaseCreated | TraceKind::PlanCreated,
-            ..
-        }
-    );
-    let state = load_verified(case_dir, creating)?;
-    if state.field {
-        decide(&state, proposed)?;
+    if bytes.last().is_none_or(|b| *b == b'\n') {
+        return Ok(());
     }
-    Ok(token)
+    let keep = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
+    let fragment = &bytes[keep..];
+    let note_line = json!({
+        "repaired_at": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "file": name, "kept_bytes": keep, "dropped_bytes": fragment.len(),
+        "dropped_sha256": hex::encode(Sha256::digest(fragment)),
+        "dropped_text": String::from_utf8_lossy(&fragment[..fragment.len().min(512)]),
+    });
+    let log = case_dir.join(REPAIRS);
+    if std::fs::read(&log).is_ok_and(|b| b.last().is_some_and(|c| *c != b'\n')) {
+        append_bytes(&log, b"\n")?;
+    }
+    append_value(&log, &note_line)?;
+    let file = OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .map_err(|e| io(&format!("open {}", path.display()), e))?;
+    note(&path);
+    file.set_len(keep as u64)
+        .and_then(|()| file.sync_all())
+        .map_err(|e| io(&format!("repair {}", path.display()), e))
 }
 
-fn terminal_state(state: &str) -> bool {
-    matches!(state, "completed" | "terminated")
-}
-
-/// `case.json`, `plan.json` and the run files under `runs/`: projections and
-/// outputs of the ledger, written only while the ledger allows them.
-fn admit_projection(st: &CaseState, file: &str, value: &Value) -> Result<(), ContractError> {
-    let life = st.life;
-    match file {
-        // A Field Case's plan is rewritten only by its plan mutation (an
-        // event), never by a submission over it.
-        "plan.json" => Err(refuse(
-            "KIND_UNKNOWN",
-            "the plan of a Field Case is rewritten only by its plan mutation",
-        )),
-        "case.json" => {
-            let new = value["state"].as_str().unwrap_or("");
-            if terminal_state(new) {
-                // R11: any path to a terminal state needs the close disposition.
-                return match life {
-                    Lifecycle::Closed => Ok(()),
-                    Lifecycle::Suspended => Err(suspended()),
-                    Lifecycle::Open => Err(refuse(
-                        "CLOSE_DISPOSITION_REQUIRED",
-                        "this write ends the case and no case-level close disposition exists",
-                    )),
-                };
+fn apply(
+    case_dir: &Path,
+    st: &CaseState,
+    batch: Batch,
+    field: bool,
+    derive: bool,
+) -> Result<Committed, ContractError> {
+    std::fs::create_dir_all(case_dir).map_err(|e| io("create the case directory", e))?;
+    let mut repaired = HashSet::new();
+    let mut committed = Committed::default();
+    let mut records = st.records.clone();
+    for op in batch.ops {
+        match op {
+            Op::Record(r) => {
+                repair_tail(case_dir, RECORDS, &mut repaired)?;
+                append_value(&case_dir.join(RECORDS), &r)?;
+                records.push(r);
             }
-            let current = st.case_state.as_deref().unwrap_or("");
-            match life {
-                Lifecycle::Open => Ok(()),
-                Lifecycle::Suspended => Err(suspended()),
-                // A closed case is not reopened by a state write.
-                Lifecycle::Closed => {
-                    if terminal_state(current) {
-                        Err(closed())
-                    } else {
-                        Ok(())
-                    }
-                }
+            Op::Event(e) => {
+                repair_tail(case_dir, EVENTS, &mut repaired)?;
+                append_value(
+                    &case_dir.join(EVENTS),
+                    &serde_json::to_value(&e).map_err(|x| integrity(x.to_string()))?,
+                )?;
+                committed.events.push(e);
+            }
+            Op::Append { file, line } => {
+                repair_tail(case_dir, &file, &mut repaired)?;
+                append_value(&case_dir.join(&file), &line)?;
+            }
+            Op::Case(v) if st.case_json.as_ref() == Some(&v) => {}
+            Op::Case(v) => {
+                let bytes = serde_json::to_vec_pretty(&v).map_err(|e| integrity(e.to_string()))?;
+                replace_bytes(case_dir, &case_dir.join("case.json"), &bytes)?;
+            }
+            Op::Plan(v) => {
+                let bytes = serde_json::to_vec_pretty(&v).map_err(|e| integrity(e.to_string()))?;
+                replace_bytes(case_dir, &case_dir.join("plan.json"), &bytes)?;
+            }
+            Op::RunFile { rel, bytes } => {
+                replace_bytes(case_dir, &case_dir.join("runs").join(rel), &bytes)?;
             }
         }
-        _ => in_flight(st, &st.events, Hypo::InFlight(None)),
     }
+    if field && derive {
+        // The ledger file exists from creation on: it is the Field Case
+        // marker no deletion of the plan or the document can undo.
+        if !case_dir.join(RECORDS).exists() {
+            append_bytes(&case_dir.join(RECORDS), b"")?;
+        }
+        // The projection the ledger determines, in the same commit.
+        let case_id = case_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let derived = derived_document(case_id, &records);
+        let current: Option<Value> = std::fs::read(case_dir.join(DOCUMENT))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok());
+        if current.as_ref() != Some(&derived) {
+            let mut bytes =
+                serde_json::to_vec_pretty(&derived).map_err(|e| integrity(e.to_string()))?;
+            bytes.push(b'\n');
+            replace_bytes(case_dir, &case_dir.join(DOCUMENT), &bytes)?;
+        }
+        write_index(case_dir, &records, st.events.len() + committed.events.len())?;
+    }
+    Ok(committed)
 }
 
-/// The case directory a path belongs to, and the path inside it: the topmost
-/// ancestor that holds a `plan.json` (run directories hold their own).
-fn case_of(path: &Path) -> Option<(PathBuf, PathBuf)> {
+// ---------------------------------------------------------------------------
+// Path-based entry points for the writers that name a file
+// ---------------------------------------------------------------------------
+
+/// The case directory a path belongs to, and the path inside it: the
+/// directory directly under a `cases` directory, else the topmost ancestor
+/// that holds a Field Case artifact or a plan.
+pub fn case_of(path: &Path) -> Option<(PathBuf, PathBuf)> {
     let mut found: Option<PathBuf> = None;
     for dir in path.ancestors().skip(1) {
-        if dir.join("plan.json").is_file() || dir.join("field_case.json").is_file() {
+        let under_cases = dir
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|n| n == "cases");
+        if under_cases || dir.join("plan.json").is_file() || is_field_case(dir) {
             found = Some(dir.to_path_buf());
+            if under_cases {
+                break;
+            }
         }
     }
     let dir = found?;
@@ -1000,32 +1451,75 @@ fn case_of(path: &Path) -> Option<(PathBuf, PathBuf)> {
     Some((dir, rel))
 }
 
-/// [`admit_write`] for a write to a named file of the case store (the one
-/// primitive the file-backed stores write through). A path that is not inside
-/// a case directory is not a case write.
-pub fn admit_file_write(path: &Path, value: &Value) -> Result<Option<WriteToken>, ContractError> {
-    let Some((dir, rel)) = case_of(path) else {
-        return Ok(None);
-    };
-    let name = rel.to_string_lossy().to_string();
-    if name == RECORDS {
-        admit_write(&dir, &Proposed::Record { record: value }).map(Some)
-    } else if name == "case.json" || name == "plan.json" || rel.starts_with("runs") {
-        admit_write(
-            &dir,
-            &Proposed::Projection {
-                file: if rel.starts_with("runs") {
-                    "runs"
-                } else {
-                    &name
-                },
-                value,
-            },
+fn op_for_file(rel: &str, value: &Value) -> Result<Op, ContractError> {
+    let derived = || {
+        refuse(
+            "KIND_UNKNOWN",
+            "this file is a projection the commit derives; it is not written directly",
         )
-        .map(Some)
-    } else {
-        admit_write(&dir, &Proposed::Store { file: &name }).map(Some)
+    };
+    Ok(match classify(rel) {
+        Some(FileClass::Ledger) => Op::Record(value.clone()),
+        Some(FileClass::CaseJson) => Op::Case(value.clone()),
+        Some(FileClass::PlanJson) => Op::Plan(value.clone()),
+        Some(FileClass::RunOutput) => Op::RunFile {
+            rel: rel.strip_prefix("runs/").unwrap_or(rel).to_string(),
+            bytes: serde_json::to_vec_pretty(value).map_err(|e| integrity(e.to_string()))?,
+        },
+        Some(FileClass::Owned(_) | FileClass::Outbox | FileClass::Execution) => Op::Append {
+            file: rel.to_string(),
+            line: value.clone(),
+        },
+        Some(FileClass::Document | FileClass::Events) => return Err(derived()),
+        None => {
+            return Err(refuse(
+                "KIND_UNKNOWN",
+                "the guard has no rule for this file of the case",
+            ))
+        }
+    })
+}
+
+/// Create the empty event log of a case that has none (legacy migration). A
+/// Field Case's log is only ever appended by events: refused for one.
+pub fn init_events(case_dir: &Path) -> Result<(), ContractError> {
+    let _lock = CaseLock::acquire(case_dir)?;
+    if case_dir.join(EVENTS).exists() {
+        return Ok(());
     }
+    if is_field_case(case_dir) {
+        return Err(refuse(
+            "KIND_UNKNOWN",
+            "the event log of a Field Case is created only with its events",
+        ));
+    }
+    std::fs::create_dir_all(case_dir).map_err(|e| io("create the case directory", e))?;
+    append_bytes(&case_dir.join(EVENTS), b"")
+}
+
+/// Commit one file write named by path: a JSON document for `case.json`,
+/// `plan.json` or a run file, a line for the stores. `Ok(false)` is a path that
+/// is not in a case directory (the caller writes it as it likes). A file of a
+/// case that is not a Field Case and has no rule is not refused, but the
+/// caller still writes it only through [`commit_plain`].
+pub fn commit_file(path: &Path, value: &Value) -> Result<bool, ContractError> {
+    let Some((dir, rel)) = case_of(path) else {
+        return Ok(false);
+    };
+    let name = rel.to_string_lossy().replace('\\', "/");
+    let op = match op_for_file(&name, value) {
+        Ok(op) => op,
+        Err(e) => {
+            // Deny by default for a Field Case; a plain case's own files pass.
+            let _lock = CaseLock::acquire(&dir)?;
+            if load_verified(&dir, false)?.field {
+                return Err(e);
+            }
+            return Ok(false);
+        }
+    };
+    commit(&dir, Batch::new().with(op))?;
+    Ok(true)
 }
 
 /// The whole consequence of `first` for the engine: `first` itself, the

@@ -29,7 +29,6 @@
 //! in-process RealityTrace writer or delivery agent exists in this crate yet.
 //! The anchor is published only when an [`AnchorPublisher`] is supplied.
 
-use sea_forge_case_runner::case_ops::case_guard::WriteToken;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -405,92 +404,20 @@ pub(super) fn read_lines_strict(path: &Path) -> Result<Vec<Value>, String> {
     Ok(out)
 }
 
-const REPAIRS: &str = "field-repairs.jsonl";
 pub(super) const RUNS: &str = "field-runs.jsonl";
 pub(super) const LINKS: &str = "field-links.jsonl";
 
 /// Every store file whose lines decide an invariant, an id or idempotency must
 /// parse completely before anything is decided or written.
 pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
-    let dir = case_dir(ctx.root, ctx.case_id);
-    for name in [
-        RECORDS,
-        INTENTS,
-        DECISIONS,
-        RT_OUTBOX,
-        ANCHOR_OUTBOX,
-        RUNS,
-        LINKS,
-        APPROVALS,
-    ] {
-        read_lines_strict(&dir.join(name)).map_err(|e| format!("store integrity: {e}"))?;
-    }
-    // The hash chain and the digests of every stored record, not only that
-    // they parse (README §3 STORE_INTEGRITY).
-    sea_forge_case_runner::case_ops::case_guard::verified_records(&dir)
-        .map_err(|r| format!("store integrity: {}", r.message))?;
-    Ok(())
-}
-
-fn sync_append(path: &Path, bytes: &[u8], token: Option<&WriteToken>) -> Result<(), String> {
-    if let Some(token) = token {
-        return token
-            .append(path, bytes)
-            .map_err(|e| format!("write {}: {e}", path.display()));
-    }
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map_err(|e| format!("open {}: {e}", path.display()))?;
-    file.write_all(bytes)
-        .and_then(|_| file.sync_data())
-        .map_err(|e| format!("write {}: {e}", path.display()))
-}
-
-/// A crash mid-append leaves a trailing fragment with no newline. Appending to
-/// it would glue the next record onto the fragment, so before every append the
-/// fragment is cut back to the last newline. The cut is noted durably in
-/// `field-repairs.jsonl` (beside the file, with the dropped text) BEFORE the
-/// truncation, so a repair never silently discards bytes.
-fn repair_torn_tail(path: &Path, token: Option<&WriteToken>) -> Result<(), String> {
-    let bytes = match fs::read(path) {
-        Ok(b) => b,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(e) => return Err(format!("read {}: {e}", path.display())),
-    };
-    if bytes.last().is_none_or(|b| *b == b'\n') {
-        return Ok(());
-    }
-    let keep = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
-    let fragment = &bytes[keep..];
-    let note = json!({
-        "repaired_at": now_rfc3339(),
-        "file": path.file_name().map(|n| n.to_string_lossy().to_string()),
-        "kept_bytes": keep, "dropped_bytes": fragment.len(),
-        "dropped_sha256": hex::encode(Sha256::digest(fragment)),
-        "dropped_text": String::from_utf8_lossy(&fragment[..fragment.len().min(512)]),
-    });
-    let log = path.with_file_name(REPAIRS);
-    let mut line = serde_json::to_vec(&note).map_err(|e| e.to_string())?;
-    line.push(b'\n');
-    let log_torn = fs::read(&log).is_ok_and(|b| b.last().is_some_and(|c| *c != b'\n'));
-    if log_torn {
-        line.insert(0, b'\n');
-    }
-    sync_append(&log, &line, token)?;
-    if let Some(token) = token {
-        return token
-            .truncate(path, keep as u64)
-            .map_err(|e| format!("repair {}: {e}", path.display()));
-    }
-    let file = OpenOptions::new()
-        .write(true)
-        .open(path)
-        .map_err(|e| format!("open {}: {e}", path.display()))?;
-    file.set_len(keep as u64)
-        .and_then(|_| file.sync_all())
-        .map_err(|e| format!("repair {}: {e}", path.display()))
+    // THE guard's strict load: every line of every store, the record chain and
+    // payload schemas, the document (README section 3 STORE_INTEGRITY).
+    sea_forge_case_runner::case_ops::case_guard::load_verified(
+        &case_dir(ctx.root, ctx.case_id),
+        false,
+    )
+    .map(drop)
+    .map_err(|r| format!("store integrity: {}", r.message))
 }
 
 /// The one primitive every file of a case store is appended through. THE
@@ -498,12 +425,24 @@ fn repair_torn_tail(path: &Path, token: Option<&WriteToken>) -> Result<(), Strin
 /// the line is durable: no writer reaches a case file without it. A refusal is
 /// returned as `GUARD:<CODE>:<message>` (see [`io_refusal`]).
 pub(super) fn append_line(path: &Path, value: &Value) -> Result<(), String> {
-    let _token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(path, value)
-        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
-    repair_torn_tail(path, _token.as_ref())?;
-    let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
-    line.push(b'\n');
-    sync_append(path, &line, _token.as_ref())
+    match sea_forge_case_runner::case_ops::case_guard::commit_file(path, value)
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?
+    {
+        true => Ok(()),
+        // Not a file of a case directory (a spool): appended plainly.
+        false => {
+            let mut line = serde_json::to_vec(value).map_err(|e| e.to_string())?;
+            line.push(b'\n');
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .map_err(|e| format!("open {}: {e}", path.display()))?;
+            file.write_all(&line)
+                .and_then(|_| file.sync_data())
+                .map_err(|e| format!("write {}: {e}", path.display()))
+        }
+    }
 }
 
 pub(super) fn records(ctx: &AppendContext) -> Vec<Value> {

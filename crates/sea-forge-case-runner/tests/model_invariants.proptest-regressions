@@ -12,3 +12,4 @@ cc dfac6979e0a5e816c538455d5d504ff1954b5e2b20821bf94affed1b52340bc1 # shrinks to
 cc 8e46b7771e9726394c2024dda9a029bfee3b477ea42ee832525dcd8d29a6f109 # shrinks to steps = [Corrupt(0), Assess(0, 0)]
 cc 00beb67ef4636fc15386adaf14744207c84c7f71f69cd50feffbb06a9f641f39 # shrinks to steps = [Corrupt(0), Assess(0, 0)]
 cc 13a2eb812d27c130a5a0636ae45fbd91274024d23b8be57a0ca735936c2af75d # shrinks to steps = [Dispose(2), Terminate]
+cc d2ebad7dc94431d3f441cba25abf1179e01b88787ebe561a06b47691f8ad03f5 # shrinks to steps = [Corrupt(4), Corrupt(4)]

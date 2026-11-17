@@ -398,14 +398,8 @@ fn run_plan_inner(
     };
     write_json(&case_dir.join("case.json"), &case)?;
     write_json(&case_dir.join("plan.json"), &plan)?;
-    // A Field Case opens with its document: revision 1, every SOP 4.2 field
-    // `unknown` (WP-21 part B, E section 3).
-    if plan.template_ref.as_deref() == Some(sea_forge_core::field_case::TEMPLATE_REF) {
-        write_json(
-            &case_dir.join("field_case.json"),
-            &sea_forge_core::field_case::opened_document(&case_id),
-        )?;
-    }
+    // A Field Case opens with its document (revision 1, every SOP 4.2 field
+    // `unknown`): the guard derives it from the ledger in the plan's commit.
     let mut events = vec![];
     append_event(
         &case_events,
@@ -800,10 +794,20 @@ fn run_plan_inner(
                             // process tree whose lifecycle was contained.
                             lifecycle_containment: LifecycleContainment::NoProcess,
                         });
-                        fs::write(artifacts.join("stdout.txt"), b"")
-                            .map_err(|error| ForgeError::io("write stdout", error))?;
-                        fs::write(artifacts.join("stderr.txt"), b"")
-                            .map_err(|error| ForgeError::io("write stderr", error))?;
+                        for name in ["stdout.txt", "stderr.txt"] {
+                            sea_forge_case_runner::case_ops::case_guard::commit(
+                                &case_dir,
+                                sea_forge_case_runner::case_ops::case_guard::Batch::new().with(
+                                    sea_forge_case_runner::case_ops::case_guard::Op::RunFile {
+                                        rel: format!("{run_id}/artifacts/{name}"),
+                                        bytes: Vec::new(),
+                                    },
+                                ),
+                            )
+                            .map_err(
+                                sea_forge_case_runner::case_ops::field_guard::Refusal::into_error,
+                            )?;
+                        }
                     }
                     let settlement = sea_forge_settlement::settle(
                         &SettlementClaim {

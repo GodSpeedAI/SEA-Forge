@@ -1300,6 +1300,39 @@ impl LedgerStream {
         self.materialize_aggregate_view(committed, vec![committed.entry_ulid.clone()], path, bytes)
     }
 
+    /// Record that `bytes` were written to `path` as the view of `committed`
+    /// by the CALLER (a writer that owns the file, such as the case guard's
+    /// commit): the view state only, no file is written here.
+    pub fn record_written_view(
+        &self,
+        committed: &CommittedRecordRef,
+        path: &Path,
+        bytes: &[u8],
+    ) -> Result<CompatibilityViewState, ForgeError> {
+        let state = CompatibilityViewState {
+            source_entry_ulid: committed.entry_ulid.clone(),
+            source_entry_ulids: vec![committed.entry_ulid.clone()],
+            source_payload_hash: committed.payload_hash.clone(),
+            view_path: path.to_string_lossy().into_owned(),
+            view_sha256: format!("sha256:{}", hex::encode(Sha256::digest(bytes))),
+            status: ViewStatus::Current,
+            failure_class: None,
+        };
+        let state_dir = self
+            .root
+            .join("ledgers")
+            .join(&self.ledger_id)
+            .join("views");
+        fs::create_dir_all(&state_dir)
+            .map_err(|error| ForgeError::io("create view state", error))?;
+        fs::write(
+            state_dir.join(format!("{}.json", committed.entry_ulid)),
+            serde_json::to_vec_pretty(&state)?,
+        )
+        .map_err(|error| ForgeError::io("write view state", error))?;
+        Ok(state)
+    }
+
     pub fn materialize_aggregate_view(
         &self,
         committed: &CommittedRecordRef,

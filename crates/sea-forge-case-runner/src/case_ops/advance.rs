@@ -240,9 +240,9 @@ pub fn advance_case(
                         &events,
                         (TraceKind::MilestoneAchieved, Some(item.clone())),
                     );
-                    let _batch_token = super::case_guard::admit_write(
+                    super::case_guard::check(
                         &case_dir,
-                        &super::case_guard::Proposed::Batch { events: &batch },
+                        &super::case_guard::Batch::of_events(&batch),
                     )
                     .map_err(super::field_guard::Refusal::into_error)?;
                     append_notify(

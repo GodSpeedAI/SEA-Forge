@@ -53,16 +53,27 @@ pub fn gate_of_item(item: &str) -> Option<&str> {
 /// does not parse is a Field Case whose store is corrupt, and fails closed in
 /// the guard's integrity check.
 pub fn is_field_case(case_dir: &Path) -> bool {
-    let by_plan = std::fs::read(case_dir.join("plan.json"))
-        .ok()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-        .is_some_and(|plan| plan["template_ref"] == FIELD_CASE_TEMPLATE);
+    let plan = std::fs::read(case_dir.join("plan.json")).ok();
+    let by_plan = plan.as_ref().is_some_and(|bytes| {
+        match serde_json::from_slice::<Value>(bytes) {
+            Ok(plan) => plan["template_ref"] == FIELD_CASE_TEMPLATE,
+            // A plan that does not parse but names the template is a Field
+            // Case with a corrupt plan (it fails closed in the load).
+            Err(_) => String::from_utf8_lossy(bytes).contains(FIELD_CASE_TEMPLATE),
+        }
+    });
     by_plan || has_marker(case_dir)
 }
 
+/// ANY `field*` artifact of the case directory (the document, the ledger, an
+/// auxiliary store), whatever its size: deleting the plan and the document
+/// does not make a Field Case look plain.
 fn has_marker(case_dir: &Path) -> bool {
-    case_dir.join("field_case.json").exists()
-        || std::fs::metadata(case_dir.join(RECORDS)).is_ok_and(|m| m.len() > 0)
+    std::fs::read_dir(case_dir).is_ok_and(|entries| {
+        entries
+            .flatten()
+            .any(|e| e.file_name().to_string_lossy().starts_with("field"))
+    })
 }
 
 fn records(case_dir: &Path) -> Vec<Value> {

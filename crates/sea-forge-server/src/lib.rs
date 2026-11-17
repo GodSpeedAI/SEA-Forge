@@ -354,10 +354,6 @@ impl ServerState {
                 },
             );
         }
-        // The guard checks the Field Case document against the full schema.
-        sea_forge_case_runner::case_ops::case_guard::set_document_validator(
-            sfwp::field_case_kinds::document_is_valid,
-        );
         Ok(Self {
             root: config.root.clone(),
             continuation_signing_key,
@@ -4199,13 +4195,16 @@ async fn readmit_execution(
 ) -> Result<(), serde_json::Value> {
     let dir = state.root.join("cases").join(case_id);
     let admitted = tokio::task::spawn_blocking(move || {
-        sea_forge_case_runner::case_ops::case_guard::admit_write(
+        use sea_forge_case_runner::case_ops::case_guard::{check, Batch, Op};
+        // Execution is admitted as a write of run output (the lifecycle's
+        // rule for work in flight); nothing is written here.
+        check(
             &dir,
-            &sea_forge_case_runner::case_ops::case_guard::Proposed::Store {
-                file: "field-runs.jsonl",
-            },
+            &Batch::new().with(Op::RunFile {
+                rel: String::new(),
+                bytes: Vec::new(),
+            }),
         )
-        .map(drop)
     })
     .await;
     match admitted {
@@ -4306,15 +4305,20 @@ async fn transition_only(
                 )
             })
             .collect();
-        let _batch_token = match sea_forge_case_runner::case_ops::case_guard::admit_write(
-            &root.join("cases").join(&case),
-            &sea_forge_case_runner::case_ops::case_guard::Proposed::Batch { events: &batch },
-        ) {
-            Ok(token) => token,
+        let case_dir = root.join("cases").join(&case);
+        let _lock = match sea_forge_case_runner::case_ops::case_guard::CaseLock::acquire(&case_dir)
+        {
+            Ok(lock) => lock,
             Err(refusal) => {
                 return Ok::<Result<(), serde_json::Value>, ForgeError>(Err(refusal.to_value()))
             }
         };
+        if let Err(refusal) = sea_forge_case_runner::case_ops::case_guard::check(
+            &case_dir,
+            &sea_forge_case_runner::case_ops::case_guard::Batch::of_events(&batch),
+        ) {
+            return Ok::<Result<(), serde_json::Value>, ForgeError>(Err(refusal.to_value()));
+        }
         for (item, how) in &list {
             let kind = if how == "skip" {
                 sea_forge_core::types::TraceKind::ItemTerminated

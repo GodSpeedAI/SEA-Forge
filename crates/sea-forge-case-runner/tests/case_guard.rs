@@ -1,11 +1,13 @@
-//! `case_guard::admit_write` on its own, one rule per test (WP-21 part B,
+//! `case_guard::check` and `commit` on their own, one rule per test (WP-21 part B,
 //! review round 3). The guard decides from the ledger (the hash-chained
 //! records and the event log), never from `case.json`, so these tests build a
 //! Field Case on disk and propose writes straight at the guard. Each rule has
 //! a test that fails when the rule is removed (see the mutation log).
 
+mod common;
+
 use sea_forge_case_runner::case_ops::case_guard::{
-    admit_file_write, admit_write, digest_of, CaseLock, Proposed,
+    check, commit, commit_file, digest_of, Batch, CaseLock, Op,
 };
 use sea_forge_core::types::TraceKind;
 use serde_json::{json, Value};
@@ -41,6 +43,15 @@ impl Case {
         .unwrap();
         fs::write(path.join("case-events.jsonl"), "").unwrap();
         fs::write(
+            path.join("case.json"),
+            json!({"version": "0.2", "case_id": "case-0001", "intent": {"intent_id": "i", "summary": "s",
+                   "actor_id": "a", "process_id": "p", "created_at": "2026-11-15T08:00:00Z"},
+                   "state": "active", "plan_ref": "plan.json", "run_ids": [], "stages": [],
+                   "close_reason": null, "created_at": "2026-11-15T08:00:00Z", "closed_at": null})
+            .to_string(),
+        )
+        .unwrap();
+        fs::write(
             path.join("field_case.json"),
             sea_forge_core::field_case::opened_document("case-0001").to_string(),
         )
@@ -57,6 +68,9 @@ impl Case {
         let prev = self.records.last().map_or(ZERO.to_string(), |r| {
             r["hash"].as_str().unwrap().to_string()
         });
+        if record.get("payload").is_none() {
+            record["payload"] = common::payload_for(&record);
+        }
         if record.get("payload").is_some() {
             record["body_digest"] = json!(digest_of(
                 &json!({"kind": record["kind"], "payload": record["payload"]})
@@ -75,20 +89,20 @@ impl Case {
     fn flush(&self) {
         let text: String = self.records.iter().map(|r| format!("{r}\n")).collect();
         fs::write(self.path.join("field-records.jsonl"), text).unwrap();
+        // The document is the projection of the ledger (the commit derives it).
+        let doc = sea_forge_case_runner::case_ops::case_guard::derived_document(
+            "case-0001",
+            &self.records,
+        );
+        fs::write(self.path.join("field_case.json"), doc.to_string()).unwrap();
     }
 
     fn disposition(&mut self, level: &str, d: &str) {
-        self.push(
-            json!({"kind": "disposition.recorded", "level": level, "disposition": d,
-                         "payload": {"level": level, "disposition": d}}),
-        );
+        self.push(json!({"kind": "disposition.recorded", "level": level, "disposition": d}));
     }
 
     fn assess(&mut self, gate: &str, state: &str) {
-        self.push(
-            json!({"kind": "gate.assessed", "gate": gate, "state": state,
-                         "payload": {"gate": gate, "state": state}}),
-        );
+        self.push(json!({"kind": "gate.assessed", "gate": gate, "state": state}));
     }
 
     fn event(&self, kind: &str, item: &str) {
@@ -102,25 +116,52 @@ impl Case {
     }
 
     fn admit(&self, kind: TraceKind, item: Option<&str>) -> Result<(), String> {
-        admit_write(&self.path, &Proposed::Event { kind: &kind, item })
-            .map(drop)
-            .map_err(|r| r.code.to_string())
+        check(
+            &self.path,
+            &Batch::of_events(&[(kind, item.map(str::to_owned))]),
+        )
+        .map_err(|r| {
+            if r.code == "STORE_INTEGRITY" {
+                eprintln!("{}", r.message);
+            }
+            r.code.to_string()
+        })
     }
 
     fn store(&self, file: &str) -> Result<(), String> {
-        admit_write(&self.path, &Proposed::Store { file })
-            .map(drop)
-            .map_err(|r| r.code.to_string())
+        check(
+            &self.path,
+            &Batch::new().with(Op::Append {
+                file: file.into(),
+                line: common::store_line(),
+            }),
+        )
+        .map_err(|r| {
+            if r.code == "STORE_INTEGRITY" {
+                eprintln!("{}", r.message);
+            }
+            r.code.to_string()
+        })
     }
 
     fn record(&self, record: Value) -> Result<(), String> {
-        admit_write(&self.path, &Proposed::Record { record: &record })
-            .map(drop)
-            .map_err(|r| r.code.to_string())
+        check(&self.path, &Batch::new().with(Op::Record(record))).map_err(|r| {
+            if r.code == "STORE_INTEGRITY" {
+                eprintln!("{}", r.message);
+            }
+            r.code.to_string()
+        })
     }
 
     /// The next record as the appender would write it (extends the chain).
     fn next(&self, mut r: Value) -> Value {
+        if r.get("payload").is_none() {
+            if r["kind"] == "gate.assessed" && r.get("gate").is_none() {
+                r["gate"] = json!("prove_value");
+                r["state"] = json!("met");
+            }
+            r["payload"] = common::payload_for(&r);
+        }
         r["seq"] = json!(self.records.len() as u64 + 1);
         r["prev_hash"] = json!(self.records.last().map_or(ZERO.to_string(), |x| x["hash"]
             .as_str()
@@ -349,10 +390,13 @@ fn close_and_terminate_need_a_case_level_close_disposition() {
         err("CLOSE_DISPOSITION_REQUIRED")
     );
     c.disposition("case", "close-failed");
-    // Closed: only a write that ends a FINISHED plan is admitted (C2).
-    assert_eq!(c.admit(TraceKind::CaseTerminated, None), err("CASE_CLOSED"));
-    c.event("human_task_completed", "task-a");
+    // Closed (D42): the actions that end the plan. A close needs a finished
+    // plan; a terminate is itself an ending, so the operator can always stop
+    // a case whose close was `close-failed` on an unfinished plan.
+    assert_eq!(c.admit(TraceKind::CaseClosed, None), err("CASE_CLOSED"));
     assert_eq!(c.admit(TraceKind::CaseTerminated, None), Ok(()));
+    c.event("case_terminated", "");
+    assert_eq!(c.admit(TraceKind::CaseTerminated, None), err("CASE_CLOSED"));
 }
 
 // (d) the document, in either dialect --------------------------------------
@@ -499,20 +543,29 @@ fn a_plain_case_is_not_touched() {
 #[test]
 fn a_path_outside_a_case_is_not_a_case_write() {
     let dir = tempfile::tempdir().unwrap();
-    assert!(admit_file_write(&dir.path().join("x.jsonl"), &json!({}))
-        .unwrap()
-        .is_none());
+    assert!(!commit_file(&dir.path().join("x.jsonl"), &json!({})).unwrap());
 }
 
 // The lock -------------------------------------------------------------------
 
-fn try_lock(path: &Path) -> bool {
+fn lock_files(case: &Case) -> Vec<PathBuf> {
+    let p = sea_forge_case_runner::case_ops::case_guard::lock_path(&case.path);
+    if p.exists() {
+        vec![p]
+    } else {
+        vec![]
+    }
+}
+
+fn try_lock(case: &Case) -> bool {
     let file = fs::OpenOptions::new()
         .read(true)
         .write(true)
-        .create(true)
-        .truncate(false)
-        .open(path.join(".case.lock"))
+        .open(
+            lock_files(case)
+                .first()
+                .expect("a lock file exists outside the case directory"),
+        )
         .unwrap();
     match file.try_lock() {
         Ok(()) => true,
@@ -522,23 +575,44 @@ fn try_lock(path: &Path) -> bool {
 }
 
 #[test]
-fn the_token_holds_the_cross_process_lock_until_dropped() {
-    let c = Case::new(vec![item("task-a", "human_task")]);
-    let token = admit_write(
-        &c.path,
-        &Proposed::Event {
-            kind: &TraceKind::ItemActivated,
-            item: Some("task-a"),
-        },
-    )
-    .unwrap();
-    // Another file description of the same file (another process would be one).
-    assert!(
-        !try_lock(&c.path),
-        "the guard and the append are one critical section"
+fn the_lock_file_lives_outside_the_case_directory_and_a_refusal_creates_nothing_inside() {
+    let mut c = Case::new(vec![item("task-a", "human_task")]);
+    c.disposition("case", "suspend");
+    let before = tree(&c.path);
+    assert!(c.admit(TraceKind::ItemActivated, Some("task-a")).is_err());
+    assert_eq!(
+        tree(&c.path),
+        before,
+        "a refusal changes nothing under the case"
     );
-    drop(token);
-    assert!(try_lock(&c.path), "released with the token");
+    assert!(!lock_files(&c).is_empty());
+    assert!(!c.path.join(".case.lock").exists());
+}
+
+fn tree(dir: &Path) -> Vec<(String, Vec<u8>)> {
+    let mut out: Vec<(String, Vec<u8>)> = fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .map(|e| {
+            (
+                e.file_name().to_string_lossy().to_string(),
+                fs::read(e.path()).unwrap_or_default(),
+            )
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+#[test]
+fn the_commit_holds_the_cross_process_lock_while_it_decides_and_releases_it() {
+    let c = Case::new(vec![item("task-a", "human_task")]);
+    let lock = CaseLock::acquire(&c.path).unwrap();
+    assert!(!try_lock(&c), "held while the verb works");
+    drop(lock);
+    assert!(try_lock(&c), "released with the lock");
+    assert!(c.admit(TraceKind::ItemActivated, Some("task-a")).is_ok());
+    assert!(try_lock(&c), "a decision releases it");
 }
 
 #[test]
@@ -546,25 +620,22 @@ fn a_refused_write_releases_the_lock() {
     let mut c = Case::new(vec![item("task-a", "human_task")]);
     c.disposition("case", "suspend");
     assert!(c.admit(TraceKind::ItemActivated, Some("task-a")).is_err());
-    assert!(try_lock(&c.path));
+    assert!(try_lock(&c));
 }
 
 #[test]
 fn the_lock_nests_on_one_thread_and_excludes_another() {
     let c = Case::new(vec![item("task-a", "human_task")]);
     let outer = CaseLock::acquire(&c.path).unwrap();
-    // A verb that holds the lock and then appends does not deadlock itself.
+    // A verb that holds the lock and then commits does not deadlock itself.
     let inner = c.admit(TraceKind::ItemActivated, Some("task-a"));
     assert_eq!(inner, Ok(()));
-    assert!(!try_lock(&c.path), "the verb still holds it");
+    assert!(!try_lock(&c), "the verb still holds it");
     let path = c.path.clone();
     let waiter = std::thread::spawn(move || {
-        let _t = admit_write(
+        check(
             &path,
-            &Proposed::Event {
-                kind: &TraceKind::ItemActivated,
-                item: Some("task-a"),
-            },
+            &Batch::of_events(&[(TraceKind::ItemActivated, Some("task-a".into()))]),
         )
         .unwrap();
     });
@@ -572,30 +643,26 @@ fn the_lock_nests_on_one_thread_and_excludes_another() {
     assert!(!waiter.is_finished(), "another writer waits for the lock");
     drop(outer);
     waiter.join().unwrap();
-    assert!(try_lock(&c.path));
+    assert!(try_lock(&c));
 }
 
 #[test]
-fn a_token_writes_only_inside_its_own_case() {
-    let a = Case::new(vec![]);
-    let b = Case::new(vec![]);
-    let token = admit_write(
-        &a.path,
-        &Proposed::Store {
-            file: "field-approvals.jsonl",
-        },
-    )
-    .unwrap();
-    assert!(token
-        .append(&a.path.join("field-approvals.jsonl"), b"{}\n")
-        .is_ok());
-    assert!(
-        token
-            .append(&b.path.join("field-approvals.jsonl"), b"{}\n")
-            .is_err(),
-        "a token is for one case directory"
-    );
-    assert!(token.replace(&b.path.join("x.json"), b"{}").is_err());
+fn commit_writes_the_batch_and_derives_the_document() {
+    let c = Case::new(vec![item("task-a", "human_task")]);
+    // A field_case.revised record is committed; the document follows in the
+    // same commit, from the ledger.
+    let mut r = json!({"kind": "field_case.revised", "revision": 2});
+    r["payload"] = common::payload_for(&r);
+    let r = c.next(r);
+    let mut r = r;
+    r["body_digest"] =
+        json!(digest_of(&json!({"kind": r["kind"], "payload": r["payload"]})).unwrap());
+    r["hash"] = json!(digest_of(&r).unwrap());
+    commit(&c.path, Batch::new().with(Op::Record(r))).unwrap();
+    let doc: Value =
+        serde_json::from_slice(&fs::read(c.path.join("field_case.json")).unwrap()).unwrap();
+    assert_eq!(doc["revision"], 2);
+    assert_eq!(doc["fields"]["purpose_and_outcome"]["signal"]["value"], "x");
 }
 
 #[test]
@@ -621,5 +688,76 @@ fn a_case_record_store_alone_marks_a_field_case() {
     assert_eq!(
         c.admit(TraceKind::ItemActivated, Some("task-a")),
         err("STORE_INTEGRITY")
+    );
+}
+
+// (f) residual detection and lock re-entrance --------------------------------
+
+fn committed_case() -> Case {
+    let c = Case::new(vec![item("task-a", "human_task")]);
+    sea_forge_case_runner::case_ops::case_guard::commit(
+        &c.path,
+        sea_forge_case_runner::case_ops::case_guard::Batch::of_events(&[(
+            TraceKind::ItemActivated,
+            Some("task-a".into()),
+        )]),
+    )
+    .unwrap();
+    c
+}
+
+#[test]
+fn the_case_index_detects_truncated_and_wiped_stores() {
+    use sea_forge_case_runner::case_ops::case_guard::index_path;
+    let c = committed_case();
+    assert!(
+        index_path(&c.path).is_file(),
+        "every commit updates the index"
+    );
+    assert_eq!(
+        c.admit(TraceKind::HumanTaskCompleted, Some("task-a")),
+        Ok(())
+    );
+    // The event log is truncated after the commit.
+    fs::write(c.path.join("case-events.jsonl"), "").unwrap();
+    assert_eq!(
+        c.admit(TraceKind::HumanTaskCompleted, Some("task-a")),
+        err("STORE_INTEGRITY")
+    );
+    // Every field* file is wiped.
+    let c = committed_case();
+    for e in fs::read_dir(&c.path).unwrap().flatten() {
+        if e.file_name().to_string_lossy().starts_with("field") {
+            fs::remove_file(e.path()).unwrap();
+        }
+    }
+    let plan = c.path.join("plan.json");
+    let mut p: Value = serde_json::from_slice(&fs::read(&plan).unwrap()).unwrap();
+    p["template_ref"] = json!(null);
+    fs::write(&plan, p.to_string()).unwrap();
+    assert_eq!(
+        c.admit(TraceKind::HumanTaskCompleted, Some("task-a")),
+        err("STORE_INTEGRITY")
+    );
+}
+
+#[test]
+fn a_nested_commit_joins_the_outer_lock_and_does_not_deadlock() {
+    use sea_forge_case_runner::case_ops::case_guard::{commit, Batch, CaseLock};
+    let c = committed_case();
+    let path = c.path.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _outer = CaseLock::acquire(&path).unwrap();
+        let r = commit(
+            &path,
+            Batch::of_events(&[(TraceKind::HumanTaskCompleted, Some("task-a".into()))]),
+        );
+        let _ = tx.send(r.is_ok());
+    });
+    assert_eq!(
+        rx.recv_timeout(std::time::Duration::from_secs(5)),
+        Ok(true),
+        "a nested commit on the same case deadlocked or failed"
     );
 }

@@ -1,8 +1,8 @@
-//! The registry of Field Case writers (WP-21 part B, review round 3): every
-//! function that writes a case store file calls THE guard
-//! (`case_guard::admit_write`), directly or through the one primitive it
-//! names. The test reads the source and FAILS when a writer skips the guard or
-//! a new sink appears that this list does not know.
+//! SECONDARY lint of Field Case writers (WP-21 part B, review round 5). The
+//! primary check is the runtime one in `model_invariants.rs`: every file the
+//! case directory sees modified is a file `commit` journaled. This test only
+//! reads the source for raw filesystem primitives (any import spelling) and
+//! for the verbs' locks.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -54,25 +54,30 @@ fn functions(text: &str) -> Vec<(String, String)> {
     out
 }
 
-fn guarded(body: &str) -> bool {
-    body.contains("admit_write(")
-        || body.contains("admit_file_write(")
-        || body.contains("CaseLock::acquire(")
-}
-
-/// The raw filesystem writes. Under a case directory they exist only inside
-/// `WriteToken` (the guard module) or in a function that holds a token.
-const RAW: [&str; 7] = [
+/// SECONDARY LINT. The primary check of writer coverage is the runtime one in
+/// `model_invariants.rs` (an inotify watch on the case directory against the
+/// journal of `commit`). This scan only catches the obvious: a raw filesystem
+/// primitive, however it is imported, in code that works with a case directory
+/// or takes a path parameter, outside the guard and the allowlist below.
+const RAW: [&str; 16] = [
     "fs::write(",
     "File::create(",
+    "File::options(",
     "OpenOptions::new()",
     "fs::rename(",
     ".set_len(",
     "fs::remove_file(",
+    "fs::remove_dir_all(",
+    "fs::hard_link(",
     "fs::copy(",
+    ".create_new(",
+    "use std::fs::write",
+    "use std::fs as",
+    "use std::fs::{",
+    "fs::File::create",
+    "std::fs::OpenOptions",
 ];
 
-/// A body that names a case directory or one of its files.
 fn case_dir_body(body: &str) -> bool {
     [
         "case_dir",
@@ -86,30 +91,57 @@ fn case_dir_body(body: &str) -> bool {
         "events_path",
         "case_events",
         "RECORDS",
+        "path: &Path",
+        "path: &std::path::Path",
     ]
     .iter()
     .any(|n| body.contains(n))
 }
 
-/// Functions that make a raw write and are NOT guarded themselves, with why
-/// each is sound. Everything else that writes under a case directory holds a
-/// token (`admit_write`, `admit_file_write` or `CaseLock`).
-const RAW_ALLOWED: [(&str, &str); 4] = [
+/// Functions that make a raw write and are not the guard, each with why it is
+/// outside the case store: a root-level store, an execution workspace the
+/// sandboxed process owns, or the plain write of a path that is not a case.
+const RAW_ALLOWED: [(&str, &str); 11] = [
     (
-        "sync_append",
-        "the byte primitive; called only by append_line and repair_torn_tail, which hold the token",
+        "execute",
+        "writes the legacy-migration marker at the store root, not in a case",
     ),
     (
-        "commit_event",
-        "appends through the token it is handed; the plain branch is for a path that is not a case directory",
+        "execute_with_permission_broker",
+        "the transcript artifact under <root>/runs/<run>",
     ),
     (
-        "append_case_event_with",
-        "appends through its token",
+        "exchange",
+        "writes a request to the server socket, not a case file",
     ),
     (
         "write_json",
-        "admits first (admit_file_write), then replaces through the token",
+        "writes a path that is NOT in a case directory (commit_file said so)",
+    ),
+    (
+        "append_line",
+        "plain append of a spool outside any case directory",
+    ),
+    ("save_workspace", "execution workspace of a run"),
+    (
+        "deliver",
+        "the interaction spool under <root>/interaction-events",
+    ),
+    (
+        "initialize_case",
+        "creates the runs directory, a directory not a file",
+    ),
+    (
+        "move_file_atomicish",
+        "legacy v0.1 -> v0.2 migration of run files",
+    ),
+    (
+        "remove_empty_run_dirs",
+        "legacy migration removes empty directories",
+    ),
+    (
+        "write_json_new",
+        "writes under a run directory outside any case (pipeline)",
     ),
 ];
 
@@ -133,7 +165,7 @@ fn scanned_files() -> Vec<PathBuf> {
 }
 
 #[test]
-fn every_raw_write_under_a_case_dir_holds_a_token() {
+fn no_raw_write_outside_the_guard_and_its_allowlist() {
     let mut found = 0;
     let mut unguarded: Vec<String> = Vec::new();
     for file in scanned_files() {
@@ -143,50 +175,32 @@ fn every_raw_write_under_a_case_dir_holds_a_token() {
                 continue;
             }
             found += 1;
-            let allowed = RAW_ALLOWED.iter().any(|(n, _)| *n == name);
-            if !(guarded(&body) || body.contains("token") || allowed) {
+            if !RAW_ALLOWED.iter().any(|(n, _)| *n == name) {
                 unguarded.push(format!("{}: fn {name}", file.display()));
             }
         }
     }
     assert!(
-        found >= 4,
+        found >= 3,
         "the scan found only {found} raw writers: it is blind"
     );
     assert!(
         unguarded.is_empty(),
-        "raw writes under a case directory with no token (take one from case_guard::admit_write):\n{}",
+        "raw filesystem writes near a case directory; build a Batch and commit it (case_guard::commit):\n{}",
         unguarded.join("\n")
     );
 }
 
-/// The sanctioned entry points are the only callers of the byte primitive.
-#[test]
-fn the_byte_primitive_has_only_its_known_callers() {
-    let mut callers: Vec<String> = Vec::new();
-    for file in scanned_files() {
-        let text = fs::read_to_string(&file).unwrap();
-        for (name, body) in functions(&text) {
-            // A definition mentions itself; count calls from other functions.
-            if name != "sync_append" && body.contains("sync_append(") {
-                callers.push(name);
-            }
-        }
-    }
-    callers.sort();
-    assert_eq!(callers, ["append_line", "repair_torn_tail"]);
-}
-
 /// Every CLI verb of `case_ops` that mutates a case holds the case lock or
-/// admits the write itself.
+/// goes through `commit`/`check`.
 #[test]
 fn every_cli_verb_takes_the_case_lock() {
     let text =
         fs::read_to_string(root().join("sea-forge-case-runner/src/case_ops/mod.rs")).unwrap();
-    // Wrappers that only delegate, and the primitives the guard sits inside.
     let exempt = [
         "append_case_event",
         "append_case_event_with",
+        "commit_case_event",
         "reopen",
         "reopen_with",
         "terminate",
@@ -206,54 +220,16 @@ fn every_cli_verb_takes_the_case_lock() {
         }
         checked += 1;
         assert!(
-            guarded(&body),
-            "case_ops::{name} mutates a case with no lock or admission"
+            body.contains("CaseLock::acquire(")
+                || body.contains("case_guard::check(")
+                || body.contains("commit("),
+            "case_ops::{name} mutates a case with no lock or commit"
         );
     }
     assert!(
         checked >= 3,
         "only {checked} verbs checked: the scan is blind"
     );
-}
-
-/// The one event appender of the case engine admits before it commits, and the
-/// store primitive admits before it appends: the guard is at BOTH appenders.
-#[test]
-fn both_event_appenders_and_the_record_appender_admit() {
-    let lib = fs::read_to_string(root().join("sea-forge-case-runner/src/lib.rs")).unwrap();
-    let append = functions(&lib)
-        .into_iter()
-        .find(|(n, _)| n == "append_event")
-        .unwrap()
-        .1;
-    assert!(append.contains("admit_write("), "CaseRunner::append_event");
-    let mod_rs =
-        fs::read_to_string(root().join("sea-forge-case-runner/src/case_ops/mod.rs")).unwrap();
-    let append = functions(&mod_rs)
-        .into_iter()
-        .find(|(n, _)| n == "append_case_event_with")
-        .unwrap()
-        .1;
-    assert!(append.contains("admit_write("), "append_case_event_with");
-    let records =
-        fs::read_to_string(root().join("sea-forge-server/src/sfwp/case_records.rs")).unwrap();
-    let append = functions(&records)
-        .into_iter()
-        .find(|(n, _)| n == "append_line")
-        .unwrap()
-        .1;
-    assert!(
-        append.contains("admit_file_write("),
-        "case_records::append_line"
-    );
-    let kinds =
-        fs::read_to_string(root().join("sea-forge-server/src/sfwp/field_case_kinds.rs")).unwrap();
-    let doc = functions(&kinds)
-        .into_iter()
-        .find(|(n, _)| n == "write_document")
-        .unwrap()
-        .1;
-    assert!(doc.contains("admit_file_write("), "write_document");
 }
 
 /// Every server verb that drives a case mutation holds the server's keyed case

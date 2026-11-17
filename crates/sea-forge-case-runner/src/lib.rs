@@ -11,8 +11,7 @@ use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction}
 use serde::Serialize;
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Synchronous case lifecycle operations shared by the CLI and server.
@@ -37,21 +36,26 @@ impl CaseRunner {
         item_id: Option<&str>,
         mut payload: serde_json::Value,
     ) -> Result<(), ForgeError> {
-        // THE guard, with the case lock held through the commit (nothing is
-        // written on a refusal).
-        let _token = match path.parent() {
-            Some(case_dir) => Some(
-                case_ops::case_guard::admit_write(
-                    case_dir,
-                    &case_ops::case_guard::Proposed::Event {
-                        kind: &kind,
-                        item: item_id,
-                    },
-                )
-                .map_err(case_ops::field_guard::Refusal::into_error)?,
+        // THE guard decides the event before the ledger commit below (the
+        // lock is held through both, so nothing is written on a refusal).
+        let case_dir = path.parent();
+        let _lock = match case_dir {
+            Some(dir) => Some(
+                case_ops::case_guard::CaseLock::acquire(dir)
+                    .map_err(case_ops::field_guard::Refusal::into_error)?,
             ),
             None => None,
         };
+        if let Some(dir) = case_dir {
+            case_ops::case_guard::check(
+                dir,
+                &case_ops::case_guard::Batch::of_events(&[(
+                    kind.clone(),
+                    item_id.map(str::to_owned),
+                )]),
+            )
+            .map_err(case_ops::field_guard::Refusal::into_error)?;
+        }
         // Additive persisted ordinals (spec §17.2 T13.2): each dispatch/
         // activation and settlement gets a 1-based monotonic ordinal derived
         // from prior persisted events. Additive only — old readers ignore it.
@@ -84,7 +88,6 @@ impl CaseRunner {
                 payload,
                 cell_id: None,
             },
-            _token.as_ref(),
         )
     }
 
@@ -98,28 +101,21 @@ impl CaseRunner {
             + 1
     }
 
-    /// Commit and append one event. The token is the admission of this very
-    /// write (it holds the case lock); without one the case is not a case
-    /// directory and the event log is appended plainly.
+    /// Commit and append one event: the ledger entry, then the guard's commit
+    /// of the event line (the caller holds the case lock across both).
     pub fn commit_event(
         path: &Path,
         stream: &LedgerStream,
         events: &mut Vec<TraceEvent>,
         event: TraceEvent,
-        token: Option<&case_ops::case_guard::WriteToken>,
     ) -> Result<(), ForgeError> {
         stream.commit_typed("case_event", vec![], &event, vec![])?;
-        let mut line = serde_json::to_vec(&event)?;
-        line.push(b'\n');
-        match token {
-            Some(token) => token.append(path, &line),
-            None => OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)
-                .and_then(|mut file| file.write_all(&line).and_then(|()| file.flush())),
-        }
-        .map_err(|error| ForgeError::io("append case event", error))?;
+        let case_dir = path.parent().unwrap_or_else(|| Path::new("."));
+        case_ops::case_guard::commit(
+            case_dir,
+            case_ops::case_guard::Batch::new().with(case_ops::case_guard::Op::Event(event.clone())),
+        )
+        .map_err(case_ops::field_guard::Refusal::into_error)?;
         events.push(event);
         Ok(())
     }
@@ -573,24 +569,18 @@ pub fn run_stage_case(
     })
 }
 
-/// Write a JSON file. A file inside a case directory is written only under
-/// the case lock and THE guard's admission (`case_guard::admit_file_write`):
-/// nothing is written before the ledger allows it.
+/// Write a JSON file. A file inside a case directory is committed through THE
+/// guard (`case_guard::commit_file`): admitted on the whole case, then written.
 pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    let bytes = serde_json::to_vec_pretty(value)?;
-    match case_ops::case_guard::admit_file_write(path, &serde_json::to_value(value)?)
+    let value = serde_json::to_value(value)?;
+    if case_ops::case_guard::commit_file(path, &value)
         .map_err(case_ops::field_guard::Refusal::into_error)?
     {
-        // A file in a case directory goes through the token.
-        Some(token) => token
-            .replace(path, &bytes)
-            .map_err(|error| ForgeError::io("write case JSON", error)),
-        None => {
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|error| ForgeError::io("create JSON parent", error))?;
-            }
-            fs::write(path, bytes).map_err(|error| ForgeError::io("write JSON", error))
-        }
+        return Ok(());
     }
+    let bytes = serde_json::to_vec_pretty(&value)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| ForgeError::io("create JSON parent", error))?;
+    }
+    fs::write(path, bytes).map_err(|error| ForgeError::io("write JSON", error))
 }

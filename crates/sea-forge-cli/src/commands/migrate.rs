@@ -386,18 +386,12 @@ pub fn execute(options: MigrateOptions<'_>) -> Result<u8, ForgeError> {
     {
         let events_path = root.join("cases").join(case_id).join("case-events.jsonl");
         if !events_path.exists() {
-            // A legacy case has no Field Case marker; the write still asks the
-            // guard (a Field Case's event log is only ever appended by events).
-            let token = sea_forge_case_runner::case_ops::case_guard::admit_file_write(
-                &events_path,
-                &serde_json::Value::Null,
+            // A legacy case has no Field Case marker; the guard creates the
+            // log (a Field Case's event log is only ever appended by events).
+            sea_forge_case_runner::case_ops::case_guard::init_events(
+                &root.join("cases").join(case_id),
             )
             .map_err(sea_forge_case_runner::case_ops::field_guard::Refusal::into_error)?;
-            match token {
-                Some(token) => token.replace(&events_path, b""),
-                None => fs::write(&events_path, b""),
-            }
-            .map_err(|e| ForgeError::io(format!("write {}", events_path.display()), e))?;
         }
     }
 

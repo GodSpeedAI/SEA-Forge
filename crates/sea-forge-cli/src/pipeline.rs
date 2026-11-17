@@ -129,10 +129,8 @@ fn write_json_new<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError
         .map_err(|error| ForgeError::io(format!("write {}", path.display()), error))
 }
 fn replace_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ForgeError> {
-    let temporary = path.with_extension("json.tmp");
-    write_json(&temporary, value)?;
-    fs::rename(&temporary, path)
-        .map_err(|error| ForgeError::io(format!("replace {}", path.display()), error))
+    // The guard's commit replaces the file atomically (temp outside the case).
+    write_json(path, value)
 }
 
 pub(crate) fn rebuild_authority_mirrors(
