@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 336
+**Status revision:** 337
 
-**Stage:** FDE S2: terminal lifecycle checkpoint
+**Stage:** FDE S2: versioned Field Case storage design
 
-**Summary:** Preserve a Field Case terminal state across successive writes in one batch and across later commits.
+**Summary:** Record the approved versioned storage and atomic publication design with a reader-compatible rollback checkpoint.
 
 **Verified:**
 
+- S2 proof on 9745a729 matched 9cbc3e16 row for row, with 15 scenario passes, AT-09 partial, and all 12 contract digests verified.
 - On checkpoint 9cbc3e16, S2 proof recorded 15 scenario passes and AT-09 partial. All 12 frozen contract digests matched.
 - With the terminal lifecycle change, just crate-test sea-forge-case-runner passed 94 tests with 19 ignored, including the new positive termination test.
 - just crate-test sea-forge-case-runner passed 93 tests with 19 ignored, including 9 model and 12 promotion saga tests.
@@ -31,8 +32,8 @@
 
 **Limits:**
 
-- The S2 proof and server suite have not been rerun after this two-file lifecycle change. Full workspace tests and independent review remain pending.
-- AT-09 awaits the WP-31 human A3 settlement proof. Staged versioned publication and runtime write comparison remain open.
+- The approved storage design is pending implementation and platform acceptance. Namespace durability remains to be qualified on Linux, macOS, and Windows.
+- The full workspace and server suite have not been rerun after the terminal lifecycle checkpoint. AT-09 awaits the WP-31 human A3 settlement proof.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -59,10 +60,12 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Implement the owner-approved versioned Field Case storage and atomic selector across Linux, macOS, and Windows. Preserve plain cases and legacy Field Case data.
+**Next:** Add and verify a shared generation resolver before enabling versioned writes. Then implement stage, verify, publish, and independent execution observation.
 
 **Evidence:**
 
+- .agents/specs/fde-field-case-storage.spec.md
+- docs/decisions/ADR-015-versioned-field-case-storage.md
 - .agents/reports/fde-convergence-2026-11-12/STATUS.md
 - .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
 - .agents/reports/fde-convergence-2026-11-12/F-implementation-plan.md
