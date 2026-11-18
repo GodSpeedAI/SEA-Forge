@@ -1,15 +1,17 @@
 # Current status
 
-**Status revision:** 366
+**Status revision:** 367
 
-**Stage:** FDE S2 | Checkpoint joined NT-07 proof
+**Stage:** FDE S2 | Linux guest resets verified and NTFS review probes added
 
-**Summary:** Persist the SEA-settled E8 in a real RealityTrace ledger and compare its exported pinned envelope across authority promotion and re-pin.
+**Summary:** Verify OS-reset recovery on Linux/ext4 and exercise the NTFS selector reader and helper failure boundaries deterministically.
 
 **Verified:**
 
+- Portability run 44421054364 passed all three jobs. The Linux artifact shows six guest resets with a fresh recovery boot on the same ext4 raw virtio disk, QEMU 8.2.2, Linux 6.8.0-149-generic. Every valid recovery committed a retry.
+- Native Windows 10.0.26300 fixed NTFS passed the OS helper boundary test and all 14 staged case-runner library tests. The actual paused reader verified the prior generation and a fresh reader selected the new one. The error-variant test distinguished refusal from publication uncertainty.
+- The independent Codex Terra review of 1e1761ee found zero critical or high issues and two medium test gaps. The new deterministic native tests address both. Focused Clippy passed at 65f1e5b3.
 - Joined NT-07 passed against RealityTrace checkpoint da47df5. The real SEA emitter, RealityTrace append, CLI ledger verify, and CLI export exercised the same E8 before promotion, after promotion, and after re-pin.
-- Portability run 44421054364 completed its native macOS App Sandbox job successfully. The Linux/ext4 guest reset job and native Windows job are still running.
 - The new guest probe compiled with 12 passing staged library tests and one externally controlled test ignored by design. The Portability workflow passed actionlint.
 - The held-reader regression failed before the change on native Windows 10.0.26300 fixed NTFS and passed afterward. All 12 staged library tests and 9 C1–C7 model tests passed in the same native environment.
 - Both hosted Ubuntu test shards passed at 085e6c6e in CI run 44402751703. S2 matched the comparison baseline with 15 passes and the expected AT-09 partial. Both hosted macOS jobs were cancelled.
@@ -19,7 +21,6 @@
 - The staged tests exercised a real partial scratch write followed by StorageFull, refusal of a modified spool with the prior generation still selected, and a healthy duplicate-path retry with identical published bytes.
 - RealityTrace checkpoint 55e496b persists the emitted world pin in envelope scope. All 6 focused mapper tests and all 3 CLI ledger tests passed, including a real SQLite append and export with hash verification.
 - The offline locked cargo-deny license gate reproduced the MIT-0 failure and passed with the approved package and version exception. The global allow list and advisory gate retain their existing configuration.
-- The native macOS rest job for run 44365325837 was queued for a targeted retry.
 - Both hosted Ubuntu test steps passed at 387ce96a in CI run 44365325837, including the cgroup-v2 delegation preflight and the workspace test shard that covers the WSL lifecycle failure.
 - The corrected legacy migration fixture passed all 9 case-runner library tests on Linux and native fixed NTFS Windows. The native Windows C1–C7 model suite also passed all 9 tests.
 - S2 at 387ce96a matched all 17 baseline rows except duration. Sixteen rows passed, AT-09 remained partial for WP-31 human A3, and all 12 contract digests matched.
@@ -99,26 +100,22 @@
 
 **Limits:**
 
+- The additional stage-creation reset and the hosted staged library checks need verification in the follow-up Actions run.
+- The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
+- DomainForge public TypedValue timestamp wire compatibility passed its expanded regression suite. Remaining public authority and duration migrations need scope confirmation before the dependency can be removed.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
-- No Linux guest-reset result is available yet. macOS/APFS and Windows/fixed-NTFS guest reset images and disposable host controllers are still missing.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
 - The macOS application restart gate needs a native runner. Abrupt host resets need separate disposable targets.
 - The production Field Case dispatch uses streamed capture with the legacy writer. The versioned writer exercises the same spool operation under staged tests.
-- RealityTrace delivery and the joined SEA Forge re-pin plus RealityTrace durable export gate remain open.
-- Abrupt host reset needs approved disposable Linux, APFS, and fixed NTFS targets with persistent test disks and external reset control.
-- Full chrono removal needs a DomainForge public Rust timestamp API decision. Existing serialized timestamp behavior remains the compatibility requirement.
 - The advisory gate remains open for the chrono migration and its input compatibility requirements.
 - The macOS server and rest jobs in CI run 44365325837 were queued when this snapshot was recorded. The native restart evidence on Linux and fixed NTFS concerns application process exits.
 - The Windows C1–C7 model compares final filesystem differences to the journal. Transient runtime observation and host-crash durability remain open on Windows.
-- Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
-- The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
 - Non-Linux model tests compare final-byte changes to the journal. Native publication durability and independent transient C7 observation need platform-specific evidence.
-- Runtime evidence sealing and historical artifact resolution remain open. NT-07 needs a RealityTrace world-reference persistence contract and a cross-repo re-pin fixture.
 - The WSL lifecycle gate needs a writable delegated cgroup-v2 directory. AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -145,7 +142,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Inspect the Linux/ext4 guest-reset artifact in Portability run 44421054364, qualify the remaining platforms, and continue the isolated timestamp migration.
+**Next:** Dispatch the seven-boundary Linux/ext4 proof and native staged library checks, then rerun the frozen NTFS review. Obtain macOS/APFS and Windows/fixed-NTFS reset environments before enabling the versioned writer.
 
 **Evidence:**
 

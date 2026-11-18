@@ -1301,6 +1301,24 @@ pub fn publish_trusted_sibling(
     kind: TrustedPublicationKind,
     mode: TrustedPublicationMode,
 ) -> Result<(), TrustedPublicationError> {
+    publish_trusted_sibling_inner(parent, source, destination, kind, mode, |_| Ok(()))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PublicationBoundary {
+    BeforeRename,
+    BeforeIdentityCheck,
+    BeforeParentFlush,
+}
+
+fn publish_trusted_sibling_inner(
+    parent: &Path,
+    source: &OsStr,
+    destination: &OsStr,
+    kind: TrustedPublicationKind,
+    mode: TrustedPublicationMode,
+    mut boundary: impl FnMut(PublicationBoundary) -> io::Result<()>,
+) -> Result<(), TrustedPublicationError> {
     let before = TrustedPublicationError::BeforeCommit;
     trusted_component(source).map_err(before)?;
     trusted_component(destination).map_err(before)?;
@@ -1423,9 +1441,11 @@ pub fn publish_trusted_sibling(
             HandleRenameMode::Replace
         }
     };
+    boundary(PublicationBoundary::BeforeRename).map_err(before)?;
     rename_handle_into_mode(source_raw, &target, rename_mode).map_err(before)?;
     let after = TrustedPublicationError::Committed;
-    let verify = || -> io::Result<()> {
+    let mut verify = || -> io::Result<()> {
+        boundary(PublicationBoundary::BeforeIdentityCheck)?;
         refuse_reparse_or_file(parent_raw, &parent_path).map_err(pin_error_into_io)?;
         confirm_final_path(parent_raw, &parent_path).map_err(pin_error_into_io)?;
         let id = handle_id(parent_raw)?;
@@ -1458,6 +1478,7 @@ pub fn publish_trusted_sibling(
                 "published entry identity changed",
             ));
         }
+        boundary(PublicationBoundary::BeforeParentFlush)?;
         // SAFETY: parent_raw is a live directory handle opened for write.
         if unsafe { FlushFileBuffers(parent_raw) } == FALSE {
             return Err(last_error());
@@ -1898,6 +1919,88 @@ mod tests {
     /// production rename is the Win32 class-10 form with `ReplaceIfExists`
     /// (see `rename_handle_into`).
     const FILE_RENAME_FLAG_REPLACE_IF_EXISTS: u32 = 0x0000_0001;
+
+    #[test]
+    fn trusted_selector_publication_reports_failures_at_the_rename_boundary() {
+        use std::io::Write;
+
+        let dir = std::env::temp_dir().join(format!(
+            "sf-os-publication-boundaries-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        std::fs::create_dir(&dir).expect("create publication directory");
+        let dir = dir.canonicalize().expect("canonical publication directory");
+        let selector = OsStr::new("current.json");
+        let staged = OsStr::new("staged-selector");
+        let boundaries = [
+            PublicationBoundary::BeforeRename,
+            PublicationBoundary::BeforeIdentityCheck,
+            PublicationBoundary::BeforeParentFlush,
+        ];
+        for (index, fail_at) in boundaries
+            .iter()
+            .copied()
+            .map(Some)
+            .chain([None])
+            .enumerate()
+        {
+            std::fs::write(dir.join(selector), b"old selector").expect("seed selector");
+            let mut file = std::fs::File::create(dir.join(staged)).expect("create staged selector");
+            file.write_all(b"new selector")
+                .expect("write staged selector");
+            file.sync_all().expect("flush staged selector");
+            drop(file);
+
+            let mut visited = Vec::new();
+            let result = publish_trusted_sibling_inner(
+                &dir,
+                staged,
+                selector,
+                TrustedPublicationKind::File,
+                TrustedPublicationMode::Replace,
+                |point| {
+                    visited.push(point);
+                    if Some(point) == fail_at {
+                        Err(io::Error::other("injected publication boundary failure"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            );
+            assert_eq!(visited, boundaries[..(index + 1).min(boundaries.len())]);
+            match fail_at {
+                Some(PublicationBoundary::BeforeRename) => {
+                    assert!(
+                        matches!(result, Err(TrustedPublicationError::BeforeCommit(ref e))
+                        if e.to_string() == "injected publication boundary failure"),
+                        "{result:?}"
+                    );
+                    assert_eq!(std::fs::read(dir.join(selector)).unwrap(), b"old selector");
+                    assert_eq!(std::fs::read(dir.join(staged)).unwrap(), b"new selector");
+                    std::fs::remove_file(dir.join(staged)).expect("remove uncommitted source");
+                }
+                Some(_) => {
+                    assert!(
+                        matches!(result, Err(TrustedPublicationError::Committed(ref e))
+                        if e.to_string() == "injected publication boundary failure"),
+                        "{result:?}"
+                    );
+                    assert_eq!(std::fs::read(dir.join(selector)).unwrap(), b"new selector");
+                    assert!(!dir.join(staged).exists());
+                }
+                None => {
+                    result.expect("publication on fixed NTFS");
+                    assert_eq!(std::fs::read(dir.join(selector)).unwrap(), b"new selector");
+                    assert!(!dir.join(staged).exists());
+                }
+            }
+        }
+        std::fs::remove_dir_all(dir).expect("remove publication directory");
+    }
 
     #[test]
     fn current_sid_is_a_user_sid() {

@@ -33,3 +33,18 @@ platform. A failed post-publication durability check leaves an uncertain outcome
 for recovery to examine. The
 [storage specification](../../.agents/specs/fde-field-case-storage.spec.md)
 defines the invariants and acceptance tests.
+
+## Qualification
+
+Dispatch the Portability workflow with `field_case_guest_reset=true` to
+exercise the staged writer on a disposable Linux/ext4 guest. The controller
+kills the guest at each named boundary and boots another instance with the
+same raw virtio disk. The uploaded `field-case-linux-guest-reset` artifact
+contains per-boundary serial logs and the disk and kernel configuration.
+Recovery verifies the selected generation and publishes a retry. Run
+[44421054364](https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44421054364)
+verified the six initial boundaries.
+
+The native Windows and macOS Portability steps exercise staged publication
+and application restart. APFS and fixed NTFS OS-reset qualification requires
+disposable guests with persistent test disks and external reset control.

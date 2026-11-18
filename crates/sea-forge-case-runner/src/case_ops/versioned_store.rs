@@ -121,11 +121,20 @@ fn directory(path: &Path) -> Result<()> {
     Ok(())
 }
 fn read_file(path: &Path) -> Result<Vec<u8>> {
+    read_file_observed(path, || {})
+}
+
+fn read_file_observed(path: &Path, after_open: impl FnOnce()) -> Result<Vec<u8>> {
     if !metadata(path)?.is_file() {
         return Err(StoreError::Invalid("expected regular file"));
     }
-    Ok(fs::read(path)?)
+    let mut file = fs::File::open(path)?;
+    after_open();
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)?;
+    Ok(bytes)
 }
+
 fn hash_ok(hash: &str) -> bool {
     hash.len() == 64
         && hash
@@ -232,11 +241,29 @@ pub(super) struct Snapshot {
 }
 
 fn open_verified(root: &Path, case_id: &str) -> Result<Option<Snapshot>> {
+    open_verified_at_selector(root, case_id, || {})
+}
+
+#[cfg(all(test, windows))]
+pub(super) fn open_after_selector_open(
+    root: &Path,
+    case_id: &str,
+    after_open: impl FnOnce(),
+) -> Result<Option<PathBuf>> {
+    Ok(open_verified_at_selector(root, case_id, after_open)?.map(|snapshot| snapshot.case_dir))
+}
+
+fn open_verified_at_selector(
+    root: &Path,
+    case_id: &str,
+    after_open: impl FnOnce(),
+) -> Result<Option<Snapshot>> {
     let Some(case) = namespace(root, case_id)? else {
         return Ok(None);
     };
-    let selector: Selector = serde_json::from_slice(&read_file(&case.join("current.json"))?)
-        .map_err(|_| StoreError::Invalid("invalid selector"))?;
+    let bytes = read_file_observed(&case.join("current.json"), after_open)?;
+    let selector: Selector =
+        serde_json::from_slice(&bytes).map_err(|_| StoreError::Invalid("invalid selector"))?;
     if selector.version != 1 || selector.case_id != case_id || !hash_ok(&selector.manifest_sha256) {
         return Err(StoreError::Invalid("selector identity or digest mismatch"));
     }

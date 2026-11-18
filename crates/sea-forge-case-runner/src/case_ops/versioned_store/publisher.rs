@@ -118,8 +118,7 @@ fn rename_sibling(source: &Path, target: &Path, _replace: bool) -> Result<(), Pu
 #[cfg(windows)]
 fn rename_sibling(source: &Path, target: &Path, replace: bool) -> Result<(), PublishError> {
     use sea_forge_sandbox::{
-        publish_trusted_sibling, TrustedPublicationError, TrustedPublicationKind,
-        TrustedPublicationMode,
+        publish_trusted_sibling, TrustedPublicationKind, TrustedPublicationMode,
     };
 
     let source_name = source
@@ -146,8 +145,30 @@ fn rename_sibling(source: &Path, target: &Path, replace: bool) -> Result<(), Pub
         kind,
         mode,
     )
-    .map_err(|error| match error {
+    .map_err(windows_publication_error)
+}
+
+#[cfg(windows)]
+fn windows_publication_error(error: sea_forge_sandbox::TrustedPublicationError) -> PublishError {
+    use sea_forge_sandbox::TrustedPublicationError;
+    match error {
         TrustedPublicationError::BeforeCommit(source) => PublishError::PreCommit(source),
         TrustedPublicationError::Committed(source) => PublishError::PublishedUncertain(source),
-    })
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_errors_preserve_the_publication_boundary() {
+    use sea_forge_sandbox::TrustedPublicationError;
+    let before = TrustedPublicationError::BeforeCommit(io::Error::other("rename refused"));
+    let after = TrustedPublicationError::Committed(io::Error::other("parent flush failed"));
+    assert!(matches!(
+        windows_publication_error(before),
+        PublishError::PreCommit(_)
+    ));
+    assert!(matches!(
+        windows_publication_error(after),
+        PublishError::PublishedUncertain(_)
+    ));
 }

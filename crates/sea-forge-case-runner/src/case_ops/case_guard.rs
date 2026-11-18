@@ -1925,6 +1925,18 @@ fn commit_staged(
     legacy_files: Option<&std::collections::BTreeMap<String, String>>,
     flush_dir: &dyn Fn(&Path) -> std::io::Result<()>,
 ) -> Result<Committed, CommitError> {
+    commit_staged_observed(root, case_id, batch, legacy_files, flush_dir, |_| {})
+}
+
+#[cfg(test)]
+fn commit_staged_observed(
+    root: &Path,
+    case_id: &str,
+    batch: Batch,
+    legacy_files: Option<&std::collections::BTreeMap<String, String>>,
+    flush_dir: &dyn Fn(&Path) -> std::io::Result<()>,
+    observe_prepared: impl FnOnce(&Path),
+) -> Result<Committed, CommitError> {
     use super::versioned_store;
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(integrity("invalid Field Case id".into()).into());
@@ -1945,6 +1957,7 @@ fn commit_staged(
     }
     decide(&state, &batch)?;
     versioned_store::transaction::replace(root, case_id, legacy_files, flush_dir, |staged| {
+        observe_prepared(staged);
         let applied = apply(staged, &state, batch, true, true)?;
         let verified = load_verified(staged, false)?;
         let plan_case = verified.plan.as_ref().map(|plan| plan.case_id.as_str());

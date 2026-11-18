@@ -142,6 +142,58 @@ fn concurrent_readers_each_get_one_complete_batch() {
     );
 }
 
+#[cfg(windows)]
+#[test]
+fn reader_opened_before_selector_replacement_reads_the_complete_old_generation() {
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    let fixture = tempfile::tempdir().unwrap();
+    let root = fixture.path();
+    commit_staged(root, CASE, create_case(), None, &dir_sync).unwrap();
+    commit_staged(root, CASE, run_file(b"old"), None, &dir_sync).unwrap();
+    let old = versioned_store::open(root, CASE).unwrap().unwrap();
+    let old_index = fs::read(index_path(&old)).unwrap();
+
+    thread::scope(|scope| {
+        let (opened_tx, opened_rx) = mpsc::channel();
+        let (resume_tx, resume_rx) = mpsc::channel();
+        let reader = scope.spawn(move || {
+            versioned_store::open_after_selector_open(root, CASE, || {
+                opened_tx.send(()).unwrap();
+                resume_rx
+                    .recv_timeout(Duration::from_secs(30))
+                    .expect("writer did not release reader");
+            })
+        });
+        opened_rx
+            .recv_timeout(Duration::from_secs(30))
+            .expect("reader did not open selector");
+        let result = commit_staged(root, CASE, run_file(b"new"), None, &dir_sync);
+        // Release even if publication returned an error; channel disconnect also
+        // releases the reader if this thread panics before sending.
+        let _ = resume_tx.send(());
+        result.unwrap();
+        let pinned = reader.join().unwrap().unwrap().unwrap();
+        assert_eq!(pinned, old);
+        assert!(load_verified(&pinned, false).unwrap().strict);
+        assert_eq!(fs::read(index_path(&pinned)).unwrap(), old_index);
+        assert_eq!(
+            fs::read(pinned.join("runs/run-1/record.txt")).unwrap(),
+            b"old"
+        );
+    });
+
+    let current = versioned_store::open(root, CASE).unwrap().unwrap();
+    assert_ne!(current, old);
+    assert!(load_verified(&current, false).unwrap().strict);
+    assert_eq!(
+        fs::read(current.join("runs/run-1/record.txt")).unwrap(),
+        b"new"
+    );
+}
+
 #[test]
 #[cfg_attr(
     not(any(unix, windows)),
@@ -530,7 +582,7 @@ fn guest_crash_publication_probe() {
         "after-first" => Some((storage, 2)),
         "before-replace" => Some((case.join("generations"), 2)),
         "after-replace" => Some((case.clone(), 2)),
-        "acked-first" | "acked-replace" => None,
+        "stage-created-first" | "acked-first" | "acked-replace" => None,
         _ => panic!("unknown reset phase: {phase}"),
     };
     let first = phase.ends_with("-first");
@@ -558,8 +610,19 @@ fn guest_crash_publication_probe() {
             }
             dir_sync(path)
         };
-        commit_staged(&root, CASE, batch, None, &sync).unwrap();
-        assert!(reset_boundary.is_none(), "missed reset boundary: {phase}");
+        commit_staged_observed(&root, CASE, batch, None, &sync, |staged| {
+            if phase == "stage-created-first" {
+                assert!(staged.is_dir());
+                assert!(staged.starts_with(root.join(".case-storage")));
+                assert!(versioned_store::open(&root, CASE).unwrap().is_none());
+                wait_for_guest_reset();
+            }
+        })
+        .unwrap();
+        assert!(
+            reset_boundary.is_none() && phase != "stage-created-first",
+            "missed reset boundary: {phase}"
+        );
         wait_for_guest_reset();
     }
     assert_eq!(mode, "verify");
@@ -591,7 +654,7 @@ fn guest_crash_publication_probe() {
         }
     }
     match phase.as_str() {
-        "before-first" => assert!(selected.is_none()),
+        "stage-created-first" | "before-first" => assert!(selected.is_none()),
         "after-first" => {}
         _ => assert!(selected.is_some()),
     }

@@ -97,6 +97,10 @@ jobs:
         shell: bash
         run: cargo test --locked -p sea-forge-changeset --test changeset_windows -- --nocapture
 
+      - name: Staged Field Case publication and application restart
+        shell: bash
+        run: cargo test --locked -p sea-forge-case-runner --lib -- --nocapture
+
       - name: Safe-write hard-link and junction tests
         shell: bash
         run: cargo test --locked -p sea-forge-sandbox --test safe_write_windows -- --nocapture
@@ -160,6 +164,10 @@ jobs:
         shell: bash
         run: cargo test --locked -p sea-forge-sandbox --lib
 
+      - name: Staged Field Case publication and application restart
+        shell: bash
+        run: cargo test --locked -p sea-forge-case-runner --lib -- --nocapture
+
   field-case-guest-reset:
     name: Field Case guest reset (Linux/ext4)
     if: github.event_name == 'workflow_dispatch' && inputs.field_case_guest_reset
@@ -175,9 +183,14 @@ jobs:
           persist-credentials: false
 
       - name: Install disposable guest prerequisites
+        timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          ubuntu_sources="$RUNNER_TEMP/field-case-ubuntu.sources"
+          cp /etc/apt/sources.list.d/ubuntu.sources "$ubuntu_sources"
+          apt_options=(-o "Dir::Etc::sourcelist=$ubuntu_sources" -o Dir::Etc::sourceparts=-
+            -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y --no-install-recommends \
             busybox-static cpio e2fsprogs linux-image-virtual qemu-system-x86 xz-utils zstd
           kernel=$(find /boot -maxdepth 1 -name 'vmlinuz-*-generic' | sort -V | tail -1)
           test -n "$kernel"

@@ -15,7 +15,7 @@ import sys
 import tempfile
 import time
 
-PHASES = ('before-first', 'after-first', 'acked-first', 'before-replace',
+PHASES = ('stage-created-first', 'before-first', 'after-first', 'acked-first', 'before-replace',
           'after-replace', 'acked-replace')
 TEST = 'case_ops::case_guard::staged_commit_tests::guest_crash_publication_probe'
 TIMEOUT = 120
@@ -87,6 +87,7 @@ fail() { echo "SEA_FDE_INIT_FAILURE $*"; poweroff -f; while :; do sleep 60; done
 mount -t proc proc /proc || fail proc
 mount -t sysfs sysfs /sys || fail sysfs
 mount -t devtmpfs devtmpfs /dev || fail devtmpfs
+exec </dev/console >/dev/console 2>&1
 MODULES
 tries=0
 while [ ! -b /dev/vda ] && [ "$tries" -lt 10 ]; do sleep 1; tries=$((tries + 1)); done
