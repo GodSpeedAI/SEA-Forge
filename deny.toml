@@ -51,6 +51,12 @@ exceptions = [
         version = "=0.8.18",
         allow = ["BSL-1.0"],
     },
+    {
+        # MIT No Attribution, through jsonschema -> referencing -> fluent-uri.
+        name = "borrow-or-share",
+        version = "=0.2.4",
+        allow = ["MIT-0"],
+    },
 ]
 
 # SEA Forge uses a nonstandard source-available license. Bind the custom SPDX

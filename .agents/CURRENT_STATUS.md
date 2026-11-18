@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 360
+**Status revision:** 361
 
-**Stage:** FDE S2 | Record native Linux verification and remaining acceptance gaps
+**Stage:** FDE S2 | Apply package-specific license decision
 
-**Summary:** Hosted Ubuntu test shards passed for the recovery checkpoint. The final Windows fixture correction passed on Linux and fixed NTFS.
+**Summary:** Approve MIT-0 only for the locked borrow-or-share 0.2.4 package and record the verified dependency gate result.
 
 **Verified:**
 
+- The offline locked cargo-deny license gate reproduced the MIT-0 failure and passed with the approved package and version exception. The global allow list and advisory gate retain their existing configuration.
+- The native macOS rest job for run 44365325837 was queued for a targeted retry.
 - Both hosted Ubuntu test steps passed at 387ce96a in CI run 44365325837, including the cgroup-v2 delegation preflight and the workspace test shard that covers the WSL lifecycle failure.
 - The corrected legacy migration fixture passed all 9 case-runner library tests on Linux and native fixed NTFS Windows. The native Windows C1–C7 model suite also passed all 9 tests.
 - S2 at 387ce96a matched all 17 baseline rows except duration. Sixteen rows passed, AT-09 remained partial for WP-31 human A3, and all 12 contract digests matched.
@@ -87,16 +89,15 @@
 
 **Limits:**
 
+- The advisory gate remains open for the chrono migration and its input compatibility requirements.
+- SEA Forge capture streaming and verified historical generations, plus the RealityTrace pinned-world persistence contract, are approved implementation work.
 - The macOS server and rest jobs in CI run 44365325837 were queued when this snapshot was recorded. The native restart evidence on Linux and fixed NTFS concerns application process exits.
 - The Windows C1–C7 model compares final filesystem differences to the journal. Transient runtime observation and host-crash durability remain open on Windows.
 - Native macOS application restart and host-crash or power-loss durability remain open. The staged writer is inactive in production.
 - Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
-- The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
 - The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
 - The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
-- The CI gate remains red on the chrono advisory and MIT-0 license rejection. The Windows native job does not qualify Field Case selector durability.
-- The native lint rerun also rejects MIT-0 for transitive borrow-or-share 0.2.4 through fluent-uri and jsonschema. This requires a license policy or dependency decision.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
@@ -128,7 +129,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Collect the hosted macOS shards. Resolve the C7 capture memory decision, historical generation reference handling, and the chrono and MIT-0 dependency gate. Qualify host-crash durability before activating versioned writes in production.
+**Next:** Implement bounded staged capture, historical manifest lineage, RealityTrace world_ref persistence, and the compatible chrono parser migration. Qualify platform interruption before production activation.
 
 **Evidence:**
 
