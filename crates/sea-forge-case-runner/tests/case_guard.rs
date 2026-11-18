@@ -778,3 +778,32 @@ fn a_nested_commit_joins_the_outer_lock_and_does_not_deadlock() {
         "a nested commit on the same case deadlocked or failed"
     );
 }
+
+#[test]
+fn commit_error_conversions_keep_uncertainty_out_of_refusals() {
+    use sea_forge_case_runner::case_ops::{case_guard::CommitError, field_guard::Refusal};
+    use sea_forge_core::errors::ForgeError;
+
+    let refusal = Refusal {
+        code: "CASE_CLOSED",
+        message: "closed".into(),
+    };
+    let error: ForgeError = CommitError::from(refusal).into();
+    match error {
+        ForgeError::Plan { class, message } => {
+            assert_eq!(class, "episode_gate_refused");
+            let value: serde_json::Value = serde_json::from_str(&message).unwrap();
+            assert_eq!(value["no_side_effect"], true);
+        }
+        other => panic!("expected refusal, got {other:?}"),
+    }
+    let error: ForgeError =
+        CommitError::PublicationUncertain(std::io::Error::other("sync failed")).into();
+    match error {
+        ForgeError::Io { context, source } => {
+            assert!(context.contains("may have changed"));
+            assert_eq!(source.to_string(), "sync failed");
+        }
+        other => panic!("expected operational error, got {other:?}"),
+    }
+}

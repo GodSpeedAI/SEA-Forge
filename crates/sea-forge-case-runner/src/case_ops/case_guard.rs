@@ -52,6 +52,31 @@ use std::path::{Path, PathBuf};
 /// The contract's refusal (`code`, `message`, `no_side_effect`).
 pub type ContractError = Refusal;
 
+/// A refusal precedes publication; an uncertain outcome may have changed the case.
+#[derive(Debug)]
+pub enum CommitError {
+    Refused(Refusal),
+    PublicationUncertain(std::io::Error),
+}
+
+impl From<Refusal> for CommitError {
+    fn from(refusal: Refusal) -> Self {
+        Self::Refused(refusal)
+    }
+}
+
+impl From<CommitError> for sea_forge_core::errors::ForgeError {
+    fn from(error: CommitError) -> Self {
+        match error {
+            CommitError::Refused(refusal) => refusal.into_error(),
+            CommitError::PublicationUncertain(source) => Self::io(
+                "case publication uncertain; the case may have changed",
+                source,
+            ),
+        }
+    }
+}
+
 /// The case-record file: the hash-chained ledger of a Field Case.
 pub const RECORDS: &str = "field-records.jsonl";
 /// The case-event log.
@@ -200,6 +225,12 @@ impl CaseLock {
     /// Block until this thread holds the case lock of `case_dir`. Creates
     /// nothing under `case_dir`.
     pub fn acquire(case_dir: &Path) -> Result<Self, ContractError> {
+        let lock = Self::acquire_logical(case_dir)?;
+        require_legacy_writer(case_dir)?;
+        Ok(lock)
+    }
+
+    fn acquire_logical(case_dir: &Path) -> Result<Self, ContractError> {
         if super::versioned_store::is_generation_data(&store_root(case_dir)) {
             return Err(integrity("published case generations are immutable".into()));
         }
@@ -224,12 +255,10 @@ impl CaseLock {
                 .map_err(|e| integrity(format!("take the case lock: {e}")))?;
             HELD.with(|held| held.borrow_mut().insert(key.clone(), (1, file)));
         }
-        let lock = Self {
+        Ok(Self {
             key,
             _thread_bound: PhantomData,
-        };
-        require_legacy_writer(case_dir)?;
-        Ok(lock)
+        })
     }
 }
 
@@ -1368,7 +1397,7 @@ fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
 
 /// Admit-and-apply: lock, load verified, decide on the post-state of the whole
 /// batch, write exactly the batch (and the projections the ledger derives),
-/// release. `Err` is the contract's refusal; nothing was written.
+/// release. The legacy path retains its existing refusal contract.
 pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
     contained(case_dir, &batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
@@ -1646,7 +1675,7 @@ pub fn commit_file(path: &Path, value: &Value) -> Result<bool, ContractError> {
     Ok(true)
 }
 
-/// Several store lines of ONE case committed as one batch: all or nothing.
+/// Several store lines of ONE case admitted as one batch.
 /// `Ok(false)` when the files are not of a case directory (nothing written).
 pub fn commit_files(items: &[(std::path::PathBuf, Value)]) -> Result<bool, ContractError> {
     let mut dir: Option<std::path::PathBuf> = None;
@@ -1745,3 +1774,53 @@ pub fn engine_pass_finishes(st: &CaseState) -> bool {
     }
     false
 }
+
+/// Stage an admitted Field Case batch in the production guard. The integration
+/// tests exercise this path before publication is enabled for runtime callers.
+#[cfg(test)]
+fn commit_staged(
+    root: &Path,
+    case_id: &str,
+    batch: Batch,
+    legacy_files: Option<&std::collections::BTreeMap<String, String>>,
+    flush_dir: &dyn Fn(&Path) -> std::io::Result<()>,
+) -> Result<Committed, CommitError> {
+    use super::versioned_store;
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(integrity("invalid Field Case id".into()).into());
+    }
+    let logical = root.join("cases").join(case_id);
+    let _lock = CaseLock::acquire_logical(&logical)?;
+    let source =
+        versioned_store::open(root, case_id).map_err(|error| integrity(error.to_string()))?;
+    if source.is_none() && logical.exists() && legacy_files.is_none() {
+        return Err(integrity("legacy migration requires a verified file set".into()).into());
+    }
+    let source = source.unwrap_or(logical);
+    contained(&source, &batch)?;
+    let creating = creating_field(&source, &batch);
+    let state = load_verified(&source, creating)?;
+    if !creating && !state.strict {
+        return Err(integrity("versioned batch must target a Field Case".into()).into());
+    }
+    decide(&state, &batch)?;
+    versioned_store::transaction::replace(root, case_id, legacy_files, flush_dir, |staged| {
+        let applied = apply(staged, &state, batch, true, true)?;
+        let verified = load_verified(staged, false)?;
+        let plan_case = verified.plan.as_ref().map(|plan| plan.case_id.as_str());
+        let projected_case = verified
+            .case_json
+            .as_ref()
+            .and_then(|case| case["case_id"].as_str());
+        if !verified.strict || plan_case != Some(case_id) || projected_case != Some(case_id) {
+            return Err(integrity(
+                "staged Field Case is incomplete or has inconsistent identity".into(),
+            ));
+        }
+        Ok(applied)
+    })
+}
+
+#[cfg(test)]
+#[path = "staged_commit_tests.rs"]
+mod staged_commit_tests;

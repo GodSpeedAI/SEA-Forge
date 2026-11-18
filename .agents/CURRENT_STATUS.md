@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 341
+**Status revision:** 342
 
-**Stage:** FDE S2: reader gate and publication outcome decision
+**Stage:** FDE S2: staged Field Case batch kernel
 
-**Summary:** Verify the reader checkpoint and record the approved separate outcome for post-publication durability uncertainty.
+**Summary:** Exercise admitted batch staging, strict verification, and atomic selection with a distinct durability-uncertain result.
 
 **Verified:**
 
+- The case-runner suite passed 103 tests with 19 ignored, including five staged-batch tests.
+- The staged tests verify first and subsequent publication, pinned concurrent readers, legacy preservation including a nested run artifact, invalid staged identity, and both sides of the selector publication boundary.
+- The legacy migration path refuses an incomplete file set before publication. The write-boundary scan still checks raw writes and permits the two reviewed private staging routines.
+- The server suite passed 689 tests with 2 ignored. WSL workspace and S2 row results are recorded at revision 341.
 - The workspace rerun passed 2048 tests with 28 ignored. The only failure was the WSL CLI lifecycle diagnostic test.
 - The final reader S2 proof matched the recovered checkpoint row for row. Fifteen scenarios passed and all 12 frozen contract digests matched.
 - A private fixture confirmed that the WSL sandbox cgroup warning precedes the JSON internal_error diagnostic on stderr.
@@ -44,10 +48,10 @@
 
 **Limits:**
 
-- The versioned writer remains disabled. Integration of the approved outcome, staged batch verification, and publication is pending.
-- The WSL lifecycle test needs an operator-provisioned writable cgroup-v2 delegation or the cgroup-enabled CI lane.
-- Cross-platform namespace durability, runtime evidence sealing, historical artifact resolution, and independent C7 execution observation are pending.
-- AT-09 awaits the WP-31 human A3 settlement proof.
+- The staged writer runs through the guard in the test build. Normal requests continue through the legacy writer while foreground, recovery, and background mutations are moved to typed outcome handling.
+- Cross-target macOS checks found an existing unguarded Linux inotify import in the model tests. Cross-target compile checks do not establish platform durability.
+- Full activation requires sealed run evidence, historical artifact resolution, independent C7 execution observation, and native platform qualification.
+- The WSL lifecycle test needs a writable delegated cgroup-v2 directory. AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
 - docs/how-to/upgrade-domainforge-producer.md still records a 0.21.1 check and its a71ff6 digest as history
@@ -73,7 +77,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Integrate the separate publication outcome and the staged batch writer. Route runtime writes and verify Linux, macOS, and Windows before enabling v1 publication.
+**Next:** Fix model-test portability, finish typed server propagation and runtime evidence sealing, then qualify and wire versioned publication.
 
 **Evidence:**
 

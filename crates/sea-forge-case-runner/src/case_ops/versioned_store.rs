@@ -11,6 +11,15 @@ use std::io::{self, Read};
 use std::num::NonZeroU64;
 use std::path::{Path, PathBuf};
 
+// Exercise the writer under the production verifier and guard before enabling
+// it in normal entry points. Runtime readers and platform gates must be wired first.
+#[cfg(test)]
+mod publisher;
+#[cfg(test)]
+mod stage;
+#[cfg(test)]
+pub(super) mod transaction;
+
 #[derive(Debug)]
 pub(super) enum StoreError {
     Io(io::Error),
@@ -199,6 +208,16 @@ pub(super) fn is_generation_data(root: &Path) -> bool {
 /// Resolve a generation once per logical read. The store must retain selected
 /// generations for readers and committed references.
 pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
+    Ok(open_verified(root, case_id)?.map(|snapshot| snapshot.case_dir))
+}
+
+struct Snapshot {
+    case_dir: PathBuf,
+    #[cfg(test)]
+    files: BTreeMap<String, String>,
+}
+
+fn open_verified(root: &Path, case_id: &str) -> Result<Option<Snapshot>> {
     let Some(case) = namespace(root, case_id)? else {
         return Ok(None);
     };
@@ -246,7 +265,11 @@ pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
     {
         return Err(StoreError::Invalid("invalid case or index layout"));
     }
-    Ok(Some(case_dir))
+    Ok(Some(Snapshot {
+        case_dir,
+        #[cfg(test)]
+        files: manifest.files,
+    }))
 }
 
 #[cfg(test)]

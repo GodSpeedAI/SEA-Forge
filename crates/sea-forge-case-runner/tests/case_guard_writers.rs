@@ -175,7 +175,12 @@ fn no_raw_write_outside_the_guard_and_its_allowlist() {
                 continue;
             }
             found += 1;
-            if !RAW_ALLOWED.iter().any(|(n, _)| *n == name) {
+            // The private stage creates fresh metadata and syncs its files
+            // before publication. Only these two routines own that access.
+            let private_stage = file
+                .ends_with("sea-forge-case-runner/src/case_ops/versioned_store/stage.rs")
+                && matches!(name.as_str(), "write_new" | "flush_tree");
+            if !private_stage && !RAW_ALLOWED.iter().any(|(n, _)| *n == name) {
                 unguarded.push(format!("{}: fn {name}", file.display()));
             }
         }
