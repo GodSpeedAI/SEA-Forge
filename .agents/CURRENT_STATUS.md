@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 349
+**Status revision:** 350
 
-**Stage:** FDE S2: preserve interaction outbox publication outcomes
+**Stage:** FDE S2: group freeze preparation and repair owed rows
 
-**Summary:** Distinguish an unavailable outbox that leaves delivery owed from an uncertain case write that recovery must inspect.
+**Summary:** Declare the prepared intent and its RealityTrace and anchor outbox rows together. Recover missing legacy rows before completing the freeze.
 
 **Verified:**
 
+- All 90 server conformance tests passed after the freeze batch change. The focused legacy replay regression also passed and checks exact restored outbox bytes.
+- S2 proof at baa4f109 matched the baseline in all 17 rows except durations. It recorded 15 scenario passes, AT-09 partial, and all 12 frozen contract digests verified.
 - All 90 tests passed in the interaction, FDE scenario, and Field Case conformance targets.
 - On isolated checkpoint 8c0fce88, CI run 44306807062 passed Ubuntu and macOS test shards, MSRV, authority, and Workbench. Portability run 44306811678 passed native Windows and macOS App Sandbox.
 - The full local server suite passed 689 tests with 2 ignored.
@@ -62,6 +64,7 @@
 
 **Limits:**
 
+- Native Windows verifies the Windows build and control plane. WP-21B still needs a durable selector publication mechanism qualified on its supported Windows storage environment.
 - The CI gate remains red on the chrono advisory and MIT-0 license rejection. The Windows native job does not qualify Field Case selector durability.
 - The native lint rerun also rejects MIT-0 for transitive borrow-or-share 0.2.4 through fluent-uri and jsonschema. This requires a license policy or dependency decision.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
@@ -96,7 +99,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the S2 rows after the typed write checkpoints, then finish freeze preparation, storage activation, and sealed sandbox evidence.
+**Next:** Finish captured settlement and the guarded run evidence writer, then qualify the versioned publication backend before runtime activation.
 
 **Evidence:**
 

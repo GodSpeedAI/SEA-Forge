@@ -638,9 +638,15 @@ fn crash_after_prepare_is_incomplete_then_recovered_by_replay_or_reconciler() {
         code(&run_as(root.path(), "case-keeper", &intruder)),
         "FREEZE_KEY_EXISTS"
     );
+    // A legacy prepare could stop after the intent and only some owed rows.
+    let outbox = root.path().join("cases/case-0001/field-rt-outbox.jsonl");
+    let complete = fs::read_to_string(&outbox).unwrap();
+    let (remaining, _) = complete.trim_end_matches('\n').rsplit_once('\n').unwrap();
+    fs::write(&outbox, format!("{remaining}\n")).unwrap();
     let out = run_as(root.path(), "case-keeper", &request);
     assert_eq!(out["outcome"], "recorded", "{out}");
-    let rt = fs::read_to_string(root.path().join("cases/case-0001/field-rt-outbox.jsonl")).unwrap();
+    let rt = fs::read_to_string(outbox).unwrap();
+    assert_eq!(rt, complete, "replay recreates the missing outbox row");
     let ids: Vec<Value> = rt
         .lines()
         .map(|l| serde_json::from_str::<Value>(l).unwrap()["record_id"].clone())

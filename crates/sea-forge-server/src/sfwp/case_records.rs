@@ -585,18 +585,26 @@ pub(super) fn latest_intents_in(dir: &Path) -> Vec<Value> {
     latest
 }
 
-fn put_intent(
-    ctx: &AppendContext,
-    state: &str,
-    base: &Value,
-    record_id: Option<&str>,
-) -> Result<(), String> {
+fn intent_op(state: &str, base: &Value, record_id: Option<&str>) -> Op {
     let mut line = base.clone();
     line["state"] = json!(state);
     if let Some(id) = record_id {
         line["record_id"] = json!(id);
     }
-    append_line(&case_dir(ctx.root, ctx.case_id).join(INTENTS), &line)
+    Op::Append {
+        file: INTENTS.into(),
+        line,
+    }
+}
+
+fn put_intent(
+    ctx: &AppendContext,
+    state: &str,
+    base: &Value,
+    record_id: Option<&str>,
+) -> Result<(), CommitError> {
+    let batch = Batch::new().with(intent_op(state, base, record_id));
+    case_guard::commit_with_outcome(&case_dir(ctx.root, ctx.case_id), batch).map(drop)
 }
 
 fn episode_key_of(payload_ref: &Value) -> Option<(String, String, u64)> {
@@ -961,7 +969,7 @@ fn append_inner(
                 if let Some(intent) = pending {
                     let rec_id = done["record_id"].as_str().unwrap_or("");
                     if let Err(e) = put_intent(ctx, "committed", &intent, Some(rec_id)) {
-                        return Ok(io_refusal(e));
+                        return record_commit_reply(e);
                     }
                 }
             }
@@ -1219,13 +1227,8 @@ fn freeze(
         "episode_kind": kind_of_episode, "digest": digest, "payload": payload,
     });
     let already_prepared = intents.iter().any(|i| i["idempotency_key"] == key);
-    if !already_prepared {
-        if let Err(e) = put_intent(ctx, "prepared", &intent, None) {
-            return Ok(io_refusal(e));
-        }
-        if let Err(e) = enqueue_freeze_outbox(ctx, payload, &case, &item, n, &digest) {
-            return Ok(io_refusal(e));
-        }
+    if let Err(error) = prepare_freeze(ctx, &intent, &item, n, &digest, !already_prepared) {
+        return record_commit_reply(error);
     }
     if fault == Some(Fault::AfterPrepare) {
         return Err(CrashInjected(Fault::AfterPrepare).into());
@@ -1271,7 +1274,7 @@ fn commit_freeze(
     }
     let rec_id = stored["record_id"].as_str().unwrap_or("").to_string();
     if let Err(e) = put_intent(ctx, "committed", intent, Some(&rec_id)) {
-        return Ok(io_refusal(e));
+        return record_commit_reply(e);
     }
     if let Some(publisher) = ctx.anchor {
         let _ = deliver_anchors(ctx, publisher);
@@ -1299,15 +1302,16 @@ fn anchor_id(case: &str, item: &str, n: u64, digest: &str) -> String {
     }
 }
 
-fn enqueue_freeze_outbox(
+fn prepare_freeze(
     ctx: &AppendContext,
-    payload: &Value,
-    case: &str,
+    intent: &Value,
     item: &str,
     n: u64,
     digest: &str,
-) -> Result<(), String> {
+    new_intent: bool,
+) -> Result<(), CommitError> {
     let dir = case_dir(ctx.root, ctx.case_id);
+    let payload = &intent["payload"];
     let episode_ref = payload["episode_ref"].as_str().unwrap_or("");
     let refs = &payload["realitytrace_refs"];
     // The contract import carries the frozen reference body; plan, question and
@@ -1322,28 +1326,43 @@ fn enqueue_freeze_outbox(
     for t in refs["threshold_ids"].as_array().into_iter().flatten() {
         entries.push(json!({"system": "realitytrace", "record_id": t, "op": "threshold.declared", "episode_ref": episode_ref}));
     }
-    let existing = read_lines(&dir.join(RT_OUTBOX));
+    let mut effects = Vec::new();
+    if new_intent {
+        effects.push(intent_op("prepared", intent, None));
+    }
+    let mut known: BTreeSet<String> = read_lines(&dir.join(RT_OUTBOX))
+        .into_iter()
+        .filter(|row| row["system"] == "realitytrace")
+        .filter_map(|row| row["record_id"].as_str().map(str::to_owned))
+        .collect();
     for mut entry in entries {
         // Dropped on (system, record_id): E §11 "Outbox duplicates".
-        if existing
-            .iter()
-            .any(|e| e["system"] == entry["system"] && e["record_id"] == entry["record_id"])
-        {
+        if !known.insert(entry["record_id"].as_str().unwrap_or_default().to_owned()) {
             continue;
         }
         entry["state"] = json!("pending");
-        append_line(&dir.join(RT_OUTBOX), &entry)?;
+        effects.push(Op::Append {
+            file: RT_OUTBOX.into(),
+            line: entry,
+        });
     }
-    let id = anchor_id(case, item, n, digest);
+    let id = anchor_id(ctx.case_id, item, n, digest);
     let anchors = read_lines(&dir.join(ANCHOR_OUTBOX));
     if !anchors.iter().any(|a| a["id"] == id.as_str()) {
-        append_line(
-            &dir.join(ANCHOR_OUTBOX),
-            &json!({"state": "pending", "kind": "freeze", "id": id, "tag": format!("fde-anchor/freeze/{id}"),
-                    "subject_ref": episode_ref, "digest": digest}),
-        )?;
+        effects.push(Op::Append {
+            file: ANCHOR_OUTBOX.into(),
+            line: json!({"state": "pending", "kind": "freeze", "id": id, "tag": format!("fde-anchor/freeze/{id}"),
+                         "subject_ref": episode_ref, "digest": digest}),
+        });
     }
-    Ok(())
+    if effects.is_empty() {
+        return Ok(());
+    }
+    let mut batch = Batch::new();
+    for effect in effects {
+        batch.push(effect);
+    }
+    case_guard::commit_with_outcome(&dir, batch).map(drop)
 }
 
 /// The repo's identity canonicalisation for actor strings
@@ -1958,14 +1977,16 @@ pub fn recover(ctx: &AppendContext) -> Result<Recovered, ForgeError> {
         }
         let key = intent["idempotency_key"].as_str().unwrap_or("").to_string();
         let payload = &intent["payload"];
-        let digest_ok =
-            check_freeze_digests(payload).is_ok_and(|(_, _, _, d)| intent["digest"] == d.as_str());
+        let checked = check_freeze_digests(payload)
+            .ok()
+            .filter(|(_, _, _, digest)| intent["digest"] == digest.as_str());
         let refs = &payload["realitytrace_refs"];
         let rt_ok = std::iter::once(&refs["plan_id"])
             .chain(refs["question_ids"].as_array().into_iter().flatten())
             .chain(refs["threshold_ids"].as_array().into_iter().flatten())
             .all(|v| v.as_str().is_some_and(|id| ctx.rt.exists(id)));
-        if digest_ok && rt_ok {
+        if let Some((_, item, n, digest)) = checked.filter(|_| rt_ok) {
+            prepare_freeze(ctx, &intent, &item, n, &digest, false)?;
             let records = records(ctx);
             if !is_refusal(
                 &commit_freeze(ctx, &intent, &records, None).map_err(AppendFailure::into_error)?,
@@ -1974,7 +1995,7 @@ pub fn recover(ctx: &AppendContext) -> Result<Recovered, ForgeError> {
                 continue;
             }
         }
-        let _ = put_intent(ctx, "abandoned", &intent, None);
+        put_intent(ctx, "abandoned", &intent, None)?;
         out.abandoned.push(key);
     }
     if let Some(publisher) = ctx.anchor {
