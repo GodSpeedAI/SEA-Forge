@@ -807,7 +807,8 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
             }
         })?;
         // The interaction event carries `authority.decision_id` for RealityTrace.
-        case_records::enqueue_run_event(root, input.case_id, &run_record);
+        case_records::enqueue_run_event(root, input.case_id, &run_record)
+            .map_err(AdmissionError::Operational)?;
     }
     Ok(Admission {
         field_case: true,

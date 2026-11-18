@@ -353,7 +353,7 @@ fn injected_emitter_failure_leaves_the_write_committed_and_the_event_owed() {
         2,
         "writes committed"
     );
-    let sent = with_ctx(root.path(), |c| deliver_events(c, &Failing));
+    let sent = with_ctx(root.path(), |c| deliver_events(c, &Failing)).unwrap();
     assert_eq!(sent, 0);
     let rows = lines(root.path(), "field-interaction-outbox.jsonl");
     assert_eq!(rows.iter().filter(|r| r["state"] == "pending").count(), 3);
@@ -364,7 +364,10 @@ fn injected_emitter_failure_leaves_the_write_committed_and_the_event_owed() {
     );
     // the emitter recovers: everything owed is delivered, once
     let sink = Counting(RefCell::new(vec![]));
-    assert_eq!(with_ctx(root.path(), |c| deliver_events(c, &sink)), 3);
+    assert_eq!(
+        with_ctx(root.path(), |c| deliver_events(c, &sink)).unwrap(),
+        3
+    );
     assert_eq!(sink.0.borrow().len(), 3);
 }
 
@@ -388,12 +391,12 @@ fn an_outbox_write_failure_does_not_block_the_case_write_and_is_reconciled() {
     )
     .unwrap();
     assert_eq!(
-        with_ctx(root.path(), reconcile_events),
+        with_ctx(root.path(), reconcile_events).unwrap(),
         1,
         "the owed event is rebuilt from the ledger"
     );
     assert_eq!(
-        with_ctx(root.path(), reconcile_events),
+        with_ctx(root.path(), reconcile_events).unwrap(),
         0,
         "reconcile is idempotent"
     );
@@ -415,8 +418,14 @@ fn replay_and_redelivery_do_not_duplicate_events() {
     assert_eq!(lines(root.path(), "field-decisions.jsonl").len(), 1);
     // delivery to the spool is idempotent, also when the delivered mark is lost
     let sink = SpoolSink::new(root.path());
-    assert_eq!(with_ctx(root.path(), |c| deliver_events(c, &sink)), 3);
-    assert_eq!(with_ctx(root.path(), |c| deliver_events(c, &sink)), 0);
+    assert_eq!(
+        with_ctx(root.path(), |c| deliver_events(c, &sink)).unwrap(),
+        3
+    );
+    assert_eq!(
+        with_ctx(root.path(), |c| deliver_events(c, &sink)).unwrap(),
+        0
+    );
     let spool = root.path().join("interaction-events/case-0001.jsonl");
     assert_eq!(fs::read_to_string(&spool).unwrap().lines().count(), 3);
     let outbox = root
@@ -430,7 +439,7 @@ fn replay_and_redelivery_do_not_duplicate_events() {
         .collect();
     fs::write(&outbox, kept.join("\n") + "\n").unwrap();
     assert_eq!(
-        with_ctx(root.path(), |c| deliver_events(c, &sink)),
+        with_ctx(root.path(), |c| deliver_events(c, &sink)).unwrap(),
         3,
         "re-marked"
     );

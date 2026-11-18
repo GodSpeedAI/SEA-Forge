@@ -29,6 +29,8 @@
 use super::case_records::{
     append_line, case_dir, decisions, now_rfc3339, read_lines, records, AppendContext,
 };
+use sea_forge_case_runner::case_ops::case_guard::{self, Batch, CommitError, Op};
+use sea_forge_case_runner::case_ops::field_guard::Refusal;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
@@ -355,16 +357,56 @@ fn known(ctx: &AppendContext, id: &str) -> bool {
         .any(|l| l["event_id"] == id)
 }
 
+fn write_outbox_row(ctx: &AppendContext, row: Value) -> Result<(), CommitError> {
+    // This auxiliary store may be unavailable while the ledger remains valid.
+    // Classify a failure known before the commit as a retryable refusal.
+    let unavailable = |message| Refusal {
+        code: "STORE_INTEGRITY",
+        message,
+    };
+    match fs::symlink_metadata(outbox_path(ctx)) {
+        Ok(metadata) if !metadata.is_file() => {
+            return Err(unavailable("interaction outbox is not a regular file".into()).into());
+        }
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+            return Err(unavailable(format!("inspect interaction outbox: {error}")).into());
+        }
+        _ => {}
+    }
+    let batch = Batch::new().with(Op::Append {
+        file: OUTBOX.into(),
+        line: row,
+    });
+    case_guard::commit_with_outcome(&case_dir(ctx.root, ctx.case_id), batch).map(drop)
+}
+
+/// A rejected auxiliary write still leaves delivery owed. An uncertain
+/// case mutation must reach the caller so recovery can inspect the case.
+pub(super) fn keep_uncertainty<T>(
+    result: Result<T, CommitError>,
+) -> Result<Option<T>, CommitError> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(CommitError::Refused(_)) => Ok(None),
+        Err(error @ CommitError::PublicationUncertain(_)) => Err(error),
+    }
+}
+
 fn enqueue(
     ctx: &AppendContext,
     id: String,
     source: Value,
     built: Result<Value, String>,
-) -> Result<(), String> {
-    match outbox_row(ctx, id, source, built) {
-        Some(row) => append_line(&outbox_path(ctx), &row),
-        None => Ok(()),
-    }
+) -> Result<bool, CommitError> {
+    write_owed_row(ctx, outbox_row(ctx, id, source, built))
+}
+
+fn write_owed_row(ctx: &AppendContext, row: Option<Value>) -> Result<bool, CommitError> {
+    let Some(row) = row else {
+        return Ok(false);
+    };
+    write_outbox_row(ctx, row)?;
+    Ok(true)
 }
 
 /// The outbox row owed for `id`, or `None` when it already exists.
@@ -386,15 +428,15 @@ fn outbox_row(
 }
 
 /// Owe the event for one ledger record. Idempotent.
-pub(super) fn enqueue_record(ctx: &AppendContext, record: &Value) -> Result<(), String> {
+pub(super) fn enqueue_record(ctx: &AppendContext, record: &Value) -> Result<bool, CommitError> {
     let (Some(record_id), Some(kind)) = (record["record_id"].as_str(), record["kind"].as_str())
     else {
-        return Err("record has no id or kind".into());
+        return Ok(false);
     };
     // Case-scoped kinds (WP-21 part B) have no episode and no translation-map
     // row: no interaction event is owed, and none is invented.
     if !matches!(kind, "episode.frozen" | "episode.settled") {
-        return Err(format!("{kind} owes no interaction event"));
+        return Ok(false);
     }
     let all = records(ctx);
     let source = json!({"system": SOURCE_LEDGER, "record_id": record_id});
@@ -422,11 +464,8 @@ pub(super) fn enqueue_record(ctx: &AppendContext, record: &Value) -> Result<(), 
 }
 
 /// Owe the event for one authority decision. Idempotent.
-pub(super) fn enqueue_decision(ctx: &AppendContext, decision: &Value) -> Result<(), String> {
-    match decision_row(ctx, decision)? {
-        Some(row) => append_line(&outbox_path(ctx), &row),
-        None => Ok(()),
-    }
+pub(super) fn enqueue_decision(ctx: &AppendContext, decision: &Value) -> Result<bool, CommitError> {
+    write_owed_row(ctx, decision_row(ctx, decision).ok().flatten())
 }
 
 /// The outbox row owed for a decision (`None` when it already exists), for a
@@ -471,21 +510,21 @@ pub(super) const OUTBOX_FILE: &str = OUTBOX;
 
 /// Add the outbox row of every ledger record and decision that lacks one (a
 /// crash between the ledger write and the enqueue). Idempotent.
-pub fn reconcile_events(ctx: &AppendContext) -> usize {
+pub fn reconcile_events(ctx: &AppendContext) -> Result<usize, CommitError> {
     let mut added = 0;
     for record in records(ctx) {
         let id = event_id(ctx.case_id, record["record_id"].as_str().unwrap_or(""));
-        if !known(ctx, &id) && enqueue_record(ctx, &record).is_ok() {
+        if !known(ctx, &id) && keep_uncertainty(enqueue_record(ctx, &record))? == Some(true) {
             added += 1;
         }
     }
     for decision in decisions(ctx) {
         let id = event_id(ctx.case_id, decision["decision_id"].as_str().unwrap_or(""));
-        if !known(ctx, &id) && enqueue_decision(ctx, &decision).is_ok() {
+        if !known(ctx, &id) && keep_uncertainty(enqueue_decision(ctx, &decision))? == Some(true) {
             added += 1;
         }
     }
-    added
+    Ok(added)
 }
 
 // ---------------------------------------------------------------------------
@@ -529,11 +568,13 @@ impl InteractionSink for SpoolSink {
     }
 }
 
-/// Deliver every pending row (after reconciling). A failing sink leaves the
-/// row pending for the next pass; it is never an error to the caller.
-/// Returns the number of rows newly marked delivered.
-pub fn deliver_events(ctx: &AppendContext, sink: &dyn InteractionSink) -> usize {
-    reconcile_events(ctx);
+/// Deliver pending rows after reconciliation. A failing sink leaves the row
+/// pending. A case write with uncertain publication stops delivery for recovery.
+pub fn deliver_events(
+    ctx: &AppendContext,
+    sink: &dyn InteractionSink,
+) -> Result<usize, CommitError> {
+    reconcile_events(ctx)?;
     let lines = read_lines(&outbox_path(ctx));
     let mut latest: BTreeMap<String, &Value> = BTreeMap::new();
     let mut pending: BTreeMap<String, &Value> = BTreeMap::new();
@@ -554,25 +595,23 @@ pub fn deliver_events(ctx: &AppendContext, sink: &dyn InteractionSink) -> usize 
         let Some(row) = pending.get(&id) else {
             continue;
         };
-        if sink.deliver(&id, &row["envelope"]).is_ok()
-            && append_line(
-                &outbox_path(ctx),
-                &json!({"event_id": id, "state": "delivered", "delivered_at": now_rfc3339()}),
-            )
-            .is_ok()
-        {
+        if sink.deliver(&id, &row["envelope"]).is_err() {
+            continue;
+        }
+        let receipt = json!({"event_id": id, "state": "delivered", "delivered_at": now_rfc3339()});
+        if keep_uncertainty(write_outbox_row(ctx, receipt))?.is_some() {
             sent += 1;
         }
     }
-    sent
+    Ok(sent)
 }
 
 /// Owe the event for one run record (an execution of the episode). The event's
 /// `authority.decision_id` is the program-execution decision (README §10), or
 /// `not_required` when the run needed none. Idempotent.
-pub(super) fn enqueue_run(ctx: &AppendContext, run: &Value) -> Result<(), String> {
+pub(super) fn enqueue_run(ctx: &AppendContext, run: &Value) -> Result<bool, CommitError> {
     let Some(run_id) = run["run_id"].as_str() else {
-        return Err("run has no id".into());
+        return Ok(false);
     };
     let all = records(ctx);
     let source = json!({"system": SOURCE_LEDGER, "record_id": run_id});

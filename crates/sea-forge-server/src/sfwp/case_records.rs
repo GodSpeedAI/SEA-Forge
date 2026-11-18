@@ -1051,7 +1051,8 @@ pub(super) fn next_record_with(
     }
     let record = commit_record(ctx, records, record, batch, None)?;
     // WP-14: the outbox can reconstruct any delivery owed by the ledger.
-    let _ = super::interaction_events::enqueue_record(ctx, &record);
+    use super::interaction_events::{enqueue_record, keep_uncertainty};
+    keep_uncertainty(enqueue_record(ctx, &record))?;
     Ok(record)
 }
 
@@ -1674,8 +1675,12 @@ fn settle(
     });
     match commit_record(ctx, records, record, batch, consumption) {
         Ok(stored) => {
-            let _ = super::interaction_events::enqueue_decision(ctx, &decision);
-            let _ = super::interaction_events::enqueue_record(ctx, &stored);
+            use super::interaction_events::{enqueue_decision, enqueue_record, keep_uncertainty};
+            if let Err(error) = keep_uncertainty(enqueue_decision(ctx, &decision))
+                .and_then(|_| keep_uncertainty(enqueue_record(ctx, &stored)))
+            {
+                return record_commit_reply(error);
+            }
             Ok(response("episode.settled", &rec_id, &episode_key, false))
         }
         Err(e) => record_commit_reply(e),
@@ -1975,7 +1980,7 @@ pub fn recover(ctx: &AppendContext) -> Result<Recovered, ForgeError> {
     if let Some(publisher) = ctx.anchor {
         let _ = deliver_anchors(ctx, publisher);
     }
-    super::interaction_events::reconcile_events(ctx);
+    super::interaction_events::reconcile_events(ctx)?;
     Ok(out)
 }
 
@@ -2266,20 +2271,18 @@ fn published_anchor_for(dir: &Path, subject_prefix: &str, digest: &str) -> Optio
     })
 }
 
-/// Owe (and try to deliver) the interaction event of a run record. Best effort,
-/// as for every record: the run record is already durable and the event is
-/// derived from it. The caller holds the case lock.
-pub fn enqueue_run_event(root: &Path, case_id: &str, run: &Value) {
+/// Owe and try to deliver the interaction event of a committed run record.
+/// The caller holds the case lock.
+pub fn enqueue_run_event(root: &Path, case_id: &str, run: &Value) -> Result<(), ForgeError> {
+    use super::interaction_events::{deliver_events, enqueue_run, keep_uncertainty, SpoolSink};
     if !valid_case_segment(case_id) {
-        return;
+        return Ok(());
     }
     with_store_ctx(root, case_id, |ctx| {
-        let _ = super::interaction_events::enqueue_run(ctx, run);
-        let _ = super::interaction_events::deliver_events(
-            ctx,
-            &super::interaction_events::SpoolSink::new(root),
-        );
-    });
+        keep_uncertainty(enqueue_run(ctx, run))?;
+        deliver_events(ctx, &SpoolSink::new(root))?;
+        Ok(())
+    })
 }
 
 /// The wire-level helper the SFWP verb uses: build the context from server state.
@@ -2342,12 +2345,12 @@ pub fn run_verb(
     };
     let answer = try_append_answer(&ctx, &Value::Object(request))?;
     // Deliver whatever is owed (this write's events and any earlier backlog).
-    // A failing emitter leaves the events in the outbox; it never changes the
-    // case write's response.
-    let _ = super::interaction_events::deliver_events(
+    // A failing emitter leaves the events owed. Uncertainty in the case's
+    // own outbox must reach the caller as an operational error.
+    super::interaction_events::deliver_events(
         &ctx,
         &super::interaction_events::SpoolSink::new(root),
-    );
+    )?;
     match answer.frame_class {
         Some(class) => Err(ForgeError::Plan {
             class,
