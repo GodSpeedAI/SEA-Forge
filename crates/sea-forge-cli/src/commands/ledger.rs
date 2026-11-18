@@ -100,7 +100,7 @@ fn describe_residue(residue: &CrashResidue) -> String {
 
 /// Print the persisted dispatch/settlement order for a case (spec §17.2 T13.2).
 ///
-/// Reads `.sea-forge/cases/<case_id>/case-events.jsonl` and prints
+/// Reads the selected case event log and prints
 /// one row per persisted `ItemActivated` / `SettlementRecorded` event in file
 /// order. Each row carries the additive ordinal persisted on the event
 /// payload. Never re-executes any episode; rejects missing, duplicate, or
@@ -109,7 +109,7 @@ fn replay_case(root: &Path, case_id: &str) -> Result<u8, ForgeError> {
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
-    let case_dir = root.join("cases").join(case_id);
+    let case_dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, case_id)?;
     let events_path = case_dir.join("case-events.jsonl");
     if !events_path.is_file() {
         return Err(ForgeError::Input(format!(

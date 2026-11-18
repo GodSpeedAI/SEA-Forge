@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 337
+**Status revision:** 338
 
-**Stage:** FDE S2: versioned Field Case storage design
+**Stage:** FDE S2: verified Field Case snapshot reader
 
-**Summary:** Record the approved versioned storage and atomic publication design with a reader-compatible rollback checkpoint.
+**Summary:** Resolve verified Field Case snapshots for case plans, CLI replay, and SFWP case views.
 
 **Verified:**
 
+- just crate-test sea-forge-case-runner passed 96 tests with 19 ignored.
+- The focused server case views suite passed 3 tests and the CLI ledger suite passed 4.
 - S2 proof on 9745a729 matched 9cbc3e16 row for row, with 15 scenario passes, AT-09 partial, and all 12 contract digests verified.
 - On checkpoint 9cbc3e16, S2 proof recorded 15 scenario passes and AT-09 partial. All 12 frozen contract digests matched.
 - With the terminal lifecycle change, just crate-test sea-forge-case-runner passed 94 tests with 19 ignored, including the new positive termination test.
@@ -32,7 +34,8 @@
 
 **Limits:**
 
-- The approved storage design is pending implementation and platform acceptance. Namespace durability remains to be qualified on Linux, macOS, and Windows.
+- The snapshot resolver is wired for case plans, CLI replay, and SFWP case views. Continuation, run and artifact lookup, and the atomic writer are pending.
+- Versioned case namespaces reject legacy writes. Linux, macOS, and Windows publication qualification remains pending.
 - The full workspace and server suite have not been rerun after the terminal lifecycle checkpoint. AT-09 awaits the WP-31 human A3 settlement proof.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
@@ -60,7 +63,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Add and verify a shared generation resolver before enabling versioned writes. Then implement stage, verify, publish, and independent execution observation.
+**Next:** Route continuation, run, and artifact readers through the shared snapshot resolver before enabling atomic publication.
 
 **Evidence:**
 

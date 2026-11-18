@@ -1301,12 +1301,25 @@ fn creating_field(case_dir: &Path, batch: &Batch) -> bool {
     new_plan || first_record || creation_events
 }
 
+fn require_legacy_writer(case_dir: &Path) -> Result<(), ContractError> {
+    let Some(case_id) = case_dir.file_name().and_then(|name| name.to_str()) else {
+        return Ok(());
+    };
+    let namespace = super::versioned_store::namespace(&store_root(case_dir), case_id)
+        .map_err(|error| integrity(error.to_string()))?;
+    if namespace.is_some() {
+        return Err(integrity("case requires the versioned writer".into()));
+    }
+    Ok(())
+}
+
 /// Decide `batch` on the case at `case_dir` under the case lock without
 /// writing anything: the pre-admission of a verb that has effects of its own
 /// (a ledger commit, a run) to order before its write. `commit` decides again.
 pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
     contained(case_dir, batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
+    require_legacy_writer(case_dir)?;
     let creating = creating_field(case_dir, batch);
     let st = load_verified(case_dir, creating)?;
     if st.field || creating {
@@ -1352,6 +1365,7 @@ fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
 pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
     contained(case_dir, &batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
+    require_legacy_writer(case_dir)?;
     let creating = creating_field(case_dir, &batch);
     let st = load_verified(case_dir, creating)?;
     let field = st.field || creating;
@@ -1588,6 +1602,7 @@ fn op_for_file(rel: &str, value: &Value) -> Result<Op, ContractError> {
 /// Field Case's log is only ever appended by events: refused for one.
 pub fn init_events(case_dir: &Path) -> Result<(), ContractError> {
     let _lock = CaseLock::acquire(case_dir)?;
+    require_legacy_writer(case_dir)?;
     if case_dir.join(EVENTS).exists() {
         return Ok(());
     }

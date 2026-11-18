@@ -25,6 +25,7 @@ pub mod case_guard;
 pub mod contract;
 pub mod field_guard;
 pub mod mediation;
+mod versioned_store;
 
 use chrono::Utc;
 use sea_forge_core::{
@@ -53,6 +54,18 @@ fn paths(
         dir.join("plan.json"),
         dir.join("case-events.jsonl"),
     )
+}
+
+/// Resolve the immutable data tree for this read, or the legacy case directory
+/// when there is no versioned namespace. Keep this path for every file read in
+/// the same logical operation.
+pub fn case_snapshot_dir(root: &Path, case_id: &str) -> Result<std::path::PathBuf, ForgeError> {
+    versioned_store::open(root, case_id)
+        .map(|selected| selected.unwrap_or_else(|| root.join("cases").join(case_id)))
+        .map_err(|error| ForgeError::Plan {
+            class: "STORE_INTEGRITY",
+            message: format!("read Field Case snapshot: {error}"),
+        })
 }
 
 fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ForgeError> {
@@ -313,8 +326,8 @@ pub fn read_case_plan(root: &Path, case_id: &str) -> Result<CasePlan, ForgeError
     if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Err(ForgeError::Input(format!("unsafe case id: {case_id}")));
     }
-    let (_, plan_path, _) = paths(root, case_id);
-    read_json(&plan_path)
+    let dir = case_snapshot_dir(root, case_id)?;
+    read_json(&dir.join("plan.json"))
 }
 
 /// `plan` with `item` appended, before any validation. This is the value a
@@ -575,15 +588,19 @@ pub fn load_case_plan(
     root: &Path,
     case_id: &str,
 ) -> Result<(Case, CasePlan, Vec<TraceEvent>), ForgeError> {
-    let (case_path, plan_path, events_path) = paths(root, case_id);
-    let events = fs::read_to_string(events_path)
+    let dir = case_snapshot_dir(root, case_id)?;
+    let events = fs::read_to_string(dir.join("case-events.jsonl"))
         .map_err(|error| ForgeError::io("read case events", error))?
         .lines()
         .filter(|line| !line.trim().is_empty())
         .map(serde_json::from_str)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| ForgeError::Serialization(error.to_string()))?;
-    Ok((read_json(&case_path)?, read_json(&plan_path)?, events))
+    Ok((
+        read_json(&dir.join("case.json"))?,
+        read_json(&dir.join("plan.json"))?,
+        events,
+    ))
 }
 
 pub fn save_case(root: &Path, case_id: &str, case: &Case) -> Result<(), ForgeError> {

@@ -39,9 +39,10 @@
 //! items. `unknown ≠ unavailable` holds throughout.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use schemars::JsonSchema;
+use sea_forge_case_runner::case_ops::case_snapshot_dir;
 use sea_forge_core::types::{Case, CasePlan, ItemKind, SettlementEvent, TraceEvent, TraceKind};
 use serde::{Deserialize, Serialize};
 
@@ -277,11 +278,17 @@ fn valid_case_id(case_id: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-fn read_case(root: &Path, case_id: &str) -> Result<Case, CaseViewError> {
+fn snapshot(root: &Path, case_id: &str) -> Result<PathBuf, CaseViewError> {
     if !valid_case_id(case_id) {
         return Err(CaseViewError::NotFound(case_id.to_string()));
     }
-    let path = root.join("cases").join(case_id).join("case.json");
+    case_snapshot_dir(root, case_id).map_err(|error| {
+        CaseViewError::Unreadable(format!("case {case_id} snapshot is unreadable: {error}"))
+    })
+}
+
+fn read_case(dir: &Path, case_id: &str) -> Result<Case, CaseViewError> {
+    let path = dir.join("case.json");
     // Stat before reading (SUP-09c): `fs::read` would size its allocation
     // from the file length, and this record is child-inflatable. Oversized is
     // *present but unreadable* — the integrity signal — while a stat failure
@@ -302,8 +309,8 @@ fn read_case(root: &Path, case_id: &str) -> Result<Case, CaseViewError> {
     })
 }
 
-fn read_plan(root: &Path, case_id: &str) -> Option<CasePlan> {
-    let path = root.join("cases").join(case_id).join("plan.json");
+fn read_plan(dir: &Path) -> Option<CasePlan> {
+    let path = dir.join("plan.json");
     if !size_within_cap(&path, MAX_RECORD_BYTES) {
         // An oversized plan degrades exactly as an unreadable one: the
         // plan-derived fields go absent rather than the view failing.
@@ -320,8 +327,8 @@ fn read_plan(root: &Path, case_id: &str) -> Option<CasePlan> {
 /// is to fold the well-formed prefix rather than fail the whole view: a
 /// horizon that renders everything up to the crash is more useful to an
 /// operator diagnosing that crash than an error page.
-fn read_case_events(root: &Path, case_id: &str) -> Vec<TraceEvent> {
-    let path = root.join("cases").join(case_id).join("case-events.jsonl");
+fn read_case_events(dir: &Path) -> Vec<TraceEvent> {
+    let path = dir.join("case-events.jsonl");
     if !size_within_cap(&path, MAX_JOURNAL_BYTES) {
         // An oversized journal (SUP-09c — this file is append-only and
         // child-inflatable) folds to nothing, the same shape an unreadable
@@ -354,7 +361,7 @@ pub fn list(root: &Path) -> CaseListResult {
         let Some(case_id) = entry.file_name().to_str().map(str::to_string) else {
             continue;
         };
-        match read_case(root, &case_id) {
+        match snapshot(root, &case_id).and_then(|dir| read_case(&dir, &case_id)) {
             Ok(case) => cases.push(CaseSummary {
                 case_id: case.case_id.clone(),
                 case_state: case_state_str(&case),
@@ -388,13 +395,15 @@ pub fn list(root: &Path) -> CaseListResult {
 
 /// Project one case's overview from its committed records.
 pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseViewError> {
-    let case = read_case(root, case_id)?;
-    let plan = read_plan(root, case_id);
+    let dir = snapshot(root, case_id)?;
+    let case = read_case(&dir, case_id)?;
+    let plan = read_plan(&dir);
 
+    let versioned = (dir != root.join("cases").join(case_id)).then_some(dir.as_path());
     let settlements = case
         .run_ids
         .iter()
-        .filter_map(|run_id| read_settlement(root, run_id))
+        .filter_map(|run_id| read_settlement(root, run_id, versioned))
         .collect();
 
     Ok(CaseOverview {
@@ -414,11 +423,15 @@ pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseView
     })
 }
 
-fn read_settlement(root: &Path, run_id: &str) -> Option<RunSettlement> {
+fn read_settlement(root: &Path, run_id: &str, snapshot: Option<&Path>) -> Option<RunSettlement> {
     // Through the one locator (K-04/DATA-02): a case's own episodes write the
     // case-owned layout, so reading `<root>/runs/` alone made a case view
     // unable to see the settlements of the runs that case created.
-    let path = crate::sfwp::run_views::run_dir(root, run_id)?.join("settlement.json");
+    let dir = match snapshot {
+        Some(snapshot) => super::run_views::run_dir_in_snapshot(root, run_id, snapshot),
+        None => super::run_views::run_dir(root, run_id),
+    }?;
+    let path = dir.join("settlement.json");
     // Same read cap as every whole-record read (SUP-09c): an oversized
     // settlement is absent here, which leaves the run honestly `unsettled`
     // rather than reading attacker-influenced bytes.
@@ -447,9 +460,10 @@ fn settlement_standing(event: &SettlementEvent) -> SettlementStanding {
 
 /// Fold this case's trace events over its plan items to produce the horizon.
 pub fn get_horizon(root: &Path, case_id: &str) -> Result<CaseHorizon, CaseViewError> {
-    let case = read_case(root, case_id)?;
-    let plan = read_plan(root, case_id);
-    let events = read_case_events(root, case_id);
+    let dir = snapshot(root, case_id)?;
+    let case = read_case(&dir, case_id)?;
+    let plan = read_plan(&dir);
+    let events = read_case_events(&dir);
 
     // Seed one row per plan item so an item with no events yet is `pending`
     // rather than missing. An absent plan yields an empty item list, not a

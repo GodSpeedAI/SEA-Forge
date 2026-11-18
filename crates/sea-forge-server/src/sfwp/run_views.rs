@@ -386,6 +386,20 @@ pub(crate) fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
     Some(case_run_dir(root, run_id).unwrap_or(flat))
 }
 
+/// Resolve the case-owned run from the same generation as its case view.
+/// Flat runs retain their precedence.
+pub(crate) fn run_dir_in_snapshot(root: &Path, run_id: &str, snapshot: &Path) -> Option<PathBuf> {
+    if !valid_run_id(run_id) {
+        return None;
+    }
+    let flat = root.join("runs").join(run_id);
+    Some(if flat.is_dir() {
+        flat
+    } else {
+        snapshot.join("runs").join(run_id)
+    })
+}
+
 /// The case-owned directory for `run_id`, if some case owns it.
 ///
 /// Scans `cases/*/runs/` rather than consulting `case.json`'s `run_ids`: a run
