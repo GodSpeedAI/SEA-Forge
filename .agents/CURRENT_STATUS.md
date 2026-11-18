@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 369
+**Status revision:** 370
 
-**Stage:** FDE S2 | Hosted staged publication and workspace evidence recorded
+**Stage:** FDE S2 | Timestamp checkpoint replay
 
-**Summary:** Finish the exact-checkpoint hosted verification for staged publication while the cross-platform reset and Chrono prerequisites remain open.
+**Summary:** Carry the run ID calendar and leap-second compatibility checkpoint into the current FDE integration.
 
 **Verified:**
 
@@ -145,7 +145,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Obtain the APFS and fixed-NTFS guest reset prerequisites, settle the ordinary RealityTrace delivery contract, and confirm the remaining public timestamp and RealityTrace migration scope.
+**Next:** Finish and verify the SEA Forge, DomainForge, and pinned RealityTrace migration. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
 
 **Evidence:**
 
