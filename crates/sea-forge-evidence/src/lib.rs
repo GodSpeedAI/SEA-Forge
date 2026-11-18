@@ -144,6 +144,37 @@ pub fn capture_file(
             .map_err(|e| ForgeError::Internal(format!("copy artifact {name}: {e}")))?;
     }
     let digest = sha256_file(&destination)?;
+    record_artifact(name, writer, source_event_id, descriptor, digest)
+}
+
+/// Record evidence for bytes already captured and sealed by the caller.
+///
+/// The caller must seal these exact bytes at `artifacts/{name}` before recording
+/// evidence. This function does not read or write the artifact itself.
+pub fn capture_bytes(
+    bytes: &[u8],
+    name: &str,
+    writer: &mut JsonlEvidenceWriter,
+    source_event_id: String,
+    descriptor: Option<(&Intent, &str)>,
+) -> Result<(EvidenceRecord, Option<ArtifactDescriptor>), ForgeError> {
+    sea_forge_sandbox::validate_relative_path(name)?;
+    record_artifact(
+        name,
+        writer,
+        source_event_id,
+        descriptor,
+        sha256_bytes(bytes),
+    )
+}
+
+fn record_artifact(
+    name: &str,
+    writer: &mut JsonlEvidenceWriter,
+    source_event_id: String,
+    descriptor: Option<(&Intent, &str)>,
+    digest: String,
+) -> Result<(EvidenceRecord, Option<ArtifactDescriptor>), ForgeError> {
     let mut metadata = BTreeMap::new();
     let mut output_descriptor = None;
     if let Some((intent, plan_item_id)) = descriptor {

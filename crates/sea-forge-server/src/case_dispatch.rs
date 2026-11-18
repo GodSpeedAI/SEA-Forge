@@ -1,7 +1,13 @@
 use crate::{agent_probe, delegation, DispatchOutcome, ServerState, SubmitPayload};
 use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use sea_forge_case_runner::{write_json, CaseRunner};
+use sea_forge_case_runner::{
+    case_ops::{
+        case_guard::{self, Batch, Op},
+        case_snapshot_dir, field_guard,
+    },
+    write_json, CaseRunner,
+};
 use sea_forge_core::{
     errors::ForgeError,
     ids,
@@ -16,8 +22,14 @@ use sea_forge_core::{
 use sea_forge_evidence::JsonlEvidenceWriter;
 use sea_forge_ledger::LedgerStream;
 use sea_forge_planner::case_engine::{replay_case, validate_proposal, CaseAction};
+use sea_forge_settlement::CapturedCriteria;
 use sea_forge_trace::JsonlTraceRecorder;
-use std::{collections::BTreeMap, fs, path::PathBuf, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::task::JoinSet;
 
 struct Completion {
@@ -729,14 +741,16 @@ pub(crate) fn execute_sandbox(
         .first()
         .ok_or_else(|| ForgeError::Input("sandbox task missing operation".into()))?
         .clone();
-    let workspace = root
-        .join("cases")
-        .join(case_id)
-        .join("runs")
-        .join(run_id)
-        .join("workspace");
-    let run_dir = workspace.parent().unwrap().to_path_buf();
+    let field = field_guard::is_field_case(&case_snapshot_dir(&root, case_id)?);
+    let case_dir = root.join("cases").join(case_id);
+    let run_dir = if field {
+        root.join(".run-workspaces").join(case_id).join(run_id)
+    } else {
+        case_dir.join("runs").join(run_id)
+    };
+    let workspace = run_dir.join("workspace");
     let artifacts = run_dir.join("artifacts");
+    let mut captured = field.then(BTreeMap::new);
     // The run directory is where this episode's *governance* records live, so
     // it exists before authority is evaluated: a denial that wrote its trace
     // and evidence nowhere would be indistinguishable from an episode that
@@ -902,14 +916,22 @@ pub(crate) fn execute_sandbox(
                     Some(item.plan_item_id.clone()),
                     serde_json::json!({"artifact": path}),
                 )?;
-                sea_forge_evidence::capture_file(
-                    &workspace.join(path),
-                    &artifacts,
-                    path,
-                    &mut evidence,
-                    event,
-                    None,
-                )?;
+                if let Some(files) = &mut captured {
+                    let relative = format!("artifacts/{path}");
+                    let bytes = sea_forge_sandbox::read_workspace_file(&workspace, path)?;
+                    sea_forge_evidence::capture_bytes(&bytes, path, &mut evidence, event, None)?;
+                    files.insert(format!("workspace/{path}"), bytes.clone());
+                    files.insert(relative, bytes);
+                } else {
+                    sea_forge_evidence::capture_file(
+                        &workspace.join(path),
+                        &artifacts,
+                        path,
+                        &mut evidence,
+                        event,
+                        None,
+                    )?;
+                }
             }
             (None, true)
         } else {
@@ -978,14 +1000,21 @@ pub(crate) fn execute_sandbox(
                     Some(item.plan_item_id.clone()),
                     serde_json::json!({"artifact": name}),
                 )?;
-                sea_forge_evidence::capture_file(
-                    &artifacts.join(name),
-                    &artifacts,
-                    name,
-                    &mut evidence,
-                    event,
-                    None,
-                )?;
+                if let Some(files) = &mut captured {
+                    let relative = format!("artifacts/{name}");
+                    let bytes = sea_forge_sandbox::read_workspace_file(&run_dir, &relative)?;
+                    sea_forge_evidence::capture_bytes(&bytes, name, &mut evidence, event, None)?;
+                    files.insert(relative, bytes);
+                } else {
+                    sea_forge_evidence::capture_file(
+                        &artifacts.join(name),
+                        &artifacts,
+                        name,
+                        &mut evidence,
+                        event,
+                        None,
+                    )?;
+                }
             }
             (Some(result), false)
         }
@@ -1007,23 +1036,66 @@ pub(crate) fn execute_sandbox(
     // a command that exited zero while writing none of its required artifacts,
     // and it had no representation for `Escalate` at all — an escalation was
     // silently settled as a rejection, losing the review the verdict asked for.
-    let settlement = sea_forge_settlement::settle(
-        &sea_forge_core::types::SettlementClaim {
-            run_id: run_id.into(),
-            plan_item_id: item.plan_item_id.clone(),
-            criteria_ref: item.settlement_criteria_ref.clone(),
-            criteria: item.settlement_criteria.clone(),
-            execution,
-            authority_verdicts: vec![decision.verdict.clone()],
-            evaluator_scores: BTreeMap::new(),
-            batch: None,
-            // F-10: a materialized write_file episode has no process result;
-            // the honest basis settles it on the required artifacts it wrote.
-            write_only,
-        },
-        &workspace,
-        &run_dir,
-    )?;
+    let claim = sea_forge_core::types::SettlementClaim {
+        run_id: run_id.into(),
+        plan_item_id: item.plan_item_id.clone(),
+        criteria_ref: item.settlement_criteria_ref.clone(),
+        criteria: item.settlement_criteria.clone(),
+        execution,
+        authority_verdicts: vec![decision.verdict.clone()],
+        evaluator_scores: BTreeMap::new(),
+        batch: None,
+        // F-10: a materialized write_file episode has no process result;
+        // the honest basis settles it on the required artifacts it wrote.
+        write_only,
+    };
+    if let Some(mut files) = captured {
+        let artifact_observations = if decision.verdict == Verdict::Allow {
+            capture_required_artifacts(&workspace, &claim.criteria.required_artifacts, &mut files)?
+        } else {
+            BTreeMap::new()
+        };
+        let stdout = claim
+            .execution
+            .as_ref()
+            .and_then(|result| files.get(&result.stdout_path))
+            .map(Vec::as_slice);
+        let settlement = sea_forge_settlement::settle_with_captured_criteria(
+            &claim,
+            &workspace,
+            &run_dir,
+            &CapturedCriteria {
+                stdout,
+                artifacts: &artifact_observations,
+            },
+        )?;
+
+        // Stop the trusted writers before reopening trace and evidence.
+        drop(trace);
+        drop(evidence);
+        for name in ["trace.jsonl", "evidence.jsonl"] {
+            let bytes = sea_forge_sandbox::read_workspace_file(&run_dir, name)?;
+            files.insert(name.into(), bytes);
+        }
+        files.insert(
+            "settlement.json".into(),
+            serde_json::to_vec_pretty(&settlement)?,
+        );
+        files.insert(
+            "authority.json".into(),
+            serde_json::to_vec_pretty(&vec![&decision])?,
+        );
+        let mut batch = Batch::new();
+        for (path, bytes) in files {
+            batch.push(Op::RunFile {
+                rel: format!("{run_id}/{path}"),
+                bytes,
+            });
+        }
+        case_guard::commit_with_outcome(&case_dir, batch)?;
+        return Ok(settlement);
+    }
+    let settlement = sea_forge_settlement::settle(&claim, &workspace, &run_dir)?;
 
     // The ledger is the truth, but `run.get` and `case.get_overview` read
     // `settlement.json` — so a settlement that lived only in the ledger made
@@ -1042,4 +1114,140 @@ pub(crate) fn execute_sandbox(
     write_json(&run_dir.join("authority.json"), &vec![&decision])?;
 
     Ok(settlement)
+}
+
+fn capture_required_artifacts(
+    workspace: &Path,
+    required: &[String],
+    files: &mut BTreeMap<String, Vec<u8>>,
+) -> Result<BTreeMap<String, bool>, ForgeError> {
+    let mut observations = BTreeMap::new();
+    for name in required {
+        if observations.contains_key(name) {
+            continue;
+        }
+        let relative = format!("workspace/{name}");
+        let present = if files.contains_key(&relative) {
+            true
+        } else {
+            match sea_forge_sandbox::read_workspace_file(workspace, name) {
+                Ok(bytes) => {
+                    files.insert(relative, bytes);
+                    true
+                }
+                Err(ForgeError::UnsafePath(_)) => false,
+                Err(ForgeError::Io { source, .. })
+                    if matches!(
+                        source.kind(),
+                        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                    ) =>
+                {
+                    false
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        observations.insert(name.clone(), present);
+    }
+    Ok(observations)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_forge_core::types::{PlanItem, TraceEvent};
+    use serde_json::{json, Value};
+
+    #[test]
+    fn field_case_write_seals_the_bytes_used_for_settlement() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let case_id = "case-0001";
+        let case_dir = root.join("cases").join(case_id);
+        let run_id = ids::run_id().unwrap();
+        let item: PlanItem = serde_json::from_value(json!({
+            "plan_item_id": "write-report",
+            "name": "Write report",
+            "item_kind": "sandboxed_task",
+            "operations": [
+                {"kind": "write_file", "path": "report.txt", "content_hint": "sealed output"}
+            ],
+            "settlement_criteria": { "required_artifacts": ["report.txt"] }
+        }))
+        .unwrap();
+        case_guard::commit(
+            &case_dir,
+            Batch::new()
+                .with(Op::Case(json!({"case_id": case_id, "state": "active"})))
+                .with(Op::Plan(json!({
+                    "version": RECORD_VERSION, "plan_id": "plan-1", "case_id": case_id,
+                    "run_id": run_id, "intent_id": "intent-1", "items": [item],
+                    "template_ref": "fde.field_case@1",
+                })))
+                .with(Op::Event(TraceEvent {
+                    version: RECORD_VERSION.into(),
+                    event_id: "evt-0001".into(),
+                    run_id: run_id.clone(),
+                    plan_item_id: None,
+                    kind: TraceKind::CaseCreated,
+                    actor_id: "operator_local".into(),
+                    timestamp: "2026-01-01T00:00:00Z".into(),
+                    payload: json!({}),
+                    cell_id: None,
+                })),
+        )
+        .unwrap();
+        fs::write(
+            root.join("policy.yaml"),
+            r#"version: "0.1"
+default: deny
+rules:
+  - name: allow-report
+    verdict: allow
+    actor_role: operator
+    operation_kind: write_file
+    path_prefix: "report.txt"
+"#,
+        )
+        .unwrap();
+
+        let config = crate::ServerConfig {
+            root: root.into(),
+            ..Default::default()
+        };
+        let result = execute_sandbox(
+            &config,
+            &item,
+            "policy.yaml",
+            "operator_local",
+            "process-1",
+            case_id,
+            &run_id,
+            root.into(),
+            30,
+            ActorRole::Operator,
+        )
+        .unwrap();
+        assert_eq!(result.status, SettlementStatus::Accepted);
+        let scratch = root.join(".run-workspaces").join(case_id).join(&run_id);
+        let published = case_dir.join("runs").join(&run_id);
+        let bytes = fs::read(published.join("artifacts/report.txt")).unwrap();
+        assert_eq!(bytes, b"sealed output");
+        assert_eq!(
+            fs::read(scratch.join("workspace/report.txt")).unwrap(),
+            bytes
+        );
+        let evidence = fs::read_to_string(published.join("evidence.jsonl")).unwrap();
+        let artifact = evidence
+            .lines()
+            .map(|line| serde_json::from_str::<Value>(line).unwrap())
+            .find(|record| record["uri"] == "artifacts/report.txt")
+            .expect("the published capture has a ledger-facing evidence record");
+        assert_eq!(artifact["sha256"], sea_forge_evidence::sha256_bytes(&bytes));
+        assert_eq!(
+            serde_json::from_slice::<Value>(&fs::read(published.join("settlement.json")).unwrap())
+                .unwrap(),
+            serde_json::to_value(result).unwrap(),
+        );
+    }
 }

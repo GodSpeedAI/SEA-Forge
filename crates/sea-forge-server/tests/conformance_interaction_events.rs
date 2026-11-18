@@ -481,7 +481,7 @@ fn an_episode_in_another_world_records_a_gap_and_invents_no_semantic_ref() {
     fs::write(dir.join("field-records.jsonl"), out).unwrap();
     let _ = fs::remove_file(root.path().join(".case-index/case-0001.json"));
     fs::remove_file(dir.join("field-interaction-outbox.jsonl")).unwrap();
-    with_ctx(root.path(), reconcile_events);
+    with_ctx(root.path(), reconcile_events).unwrap();
     let rows = lines(root.path(), "field-interaction-outbox.jsonl");
     assert!(rows.iter().all(|r| r["state"] == "unmapped"), "{rows:?}");
     assert_eq!(rows.len(), 3);

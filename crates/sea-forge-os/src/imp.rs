@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
     NtCreateFile, FILE_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
+    FILE_SYNCHRONOUS_IO_NONALERT,
 };
 use windows_sys::Win32::Foundation::{
     CloseHandle, LocalFree, RtlNtStatusToDosError, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
@@ -29,13 +30,13 @@ use windows_sys::Win32::Security::{
 };
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, FileRenameInfo,
-    GetFileInformationByHandle, GetFileInformationByHandleEx, GetFinalPathNameByHandleW,
-    GetLongPathNameW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
-    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
-    FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-    FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
-    FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
-    VOLUME_NAME_DOS,
+    GetFileInformationByHandle, GetFileInformationByHandleEx, GetFileType,
+    GetFinalPathNameByHandleW, GetLongPathNameW, SetFileInformationByHandle,
+    BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE, FILE_ATTRIBUTE_DIRECTORY,
+    FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO,
+    FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO,
+    FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ,
+    FILE_SHARE_WRITE, FILE_TYPE_DISK, OPEN_EXISTING, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -461,14 +462,18 @@ fn is_not_found(error: &io::Error) -> bool {
     )
 }
 
-fn handle_attributes(handle: HANDLE) -> io::Result<u32> {
+fn handle_info(handle: HANDLE) -> io::Result<BY_HANDLE_FILE_INFORMATION> {
     // SAFETY: `info` is a plain out-struct of the layout the call writes; the handle is live and owned by the caller.
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { mem::zeroed() };
     // SAFETY: the handle is live and `info` is a valid out-pointer.
     if unsafe { GetFileInformationByHandle(handle, &mut info) } == FALSE {
         return Err(last_error());
     }
-    Ok(info.dwFileAttributes)
+    Ok(info)
+}
+
+fn handle_attributes(handle: HANDLE) -> io::Result<u32> {
+    handle_info(handle).map(|info| info.dwFileAttributes)
 }
 
 fn handle_final_path(handle: HANDLE) -> io::Result<PathBuf> {
@@ -844,6 +849,70 @@ impl PinnedDir {
             path: resolved,
             id,
         })
+    }
+
+    /// Opens a direct regular-file child for reading through this pin.
+    /// The returned handle shares reads only: existing or new writers and
+    /// deleters cause a sharing violation instead of changing captured bytes.
+    pub fn open_file_read(&self, name: &OsStr) -> Result<std::fs::File, PinError> {
+        let units: Vec<u16> = name.encode_wide().collect();
+        if units.is_empty()
+            || units == [b'.' as u16]
+            || units == [b'.' as u16, b'.' as u16]
+            || units
+                .iter()
+                .any(|&c| c == 0 || c == b'/' as u16 || c == b'\\' as u16 || c == b':' as u16)
+        {
+            return Err(PinError::Io(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "file name must be a single component without a stream",
+            )));
+        }
+        self.revalidate()?;
+        let child_path = self.path.join(name);
+        let handle = open_anchored(
+            self.handle.as_raw_handle() as HANDLE,
+            name,
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            FILE_OPEN,
+            FILE_OPEN_FOR_BACKUP_INTENT
+                | FILE_FLAG_OPEN_REPARSE_POINT
+                | FILE_SYNCHRONOUS_IO_NONALERT,
+        )
+        .map_err(|error| {
+            if is_not_found(&error) {
+                PinError::Missing(child_path.clone())
+            } else {
+                PinError::Io(error)
+            }
+        })?;
+        let raw = handle.as_raw_handle() as HANDLE;
+        let info = handle_attribute_tag(raw).map_err(PinError::Io)?;
+        if info.ReparseTag != 0 || info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            return Err(PinError::ReparsePoint(child_path));
+        }
+        // SAFETY: raw is a live handle owned by `handle`.
+        if info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0
+            || unsafe { GetFileType(raw) } != FILE_TYPE_DISK
+        {
+            return Err(PinError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "anchored entry is not a regular file",
+            )));
+        }
+        if handle_info(raw).map_err(PinError::Io)?.nNumberOfLinks != 1 {
+            return Err(PinError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "workspace capture requires a single-link file",
+            )));
+        }
+        let resolved = handle_final_path(raw).map_err(PinError::Io)?;
+        if resolved.parent() != Some(self.path.as_path()) {
+            return Err(PinError::Escaped(resolved));
+        }
+        self.revalidate()?;
+        Ok(std::fs::File::from(handle))
     }
 
     /// Reports what `name` is, without following a reparse point. The entry

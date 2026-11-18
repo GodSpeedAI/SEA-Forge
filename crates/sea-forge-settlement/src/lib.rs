@@ -13,10 +13,37 @@ pub use declaration::{
     SettlementAuthority, SweSeedResponse, SweSeedSettlementAuthority, SweSeedTransport,
 };
 
+/// Evidence captured once by the case runner for settlement criteria.
+/// Every required artifact must have an observation. Stdout is required only
+/// when a completed execution declares a stdout criterion.
+pub struct CapturedCriteria<'a> {
+    pub stdout: Option<&'a [u8]>,
+    pub artifacts: &'a std::collections::BTreeMap<String, bool>,
+}
+
 pub fn settle(
     claim: &SettlementClaim,
     workspace: &Path,
     run_dir: &Path,
+) -> Result<SettlementEvent, ForgeError> {
+    settle_inner(claim, workspace, run_dir, None)
+}
+
+/// Settle using the runner's captured criteria evidence instead of rereading it.
+pub fn settle_with_captured_criteria(
+    claim: &SettlementClaim,
+    workspace: &Path,
+    run_dir: &Path,
+    captured: &CapturedCriteria<'_>,
+) -> Result<SettlementEvent, ForgeError> {
+    settle_inner(claim, workspace, run_dir, Some(captured))
+}
+
+fn settle_inner(
+    claim: &SettlementClaim,
+    workspace: &Path,
+    run_dir: &Path,
+    captured: Option<&CapturedCriteria<'_>>,
 ) -> Result<SettlementEvent, ForgeError> {
     let mut basis = Vec::new();
     let (status, review_required) = if claim.authority_verdicts.contains(&Verdict::Escalate) {
@@ -35,8 +62,7 @@ pub fn settle(
                 basis.push("write_only".into());
                 let mut accepted = true;
                 for path in &claim.criteria.required_artifacts {
-                    let present =
-                        safe_existing(workspace, path).is_ok_and(|candidate| candidate.is_file());
+                    let present = artifact_present(workspace, path, captured)?;
                     basis.push(format!(
                         "required_artifact_{}:{path}",
                         if present { "present" } else { "missing" }
@@ -82,8 +108,7 @@ pub fn settle(
                         accepted &= zero;
                     }
                     for path in &claim.criteria.required_artifacts {
-                        let present = safe_existing(workspace, path)
-                            .is_ok_and(|candidate| candidate.is_file());
+                        let present = artifact_present(workspace, path, captured)?;
                         basis.push(format!(
                             "required_artifact_{}:{path}",
                             if present { "present" } else { "missing" }
@@ -91,8 +116,18 @@ pub fn settle(
                         accepted &= present;
                     }
                     if let Some(needle) = &claim.criteria.stdout_must_contain {
-                        let stdout = safe_existing(run_dir, &execution.stdout_path)?;
-                        let matches = file_contains(&stdout, needle)?;
+                        let matches = if let Some(captured) = captured {
+                            let stdout = captured.stdout.ok_or_else(|| {
+                                ForgeError::Input("missing captured stdout".into())
+                            })?;
+                            needle.is_empty()
+                                || stdout
+                                    .windows(needle.len())
+                                    .any(|bytes| bytes == needle.as_bytes())
+                        } else {
+                            let stdout = safe_existing(run_dir, &execution.stdout_path)?;
+                            file_contains(&stdout, needle)?
+                        };
                         basis.push(
                             if matches {
                                 "stdout_match"
@@ -172,6 +207,19 @@ pub fn settle(
         settled_at: Utc::now().to_rfc3339(),
         criteria_ref: claim.criteria_ref.clone(),
     })
+}
+
+fn artifact_present(
+    workspace: &Path,
+    path: &str,
+    captured: Option<&CapturedCriteria<'_>>,
+) -> Result<bool, ForgeError> {
+    match captured {
+        Some(captured) => captured.artifacts.get(path).copied().ok_or_else(|| {
+            ForgeError::Input(format!("missing captured artifact observation: {path}"))
+        }),
+        None => Ok(safe_existing(workspace, path).is_ok_and(|candidate| candidate.is_file())),
+    }
 }
 
 /// Returns `None` when no agent-output criterion was declared.
@@ -470,6 +518,52 @@ mod tests {
         let second = settle(&claim, Path::new("."), Path::new(".")).unwrap();
         assert_ne!(first.settlement_id, second.settlement_id);
         assert!(first.settlement_id.starts_with("set_"));
+    }
+
+    #[test]
+    fn captured_criteria_drive_settlement_without_reading_legacy_paths() {
+        let root = std::env::temp_dir().join(format!("sea-forge-capture-{}", std::process::id()));
+        let workspace = root.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::write(root.join("stdout.txt"), "different output").unwrap();
+        let claim = SettlementClaim {
+            run_id: "run".into(),
+            plan_item_id: "item_01".into(),
+            criteria_ref: None,
+            criteria: SettlementCriteria {
+                require_exit_zero: true,
+                required_artifacts: vec!["model.sea".into()],
+                stdout_must_contain: Some("model valid".into()),
+                ..Default::default()
+            },
+            execution: Some(ExecutionResult {
+                status: ExecutionStatus::Completed,
+                exit_code: Some(0),
+                stdout_path: "stdout.txt".into(),
+                stderr_path: "stderr.txt".into(),
+                started_at: "start".into(),
+                finished_at: "finish".into(),
+                lifecycle_containment: LifecycleContainment::NoProcess,
+            }),
+            authority_verdicts: vec![Verdict::Allow],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+            write_only: false,
+        };
+        let artifacts = BTreeMap::from([("model.sea".into(), true)]);
+        let captured = CapturedCriteria {
+            stdout: Some(b"sea-forge: model valid"),
+            artifacts: &artifacts,
+        };
+        let legacy = settle(&claim, &workspace, &root).unwrap();
+        let event = settle_with_captured_criteria(&claim, &workspace, &root, &captured).unwrap();
+        assert_eq!(legacy.status, SettlementStatus::Rejected);
+        assert_eq!(event.status, SettlementStatus::Accepted);
+        assert!(event
+            .basis
+            .contains(&"required_artifact_present:model.sea".into()));
+        assert!(event.basis.contains(&"stdout_match".into()));
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

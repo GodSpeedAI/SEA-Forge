@@ -695,9 +695,6 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
 /// write lands in the moved directory. That relocation is not excluded here.
 #[cfg(unix)]
 pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {
-    use rustix::fs::{Mode, OFlags};
-    use rustix::io::Errno;
-
     let canonical_root = root
         .canonicalize()
         .map_err(|e| ForgeError::io("canonicalize workspace", e))?;
@@ -717,8 +714,21 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
             destination.display()
         ))
     })?;
+    let dir = pinned_walk_unix(&canonical_root, parents, destination)?;
+    write_entry_unix(&dir, destination, file_name, bytes)
+}
+
+#[cfg(unix)]
+fn pinned_walk_unix(
+    canonical_root: &Path,
+    parents: &[&std::ffi::OsStr],
+    destination: &Path,
+) -> Result<std::os::fd::OwnedFd, ForgeError> {
+    use rustix::fs::{Mode, OFlags};
+    use rustix::io::Errno;
+
     let mut dir = rustix::fs::open(
-        canonical_root.as_path(),
+        canonical_root,
         OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
         Mode::empty(),
     )
@@ -741,7 +751,88 @@ pub fn safe_write_within(root: &Path, destination: &Path, bytes: &[u8]) -> Resul
             ),
         })?;
     }
-    write_entry_unix(&dir, destination, file_name, bytes)
+    Ok(dir)
+}
+
+/// Read bytes through the directory and file handles opened below `root`.
+/// Only a regular file is accepted. The returned bytes can drive both
+/// settlement and publication without reopening the workspace path.
+#[cfg(any(unix, windows))]
+pub fn read_workspace_file(root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError> {
+    use std::io::Read as _;
+
+    validate_relative_path(rel)?;
+    let root = root
+        .canonicalize()
+        .map_err(|error| ForgeError::io("canonicalize workspace", error))?;
+    let relative = Path::new(rel);
+    let path = root.join(relative);
+    let names = normal_components(relative, &path)?;
+    let (name, parents) = names
+        .split_last()
+        .ok_or_else(|| ForgeError::UnsafePath(rel.into()))?;
+    let mut file = open_workspace_file(&root, parents, name, &path)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(|error| ForgeError::io(format!("read workspace file {rel}"), error))?;
+    Ok(bytes)
+}
+
+#[cfg(unix)]
+fn open_workspace_file(
+    root: &Path,
+    parents: &[&std::ffi::OsStr],
+    name: &std::ffi::OsStr,
+    path: &Path,
+) -> Result<fs::File, ForgeError> {
+    use rustix::fs::{Mode, OFlags};
+    use rustix::io::Errno;
+
+    let dir = pinned_walk_unix(root, parents, path)?;
+    let handle = rustix::fs::openat(
+        &dir,
+        name,
+        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC | OFlags::NONBLOCK,
+        Mode::empty(),
+    )
+    .map_err(|error| match error {
+        Errno::LOOP => ForgeError::UnsafePath(format!("file is a symlink: {}", path.display())),
+        other => ForgeError::io(
+            format!("open {}", path.display()),
+            std::io::Error::from(other),
+        ),
+    })?;
+    use std::os::unix::fs::MetadataExt as _;
+    let file = fs::File::from(handle);
+    let metadata = file
+        .metadata()
+        .map_err(|e| ForgeError::io("inspect workspace file", e))?;
+    if !metadata.is_file() || metadata.nlink() != 1 {
+        return Err(ForgeError::UnsafePath(format!(
+            "workspace capture requires a single-link regular file: {}",
+            path.display()
+        )));
+    }
+    Ok(file)
+}
+
+#[cfg(windows)]
+fn open_workspace_file(
+    root: &Path,
+    parents: &[&std::ffi::OsStr],
+    name: &std::ffi::OsStr,
+    path: &Path,
+) -> Result<fs::File, ForgeError> {
+    pinned_walk(root, parents, false)?
+        .open_file_read(name)
+        .map_err(|error| pin_error(error, path))
+}
+
+#[cfg(not(any(unix, windows)))]
+pub fn read_workspace_file(_root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError> {
+    Err(ForgeError::UnsafePath(format!(
+        "workspace file reads are unavailable: {rel}"
+    )))
 }
 
 /// Neither Unix nor Windows: no containment support is available here.

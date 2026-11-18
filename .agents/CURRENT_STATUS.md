@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 350
+**Status revision:** 351
 
-**Stage:** FDE S2: group freeze preparation and repair owed rows
+**Stage:** FDE S2: capture and seal Field Case run evidence
 
-**Summary:** Declare the prepared intent and its RealityTrace and anchor outbox rows together. Recover missing legacy rows before completing the freeze.
+**Summary:** Run the Field Case executor in scratch space, settle against captured bytes, and declare its sealed evidence through the case guard.
 
 **Verified:**
 
+- The settlement package passed 21 unit tests and the four focused server conformance targets passed 101 tests. A real Field Case write-only handler sealed the exact bytes used for its evidence hash and settlement.
+- At bc7cd8ca, the full workspace suite recorded 2055 passed and 28 ignored. The sole failure remains the confirmed local WSL cgroup diagnostic before the CLI JSON frame.
+- A standard-user Windows NTFS fixture succeeded at directory FlushFileBuffers, first sibling installation, and selector replacement through SetFileInformationByHandle with write-through, including with a non-deletable parent handle held.
 - All 90 server conformance tests passed after the freeze batch change. The focused legacy replay regression also passed and checks exact restored outbox bytes.
 - S2 proof at baa4f109 matched the baseline in all 17 rows except durations. It recorded 15 scenario passes, AT-09 partial, and all 12 frozen contract digests verified.
 - All 90 tests passed in the interaction, FDE scenario, and Field Case conformance targets.
@@ -64,6 +67,7 @@
 
 **Limits:**
 
+- The staged versioned writer is still inactive in production. The NTFS fixture establishes native API behavior on one host, and remains short of publisher integration or crash-recovery qualification.
 - Native Windows verifies the Windows build and control plane. WP-21B still needs a durable selector publication mechanism qualified on its supported Windows storage environment.
 - The CI gate remains red on the chrono advisory and MIT-0 license rejection. The Windows native job does not qualify Field Case selector durability.
 - The native lint rerun also rejects MIT-0 for transitive borrow-or-share 0.2.4 through fluent-uri and jsonschema. This requires a license policy or dependency decision.
@@ -99,7 +103,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish captured settlement and the guarded run evidence writer, then qualify the versioned publication backend before runtime activation.
+**Next:** Cross-check the sealed reader on Windows, rerun S2, then integrate and qualify the staged publication backend and remaining runtime writers.
 
 **Evidence:**
 
