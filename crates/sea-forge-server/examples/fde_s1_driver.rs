@@ -9,23 +9,29 @@
 //! authentication, not isolated host workload identity: assurance stays `session` (pre-S3).
 //! One line of `responses.ndjson` is written per frame. State lives on disk under the cell root, so
 //! the process can be restarted between steps.
-#![cfg(unix)]
 #![allow(dead_code)]
 
+#[cfg(unix)]
 #[path = "../tests/support/authenticated.rs"]
 mod authenticated;
 
+#[cfg(unix)]
 use sea_forge_core::types::ActorRole;
+#[cfg(unix)]
 use sea_forge_server::ServerConfig;
+#[cfg(unix)]
 use serde_json::{json, Value};
+#[cfg(unix)]
 use std::io::Write;
 
+#[cfg(unix)]
 fn arg(n: usize, what: &str) -> String {
     std::env::args()
         .nth(n)
         .unwrap_or_else(|| panic!("usage: fde_s1_driver <server-config.json> <frames.ndjson> <responses.ndjson> (missing {what})"))
 }
 
+#[cfg(unix)]
 #[tokio::main]
 async fn main() {
     let config: ServerConfig =
@@ -48,4 +54,10 @@ async fn main() {
         writeln!(out, "{row}").unwrap();
     }
     cell.shutdown().await;
+}
+
+#[cfg(not(unix))]
+fn main() -> std::process::ExitCode {
+    eprintln!("fde_s1_driver requires the Unix authenticated connection fixture");
+    std::process::ExitCode::FAILURE
 }

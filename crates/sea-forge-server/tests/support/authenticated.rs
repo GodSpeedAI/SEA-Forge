@@ -194,17 +194,30 @@ pub struct Client {
 
 impl Client {
     pub async fn call(&mut self, request: Value) -> Value {
-        self.writer
+        let write_result = self
+            .writer
             .write_all(format!("{request}\n").as_bytes())
-            .await
-            .unwrap();
-        self.writer.flush().await.unwrap();
+            .await;
+        let broken_pipe = match write_result {
+            Ok(()) => {
+                self.writer.flush().await.unwrap();
+                false
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::BrokenPipe => true,
+            Err(error) => panic!("private request write failed: {error}"),
+        };
         let mut line = String::new();
         let n = tokio::time::timeout(Duration::from_secs(30), self.reader.read_line(&mut line))
             .await
             .expect("private response timed out")
             .unwrap();
         assert!(n > 0, "private connection closed unexpectedly");
-        serde_json::from_str(line.trim()).unwrap()
+        let response: Value = serde_json::from_str(line.trim()).unwrap();
+        if broken_pipe {
+            assert_eq!(response["outcome"], "refused");
+            assert_eq!(response["code"], "PAYLOAD_TOO_LARGE");
+            assert!(response["message"].as_str().is_some());
+        }
+        response
     }
 }

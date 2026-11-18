@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 344
+**Status revision:** 345
 
-**Stage:** FDE S2: group execution admission effects
+**Stage:** FDE S2: repair native proof fixtures
 
-**Summary:** Declare assignment, delegation link, run record, and decision usage in one guarded batch under the case lock.
+**Summary:** Use canonical temporary paths in storage assertions and handle the framed oversize refusal when the server closes the authenticated socket early.
 
 **Verified:**
 
+- The case-runner library passed all 8 tests locally. The two server conformance targets passed 80 tests locally with the fixture repairs present.
+- The Linux S1 driver example compiled. Windows compilation stopped in the cross-toolchain before reaching the driver because the local ring build lacks MSVC tools.
+- Native verification at 5f67ae95 passed Ubuntu server and rest and the macOS App Sandbox job. The native macOS server and rest jobs found fixture failures, and Windows found the missing example entry point.
 - Focused server conformance passed 80 tests across conformance_fde_scenarios and conformance_field_case.
 - The Linux model suite passed all nine tests, including its existing exact inotify event comparison.
 - All case-runner targets cross-checked for aarch64-apple-darwin and x86_64-pc-windows-msvc.
@@ -51,6 +54,7 @@
 
 **Limits:**
 
+- Native verification for the fixture repairs is pending. RustSec RUSTSEC-2026-0543 blocks the lint gate through both direct chrono use and domainforge-core.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
 - Non-Linux model tests compare final-byte changes to the journal. Native publication durability and independent transient C7 observation need platform-specific evidence.
 - Runtime evidence sealing and historical artifact resolution remain open. NT-07 needs a RealityTrace world-reference persistence contract and a cross-repo re-pin fixture.
@@ -80,7 +84,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify native conformance harness fixes, then carry publication uncertainty through the runtime writer paths.
+**Next:** Publish the fixture repair checkpoint to the isolated verification branch and rerun native CI and Portability.
 
 **Evidence:**
 

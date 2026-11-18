@@ -337,7 +337,10 @@ mod tests {
         let selected = open(root.path(), "case-1").unwrap().unwrap();
         assert_eq!(
             super::super::case_guard::index_path(&selected),
-            generation.join("data/.case-index/case-1.json")
+            generation
+                .canonicalize()
+                .unwrap()
+                .join("data/.case-index/case-1.json")
         );
         assert!(super::super::case_guard::CaseLock::acquire(&selected).is_err());
         let logical = root.path().join("cases/case-1");

@@ -136,7 +136,7 @@ fn concurrent_readers_each_get_one_complete_batch() {
 #[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
 fn migrate_verified_legacy_files_into_a_complete_generation() {
     let fixture = tempfile::tempdir().unwrap();
-    let root = fixture.path();
+    let root = &fixture.path().canonicalize().unwrap();
     let legacy = root.join("cases").join(CASE);
     commit(&legacy, create_case()).unwrap();
     let old_artifact = legacy.join("runs/run-old/record.txt");
