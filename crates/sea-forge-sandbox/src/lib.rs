@@ -778,7 +778,7 @@ pub fn read_workspace_file(root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError
     Ok(bytes)
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 fn open_workspace_file(
     root: &Path,
     parents: &[&std::ffi::OsStr],
@@ -786,34 +786,124 @@ fn open_workspace_file(
     path: &Path,
 ) -> Result<fs::File, ForgeError> {
     use rustix::fs::{Mode, OFlags};
-    use rustix::io::Errno;
+    use std::os::fd::AsRawFd as _;
 
     let dir = pinned_walk_unix(root, parents, path)?;
-    let handle = rustix::fs::openat(
+    // O_PATH pins the entry without opening it for data I/O. In particular,
+    // checking the pinned type never opens a device or a named pipe.
+    let pin = rustix::fs::openat(
         &dir,
         name,
-        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC | OFlags::NONBLOCK,
+        OFlags::PATH | OFlags::NOFOLLOW | OFlags::CLOEXEC,
         Mode::empty(),
     )
-    .map_err(|error| match error {
-        Errno::LOOP => ForgeError::UnsafePath(format!("file is a symlink: {}", path.display())),
-        other => ForgeError::io(
-            format!("open {}", path.display()),
-            std::io::Error::from(other),
-        ),
+    .map(fs::File::from)
+    .map_err(|error| {
+        ForgeError::io(
+            format!("pin {}", path.display()),
+            std::io::Error::from(error),
+        )
     })?;
+    let expected = workspace_file_identity(&pin, 1, path)?;
+    // The path refers to the already-vetted inode, not the mutable workspace
+    // name. Keep the pin alive until the readable file is identity-checked.
+    let entry = format!("/proc/self/fd/{}", pin.as_raw_fd());
+    let file = fs::File::open(entry)
+        .map_err(|error| ForgeError::io(format!("open pinned {}", path.display()), error))?;
+    if workspace_file_identity(&file, 1, path)? != expected {
+        return Err(ForgeError::UnsafePath(format!(
+            "workspace file identity changed: {}",
+            path.display()
+        )));
+    }
+    Ok(file)
+}
+
+#[cfg(all(unix, not(target_os = "linux")))]
+fn open_workspace_file(
+    root: &Path,
+    parents: &[&std::ffi::OsStr],
+    name: &std::ffi::OsStr,
+    path: &Path,
+) -> Result<fs::File, ForgeError> {
+    use rustix::fs::{AtFlags, FileType, Mode, OFlags};
+    use std::os::unix::fs::DirBuilderExt as _;
+
+    let source = pinned_walk_unix(root, parents, path)?;
+    // Field Case capture roots sit inside host-owned scratch. The sibling
+    // directory is private to the host and on the same filesystem.
+    let parent = root
+        .parent()
+        .ok_or_else(|| ForgeError::UnsafePath(root.display().to_string()))?;
+    let alias_dir = parent.join(sea_forge_core::ids::random_id(".capture")?);
+    fs::DirBuilder::new()
+        .mode(0o700)
+        .create(&alias_dir)
+        .map_err(|error| ForgeError::io("create workspace capture directory", error))?;
+    let result = (|| {
+        let alias = pinned_walk_unix(&alias_dir, &[], &alias_dir)?;
+        // linkat does not open the source for data I/O. It pins the inode in
+        // the private directory, where type checking can precede data access.
+        rustix::fs::linkat(&source, name, &alias, "entry", AtFlags::empty()).map_err(|error| {
+            ForgeError::io("pin workspace capture entry", std::io::Error::from(error))
+        })?;
+        let expected =
+            rustix::fs::statat(&alias, "entry", AtFlags::SYMLINK_NOFOLLOW).map_err(|error| {
+                ForgeError::io("inspect pinned capture entry", std::io::Error::from(error))
+            })?;
+        if FileType::from_raw_mode(expected.st_mode) != FileType::RegularFile
+            || expected.st_nlink != 2
+        {
+            return Err(ForgeError::UnsafePath(format!(
+                "workspace capture requires a single-link regular file: {}",
+                path.display()
+            )));
+        }
+        let file = rustix::fs::openat(
+            &alias,
+            "entry",
+            OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )
+        .map(fs::File::from)
+        .map_err(|error| {
+            ForgeError::io("open pinned capture entry", std::io::Error::from(error))
+        })?;
+        if workspace_file_identity(&file, 2, path)?
+            != (expected.st_dev as u64, expected.st_ino as u64)
+        {
+            return Err(ForgeError::UnsafePath(format!(
+                "workspace file identity changed: {}",
+                path.display()
+            )));
+        }
+        Ok(file)
+    })();
+    let cleanup = fs::remove_dir_all(&alias_dir)
+        .map_err(|error| ForgeError::io("remove workspace capture directory", error));
+    let file = result?;
+    cleanup?;
+    Ok(file)
+}
+
+#[cfg(unix)]
+fn workspace_file_identity(
+    file: &fs::File,
+    links: u64,
+    path: &Path,
+) -> Result<(u64, u64), ForgeError> {
     use std::os::unix::fs::MetadataExt as _;
-    let file = fs::File::from(handle);
+
     let metadata = file
         .metadata()
-        .map_err(|e| ForgeError::io("inspect workspace file", e))?;
-    if !metadata.is_file() || metadata.nlink() != 1 {
+        .map_err(|error| ForgeError::io("inspect workspace file", error))?;
+    if !metadata.is_file() || metadata.nlink() != links {
         return Err(ForgeError::UnsafePath(format!(
             "workspace capture requires a single-link regular file: {}",
             path.display()
         )));
     }
-    Ok(file)
+    Ok((metadata.dev(), metadata.ino()))
 }
 
 #[cfg(windows)]

@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 351
+**Status revision:** 352
 
-**Stage:** FDE S2: capture and seal Field Case run evidence
+**Stage:** FDE S2: verify capture identities before data access
 
-**Summary:** Run the Field Case executor in scratch space, settle against captured bytes, and declare its sealed evidence through the case guard.
+**Summary:** Inspect and pin regular workspace files before reading them, and give the native Windows handle the concrete synchronous read rights it requires.
 
 **Verified:**
 
+- The Field Case sealing regression passed after the Unix hardening. The macOS sandbox target and Windows os and sandbox targets cross-checked.
+- An independent Linux syscall trace observed scratch writes for the trace, evidence, and report before their canonical run files appeared.
+- S2 at bcafa556 matched the baseline across all 17 rows except duration. It recorded 15 scenario passes, AT-09 partial, and 12 contract digests verified.
+- Native Windows job 134841303184 exposed error 87 in the initial pinned read. A native local NTFS fixture reproduced the old generic-access status and read the exact expected bytes with the corrected concrete rights.
 - The settlement package passed 21 unit tests and the four focused server conformance targets passed 101 tests. A real Field Case write-only handler sealed the exact bytes used for its evidence hash and settlement.
 - At bc7cd8ca, the full workspace suite recorded 2055 passed and 28 ignored. The sole failure remains the confirmed local WSL cgroup diagnostic before the CLI JSON frame.
 - A standard-user Windows NTFS fixture succeeded at directory FlushFileBuffers, first sibling installation, and selector replacement through SetFileInformationByHandle with write-through, including with a non-deletable parent handle held.
@@ -67,6 +71,8 @@
 
 **Limits:**
 
+- The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
+- The revised Windows Rust handler still needs the hosted native rerun. The NTFS rename fixture does not establish production versioned activation or crash recovery.
 - The staged versioned writer is still inactive in production. The NTFS fixture establishes native API behavior on one host, and remains short of publisher integration or crash-recovery qualification.
 - Native Windows verifies the Windows build and control plane. WP-21B still needs a durable selector publication mechanism qualified on its supported Windows storage environment.
 - The CI gate remains red on the chrono advisory and MIT-0 license rejection. The Windows native job does not qualify Field Case selector durability.
@@ -103,7 +109,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Cross-check the sealed reader on Windows, rerun S2, then integrate and qualify the staged publication backend and remaining runtime writers.
+**Next:** Rerun Windows Portability on the corrected checkpoint, then finish capture staging and the supported atomic publication provider.
 
 **Evidence:**
 
