@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 342
+**Status revision:** 343
 
-**Stage:** FDE S2: staged Field Case batch kernel
+**Stage:** FDE S2: portable Field Case model gate
 
-**Summary:** Exercise admitted batch staging, strict verification, and atomic selection with a distinct durability-uncertain result.
+**Summary:** Retain Linux event observations and run the model against final-byte observations on other platforms.
 
 **Verified:**
 
+- The Linux model suite passed all nine tests, including its existing exact inotify event comparison.
+- All case-runner targets cross-checked for aarch64-apple-darwin and x86_64-pc-windows-msvc.
 - The case-runner suite passed 103 tests with 19 ignored, including five staged-batch tests.
 - The staged tests verify first and subsequent publication, pinned concurrent readers, legacy preservation including a nested run artifact, invalid staged identity, and both sides of the selector publication boundary.
 - The legacy migration path refuses an incomplete file set before publication. The write-boundary scan still checks raw writes and permits the two reviewed private staging routines.
@@ -48,10 +50,10 @@
 
 **Limits:**
 
-- The staged writer runs through the guard in the test build. Normal requests continue through the legacy writer while foreground, recovery, and background mutations are moved to typed outcome handling.
-- Cross-target macOS checks found an existing unguarded Linux inotify import in the model tests. Cross-target compile checks do not establish platform durability.
-- Full activation requires sealed run evidence, historical artifact resolution, independent C7 execution observation, and native platform qualification.
-- The WSL lifecycle test needs a writable delegated cgroup-v2 directory. AT-09 awaits the WP-31 human A3 settlement proof.
+- The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
+- Non-Linux model tests compare final-byte changes to the journal. Native publication durability and independent transient C7 observation need platform-specific evidence.
+- Runtime evidence sealing and historical artifact resolution remain open. NT-07 needs a RealityTrace world-reference persistence contract and a cross-repo re-pin fixture.
+- The WSL lifecycle gate needs a writable delegated cgroup-v2 directory. AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
 - docs/how-to/upgrade-domainforge-producer.md still records a 0.21.1 check and its a71ff6 digest as history
@@ -77,7 +79,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Fix model-test portability, finish typed server propagation and runtime evidence sealing, then qualify and wire versioned publication.
+**Next:** Run the existing native CI lanes on an isolated checkpoint and continue the server outcome and sealed evidence integration.
 
 **Evidence:**
 

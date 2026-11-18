@@ -12,14 +12,16 @@
 //! - C4 a corrupt store accepts no write and changes no byte;
 //! - C5 a refused verb changes no byte under the case directory;
 //! - C6 a suspended case accepts only what the registry accepts suspended;
-//! - C7 writer coverage, observed at runtime: an inotify watch on the case
-//!   directory sees exactly the files `commit` journaled, no more, no fewer;
+//! - C7 on Linux: an inotify watch sees exactly the top-level files `commit`
+//!   journaled; elsewhere, independently observed final-byte changes must be
+//!   a subset of the journal (this does not observe transient writes);
 //! - the product rule: after `close-failed` the operator can terminate.
 //!
 //! `MODEL_CASES` sets the case count (default 256, the CI count; 5,000 locally).
 
 mod common;
 
+#[cfg(target_os = "linux")]
 use inotify::{Inotify, WatchMask};
 use proptest::prelude::*;
 use sea_forge_case_runner::case_ops::{
@@ -554,10 +556,12 @@ fn delete_marker(w: &mut World, k: usize) {
     w.corrupted = true;
 }
 
+#[cfg(target_os = "linux")]
 struct Watcher {
     ino: Inotify,
 }
 
+#[cfg(target_os = "linux")]
 impl Watcher {
     fn new(dir: &Path) -> Self {
         let ino = Inotify::init().unwrap();
@@ -597,6 +601,49 @@ impl Watcher {
     }
 }
 
+// Observe top-level final bytes independently of the guard's journal. This
+// cannot detect writes restored to their original bytes or temporary writes.
+#[cfg(not(target_os = "linux"))]
+struct Watcher {
+    dir: PathBuf,
+    previous: std::collections::BTreeMap<String, Vec<u8>>,
+}
+
+#[cfg(not(target_os = "linux"))]
+impl Watcher {
+    fn files(dir: &Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+        fs::read_dir(dir)
+            .unwrap()
+            .map(|entry| entry.unwrap())
+            .filter(|entry| entry.file_type().unwrap().is_file())
+            .map(|entry| {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                (name, fs::read(entry.path()).unwrap())
+            })
+            .collect()
+    }
+
+    fn new(dir: &Path) -> Self {
+        Self {
+            dir: dir.to_path_buf(),
+            previous: Self::files(dir),
+        }
+    }
+
+    fn drain(&mut self) -> BTreeSet<String> {
+        let current = Self::files(&self.dir);
+        let changed = self
+            .previous
+            .keys()
+            .chain(current.keys())
+            .filter(|name| self.previous.get(*name) != current.get(*name))
+            .cloned()
+            .collect();
+        self.previous = current;
+        changed
+    }
+}
+
 struct Snapshot {
     hash: String,
     events: usize,
@@ -622,11 +669,14 @@ fn check(
     let events = w.events();
     let new_events = &events[before.events.min(events.len())..];
     let new_records = &records[before.records.min(records.len())..];
-    // C7: the files modified under the case directory are exactly the files
-    // `commit` journaled.
-    if observed != journaled {
+    // Linux observes write events; other platforms observe only final-byte changes.
+    #[cfg(target_os = "linux")]
+    let inconsistent = observed != journaled;
+    #[cfg(not(target_os = "linux"))]
+    let inconsistent = !observed.is_subset(journaled);
+    if inconsistent {
         return Err(format!(
-            "C7: observed writes {observed:?} differ from the committed writes {journaled:?} ({s:?}): {outcome:?}"
+            "C7: observed changes {observed:?} do not match the platform journal check {journaled:?} ({s:?}): {outcome:?}"
         ));
     }
     // C4: a corrupt store accepts no write and changes no byte.
