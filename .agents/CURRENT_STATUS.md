@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 339
+**Status revision:** 340
 
-**Stage:** FDE S2: versioned case, run, and continuation readers
+**Stage:** FDE S2: CLI delegation and workspace conformance
 
-**Summary:** Pin and verify selected Field Case snapshots across SFWP and CLI views, with the index stored beside the case records.
+**Summary:** Pass the current case ID to delegation and verify the exact runtime workspace layout in M5.
 
 **Verified:**
 
+- The local t13_1 fixture returned a missing case_id request error before the fix. T13.1 passes with the existing case_id field populated.
+- The focused CLI M13 and M5 suites passed all five tests. M5 checks all eight case-owned runtime workspaces and retains the top-level side-effect restriction.
 - Case-runner suite passed 97 tests with 19 ignored. The reviewed server suite passed 689 tests with 2 ignored.
 - The new server tests verify selected run data, flat run precedence, and integrity errors for corrupt data and invalid discovery.
 - The S2 proof before the final reader review matched the prior checkpoint row by row. Fifteen scenarios passed, AT-09 remained partial, and all 12 frozen contract digests matched.
@@ -40,7 +42,7 @@
 
 - The versioned writer remains disabled. Writer integration needs a distinct result for post-publication durability uncertainty.
 - Cross-platform namespace durability, runtime evidence sealing, historical artifact resolution, and the independent C7 execution oracle are pending.
-- The initial full workspace gate ran 2045 passing tests and 28 ignored, with CLI failures in t13_1, M5 workspace placement, and post-start JSON diagnostics.
+- The workspace rerun after the two CLI fixes is pending. The initial workspace gate also found the existing post-start JSON diagnostic failure.
 - AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -67,7 +69,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the CLI regression fixes separately. Integrate stage, strict verification, and atomic publication after the internal result decision, then qualify the platform and runtime evidence gates.
+**Next:** Rerun the workspace and S2 gates. Integrate the staged publisher after the internal result decision and qualify its runtime and platform gates.
 
 **Evidence:**
 

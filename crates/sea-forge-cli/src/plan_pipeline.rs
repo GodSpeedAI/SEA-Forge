@@ -607,6 +607,7 @@ fn run_plan_inner(
                             &root,
                             json!({
                                 "verb": "delegate",
+                                "case_id": case_id,
                                 // Server request admission (2026-08-31) refuses
                                 // protected durable mutations without a
                                 // request_id; a deterministic one keyed on the

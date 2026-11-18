@@ -133,6 +133,71 @@ fn cli_project_runs_full_m5_chain_and_settles_independent_projections() {
         );
     }
 
+    // The eight stage episodes each own one authorized workspace outside the
+    // case store. Check the complete layout against the persisted case runs.
+    let case: serde_json::Value = serde_json::from_slice(
+        &fs::read(root.join("cases").join(case_id).join("case.json")).unwrap(),
+    )
+    .unwrap();
+    let runs = case["run_ids"].as_array().unwrap();
+    assert_eq!(runs.len(), 8, "the fixture has eight stage episodes");
+    let names = |dir: &Path| -> std::collections::BTreeSet<String> {
+        fs::read_dir(dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .collect()
+    };
+    let workspaces = root.join(".run-workspaces");
+    assert!(fs::symlink_metadata(&workspaces)
+        .unwrap()
+        .file_type()
+        .is_dir());
+    assert_eq!(
+        names(&workspaces),
+        [case_id.to_string()].into_iter().collect()
+    );
+    let case_workspaces = workspaces.join(case_id);
+    assert!(fs::symlink_metadata(&case_workspaces)
+        .unwrap()
+        .file_type()
+        .is_dir());
+    let expected_runs: std::collections::BTreeSet<String> = runs
+        .iter()
+        .map(|run| run.as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(expected_runs.len(), 8, "stage run IDs must be distinct");
+    assert_eq!(names(&case_workspaces), expected_runs);
+    for run_id in &expected_runs {
+        let run = case_workspaces.join(run_id);
+        assert!(fs::symlink_metadata(&run).unwrap().file_type().is_dir());
+        assert_eq!(
+            names(&run),
+            ["artifacts".to_string(), "workspace".to_string()]
+                .into_iter()
+                .collect()
+        );
+        for dir in ["workspace", "artifacts"] {
+            assert!(fs::symlink_metadata(run.join(dir))
+                .unwrap()
+                .file_type()
+                .is_dir());
+        }
+        assert!(names(&run.join("workspace")).is_empty());
+        let artifacts = run.join("artifacts");
+        assert_eq!(
+            names(&artifacts),
+            ["stderr.txt".to_string(), "stdout.txt".to_string()]
+                .into_iter()
+                .collect()
+        );
+        for file in ["stdout.txt", "stderr.txt"] {
+            assert!(fs::symlink_metadata(artifacts.join(file))
+                .unwrap()
+                .file_type()
+                .is_file());
+        }
+    }
+
     // No DomainForge-owned filesystem side effects: DomainForge writes
     // nothing itself (§10.4a). Every file under root traces to SEA Forge's
     // own authorized writes (ledgers/, cases/, spec-pipelines/, policy.yaml,
@@ -151,6 +216,7 @@ fn cli_project_runs_full_m5_chain_and_settles_independent_projections() {
                     | "cases"
                     | ".case-locks"
                     | ".case-index"
+                    | ".run-workspaces"
                     | "spec-pipelines"
                     | "policy.yaml"
                     | "model.sea"
