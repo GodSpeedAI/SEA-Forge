@@ -2900,15 +2900,14 @@ async fn deliver_field_anchors(state: &Arc<ServerState>, case_id: &str) {
 pub async fn recover_field_case(
     state: &Arc<ServerState>,
     case_id: &str,
-) -> sfwp::case_records::Recovered {
+) -> Result<sfwp::case_records::Recovered, ForgeError> {
     let lock = state.acquire_case_lock(case_id).await;
     let (root, case) = (state.root.clone(), case_id.to_string());
-    let out = tokio::task::spawn_blocking(move || sfwp::case_records::recover_for(&root, &case))
-        .await
-        .unwrap_or_default();
+    let out =
+        tokio::task::spawn_blocking(move || sfwp::case_records::recover_for(&root, &case)).await;
     drop(lock);
     state.prune_case_lock(case_id).await;
-    out
+    out.map_err(|error| ForgeError::io("case recovery task failed", std::io::Error::other(error)))?
 }
 
 pub async fn handle_request_as(
@@ -5702,7 +5701,7 @@ mod field_recover_tests {
             .await
             .expect("recovery runs once the lock is free")
             .unwrap();
-        assert_eq!(out, sea_forge_server_recovered_default());
+        assert_eq!(out.unwrap(), sea_forge_server_recovered_default());
     }
 
     /// Finding 2 (round 2): every case-mutating verb is one critical section under

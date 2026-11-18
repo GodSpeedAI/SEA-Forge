@@ -25,9 +25,9 @@
 //! not checked (RD-21: enforcement is off until WP-31).
 
 use super::case_records::{
-    bound_approval_named, canonical_actor, case_dir, digest_of, integrity, io_refusal, lifecycle,
-    next_record_with, read_lines, records, refuse, store_refusal, vendored_schemas, AppendContext,
-    Lifecycle, APPROVALS,
+    bound_approval_named, canonical_actor, case_dir, digest_of, integrity, lifecycle,
+    next_record_with, read_lines, record_commit_reply, records, refuse, store_refusal,
+    vendored_schemas, AppendContext, AppendFailure, Lifecycle, APPROVALS,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
@@ -317,39 +317,47 @@ fn consumed_for(ctx: &AppendContext, reference: &str, body_digest: &str) -> bool
 
 /// Run one of the four part-B kinds. `request` carries the v2 `contract`
 /// marker; the caller holds the case lock.
-pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
+pub(super) fn append(ctx: &AppendContext, request: &Value) -> Result<Value, AppendFailure> {
     let kind = request["kind"].as_str().unwrap_or("");
     let payload = &request["payload"];
     let key = request["idempotency_key"].as_str().unwrap_or("");
     if let Err(refusal) = validate(request) {
-        return refusal;
+        return Ok(refusal);
     }
     if canonical_actor(ctx.principal).is_err()
         || ctx.chain.iter().any(|c| canonical_actor(c).is_err())
     {
-        return schema_invalid("the request carries no verified principal (or chain member)");
+        return Ok(schema_invalid(
+            "the request carries no verified principal (or chain member)",
+        ));
     }
     if let Err(refusal) = semantic_checks(ctx, kind, payload) {
-        return refusal;
+        return Ok(refusal);
     }
     // STORE_INTEGRITY: every read the rules below need.
     if let Err(e) = integrity(ctx) {
-        return store_refusal(e);
+        return Ok(store_refusal(e));
     }
     match is_field_case(ctx.root, ctx.case_id) {
         Ok(true) => {}
-        Ok(false) => return schema_invalid("this kind applies to a Field Case (fde.field_case@1)"),
-        Err(e) => return store_refusal(e),
+        Ok(false) => {
+            return Ok(schema_invalid(
+                "this kind applies to a Field Case (fde.field_case@1)",
+            ))
+        }
+        Err(e) => return Ok(store_refusal(e)),
     }
     let all = records(ctx);
     // Every kind of this family rests on the document: missing or invalid is
     // STORE_INTEGRITY and nothing is written (README section 6).
     let document = match load_document(ctx, &all) {
         Ok(d) => Some(d),
-        Err(e) => return store_refusal(e),
+        Err(e) => return Ok(store_refusal(e)),
     };
     let Some(body_digest) = digest_of(&json!({"kind": kind, "payload": payload})) else {
-        return schema_invalid("payload is not canonicalisable (float or unsupported value)");
+        return Ok(schema_invalid(
+            "payload is not canonicalisable (float or unsupported value)",
+        ));
     };
     // Idempotency: a replay returns the original and is never refused by a
     // later rule (D43).
@@ -357,13 +365,13 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
         if done["body_digest"] == body_digest.as_str() {
             let mut original = done["response"].clone();
             original["replayed"] = json!(true);
-            return original;
+            return Ok(original);
         }
-        return refuse(
+        return Ok(refuse(
             "IDEMPOTENCY_CONFLICT",
             "idempotency_key was used with a different body",
             None,
-        );
+        ));
     }
     // CASE_CLOSED is final for every kind of this family; a suspended case still
     // accepts revisions, strategies and gates, and a disposition only when it
@@ -371,18 +379,18 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     let state = lifecycle(&all);
     match state {
         Lifecycle::Closed => {
-            return refuse(
+            return Ok(refuse(
                 "CASE_CLOSED",
                 "the case has a close disposition; closed is final",
                 None,
-            )
+            ))
         }
         Lifecycle::Suspended if kind == "disposition.recorded" => {
             let d = payload["disposition"].as_str().unwrap_or("");
             let lifts_or_closes =
                 payload["level"] == "case" && (d == "continue" || d.starts_with("close-"));
             if !lifts_or_closes {
-                return refuse("CASE_SUSPENDED", "the case is suspended", None);
+                return Ok(refuse("CASE_SUSPENDED", "the case is suspended", None));
             }
         }
         _ => {}
@@ -399,7 +407,7 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     };
     let plan = match outcome {
         Ok(p) => p,
-        Err(refusal) => return refusal,
+        Err(refusal) => return Ok(refusal),
     };
     // Write: the approval's consumption, the record, then the projection.
     let record_id = format!("rec-{:04}", all.len() + 1);
@@ -440,12 +448,12 @@ pub(super) fn append(ctx: &AppendContext, request: &Value) -> Value {
     let stored =
         match next_record_with(ctx, &all, record, consumption.map(|line| (APPROVALS, line))) {
             Ok(s) => s,
-            Err(e) => return io_refusal(e),
+            Err(e) => return record_commit_reply(e),
         };
     // The record commit rewrote the document: it is derived from the ledger.
     // The stored record id is the one predicted above (same lock, same ledger).
     debug_assert_eq!(stored["record_id"], record_id);
-    resp
+    Ok(resp)
 }
 
 /// What a kind decided: the response members, the record members and the

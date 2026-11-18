@@ -669,7 +669,7 @@ fn crash_after_prepare_is_incomplete_then_recovered_by_replay_or_reconciler() {
         Err(CrashInjected(Fault::AfterRecord))
     );
     assert_eq!(
-        recover(&c),
+        recover(&c).unwrap(),
         Recovered {
             completed: vec![request["idempotency_key"].as_str().unwrap().to_string()],
             abandoned: vec![]
@@ -683,7 +683,7 @@ fn crash_after_prepare_is_incomplete_then_recovered_by_replay_or_reconciler() {
         1,
         "no second record"
     );
-    assert_eq!(recover(&c), Recovered::default(), "idempotent");
+    assert_eq!(recover(&c).unwrap(), Recovered::default(), "idempotent");
 }
 
 #[test]
@@ -697,7 +697,7 @@ fn a_prepared_freeze_whose_digest_cannot_be_completed_is_abandoned_and_n_plus_on
     assert!(append_faulted(&c, &request, Some(Fault::AfterPrepare)).is_err());
     // the RealityTrace records disappear: the keeper cannot complete it
     fs::remove_file(root.path().join("realitytrace/records.jsonl")).unwrap();
-    let out = recover(&c);
+    let out = recover(&c).unwrap();
     assert_eq!(out.abandoned.len(), 1);
     let item = request["payload"]["reference"]["body"]["plan_item_id"]
         .as_str()

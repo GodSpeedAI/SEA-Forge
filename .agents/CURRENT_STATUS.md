@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 347
+**Status revision:** 348
 
-**Stage:** FDE S2: group settlement publication effects
+**Stage:** FDE S2: preserve case-record publication outcomes
 
-**Summary:** Declare the settlement decision, case ledger record, and approval consumption together and retain the decision identity on retries.
+**Summary:** Carry typed ledger-write uncertainty through record append and stop freeze recovery before marking an uncertain record abandoned.
 
 **Verified:**
 
+- The full local server suite passed 689 tests with 2 ignored.
+- The isolated native macOS server and App Sandbox jobs passed on 8c0fce88.
 - Server conformance passed all 91 tests across conformance_case_episode, conformance_fde_scenarios, and conformance_field_case.
 - Checkpoint 8c0fce88 is on fde/wp21b-verify-5f67ae95. Native CI run 44306807062 and Portability run 44306811678 were dispatched for that checkpoint.
 - All 29 focused guard tests passed, including a regression proving the first write can remain after a later filesystem failure.
@@ -58,6 +60,7 @@
 
 **Limits:**
 
+- The native lint rerun also rejects MIT-0 for transitive borrow-or-share 0.2.4 through fluent-uri and jsonschema. This requires a license policy or dependency decision.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - Native verification for the fixture repairs is pending. RustSec RUSTSEC-2026-0543 blocks the lint gate through both direct chrono use and domainforge-core.
@@ -90,7 +93,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Carry the typed outcome through case-record publication and its recovery and delivery consumers. Record the native rerun results.
+**Next:** Integrate typed case outbox writes, then continue C7 captured evidence and platform publication qualification.
 
 **Evidence:**
 

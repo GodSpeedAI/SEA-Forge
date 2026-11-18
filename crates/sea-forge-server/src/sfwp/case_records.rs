@@ -29,7 +29,9 @@
 //! in-process RealityTrace writer or delivery agent exists in this crate yet.
 //! The anchor is published only when an [`AnchorPublisher`] is supplied.
 
-use sea_forge_case_runner::case_ops::case_guard::{self, Batch, Op};
+use sea_forge_case_runner::case_ops::case_guard::{self, Batch, CommitError, Op};
+use sea_forge_case_runner::case_ops::field_guard::Refusal;
+use sea_forge_core::errors::ForgeError;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -178,6 +180,39 @@ pub enum Fault {
 /// The injected crash: the process "died" at the named boundary.
 #[derive(Debug, PartialEq, Eq)]
 pub struct CrashInjected(pub Fault);
+
+#[derive(Debug)]
+pub(super) enum AppendFailure {
+    Injected(CrashInjected),
+    Operational(ForgeError),
+}
+
+impl From<CrashInjected> for AppendFailure {
+    fn from(error: CrashInjected) -> Self {
+        Self::Injected(error)
+    }
+}
+
+impl AppendFailure {
+    fn into_error(self) -> ForgeError {
+        match self {
+            Self::Operational(error) => error,
+            Self::Injected(fault) => ForgeError::io(
+                "case record append interrupted",
+                std::io::Error::other(format!("{fault:?}")),
+            ),
+        }
+    }
+}
+
+pub(super) fn record_commit_reply(error: CommitError) -> Result<Value, AppendFailure> {
+    match error {
+        CommitError::Refused(refusal) => Ok(refuse(refusal.code, &refusal.message, None)),
+        uncertain @ CommitError::PublicationUncertain(_) => {
+            Err(AppendFailure::Operational(uncertain.into()))
+        }
+    }
+}
 
 /// Existence of RealityTrace records, resolved at their owner.
 pub trait RealityTraceIndex {
@@ -700,11 +735,15 @@ pub fn append(ctx: &AppendContext, request: &Value) -> Value {
 /// [`append`], with the SFWP frame class a v1 writer is owed (the verb turns it
 /// into an error frame; direct callers see the `SCHEMA_INVALID` fallback).
 pub fn append_answer(ctx: &AppendContext, request: &Value) -> Answer {
+    try_append_answer(ctx, request).unwrap_or_else(|error| Answer {
+        value: crate::forge_error_response(&error),
+        frame_class: None,
+    })
+}
+
+fn try_append_answer(ctx: &AppendContext, request: &Value) -> Result<Answer, ForgeError> {
     let v2 = request.get("contract").and_then(Value::as_str) == Some(V2_MARKER);
-    let value = append_faulted(ctx, request, None).unwrap_or_else(|crash| {
-        // Unreachable without a fault; keep the contract shape if it ever is.
-        refuse("SCHEMA_INVALID", &format!("{crash:?}"), None)
-    });
+    let value = append_inner(ctx, request, None).map_err(AppendFailure::into_error)?;
     let frame_class = if v2 {
         None
     } else {
@@ -714,10 +753,10 @@ pub fn append_answer(ctx: &AppendContext, request: &Value) -> Answer {
             _ => None,
         }
     };
-    Answer {
+    Ok(Answer {
         value: if v2 { value } else { downgrade(value) },
         frame_class,
-    }
+    })
 }
 
 /// README §6 "v1 writers": each v2-only code replaced by the fallback that is
@@ -794,6 +833,18 @@ pub fn append_faulted(
     request: &Value,
     fault: Option<Fault>,
 ) -> Result<Value, CrashInjected> {
+    match append_inner(ctx, request, fault) {
+        Ok(value) => Ok(value),
+        Err(AppendFailure::Injected(fault)) => Err(fault),
+        Err(AppendFailure::Operational(error)) => Ok(crate::forge_error_response(&error)),
+    }
+}
+
+fn append_inner(
+    ctx: &AppendContext,
+    request: &Value,
+    fault: Option<Fault>,
+) -> Result<Value, AppendFailure> {
     // The marker selects the dialect only; an unknown marker is not a dialect.
     match request.get("contract") {
         None | Some(Value::Null) => {}
@@ -826,7 +877,7 @@ pub fn append_faulted(
     // 2. The four v2-only kinds (WP-21 part B) have their own path: the same
     // precedence, a v2 payload schema and the Field Case document.
     if v2 && V2_ONLY_KINDS.contains(&kind) {
-        return Ok(super::field_case_kinds::append(ctx, request));
+        return super::field_case_kinds::append(ctx, request);
     }
     // 3. SCHEMA_INVALID and its specific forms. The v1 schema is closed, so the
     // marker is not part of what it validates.
@@ -957,7 +1008,7 @@ pub fn append_faulted(
 
     match kind {
         "episode.frozen" => freeze(ctx, payload, key, &body_digest, &records, &intents, fault),
-        "episode.settled" => Ok(settle(ctx, payload, key, &body_digest, &records)),
+        "episode.settled" => settle(ctx, payload, key, &body_digest, &records),
         _ => Ok(refuse(
             "KIND_UNKNOWN",
             "kind is not a registered kind",
@@ -980,7 +1031,7 @@ pub(super) fn next_record(
     ctx: &AppendContext,
     records: &[Value],
     record: Value,
-) -> Result<Value, String> {
+) -> Result<Value, CommitError> {
     next_record_with(ctx, records, record, None)
 }
 
@@ -990,7 +1041,7 @@ pub(super) fn next_record_with(
     records: &[Value],
     record: Value,
     also: Option<(&str, Value)>,
-) -> Result<Value, String> {
+) -> Result<Value, CommitError> {
     let mut batch = Batch::new();
     if let Some((file, line)) = also {
         batch.push(Op::Append {
@@ -1010,7 +1061,7 @@ fn commit_record(
     mut record: Value,
     mut batch: Batch,
     after_record: Option<Op>,
-) -> Result<Value, String> {
+) -> Result<Value, CommitError> {
     let seq = records.len() as u64 + 1;
     let prev = records
         .last()
@@ -1021,14 +1072,16 @@ fn commit_record(
     record["record_id"] = json!(format!("rec-{seq:04}"));
     record["prev_hash"] = json!(prev);
     record["recorded_at"] = json!(now_rfc3339());
-    let hash = digest_of(&record).ok_or("record is not canonicalisable")?;
+    let hash = digest_of(&record).ok_or_else(|| Refusal {
+        code: "SCHEMA_INVALID",
+        message: "case record store failed: record is not canonicalisable".into(),
+    })?;
     record["hash"] = json!(hash);
     batch.push(Op::Record(record.clone()));
     if let Some(op) = after_record {
         batch.push(op);
     }
-    case_guard::commit(&case_dir(ctx.root, ctx.case_id), batch)
-        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
+    case_guard::commit_with_outcome(&case_dir(ctx.root, ctx.case_id), batch)?;
     Ok(record)
 }
 
@@ -1056,7 +1109,7 @@ fn freeze(
     records: &[Value],
     intents: &[Value],
     fault: Option<Fault>,
-) -> Result<Value, CrashInjected> {
+) -> Result<Value, AppendFailure> {
     let (case, item, n, digest) = match check_freeze_digests(payload) {
         Ok(parts) => parts,
         Err(refusal) => return Ok(refusal),
@@ -1174,7 +1227,7 @@ fn freeze(
         }
     }
     if fault == Some(Fault::AfterPrepare) {
-        return Err(CrashInjected(Fault::AfterPrepare));
+        return Err(CrashInjected(Fault::AfterPrepare).into());
     }
     commit_freeze(ctx, &intent, records, fault)
 }
@@ -1185,7 +1238,7 @@ fn commit_freeze(
     intent: &Value,
     records: &[Value],
     fault: Option<Fault>,
-) -> Result<Value, CrashInjected> {
+) -> Result<Value, AppendFailure> {
     let kind = "episode.frozen";
     let key = intent["idempotency_key"].as_str().unwrap_or("");
     let record = json!({
@@ -1208,12 +1261,12 @@ fn commit_freeze(
             record["response"] = response(kind, &rec_id, &intent["episode_key"], false);
             match next_record(ctx, records, record) {
                 Ok(r) => r,
-                Err(e) => return Ok(io_refusal(e)),
+                Err(e) => return record_commit_reply(e),
             }
         }
     };
     if fault == Some(Fault::AfterRecord) {
-        return Err(CrashInjected(Fault::AfterRecord));
+        return Err(CrashInjected(Fault::AfterRecord).into());
     }
     let rec_id = stored["record_id"].as_str().unwrap_or("").to_string();
     if let Err(e) = put_intent(ctx, "committed", intent, Some(&rec_id)) {
@@ -1446,10 +1499,14 @@ fn settle(
     key: &str,
     body_digest: &str,
     records: &[Value],
-) -> Value {
+) -> Result<Value, AppendFailure> {
     let Some((case, item, n, _)) = parse_episode_ref(payload["episode_ref"].as_str().unwrap_or(""))
     else {
-        return refuse("SCHEMA_INVALID", "payload.episode_ref does not parse", None);
+        return Ok(refuse(
+            "SCHEMA_INVALID",
+            "payload.episode_ref does not parse",
+            None,
+        ));
     };
     let episode_key = key_json(&case, &item, n);
     // I-1: a settlement needs a COMPLETE freeze (both phases, the realitytrace
@@ -1457,29 +1514,29 @@ fn settle(
     match freeze_state(ctx, &item, n, ctx.anchor_configured()) {
         FreezeStatus::Complete => {}
         FreezeStatus::Missing => {
-            return refuse(
+            return Ok(refuse(
                 "FREEZE_MISSING",
                 "no freeze record for the episode",
                 Some("I-1"),
-            )
+            ))
         }
         FreezeStatus::Incomplete(parts) => {
-            return refuse(
+            return Ok(refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("freeze incomplete: missing {}", parts.join(", ")),
                 Some("I-1"),
-            )
+            ))
         }
     }
     let Some(freeze) = records
         .iter()
         .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == episode_key)
     else {
-        return refuse(
+        return Ok(refuse(
             "FREEZE_MISSING",
             "no freeze record for the episode",
             Some("I-1"),
-        );
+        ));
     };
     // The settlement must cite the frozen digest, not another one.
     if let (Some(frozen), Some((_, _, _, cited))) = (
@@ -1487,11 +1544,11 @@ fn settle(
         parse_episode_ref(payload["episode_ref"].as_str().unwrap_or("")),
     ) {
         if frozen != cited {
-            return refuse(
+            return Ok(refuse(
                 "EPISODE_REF_DIGEST_MISMATCH",
                 "episode_ref digest differs from the frozen episode",
                 None,
-            );
+            ));
         }
     }
     // NT-18 and NT-48 at settlement (anchoring configured).
@@ -1499,10 +1556,10 @@ fn settle(
         .as_str()
         .unwrap_or("");
     if let Err(refusal) = model_anchor_check(ctx, world_ref) {
-        return refusal;
+        return Ok(refusal);
     }
     if let Err(refusal) = freeze_anchor_publisher(ctx, freeze["digest"].as_str().unwrap_or("")) {
-        return refusal;
+        return Ok(refusal);
     }
     // One settlement per episode key. The same idempotency key replays before
     // this point; a different key for a settled episode is SETTLEMENT_EXISTS
@@ -1511,21 +1568,21 @@ fn settle(
         .iter()
         .any(|r| r["kind"] == "episode.settled" && r["episode_key"] == episode_key)
     {
-        return refuse(
+        return Ok(refuse(
             "SETTLEMENT_EXISTS",
             "the episode already has a settlement",
             None,
-        );
+        ));
     }
     // Exploratory episodes settle only U or C.
     if freeze["episode_kind"] == "exploratory"
         && matches!(payload["result"].as_str(), Some("S") | Some("F"))
     {
-        return refuse(
+        return Ok(refuse(
             "EXPLORATORY_NOT_SETTLEABLE",
             "an exploratory episode cannot settle S or F",
             None,
-        );
+        ));
     }
     // I-2: the settling principal's chain must not contain an executor of the
     // item: the actors of its case events (S1) plus the executor set of the run
@@ -1533,14 +1590,14 @@ fn settle(
     // record fails closed (DELEGATION_LINK_INVALID).
     let mut executors = match executors_of(ctx, &item) {
         Ok(e) => e,
-        Err(why) => return io_refusal(why),
+        Err(why) => return Ok(io_refusal(why)),
     };
     let episode_ref = payload["episode_ref"].as_str().unwrap_or("");
     let analysis =
         match super::run_records::analyse(ctx.root, ctx.case_id, episode_ref, ctx.principal) {
             Ok(Ok(a)) => a,
-            Ok(Err(why)) => return refuse("DELEGATION_LINK_INVALID", &why, Some("I-2")),
-            Err(why) => return store_refusal(why),
+            Ok(Err(why)) => return Ok(refuse("DELEGATION_LINK_INVALID", &why, Some("I-2"))),
+            Err(why) => return Ok(store_refusal(why)),
         };
     executors.extend(analysis.executors.iter().cloned());
     let contained = ctx
@@ -1551,13 +1608,13 @@ fn settle(
         .any(|c| executors.contains(&c));
     if contained {
         if let Err(e) = record_refusal(ctx, key, body_digest, &episode_key, &executors) {
-            return io_refusal(e);
+            return Ok(io_refusal(e));
         }
-        return refuse(
+        return Ok(refuse(
             "SELF_SETTLEMENT_REFUSED",
             "settling principal's chain contains the executor's identity",
             Some("I-2"),
-        );
+        ));
     }
     // The verifier context is derived from run records, never asserted (H2).
     // Only an episode that has run records can derive one.
@@ -1569,11 +1626,11 @@ fn settle(
         if declared != analysis.derived_context
             || (analysis.sibling && confirmed && analysis.derived_context != "fresh")
         {
-            return refuse(
+            return Ok(refuse(
                 "VERIFIER_CONTEXT_MISMATCH",
                 "the declared verifier context differs from the one derived from run records, or a sibling of an executor settles without a fresh context",
                 None,
-            );
+            ));
         }
     }
     // A human settlement needs an approval bound to this very record (README
@@ -1588,11 +1645,11 @@ fn settle(
         });
         approval = bound_approval(ctx, "settle_episode_human", params, episode_ref);
         if approval.is_none() {
-            return refuse(
+            return Ok(refuse(
                 "AUTHORITY_DENIED",
                 "a human settlement needs an approval bound to this record",
                 None,
-            );
+            ));
         }
     }
     let (decision, new_decision) =
@@ -1619,9 +1676,9 @@ fn settle(
         Ok(stored) => {
             let _ = super::interaction_events::enqueue_decision(ctx, &decision);
             let _ = super::interaction_events::enqueue_record(ctx, &stored);
-            response("episode.settled", &rec_id, &episode_key, false)
+            Ok(response("episode.settled", &rec_id, &episode_key, false))
         }
-        Err(e) => io_refusal(e),
+        Err(e) => record_commit_reply(e),
     }
 }
 
@@ -1885,10 +1942,10 @@ pub struct Recovered {
 /// The caller MUST hold the case's lock (a recovery interleaved with an append
 /// would race on `seq` and the outbox files); the server entry point that
 /// does so is `recover_field_case` in `lib.rs`.
-pub fn recover(ctx: &AppendContext) -> Recovered {
+pub fn recover(ctx: &AppendContext) -> Result<Recovered, ForgeError> {
     let mut out = Recovered::default();
     if integrity(ctx).is_err() {
-        return out;
+        return Ok(out);
     }
     for intent in latest_intents(ctx) {
         if intent["state"] != "prepared" {
@@ -1905,7 +1962,9 @@ pub fn recover(ctx: &AppendContext) -> Recovered {
             .all(|v| v.as_str().is_some_and(|id| ctx.rt.exists(id)));
         if digest_ok && rt_ok {
             let records = records(ctx);
-            if commit_freeze(ctx, &intent, &records, None).is_ok_and(|r| !is_refusal(&r)) {
+            if !is_refusal(
+                &commit_freeze(ctx, &intent, &records, None).map_err(AppendFailure::into_error)?,
+            ) {
                 out.completed.push(key);
                 continue;
             }
@@ -1917,7 +1976,7 @@ pub fn recover(ctx: &AppendContext) -> Recovered {
         let _ = deliver_anchors(ctx, publisher);
     }
     super::interaction_events::reconcile_events(ctx);
-    out
+    Ok(out)
 }
 
 /// The pending anchors whose freeze record is committed and that are not yet
@@ -2033,9 +2092,9 @@ pub fn record_anchor_receipt_for(
 }
 
 /// [`recover`] for a case without a request context; call under the case lock.
-pub fn recover_for(root: &Path, case_id: &str) -> Recovered {
+pub fn recover_for(root: &Path, case_id: &str) -> Result<Recovered, ForgeError> {
     if !valid_case_segment(case_id) {
-        return Recovered::default();
+        return Ok(Recovered::default());
     }
     with_store_ctx(root, case_id, recover)
 }
@@ -2239,7 +2298,6 @@ pub fn run_verb(
     contract: Value,
     pinned_world: Option<String>,
 ) -> Result<Value, sea_forge_core::errors::ForgeError> {
-    use sea_forge_core::errors::ForgeError;
     if !valid_case_segment(case_id) || !case_dir(root, case_id).join("case.json").exists() {
         return Err(ForgeError::Input(format!("unknown case {case_id}")));
     }
@@ -2282,7 +2340,7 @@ pub fn run_verb(
         anchor: script.as_ref().map(|s| s as &dyn AnchorPublisher),
         policy: &policy,
     };
-    let answer = append_answer(&ctx, &Value::Object(request));
+    let answer = try_append_answer(&ctx, &Value::Object(request))?;
     // Deliver whatever is owed (this write's events and any earlier backlog).
     // A failing emitter leaves the events in the outbox; it never changes the
     // case write's response.
