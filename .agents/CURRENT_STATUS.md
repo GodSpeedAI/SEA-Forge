@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 361
+**Status revision:** 362
 
-**Stage:** FDE S2 | Apply package-specific license decision
+**Stage:** FDE S2 | Checkpoint streamed run evidence and pinned-world persistence
 
-**Summary:** Approve MIT-0 only for the locked borrow-or-share 0.2.4 package and record the verified dependency gate result.
+**Summary:** Stream Field Case output from pinned handles into private spools and bind each published file to the digest used by its evidence.
 
 **Verified:**
 
+- On Linux the streamed capture passed 11 case-runner unit tests, all 3 writer and lock scans, all 9 C1–C7 model tests, all 23 settlement unit tests, and the server Field Case write-only sealing regression.
+- The staged tests exercised a real partial scratch write followed by StorageFull, refusal of a modified spool with the prior generation still selected, and a healthy duplicate-path retry with identical published bytes.
+- RealityTrace checkpoint 55e496b persists the emitted world pin in envelope scope. All 6 focused mapper tests and all 3 CLI ledger tests passed, including a real SQLite append and export with hash verification.
 - The offline locked cargo-deny license gate reproduced the MIT-0 failure and passed with the approved package and version exception. The global allow list and advisory gate retain their existing configuration.
 - The native macOS rest job for run 44365325837 was queued for a targeted retry.
 - Both hosted Ubuntu test steps passed at 387ce96a in CI run 44365325837, including the cgroup-v2 delegation preflight and the workspace test shard that covers the WSL lifecycle failure.
@@ -89,15 +92,17 @@
 
 **Limits:**
 
+- The production Field Case dispatch uses streamed capture with the legacy writer. The versioned writer exercises the same spool operation under staged tests.
+- RealityTrace delivery and the joined SEA Forge re-pin plus RealityTrace durable export gate remain open.
+- Abrupt host reset needs approved disposable Linux, APFS, and fixed NTFS targets with persistent test disks and external reset control.
+- Full chrono removal needs a DomainForge public Rust timestamp API decision. Existing serialized timestamp behavior remains the compatibility requirement.
 - The advisory gate remains open for the chrono migration and its input compatibility requirements.
-- SEA Forge capture streaming and verified historical generations, plus the RealityTrace pinned-world persistence contract, are approved implementation work.
 - The macOS server and rest jobs in CI run 44365325837 were queued when this snapshot was recorded. The native restart evidence on Linux and fixed NTFS concerns application process exits.
 - The Windows C1–C7 model compares final filesystem differences to the journal. Transient runtime observation and host-crash durability remain open on Windows.
 - Native macOS application restart and host-crash or power-loss durability remain open. The staged writer is inactive in production.
 - Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
 - The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
-- The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
@@ -129,7 +134,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Implement bounded staged capture, historical manifest lineage, RealityTrace world_ref persistence, and the compatible chrono parser migration. Qualify platform interruption before production activation.
+**Next:** Verify manifest lineage and digest reads, complete RealityTrace delivery and the cross-repo re-pin proof, qualify native capture, and finish chrono migration once its public API is agreed.
 
 **Evidence:**
 

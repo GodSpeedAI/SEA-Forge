@@ -45,9 +45,10 @@ use sha2::{Digest, Sha256};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
-use std::io::Write as _;
+use std::io::{self, Read, Seek as _, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// The contract's refusal (`code`, `message`, `no_side_effect`).
 pub type ContractError = Refusal;
@@ -281,6 +282,109 @@ impl Drop for CaseLock {
 // What is proposed
 // ---------------------------------------------------------------------------
 
+/// Bytes captured once into a runner-owned scratch file. Clones share the
+/// same sealed bytes so one capture can serve multiple admitted paths.
+#[derive(Clone, Debug)]
+pub struct SealedRunFile {
+    spool: Arc<RunFileSpool>,
+    digest: String,
+}
+
+#[derive(Debug)]
+struct RunFileSpool {
+    file: Mutex<File>,
+    // Field drop order closes the handle before removing the scratch file.
+    _cleanup: SpoolPath,
+}
+
+#[derive(Debug)]
+struct SpoolPath(PathBuf);
+
+impl Drop for SpoolPath {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+impl SealedRunFile {
+    /// The runner supplies an existing directory outside the workload's
+    /// writable tree. Only a complete copy produces a sealed value.
+    pub fn capture(
+        scratch: &Path,
+        source: &mut dyn Read,
+    ) -> Result<Self, sea_forge_core::errors::ForgeError> {
+        use sea_forge_core::errors::ForgeError;
+
+        let path = scratch.join(sea_forge_core::ids::random_id(".sealed")?);
+        let mut options = OpenOptions::new();
+        options.create_new(true).read(true).write(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt as _;
+            options.mode(0o600);
+        }
+        let mut file = options
+            .open(&path)
+            .map_err(|error| ForgeError::io("create sealed run spool", error))?;
+        let cleanup = SpoolPath(path);
+        let digest = match copy_and_hash(source, &mut file) {
+            Ok(digest) => digest,
+            Err(error) => {
+                drop(file);
+                return Err(ForgeError::io("capture sealed run file", error));
+            }
+        };
+        Ok(Self {
+            spool: Arc::new(RunFileSpool {
+                file: Mutex::new(file),
+                _cleanup: cleanup,
+            }),
+            digest,
+        })
+    }
+
+    pub fn digest(&self) -> &str {
+        &self.digest
+    }
+
+    pub fn with_reader<T>(&self, read: impl FnOnce(&mut dyn Read) -> T) -> io::Result<T> {
+        let mut file = self
+            .spool
+            .file
+            .lock()
+            .map_err(|_| io::Error::other("sealed run file lock poisoned"))?;
+        file.rewind()?;
+        Ok(read(&mut *file))
+    }
+
+    fn write_verified(&self, destination: &mut File) -> io::Result<()> {
+        let digest = self.with_reader(|source| copy_and_hash(source, destination))??;
+        if digest != self.digest {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "sealed run file digest changed",
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn copy_and_hash(source: &mut dyn Read, destination: &mut dyn Write) -> io::Result<String> {
+    let mut chunk = [0_u8; 16 * 1024];
+    let mut hash = Sha256::new();
+    loop {
+        match source.read(&mut chunk) {
+            Ok(0) => return Ok(hex::encode(hash.finalize())),
+            Ok(count) => {
+                destination.write_all(&chunk[..count])?;
+                hash.update(&chunk[..count]);
+            }
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(error) => return Err(error),
+        }
+    }
+}
+
 /// One operation of a batch.
 #[derive(Debug, Clone)]
 pub enum Op {
@@ -297,6 +401,8 @@ pub enum Op {
     Plan(Value),
     /// A file under `runs/` (run outputs), by path inside `runs/`.
     RunFile { rel: String, bytes: Vec<u8> },
+    /// A run output backed by a sealed file and verified as it is copied.
+    RunFileFromSpool { rel: String, source: SealedRunFile },
 }
 
 /// A verb's whole consequence, committed all or nothing.
@@ -1286,7 +1392,9 @@ pub fn decide(st: &CaseState, batch: &Batch) -> Result<(), ContractError> {
                     ));
                 }
             }
-            Op::RunFile { .. } => in_flight(&sim, &sim.events, Hypo::InFlight(None))?,
+            Op::RunFile { .. } | Op::RunFileFromSpool { .. } => {
+                in_flight(&sim, &sim.events, Hypo::InFlight(None))?
+            }
             Op::Case(_) => {}
         }
     }
@@ -1371,8 +1479,9 @@ pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
 fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
     use std::path::Component;
     for op in &batch.ops {
-        let Op::RunFile { rel, .. } = op else {
-            continue;
+        let rel = match op {
+            Op::RunFile { rel, .. } | Op::RunFileFromSpool { rel, .. } => rel,
+            _ => continue,
         };
         let escape = |why: &str| refuse("PATH_ESCAPE", &format!("run file {rel:?}: {why}"));
         let mut at = case_dir.join("runs");
@@ -1454,6 +1563,14 @@ fn append_value(path: &Path, value: &Value) -> Result<(), ContractError> {
 
 /// Replace `path` (temp file OUTSIDE the case directory, then rename).
 fn replace_bytes(case_dir: &Path, path: &Path, bytes: &[u8]) -> Result<(), ContractError> {
+    replace_file(case_dir, path, |file| file.write_all(bytes))
+}
+
+fn replace_file(
+    case_dir: &Path,
+    path: &Path,
+    write: impl FnOnce(&mut File) -> io::Result<()>,
+) -> Result<(), ContractError> {
     static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let (dir, _) = lock_file(case_dir);
     let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -1463,10 +1580,12 @@ fn replace_bytes(case_dir: &Path, path: &Path, bytes: &[u8]) -> Result<(), Contr
     }
     std::fs::create_dir_all(&dir).map_err(|e| io("create the lock directory", e))?;
     let mut file = File::create(&tmp).map_err(|e| io("create temp file", e))?;
-    file.write_all(bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|e| io("write temp file", e))?;
+    let result = write(&mut file).and_then(|()| file.sync_all());
     drop(file);
+    if let Err(error) = result {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(io("write temp file", error));
+    }
     note(path);
     std::fs::rename(&tmp, path).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
@@ -1568,6 +1687,11 @@ fn apply(
             }
             Op::RunFile { rel, bytes } => {
                 replace_bytes(case_dir, &case_dir.join("runs").join(rel), &bytes)?;
+            }
+            Op::RunFileFromSpool { rel, source } => {
+                replace_file(case_dir, &case_dir.join("runs").join(rel), |file| {
+                    source.write_verified(file)
+                })?;
             }
         }
     }

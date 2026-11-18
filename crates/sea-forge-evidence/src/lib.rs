@@ -158,14 +158,34 @@ pub fn capture_bytes(
     source_event_id: String,
     descriptor: Option<(&Intent, &str)>,
 ) -> Result<(EvidenceRecord, Option<ArtifactDescriptor>), ForgeError> {
-    sea_forge_sandbox::validate_relative_path(name)?;
-    record_artifact(
+    record_captured_digest(
+        sha256_bytes(bytes),
         name,
         writer,
         source_event_id,
         descriptor,
-        sha256_bytes(bytes),
     )
+}
+
+/// Record the digest of a sealed artifact that will be published with this evidence.
+pub fn record_captured_digest(
+    digest: String,
+    name: &str,
+    writer: &mut JsonlEvidenceWriter,
+    source_event_id: String,
+    descriptor: Option<(&Intent, &str)>,
+) -> Result<(EvidenceRecord, Option<ArtifactDescriptor>), ForgeError> {
+    sea_forge_sandbox::validate_relative_path(name)?;
+    if digest.len() != 64
+        || !digest
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+    {
+        return Err(ForgeError::Input(
+            "invalid captured artifact SHA-256".into(),
+        ));
+    }
+    record_artifact(name, writer, source_event_id, descriptor, digest)
 }
 
 fn record_artifact(

@@ -422,3 +422,92 @@ fn interrupted_publication_can_be_retried() {
         );
     }
 }
+
+#[test]
+#[cfg(any(unix, windows))]
+fn staged_spool_verifies_bytes_before_publication() {
+    let fixture = tempfile::tempdir().unwrap();
+    let root = fixture.path();
+    commit_staged(root, CASE, create_case(), None, &dir_sync).unwrap();
+    commit_staged(root, CASE, run_file(b"previous"), None, &dir_sync).unwrap();
+    let old = versioned_store::open(root, CASE).unwrap().unwrap();
+    let bytes = vec![0xbc; 40_000];
+    let changed = SealedRunFile::capture(root, &mut bytes.as_slice()).unwrap();
+    {
+        let mut file = changed.spool.file.lock().unwrap();
+        file.rewind().unwrap();
+        file.write_all(b"changed").unwrap();
+    }
+    let batch = Batch::new().with(Op::RunFileFromSpool {
+        rel: "run-1/record.txt".into(),
+        source: changed,
+    });
+    assert!(matches!(
+        commit_staged(root, CASE, batch, None, &dir_sync),
+        Err(CommitError::Refused(_))
+    ));
+    assert_eq!(
+        versioned_store::open(root, CASE).unwrap(),
+        Some(old.clone())
+    );
+    assert_eq!(
+        fs::read(old.join("runs/run-1/record.txt")).unwrap(),
+        b"previous"
+    );
+
+    let clean = SealedRunFile::capture(root, &mut bytes.as_slice()).unwrap();
+    assert_eq!(clean.digest(), hex::encode(Sha256::digest(&bytes)));
+    let batch = Batch::new()
+        .with(Op::RunFileFromSpool {
+            rel: "run-1/record.txt".into(),
+            source: clean.clone(),
+        })
+        .with(Op::RunFileFromSpool {
+            rel: "run-1/double.txt".into(),
+            source: clean,
+        });
+    commit_staged(root, CASE, batch, None, &dir_sync).unwrap();
+    let selected = versioned_store::open(root, CASE).unwrap().unwrap();
+    assert_eq!(
+        fs::read(selected.join("runs/run-1/record.txt")).unwrap(),
+        bytes
+    );
+    assert_eq!(
+        fs::read(selected.join("runs/run-1/double.txt")).unwrap(),
+        bytes
+    );
+}
+
+#[test]
+fn capture_copy_propagates_storage_full_after_a_real_partial_write() {
+    struct LimitedFile {
+        file: File,
+        remaining: usize,
+    }
+
+    impl Write for LimitedFile {
+        fn write(&mut self, bytes: &[u8]) -> std_io::Result<usize> {
+            if self.remaining == 0 {
+                return Err(std_io::ErrorKind::StorageFull.into());
+            }
+            let written = self.file.write(&bytes[..bytes.len().min(self.remaining)])?;
+            self.remaining -= written;
+            Ok(written)
+        }
+
+        fn flush(&mut self) -> std_io::Result<()> {
+            self.file.flush()
+        }
+    }
+
+    let mut destination = LimitedFile {
+        file: tempfile::tempfile().unwrap(),
+        remaining: 7,
+    };
+    let error = copy_and_hash(&mut &b"matched then more bytes"[..], &mut destination).unwrap_err();
+    assert_eq!(error.kind(), std_io::ErrorKind::StorageFull);
+    let mut prefix = Vec::new();
+    destination.file.rewind().unwrap();
+    destination.file.read_to_end(&mut prefix).unwrap();
+    assert_eq!(prefix, b"matched");
+}

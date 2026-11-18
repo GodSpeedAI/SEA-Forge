@@ -29,9 +29,12 @@ WP-21B on Linux, macOS, and Windows. The storage decision is recorded in
    generation and its selector in one step. After that, missing or invalid
    selector data never authorizes a legacy fallback.
 6. Execution workspaces and transient sandbox output are outside published case
-   generations. Evidence that refers to a committed generation continues to
-   resolve to its original bytes. Reclamation must preserve referenced
-   generations and active readers.
+   generations. The runner streams from pinned workspace file handles into
+   private scratch files with bounded memory. Settlement uses the sealed
+   contents, and the staged writer verifies the capture digest before installing
+   the file. Evidence for a committed generation continues to resolve to its
+   original bytes. Reclamation must preserve referenced generations and active
+   readers.
 
 ## Acceptance
 

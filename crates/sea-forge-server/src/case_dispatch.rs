@@ -3,7 +3,7 @@ use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_case_runner::{
     case_ops::{
-        case_guard::{self, Batch, Op},
+        case_guard::{self, Batch, Op, SealedRunFile},
         case_snapshot_dir, field_guard,
     },
     write_json, CaseRunner,
@@ -918,10 +918,16 @@ pub(crate) fn execute_sandbox(
                 )?;
                 if let Some(files) = &mut captured {
                     let relative = format!("artifacts/{path}");
-                    let bytes = sea_forge_sandbox::read_workspace_file(&workspace, path)?;
-                    sea_forge_evidence::capture_bytes(&bytes, path, &mut evidence, event, None)?;
-                    files.insert(format!("workspace/{path}"), bytes.clone());
-                    files.insert(relative, bytes);
+                    let spool = capture_run_file(&run_dir, &workspace, path)?;
+                    sea_forge_evidence::record_captured_digest(
+                        spool.digest().into(),
+                        path,
+                        &mut evidence,
+                        event,
+                        None,
+                    )?;
+                    files.insert(format!("workspace/{path}"), spool.clone());
+                    files.insert(relative, spool);
                 } else {
                     sea_forge_evidence::capture_file(
                         &workspace.join(path),
@@ -1002,9 +1008,15 @@ pub(crate) fn execute_sandbox(
                 )?;
                 if let Some(files) = &mut captured {
                     let relative = format!("artifacts/{name}");
-                    let bytes = sea_forge_sandbox::read_workspace_file(&run_dir, &relative)?;
-                    sea_forge_evidence::capture_bytes(&bytes, name, &mut evidence, event, None)?;
-                    files.insert(relative, bytes);
+                    let spool = capture_run_file(&run_dir, &run_dir, &relative)?;
+                    sea_forge_evidence::record_captured_digest(
+                        spool.digest().into(),
+                        name,
+                        &mut evidence,
+                        event,
+                        None,
+                    )?;
+                    files.insert(relative, spool);
                 } else {
                     sea_forge_evidence::capture_file(
                         &artifacts.join(name),
@@ -1051,47 +1063,68 @@ pub(crate) fn execute_sandbox(
     };
     if let Some(mut files) = captured {
         let artifact_observations = if decision.verdict == Verdict::Allow {
-            capture_required_artifacts(&workspace, &claim.criteria.required_artifacts, &mut files)?
+            capture_required_artifacts(
+                &run_dir,
+                &workspace,
+                &claim.criteria.required_artifacts,
+                &mut files,
+            )?
         } else {
             BTreeMap::new()
+        };
+        let settle = |stdout: Option<&mut dyn std::io::Read>| {
+            sea_forge_settlement::settle_with_captured_criteria(
+                &claim,
+                &workspace,
+                &run_dir,
+                CapturedCriteria {
+                    stdout,
+                    artifacts: &artifact_observations,
+                },
+            )
         };
         let stdout = claim
             .execution
             .as_ref()
-            .and_then(|result| files.get(&result.stdout_path))
-            .map(Vec::as_slice);
-        let settlement = sea_forge_settlement::settle_with_captured_criteria(
-            &claim,
-            &workspace,
-            &run_dir,
-            &CapturedCriteria {
-                stdout,
-                artifacts: &artifact_observations,
-            },
-        )?;
+            .and_then(|result| files.get(&result.stdout_path));
+        let settlement = match stdout {
+            Some(spool) => spool
+                .with_reader(|reader| settle(Some(reader)))
+                .map_err(|error| ForgeError::io("read sealed stdout", error))??,
+            None => settle(None)?,
+        };
 
         // Stop the trusted writers before reopening trace and evidence.
         drop(trace);
         drop(evidence);
         for name in ["trace.jsonl", "evidence.jsonl"] {
-            let bytes = sea_forge_sandbox::read_workspace_file(&run_dir, name)?;
-            files.insert(name.into(), bytes);
+            files.insert(name.into(), capture_run_file(&run_dir, &run_dir, name)?);
         }
-        files.insert(
-            "settlement.json".into(),
-            serde_json::to_vec_pretty(&settlement)?,
-        );
-        files.insert(
-            "authority.json".into(),
-            serde_json::to_vec_pretty(&vec![&decision])?,
-        );
-        let mut batch = Batch::new();
-        for (path, bytes) in files {
-            batch.push(Op::RunFile {
-                rel: format!("{run_id}/{path}"),
-                bytes,
-            });
+        let mut outputs: BTreeMap<_, _> = files
+            .into_iter()
+            .map(|(path, source)| {
+                let rel = format!("{run_id}/{path}");
+                (path, Op::RunFileFromSpool { rel, source })
+            })
+            .collect();
+        for (path, bytes) in [
+            ("settlement.json", serde_json::to_vec_pretty(&settlement)?),
+            (
+                "authority.json",
+                serde_json::to_vec_pretty(&vec![&decision])?,
+            ),
+        ] {
+            outputs.insert(
+                path.into(),
+                Op::RunFile {
+                    rel: format!("{run_id}/{path}"),
+                    bytes,
+                },
+            );
         }
+        let batch = Batch {
+            ops: outputs.into_values().collect(),
+        };
         case_guard::commit_with_outcome(&case_dir, batch)?;
         return Ok(settlement);
     }
@@ -1116,10 +1149,20 @@ pub(crate) fn execute_sandbox(
     Ok(settlement)
 }
 
+fn capture_run_file(
+    scratch: &Path,
+    source: &Path,
+    relative: &str,
+) -> Result<SealedRunFile, ForgeError> {
+    let mut reader = sea_forge_sandbox::open_workspace_read(source, relative)?;
+    SealedRunFile::capture(scratch, &mut reader)
+}
+
 fn capture_required_artifacts(
+    scratch: &Path,
     workspace: &Path,
     required: &[String],
-    files: &mut BTreeMap<String, Vec<u8>>,
+    files: &mut BTreeMap<String, SealedRunFile>,
 ) -> Result<BTreeMap<String, bool>, ForgeError> {
     let mut observations = BTreeMap::new();
     for name in required {
@@ -1130,9 +1173,9 @@ fn capture_required_artifacts(
         let present = match files.entry(relative) {
             std::collections::btree_map::Entry::Occupied(_) => true,
             std::collections::btree_map::Entry::Vacant(entry) => {
-                match sea_forge_sandbox::read_workspace_file(workspace, name) {
-                    Ok(bytes) => {
-                        entry.insert(bytes);
+                match sea_forge_sandbox::open_workspace_read(workspace, name) {
+                    Ok(mut reader) => {
+                        entry.insert(SealedRunFile::capture(scratch, &mut reader)?);
                         true
                     }
                     Err(ForgeError::UnsafePath(_)) => false,

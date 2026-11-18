@@ -16,9 +16,9 @@ pub use declaration::{
 /// Evidence captured once by the case runner for settlement criteria.
 /// Every required artifact must have an observation. Stdout is required only
 /// when a completed execution declares a stdout criterion.
-pub struct CapturedCriteria<'a> {
-    pub stdout: Option<&'a [u8]>,
-    pub artifacts: &'a std::collections::BTreeMap<String, bool>,
+pub struct CapturedCriteria<'stdout, 'artifacts> {
+    pub stdout: Option<&'stdout mut dyn Read>,
+    pub artifacts: &'artifacts std::collections::BTreeMap<String, bool>,
 }
 
 pub fn settle(
@@ -34,7 +34,7 @@ pub fn settle_with_captured_criteria(
     claim: &SettlementClaim,
     workspace: &Path,
     run_dir: &Path,
-    captured: &CapturedCriteria<'_>,
+    captured: CapturedCriteria<'_, '_>,
 ) -> Result<SettlementEvent, ForgeError> {
     settle_inner(claim, workspace, run_dir, Some(captured))
 }
@@ -43,7 +43,7 @@ fn settle_inner(
     claim: &SettlementClaim,
     workspace: &Path,
     run_dir: &Path,
-    captured: Option<&CapturedCriteria<'_>>,
+    mut captured: Option<CapturedCriteria<'_, '_>>,
 ) -> Result<SettlementEvent, ForgeError> {
     let mut basis = Vec::new();
     let (status, review_required) = if claim.authority_verdicts.contains(&Verdict::Escalate) {
@@ -62,7 +62,7 @@ fn settle_inner(
                 basis.push("write_only".into());
                 let mut accepted = true;
                 for path in &claim.criteria.required_artifacts {
-                    let present = artifact_present(workspace, path, captured)?;
+                    let present = artifact_present(workspace, path, captured.as_ref())?;
                     basis.push(format!(
                         "required_artifact_{}:{path}",
                         if present { "present" } else { "missing" }
@@ -108,7 +108,7 @@ fn settle_inner(
                         accepted &= zero;
                     }
                     for path in &claim.criteria.required_artifacts {
-                        let present = artifact_present(workspace, path, captured)?;
+                        let present = artifact_present(workspace, path, captured.as_ref())?;
                         basis.push(format!(
                             "required_artifact_{}:{path}",
                             if present { "present" } else { "missing" }
@@ -116,14 +116,11 @@ fn settle_inner(
                         accepted &= present;
                     }
                     if let Some(needle) = &claim.criteria.stdout_must_contain {
-                        let matches = if let Some(captured) = captured {
-                            let stdout = captured.stdout.ok_or_else(|| {
+                        let matches = if let Some(captured) = captured.as_mut() {
+                            let stdout = captured.stdout.as_deref_mut().ok_or_else(|| {
                                 ForgeError::Input("missing captured stdout".into())
                             })?;
-                            needle.is_empty()
-                                || stdout
-                                    .windows(needle.len())
-                                    .any(|bytes| bytes == needle.as_bytes())
+                            reader_contains(stdout, needle)?
                         } else {
                             let stdout = safe_existing(run_dir, &execution.stdout_path)?;
                             file_contains(&stdout, needle)?
@@ -212,7 +209,7 @@ fn settle_inner(
 fn artifact_present(
     workspace: &Path,
     path: &str,
-    captured: Option<&CapturedCriteria<'_>>,
+    captured: Option<&CapturedCriteria<'_, '_>>,
 ) -> Result<bool, ForgeError> {
     match captured {
         Some(captured) => captured.artifacts.get(path).copied().ok_or_else(|| {
@@ -448,11 +445,18 @@ fn file_contains(path: &Path, needle: &str) -> Result<bool, ForgeError> {
     }
     let mut file =
         File::open(path).map_err(|error| ForgeError::io("open captured stdout", error))?;
+    reader_contains(&mut file, needle)
+}
+
+fn reader_contains(reader: &mut dyn Read, needle: &str) -> Result<bool, ForgeError> {
+    if needle.is_empty() {
+        return Ok(true);
+    }
     let needle = needle.as_bytes();
     let mut chunk = [0_u8; 8192];
     let mut overlap = Vec::new();
     loop {
-        let count = file
+        let count = reader
             .read(&mut chunk)
             .map_err(|error| ForgeError::io("read captured stdout", error))?;
         if count == 0 {
@@ -551,12 +555,13 @@ mod tests {
             write_only: false,
         };
         let artifacts = BTreeMap::from([("model.sea".into(), true)]);
+        let mut stdout: &[u8] = b"sea-forge: model valid";
         let captured = CapturedCriteria {
-            stdout: Some(b"sea-forge: model valid"),
+            stdout: Some(&mut stdout),
             artifacts: &artifacts,
         };
         let legacy = settle(&claim, &workspace, &root).unwrap();
-        let event = settle_with_captured_criteria(&claim, &workspace, &root, &captured).unwrap();
+        let event = settle_with_captured_criteria(&claim, &workspace, &root, captured).unwrap();
         assert_eq!(legacy.status, SettlementStatus::Rejected);
         assert_eq!(event.status, SettlementStatus::Accepted);
         assert!(event
@@ -564,6 +569,83 @@ mod tests {
             .contains(&"required_artifact_present:model.sea".into()));
         assert!(event.basis.contains(&"stdout_match".into()));
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn captured_stdout_matches_across_read_boundary_with_non_utf8() {
+        let mut bytes = vec![b'x'; 8190];
+        bytes.push(0xff);
+        bytes.extend_from_slice(b"model valid");
+        let mut stdout = std::io::Cursor::new(bytes);
+        let artifacts = BTreeMap::new();
+        let claim = SettlementClaim {
+            run_id: "run".into(),
+            plan_item_id: "item_01".into(),
+            criteria_ref: None,
+            criteria: SettlementCriteria {
+                stdout_must_contain: Some("model valid".into()),
+                ..Default::default()
+            },
+            execution: Some(ExecutionResult {
+                status: ExecutionStatus::Completed,
+                exit_code: Some(0),
+                stdout_path: "unused".into(),
+                stderr_path: "unused".into(),
+                started_at: "start".into(),
+                finished_at: "finish".into(),
+                lifecycle_containment: LifecycleContainment::NoProcess,
+            }),
+            authority_verdicts: vec![Verdict::Allow],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+            write_only: false,
+        };
+        let captured = CapturedCriteria {
+            stdout: Some(&mut stdout),
+            artifacts: &artifacts,
+        };
+        let event = settle_with_captured_criteria(&claim, Path::new("."), Path::new("."), captured)
+            .unwrap();
+        assert_eq!(event.status, SettlementStatus::Accepted);
+        assert!(event.basis.contains(&"stdout_match".into()));
+    }
+
+    #[test]
+    fn missing_captured_stdout_is_an_error_even_for_empty_needle() {
+        let claim = SettlementClaim {
+            run_id: "run".into(),
+            plan_item_id: "item_01".into(),
+            criteria_ref: None,
+            criteria: SettlementCriteria {
+                stdout_must_contain: Some(String::new()),
+                ..Default::default()
+            },
+            execution: Some(ExecutionResult {
+                status: ExecutionStatus::Completed,
+                exit_code: Some(0),
+                stdout_path: "unused".into(),
+                stderr_path: "unused".into(),
+                started_at: "start".into(),
+                finished_at: "finish".into(),
+                lifecycle_containment: LifecycleContainment::NoProcess,
+            }),
+            authority_verdicts: vec![Verdict::Allow],
+            evaluator_scores: BTreeMap::new(),
+            batch: None,
+            write_only: false,
+        };
+        let artifacts = BTreeMap::new();
+        let captured = CapturedCriteria {
+            stdout: None,
+            artifacts: &artifacts,
+        };
+        let result =
+            settle_with_captured_criteria(&claim, Path::new("."), Path::new("."), captured);
+        assert!(
+            matches!(result, Err(ForgeError::Input(message)) if message == "missing captured stdout")
+        );
+        // The ordinary file matcher accepts an empty needle without opening the file.
+        assert!(file_contains(Path::new("missing-stdout"), "").unwrap());
     }
 
     #[test]

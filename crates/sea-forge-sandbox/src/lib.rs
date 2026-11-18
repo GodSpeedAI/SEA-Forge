@@ -754,13 +754,9 @@ fn pinned_walk_unix(
     Ok(dir)
 }
 
-/// Read bytes through the directory and file handles opened below `root`.
-/// Only a regular file is accepted. The returned bytes can drive both
-/// settlement and publication without reopening the workspace path.
+/// Open a validated workspace entry for reads through a pinned regular file handle.
 #[cfg(any(unix, windows))]
-pub fn read_workspace_file(root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError> {
-    use std::io::Read as _;
-
+pub fn open_workspace_read(root: &Path, rel: &str) -> Result<fs::File, ForgeError> {
     validate_relative_path(rel)?;
     let root = root
         .canonicalize()
@@ -771,7 +767,13 @@ pub fn read_workspace_file(root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError
     let (name, parents) = names
         .split_last()
         .ok_or_else(|| ForgeError::UnsafePath(rel.into()))?;
-    let mut file = open_workspace_file(&root, parents, name, &path)?;
+    open_workspace_file(&root, parents, name, &path)
+}
+
+/// Read a workspace file into memory for callers that require its full contents.
+pub fn read_workspace_file(root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError> {
+    use std::io::Read as _;
+    let mut file = open_workspace_read(root, rel)?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)
         .map_err(|error| ForgeError::io(format!("read workspace file {rel}"), error))?;
@@ -919,7 +921,7 @@ fn open_workspace_file(
 }
 
 #[cfg(not(any(unix, windows)))]
-pub fn read_workspace_file(_root: &Path, rel: &str) -> Result<Vec<u8>, ForgeError> {
+pub fn open_workspace_read(_root: &Path, rel: &str) -> Result<fs::File, ForgeError> {
     Err(ForgeError::UnsafePath(format!(
         "workspace file reads are unavailable: {rel}"
     )))
