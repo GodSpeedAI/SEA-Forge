@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 340
+**Status revision:** 341
 
-**Stage:** FDE S2: CLI delegation and workspace conformance
+**Stage:** FDE S2: reader gate and publication outcome decision
 
-**Summary:** Pass the current case ID to delegation and verify the exact runtime workspace layout in M5.
+**Summary:** Verify the reader checkpoint and record the approved separate outcome for post-publication durability uncertainty.
 
 **Verified:**
 
+- The workspace rerun passed 2048 tests with 28 ignored. The only failure was the WSL CLI lifecycle diagnostic test.
+- The final reader S2 proof matched the recovered checkpoint row for row. Fifteen scenarios passed and all 12 frozen contract digests matched.
+- A private fixture confirmed that the WSL sandbox cgroup warning precedes the JSON internal_error diagnostic on stderr.
+- The owner approved an internal uncertainty outcome for a published selector with an unconfirmed durability flush. Prepublication refusals retain the frozen FDE response.
 - The local t13_1 fixture returned a missing case_id request error before the fix. T13.1 passes with the existing case_id field populated.
 - The focused CLI M13 and M5 suites passed all five tests. M5 checks all eight case-owned runtime workspaces and retains the top-level side-effect restriction.
 - Case-runner suite passed 97 tests with 19 ignored. The reviewed server suite passed 689 tests with 2 ignored.
@@ -40,9 +44,9 @@
 
 **Limits:**
 
-- The versioned writer remains disabled. Writer integration needs a distinct result for post-publication durability uncertainty.
-- Cross-platform namespace durability, runtime evidence sealing, historical artifact resolution, and the independent C7 execution oracle are pending.
-- The workspace rerun after the two CLI fixes is pending. The initial workspace gate also found the existing post-start JSON diagnostic failure.
+- The versioned writer remains disabled. Integration of the approved outcome, staged batch verification, and publication is pending.
+- The WSL lifecycle test needs an operator-provisioned writable cgroup-v2 delegation or the cgroup-enabled CI lane.
+- Cross-platform namespace durability, runtime evidence sealing, historical artifact resolution, and independent C7 execution observation are pending.
 - AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -69,7 +73,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Rerun the workspace and S2 gates. Integrate the staged publisher after the internal result decision and qualify its runtime and platform gates.
+**Next:** Integrate the separate publication outcome and the staged batch writer. Route runtime writes and verify Linux, macOS, and Windows before enabling v1 publication.
 
 **Evidence:**
 

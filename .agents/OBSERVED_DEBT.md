@@ -983,7 +983,7 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - Scope: T00 records baselines and changes no product file; formatting repair
   is outside its contract.
 
-## Open: sea-forge-cli conformance_m13 t13_1 fails at baseline (second pre-existing red test)
+## Resolved: sea-forge-cli conformance_m13 t13_1 fails at baseline (second pre-existing red test)
 
 - Observed: 2026-09-17 (GodSpeed bounded-judgment T00 gate baselining)
 - Evidence: `just test` (revision 7234823) aborts in
@@ -1000,6 +1000,7 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
   suites after conformance_m13 individually before attributing any of their
   results to plan work.
 - Scope: T00 only classifies baselines; repair belongs to the gate-repair task.
+- Resolved in `0ab02a6b` on `fde/integration`. The synthetic loopback fixture returned `bad request: missing field case_id`. The CLI now sends the current case ID through the existing request field. The original conformance test passed after the fix.
 
 ## Open: grant.authorize failure after a committed Allow strands a run allowed-but-unsettled
 
@@ -1418,8 +1419,8 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - **Decision (design, unchanged)**: BLOCKED is not PASS and never reads as one: every BLOCKED scenario prints its tally line on the suite output, the `no_blocked_scenarios_in_required_mode` guards fail any required lane (`SEA_FORGE_REQUIRE_LANDLOCK_NET=1`, `SEA_FORGE_REQUIRE_CGROUP=1`, `SEA_FORGE_REQUIRE_LINK_PRIVILEGE=1`, `SEA_FORGE_REQUIRE_WORKLOAD_ISOLATION=1`) that finished with a nonzero tally, and CI sets those REQUIRE variables so the lanes cannot silently skip. What the dispute leaves open is the harness shape: the counts are in suite output, not a machine-readable result format that excludes BLOCKED scenarios from pass totals.
 - **Next move**: only if the dispute is re-raised: move optional prerequisite-dependent scenarios to a result harness that reports BLOCKED separately and excludes them from libtest pass counts, or fail unavailable prerequisites in ordinary security tests outright. Owner: sea-forge-sandbox/case-runner test harnesses.
 
-## Open: `post_start_internal_error_is_run_correlated_and_traced` fails on the WSL2 workstation (status revision 237)
+## Open: `post_start_internal_error_is_run_correlated_and_traced` fails on the WSL2 workstation
 
-- **Evidence**: `cargo test -p sea-forge-cli --test lifecycle post_start_internal_error_is_run_correlated_and_traced` (`crates/sea-forge-cli/tests/lifecycle.rs`) fails on pristine HEAD on this WSL2 host, verified by stashing local changes. Main CI is green, so the failure is likely host-specific; the cause was not diagnosed.
-- **Impact**: the run-correlated, traced post-start internal-error path is not exercised locally on WSL2; CI is the only attestation.
-- **Next move**: diagnose on the WSL2 host (compare against the CI Linux runner), then either fix the host-dependent assumption or record a precise NOT-EXECUTABLE guard.
+- The full workspace gate reproduced the failure on `0ab02a6b`. The equivalent local fixture confirmed that the sandbox warning about an undelegated `/sys/fs/cgroup/non-systemd` precedes the JSON `internal_error` diagnostic on stderr.
+- The lifecycle test expects stderr to contain a single JSON document. It stops at parsing and leaves the run-correlated trace assertion unverified on this host.
+- Rerun with an operator-provisioned, writable cgroup-v2 delegation through `SEA_FORGE_CGROUP_ROOT` or on the existing cgroup-enabled CI lane.
