@@ -17,8 +17,9 @@
 //! derived from run records and never taken from the payload.
 
 use super::case_records::{
-    append_line, canonical_actor, case_dir, now_rfc3339, parse_time, read_lines_strict, LINKS, RUNS,
+    canonical_actor, case_dir, now_rfc3339, parse_time, read_lines_strict, LINKS, RUNS,
 };
+use sea_forge_case_runner::case_ops::case_guard::{Batch, Op};
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -54,10 +55,12 @@ fn stamp(t: chrono::DateTime<chrono::Utc>) -> String {
     t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
-/// Write the run record (and, for a delegated run, the link first). Returns the
-/// run id. The caller holds the case lock.
-pub fn record_run(root: &Path, input: &RunInput) -> Result<(String, Value), String> {
-    let dir = case_dir(root, input.case_id);
+/// Add the link and run record to the caller's admission batch in that order.
+pub(super) fn add_run_records(
+    dir: &Path,
+    input: &RunInput,
+    batch: &mut Batch,
+) -> Result<(String, Value), String> {
     let runs = read_lines_strict(&dir.join(RUNS))?;
     let links = read_lines_strict(&dir.join(LINKS))?;
     let run_id = format!("run-{:04}", runs.len() + 1);
@@ -65,16 +68,16 @@ pub fn record_run(root: &Path, input: &RunInput) -> Result<(String, Value), Stri
     let mut link_id = Value::Null;
     if let Some(link) = &input.link {
         let id = format!("link-{:04}", links.len() + 1);
-        append_line(
-            &dir.join(LINKS),
-            &json!({
+        batch.push(Op::Append {
+            file: LINKS.into(),
+            line: json!({
                 "link_id": id, "case_id": input.case_id, "episode_ref": input.episode_ref,
                 "assignment_id": link.assignment_id, "delegator": link.delegator,
                 "gateway_actor": link.gateway_actor, "delegate": link.delegate,
                 "issued_at": stamp(issued),
                 "expires_at": stamp(issued + chrono::Duration::seconds(link.ttl_secs)),
             }),
-        )?;
+        });
         link_id = json!(id);
     }
     // The run starts after the link: a strictly later timestamp, never equal.
@@ -86,7 +89,10 @@ pub fn record_run(root: &Path, input: &RunInput) -> Result<(String, Value), Stri
             "link_id": link_id, "workspace_ref": input.workspace_ref,
             "started_at": stamp(started), "recorded_at": now_rfc3339(),
     });
-    append_line(&dir.join(RUNS), &record)?;
+    batch.push(Op::Append {
+        file: RUNS.into(),
+        line: record.clone(),
+    });
     Ok((run_id, record))
 }
 

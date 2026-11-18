@@ -19,6 +19,7 @@
 
 use super::case_records::{self, Lifecycle};
 use super::run_records;
+use sea_forge_case_runner::case_ops::case_guard::{self, Batch, Op};
 use sea_forge_core::types::{CasePlan, ItemKind, TraceEvent, TraceKind};
 use serde_json::{json, Value};
 use std::path::Path;
@@ -687,33 +688,22 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             }
         }
     }
-    // Admitted: the gate's own record (still under the caller's case lock).
+    let mut batch = Batch::new();
     if let Some((id, state)) = assignment {
-        case_records::append_line(
-            &root.join("cases").join(input.case_id).join(ASSIGNMENTS),
-            &json!({"assignment_id": id, "state": state,
-                    "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
-                    "at": case_records::now_rfc3339()}),
-        )
-        .map_err(|why| {
-            refuse(
-                "FREEZE_INCOMPLETE",
-                &format!("store integrity: {why}"),
-                Some("I-1"),
-            )
-        })?;
+        batch.push(Op::Append {
+            file: ASSIGNMENTS.into(),
+            line: json!({
+                "assignment_id": id,
+                "state": state,
+                "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
+                "at": case_records::now_rfc3339(),
+            }),
+        });
     }
-    // The run record, and for a delegation the link before it (README §8),
-    // still under the caller's case lock and before anything starts.
+    // Seal assignment, link, run, and decision usage in one declared effect
+    // while the same case lock still protects the admission state.
     let episode_ref = facts.episode_ref.unwrap_or_default();
     if input.verb != Verb::HumanTaskComplete {
-        let config = case_records::fde_config(root).map_err(|why| {
-            refuse(
-                "FREEZE_INCOMPLETE",
-                &format!("store integrity: {why}"),
-                Some("I-1"),
-            )
-        })?;
         let agent = input.endpoint.map(|e| format!("agent:{e}"));
         let _ = &workspace;
         let verifier = delegate
@@ -738,8 +728,8 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             input.actor
         };
         let on_behalf_of = if delegate { input.actor } else { None };
-        let (run_id, run_record) = run_records::record_run(
-            root,
+        let (run_id, run_record) = run_records::add_run_records(
+            &dir,
             &run_records::RunInput {
                 case_id: input.case_id,
                 episode_ref: &episode_ref,
@@ -755,6 +745,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                 link,
                 decision_id: Some(decision.decision_id.as_str()),
             },
+            &mut batch,
         )
         .map_err(|why| {
             refuse(
@@ -763,16 +754,20 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                 Some("I-1"),
             )
         })?;
-        // `runs_used` + 1, in the same critical section as the check above.
-        case_records::append_line(
-            &root.join("cases").join(input.case_id).join(EXEC_RUNS),
-            &json!({"decision_key": decision.key, "decision_id": decision.decision_id,
-                    "run_id": run_id, "at": case_records::now_rfc3339()}),
-        )
-        .map_err(|why| {
+        batch.push(Op::Append {
+            file: EXEC_RUNS.into(),
+            line: json!({
+                "decision_key": decision.key,
+                "decision_id": decision.decision_id,
+                "run_id": run_id,
+                "at": case_records::now_rfc3339(),
+            }),
+        });
+        let write_dir = root.join("cases").join(input.case_id);
+        case_guard::commit(&write_dir, batch).map_err(|why| {
             refuse(
                 "FREEZE_INCOMPLETE",
-                &format!("store integrity: {why}"),
+                &format!("store integrity: GUARD:{}:{}", why.code, why.message),
                 Some("I-1"),
             )
         })?;

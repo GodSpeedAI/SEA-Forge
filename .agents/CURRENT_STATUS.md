@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 343
+**Status revision:** 344
 
-**Stage:** FDE S2: portable Field Case model gate
+**Stage:** FDE S2: group execution admission effects
 
-**Summary:** Retain Linux event observations and run the model against final-byte observations on other platforms.
+**Summary:** Declare assignment, delegation link, run record, and decision usage in one guarded batch under the case lock.
 
 **Verified:**
 
+- Focused server conformance passed 80 tests across conformance_fde_scenarios and conformance_field_case.
 - The Linux model suite passed all nine tests, including its existing exact inotify event comparison.
 - All case-runner targets cross-checked for aarch64-apple-darwin and x86_64-pc-windows-msvc.
 - The case-runner suite passed 103 tests with 19 ignored, including five staged-batch tests.
@@ -79,7 +80,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Run the existing native CI lanes on an isolated checkpoint and continue the server outcome and sealed evidence integration.
+**Next:** Verify native conformance harness fixes, then carry publication uncertainty through the runtime writer paths.
 
 **Evidence:**
 
