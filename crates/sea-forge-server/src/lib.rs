@@ -10,7 +10,6 @@
 //! via `spawn_blocking`. Kernel logic stays synchronous; Tokio lives only
 //! here.
 
-use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_core::{
     errors::ForgeError,
@@ -723,7 +722,7 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
                 status: SettlementStatus::Rejected,
                 basis: vec!["cancelled".into()],
                 review_required: false,
-                settled_at: Utc::now().to_rfc3339(),
+                settled_at: sea_forge_core::timestamp::now_rfc3339(),
                 criteria_ref: None,
             };
             agent_probe::commit_view(
@@ -838,7 +837,7 @@ fn recover_cancelled_delegations(config: &ServerConfig) -> Result<(), ForgeError
                 status: SettlementStatus::Rejected,
                 basis: vec!["acp_disconnect".into()],
                 review_required: false,
-                settled_at: Utc::now().to_rfc3339(),
+                settled_at: sea_forge_core::timestamp::now_rfc3339(),
                 criteria_ref: None,
             };
             agent_probe::commit_view(
@@ -5149,7 +5148,7 @@ fn record_cancellation(
         plan_item_id: "agent_task",
         requester: entity.into(),
         authority_decision_ref: authority_ref.entry_ulid().into(),
-        requested_at: Utc::now().to_rfc3339(),
+        requested_at: sea_forge_core::timestamp::now_rfc3339(),
         ordinal: 1,
     };
     agent_probe::commit_view(

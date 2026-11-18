@@ -293,7 +293,7 @@ fn reaches_terminal(dir: &Path, scope: &[(String, &str)]) -> Result<bool, String
                 TraceKind::ItemCompleted
             },
             actor_id: "execution-gate".into(),
-            timestamp: chrono::Utc::now().to_rfc3339(),
+            timestamp: sea_forge_core::timestamp::now_rfc3339(),
             payload: json!({}),
             cell_id: None,
         });
@@ -324,7 +324,7 @@ fn reaches_terminal(dir: &Path, scope: &[(String, &str)]) -> Result<bool, String
             plan_item_id: Some(id),
             kind: TraceKind::MilestoneAchieved,
             actor_id: "execution-gate".into(),
-            timestamp: chrono::Utc::now().to_rfc3339(),
+            timestamp: sea_forge_core::timestamp::now_rfc3339(),
             payload: json!({}),
             cell_id: None,
         });

@@ -103,7 +103,7 @@ fn commit_projection(
     let adapter_ref = "sea-forge-domainforge@0.1";
     let projection_id = ids::random_id("proj")?;
     let model_ref_value = serde_json::to_value(&model.model_ref)?;
-    let created_at = chrono::Utc::now().to_rfc3339();
+    let created_at = sea_forge_core::timestamp::now_rfc3339();
 
     let (record, accepted) = match sea_forge_domainforge::project(model, kind) {
         Ok(outputs) => {
@@ -178,7 +178,7 @@ fn commit_projection(
             "projection_validation_failed".into()
         }],
         review_required: false,
-        settled_at: chrono::Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: None,
     };
     stream.commit_typed(

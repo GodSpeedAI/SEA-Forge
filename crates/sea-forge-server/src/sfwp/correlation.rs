@@ -235,7 +235,7 @@ impl RequestCorrelationStore {
             request_id: request_id.to_string(),
             method: method.to_string(),
             status: RequestStatus::Pending,
-            submitted_at: chrono::Utc::now().to_rfc3339(),
+            submitted_at: sea_forge_core::timestamp::now_rfc3339(),
             completed_at: None,
             outcome: None,
             payload_hash: self.carry_hash(request_id, payload_hash)?,
@@ -313,7 +313,7 @@ impl RequestCorrelationStore {
         let submitted_at = prior
             .as_ref()
             .map(|record| record.submitted_at.clone())
-            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+            .unwrap_or_else(sea_forge_core::timestamp::now_rfc3339);
         let (payload_hash, locator) = match &prior {
             Some(record) => (record.payload_hash.clone(), record.locator.clone()),
             None => (None, None),
@@ -323,7 +323,7 @@ impl RequestCorrelationStore {
             method: method.to_string(),
             status,
             submitted_at,
-            completed_at: Some(chrono::Utc::now().to_rfc3339()),
+            completed_at: Some(sea_forge_core::timestamp::now_rfc3339()),
             outcome: Some(outcome.clone()),
             payload_hash,
             locator,

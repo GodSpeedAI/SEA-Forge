@@ -16,7 +16,7 @@ use sea_forge_self_model::{
 use std::path::Path;
 
 fn now_iso() -> String {
-    chrono::Utc::now().to_rfc3339()
+    sea_forge_core::timestamp::now_rfc3339()
 }
 
 fn default_cell_id(root: &Path) -> Result<String, ForgeError> {

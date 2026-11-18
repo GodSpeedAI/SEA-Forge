@@ -1617,7 +1617,7 @@ fn repair_tail(
     let keep = bytes.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1);
     let fragment = &bytes[keep..];
     let note_line = json!({
-        "repaired_at": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "repaired_at": sea_forge_core::timestamp::now_rfc3339_millis_z(),
         "file": name, "kept_bytes": keep, "dropped_bytes": fragment.len(),
         "dropped_sha256": hex::encode(Sha256::digest(fragment)),
         "dropped_text": String::from_utf8_lossy(&fragment[..fragment.len().min(512)]),

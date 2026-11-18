@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 372
+**Status revision:** 373
 
 **Stage:** FDE S2 | Timestamp checkpoint replay
 
-**Summary:** Carry the unused runtime and spec-pipeline Chrono edge removals into the current FDE integration.
+**Summary:** Carry the compatible case and service record clocks into the current FDE integration.
 
 **Verified:**
 

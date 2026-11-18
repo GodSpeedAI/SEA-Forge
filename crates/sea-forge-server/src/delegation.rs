@@ -266,7 +266,7 @@ pub async fn execute_with_permission_broker(
         summary: format!("Delegate to agent endpoint {endpoint_id}"),
         actor_id: request.entity.into(),
         process_id: request.process.into(),
-        created_at: Utc::now().to_rfc3339(),
+        created_at: sea_forge_core::timestamp::now_rfc3339(),
     };
     let intent_ref = commit_view(
         &ledger,
@@ -424,7 +424,7 @@ pub async fn execute_with_permission_broker(
     // T18): `check_integrity` requires `criteria_declared_at <=
     // execution_started_at`, and `criteria.declared_at` was set above,
     // strictly before this point.
-    let execution_started_at = Utc::now().to_rfc3339();
+    let execution_started_at = sea_forge_core::timestamp::now_rfc3339();
     let mut continuation_key: Option<String> = None;
     let mut harvested_refs: Vec<String> = Vec::new();
     let outcome: sea_forge_agent::DelegationOutcome = if snapshot.kind == ProviderKind::Acp {
@@ -807,7 +807,7 @@ pub async fn execute_with_permission_broker(
         status: status.clone(),
         basis: basis.clone(),
         review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: None,
     };
     commit_view(
@@ -1307,7 +1307,7 @@ fn finish_rejected(
         status: SettlementStatus::Rejected,
         basis: vec![error_class.clone()],
         review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: None,
     };
     commit_view(
@@ -2404,7 +2404,7 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
                 } else {
                     "deny_unmapped".into()
                 },
-                decided_at: Utc::now().to_rfc3339(),
+                decided_at: sea_forge_core::timestamp::now_rfc3339(),
                 raw_sha256,
             };
             if commit_view(

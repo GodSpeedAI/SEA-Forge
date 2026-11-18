@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_capability as capability;
 use sea_forge_core::ids;
@@ -184,7 +183,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let artifacts = run_dir.join("artifacts");
         fs::create_dir(&workspace).map_err(|e| ForgeError::io("create workspace structure", e))?;
         fs::create_dir(&artifacts).map_err(|e| ForgeError::io("create artifacts", e))?;
-        let now = Utc::now().to_rfc3339();
+        let now = sea_forge_core::timestamp::now_rfc3339();
         let intent = Intent {
             intent_id: ids::random_id("int")?,
             summary: options.intent,
@@ -204,7 +203,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         let authority_stream =
             LedgerStream::open(&root, format!("case-{case_id}"), &intent.actor_id)?;
         let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
-        let declared_at = Utc::now().to_rfc3339();
+        let declared_at = sea_forge_core::timestamp::now_rfc3339();
         let mut plan = plan;
         for item in &mut plan.items {
             let record =
@@ -722,7 +721,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
             None,
             json!({"status":settled.status}),
         )?;
-        case.closed_at = Some(Utc::now().to_rfc3339());
+        case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
         match settled.status {
             SettlementStatus::Accepted => case.state = CaseState::Completed,
             SettlementStatus::Rejected => {
@@ -745,7 +744,7 @@ pub fn run_intent(options: RunOptions) -> Result<RunOutcome, ForgeError> {
         // Deterministic memory extraction — final pipeline step (§10.5).
         // Never fails the run; errors are logged operator-visibly.
         let memory_path = sandbox::safe_join(&root, "memory/items.jsonl")?;
-        let now = Utc::now().to_rfc3339();
+        let now = sea_forge_core::timestamp::now_rfc3339();
         let memory_items = capability::memory::extract_from_envelope(&envelope, &now);
         if let Err(error) = capability::memory::append_memory_items(&memory_path, &memory_items) {
             tracing::warn!(

@@ -4,8 +4,8 @@ pub mod case_ops;
 pub mod cell_episode;
 pub mod promotion;
 
-use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_core::timestamp::now_rfc3339;
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_ledger::LedgerStream;
 use sea_forge_planner::case_engine::{next_case_actions, replay_case, CaseAction};
@@ -85,7 +85,7 @@ impl CaseRunner {
                 plan_item_id: item_id.map(str::to_owned),
                 kind,
                 actor_id: "case_engine".into(),
-                timestamp: Utc::now().to_rfc3339(),
+                timestamp: now_rfc3339(),
                 payload,
                 cell_id: None,
             },
@@ -214,7 +214,7 @@ fn run_stage_episode(
             status: SettlementStatus::Rejected,
             basis: vec!["prerequisite_invalid".into()],
             review_required: false,
-            settled_at: Utc::now().to_rfc3339(),
+            settled_at: now_rfc3339(),
             criteria_ref: item.settlement_criteria_ref.clone(),
         });
     }
@@ -249,7 +249,7 @@ fn run_stage_episode(
                 status: SettlementStatus::Rejected,
                 basis: vec!["generated_zone_direct_edit".into()],
                 review_required: false,
-                settled_at: Utc::now().to_rfc3339(),
+                settled_at: now_rfc3339(),
                 criteria_ref: item.settlement_criteria_ref.clone(),
             });
         }
@@ -391,7 +391,7 @@ pub fn run_stage_case(
             summary: format!("Execute spec pipeline for case {case_id}"),
             actor_id: entity.into(),
             process_id: "spec_pipeline".into(),
-            created_at: Utc::now().to_rfc3339(),
+            created_at: now_rfc3339(),
         },
         state: CaseState::Active,
         plan_ref: plan.plan_id.clone(),
@@ -402,7 +402,7 @@ pub fn run_stage_case(
             .map(|item| item.plan_item_id.clone())
             .collect(),
         close_reason: None,
-        created_at: Utc::now().to_rfc3339(),
+        created_at: now_rfc3339(),
         closed_at: None,
     };
     write_json(&case_dir.join("case.json"), &case)?;
@@ -438,7 +438,7 @@ pub fn run_stage_case(
                 }
                 CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(now_rfc3339());
                     CaseRunner::append_event(
                         &case_events,
                         &stream,
@@ -452,7 +452,7 @@ pub fn run_stage_case(
                 CaseAction::TerminateCase { blocking_item } => {
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(now_rfc3339());
                     CaseRunner::append_event(
                         &case_events,
                         &stream,

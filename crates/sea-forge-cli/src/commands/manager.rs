@@ -197,7 +197,7 @@ pub fn iterate(opts: ManagerIterateOptions) -> Result<u8, ForgeError> {
         action: ManagerAction::Noop,
         proposed_item_ref: None,
         granted: None,
-        recorded_at: Utc::now().to_rfc3339(),
+        recorded_at: sea_forge_core::timestamp::now_rfc3339(),
     };
 
     match judgment {

@@ -482,7 +482,7 @@ impl McpListenerGuard {
         }
         let record = json!({"server": self.server, "reason": reason,
             "barrier": "listener_closed_session_ended_upstream_killed",
-            "acknowledged_at": chrono::Utc::now().to_rfc3339()});
+            "acknowledged_at": sea_forge_core::timestamp::now_rfc3339()});
         LedgerStream::open(
             &self.root,
             format!("mcp-listener-{}", self.server),

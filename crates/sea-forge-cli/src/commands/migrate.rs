@@ -401,7 +401,7 @@ pub fn execute(options: MigrateOptions<'_>) -> Result<u8, ForgeError> {
     // Write the migration marker only after all prior steps succeeded.
     let marker = MigrationMarker {
         version: sea_forge_core::RECORD_VERSION.into(),
-        migrated_at: chrono::Utc::now().to_rfc3339(),
+        migrated_at: sea_forge_core::timestamp::now_rfc3339(),
         stream_id: MIGRATION_STREAM.into(),
         entry_count: committed.len() as u64,
         global_checkpoint_hash: global_checkpoint.global_checkpoint_hash,

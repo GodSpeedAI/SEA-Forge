@@ -7,6 +7,23 @@ pub fn now_rfc3339() -> String {
     format_utc(OffsetDateTime::now_utc())
 }
 
+/// Return the current UTC time with exactly three fractional digits and a Z suffix.
+pub fn now_rfc3339_millis_z() -> String {
+    format_utc_millis_z(OffsetDateTime::now_utc())
+}
+
+fn format_utc_millis_z(timestamp: OffsetDateTime) -> String {
+    let timestamp = timestamp.to_offset(UtcOffset::UTC);
+    format!(
+        "{}T{:02}:{:02}:{:02}.{:03}Z",
+        timestamp.date(),
+        timestamp.hour(),
+        timestamp.minute(),
+        timestamp.second(),
+        timestamp.millisecond(),
+    )
+}
+
 fn format_utc(timestamp: OffsetDateTime) -> String {
     let timestamp = timestamp.to_offset(UtcOffset::UTC);
     let mut text = format!(
@@ -35,8 +52,20 @@ fn format_utc(timestamp: OffsetDateTime) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::format_utc;
+    use super::{format_utc, format_utc_millis_z};
     use time::macros::datetime;
+
+    #[test]
+    fn repair_timestamp_bytes_keep_fixed_milliseconds_and_z() {
+        assert_eq!(
+            format_utc_millis_z(datetime!(2026-11-18 08:00:00.123_456_7 -05:00)),
+            "2026-11-18T13:00:00.123Z",
+        );
+        assert_eq!(
+            format_utc_millis_z(datetime!(2026-11-18 08:00:00 UTC)),
+            "2026-11-18T08:00:00.000Z",
+        );
+    }
 
     #[test]
     fn timestamp_bytes_match_historical_record_precision() {

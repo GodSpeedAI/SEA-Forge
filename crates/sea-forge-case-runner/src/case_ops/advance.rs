@@ -13,7 +13,7 @@
 //! (D-3). This loop is the "both, behind one engine call" half.
 
 use super::{load_case_plan, paths, write_json, CaseEventNotifier};
-use chrono::Utc;
+use sea_forge_core::timestamp::now_rfc3339;
 use sea_forge_core::{
     errors::ForgeError,
     ids,
@@ -258,7 +258,7 @@ pub fn advance_case(
                 }
                 CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(now_rfc3339());
                     append_notify(
                         &case_events,
                         &stream,
@@ -273,7 +273,7 @@ pub fn advance_case(
                 CaseAction::TerminateCase { blocking_item } => {
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(now_rfc3339());
                     append_notify(
                         &case_events,
                         &stream,
@@ -351,7 +351,7 @@ pub fn advance_case(
                     status: SettlementStatus::Rejected,
                     basis: vec!["episode_dispatch_error".into(), class.into()],
                     review_required: false,
-                    settled_at: Utc::now().to_rfc3339(),
+                    settled_at: now_rfc3339(),
                     criteria_ref: item.settlement_criteria_ref.clone(),
                 }
             });

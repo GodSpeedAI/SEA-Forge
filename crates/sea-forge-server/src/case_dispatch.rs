@@ -104,7 +104,7 @@ pub(crate) async fn submit(
                 summary: format!("Execute plan {plan_ref}"),
                 actor_id: mint_entity,
                 process_id: mint_process,
-                created_at: Utc::now().to_rfc3339(),
+                created_at: sea_forge_core::timestamp::now_rfc3339(),
             };
             let case = Case {
                 version: RECORD_VERSION.into(),
@@ -120,7 +120,7 @@ pub(crate) async fn submit(
                     .map(|item| item.plan_item_id.clone())
                     .collect(),
                 close_reason: None,
-                created_at: Utc::now().to_rfc3339(),
+                created_at: sea_forge_core::timestamp::now_rfc3339(),
                 closed_at: None,
             };
             write_json(&case_dir.join("case.json"), &case)?;
@@ -231,7 +231,7 @@ pub(crate) async fn submit(
                 )?,
                 CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     CaseRunner::append_event(
                         &case_events,
                         &stream,
@@ -264,7 +264,7 @@ pub(crate) async fn submit(
                     }
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     CaseRunner::append_event(
                         &case_events,
                         &stream,
@@ -447,7 +447,7 @@ pub(crate) async fn submit(
                                 status: SettlementStatus::Rejected,
                                 basis: vec!["episode_dispatch_error".into(), error.class().into()],
                                 review_required: false,
-                                settled_at: Utc::now().to_rfc3339(),
+                                settled_at: sea_forge_core::timestamp::now_rfc3339(),
                                 criteria_ref,
                             }
                         });
@@ -653,7 +653,7 @@ async fn execute_agent(
         // criteria mismatch).
         basis: outcome.basis,
         review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: item.settlement_criteria_ref.clone(),
     })
 }
@@ -710,7 +710,7 @@ fn commit_item_criteria(
                 item.plan_item_id
             ),
         },
-        declared_at: Utc::now().to_rfc3339(),
+        declared_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_record_hash: String::new(),
     };
     record.criteria_record_hash = sea_forge_planner::compute_record_hash(&record)?;

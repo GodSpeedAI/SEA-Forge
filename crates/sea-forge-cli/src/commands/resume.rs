@@ -169,7 +169,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         let mut case = case;
         case.state = CaseState::Completed;
         case.closed_at
-            .get_or_insert_with(|| Utc::now().to_rfc3339());
+            .get_or_insert_with(sea_forge_core::timestamp::now_rfc3339);
         write_json(&case_dir.join("case.json"), &case)?;
         println!("declaration_id={}", completed.declaration.declaration_id);
         println!(
@@ -189,7 +189,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         case.state = CaseState::Terminated;
         case.close_reason = Some("artifact_transition_terminal".into());
         case.closed_at
-            .get_or_insert_with(|| Utc::now().to_rfc3339());
+            .get_or_insert_with(sea_forge_core::timestamp::now_rfc3339);
         write_json(&case_dir.join("case.json"), &case)?;
         return Ok(ResumeOutcome {
             case_id: options.case_id,
@@ -288,7 +288,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
         let mut case = case;
         case.state = CaseState::Terminated;
         case.close_reason = Some("authority_escalate_expired".into());
-        case.closed_at = Some(Utc::now().to_rfc3339());
+        case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
         write_json(&case_dir.join("case.json"), &case)?;
         let stream =
             LedgerStream::open(&root, format!("case-{}", options.case_id), &options.entity)?;
@@ -615,7 +615,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                 }
                 sea_forge_planner::case_engine::CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     append_event(
                         &case_events,
                         &stream,
@@ -634,7 +634,7 @@ pub fn resume(options: ResumeOptions) -> Result<ResumeOutcome, ForgeError> {
                 sea_forge_planner::case_engine::CaseAction::TerminateCase { blocking_item } => {
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     append_event(
                         &case_events,
                         &stream,
@@ -813,12 +813,12 @@ fn resume_artifact_transition(
                 reason,
                 transition_token_ref: None,
                 declaration_ref: None,
-                terminal_at: Utc::now().to_rfc3339(),
+                terminal_at: sea_forge_core::timestamp::now_rfc3339(),
             },
         )?;
         case.state = CaseState::Terminated;
         case.close_reason = Some(close_reason.into());
-        case.closed_at = Some(Utc::now().to_rfc3339());
+        case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
         write_json(&case_dir.join("case.json"), &case)?;
         return Ok(ResumeOutcome {
             case_id: options.case_id,
@@ -1064,12 +1064,12 @@ fn resume_artifact_transition(
                 reason: sea_forge_artifact_ip::ArtifactTransitionTerminalReason::SettlementRejected,
                 transition_token_ref: None,
                 declaration_ref: None,
-                terminal_at: Utc::now().to_rfc3339(),
+                terminal_at: sea_forge_core::timestamp::now_rfc3339(),
             },
         )?;
         case.state = CaseState::Terminated;
         case.close_reason = Some("artifact_transition_settlement_rejected".into());
-        case.closed_at = Some(Utc::now().to_rfc3339());
+        case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
         write_json(&case_dir.join("case.json"), &case)?;
         return Ok(ResumeOutcome {
             case_id: options.case_id,
@@ -1257,12 +1257,12 @@ fn resume_artifact_transition(
             reason: sea_forge_artifact_ip::ArtifactTransitionTerminalReason::TransitionCommitted,
             transition_token_ref: Some(resumed.token.transition_token_id.clone()),
             declaration_ref: Some(resumed.declaration.declaration_id.clone()),
-            terminal_at: Utc::now().to_rfc3339(),
+            terminal_at: sea_forge_core::timestamp::now_rfc3339(),
         },
     )?;
     case.state = CaseState::Completed;
     case.run_ids = vec![pending.run_id];
-    case.closed_at = Some(Utc::now().to_rfc3339());
+    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
     write_json(&case_dir.join("case.json"), &case)?;
     println!("declaration_id={}", resumed.declaration.declaration_id);
     println!("transition_token_id={}", resumed.token.transition_token_id);

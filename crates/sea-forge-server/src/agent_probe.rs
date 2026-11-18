@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sea_forge_agent::{
     AgentConfig, AgentError, AgentMessage, AgentProvider, AnthropicProvider, CompletionRequest,
     OpenAiCompatibleProvider, ProviderKind,
@@ -133,7 +132,7 @@ pub async fn probe(
         summary: format!("Probe configured agent endpoint {endpoint_id}"),
         actor_id: request.entity.into(),
         process_id: request.process.into(),
-        created_at: Utc::now().to_rfc3339(),
+        created_at: sea_forge_core::timestamp::now_rfc3339(),
     };
     let intent_ref = commit_view(
         &ledger,
@@ -357,7 +356,7 @@ pub async fn probe(
                 status: SettlementStatus::Accepted,
                 basis: vec!["authority_allow".into(), "schema_valid_response".into()],
                 review_required: false,
-                settled_at: Utc::now().to_rfc3339(),
+                settled_at: sea_forge_core::timestamp::now_rfc3339(),
                 criteria_ref: None,
             };
             commit_view(
@@ -428,7 +427,7 @@ fn finish_rejected(
         status: SettlementStatus::Rejected,
         basis: vec![error_class.clone()],
         review_required: false,
-        settled_at: Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: None,
     };
     commit_view(

@@ -28,6 +28,7 @@ pub mod mediation;
 mod versioned_store;
 
 use chrono::Utc;
+use sea_forge_core::timestamp::now_rfc3339;
 use sea_forge_core::{
     errors::ForgeError,
     ids,
@@ -229,7 +230,7 @@ fn commit_case_event(
         plan_item_id: item_id.map(str::to_owned),
         kind,
         actor_id: actor.into(),
-        timestamp: chrono::Utc::now().to_rfc3339(),
+        timestamp: now_rfc3339(),
         payload,
         cell_id: None,
     };
@@ -383,7 +384,7 @@ pub fn terminate_with(
     )?;
     case.state = CaseState::Terminated;
     case.close_reason = Some(format!("operator_terminated:{reason}"));
-    case.closed_at = Some(Utc::now().to_rfc3339());
+    case.closed_at = Some(now_rfc3339());
     write_json(&case_path, &case)?;
     Ok(0)
 }
@@ -606,7 +607,7 @@ pub fn complete_human_task_with(
         plan_item_id: Some(item_id.into()),
         kind: TraceKind::HumanTaskCompleted,
         actor_id: actor.into(),
-        timestamp: Utc::now().to_rfc3339(),
+        timestamp: now_rfc3339(),
         payload: json!({"note": note}),
         cell_id: None,
     });
@@ -641,7 +642,7 @@ pub fn complete_human_task_with(
                     plan_item_id: Some(id.clone()),
                     kind: TraceKind::MilestoneAchieved,
                     actor_id: actor.into(),
-                    timestamp: Utc::now().to_rfc3339(),
+                    timestamp: now_rfc3339(),
                     payload: json!({}),
                     cell_id: None,
                 });
@@ -657,7 +658,7 @@ pub fn complete_human_task_with(
                     notify,
                 )?;
                 case.state = CaseState::Completed;
-                case.closed_at = Some(Utc::now().to_rfc3339());
+                case.closed_at = Some(now_rfc3339());
                 save_case(root, case_id, &case)?;
                 return Ok(0);
             }

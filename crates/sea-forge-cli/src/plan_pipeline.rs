@@ -128,7 +128,7 @@ fn run_plan_inner(
             .unwrap_or_else(|| format!("Execute plan {}", options.plan.display())),
         actor_id: options.entity.clone(),
         process_id: options.process.clone(),
-        created_at: Utc::now().to_rfc3339(),
+        created_at: sea_forge_core::timestamp::now_rfc3339(),
     };
     let actor = Actor {
         actor_id: options.entity.clone(),
@@ -163,7 +163,7 @@ fn run_plan_inner(
 
     // Derive and commit settlement criteria records for every settling item.
     let mut criteria_map: BTreeMap<String, SettlementCriteriaRecord> = BTreeMap::new();
-    let declared_at = Utc::now().to_rfc3339();
+    let declared_at = sea_forge_core::timestamp::now_rfc3339();
     for item in &mut plan.items {
         let mut record = if let Some(template) = &built_in_template {
             sea_forge_planner::derive_from_template(
@@ -393,7 +393,7 @@ fn run_plan_inner(
             .map(|item| item.plan_item_id.clone())
             .collect(),
         close_reason: None,
-        created_at: Utc::now().to_rfc3339(),
+        created_at: sea_forge_core::timestamp::now_rfc3339(),
         closed_at: None,
     };
     write_json(&case_dir.join("case.json"), &case)?;
@@ -635,7 +635,7 @@ fn run_plan_inner(
                             status: status.clone(),
                             basis: vec!["agent_task_delegated".into()],
                             review_required: false,
-                            settled_at: Utc::now().to_rfc3339(),
+                            settled_at: sea_forge_core::timestamp::now_rfc3339(),
                             criteria_ref: item.settlement_criteria_ref.clone(),
                         };
                         stream.commit_typed(
@@ -789,8 +789,8 @@ fn run_plan_inner(
                             exit_code: Some(0),
                             stdout_path: "artifacts/stdout.txt".into(),
                             stderr_path: "artifacts/stderr.txt".into(),
-                            started_at: Utc::now().to_rfc3339(),
-                            finished_at: Utc::now().to_rfc3339(),
+                            started_at: sea_forge_core::timestamp::now_rfc3339(),
+                            finished_at: sea_forge_core::timestamp::now_rfc3339(),
                             // No process ran for this item: there is no
                             // process tree whose lifecycle was contained.
                             lifecycle_containment: LifecycleContainment::NoProcess,
@@ -868,7 +868,7 @@ fn run_plan_inner(
                 }
                 CaseAction::CompleteCase => {
                     case.state = CaseState::Completed;
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     append_event(
                         &case_events,
                         &stream,
@@ -887,7 +887,7 @@ fn run_plan_inner(
                 CaseAction::TerminateCase { blocking_item } => {
                     case.state = CaseState::Terminated;
                     case.close_reason = Some(format!("required_item_failed:{blocking_item}"));
-                    case.closed_at = Some(Utc::now().to_rfc3339());
+                    case.closed_at = Some(sea_forge_core::timestamp::now_rfc3339());
                     append_event(
                         &case_events,
                         &stream,

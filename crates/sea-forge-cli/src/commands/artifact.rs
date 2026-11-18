@@ -143,7 +143,7 @@ pub fn transition_command(
                         proposal: pending_proposal,
                         proposal_snapshot_hash: String::new(),
                         profile_hash: String::new(),
-                        created_at: chrono::Utc::now().to_rfc3339(),
+                        created_at: sea_forge_core::timestamp::now_rfc3339(),
                     };
                     seal_pending_transition(&mut pending)?;
                     commit_pending_transition(&pending_root, &pending_actor, &pending)?;
