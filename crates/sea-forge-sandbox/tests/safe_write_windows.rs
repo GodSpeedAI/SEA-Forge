@@ -228,3 +228,37 @@ fn pinned_anchor_refuses_write_handles_and_a_planted_junction_does_not_redirect(
         "the outside junction target received entries while the pin was active"
     );
 }
+
+#[test]
+fn local_ntfs_publishes_a_staged_namespace_and_a_replacement_selector() {
+    use sea_forge_sandbox::{
+        publish_trusted_sibling, TrustedPublicationError, TrustedPublicationKind as Kind,
+        TrustedPublicationMode as Mode,
+    };
+    use std::{ffi::OsStr, fs};
+
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let staged = OsStr::new("stage-case");
+    let case = OsStr::new("case-1");
+    fs::create_dir(root.join(staged)).unwrap();
+    fs::write(root.join(staged).join("current.json"), b"generation 1").unwrap();
+
+    publish_trusted_sibling(&root, staged, case, Kind::Directory, Mode::NoReplace).unwrap();
+    let published = root.join(case);
+    let selector = OsStr::new("current.json");
+    assert_eq!(fs::read(published.join(selector)).unwrap(), b"generation 1");
+
+    fs::create_dir(root.join(staged)).unwrap();
+    assert!(matches!(
+        publish_trusted_sibling(&root, staged, case, Kind::Directory, Mode::NoReplace),
+        Err(TrustedPublicationError::BeforeCommit(_))
+    ));
+    assert_eq!(fs::read(published.join(selector)).unwrap(), b"generation 1");
+
+    let next = OsStr::new("staged-selector");
+    fs::write(published.join(next), b"generation 2").unwrap();
+    publish_trusted_sibling(&published, next, selector, Kind::File, Mode::Replace).unwrap();
+    assert_eq!(fs::read(published.join(selector)).unwrap(), b"generation 2");
+    assert!(!published.join(next).exists());
+}

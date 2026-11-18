@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 353
+**Status revision:** 354
 
-**Stage:** FDE S2: verify sealed evidence package quality
+**Stage:** FDE S2: wire local NTFS handle-based staged publication
 
-**Summary:** Use one map entry lookup when recording the captured artifact, preserving the existing one-read behavior.
+**Summary:** Route the staged Windows publisher through write-through sibling handles on fixed NTFS volumes and preserve uncertainty after selection.
 
 **Verified:**
 
+- All 8 case-runner library tests passed locally, including the staged publication and durability-boundary cases.
+- All affected Windows targets cross-checked, including the new native NTFS publication test in the existing Portability test target.
 - Clippy with -D warnings passed for all targets of sandbox, case-runner, server, evidence, and settlement.
 - The corrected capture checkpoint 1cbc292e is on the isolated verification branch. Native Portability run 44317645405 is queued for that checkpoint.
 - The Field Case sealing regression passed after the Unix hardening. The macOS sandbox target and Windows os and sandbox targets cross-checked.
@@ -73,6 +75,7 @@
 
 **Limits:**
 
+- The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
 - Full workspace verification on the later capture checkpoint and native macOS and Windows acceptance remain open.
 - The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
 - The revised Windows Rust handler still needs the hosted native rerun. The NTFS rename fixture does not establish production versioned activation or crash recovery.
@@ -112,7 +115,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish the hosted native verification, then integrate the local NTFS publication primitive and resolve bounded capture before activation.
+**Next:** Run the existing native Portability workflow on the NTFS checkpoint, then finish capture staging and runtime writer activation with crash recovery proof.
 
 **Evidence:**
 

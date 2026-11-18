@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
 use windows_sys::Wdk::Storage::FileSystem::{
     NtCreateFile, FILE_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_FOR_BACKUP_INTENT, FILE_OPEN_IF,
-    FILE_SYNCHRONOUS_IO_NONALERT,
+    FILE_SYNCHRONOUS_IO_NONALERT, FILE_WRITE_THROUGH,
 };
 use windows_sys::Win32::Foundation::{
     CloseHandle, LocalFree, RtlNtStatusToDosError, ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND,
@@ -30,14 +30,14 @@ use windows_sys::Win32::Security::{
 };
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, FileRenameInfo,
-    GetFileInformationByHandle, GetFileInformationByHandleEx, GetFileType,
-    GetFinalPathNameByHandleW, GetLongPathNameW, SetFileInformationByHandle,
-    BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE, FILE_ATTRIBUTE_DIRECTORY,
-    FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO,
-    FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
-    FILE_GENERIC_READ, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_RENAME_INFO_0,
-    FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_TYPE_DISK, OPEN_EXISTING,
-    VOLUME_NAME_DOS,
+    FlushFileBuffers, GetDriveTypeW, GetFileInformationByHandle, GetFileInformationByHandleEx,
+    GetFileType, GetFinalPathNameByHandleW, GetLongPathNameW, GetVolumeInformationByHandleW,
+    GetVolumePathNameW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
+    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
+    FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
+    FILE_FLAG_OPEN_REPARSE_POINT, FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_ID_INFO,
+    FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ,
+    FILE_SHARE_WRITE, FILE_TYPE_DISK, OPEN_EXISTING, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -1236,6 +1236,228 @@ fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
     std::ffi::OsString::from_wide(&target)
 }
 
+/// Kind of staged sibling expected by [`publish_trusted_sibling`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrustedPublicationKind {
+    /// A regular, single-link file (for example a selector).
+    File,
+    /// A staged directory (for example a complete generation).
+    Directory,
+}
+
+/// Rename collision behavior for a trusted sibling publication.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrustedPublicationMode {
+    /// Fail if the destination exists.
+    NoReplace,
+    /// Ask the filesystem to replace an existing destination.
+    Replace,
+}
+
+/// Publication failed before the rename, or after the rename had committed.
+#[derive(Debug)]
+pub enum TrustedPublicationError {
+    /// No successful rename was reported by the OS.
+    BeforeCommit(io::Error),
+    /// The rename succeeded but verification or the directory flush failed.
+    /// The destination may already be visible; do not retry as an uncommitted write.
+    Committed(io::Error),
+}
+
+fn trusted_component(name: &OsStr) -> io::Result<()> {
+    let units: Vec<u16> = name.encode_wide().collect();
+    if units.is_empty()
+        || units == [46]
+        || units == [46, 46]
+        || units
+            .iter()
+            .any(|&c| c == 0 || c == 47 || c == 92 || c == 58)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "publication name must be a single component without a stream",
+        ));
+    }
+    Ok(())
+}
+
+/// Publish a staged sibling on a local fixed NTFS volume.
+///
+/// Security contract: the caller exclusively controls the parent namespace,
+/// its ancestors, and the staged tree, and has already validated and flushed
+/// all staged contents. In particular, this shared-write parent pin does not
+/// exclude directory mutations or protect ancestors from rename/substitution.
+/// The source handle excludes concurrent writers/deleters of that object, but
+/// does not lock directory descendants or invalidate pre-existing writable
+/// mappings. The retained parent denies delete sharing throughout the rename.
+/// No claim is made about untrusted namespace writers, crash recovery, storage
+/// hardware durability, or platforms/filesystems beyond the checked contract.
+/// A successful rename followed by a failed check/flush is `Committed`.
+pub fn publish_trusted_sibling(
+    parent: &Path,
+    source: &OsStr,
+    destination: &OsStr,
+    kind: TrustedPublicationKind,
+    mode: TrustedPublicationMode,
+) -> Result<(), TrustedPublicationError> {
+    let before = TrustedPublicationError::BeforeCommit;
+    trusted_component(source).map_err(before)?;
+    trusted_component(destination).map_err(before)?;
+    if source
+        .to_string_lossy()
+        .eq_ignore_ascii_case(&destination.to_string_lossy())
+    {
+        return Err(before(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "source and destination must differ",
+        )));
+    }
+    let parent_handle = open_entry(
+        parent,
+        PINNED_DIR_ACCESS,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        OPEN_EXISTING,
+        DIRECTORY_FLAGS,
+    )
+    .map_err(before)?;
+    let parent_raw = parent_handle.as_raw_handle() as HANDLE;
+    refuse_reparse_or_file(parent_raw, parent)
+        .map_err(pin_error_into_io)
+        .map_err(before)?;
+    confirm_final_path(parent_raw, parent)
+        .map_err(pin_error_into_io)
+        .map_err(before)?;
+    let parent_id = handle_id(parent_raw).map_err(before)?;
+    let parent_path = handle_final_path(parent_raw).map_err(before)?;
+    let mut fs_name = [0u16; 32];
+    // SAFETY: the parent handle is live and fs_name is a valid writable buffer.
+    if unsafe {
+        GetVolumeInformationByHandleW(
+            parent_raw,
+            null_mut(),
+            0,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            fs_name.as_mut_ptr(),
+            fs_name.len() as u32,
+        )
+    } == FALSE
+    {
+        return Err(before(last_error()));
+    }
+    let fs_end = fs_name
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(fs_name.len());
+    if !String::from_utf16_lossy(&fs_name[..fs_end]).eq_ignore_ascii_case("NTFS") {
+        return Err(before(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "publication requires NTFS",
+        )));
+    }
+    let path_wide = to_wide(&parent_path);
+    let mut volume_root = vec![0u16; 32768];
+    // SAFETY: path_wide is NUL-terminated and volume_root is writable.
+    if unsafe {
+        GetVolumePathNameW(
+            path_wide.as_ptr(),
+            volume_root.as_mut_ptr(),
+            volume_root.len() as u32,
+        )
+    } == FALSE
+    {
+        return Err(before(last_error()));
+    }
+    // DRIVE_FIXED is 3; the volume root is NUL-terminated by GetVolumePathNameW.
+    // SAFETY: volume_root contains the successful API's NUL-terminated result.
+    if unsafe { GetDriveTypeW(volume_root.as_ptr()) } != 3 {
+        return Err(before(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "publication requires a local fixed volume",
+        )));
+    }
+    let source_handle = open_anchored(
+        parent_raw,
+        source,
+        FILE_GENERIC_READ | FILE_GENERIC_WRITE | DELETE,
+        FILE_SHARE_READ,
+        FILE_OPEN,
+        FILE_OPEN_FOR_BACKUP_INTENT
+            | FILE_FLAG_OPEN_REPARSE_POINT
+            | FILE_SYNCHRONOUS_IO_NONALERT
+            | FILE_WRITE_THROUGH,
+    )
+    .map_err(before)?;
+    let source_raw = source_handle.as_raw_handle() as HANDLE;
+    let tag = handle_attribute_tag(source_raw).map_err(before)?;
+    // SAFETY: source_raw is a live owned handle.
+    if tag.ReparseTag != 0
+        || tag.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
+        || unsafe { GetFileType(source_raw) } != FILE_TYPE_DISK
+        || (tag.FileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0)
+            != (kind == TrustedPublicationKind::Directory)
+    {
+        return Err(before(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unsafe staged source type",
+        )));
+    }
+    if kind == TrustedPublicationKind::File
+        && handle_info(source_raw).map_err(before)?.nNumberOfLinks != 1
+    {
+        return Err(before(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "staged file must have one link",
+        )));
+    }
+    let source_id = handle_id(source_raw).map_err(before)?;
+    let target = absolute_rename_target(&parent_path, destination);
+    rename_handle_into_mode(source_raw, &target, mode == TrustedPublicationMode::Replace)
+        .map_err(before)?;
+    let after = TrustedPublicationError::Committed;
+    let verify = || -> io::Result<()> {
+        refuse_reparse_or_file(parent_raw, &parent_path).map_err(pin_error_into_io)?;
+        confirm_final_path(parent_raw, &parent_path).map_err(pin_error_into_io)?;
+        let id = handle_id(parent_raw)?;
+        if id.VolumeSerialNumber != parent_id.VolumeSerialNumber
+            || id.FileId.Identifier != parent_id.FileId.Identifier
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "publication parent identity changed",
+            ));
+        }
+        let published = open_anchored(
+            parent_raw,
+            destination,
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            FILE_OPEN,
+            FILE_OPEN_FOR_BACKUP_INTENT | FILE_FLAG_OPEN_REPARSE_POINT,
+        )?;
+        let raw = published.as_raw_handle() as HANDLE;
+        let tag = handle_attribute_tag(raw)?;
+        let id = handle_id(raw)?;
+        if tag.ReparseTag != 0
+            || tag.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
+            || id.VolumeSerialNumber != source_id.VolumeSerialNumber
+            || id.FileId.Identifier != source_id.FileId.Identifier
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "published entry identity changed",
+            ));
+        }
+        // SAFETY: parent_raw is a live directory handle opened for write.
+        if unsafe { FlushFileBuffers(parent_raw) } == FALSE {
+            return Err(last_error());
+        }
+        Ok(())
+    };
+    verify().map_err(after)
+}
+
 /// Renames the open file `file` to the absolute `\\?\` path `target`,
 /// replacing an existing entry: `SetFileInformationByHandle` with information
 /// class `FileRenameInfo` (class 10), `ReplaceIfExists=TRUE`, and a
@@ -1263,6 +1485,10 @@ fn absolute_rename_target(pinned: &Path, name: &OsStr) -> std::ffi::OsString {
 /// Platform contract: `FileNameLength` is counted in BYTES of the target
 /// (terminator excluded) and the buffer is exactly header + bytes.
 fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
+    rename_handle_into_mode(file, target, true)
+}
+
+fn rename_handle_into_mode(file: HANDLE, target: &OsStr, replace: bool) -> io::Result<()> {
     let target_wide: Vec<u16> = target.encode_wide().collect();
     // FileNameLength is counted in BYTES of the target name (not characters),
     // without the terminator.
@@ -1276,7 +1502,7 @@ fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
     // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
     unsafe {
         (*info).Anonymous = FILE_RENAME_INFO_0 {
-            ReplaceIfExists: true,
+            ReplaceIfExists: replace,
         };
         (*info).RootDirectory = null_mut();
         (*info).FileNameLength = target_bytes as u32;
@@ -1296,7 +1522,7 @@ fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
             format!(
                 "SetFileInformationByHandle(FileRenameInfo) rename failed: {error} \
                  (os code {}); FileRenameInfo sent: class=FileRenameInformation (10), \
-                 ReplaceIfExists=TRUE, RootDirectory=NULL, FileNameLength={target_bytes} \
+                 ReplaceIfExists={replace}, RootDirectory=NULL, FileNameLength={target_bytes} \
                  bytes ({} UTF-16 units, terminator excluded), buffer={size} bytes, \
                  target={:?}",
                 error.raw_os_error().unwrap_or(0),

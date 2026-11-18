@@ -925,6 +925,12 @@ pub fn read_workspace_file(_root: &Path, rel: &str) -> Result<Vec<u8>, ForgeErro
     )))
 }
 
+#[cfg(windows)]
+pub use sea_forge_os::{
+    publish_trusted_sibling, TrustedPublicationError, TrustedPublicationKind,
+    TrustedPublicationMode,
+};
+
 /// Neither Unix nor Windows: no containment support is available here.
 #[cfg(not(any(unix, windows)))]
 pub fn safe_write_within(_root: &Path, destination: &Path, bytes: &[u8]) -> Result<(), ForgeError> {

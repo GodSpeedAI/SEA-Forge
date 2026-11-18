@@ -71,7 +71,7 @@ pub fn publish(
         } => {
             require_siblings(staged_namespace, case).map_err(PreCommit)?;
             require_absent(case).map_err(PreCommit)?;
-            fs::rename(staged_namespace, case).map_err(PreCommit)?; // commit point
+            rename_sibling(staged_namespace, case, false)?; // commit point
             flush_dir(parent(case).map_err(PublishedUncertain)?).map_err(PublishedUncertain)
         }
         Publication::Next {
@@ -98,11 +98,56 @@ pub fn publish(
             {
                 return Err(PreCommit(invalid("selectors must be regular files")));
             }
-            fs::rename(staged_generation, &slot).map_err(PreCommit)?;
+            rename_sibling(staged_generation, &slot, false).map_err(|error| match error {
+                // The current selector still refers to the old generation.
+                PreCommit(source) | PublishedUncertain(source) => PreCommit(source),
+            })?;
             // Ensure the generation binding precedes publication of its selector.
             flush_dir(&generations).map_err(PreCommit)?;
-            fs::rename(staged_selector, &current).map_err(PreCommit)?; // commit point
+            rename_sibling(staged_selector, &current, true)?; // commit point
             flush_dir(case).map_err(PublishedUncertain)
         }
     }
+}
+
+#[cfg(not(windows))]
+fn rename_sibling(source: &Path, target: &Path, _replace: bool) -> Result<(), PublishError> {
+    fs::rename(source, target).map_err(PublishError::PreCommit)
+}
+
+#[cfg(windows)]
+fn rename_sibling(source: &Path, target: &Path, replace: bool) -> Result<(), PublishError> {
+    use sea_forge_sandbox::{
+        publish_trusted_sibling, TrustedPublicationError, TrustedPublicationKind,
+        TrustedPublicationMode,
+    };
+
+    let source_name = source
+        .file_name()
+        .ok_or_else(|| PublishError::PreCommit(invalid("stage must have a file name")))?;
+    let target_name = target.file_name().ok_or_else(|| {
+        PublishError::PreCommit(invalid("publication slot must have a file name"))
+    })?;
+    let (kind, mode) = if replace {
+        (
+            TrustedPublicationKind::File,
+            TrustedPublicationMode::Replace,
+        )
+    } else {
+        (
+            TrustedPublicationKind::Directory,
+            TrustedPublicationMode::NoReplace,
+        )
+    };
+    publish_trusted_sibling(
+        parent(source).map_err(PublishError::PreCommit)?,
+        source_name,
+        target_name,
+        kind,
+        mode,
+    )
+    .map_err(|error| match error {
+        TrustedPublicationError::BeforeCommit(source) => PublishError::PreCommit(source),
+        TrustedPublicationError::Committed(source) => PublishError::PublishedUncertain(source),
+    })
 }

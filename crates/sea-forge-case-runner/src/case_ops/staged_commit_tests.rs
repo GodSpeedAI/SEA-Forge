@@ -10,8 +10,22 @@ use std::io as std_io;
 
 const CASE: &str = "case-0001";
 
+#[cfg(not(windows))]
 fn dir_sync(path: &Path) -> std_io::Result<()> {
     File::open(path)?.sync_all()
+}
+
+#[cfg(windows)]
+fn dir_sync(path: &Path) -> std_io::Result<()> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+
+    const GENERIC_WRITE: u32 = 0x4000_0000;
+    const DIRECTORY_NOFOLLOW: u32 = 0x0220_0000;
+    fs::OpenOptions::new()
+        .access_mode(GENERIC_WRITE)
+        .custom_flags(DIRECTORY_NOFOLLOW)
+        .open(path)?
+        .sync_all()
 }
 
 fn create_case() -> Batch {
@@ -40,7 +54,10 @@ fn run_file(bytes: &[u8]) -> Batch {
 }
 
 #[test]
-#[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
 fn invalid_staged_state_keeps_the_case_namespace_absent() {
     let fixture = tempfile::tempdir().unwrap();
     let root = fixture.path();
@@ -66,7 +83,10 @@ fn invalid_staged_state_keeps_the_case_namespace_absent() {
 }
 
 #[test]
-#[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
 fn successful_batches_select_complete_generations() {
     let fixture = tempfile::tempdir().unwrap();
     let root = fixture.path();
@@ -87,7 +107,10 @@ fn successful_batches_select_complete_generations() {
 }
 
 #[test]
-#[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
 fn concurrent_readers_each_get_one_complete_batch() {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Barrier;
@@ -133,7 +156,10 @@ fn concurrent_readers_each_get_one_complete_batch() {
 }
 
 #[test]
-#[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
 fn migrate_verified_legacy_files_into_a_complete_generation() {
     let fixture = tempfile::tempdir().unwrap();
     let root = &fixture.path().canonicalize().unwrap();
@@ -204,7 +230,10 @@ fn migrate_verified_legacy_files_into_a_complete_generation() {
 }
 
 #[test]
-#[cfg_attr(not(unix), ignore = "uses native Unix directory sync")]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
 fn durability_errors_straddle_the_selector_publication_point() {
     let fixture = tempfile::tempdir().unwrap();
     let root = fixture.path();
