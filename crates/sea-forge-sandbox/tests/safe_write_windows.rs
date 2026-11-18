@@ -256,9 +256,14 @@ fn local_ntfs_publishes_a_staged_namespace_and_a_replacement_selector() {
     ));
     assert_eq!(fs::read(published.join(selector)).unwrap(), b"generation 1");
 
+    use std::io::Read as _;
+    let mut old_selector = fs::File::open(published.join(selector)).unwrap();
     let next = OsStr::new("staged-selector");
     fs::write(published.join(next), b"generation 2").unwrap();
     publish_trusted_sibling(&published, next, selector, Kind::File, Mode::Replace).unwrap();
     assert_eq!(fs::read(published.join(selector)).unwrap(), b"generation 2");
+    let mut old_bytes = Vec::new();
+    old_selector.read_to_end(&mut old_bytes).unwrap();
+    assert_eq!(old_bytes, b"generation 1");
     assert!(!published.join(next).exists());
 }

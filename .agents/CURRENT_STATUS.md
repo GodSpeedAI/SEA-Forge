@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 363
+**Status revision:** 364
 
-**Stage:** FDE S2 | Checkpoint verified historical artifact retrieval
+**Stage:** FDE S2 | Checkpoint fixed NTFS selector replacement
 
-**Summary:** Bind published predecessors in v2 manifests and follow the pinned committed history on a digest lookup miss.
+**Summary:** Replace a staged NTFS selector through its write-through handle while concurrent readers retain the prior file.
 
 **Verified:**
 
+- The held-reader regression failed before the change on native Windows 10.0.26300 fixed NTFS and passed afterward. All 12 staged library tests and 9 C1–C7 model tests passed in the same native environment.
+- Both hosted Ubuntu test shards passed at 085e6c6e in CI run 44402751703. S2 matched the comparison baseline with 15 passes and the expected AT-09 partial. Both hosted macOS jobs were cancelled.
 - The lineage checkpoint passed all 12 case-runner library tests and all 3 writer and lock scan tests. The historical digest test retrieved a committed predecessor, excluded a complete unselected generation, and rejected a damaged lineage. Existing selected and flat lookup precedence passed.
 - The targeted macOS rest retry for run 44365325837 ended cancelled. The existing fixed NTFS and Linux application restart evidence remains available.
 - On Linux the streamed capture passed 11 case-runner unit tests, all 3 writer and lock scans, all 9 C1–C7 model tests, all 23 settlement unit tests, and the server Field Case write-only sealing regression.
@@ -94,6 +96,7 @@
 
 **Limits:**
 
+- The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
 - The macOS application restart gate needs a native runner. Abrupt host resets need separate disposable targets.
 - The production Field Case dispatch uses streamed capture with the legacy writer. The versioned writer exercises the same spool operation under staged tests.
@@ -137,7 +140,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the current staged build natively on fixed NTFS, finish RealityTrace delivery and the re-pin proof, and continue compatible timestamp migration.
+**Next:** Publish the Linux/ext4 guest reset harness, run the joined NT-07 proof, and continue the separate Chrono migration.
 
 **Evidence:**
 

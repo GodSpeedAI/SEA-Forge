@@ -30,14 +30,15 @@ use windows_sys::Win32::Security::{
 };
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FileAttributeTagInfo, FileDispositionInfo, FileIdInfo, FileRenameInfo,
-    FlushFileBuffers, GetDriveTypeW, GetFileInformationByHandle, GetFileInformationByHandleEx,
-    GetFileType, GetFinalPathNameByHandleW, GetLongPathNameW, GetVolumeInformationByHandleW,
-    GetVolumePathNameW, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE,
-    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
-    FILE_ATTRIBUTE_TAG_INFO, FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-    FILE_FLAG_OPEN_REPARSE_POINT, FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_ID_INFO,
-    FILE_READ_ATTRIBUTES, FILE_RENAME_INFO, FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ,
-    FILE_SHARE_WRITE, FILE_TYPE_DISK, OPEN_EXISTING, VOLUME_NAME_DOS,
+    FileRenameInfoEx, FlushFileBuffers, GetDriveTypeW, GetFileInformationByHandle,
+    GetFileInformationByHandleEx, GetFileType, GetFinalPathNameByHandleW, GetLongPathNameW,
+    GetVolumeInformationByHandleW, GetVolumePathNameW, SetFileInformationByHandle,
+    BY_HANDLE_FILE_INFORMATION, CREATE_NEW, DELETE, FILE_ATTRIBUTE_DIRECTORY,
+    FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO,
+    FILE_DISPOSITION_INFO, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
+    FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_ID_INFO, FILE_READ_ATTRIBUTES, FILE_RENAME_INFO,
+    FILE_RENAME_INFO_0, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_TYPE_DISK,
+    OPEN_EXISTING, VOLUME_NAME_DOS,
 };
 use windows_sys::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
@@ -1413,8 +1414,16 @@ pub fn publish_trusted_sibling(
     }
     let source_id = handle_id(source_raw).map_err(before)?;
     let target = absolute_rename_target(&parent_path, destination);
-    rename_handle_into_mode(source_raw, &target, mode == TrustedPublicationMode::Replace)
-        .map_err(before)?;
+    let rename_mode = match (mode, kind) {
+        (TrustedPublicationMode::NoReplace, _) => HandleRenameMode::Install,
+        (TrustedPublicationMode::Replace, TrustedPublicationKind::File) => {
+            HandleRenameMode::ReplaceOpenFile
+        }
+        (TrustedPublicationMode::Replace, TrustedPublicationKind::Directory) => {
+            HandleRenameMode::Replace
+        }
+    };
+    rename_handle_into_mode(source_raw, &target, rename_mode).map_err(before)?;
     let after = TrustedPublicationError::Committed;
     let verify = || -> io::Result<()> {
         refuse_reparse_or_file(parent_raw, &parent_path).map_err(pin_error_into_io)?;
@@ -1485,10 +1494,41 @@ pub fn publish_trusted_sibling(
 /// Platform contract: `FileNameLength` is counted in BYTES of the target
 /// (terminator excluded) and the buffer is exactly header + bytes.
 fn rename_handle_into(file: HANDLE, target: &OsStr) -> io::Result<()> {
-    rename_handle_into_mode(file, target, true)
+    rename_handle_into_mode(file, target, HandleRenameMode::Replace)
 }
 
-fn rename_handle_into_mode(file: HANDLE, target: &OsStr, replace: bool) -> io::Result<()> {
+#[derive(Debug)]
+enum HandleRenameMode {
+    Install,
+    Replace,
+    ReplaceOpenFile,
+}
+
+fn rename_handle_into_mode(file: HANDLE, target: &OsStr, mode: HandleRenameMode) -> io::Result<()> {
+    // FILE_RENAME_INFO.Flags values from winbase.h. POSIX semantics allow the old
+    // selector to survive on existing reader handles while fresh opens see the new file.
+    const REPLACE_IF_EXISTS: u32 = 0x0000_0001;
+    const POSIX_SEMANTICS: u32 = 0x0000_0002;
+    let (class, options) = match mode {
+        HandleRenameMode::Install => (
+            FileRenameInfo,
+            FILE_RENAME_INFO_0 {
+                ReplaceIfExists: false,
+            },
+        ),
+        HandleRenameMode::Replace => (
+            FileRenameInfo,
+            FILE_RENAME_INFO_0 {
+                ReplaceIfExists: true,
+            },
+        ),
+        HandleRenameMode::ReplaceOpenFile => (
+            FileRenameInfoEx,
+            FILE_RENAME_INFO_0 {
+                Flags: REPLACE_IF_EXISTS | POSIX_SEMANTICS,
+            },
+        ),
+    };
     let target_wide: Vec<u16> = target.encode_wide().collect();
     // FileNameLength is counted in BYTES of the target name (not characters),
     // without the terminator.
@@ -1501,16 +1541,14 @@ fn rename_handle_into_mode(file: HANDLE, target: &OsStr, replace: bool) -> io::R
     let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
     // SAFETY: `buffer` is zeroed, 8-byte aligned and at least `size` bytes, so the header and `target_bytes` of FileName are in bounds and initialized. `FileName` starts at a u16-aligned offset inside the header allocation.
     unsafe {
-        (*info).Anonymous = FILE_RENAME_INFO_0 {
-            ReplaceIfExists: replace,
-        };
+        (*info).Anonymous = options;
         (*info).RootDirectory = null_mut();
         (*info).FileNameLength = target_bytes as u32;
         let destination = std::ptr::addr_of_mut!((*info).FileName).cast::<u16>();
         std::ptr::copy_nonoverlapping(target_wide.as_ptr(), destination, target_wide.len());
     }
     // SAFETY: `file` is a live handle opened with DELETE access; `info` points at `size` initialized bytes that outlive the call.
-    let ok = unsafe { SetFileInformationByHandle(file, FileRenameInfo, info.cast(), size as u32) };
+    let ok = unsafe { SetFileInformationByHandle(file, class, info.cast(), size as u32) };
     if ok == FALSE {
         // Instrumentation for the recorded ERROR_INVALID_PARAMETER history on
         // the windows lane: the raw Win32 error code plus the exact struct
@@ -1520,9 +1558,9 @@ fn rename_handle_into_mode(file: HANDLE, target: &OsStr, replace: bool) -> io::R
         return Err(io::Error::new(
             error.kind(),
             format!(
-                "SetFileInformationByHandle(FileRenameInfo) rename failed: {error} \
-                 (os code {}); FileRenameInfo sent: class=FileRenameInformation (10), \
-                 ReplaceIfExists={replace}, RootDirectory=NULL, FileNameLength={target_bytes} \
+                "SetFileInformationByHandle rename failed: {error} \
+                 (os code {}); class={class}, mode={mode:?}, \
+                 RootDirectory=NULL, FileNameLength={target_bytes} \
                  bytes ({} UTF-16 units, terminator excluded), buffer={size} bytes, \
                  target={:?}",
                 error.raw_os_error().unwrap_or(0),

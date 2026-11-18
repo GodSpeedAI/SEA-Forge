@@ -223,6 +223,7 @@ pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
 pub(super) struct Snapshot {
     pub(super) case_dir: PathBuf,
     pub(super) generation: NonZeroU64,
+    #[cfg(test)]
     manifest_sha256: String,
     predecessor: Option<Predecessor>,
     format_version: u64,
@@ -305,6 +306,7 @@ fn verify_generation(
     Ok(Snapshot {
         case_dir,
         generation: number,
+        #[cfg(test)]
         manifest_sha256: digest.to_owned(),
         predecessor: manifest.predecessor,
         format_version: manifest.version,
