@@ -1837,6 +1837,19 @@ fn commit_staged(
     })
 }
 
+#[cfg(all(test, windows))]
+fn dir_sync(path: &Path) -> std::io::Result<()> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+
+    const GENERIC_WRITE: u32 = 0x4000_0000;
+    const DIRECTORY_NOFOLLOW: u32 = 0x0220_0000;
+    std::fs::OpenOptions::new()
+        .access_mode(GENERIC_WRITE)
+        .custom_flags(DIRECTORY_NOFOLLOW)
+        .open(path)?
+        .sync_all()
+}
+
 #[cfg(test)]
 #[path = "staged_commit_tests.rs"]
 mod staged_commit_tests;

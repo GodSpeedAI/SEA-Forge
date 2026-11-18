@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 355
+**Status revision:** 356
 
-**Stage:** FDE S2 | Reconcile native NTFS verification and restore the workspace gate
+**Stage:** FDE S2 | Restore writer scan and verify interruption recovery
 
-**Summary:** Native Portability passed at 13b5ec10. The workspace suite exposed a guard scan regression in the Windows staged test helper.
+**Summary:** Keep the Windows test fixture outside the production source scan while preserving its real directory flush.
 
 **Verified:**
 
+- All 104 case-runner tests passed with 19 ignored, including all three raw-writer and lock scan checks.
 - In Portability run 44320285578 at 13b5ec10, native Windows job 134857115151 and macOS App Sandbox job 134857114371 both passed.
 - The earlier pinned-read checkpoint 1cbc292e passed native Windows in job 134850336686.
 - The full workspace run at 13b5ec10 recorded 2056 passed, 2 failed, and 28 ignored. The failures were the raw-writer source scan on the Windows test helper and the known WSL lifecycle stderr diagnostic.
@@ -15,7 +16,6 @@
 - All 8 case-runner library tests passed locally, including the staged publication and durability-boundary cases.
 - All affected Windows targets cross-checked, including the new native NTFS publication test in the existing Portability test target.
 - Clippy with -D warnings passed for all targets of sandbox, case-runner, server, evidence, and settlement.
-- The corrected capture checkpoint 1cbc292e is on the isolated verification branch. Native Portability run 44317645405 is queued for that checkpoint.
 - The Field Case sealing regression passed after the Unix hardening. The macOS sandbox target and Windows os and sandbox targets cross-checked.
 - An independent Linux syscall trace observed scratch writes for the trace, evidence, and report before their canonical run files appeared.
 - S2 at bcafa556 matched the baseline across all 17 rows except duration. It recorded 15 scenario passes, AT-09 partial, and 12 contract digests verified.
@@ -83,16 +83,11 @@
 - The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
 - The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
-- Full workspace verification on the later capture checkpoint and native macOS and Windows acceptance remain open.
 - The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
-- The revised Windows Rust handler still needs the hosted native rerun. The NTFS rename fixture does not establish production versioned activation or crash recovery.
-- The staged versioned writer is still inactive in production. The NTFS fixture establishes native API behavior on one host, and remains short of publisher integration or crash-recovery qualification.
-- Native Windows verifies the Windows build and control plane. WP-21B still needs a durable selector publication mechanism qualified on its supported Windows storage environment.
 - The CI gate remains red on the chrono advisory and MIT-0 license rejection. The Windows native job does not qualify Field Case selector durability.
 - The native lint rerun also rejects MIT-0 for transitive borrow-or-share 0.2.4 through fluent-uri and jsonschema. This requires a license policy or dependency decision.
 - Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
-- Native verification for the fixture repairs is pending. RustSec RUSTSEC-2026-0543 blocks the lint gate through both direct chrono use and domainforge-core.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
 - Non-Linux model tests compare final-byte changes to the journal. Native publication durability and independent transient C7 observation need platform-specific evidence.
 - Runtime evidence sealing and historical artifact resolution remain open. NT-07 needs a RealityTrace world-reference persistence contract and a cross-repo re-pin fixture.
@@ -122,7 +117,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Keep the Windows directory-flush fixture covered and restore the raw-writer scan. Resolve capture memory growth, connect the staged publication and recovery paths, then qualify crash durability.
+**Next:** Verify process interruption around selector replacement and rerun S2 and the full workspace. Then resolve capture memory growth and wire production activation and recovery.
 
 **Evidence:**
 

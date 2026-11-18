@@ -15,19 +15,6 @@ fn dir_sync(path: &Path) -> std_io::Result<()> {
     File::open(path)?.sync_all()
 }
 
-#[cfg(windows)]
-fn dir_sync(path: &Path) -> std_io::Result<()> {
-    use std::os::windows::fs::OpenOptionsExt as _;
-
-    const GENERIC_WRITE: u32 = 0x4000_0000;
-    const DIRECTORY_NOFOLLOW: u32 = 0x0220_0000;
-    fs::OpenOptions::new()
-        .access_mode(GENERIC_WRITE)
-        .custom_flags(DIRECTORY_NOFOLLOW)
-        .open(path)?
-        .sync_all()
-}
-
 fn create_case() -> Batch {
     Batch::new()
         .with(Op::Case(json!({
