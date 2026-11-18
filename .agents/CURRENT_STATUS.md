@@ -1,20 +1,20 @@
 # Current status
 
-**Status revision:** 357
+**Status revision:** 358
 
-**Stage:** FDE S2 | Verify staged restart and selected-generation artifacts
+**Stage:** FDE S2 | Qualify staged application restart on Linux and fixed NTFS
 
-**Summary:** Verify staged selector replacement across application interruption and confirm artifact retrieval through the selected snapshot.
+**Summary:** Verify recovery before and after first publication and selector replacement on the same staged case-writer implementation.
 
 **Verified:**
 
-- The staged case-runner interruption test passed on Linux and ran natively on a fixed NTFS Windows volume. Exiting before selector replacement preserved the old generation. Exiting after replacement selected the new generation. Both paths allowed a subsequent commit.
+- The staged case-runner interruption test passed on Linux and native Windows on a fixed NTFS volume. It covered both sides of first publication and selector replacement. The observed snapshot matched the interrupted boundary and a subsequent commit succeeded in every case.
+- DomainForge checked in its generated timestamp migration at 2f59e44. The native compatibility test, all-target all-feature Clippy, formatting, and commit lint passed. The earlier native CLI suite and WASM check passed.
 - The server selected-snapshot regression passed on Linux. Artifact retrieval returned the published bytes, digest, run ID, evidence ID, and URI.
 - At 89bc705a all 104 case-runner tests passed with 19 ignored. The source scan also passed with the interruption and artifact regressions applied.
 - In Portability run 44320285578 at 13b5ec10, native Windows job 134857115151 and macOS App Sandbox job 134857114371 both passed.
 - The earlier pinned-read checkpoint 1cbc292e passed native Windows in job 134850336686.
 - The full workspace run at 13b5ec10 recorded 2056 passed, 2 failed, and 28 ignored. The failures were the raw-writer source scan on the Windows test helper and the known WSL lifecycle stderr diagnostic.
-- The separate SEA Forge timestamp migration is checkpointed at 5a93603f. DomainForge's generated-timestamp changes passed 1333 native tests with 12 ignored and checked on WASM. The DomainForge changes are staged on fix/replace-chrono.
 - All 8 case-runner library tests passed locally, including the staged publication and durability-boundary cases.
 - All affected Windows targets cross-checked, including the new native NTFS publication test in the existing Portability test target.
 - Clippy with -D warnings passed for all targets of sandbox, case-runner, server, evidence, and settlement.
@@ -81,7 +81,7 @@
 
 **Limits:**
 
-- Application restart around selector replacement is verified on Linux and fixed NTFS. Interruption around first publication, native macOS restart, and host-crash or power-loss durability remain open.
+- Native macOS application restart and host-crash or power-loss durability remain open. The staged writer is inactive in production.
 - Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
 - The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
@@ -120,7 +120,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Rerun the S2 proof and full workspace against the recovery checkpoint, then qualify first publication and production activation.
+**Next:** Run S2 and the workspace gates on this checkpoint. Then qualify remaining crash boundaries, resolve capture memory, and integrate production activation.
 
 **Evidence:**
 

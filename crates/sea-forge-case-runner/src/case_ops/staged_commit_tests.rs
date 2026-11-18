@@ -291,10 +291,13 @@ fn interrupted_publication_can_be_retried() {
     if let Some(root) = std::env::var_os(CHILD_ROOT) {
         let root = std::path::PathBuf::from(root);
         let boundary = std::env::var(CHILD_BOUNDARY).expect("child boundary");
-        let case = root.join(".case-storage").join(CASE);
-        let watched = match boundary.as_str() {
-            "before" => case.join("generations"),
-            "after" => case,
+        let storage = root.join(".case-storage");
+        let case = storage.join(CASE);
+        let (watched, occurrence, batch) = match boundary.as_str() {
+            "before-first" => (storage, 1, create_case()),
+            "after-first" => (storage, 2, create_case()),
+            "before-replace" => (case.join("generations"), 2, run_file(b"child")),
+            "after-replace" => (case, 2, run_file(b"child")),
             _ => panic!("unknown child boundary"),
         };
         let calls = Cell::new(0);
@@ -302,28 +305,20 @@ fn interrupted_publication_can_be_retried() {
             if path == watched {
                 let count = calls.get() + 1;
                 calls.set(count);
-                // First sync seals the stage; the second is in the publisher.
-                if count == 2 {
+                // The first matching sync seals the stage.
+                // The second follows a rename in the publisher.
+                if count == occurrence {
                     std::process::exit(SENTINEL);
                 }
             }
             dir_sync(path)
         };
-        commit_staged(&root, CASE, run_file(b"child"), None, &sync)
+        commit_staged(&root, CASE, batch, None, &sync)
             .expect("child must reach the selected publication boundary");
         panic!("child passed the selected publication boundary");
     }
 
-    for boundary in ["before", "after"] {
-        let fixture = tempfile::tempdir().unwrap();
-        let root = fixture.path();
-        commit_staged(root, CASE, create_case(), None, &dir_sync).unwrap();
-        commit_staged(root, CASE, run_file(b"old"), None, &dir_sync).unwrap();
-        let old = versioned_store::open(root, CASE).unwrap().unwrap();
-        assert!(load_verified(&old, false).unwrap().strict);
-        let case = root.join(".case-storage").join(CASE);
-        let generations = case.join("generations");
-
+    let interrupt_at = |root: &Path, boundary: &str| {
         let mut child = Command::new(std::env::current_exe().unwrap())
             .arg("--exact")
             .arg(TEST_NAME)
@@ -351,6 +346,45 @@ fn interrupted_publication_can_be_retried() {
             Some(SENTINEL),
             "child missed {boundary} boundary"
         );
+    };
+
+    for (boundary, published) in [("before-first", false), ("after-first", true)] {
+        let fixture = tempfile::tempdir().unwrap();
+        let root = fixture.path();
+        interrupt_at(root, boundary);
+        let selected = versioned_store::open(root, CASE).unwrap();
+        assert_eq!(
+            selected.is_some(),
+            published,
+            "unexpected snapshot at {boundary}"
+        );
+        if let Some(snapshot) = selected {
+            assert!(load_verified(&snapshot, false).unwrap().strict);
+        }
+
+        let (batch, generation) = if published {
+            (run_file(b"retry"), "2")
+        } else {
+            (create_case(), "1")
+        };
+        commit_staged(root, CASE, batch, None, &dir_sync).unwrap();
+        let retry = versioned_store::open(root, CASE).unwrap().unwrap();
+        let generations = root.join(".case-storage").join(CASE).join("generations");
+        assert!(retry.starts_with(generations.join(generation)));
+        assert!(load_verified(&retry, false).unwrap().strict);
+    }
+
+    for boundary in ["before-replace", "after-replace"] {
+        let fixture = tempfile::tempdir().unwrap();
+        let root = fixture.path();
+        commit_staged(root, CASE, create_case(), None, &dir_sync).unwrap();
+        commit_staged(root, CASE, run_file(b"old"), None, &dir_sync).unwrap();
+        let old = versioned_store::open(root, CASE).unwrap().unwrap();
+        assert!(load_verified(&old, false).unwrap().strict);
+        let case = root.join(".case-storage").join(CASE);
+        let generations = case.join("generations");
+
+        interrupt_at(root, boundary);
 
         let selected = versioned_store::open(root, CASE).unwrap().unwrap();
         let installed = generations.join("3").join("data/cases").join(CASE);
@@ -360,7 +394,7 @@ fn interrupted_publication_can_be_retried() {
             b"child"
         );
         assert!(load_verified(&installed, false).unwrap().strict);
-        if boundary == "before" {
+        if boundary == "before-replace" {
             assert_eq!(selected, old);
         } else {
             assert_eq!(selected, installed);
