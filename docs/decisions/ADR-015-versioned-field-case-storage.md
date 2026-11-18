@@ -23,7 +23,10 @@ plain-case behavior and validate legacy Field Case input before migration.
 Introduce read compatibility before enabling the versioned writer. That
 checkpoint must continue to read versioned state and refuse writes to an
 immutable generation. A binary that predates read compatibility cannot serve as
-a rollback target after migration.
+a rollback target after migration. Publish the dual reader for v1 and v2
+manifests before enabling the v2 writer. Rollback after the first v2 publication
+must retain that reader. The v2 manifest binds the previous selected
+generation so history remains anchored by the selector's manifest digest.
 
 Parent-entry durability and rename behavior must be qualified on each supported
 platform. A failed post-publication durability check leaves an uncertain outcome

@@ -657,7 +657,28 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
             "malformed artifact digest {digest:?}: expected a 64-character hex sha256"
         )));
     }
-    let (dirs, discovery_error) = candidate_run_dirs(root);
+    let (dirs, mut histories, discovery_error) = candidate_run_dirs(root);
+    if let Some(artifact) = find_artifact(dirs, digest)? {
+        return Ok(artifact);
+    }
+    for history in &mut histories {
+        while let Some(previous) = history.previous()? {
+            let mut dirs = Vec::new();
+            collect_run_dirs(&previous.join("runs"), &mut dirs);
+            if let Some(artifact) = find_artifact(dirs, digest)? {
+                return Ok(artifact);
+            }
+        }
+    }
+    if let Some(error) = discovery_error {
+        return Err(error);
+    }
+    Err(ForgeError::Input(format!(
+        "artifact_not_found: no evidence record in this cell carries digest {digest}"
+    )))
+}
+
+fn find_artifact(dirs: Vec<PathBuf>, digest: &str) -> Result<Option<ArtifactView>, ForgeError> {
     for run_dir in dirs {
         let evidence_path = run_dir.join("evidence.jsonl");
         if !crate::sfwp::size_within_cap(&evidence_path, crate::sfwp::MAX_JOURNAL_BYTES) {
@@ -699,7 +720,7 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
                 Ok(text) => (Some(text), None),
                 Err(_) => (None, Some(base64_encode(&bytes))),
             };
-            return Ok(ArtifactView {
+            return Ok(Some(ArtifactView {
                 digest: digest.to_string(),
                 run_id: record.run_id,
                 evidence_id: record.evidence_id,
@@ -707,48 +728,54 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
                 size_bytes: metadata.len(),
                 content,
                 content_base64,
-            });
+            }));
         }
     }
-    if let Some(error) = discovery_error {
-        return Err(error);
-    }
-    Err(ForgeError::Input(format!(
-        "artifact_not_found: no evidence record in this cell carries digest {digest}"
-    )))
+    Ok(None)
 }
 
 /// Every run directory this cell owns, deterministically ordered: standalone
 /// `<root>/runs/*` and case-scoped `<root>/cases/*/runs/*`.
-fn candidate_run_dirs(root: &Path) -> (Vec<PathBuf>, Option<ForgeError>) {
+fn collect_run_dirs(runs: &Path, out: &mut Vec<PathBuf>) {
+    if let Ok(entries) = std::fs::read_dir(runs) {
+        let mut found: Vec<PathBuf> = entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.is_dir())
+            .collect();
+        found.sort();
+        out.extend(found);
+    }
+}
+
+fn candidate_run_dirs(
+    root: &Path,
+) -> (
+    Vec<PathBuf>,
+    Vec<sea_forge_case_runner::case_ops::CaseSnapshotHistory>,
+    Option<ForgeError>,
+) {
     let mut dirs = Vec::new();
-    let collect = |runs: &Path, out: &mut Vec<PathBuf>| {
-        if let Ok(entries) = std::fs::read_dir(runs) {
-            let mut found: Vec<PathBuf> = entries
-                .flatten()
-                .map(|entry| entry.path())
-                .filter(|path| path.is_dir())
-                .collect();
-            found.sort();
-            out.extend(found);
-        }
-    };
-    collect(&root.join("runs"), &mut dirs);
+    let mut histories = Vec::new();
+    collect_run_dirs(&root.join("runs"), &mut dirs);
     let mut cases = match sea_forge_case_runner::case_ops::case_ids(root) {
         Ok(cases) => cases,
-        Err(error) => return (dirs, Some(error)),
+        Err(error) => return (dirs, histories, Some(error)),
     };
     cases.sort();
     let mut discovery_error = None;
     for case_id in cases {
-        match sea_forge_case_runner::case_ops::case_snapshot_dir(root, &case_id) {
-            Ok(dir) => collect(&dir.join("runs"), &mut dirs),
+        match sea_forge_case_runner::case_ops::case_snapshot_history(root, &case_id) {
+            Ok(history) => {
+                collect_run_dirs(&history.selected().join("runs"), &mut dirs);
+                histories.push(history);
+            }
             Err(error) => {
                 discovery_error.get_or_insert(error);
             }
         }
     }
-    (dirs, discovery_error)
+    (dirs, histories, discovery_error)
 }
 
 /// Standard base64 (RFC 4648, with padding). Hand-rolled because adding the
@@ -781,6 +808,112 @@ fn base64_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn artifact_get_uses_only_verified_committed_history() {
+        use sea_forge_evidence::sha256_bytes;
+        use std::fs;
+
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let namespace = root.join(".case-storage/case-example");
+        let run = "cases/case-example/runs/run-example";
+        let evidence_path = format!("{run}/evidence.jsonl");
+        let artifact_path = format!("{run}/artifacts/stdout.txt");
+        let index = ".case-index/case-example.json";
+        let artifact = b"historical artifact";
+        let digest = sha256_bytes(artifact);
+        let evidence = format!(
+            "{}\n",
+            serde_json::json!({
+                "version":"0.1", "evidence_id":"evi_0001", "run_id":"run-example",
+                "kind":"artifact", "uri":"artifacts/stdout.txt", "sha256":digest,
+                "source_event_id":"evt_0001"
+            })
+        );
+        let first = namespace.join("generations/1");
+        let data = first.join("data");
+        fs::create_dir_all(data.join(run).join("artifacts")).unwrap();
+        fs::create_dir_all(data.join(".case-index")).unwrap();
+        fs::write(data.join(&artifact_path), artifact).unwrap();
+        fs::write(data.join(&evidence_path), &evidence).unwrap();
+        fs::write(data.join(index), b"{}").unwrap();
+        let first_manifest = serde_json::to_vec(&serde_json::json!({
+            "version":1, "case_id":"case-example", "generation":1,
+            "files": { (&artifact_path):sha256_bytes(artifact),
+                (&evidence_path):sha256_bytes(evidence.as_bytes()), (index):sha256_bytes(b"{}") }
+        }))
+        .unwrap();
+        fs::write(first.join("manifest.json"), &first_manifest).unwrap();
+
+        // This complete, valid generation was never selected.
+        let orphan = namespace.join("generations/2");
+        let orphan_data = orphan.join("data");
+        fs::create_dir_all(orphan_data.join(run).join("artifacts")).unwrap();
+        fs::create_dir_all(orphan_data.join(".case-index")).unwrap();
+        let orphan_bytes = b"orphan-only artifact";
+        let orphan_digest = sha256_bytes(orphan_bytes);
+        let orphan_evidence = evidence.replace(&digest, &orphan_digest);
+        fs::write(orphan_data.join(&evidence_path), &orphan_evidence).unwrap();
+        fs::write(orphan_data.join(&artifact_path), orphan_bytes).unwrap();
+        fs::write(orphan_data.join(index), b"{}").unwrap();
+        let orphan_manifest = serde_json::to_vec(&serde_json::json!({
+            "version":2, "case_id":"case-example", "generation":2,
+            "predecessor":{"generation":1,"manifest_sha256":sha256_bytes(&first_manifest)},
+            "files":{(&artifact_path):sha256_bytes(orphan_bytes),
+                (&evidence_path):sha256_bytes(orphan_evidence.as_bytes()), (index):sha256_bytes(b"{}")}
+        })).unwrap();
+        fs::write(orphan.join("manifest.json"), orphan_manifest).unwrap();
+
+        let selected = namespace.join("generations/3");
+        let selected_data = selected.join("data");
+        fs::create_dir_all(selected_data.join(run).join("artifacts")).unwrap();
+        fs::create_dir_all(selected_data.join(".case-index")).unwrap();
+        let selected_bytes = b"selected artifact";
+        let selected_digest = sha256_bytes(selected_bytes);
+        let selected_evidence = evidence.replace(&digest, &selected_digest);
+        fs::write(selected_data.join(&artifact_path), selected_bytes).unwrap();
+        fs::write(selected_data.join(&evidence_path), &selected_evidence).unwrap();
+        fs::write(selected_data.join(index), b"{}").unwrap();
+        let manifest = serde_json::to_vec(&serde_json::json!({
+            "version":2, "case_id":"case-example", "generation":3,
+            "predecessor":{"generation":1,"manifest_sha256":sha256_bytes(&first_manifest)},
+            "files":{(&artifact_path):sha256_bytes(selected_bytes),
+                (&evidence_path):sha256_bytes(selected_evidence.as_bytes()), (index):sha256_bytes(b"{}")}
+        })).unwrap();
+        fs::write(selected.join("manifest.json"), &manifest).unwrap();
+        fs::write(
+            namespace.join("current.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "version":1,"case_id":"case-example","generation":3,
+                "manifest_sha256":sha256_bytes(&manifest)
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let fetched = artifact_get(root, &digest).unwrap();
+        assert_eq!(fetched.digest, digest);
+        assert_eq!(fetched.run_id, "run-example");
+        assert_eq!(fetched.evidence_id, "evi_0001");
+        assert_eq!(fetched.content.as_deref(), Some("historical artifact"));
+        assert!(artifact_get(root, &orphan_digest)
+            .unwrap_err()
+            .to_string()
+            .contains("artifact_not_found"));
+        fs::write(first.join("manifest.json"), b"damaged").unwrap();
+        assert_eq!(
+            artifact_get(root, &selected_digest)
+                .unwrap()
+                .content
+                .as_deref(),
+            Some("selected artifact")
+        );
+        assert!(artifact_get(root, &digest)
+            .unwrap_err()
+            .to_string()
+            .contains("manifest digest mismatch"));
+    }
 
     #[test]
     fn base64_matches_known_vectors() {

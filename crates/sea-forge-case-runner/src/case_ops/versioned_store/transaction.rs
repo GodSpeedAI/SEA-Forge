@@ -112,8 +112,16 @@ pub(in crate::case_ops) fn replace<T>(
             legacy_files.map(|files| (root, files)),
         )
     };
-    let stage =
+    let mut stage =
         stage::Stage::prepare(layout, case_id, generation, source).map_err(storage_refusal)?;
+    if let Some(selected) = &selected {
+        stage
+            .set_predecessor(super::Predecessor {
+                generation: selected.generation,
+                manifest_sha256: selected.manifest_sha256.clone(),
+            })
+            .map_err(storage_refusal)?;
+    }
     let applied = apply_and_verify(&stage.case_dir())?;
     let sealed = stage
         .seal(&stage::Flush {

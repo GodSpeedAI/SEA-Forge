@@ -35,6 +35,12 @@ WP-21B on Linux, macOS, and Windows. The storage decision is recorded in
    the file. Evidence for a committed generation continues to resolve to its
    original bytes. Reclamation must preserve referenced generations and active
    readers.
+7. A version 2 manifest binds the immediately preceding committed generation
+   and its manifest digest, except at first publication. A previously published
+   version 1 manifest is a history root. Historical artifact lookup pins the
+   selector once, then follows only verified links with decreasing generation
+   numbers. Directories left by an interrupted publication are outside that
+   history. The artifact API retains digest-only lookup.
 
 ## Acceptance
 

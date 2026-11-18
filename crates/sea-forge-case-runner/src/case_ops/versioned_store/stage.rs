@@ -3,7 +3,9 @@
 //! The caller holds the logical case lock and supplies verified owned paths
 //! and flush operations qualified for the platform and volume.
 
-use super::{directory, hash_ok, metadata, walk, Manifest, Result, Selector, StoreError};
+use super::{
+    directory, hash_ok, metadata, walk, Manifest, Predecessor, Result, Selector, StoreError,
+};
 use sea_forge_core::path::{valid_id_segment, validate_relative_path};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -37,6 +39,7 @@ pub(super) struct Stage {
     case_id: String,
     generation: NonZeroU64,
     next_namespace: Option<PathBuf>,
+    predecessor: Option<Predecessor>,
 }
 
 /// Access paths by reference and retain this guard through publication.
@@ -177,11 +180,20 @@ impl Stage {
             case_id: case_id.into(),
             generation,
             next_namespace,
+            predecessor: None,
         };
         if let Some((source, files)) = source {
             stage.seed(source, files)?;
         }
         Ok(stage)
+    }
+
+    pub(super) fn set_predecessor(&mut self, predecessor: Predecessor) -> Result<()> {
+        if predecessor.generation >= self.generation || !hash_ok(&predecessor.manifest_sha256) {
+            return Err(StoreError::Invalid("invalid predecessor"));
+        }
+        self.predecessor = Some(predecessor);
+        Ok(())
     }
 
     pub(super) fn case_dir(&self) -> PathBuf {
@@ -243,9 +255,10 @@ impl Stage {
             return Err(StoreError::Invalid("staged case index is missing"));
         }
         let manifest = serde_json::to_vec(&serde_json::json!({
-            "version": 1,
+            "version": 2,
             "case_id": self.case_id,
             "generation": self.generation.get(),
+            "predecessor": self.predecessor,
             "files": files,
         }))
         .map_err(|_| StoreError::Invalid("manifest serialization"))?;

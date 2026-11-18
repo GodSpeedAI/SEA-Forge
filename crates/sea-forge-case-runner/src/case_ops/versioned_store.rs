@@ -2,7 +2,7 @@
 
 use sea_forge_core::path::{valid_id_segment, validate_relative_path};
 use serde::de::{Error as _, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -57,8 +57,17 @@ struct Manifest {
     version: u64,
     case_id: String,
     generation: u64,
+    #[serde(default)]
+    predecessor: Option<Predecessor>,
     #[serde(deserialize_with = "unique_files")]
     files: BTreeMap<String, String>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Predecessor {
+    generation: NonZeroU64,
+    manifest_sha256: String,
 }
 
 fn unique_files<'de, D: Deserializer<'de>>(
@@ -211,8 +220,12 @@ pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
     Ok(open_verified(root, case_id)?.map(|snapshot| snapshot.case_dir))
 }
 
-struct Snapshot {
-    case_dir: PathBuf,
+pub(super) struct Snapshot {
+    pub(super) case_dir: PathBuf,
+    pub(super) generation: NonZeroU64,
+    manifest_sha256: String,
+    predecessor: Option<Predecessor>,
+    format_version: u64,
     #[cfg(test)]
     files: BTreeMap<String, String>,
 }
@@ -226,21 +239,45 @@ fn open_verified(root: &Path, case_id: &str) -> Result<Option<Snapshot>> {
     if selector.version != 1 || selector.case_id != case_id || !hash_ok(&selector.manifest_sha256) {
         return Err(StoreError::Invalid("selector identity or digest mismatch"));
     }
+    Ok(Some(verify_generation(
+        &case,
+        case_id,
+        selector.generation,
+        &selector.manifest_sha256,
+    )?))
+}
+
+fn verify_generation(
+    case: &Path,
+    case_id: &str,
+    number: NonZeroU64,
+    digest: &str,
+) -> Result<Snapshot> {
+    if !hash_ok(digest) {
+        return Err(StoreError::Invalid("invalid manifest digest"));
+    }
     let generations = case.join("generations");
     directory(&generations)?;
-    let generation = generations.join(selector.generation.to_string());
+    let generation = generations.join(number.to_string());
     directory(&generation)?;
     let bytes = read_file(&generation.join("manifest.json"))?;
-    if hex::encode(Sha256::digest(&bytes)) != selector.manifest_sha256 {
+    if hex::encode(Sha256::digest(&bytes)) != digest {
         return Err(StoreError::Invalid("manifest digest mismatch"));
     }
     let manifest: Manifest =
         serde_json::from_slice(&bytes).map_err(|_| StoreError::Invalid("invalid manifest"))?;
-    if manifest.version != 1
+    if !(1..=2).contains(&manifest.version)
+        || (manifest.version == 1 && manifest.predecessor.is_some())
+        || (manifest.version == 2 && manifest.predecessor.is_none() && number.get() != 1)
         || manifest.case_id != case_id
-        || manifest.generation != selector.generation.get()
+        || manifest.generation != number.get()
     {
         return Err(StoreError::Invalid("manifest identity mismatch"));
+    }
+    if let Some(previous) = &manifest.predecessor {
+        if previous.generation >= number || !hash_ok(&previous.manifest_sha256) {
+            return Err(StoreError::Invalid("invalid predecessor"));
+        }
     }
     for (name, hash) in &manifest.files {
         if name == "." || validate_relative_path(name).is_err() || !hash_ok(hash) {
@@ -265,11 +302,59 @@ fn open_verified(root: &Path, case_id: &str) -> Result<Option<Snapshot>> {
     {
         return Err(StoreError::Invalid("invalid case or index layout"));
     }
-    Ok(Some(Snapshot {
+    Ok(Snapshot {
         case_dir,
+        generation: number,
+        manifest_sha256: digest.to_owned(),
+        predecessor: manifest.predecessor,
+        format_version: manifest.version,
         #[cfg(test)]
         files: manifest.files,
-    }))
+    })
+}
+
+/// A cursor rooted in the selector read when the cursor was opened.
+pub(super) struct History {
+    case: PathBuf,
+    case_id: String,
+    current: Snapshot,
+}
+
+impl History {
+    pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<Self>> {
+        let Some(current) = open_verified(root, case_id)? else {
+            return Ok(None);
+        };
+        let case = namespace(root, case_id)?.ok_or(StoreError::Invalid("missing namespace"))?;
+        Ok(Some(Self {
+            case,
+            case_id: case_id.to_owned(),
+            current,
+        }))
+    }
+
+    pub(super) fn current(&self) -> &Path {
+        &self.current.case_dir
+    }
+
+    pub(super) fn previous(&mut self) -> Result<Option<&Path>> {
+        let Some(previous) = &self.current.predecessor else {
+            return Ok(None);
+        };
+        let parent = verify_generation(
+            &self.case,
+            &self.case_id,
+            previous.generation,
+            &previous.manifest_sha256,
+        )?;
+        if parent.generation >= self.current.generation
+            || parent.format_version > self.current.format_version
+        {
+            return Err(StoreError::Invalid("invalid predecessor ordering"));
+        }
+        self.current = parent;
+        Ok(Some(&self.current.case_dir))
+    }
 }
 
 #[cfg(test)]
@@ -314,6 +399,56 @@ mod tests {
         fs::write(generation.join("manifest.json"), bytes).unwrap();
         write_selector(root, bytes);
     }
+    #[test]
+    fn history_follows_selected_links_and_rejects_damage() {
+        let (root, first) = fixture();
+        let parent_bytes = fs::read(first.join("manifest.json")).unwrap();
+        let case = root.path().join(".case-storage/case-1");
+        // Generation 2 was installed but never selected.
+        fs::create_dir(case.join("generations/2")).unwrap();
+        let third = case.join("generations/3");
+        fs::create_dir_all(third.join("data/cases/case-1/sub")).unwrap();
+        fs::create_dir_all(third.join("data/.case-index")).unwrap();
+        fs::copy(
+            first.join("data/cases/case-1/sub/a.txt"),
+            third.join("data/cases/case-1/sub/a.txt"),
+        )
+        .unwrap();
+        fs::copy(
+            first.join("data/.case-index/case-1.json"),
+            third.join("data/.case-index/case-1.json"),
+        )
+        .unwrap();
+        let mut manifest: serde_json::Value = serde_json::from_slice(&parent_bytes).unwrap();
+        manifest["version"] = json!(2);
+        manifest["generation"] = json!(3);
+        manifest["predecessor"] =
+            json!({"generation": 1, "manifest_sha256": hex::encode(Sha256::digest(&parent_bytes))});
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        fs::write(third.join("manifest.json"), &bytes).unwrap();
+        fs::write(
+            case.join("current.json"),
+            serde_json::to_vec(&json!({
+                "version":1, "case_id":"case-1", "generation":3,
+                "manifest_sha256":hex::encode(Sha256::digest(&bytes))
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let mut history = History::open(root.path(), "case-1").unwrap().unwrap();
+        assert_eq!(history.current.generation.get(), 3);
+        let selector = fs::read(case.join("current.json")).unwrap();
+        fs::write(case.join("current.json"), b"changed after pin").unwrap();
+        assert!(history.previous().unwrap().is_some());
+        assert_eq!(history.current.generation.get(), 1);
+        assert!(history.previous().unwrap().is_none());
+        fs::write(case.join("current.json"), selector).unwrap();
+        let mut history = History::open(root.path(), "case-1").unwrap().unwrap();
+        fs::write(first.join("manifest.json"), b"damaged").unwrap();
+        assert!(history.previous().is_err());
+        assert!(open(root.path(), "case-1").is_ok());
+    }
+
     #[test]
     fn selected_tree_and_absence() {
         let (root, generation) = fixture();

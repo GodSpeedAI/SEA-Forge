@@ -68,6 +68,49 @@ pub fn case_snapshot_dir(root: &Path, case_id: &str) -> Result<std::path::PathBu
         })
 }
 
+/// A case view pinned to one selected snapshot, with lazy verified history.
+pub struct CaseSnapshotHistory {
+    selected: std::path::PathBuf,
+    history: Option<versioned_store::History>,
+}
+
+impl CaseSnapshotHistory {
+    pub fn selected(&self) -> &Path {
+        &self.selected
+    }
+
+    /// Verify and advance to the immediate committed predecessor, if any.
+    pub fn previous(&mut self) -> Result<Option<std::path::PathBuf>, ForgeError> {
+        match &mut self.history {
+            Some(history) => history
+                .previous()
+                .map(|path| path.map(Path::to_path_buf))
+                .map_err(history_error),
+            None => Ok(None),
+        }
+    }
+}
+
+fn history_error(error: versioned_store::StoreError) -> ForgeError {
+    ForgeError::Plan {
+        class: "STORE_INTEGRITY",
+        message: format!("read Field Case history: {error}"),
+    }
+}
+
+/// Pin the selected generation once, retaining its predecessor link for later reads.
+pub fn case_snapshot_history(
+    root: &Path,
+    case_id: &str,
+) -> Result<CaseSnapshotHistory, ForgeError> {
+    let history = versioned_store::History::open(root, case_id).map_err(history_error)?;
+    let selected = history.as_ref().map_or_else(
+        || root.join("cases").join(case_id),
+        |history| history.current().to_path_buf(),
+    );
+    Ok(CaseSnapshotHistory { selected, history })
+}
+
 /// Discover logical cases across both storage layouts. A versioned case is
 /// listed even if its selector is corrupt, so the caller can report it.
 pub fn case_ids(root: &Path) -> Result<Vec<String>, ForgeError> {
