@@ -2772,7 +2772,6 @@ dependencies = [
 name = "sea-forge-runtime"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "hex",
  "sea-forge-authority",
  "sea-forge-core",
@@ -2878,7 +2877,6 @@ dependencies = [
 name = "sea-forge-spec-pipeline"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "hex",
  "sea-forge-core",
  "sea-forge-domainforge",

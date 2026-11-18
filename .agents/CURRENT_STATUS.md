@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 371
+**Status revision:** 372
 
 **Stage:** FDE S2 | Timestamp checkpoint replay
 
-**Summary:** Carry the compatible UTC record formatter into the current FDE integration.
+**Summary:** Carry the unused runtime and spec-pipeline Chrono edge removals into the current FDE integration.
 
 **Verified:**
 

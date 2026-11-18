@@ -137,7 +137,7 @@ impl SnapshotView for LedgerSnapshotView {
             &envelopes,
             &declarations,
             &self.policy,
-            &chrono::Utc::now().to_rfc3339(),
+            &sea_forge_core::timestamp::now_rfc3339(),
         )
         .ok()?;
         // Evidence comes from whichever ledgered source actually backs the
@@ -333,7 +333,7 @@ pub fn ask(
     let policy = load_surface_policy(root, actor_id)?;
 
     let question_id = random_id("thq")?;
-    let asked_at = chrono::Utc::now().to_rfc3339();
+    let asked_at = sea_forge_core::timestamp::now_rfc3339();
     let question = ThothQuestion {
         question_id: question_id.clone(),
         kind: kind.clone(),
@@ -354,7 +354,7 @@ pub fn ask(
     )?;
 
     let answer_id = random_id("tha")?;
-    let answered_at = chrono::Utc::now().to_rfc3339();
+    let answered_at = sea_forge_core::timestamp::now_rfc3339();
     let answer = answer_question(&question, &view, &policy, &answer_id, &answered_at);
 
     let candidates = candidate_classes(&kind);

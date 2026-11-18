@@ -499,7 +499,7 @@ pub fn rebuild_capability(
         &envelopes,
         &declarations,
         policy,
-        &chrono::Utc::now().to_rfc3339(),
+        &sea_forge_core::timestamp::now_rfc3339(),
     )?;
     // Write the record
     let dir = root.join("capabilities");
