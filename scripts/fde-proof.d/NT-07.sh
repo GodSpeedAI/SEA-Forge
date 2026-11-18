@@ -7,4 +7,5 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 "$here/_cargo-test.sh" sea-forge-authority world_pin 1 nt07
 "$here/_cargo-test.sh" sea-forge-server conformance_world_pin 1 wp18_
-exec "$here/_rt-test.sh" 1 at13_the_same_records
+"$here/_rt-test.sh" 1 at13_the_same_records
+exec "$here/_nt07-joined.sh"

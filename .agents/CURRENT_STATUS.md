@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 365
+**Status revision:** 366
 
-**Stage:** FDE S2 | Linux guest-reset harness ready for Actions
+**Stage:** FDE S2 | Checkpoint joined NT-07 proof
 
-**Summary:** Exercise staged Linux/ext4 publication across guest OS loss and recovery on the same test disk at six explicit boundaries.
+**Summary:** Persist the SEA-settled E8 in a real RealityTrace ledger and compare its exported pinned envelope across authority promotion and re-pin.
 
 **Verified:**
 
+- Joined NT-07 passed against RealityTrace checkpoint da47df5. The real SEA emitter, RealityTrace append, CLI ledger verify, and CLI export exercised the same E8 before promotion, after promotion, and after re-pin.
+- Portability run 44421054364 completed its native macOS App Sandbox job successfully. The Linux/ext4 guest reset job and native Windows job are still running.
 - The new guest probe compiled with 12 passing staged library tests and one externally controlled test ignored by design. The Portability workflow passed actionlint.
 - The held-reader regression failed before the change on native Windows 10.0.26300 fixed NTFS and passed afterward. All 12 staged library tests and 9 C1–C7 model tests passed in the same native environment.
 - Both hosted Ubuntu test shards passed at 085e6c6e in CI run 44402751703. S2 matched the comparison baseline with 15 passes and the expected AT-09 partial. Both hosted macOS jobs were cancelled.
@@ -97,6 +99,7 @@
 
 **Limits:**
 
+- Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
 - No Linux guest-reset result is available yet. macOS/APFS and Windows/fixed-NTFS guest reset images and disposable host controllers are still missing.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
@@ -142,7 +145,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Dispatch the isolated Portability branch with field_case_guest_reset enabled and verify its artifact before recording Linux guest-reset evidence.
+**Next:** Inspect the Linux/ext4 guest-reset artifact in Portability run 44421054364, qualify the remaining platforms, and continue the isolated timestamp migration.
 
 **Evidence:**
 

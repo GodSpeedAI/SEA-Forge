@@ -91,6 +91,10 @@ fn file_digest(path: &Path) -> Option<String> {
 }
 
 fn run_case(case: &str, protected: bool) -> Scenario {
+    run_case_in_world(case, protected, WORLD)
+}
+
+fn run_case_in_world(case: &str, protected: bool, world: &str) -> Scenario {
     let root = tempfile::tempdir().unwrap();
     let workspace = root.path().join("workspace");
     let artifacts = root.path().join("artifacts");
@@ -174,7 +178,7 @@ fn run_case(case: &str, protected: bool) -> Scenario {
         &model(),
         "12345678-1234-4234-8234-123456789abc",
         None,
-        WORLD,
+        world,
     )
     .unwrap();
     let mut registry = InvocationLedger::default();
@@ -309,6 +313,37 @@ fn trace(s: &Scenario) -> (Value, Value) {
     )
     .unwrap();
     (proof, evidence)
+}
+
+/// Invoked only by the optional cross-repository NT-07 proof harness.
+#[test]
+#[ignore = "requires the joined NT-07 proof launcher"]
+fn nt07_emit_e8_fixture() {
+    let path = std::env::var("SEA_NT07_E8_OUTPUT").expect("SEA_NT07_E8_OUTPUT");
+    let world = std::env::var("SEA_NT07_WORLD_REF").expect("SEA_NT07_WORLD_REF");
+    let case = std::env::var("SEA_NT07_CASE_ID").expect("SEA_NT07_CASE_ID");
+    let scenario = run_case_in_world(&case, false, &world);
+    assert_eq!(scenario.status, SettlementStatus::Accepted);
+    let m = model();
+    let context = ProofContext {
+        model_sha256: &m,
+        world_ref: &world,
+        proof_event_id: PROOF_ID,
+        proof_result_id: "proof-sec12",
+        occurred_at: "2026-10-17T12:01:00+00:00",
+    };
+    let proof = proof_completed(&scenario.entries, &scenario.settlement, &context).unwrap();
+    let evidence = record_evidence(
+        &proof,
+        &scenario.settlement,
+        &mut IngestState::new(),
+        &context,
+        EVIDENCE_ID,
+        "sec12-protected-write",
+    )
+    .unwrap();
+    assert_eq!(evidence["payload"]["world_ref"], world);
+    fs::write(path, serde_json::to_vec(&evidence).unwrap()).unwrap();
 }
 
 /// What an independent auditor can establish from artifacts alone.

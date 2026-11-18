@@ -367,6 +367,131 @@ fn record_worlds(root: &Path) -> Vec<(String, String)> {
         .collect()
 }
 
+// Optional cross-repository proof. The launcher supplies an enrolled disposable
+// RealityTrace repo, matching isolated XDG directories and the three prebuilt
+// binaries. Missing prerequisites are errors when SEA_NT07_PROOF=1.
+struct Nt07 {
+    emitter: PathBuf,
+    persist: PathBuf,
+    cli: PathBuf,
+    db: PathBuf,
+    repo: String,
+    checkout: String,
+    xdg_data: PathBuf,
+    xdg_state: PathBuf,
+}
+
+impl Nt07 {
+    fn optional() -> Option<Self> {
+        match std::env::var("SEA_NT07_PROOF") {
+            Err(std::env::VarError::NotPresent) => return None,
+            Ok(value) => assert_eq!(value, "1", "SEA_NT07_PROOF must be 1 when set"),
+            Err(error) => panic!("SEA_NT07_PROOF: {error}"),
+        }
+        let value = |key: &str| {
+            let value = std::env::var(key).unwrap_or_else(|_| panic!("missing {key}"));
+            assert!(!value.is_empty(), "empty {key}");
+            value
+        };
+        let bin = |key: &str| {
+            let path = PathBuf::from(value(key));
+            assert!(
+                path.is_file(),
+                "{key} is not a prebuilt file: {}",
+                path.display()
+            );
+            path
+        };
+        let xdg_data = PathBuf::from(value("XDG_DATA_HOME"));
+        let xdg_state = PathBuf::from(value("XDG_STATE_HOME"));
+        assert!(
+            xdg_data.is_dir() && xdg_state.is_dir(),
+            "isolated XDG directories must exist"
+        );
+        Some(Self {
+            emitter: bin("SEA_NT07_EMITTER"),
+            persist: bin("SEA_NT07_PERSIST"),
+            cli: bin("SEA_NT07_REALITYTRACE"),
+            db: PathBuf::from(value("SEA_NT07_DB")),
+            repo: value("SEA_NT07_REPO_ID"),
+            checkout: value("SEA_NT07_CHECKOUT_ID"),
+            xdg_data,
+            xdg_state,
+        })
+    }
+
+    fn command(&self, bin: &Path) -> std::process::Command {
+        let mut command = std::process::Command::new(bin);
+        command
+            .env("XDG_DATA_HOME", &self.xdg_data)
+            .env("XDG_STATE_HOME", &self.xdg_state)
+            .env_remove("SXR_DAEMON_SOCKET");
+        command
+    }
+
+    fn run(command: &mut std::process::Command) -> std::process::Output {
+        let output = command.output().expect("start NT-07 proof command");
+        assert!(
+            output.status.success(),
+            "NT-07 command failed: {}
+{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        output
+    }
+
+    fn start(&self, root: &Path, world: &str) -> (String, Value) {
+        let evidence_file = root.join("nt07-e8.json");
+        Self::run(
+            self.command(&self.emitter)
+                .args(["--exact", "nt07_emit_e8_fixture", "--ignored"])
+                .env("SEA_NT07_E8_OUTPUT", &evidence_file)
+                .env("SEA_NT07_WORLD_REF", world)
+                .env("SEA_NT07_CASE_ID", "case-0001"),
+        );
+        let evidence: Value =
+            serde_json::from_slice(&std::fs::read(&evidence_file).unwrap()).unwrap();
+        assert_eq!(evidence["payload"]["world_ref"], world);
+        let id = evidence["event_id"].as_str().unwrap().to_owned();
+        Self::run(
+            self.command(&self.persist)
+                .arg(&self.db)
+                .arg(&self.repo)
+                .arg(&self.checkout)
+                .arg(&evidence_file),
+        );
+        let row = self.row(&id);
+        assert_eq!(row["record_kind"], "evidence.recorded");
+        assert_eq!(row["payload"]["scope"]["world_ref"], world);
+        assert_eq!(row["payload"]["scope"]["repo_id"], self.repo);
+        assert_eq!(row["payload"]["scope"]["checkout_id"], self.checkout);
+        assert!(row["append_ordinal"].as_u64().is_some());
+        assert!(!row["entry_hash"].as_str().unwrap().is_empty());
+        (id, row)
+    }
+
+    fn row(&self, id: &str) -> Value {
+        let verify = Self::run(
+            self.command(&self.cli)
+                .args(["ledger", "verify", "--repo", &self.repo, "--json"]),
+        );
+        let report: Value = serde_json::from_slice(&verify.stdout).unwrap();
+        assert_eq!(report["ok"], true, "{report}");
+        let export = Self::run(
+            self.command(&self.cli)
+                .args(["ledger", "export", "--repo", &self.repo, "--json"]),
+        );
+        let rows: Vec<Value> = serde_json::from_slice(&export.stdout).unwrap();
+        let matches: Vec<_> = rows
+            .into_iter()
+            .filter(|row| row["payload"]["envelope_id"] == id)
+            .collect();
+        assert_eq!(matches.len(), 1, "expected one E8 envelope");
+        matches.into_iter().next().unwrap()
+    }
+}
+
 #[tokio::test]
 async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_world_and_a_new_episode_freezes_under_the_new_one(
 ) {
@@ -382,6 +507,10 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .await;
     assert_eq!(pin["current"], json!(v1), "{pin}");
     assert_eq!(pin["history"], json!([]));
+    let nt07 = Nt07::optional();
+    let persisted = nt07
+        .as_ref()
+        .map(|harness| harness.start(root.path(), pin["current"].as_str().unwrap()));
 
     // Episode 1 freezes and settles under v1 (the S1 control episode).
     let ep1 = frozen_under(&v1, "item-03");
@@ -483,6 +612,9 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .call_for(&service, json!({"verb": "authority_pin"}))
         .await;
     assert_eq!(pin["current"], json!(v2), "{pin}");
+    if let (Some(harness), Some((id, original))) = (&nt07, &persisted) {
+        assert_eq!(&harness.row(id), original, "E8 changed after promotion");
+    }
     let transitions = cell
         .call_for(&service, json!({"verb": "authority_transitions"}))
         .await;
@@ -547,6 +679,9 @@ async fn wp18_promote_and_re_pin_over_the_socket_keep_settled_evidence_with_its_
         .await;
     assert_eq!(pin["current"], json!(v1));
     assert_eq!(pin["history"].as_array().unwrap().len(), 2);
+    if let (Some(harness), Some((id, original))) = (&nt07, &persisted) {
+        assert_eq!(&harness.row(id), original, "E8 changed after re-pin");
+    }
     // NT-07 after re-pin: nothing was retargeted.
     assert_eq!(
         record_worlds(root.path()),
