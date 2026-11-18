@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 354
+**Status revision:** 355
 
-**Stage:** FDE S2: wire local NTFS handle-based staged publication
+**Stage:** FDE S2 | Reconcile native NTFS verification and restore the workspace gate
 
-**Summary:** Route the staged Windows publisher through write-through sibling handles on fixed NTFS volumes and preserve uncertainty after selection.
+**Summary:** Native Portability passed at 13b5ec10. The workspace suite exposed a guard scan regression in the Windows staged test helper.
 
 **Verified:**
 
+- In Portability run 44320285578 at 13b5ec10, native Windows job 134857115151 and macOS App Sandbox job 134857114371 both passed.
+- The earlier pinned-read checkpoint 1cbc292e passed native Windows in job 134850336686.
+- The full workspace run at 13b5ec10 recorded 2056 passed, 2 failed, and 28 ignored. The failures were the raw-writer source scan on the Windows test helper and the known WSL lifecycle stderr diagnostic.
+- The separate SEA Forge timestamp migration is checkpointed at 5a93603f. DomainForge's generated-timestamp changes passed 1333 native tests with 12 ignored and checked on WASM. The DomainForge changes are staged on fix/replace-chrono.
 - All 8 case-runner library tests passed locally, including the staged publication and durability-boundary cases.
 - All affected Windows targets cross-checked, including the new native NTFS publication test in the existing Portability test target.
 - Clippy with -D warnings passed for all targets of sandbox, case-runner, server, evidence, and settlement.
@@ -75,6 +79,9 @@
 
 **Limits:**
 
+- Local fixed-volume NTFS normal-path publication has native coverage. Crash recovery and production activation still need qualification.
+- The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
+- The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
 - The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
 - Full workspace verification on the later capture checkpoint and native macOS and Windows acceptance remain open.
 - The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
@@ -115,7 +122,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Run the existing native Portability workflow on the NTFS checkpoint, then finish capture staging and runtime writer activation with crash recovery proof.
+**Next:** Keep the Windows directory-flush fixture covered and restore the raw-writer scan. Resolve capture memory growth, connect the staged publication and recovery paths, then qualify crash durability.
 
 **Evidence:**
 
