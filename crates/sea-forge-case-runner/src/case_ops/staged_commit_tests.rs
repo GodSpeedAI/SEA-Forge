@@ -511,3 +511,108 @@ fn capture_copy_propagates_storage_full_after_a_real_partial_write() {
     destination.file.read_to_end(&mut prefix).unwrap();
     assert_eq!(prefix, b"matched");
 }
+
+// The external controller kills the guest at the marker and boots it again on
+// the same disk. Holding this thread alive prevents process-exit cleanup.
+#[cfg(target_os = "linux")]
+#[test]
+#[ignore = "requires a disposable guest and an external reset controller"]
+fn guest_crash_publication_probe() {
+    use std::io::Write as _;
+
+    let root = std::path::PathBuf::from(std::env::var_os("SEA_FDE_CRASH_ROOT").unwrap());
+    let mode = std::env::var("SEA_FDE_CRASH_MODE").unwrap();
+    let phase = std::env::var("SEA_FDE_CRASH_PHASE").unwrap();
+    let storage = root.join(".case-storage");
+    let case = storage.join(CASE);
+    let reset_boundary = match phase.as_str() {
+        "before-first" => Some((storage, 1)),
+        "after-first" => Some((storage, 2)),
+        "before-replace" => Some((case.join("generations"), 2)),
+        "after-replace" => Some((case.clone(), 2)),
+        "acked-first" | "acked-replace" => None,
+        _ => panic!("unknown reset phase: {phase}"),
+    };
+    let first = phase.ends_with("-first");
+
+    if mode == "write" {
+        assert!(versioned_store::open(&root, CASE).unwrap().is_none());
+        if !first {
+            commit_staged(&root, CASE, create_case(), None, &dir_sync).unwrap();
+            commit_staged(&root, CASE, run_file(b"old"), None, &dir_sync).unwrap();
+        }
+        let batch = if first {
+            create_case()
+        } else {
+            run_file(b"new")
+        };
+        let calls = Cell::new(0);
+        let sync = |path: &Path| {
+            if let Some((watched, occurrence)) = &reset_boundary {
+                if path == watched {
+                    calls.set(calls.get() + 1);
+                    if calls.get() == *occurrence {
+                        wait_for_guest_reset();
+                    }
+                }
+            }
+            dir_sync(path)
+        };
+        commit_staged(&root, CASE, batch, None, &sync).unwrap();
+        assert!(reset_boundary.is_none(), "missed reset boundary: {phase}");
+        wait_for_guest_reset();
+    }
+    assert_eq!(mode, "verify");
+
+    let selected = versioned_store::open(&root, CASE).unwrap();
+    let record = Path::new("runs/run-1/record.txt");
+    if let Some(snapshot) = &selected {
+        assert!(load_verified(snapshot, false).unwrap().strict);
+        if first {
+            assert!(!snapshot.join(record).exists());
+            assert_eq!(*snapshot, case.join("generations/1/data/cases").join(CASE));
+        } else {
+            let version = fs::read(snapshot.join(record)).unwrap();
+            let valid = match phase.as_str() {
+                "before-replace" => version == b"old",
+                "after-replace" => version == b"old" || version == b"new",
+                "acked-replace" => version == b"new",
+                _ => unreachable!(),
+            };
+            assert!(valid, "invalid recovered record at {phase}: {version:?}");
+            let generation = if version == b"old" { "2" } else { "3" };
+            assert_eq!(
+                *snapshot,
+                case.join("generations")
+                    .join(generation)
+                    .join("data/cases")
+                    .join(CASE)
+            );
+        }
+    }
+    match phase.as_str() {
+        "before-first" => assert!(selected.is_none()),
+        "after-first" => {}
+        _ => assert!(selected.is_some()),
+    }
+
+    if selected.is_none() {
+        commit_staged(&root, CASE, create_case(), None, &dir_sync).unwrap();
+    }
+    commit_staged(&root, CASE, run_file(b"retry"), None, &dir_sync).unwrap();
+    let retried = versioned_store::open(&root, CASE).unwrap().unwrap();
+    assert!(load_verified(&retried, false).unwrap().strict);
+    assert_eq!(fs::read(retried.join(record)).unwrap(), b"retry");
+    println!("\nSEA_FDE_RECOVERY_OK");
+    std::io::stdout().flush().unwrap();
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_guest_reset() -> ! {
+    use std::io::Write as _;
+    println!("\nSEA_FDE_RESET_READY");
+    std::io::stdout().flush().unwrap();
+    loop {
+        std::thread::park();
+    }
+}

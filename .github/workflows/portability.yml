@@ -22,6 +22,11 @@ on:
       - '.agents/reports/**'
       - '.agents/plans/**'
   workflow_dispatch:
+    inputs:
+      field_case_guest_reset:
+        description: Run the Field Case publication guest-reset proof on Linux/ext4
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -154,3 +159,50 @@ jobs:
       - name: Sandbox unit tests
         shell: bash
         run: cargo test --locked -p sea-forge-sandbox --lib
+
+  field-case-guest-reset:
+    name: Field Case guest reset (Linux/ext4)
+    if: github.event_name == 'workflow_dispatch' && inputs.field_case_guest_reset
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install disposable guest prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            busybox-static cpio e2fsprogs linux-image-virtual qemu-system-x86 xz-utils zstd
+          kernel=$(find /boot -maxdepth 1 -name 'vmlinuz-*-generic' | sort -V | tail -1)
+          test -n "$kernel"
+          sudo install -m 0644 "$kernel" "$RUNNER_TEMP/field-case-kernel"
+          echo "GUEST_KERNEL_RELEASE=${kernel##*/vmlinuz-}" >> "$GITHUB_ENV"
+
+      - name: Build staged-publication probe
+        run: |
+          rustup show active-toolchain || rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          cargo test --locked -p sea-forge-case-runner --lib --no-run --message-format=json > "$RUNNER_TEMP/probe-build.jsonl"
+          probe=$(python3 -c 'import json, sys; paths = [row["executable"] for row in map(json.loads, sys.stdin) if row.get("reason") == "compiler-artifact" and row.get("executable") and row["target"]["name"] == "sea_forge_case_runner" and row["profile"]["test"]]; assert len(paths) == 1, paths; print(paths[0])' < "$RUNNER_TEMP/probe-build.jsonl")
+          echo "FIELD_CASE_PROBE=$probe" >> "$GITHUB_ENV"
+
+      - name: Reset and recover the guest at each publication boundary
+        run: |
+          python3 scripts/fde-case-crash-linux.py \
+            --probe "$FIELD_CASE_PROBE" --kernel "$RUNNER_TEMP/field-case-kernel" \
+            --kernel-release "$GUEST_KERNEL_RELEASE" --output "$RUNNER_TEMP/field-case-crash-evidence"
+
+      - name: Upload guest serial logs and disk configuration
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: field-case-linux-guest-reset
+          path: |
+            ${{ runner.temp }}/field-case-crash-evidence/
+            ${{ runner.temp }}/probe-build.jsonl
+          if-no-files-found: warn

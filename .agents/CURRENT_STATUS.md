@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 364
+**Status revision:** 365
 
-**Stage:** FDE S2 | Checkpoint fixed NTFS selector replacement
+**Stage:** FDE S2 | Linux guest-reset harness ready for Actions
 
-**Summary:** Replace a staged NTFS selector through its write-through handle while concurrent readers retain the prior file.
+**Summary:** Exercise staged Linux/ext4 publication across guest OS loss and recovery on the same test disk at six explicit boundaries.
 
 **Verified:**
 
+- The new guest probe compiled with 12 passing staged library tests and one externally controlled test ignored by design. The Portability workflow passed actionlint.
 - The held-reader regression failed before the change on native Windows 10.0.26300 fixed NTFS and passed afterward. All 12 staged library tests and 9 C1–C7 model tests passed in the same native environment.
 - Both hosted Ubuntu test shards passed at 085e6c6e in CI run 44402751703. S2 matched the comparison baseline with 15 passes and the expected AT-09 partial. Both hosted macOS jobs were cancelled.
 - The lineage checkpoint passed all 12 case-runner library tests and all 3 writer and lock scan tests. The historical digest test retrieved a committed predecessor, excluded a complete unselected generation, and rejected a damaged lineage. Existing selected and flat lookup precedence passed.
@@ -96,6 +97,7 @@
 
 **Limits:**
 
+- No Linux guest-reset result is available yet. macOS/APFS and Windows/fixed-NTFS guest reset images and disposable host controllers are still missing.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
 - The macOS application restart gate needs a native runner. Abrupt host resets need separate disposable targets.
@@ -140,7 +142,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Publish the Linux/ext4 guest reset harness, run the joined NT-07 proof, and continue the separate Chrono migration.
+**Next:** Dispatch the isolated Portability branch with field_case_guest_reset enabled and verify its artifact before recording Linux guest-reset evidence.
 
 **Evidence:**
 
