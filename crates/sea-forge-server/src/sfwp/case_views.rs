@@ -287,6 +287,27 @@ fn snapshot(root: &Path, case_id: &str) -> Result<PathBuf, CaseViewError> {
     })
 }
 
+pub(super) type PinnedCases = Vec<(String, Result<PathBuf, CaseViewError>)>;
+
+pub(super) fn pinned_cases(
+    root: &Path,
+    pinned: Option<(&str, &Path)>,
+) -> Result<PinnedCases, CaseViewError> {
+    let ids = sea_forge_case_runner::case_ops::case_ids(root).map_err(|error| {
+        CaseViewError::Unreadable(format!("case snapshot discovery failed: {error}"))
+    })?;
+    Ok(ids
+        .into_iter()
+        .map(|id| {
+            let dir = match pinned {
+                Some((pinned_id, dir)) if pinned_id == id => Ok(dir.to_path_buf()),
+                _ => snapshot(root, &id),
+            };
+            (id, dir)
+        })
+        .collect())
+}
+
 fn read_case(dir: &Path, case_id: &str) -> Result<Case, CaseViewError> {
     let path = dir.join("case.json");
     // Stat before reading (SUP-09c): `fs::read` would size its allocation
@@ -346,22 +367,18 @@ fn read_case_events(dir: &Path) -> Vec<TraceEvent> {
 
 /// List every readable case record under `<root>/cases`, newest first.
 pub fn list(root: &Path) -> CaseListResult {
+    checked_list(root).unwrap_or_else(|error| {
+        tracing::warn!(error = %error.message(), "cannot rebuild case list");
+        CaseListResult::default()
+    })
+}
+
+pub(crate) fn checked_list(root: &Path) -> Result<CaseListResult, CaseViewError> {
     let mut cases = Vec::new();
     let mut unreadable = Vec::new();
 
-    let Ok(entries) = std::fs::read_dir(root.join("cases")) else {
-        // No `cases/` directory yet is the normal state of a fresh cell.
-        return CaseListResult::default();
-    };
-
-    for entry in entries.flatten() {
-        if !entry.path().is_dir() {
-            continue;
-        }
-        let Some(case_id) = entry.file_name().to_str().map(str::to_string) else {
-            continue;
-        };
-        match snapshot(root, &case_id).and_then(|dir| read_case(&dir, &case_id)) {
+    for (case_id, dir) in pinned_cases(root, None)? {
+        match dir.and_then(|dir| read_case(&dir, &case_id)) {
             Ok(case) => cases.push(CaseSummary {
                 case_id: case.case_id.clone(),
                 case_state: case_state_str(&case),
@@ -390,7 +407,7 @@ pub fn list(root: &Path) -> CaseListResult {
     });
     unreadable.sort();
 
-    CaseListResult { cases, unreadable }
+    Ok(CaseListResult { cases, unreadable })
 }
 
 /// Project one case's overview from its committed records.
@@ -399,12 +416,29 @@ pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseView
     let case = read_case(&dir, case_id)?;
     let plan = read_plan(&dir);
 
-    let versioned = (dir != root.join("cases").join(case_id)).then_some(dir.as_path());
-    let settlements = case
-        .run_ids
-        .iter()
-        .filter_map(|run_id| read_settlement(root, run_id, versioned))
-        .collect();
+    let versioned = dir != root.join("cases").join(case_id);
+    let flat_runs = root.join("runs");
+    let mut snapshots = None;
+    let mut settlements = Vec::new();
+    for run_id in &case.run_ids {
+        let Some(local) = super::run_views::run_dir_in_snapshot(root, run_id, &dir) else {
+            continue;
+        };
+        let path = if versioned || local.parent() == Some(flat_runs.as_path()) {
+            Some(local)
+        } else {
+            let snapshots = snapshots.get_or_insert_with(|| {
+                super::run_views::RunCaseSnapshots::with_pinned(root, Some((case_id, &dir)))
+            });
+            snapshots
+                .verify()
+                .map_err(|error| CaseViewError::Unreadable(error.message()))?;
+            super::run_views::locate_run(root, run_id, snapshots)
+        };
+        if let Some(settlement) = path.and_then(|path| read_settlement(run_id, &path)) {
+            settlements.push(settlement);
+        }
+    }
 
     Ok(CaseOverview {
         case_id: case.case_id.clone(),
@@ -423,14 +457,7 @@ pub fn get_overview(root: &Path, case_id: &str) -> Result<CaseOverview, CaseView
     })
 }
 
-fn read_settlement(root: &Path, run_id: &str, snapshot: Option<&Path>) -> Option<RunSettlement> {
-    // Through the one locator (K-04/DATA-02): a case's own episodes write the
-    // case-owned layout, so reading `<root>/runs/` alone made a case view
-    // unable to see the settlements of the runs that case created.
-    let dir = match snapshot {
-        Some(snapshot) => super::run_views::run_dir_in_snapshot(root, run_id, snapshot),
-        None => super::run_views::run_dir(root, run_id),
-    }?;
+fn read_settlement(run_id: &str, dir: &Path) -> Option<RunSettlement> {
     let path = dir.join("settlement.json");
     // Same read cap as every whole-record read (SUP-09c): an oversized
     // settlement is absent here, which leaves the run honestly `unsettled`

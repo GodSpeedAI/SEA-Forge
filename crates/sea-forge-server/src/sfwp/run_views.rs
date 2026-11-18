@@ -375,7 +375,11 @@ fn valid_run_id(run_id: &str) -> bool {
 /// than `None`: callers read through it and treat an unreadable file as
 /// absence, and returning `None` here would turn "no such run" into "malformed
 /// run id" at every call site.
-pub(crate) fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
+pub(super) fn locate_run(
+    root: &Path,
+    run_id: &str,
+    snapshots: &RunCaseSnapshots,
+) -> Option<PathBuf> {
     if !valid_run_id(run_id) {
         return None;
     }
@@ -383,7 +387,14 @@ pub(crate) fn run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
     if flat.is_dir() {
         return Some(flat);
     }
-    Some(case_run_dir(root, run_id).unwrap_or(flat))
+    Some(
+        snapshots
+            .cases
+            .iter()
+            .map(|(_, case)| case.join("runs").join(run_id))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or(flat),
+    )
 }
 
 /// Resolve the case-owned run from the same generation as its case view.
@@ -400,19 +411,67 @@ pub(crate) fn run_dir_in_snapshot(root: &Path, run_id: &str, snapshot: &Path) ->
     })
 }
 
-/// The case-owned directory for `run_id`, if some case owns it.
-///
-/// Scans `cases/*/runs/` rather than consulting `case.json`'s `run_ids`: a run
-/// directory exists from the moment the episode records its first governance
-/// event, which is before the case file naming it is rewritten. Resolving off
-/// the filesystem means a run is reachable during the window a crash could
-/// leave behind, not only after the case was updated.
-fn case_run_dir(root: &Path, run_id: &str) -> Option<PathBuf> {
-    std::fs::read_dir(root.join("cases"))
-        .ok()?
-        .flatten()
-        .map(|case| case.path().join("runs").join(run_id))
-        .find(|candidate| candidate.is_dir())
+/// Pin each case once for run resolution, ownership, and lifecycle.
+pub(crate) struct RunCaseSnapshots {
+    cases: Vec<(String, PathBuf)>,
+    unreadable: Vec<String>,
+    discovery_error: Option<super::case_views::CaseViewError>,
+}
+
+impl RunCaseSnapshots {
+    pub(crate) fn open(root: &Path) -> Self {
+        Self::with_pinned(root, None)
+    }
+
+    pub(super) fn with_pinned(root: &Path, pinned: Option<(&str, &Path)>) -> Self {
+        let mut cases = Vec::new();
+        let mut unreadable = Vec::new();
+        let entries = match super::case_views::pinned_cases(root, pinned) {
+            Ok(entries) => entries,
+            Err(error) => {
+                tracing::warn!(error = %error.message(), "cannot discover run case snapshots");
+                return Self {
+                    cases,
+                    unreadable,
+                    discovery_error: Some(error),
+                };
+            }
+        };
+        for (id, result) in entries {
+            match result {
+                Ok(dir) => cases.push((id, dir)),
+                Err(error) => {
+                    tracing::warn!(case_id = id, error = %error.message(), "case snapshot unreadable");
+                    unreadable.push(id);
+                }
+            }
+        }
+        Self {
+            cases,
+            unreadable,
+            discovery_error: None,
+        }
+    }
+
+    pub(super) fn verify(&self) -> Result<(), RunViewError> {
+        if let Some(error) = &self.discovery_error {
+            return Err(RunViewError::Unreadable(error.message()));
+        }
+        if !self.unreadable.is_empty() {
+            return Err(RunViewError::Unreadable(format!(
+                "unreadable case snapshots: {}",
+                self.unreadable.join(", ")
+            )));
+        }
+        Ok(())
+    }
+
+    fn case_dir(&self, id: &str) -> Option<&Path> {
+        self.cases
+            .iter()
+            .find(|(case_id, _)| case_id == id)
+            .map(|(_, dir)| dir.as_path())
+    }
 }
 
 /// Read one JSON record, treating any failure (absent, unreadable, malformed,
@@ -463,24 +522,22 @@ fn enum_str<T: Serialize>(value: &T) -> String {
 /// directory, and three hand-rolled walks would eventually disagree about what
 /// counts as a run directory at all. Each caller keeps its own *readability*
 /// policy — this decides only what to look at, never what to do with it.
-pub(crate) fn run_dirs(root: &Path) -> Vec<(String, PathBuf)> {
+pub(crate) fn run_dirs(root: &Path, snapshots: &RunCaseSnapshots) -> Vec<(String, PathBuf)> {
     // Both layouts, for the reason given on `run_dir`: a case episode's run is
     // as real as a CLI run, and a view that walked only `runs/` rendered every
     // case-dispatched run as if it did not exist.
-    let mut cases: Vec<PathBuf> = std::fs::read_dir(root.join("cases"))
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|case| case.path().join("runs"))
-        .collect();
-    // Deterministic order regardless of readdir order, so the flat-wins rule
-    // below and the final list are both stable.
-    cases.sort();
+    let mut cases: Vec<_> = snapshots.cases.iter().collect();
+    // Sort by logical case ID to preserve duplicate resolution across layouts.
+    cases.sort_by(|(left, _), (right, _)| left.cmp(right));
 
     let mut dirs: BTreeMap<String, PathBuf> = BTreeMap::new();
     // Case-owned first, then flat, so a flat run wins a duplicate id: it is
     // the older layout and the one existing proofs read.
-    for runs in cases.into_iter().chain([root.join("runs")]) {
+    for runs in cases
+        .into_iter()
+        .map(|(_, dir)| dir.join("runs"))
+        .chain([root.join("runs")])
+    {
         let Ok(entries) = std::fs::read_dir(&runs) else {
             // No `runs/` yet is the normal state of a fresh cell or a case
             // whose first episode has not started, not a failure.
@@ -502,13 +559,10 @@ pub(crate) fn run_dirs(root: &Path) -> Vec<(String, PathBuf)> {
 /// Shared with `crate::sfwp::delegations`: "a run belongs to the case that
 /// claims it" is a rule, and a second copy could let two views disagree about
 /// who owns a run.
-pub(crate) fn case_index(root: &Path) -> BTreeMap<String, String> {
+pub(crate) fn case_index(snapshots: &RunCaseSnapshots) -> BTreeMap<String, String> {
     let mut index = BTreeMap::new();
-    let Ok(entries) = std::fs::read_dir(root.join("cases")) else {
-        return index;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path().join("case.json");
+    for (_, dir) in &snapshots.cases {
+        let path = dir.join("case.json");
         let Some(case) = read_json::<Case>(&path) else {
             continue;
         };
@@ -614,12 +668,11 @@ fn fold_trace(events: &[TraceEvent]) -> TraceFold {
 /// matched to its lifecycle events exactly: `item_activated` names the run id and the instance, and
 /// the terminal events for the same item and instance close it. Anything the run trace already
 /// settled (a terminal standing) is left alone.
-fn overlay_case_lifecycle(root: &Path, case_id: &str, run_id: &str, fold: &mut TraceFold) {
+fn overlay_case_lifecycle(case_dir: &Path, run_id: &str, fold: &mut TraceFold) {
     let Some(item) = fold.plan_item_id.clone() else {
         return;
     };
-    let events: Vec<TraceEvent> =
-        read_jsonl(&root.join("cases").join(case_id).join("case-events.jsonl"));
+    let events: Vec<TraceEvent> = read_jsonl(&case_dir.join("case-events.jsonl"));
     let Some(activated) = events.iter().position(|e| {
         e.kind == TraceKind::ItemActivated
             && e.plan_item_id.as_deref() == Some(item.as_str())
@@ -841,11 +894,24 @@ fn plan_item<'a>(
 
 /// List every readable run directory, newest first.
 pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
-    let index = case_index(root);
+    list_in(root, case_id, &RunCaseSnapshots::open(root))
+}
+
+pub(crate) fn checked_list(
+    root: &Path,
+    case_id: Option<&str>,
+) -> Result<RunListResult, RunViewError> {
+    let snapshots = RunCaseSnapshots::open(root);
+    snapshots.verify()?;
+    Ok(list_in(root, case_id, &snapshots))
+}
+
+fn list_in(root: &Path, case_id: Option<&str>, snapshots: &RunCaseSnapshots) -> RunListResult {
+    let index = case_index(snapshots);
     let mut runs = Vec::new();
     let mut unreadable = Vec::new();
 
-    for (run_id, dir) in run_dirs(root) {
+    for (run_id, dir) in run_dirs(root, snapshots) {
         let owner = index.get(&run_id).cloned();
 
         // Scoping to a case means "runs this case claims" — a run the case does
@@ -868,8 +934,8 @@ pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
         }
 
         let mut fold = fold_trace(&events);
-        if let Some(owner) = owner.as_deref() {
-            overlay_case_lifecycle(root, owner, &run_id, &mut fold);
+        if let Some(case_dir) = owner.as_deref().and_then(|id| snapshots.case_dir(id)) {
+            overlay_case_lifecycle(case_dir, &run_id, &mut fold);
         }
         let evidence_count = read_jsonl::<EvidenceRecord>(&dir.join("evidence.jsonl")).len();
 
@@ -903,7 +969,13 @@ pub fn list(root: &Path, case_id: Option<&str>) -> RunListResult {
 
 /// Project one run's linked record from its committed files.
 pub fn get(root: &Path, run_id: &str) -> Result<RunRecord, RunViewError> {
-    let dir = run_dir(root, run_id).ok_or_else(|| RunViewError::NotFound(run_id.to_string()))?;
+    if !valid_run_id(run_id) {
+        return Err(RunViewError::NotFound(run_id.to_string()));
+    }
+    let snapshots = RunCaseSnapshots::open(root);
+    snapshots.verify()?;
+    let dir = locate_run(root, run_id, &snapshots)
+        .ok_or_else(|| RunViewError::NotFound(run_id.to_string()))?;
     if !dir.is_dir() {
         return Err(RunViewError::NotFound(run_id.to_string()));
     }
@@ -923,10 +995,10 @@ pub fn get(root: &Path, run_id: &str) -> Result<RunRecord, RunViewError> {
         )));
     }
 
-    let owner = case_index(root).get(run_id).cloned();
+    let owner = case_index(&snapshots).get(run_id).cloned();
     let mut fold = fold_trace(&events);
-    if let Some(owner) = owner.as_deref() {
-        overlay_case_lifecycle(root, owner, run_id, &mut fold);
+    if let Some(case_dir) = owner.as_deref().and_then(|id| snapshots.case_dir(id)) {
+        overlay_case_lifecycle(case_dir, run_id, &mut fold);
     }
     let item = plan
         .as_ref()
@@ -1057,6 +1129,105 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let error = get(root.path(), "run-nope").unwrap_err();
         assert_eq!(error.class(), "not_found");
+    }
+
+    #[test]
+    fn invalid_storage_directory_reports_discovery_error() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join(".case-storage"), b"invalid").unwrap();
+        assert_eq!(
+            get(root.path(), "run-example").unwrap_err().class(),
+            "record_unreadable"
+        );
+        assert_eq!(
+            checked_list(root.path(), None).unwrap_err().class(),
+            "record_unreadable"
+        );
+        assert!(super::super::case_views::checked_list(root.path()).is_err());
+    }
+
+    #[test]
+    fn run_view_uses_the_selected_case_snapshot_and_keeps_flat_precedence() {
+        use sea_forge_evidence::sha256_bytes;
+        use std::fs;
+
+        let root = tempfile::tempdir().unwrap();
+        let root = root.path();
+        let run_id = "run-example";
+        let legacy = root.join("cases/case-example/runs").join(run_id);
+        let flat = root.join("runs").join(run_id);
+        let namespace = root.join(".case-storage/case-example");
+        let generation = namespace.join("generations/1");
+        let data = generation.join("data");
+        let run = "cases/case-example/runs/run-example";
+        let record = format!("{run}/settlement.json");
+        let index = ".case-index/case-example.json";
+
+        let settlement = SettlementEvent {
+            version: "0.1".into(),
+            settlement_id: "set_01".into(),
+            run_id: run_id.into(),
+            status: sea_forge_core::types::SettlementStatus::Accepted,
+            basis: vec![],
+            review_required: false,
+            settled_at: "2026-01-01T00:00:00Z".into(),
+            criteria_ref: None,
+        };
+        let accepted = serde_json::to_vec(&settlement).unwrap();
+        let rejected = serde_json::to_vec(&SettlementEvent {
+            status: sea_forge_core::types::SettlementStatus::Rejected,
+            ..settlement
+        })
+        .unwrap();
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(legacy.join("settlement.json"), &rejected).unwrap();
+        assert_eq!(
+            get(root, run_id).unwrap().settlement,
+            SettlementStanding::Rejected
+        );
+
+        fs::create_dir_all(data.join(run)).unwrap();
+        fs::create_dir_all(data.join(".case-index")).unwrap();
+        fs::write(data.join(&record), &accepted).unwrap();
+        fs::write(data.join(index), b"{}").unwrap();
+        let manifest = serde_json::to_vec(&serde_json::json!({
+            "version": 1,
+            "case_id": "case-example",
+            "generation": 1,
+            "files": {(&record): sha256_bytes(&accepted), (index): sha256_bytes(b"{}")},
+        }))
+        .unwrap();
+        fs::write(generation.join("manifest.json"), &manifest).unwrap();
+        fs::write(
+            namespace.join("current.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "version": 1,
+                "case_id": "case-example",
+                "generation": 1,
+                "manifest_sha256": sha256_bytes(&manifest),
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            get(root, run_id).unwrap().settlement,
+            SettlementStanding::Accepted
+        );
+        assert_eq!(list(root, None).runs.len(), 1);
+
+        fs::create_dir_all(&flat).unwrap();
+        fs::write(flat.join("settlement.json"), &rejected).unwrap();
+        assert_eq!(
+            get(root, run_id).unwrap().settlement,
+            SettlementStanding::Rejected
+        );
+
+        fs::write(data.join(record), b"corrupt").unwrap();
+        assert_eq!(get(root, run_id).unwrap_err().class(), "record_unreadable");
+        assert_eq!(
+            checked_list(root, None).unwrap_err().class(),
+            "record_unreadable"
+        );
     }
 
     /// The join reports what the settlement said — and says nothing when the

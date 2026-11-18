@@ -6,20 +6,11 @@ fn find_run_dir(root: &Path, run_id: &str) -> Result<std::path::PathBuf, ForgeEr
     if legacy.is_dir() {
         return Ok(legacy);
     }
-    let cases_dir = root.join("cases");
-    if cases_dir.is_dir() {
-        for entry in fs::read_dir(&cases_dir)
-            .map_err(|e| ForgeError::io("read cases directory", e))?
-            .flatten()
-        {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let candidate = path.join("runs").join(run_id);
-            if candidate.is_dir() {
-                return Ok(candidate);
-            }
+    for case_id in sea_forge_case_runner::case_ops::case_ids(root)? {
+        let case_dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, &case_id)?;
+        let candidate = case_dir.join("runs").join(run_id);
+        if candidate.is_dir() {
+            return Ok(candidate);
         }
     }
     Err(ForgeError::Input(format!("run {run_id} not found")))

@@ -168,17 +168,32 @@ fn optional_directory(path: &Path) -> Result<bool> {
     }
 }
 
+pub(super) fn storage_dir(root: &Path) -> Result<Option<PathBuf>> {
+    let storage = root.join(".case-storage");
+    Ok(optional_directory(&storage)?.then_some(storage))
+}
+
 /// An existing versioned namespace takes precedence over legacy files.
 pub(super) fn namespace(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
     if !valid_id_segment(case_id, 128) {
         return Err(StoreError::Invalid("invalid case id"));
     }
-    let storage = root.join(".case-storage");
-    if !optional_directory(&storage)? {
+    let Some(storage) = storage_dir(root)? else {
         return Ok(None);
-    }
+    };
     let case = storage.join(case_id);
     Ok(optional_directory(&case)?.then_some(case))
+}
+
+/// Recognize the physical data root passed to a path-based mutation.
+pub(super) fn is_generation_data(root: &Path) -> bool {
+    let mut names = root.ancestors().take(5).map(Path::file_name);
+    matches!(
+        (names.next(), names.next(), names.next(), names.next(), names.next()),
+        (Some(Some(data)), Some(Some(generation)), Some(Some(generations)), Some(Some(_)), Some(Some(storage)))
+            if data == "data" && generations == "generations" && storage == ".case-storage"
+                && generation.to_str().is_some_and(|value| value.parse::<NonZeroU64>().is_ok())
+    )
 }
 
 /// Resolve a generation once per logical read. The store must retain selected
@@ -220,7 +235,18 @@ pub(super) fn open(root: &Path, case_id: &str) -> Result<Option<PathBuf>> {
     if actual != manifest.files {
         return Err(StoreError::Invalid("file set or digest mismatch"));
     }
-    Ok(Some(data))
+    let case_dir = data.join("cases").join(case_id);
+    let index = format!(".case-index/{case_id}.json");
+    let case_prefix = format!("cases/{case_id}/");
+    directory(&case_dir)?;
+    if !actual.contains_key(&index)
+        || actual
+            .keys()
+            .any(|name| name != &index && !name.starts_with(&case_prefix))
+    {
+        return Err(StoreError::Invalid("invalid case or index layout"));
+    }
+    Ok(Some(case_dir))
 }
 
 #[cfg(test)]
@@ -233,10 +259,15 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let case = root.path().join(".case-storage/case-1");
         let generation = case.join("generations/1");
-        fs::create_dir_all(generation.join("data/sub")).unwrap();
-        fs::write(generation.join("data/sub/a.txt"), b"hello").unwrap();
+        fs::create_dir_all(generation.join("data/cases/case-1/sub")).unwrap();
+        fs::create_dir_all(generation.join("data/.case-index")).unwrap();
+        fs::write(generation.join("data/cases/case-1/sub/a.txt"), b"hello").unwrap();
+        fs::write(generation.join("data/.case-index/case-1.json"), b"{}").unwrap();
         let manifest = serde_json::to_vec(&json!({"version":1,"case_id":"case-1","generation":1,
-            "files":{"sub/a.txt":hex::encode(Sha256::digest(b"hello"))}}))
+        "files":{
+            "cases/case-1/sub/a.txt":hex::encode(Sha256::digest(b"hello")),
+            ".case-index/case-1.json":hex::encode(Sha256::digest(b"{}")),
+        }}))
         .unwrap();
         fs::write(generation.join("manifest.json"), &manifest).unwrap();
         write_selector(root.path(), &manifest);
@@ -265,20 +296,44 @@ mod tests {
         let (root, generation) = fixture();
         assert_eq!(
             open(root.path(), "case-1").unwrap(),
-            Some(generation.join("data"))
+            Some(generation.join("data/cases/case-1"))
         );
         assert_eq!(open(root.path(), "other").unwrap(), None);
+        fs::create_dir_all(root.path().join("cases/case-1")).unwrap();
+        fs::create_dir_all(root.path().join(".case-storage/.stage-123")).unwrap();
+        assert_eq!(super::super::case_ids(root.path()).unwrap(), ["case-1"]);
+        fs::create_dir_all(root.path().join(".case-storage/case-2")).unwrap();
+        assert_eq!(
+            super::super::case_ids(root.path()).unwrap(),
+            ["case-1", "case-2"]
+        );
     }
+    #[test]
+    fn published_case_and_index_are_bound_together() {
+        let (root, generation) = fixture();
+        let selected = open(root.path(), "case-1").unwrap().unwrap();
+        assert_eq!(
+            super::super::case_guard::index_path(&selected),
+            generation.join("data/.case-index/case-1.json")
+        );
+        assert!(super::super::case_guard::CaseLock::acquire(&selected).is_err());
+        let logical = root.path().join("cases/case-1");
+        assert!(super::super::case_guard::CaseLock::acquire(&logical).is_err());
+        assert!(!generation.join("data/.case-locks").exists());
+        fs::write(generation.join("data/.case-index/case-1.json"), b"changed").unwrap();
+        assert!(open(root.path(), "case-1").is_err());
+    }
+
     #[test]
     fn rejects_corruption_and_incomplete_namespace() {
         let (root, generation) = fixture();
-        fs::write(generation.join("data/sub/a.txt"), b"changed").unwrap();
+        fs::write(generation.join("data/cases/case-1/sub/a.txt"), b"changed").unwrap();
         assert!(open(root.path(), "case-1").is_err());
         let (root, generation) = fixture();
         fs::write(generation.join("data/extra"), b"extra").unwrap();
         assert!(open(root.path(), "case-1").is_err());
         let (root, generation) = fixture();
-        fs::remove_file(generation.join("data/sub/a.txt")).unwrap();
+        fs::remove_file(generation.join("data/cases/case-1/sub/a.txt")).unwrap();
         assert!(open(root.path(), "case-1").is_err());
         let (root, generation) = fixture();
         fs::write(generation.join("manifest.json"), b"{}").unwrap();

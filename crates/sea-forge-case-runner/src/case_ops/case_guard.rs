@@ -200,6 +200,9 @@ impl CaseLock {
     /// Block until this thread holds the case lock of `case_dir`. Creates
     /// nothing under `case_dir`.
     pub fn acquire(case_dir: &Path) -> Result<Self, ContractError> {
+        if super::versioned_store::is_generation_data(&store_root(case_dir)) {
+            return Err(integrity("published case generations are immutable".into()));
+        }
         let (dir, name) = lock_file(case_dir);
         let key = dir.join(name);
         let nested = HELD.with(|held| {
@@ -221,10 +224,12 @@ impl CaseLock {
                 .map_err(|e| integrity(format!("take the case lock: {e}")))?;
             HELD.with(|held| held.borrow_mut().insert(key.clone(), (1, file)));
         }
-        Ok(Self {
+        let lock = Self {
             key,
             _thread_bound: PhantomData,
-        })
+        };
+        require_legacy_writer(case_dir)?;
+        Ok(lock)
     }
 }
 
@@ -1305,6 +1310,9 @@ fn require_legacy_writer(case_dir: &Path) -> Result<(), ContractError> {
     let Some(case_id) = case_dir.file_name().and_then(|name| name.to_str()) else {
         return Ok(());
     };
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Ok(());
+    }
     let namespace = super::versioned_store::namespace(&store_root(case_dir), case_id)
         .map_err(|error| integrity(error.to_string()))?;
     if namespace.is_some() {
@@ -1319,7 +1327,6 @@ fn require_legacy_writer(case_dir: &Path) -> Result<(), ContractError> {
 pub fn check(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
     contained(case_dir, batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
-    require_legacy_writer(case_dir)?;
     let creating = creating_field(case_dir, batch);
     let st = load_verified(case_dir, creating)?;
     if st.field || creating {
@@ -1365,7 +1372,6 @@ fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
 pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
     contained(case_dir, &batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
-    require_legacy_writer(case_dir)?;
     let creating = creating_field(case_dir, &batch);
     let st = load_verified(case_dir, creating)?;
     let field = st.field || creating;
@@ -1602,7 +1608,6 @@ fn op_for_file(rel: &str, value: &Value) -> Result<Op, ContractError> {
 /// Field Case's log is only ever appended by events: refused for one.
 pub fn init_events(case_dir: &Path) -> Result<(), ContractError> {
     let _lock = CaseLock::acquire(case_dir)?;
-    require_legacy_writer(case_dir)?;
     if case_dir.join(EVENTS).exists() {
         return Ok(());
     }

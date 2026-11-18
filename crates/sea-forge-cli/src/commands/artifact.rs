@@ -164,7 +164,7 @@ pub fn transition_command(
             "artifact_transition_error: governed transition case did not complete".into(),
         ));
     }
-    let case_dir = root.join("cases").join(&outcome.case_id);
+    let case_dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, &outcome.case_id)?;
     let case: sea_forge_core::types::Case = serde_json::from_slice(
         &fs::read(case_dir.join("case.json"))
             .map_err(|error| ForgeError::io("read transition case", error))?,

@@ -3557,8 +3557,7 @@ pub async fn handle_request_as(
             serde_json::to_value(sfwp::case::preflight(&state.root, params))
                 .unwrap_or_else(|_| serde_json::json!({"error": "preflight serialization failed"}))
         }
-        Request::CaseList => serde_json::to_value(sfwp::case_views::list(&state.root))
-            .unwrap_or_else(|_| serde_json::json!({"error": "case list serialization failed"})),
+        Request::CaseList => case_view_response(sfwp::case_views::checked_list(&state.root)),
         Request::CaseGetOverview { case_id } => {
             // The digest must describe exactly the state returned. Hold the
             // case lock (so `case.add_item`, which commits and materializes
@@ -3589,18 +3588,11 @@ pub async fn handle_request_as(
         Request::CaseGetHorizon { case_id } => {
             case_view_response(sfwp::case_views::get_horizon(&state.root, &case_id))
         }
-        Request::RunList { case_id } => {
-            serde_json::to_value(sfwp::run_views::list(&state.root, case_id.as_deref()))
-                .unwrap_or_else(|_| serde_json::json!({"error": "run list serialization failed"}))
-        }
-        Request::RunGet { run_id } => match sfwp::run_views::get(&state.root, &run_id) {
-            Ok(view) => serde_json::to_value(view)
-                .unwrap_or_else(|_| serde_json::json!({"error": "run view serialization failed"})),
-            Err(error) => serde_json::json!({
-                "error": error.message(),
-                "error_class": error.class(),
-            }),
-        },
+        Request::RunList { case_id } => run_view_response(sfwp::run_views::checked_list(
+            &state.root,
+            case_id.as_deref(),
+        )),
+        Request::RunGet { run_id } => run_view_response(sfwp::run_views::get(&state.root, &run_id)),
         Request::AssetList => {
             serde_json::to_value(sfwp::assets::list(&state.root, &state.config().agent))
                 .unwrap_or_else(|_| serde_json::json!({"error": "asset list serialization failed"}))
@@ -4614,6 +4606,16 @@ async fn field_case_read(
         Err(error) => forge_error_response(&ForgeError::Internal(format!(
             "case read task panic: {error}"
         ))),
+    }
+}
+
+fn run_view_response<T: serde::Serialize>(
+    result: Result<T, sfwp::run_views::RunViewError>,
+) -> serde_json::Value {
+    match result {
+        Ok(view) => serde_json::to_value(view)
+            .unwrap_or_else(|_| serde_json::json!({"error": "run view serialization failed"})),
+        Err(error) => serde_json::json!({"error": error.message(), "error_class": error.class()}),
     }
 }
 

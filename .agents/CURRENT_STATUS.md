@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 338
+**Status revision:** 339
 
-**Stage:** FDE S2: verified Field Case snapshot reader
+**Stage:** FDE S2: versioned case, run, and continuation readers
 
-**Summary:** Resolve verified Field Case snapshots for case plans, CLI replay, and SFWP case views.
+**Summary:** Pin and verify selected Field Case snapshots across SFWP and CLI views, with the index stored beside the case records.
 
 **Verified:**
 
+- Case-runner suite passed 97 tests with 19 ignored. The reviewed server suite passed 689 tests with 2 ignored.
+- The new server tests verify selected run data, flat run precedence, and integrity errors for corrupt data and invalid discovery.
+- The S2 proof before the final reader review matched the prior checkpoint row by row. Fifteen scenarios passed, AT-09 remained partial, and all 12 frozen contract digests matched.
+- The standalone staging and publisher prototype passed five tests on this host, including a round trip through the production reader, concurrent readers, and injected flush failures.
 - just crate-test sea-forge-case-runner passed 96 tests with 19 ignored.
 - The focused server case views suite passed 3 tests and the CLI ledger suite passed 4.
 - S2 proof on 9745a729 matched 9cbc3e16 row for row, with 15 scenario passes, AT-09 partial, and all 12 contract digests verified.
@@ -34,10 +38,10 @@
 
 **Limits:**
 
-- The snapshot resolver is wired for case plans, CLI replay, and SFWP case views. Continuation, run and artifact lookup, and the atomic writer are pending.
-- Versioned case namespaces reject legacy writes. Linux, macOS, and Windows publication qualification remains pending.
-- The full workspace and server suite have not been rerun after the terminal lifecycle checkpoint. AT-09 awaits the WP-31 human A3 settlement proof.
-- cargo test --workspace and just ci not run (host memory)
+- The versioned writer remains disabled. Writer integration needs a distinct result for post-publication durability uncertainty.
+- Cross-platform namespace durability, runtime evidence sealing, historical artifact resolution, and the independent C7 execution oracle are pending.
+- The initial full workspace gate ran 2045 passing tests and 28 ignored, with CLI failures in t13_1, M5 workspace placement, and post-start JSON diagnostics.
+- AT-09 awaits the WP-31 human A3 settlement proof.
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
 - docs/how-to/upgrade-domainforge-producer.md still records a 0.21.1 check and its a71ff6 digest as history
@@ -63,7 +67,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Route continuation, run, and artifact readers through the shared snapshot resolver before enabling atomic publication.
+**Next:** Verify the CLI regression fixes separately. Integrate stage, strict verification, and atomic publication after the internal result decision, then qualify the platform and runtime evidence gates.
 
 **Evidence:**
 

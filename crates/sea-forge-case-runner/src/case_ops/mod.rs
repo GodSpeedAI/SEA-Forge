@@ -68,6 +68,45 @@ pub fn case_snapshot_dir(root: &Path, case_id: &str) -> Result<std::path::PathBu
         })
 }
 
+/// Discover logical cases across both storage layouts. A versioned case is
+/// listed even if its selector is corrupt, so the caller can report it.
+pub fn case_ids(root: &Path) -> Result<Vec<String>, ForgeError> {
+    let mut seen = std::collections::HashSet::new();
+    let mut ids = Vec::new();
+    let append = |entry: fs::DirEntry,
+                  ids: &mut Vec<String>,
+                  seen: &mut std::collections::HashSet<String>| {
+        if let Ok(id) = entry.file_name().into_string() {
+            if sea_forge_core::path::valid_id_segment(&id, 128) && seen.insert(id.clone()) {
+                ids.push(id);
+            }
+        }
+    };
+    match fs::read_dir(root.join("cases")) {
+        Ok(entries) => {
+            for entry in entries.flatten().filter(|entry| entry.path().is_dir()) {
+                append(entry, &mut ids, &mut seen);
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(ForgeError::io("read cases directory", error)),
+    }
+    let storage = versioned_store::storage_dir(root).map_err(|error| ForgeError::Plan {
+        class: "STORE_INTEGRITY",
+        message: format!("discover Field Case snapshots: {error}"),
+    })?;
+    if let Some(storage) = storage {
+        let entries = fs::read_dir(storage)
+            .map_err(|error| ForgeError::io("read Field Case storage directory", error))?;
+        for entry in entries {
+            let entry =
+                entry.map_err(|error| ForgeError::io("read Field Case storage entry", error))?;
+            append(entry, &mut ids, &mut seen);
+        }
+    }
+    Ok(ids)
+}
+
 fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ForgeError> {
     serde_json::from_slice(
         &fs::read(path).map_err(|error| ForgeError::io("read case state", error))?,

@@ -84,13 +84,9 @@ pub struct Admission {
 /// skipped either: the rule lives in ONE function, `case_ops::field_guard`, which
 /// every writer (this admission, the transition writer, the engine, the human
 /// completion) calls. Refused with the contract's code and no side effect.
-fn gate_item_check(root: &Path, case_id: &str, item: &str, how: &str) -> Result<(), Value> {
-    sea_forge_case_runner::case_ops::field_guard::gate_item_check(
-        &root.join("cases").join(case_id),
-        item,
-        how,
-    )
-    .map_err(|r| r.to_value())
+fn gate_item_check(dir: &Path, item: &str, how: &str) -> Result<(), Value> {
+    sea_forge_case_runner::case_ops::field_guard::gate_item_check(dir, item, how)
+        .map_err(|r| r.to_value())
 }
 
 /// The check adjacent to an execution (item 2 of the WP-21b review, item 4 of
@@ -100,10 +96,14 @@ fn gate_item_check(root: &Path, case_id: &str, item: &str, how: &str) -> Result<
 /// other pass (another item, the supervisor) is `CASE_CLOSED`. Not a Field
 /// Case: nothing to check.
 pub fn recheck_lifecycle(root: &Path, case_id: &str, item: Option<&str>) -> Result<(), Value> {
-    if !matches!(template_of(root, case_id), Ok(Some(t)) if t == FIELD_CASE_TEMPLATE) {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
         return Ok(());
     }
-    let facts = case_records::episode_facts(root, case_id, "-", 0).map_err(|why| {
+    let dir = snapshot(root, case_id)?;
+    if !matches!(template_of(&dir), Ok(Some(t)) if t == FIELD_CASE_TEMPLATE) {
+        return Ok(());
+    }
+    let facts = case_records::episode_facts_in(root, &dir, case_id, "-", 0).map_err(|why| {
         refuse(
             "FREEZE_INCOMPLETE",
             &format!("store integrity: {why}"),
@@ -114,14 +114,15 @@ pub fn recheck_lifecycle(root: &Path, case_id: &str, item: Option<&str>) -> Resu
         Lifecycle::Suspended => Err(refuse("CASE_SUSPENDED", "the case is suspended", None)),
         Lifecycle::Closed => {
             let ends_plan = match item {
-                Some(item) => reaches_terminal(root, case_id, &[(item.to_string(), "complete")])
-                    .map_err(|why| {
+                Some(item) => {
+                    reaches_terminal(&dir, &[(item.to_string(), "complete")]).map_err(|why| {
                         refuse(
                             "FREEZE_INCOMPLETE",
                             &format!("the plan cannot be read: {why}"),
                             Some("I-1"),
                         )
-                    })?,
+                    })?
+                }
                 None => false,
             };
             if ends_plan {
@@ -197,14 +198,23 @@ fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
     out
 }
 
-fn template_of(root: &Path, case_id: &str) -> Result<Option<String>, String> {
-    let dir = root.join("cases").join(case_id);
+fn snapshot(root: &Path, case_id: &str) -> Result<std::path::PathBuf, Value> {
+    sea_forge_case_runner::case_ops::case_snapshot_dir(root, case_id).map_err(|why| {
+        refuse(
+            "FREEZE_INCOMPLETE",
+            &format!("store integrity: {why}"),
+            Some("I-1"),
+        )
+    })
+}
+
+fn template_of(dir: &Path) -> Result<Option<String>, String> {
     let path = dir.join("plan.json");
     match std::fs::read(&path) {
         Ok(bytes) => {
             let doc: Value = serde_json::from_slice(&bytes)
                 .map_err(|e| format!("{} is not valid JSON: {e}", path.display()))?;
-            if sea_forge_case_runner::case_ops::case_guard::index_says_field(&dir) {
+            if sea_forge_case_runner::case_ops::case_guard::index_says_field(dir) {
                 return Ok(Some(FIELD_CASE_TEMPLATE.to_string()));
             }
             Ok(doc["template_ref"].as_str().map(String::from))
@@ -212,7 +222,7 @@ fn template_of(root: &Path, case_id: &str) -> Result<Option<String>, String> {
         // A missing plan of a case the shared classifier calls a Field Case is
         // a Field Case with a corrupt store: the Field admission refuses it.
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(
-            sea_forge_case_runner::case_ops::field_guard::is_field_case(&dir)
+            sea_forge_case_runner::case_ops::field_guard::is_field_case(dir)
                 .then(|| FIELD_CASE_TEMPLATE.to_string()),
         ),
         Err(e) => Err(format!("read {}: {e}", path.display())),
@@ -239,11 +249,10 @@ fn plan_is_finished(plan: &CasePlan, events: &[TraceEvent]) -> bool {
 /// Would the action(s) leave the plan with nothing left to do (the engine would
 /// complete or terminate the case)? Evaluated on the plan and the event ledger
 /// with the scope's items hypothetically finished.
-fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Result<bool, String> {
+fn reaches_terminal(dir: &Path, scope: &[(String, &str)]) -> Result<bool, String> {
     if scope.is_empty() {
         return Ok(false);
     }
-    let dir = root.join("cases").join(case_id);
     let plan: CasePlan = serde_json::from_slice(
         &std::fs::read(dir.join("plan.json")).map_err(|e| format!("read plan.json: {e}"))?,
     )
@@ -289,7 +298,6 @@ fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Res
     // The engine's automatic milestones cascade: a milestone that would be
     // achieved next (its gate passing, read now) is part of what this action
     // leads to, so a close behind it is seen here and refused before a write.
-    let case_dir = root.join("cases").join(case_id);
     for _ in 0..plan.items.len() {
         let Some(id) = next_case_actions(&plan.items, &events)
             .iter()
@@ -300,7 +308,7 @@ fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Res
         else {
             break;
         };
-        if sea_forge_case_runner::case_ops::field_guard::gate_item_check(&case_dir, &id, "complete")
+        if sea_forge_case_runner::case_ops::field_guard::gate_item_check(dir, &id, "complete")
             .is_err()
         {
             break;
@@ -334,8 +342,7 @@ fn reaches_terminal(root: &Path, case_id: &str, scope: &[(String, &str)]) -> Res
 }
 
 /// The plan items that have an execution step (sandboxed or agent work).
-fn execution_items(root: &Path, case_id: &str) -> Result<Vec<String>, String> {
-    let dir = root.join("cases").join(case_id);
+fn execution_items(dir: &Path) -> Result<Vec<String>, String> {
     let plan: CasePlan = serde_json::from_slice(
         &std::fs::read(dir.join("plan.json")).map_err(|e| format!("read plan.json: {e}"))?,
     )
@@ -366,12 +373,15 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     // R9: the case is resolved from the store. A `delegate` whose case does not
     // resolve fails closed (never assumed plain); the other verbs keep their
     // own unknown-case answers.
-    let known = sea_forge_core::path::valid_id_segment(input.case_id, 128)
-        && root
-            .join("cases")
-            .join(input.case_id)
-            .join("case.json")
-            .exists();
+    let valid = sea_forge_core::path::valid_id_segment(input.case_id, 128);
+    let dir = if valid {
+        Some(snapshot(root, input.case_id)?)
+    } else {
+        None
+    };
+    let known = dir
+        .as_ref()
+        .is_some_and(|dir| dir.join("case.json").exists());
     if !known {
         return if delegate {
             Err(unresolved("case_id does not resolve to a case"))
@@ -379,7 +389,8 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             Ok(Admission::default())
         };
     }
-    let template = match template_of(root, input.case_id) {
+    let dir = dir.expect("a known case has a snapshot directory");
+    let template = match template_of(&dir) {
         Ok(t) => t,
         Err(why) if delegate => return Err(unresolved(&why)),
         Err(_) => return Ok(Admission::default()),
@@ -419,8 +430,9 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         .map(|(i, ..)| i.as_str())
         .or(input.item_id)
         .unwrap_or("-");
-    let facts = case_records::episode_facts(
+    let facts = case_records::episode_facts_in(
         root,
+        &dir,
         input.case_id,
         scope_item,
         key.as_ref().map_or(0, |(_, n, _)| *n),
@@ -463,7 +475,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     } else {
         scope_item_scope(input, key.as_ref())
     };
-    let terminal = reaches_terminal(root, input.case_id, &scope).map_err(|why| {
+    let terminal = reaches_terminal(&dir, &scope).map_err(|why| {
         refuse(
             "FREEZE_INCOMPLETE",
             &format!("the plan cannot be read: {why}"),
@@ -498,7 +510,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     if input.verb == Verb::HumanTaskComplete {
         if let Some(item) = input.item_id {
-            gate_item_check(root, input.case_id, item, "complete")?;
+            gate_item_check(&dir, item, "complete")?;
         }
         return Ok(Admission {
             field_case: true,
@@ -519,10 +531,10 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         // transition, whatever the request says about transition_only.
         for item in input.transition_items.as_array().into_iter().flatten() {
             if let (Some(i), Some(how)) = (item["item_id"].as_str(), item["transition"].as_str()) {
-                gate_item_check(root, input.case_id, i, how)?;
+                gate_item_check(&dir, i, how)?;
             }
         }
-        let exec = execution_items(root, input.case_id).map_err(|why| {
+        let exec = execution_items(&dir).map_err(|why| {
             refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("the plan cannot be read: {why}"),
@@ -618,7 +630,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     let workspace = workspace_of(input, &item);
     let frozen_ref = facts.episode_ref.clone().unwrap_or_default();
     let object = execution_object(
-        root,
+        &dir,
         input,
         &item,
         &frozen_ref,
@@ -632,7 +644,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             None,
         )
     })?;
-    let decision = find_decision(root, input.case_id, &object, &config)?;
+    let decision = find_decision(root, &dir, &object, &config)?;
     // R10: the assignment.
     let mut assignment: Option<(String, &str)> = None;
     if let Some(id) = input.assignment_id.filter(|_| delegate) {
@@ -643,7 +655,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         if (c.as_str(), i.as_str(), an) != (input.case_id, item.as_str(), n) || k == 0 {
             return Err(invalid("assignment_id names another episode"));
         }
-        let path = root.join("cases").join(input.case_id).join(ASSIGNMENTS);
+        let path = dir.join(ASSIGNMENTS);
         let lines = case_records::read_lines_strict(&path).map_err(|why| {
             refuse(
                 "FREEZE_INCOMPLETE",
@@ -808,7 +820,7 @@ fn workspace_of(input: &GateInput, item: &str) -> String {
 /// item's command, the request's time bound. A delegation has no command: its
 /// argv is the endpoint and its sandbox profile `agent`.
 fn execution_object(
-    root: &Path,
+    dir: &Path,
     input: &GateInput,
     item: &str,
     episode_ref: &str,
@@ -817,8 +829,7 @@ fn execution_object(
 ) -> Result<Value, String> {
     use sea_forge_core::types::Operation;
     let plan: CasePlan = serde_json::from_slice(
-        &std::fs::read(root.join("cases").join(input.case_id).join("plan.json"))
-            .map_err(|e| format!("read plan.json: {e}"))?,
+        &std::fs::read(dir.join("plan.json")).map_err(|e| format!("read plan.json: {e}"))?,
     )
     .map_err(|e| format!("plan.json: {e}"))?;
     let plan_item = plan.items.iter().find(|i| i.plan_item_id == item);
@@ -861,7 +872,7 @@ struct Decision {
 /// exhausted, or any unreadable record is `AUTHORITY_DENIED` (fail closed).
 fn find_decision(
     root: &Path,
-    case_id: &str,
+    dir: &Path,
     object: &Value,
     config: &Value,
 ) -> Result<Decision, Value> {
@@ -878,7 +889,7 @@ fn find_decision(
     let entries = ledger
         .read_entries()
         .map_err(|e| denied(&format!("the authority ledger cannot be read: {e}")))?;
-    let runs = case_records::read_lines_strict(&root.join("cases").join(case_id).join(EXEC_RUNS))
+    let runs = case_records::read_lines_strict(&dir.join(EXEC_RUNS))
         .map_err(|e| denied(&format!("the run counter cannot be read: {e}")))?;
     let max_runs = config["execution_max_runs"].as_u64().unwrap_or(1).max(1);
     let ttl = config["execution_decision_ttl_secs"]

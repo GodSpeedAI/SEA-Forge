@@ -55,7 +55,7 @@ use schemars::JsonSchema;
 use sea_forge_core::types::{CasePlan, Operation, SettlementEvent, TranscriptEvidence};
 use serde::{Deserialize, Serialize};
 
-use crate::sfwp::run_views::{case_index, read_json, run_dirs};
+use crate::sfwp::run_views::{case_index, read_json, run_dirs, RunCaseSnapshots};
 
 /// What the server knows about a delegation right now, live-only.
 ///
@@ -160,12 +160,13 @@ struct PlannedTask {
 ///
 /// `live` is a snapshot of the server's in-memory handles, keyed by run id.
 pub fn list(root: &Path, live: &BTreeMap<String, LiveDelegation>) -> DelegationListResult {
-    let index = case_index(root);
+    let snapshots = RunCaseSnapshots::open(root);
+    let index = case_index(&snapshots);
     let mut delegations = Vec::new();
     let mut unreadable = Vec::new();
     let mut seen: Vec<String> = Vec::new();
 
-    for (run_id, dir) in run_dirs(root) {
+    for (run_id, dir) in run_dirs(root, &snapshots) {
         let Some(plan) = read_json::<CasePlan>(&dir.join("plan.json")) else {
             // A run directory with no readable plan is only *this* view's
             // problem when it is a delegation, and an unreadable plan is

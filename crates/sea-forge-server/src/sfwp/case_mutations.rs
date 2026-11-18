@@ -657,7 +657,8 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
             "malformed artifact digest {digest:?}: expected a 64-character hex sha256"
         )));
     }
-    for run_dir in candidate_run_dirs(root) {
+    let (dirs, discovery_error) = candidate_run_dirs(root);
+    for run_dir in dirs {
         let evidence_path = run_dir.join("evidence.jsonl");
         if !crate::sfwp::size_within_cap(&evidence_path, crate::sfwp::MAX_JOURNAL_BYTES) {
             continue;
@@ -709,6 +710,9 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
             });
         }
     }
+    if let Some(error) = discovery_error {
+        return Err(error);
+    }
     Err(ForgeError::Input(format!(
         "artifact_not_found: no evidence record in this cell carries digest {digest}"
     )))
@@ -716,7 +720,7 @@ pub(crate) fn artifact_get(root: &Path, digest: &str) -> Result<ArtifactView, Fo
 
 /// Every run directory this cell owns, deterministically ordered: standalone
 /// `<root>/runs/*` and case-scoped `<root>/cases/*/runs/*`.
-fn candidate_run_dirs(root: &Path) -> Vec<PathBuf> {
+fn candidate_run_dirs(root: &Path) -> (Vec<PathBuf>, Option<ForgeError>) {
     let mut dirs = Vec::new();
     let collect = |runs: &Path, out: &mut Vec<PathBuf>| {
         if let Ok(entries) = std::fs::read_dir(runs) {
@@ -730,18 +734,21 @@ fn candidate_run_dirs(root: &Path) -> Vec<PathBuf> {
         }
     };
     collect(&root.join("runs"), &mut dirs);
-    if let Ok(cases) = std::fs::read_dir(root.join("cases")) {
-        let mut case_dirs: Vec<PathBuf> = cases
-            .flatten()
-            .map(|entry| entry.path().join("runs"))
-            .filter(|path| path.is_dir())
-            .collect();
-        case_dirs.sort();
-        for case_runs in case_dirs {
-            collect(&case_runs, &mut dirs);
+    let mut cases = match sea_forge_case_runner::case_ops::case_ids(root) {
+        Ok(cases) => cases,
+        Err(error) => return (dirs, Some(error)),
+    };
+    cases.sort();
+    let mut discovery_error = None;
+    for case_id in cases {
+        match sea_forge_case_runner::case_ops::case_snapshot_dir(root, &case_id) {
+            Ok(dir) => collect(&dir.join("runs"), &mut dirs),
+            Err(error) => {
+                discovery_error.get_or_insert(error);
+            }
         }
     }
-    dirs
+    (dirs, discovery_error)
 }
 
 /// Standard base64 (RFC 4648, with padding). Hand-rolled because adding the

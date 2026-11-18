@@ -54,7 +54,7 @@ use sea_forge_core::types::{CasePlan, Operation, SettlementEvent, SettlementStat
 use sea_forge_extension::{ExtensionRegistry, ExtensionStatus, TrustLevel};
 use serde::{Deserialize, Serialize};
 
-use crate::sfwp::run_views::{read_json, run_dirs};
+use crate::sfwp::run_views::{read_json, run_dirs, RunCaseSnapshots};
 
 /// Which family an asset belongs to. Closed on purpose: a fourth family means a
 /// fourth real source of truth in the kernel, not a free-text label.
@@ -202,7 +202,8 @@ struct ProbeEvidence {
 
 fn latest_probe_per_endpoint(root: &Path) -> BTreeMap<String, ProbeEvidence> {
     let mut latest: BTreeMap<String, ProbeEvidence> = BTreeMap::new();
-    for (run_id, dir) in run_dirs(root) {
+    let snapshots = RunCaseSnapshots::open(root);
+    for (run_id, dir) in run_dirs(root, &snapshots) {
         let Some(plan) = read_json::<CasePlan>(&dir.join("plan.json")) else {
             continue;
         };

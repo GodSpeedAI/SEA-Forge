@@ -32,7 +32,6 @@ use super::case_records::{
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use sea_forge_core::field_case::is_field_path;
@@ -99,22 +98,21 @@ pub fn document_is_valid(document: &Value) -> Result<(), String> {
 // The document
 // ---------------------------------------------------------------------------
 
-fn document_path(ctx: &AppendContext) -> PathBuf {
-    case_dir(ctx.root, ctx.case_id).join(DOCUMENT)
-}
-
 /// Whether the case was opened from the Field Case template.
 pub fn is_field_case(root: &std::path::Path, case_id: &str) -> Result<bool, String> {
     // The one shared classifier (case index first, then the plan, then any
     // `field*` artifact when the plan is missing).
-    let dir = case_dir(root, case_id);
+    is_field_case_in(&case_dir(root, case_id))
+}
+
+pub(super) fn is_field_case_in(dir: &std::path::Path) -> Result<bool, String> {
     let plan = dir.join("plan.json");
     if let Ok(bytes) = fs::read(&plan) {
         serde_json::from_slice::<Value>(&bytes)
             .map_err(|e| format!("{} is not valid JSON: {e}", plan.display()))?;
     }
     Ok(sea_forge_case_runner::case_ops::field_guard::is_field_case(
-        &dir,
+        dir,
     ))
 }
 
@@ -147,13 +145,21 @@ pub fn ledger_revision(records: &[Value]) -> u64 {
 /// file behind its records. `Err` is `STORE_INTEGRITY`: no file, an invalid
 /// document, a document of another case, or one ahead of its ledger.
 pub fn load_document(ctx: &AppendContext, all: &[Value]) -> Result<Value, String> {
-    let path = document_path(ctx);
+    load_document_in(ctx.case_id, &case_dir(ctx.root, ctx.case_id), all)
+}
+
+pub(super) fn load_document_in(
+    case_id: &str,
+    dir: &std::path::Path,
+    all: &[Value],
+) -> Result<Value, String> {
+    let path = dir.join(DOCUMENT);
     let bytes = fs::read(&path)
         .map_err(|e| format!("store integrity: field_case.json of a Field Case: {e}"))?;
     let mut document: Value = serde_json::from_slice(&bytes)
         .map_err(|e| format!("store integrity: field_case.json is not JSON: {e}"))?;
     document_is_valid(&document).map_err(|e| format!("store integrity: field_case.json: {e}"))?;
-    if document["case_id"] != ctx.case_id {
+    if document["case_id"] != case_id {
         return Err("store integrity: field_case.json names another case".into());
     }
     let have = document["revision"].as_u64().unwrap_or(0);
@@ -166,7 +172,7 @@ pub fn load_document(ctx: &AppendContext, all: &[Value]) -> Result<Value, String
     // A document behind its ledger is what the ledger derives; the next
     // commit rewrites the file.
     if have < want {
-        document = sea_forge_case_runner::case_ops::case_guard::derived_document(ctx.case_id, all);
+        document = sea_forge_case_runner::case_ops::case_guard::derived_document(case_id, all);
         document_is_valid(&document)
             .map_err(|e| format!("store integrity: derived document: {e}"))?;
     }

@@ -5,17 +5,10 @@ use sea_forge_core::{
 use std::{fs, path::Path};
 
 pub fn list(root: &Path, unsettled: bool) -> Result<u8, ForgeError> {
-    let cases_dir = root.join("cases");
-    if !cases_dir.exists() {
-        return Ok(0);
-    }
-
     let mut cases = Vec::new();
-    for entry in fs::read_dir(&cases_dir).map_err(|error| ForgeError::io("read cases", error))? {
-        let path = entry
-            .map_err(|error| ForgeError::io("read case entry", error))?
-            .path()
-            .join("case.json");
+    for case_id in sea_forge_case_runner::case_ops::case_ids(root)? {
+        let case_dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, &case_id)?;
+        let path = case_dir.join("case.json");
         if !path.is_file() {
             continue;
         }
@@ -24,8 +17,13 @@ pub fn list(root: &Path, unsettled: bool) -> Result<u8, ForgeError> {
         )
         .map_err(|error| ForgeError::Serialization(format!("parse {}: {error}", path.display())))?;
         for run_id in &case.run_ids {
-            let settlement_path = cases_dir
-                .join(&case.case_id)
+            // Preserve the legacy projection's case.json identity lookup.
+            let settlement_case_dir = if case_dir == root.join("cases").join(&case_id) {
+                root.join("cases").join(&case.case_id)
+            } else {
+                case_dir.clone()
+            };
+            let settlement_path = settlement_case_dir
                 .join("runs")
                 .join(run_id)
                 .join("settlement.json");

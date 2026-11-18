@@ -52,7 +52,7 @@ const ZERO_HASH: &str = "0000000000000000000000000000000000000000000000000000000
 /// outbox, so it is held to a quarter of the frame.
 pub const MAX_PAYLOAD_BYTES: usize = 256 * 1024;
 
-const RECORDS: &str = "field-records.jsonl";
+pub(super) const RECORDS: &str = "field-records.jsonl";
 const INTENTS: &str = "field-freeze-intents.jsonl";
 const RT_OUTBOX: &str = "field-rt-outbox.jsonl";
 const ANCHOR_OUTBOX: &str = "field-anchor-outbox.jsonl";
@@ -410,16 +410,17 @@ pub(super) const LINKS: &str = "field-links.jsonl";
 /// Every store file whose lines decide an invariant, an id or idempotency must
 /// parse completely before anything is decided or written.
 pub(super) fn integrity(ctx: &AppendContext) -> Result<(), String> {
+    integrity_in(&case_dir(ctx.root, ctx.case_id))
+}
+
+pub(super) fn integrity_in(dir: &Path) -> Result<(), String> {
     // THE guard's strict load: every line of every store, the record chain and
     // payload schemas, the document (README section 3 STORE_INTEGRITY).
-    sea_forge_case_runner::case_ops::case_guard::load_verified(
-        &case_dir(ctx.root, ctx.case_id),
-        false,
-    )
-    .map_err(|r| format!("store integrity: {}", r.message))?;
+    sea_forge_case_runner::case_ops::case_guard::load_verified(dir, false)
+        .map_err(|r| format!("store integrity: {}", r.message))?;
     // The hash chain and the digests of every stored record (README section 3
     // STORE_INTEGRITY), also for a case that is not a Field Case proper.
-    sea_forge_case_runner::case_ops::case_guard::verified_records(&case_dir(ctx.root, ctx.case_id))
+    sea_forge_case_runner::case_ops::case_guard::verified_records(dir)
         .map(drop)
         .map_err(|r| format!("store integrity: {}", r.message))
 }
@@ -537,8 +538,12 @@ fn record_refusal(
 
 /// Latest intent line per idempotency key.
 pub(super) fn latest_intents(ctx: &AppendContext) -> Vec<Value> {
+    latest_intents_in(&case_dir(ctx.root, ctx.case_id))
+}
+
+pub(super) fn latest_intents_in(dir: &Path) -> Vec<Value> {
     let mut latest: Vec<Value> = Vec::new();
-    for line in read_lines(&case_dir(ctx.root, ctx.case_id).join(INTENTS)) {
+    for line in read_lines(&dir.join(INTENTS)) {
         match latest
             .iter_mut()
             .find(|l| l["idempotency_key"] == line["idempotency_key"])
@@ -1687,14 +1692,30 @@ pub(super) fn freeze_state(
     n: u64,
     require_anchor: bool,
 ) -> FreezeStatus {
-    if integrity(ctx).is_err() {
+    freeze_state_in(
+        ctx,
+        &case_dir(ctx.root, ctx.case_id),
+        plan_item_id,
+        n,
+        require_anchor,
+    )
+}
+
+pub(super) fn freeze_state_in(
+    ctx: &AppendContext,
+    dir: &Path,
+    plan_item_id: &str,
+    n: u64,
+    require_anchor: bool,
+) -> FreezeStatus {
+    if integrity_in(dir).is_err() {
         return FreezeStatus::Incomplete(vec!["store_integrity"]);
     }
     let key = key_json(ctx.case_id, plan_item_id, n);
-    let record = records(ctx)
+    let record = read_lines(&dir.join(RECORDS))
         .into_iter()
         .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == key);
-    let intent = latest_intents(ctx)
+    let intent = latest_intents_in(dir)
         .into_iter()
         .find(|i| i["episode_key"] == key && i["state"] != "abandoned");
     let Some(source) = record.as_ref().or(intent.as_ref()) else {
@@ -1705,7 +1726,7 @@ pub(super) fn freeze_state(
         None => missing.push("case_record"),
         Some(r) => {
             // Both phases: the intent for the record's key must be committed.
-            let committed = latest_intents(ctx)
+            let committed = latest_intents_in(dir)
                 .iter()
                 .any(|i| i["idempotency_key"] == r["idempotency_key"] && i["state"] == "committed");
             if !committed {
@@ -1723,7 +1744,7 @@ pub(super) fn freeze_state(
         missing.push("realitytrace_records");
     }
     let digest = source["digest"].as_str().unwrap_or("");
-    let anchored = read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
+    let anchored = read_lines(&dir.join(ANCHOR_OUTBOX))
         .iter()
         .any(|a| a["state"] == "published" && a["digest"] == digest);
     if require_anchor && !anchored {
@@ -2078,6 +2099,19 @@ pub fn episode_facts(
     if !valid_case_segment(case_id) {
         return Err(format!("unsafe case id {case_id}"));
     }
+    let dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, case_id)
+        .map_err(|e| format!("store integrity: {e}"))?;
+    episode_facts_in(root, &dir, case_id, plan_item_id, n)
+}
+
+/// Read episode facts from the caller's already resolved case snapshot.
+pub(super) fn episode_facts_in(
+    root: &Path,
+    dir: &Path,
+    case_id: &str,
+    plan_item_id: &str,
+    n: u64,
+) -> Result<EpisodeFacts, String> {
     let config = fde_config(root)?;
     let policy = AppendPolicy {
         pinned_world: None,
@@ -2096,10 +2130,10 @@ pub fn episode_facts(
         anchor: None,
         policy: &policy,
     };
-    integrity(&ctx)?;
+    integrity_in(dir)?;
     let key = key_json(case_id, plan_item_id, n);
-    let all = records(&ctx);
-    let intents = latest_intents(&ctx);
+    let all = read_lines(&dir.join(RECORDS));
+    let intents = latest_intents_in(dir);
     let record = all
         .iter()
         .find(|r| r["kind"] == "episode.frozen" && r["episode_key"] == key);
@@ -2121,7 +2155,7 @@ pub fn episode_facts(
     });
     let prefix = format!("episode:{case_id}:{plan_item_id}:{n}@");
     let digest = source.and_then(|src| src["digest"].as_str()).unwrap_or("");
-    let anchor = published_anchor_for(&ctx, &prefix, digest);
+    let anchor = published_anchor_for(dir, &prefix, digest);
     let publisher_ok = match (ctx.policy.case_keeper, &anchor) {
         (Some(keeper), Some(a)) => a["receipt"]["pusher_identity"]
             .as_str()
@@ -2166,17 +2200,15 @@ pub fn episode_facts(
     })
 }
 
-fn published_anchor_for(ctx: &AppendContext, subject_prefix: &str, digest: &str) -> Option<Value> {
-    read_lines(&case_dir(ctx.root, ctx.case_id).join(ANCHOR_OUTBOX))
-        .into_iter()
-        .find(|a| {
-            a["state"] == "published"
-                && a["kind"] == "freeze"
-                && (a["subject_ref"]
-                    .as_str()
-                    .is_some_and(|r| r.starts_with(subject_prefix))
-                    || (!digest.is_empty() && a["digest"] == digest))
-        })
+fn published_anchor_for(dir: &Path, subject_prefix: &str, digest: &str) -> Option<Value> {
+    read_lines(&dir.join(ANCHOR_OUTBOX)).into_iter().find(|a| {
+        a["state"] == "published"
+            && a["kind"] == "freeze"
+            && (a["subject_ref"]
+                .as_str()
+                .is_some_and(|r| r.starts_with(subject_prefix))
+                || (!digest.is_empty() && a["digest"] == digest))
+    })
 }
 
 /// Owe (and try to deliver) the interaction event of a run record. Best effort,

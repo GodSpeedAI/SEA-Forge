@@ -9,10 +9,11 @@
 //! may bring a document left behind by a crash up to its ledger).
 
 use super::case_records::{
-    fde_config, freeze_state, integrity, latest_intents, lifecycle, now_rfc3339, parse_time,
-    read_lines, records, refuse, with_store_ctx, AppendContext, FreezeStatus, Lifecycle, APPROVALS,
+    fde_config, freeze_state_in, integrity_in, latest_intents_in, lifecycle, now_rfc3339,
+    parse_time, read_lines, refuse, with_store_ctx, AppendContext, FreezeStatus, Lifecycle,
+    APPROVALS, RECORDS,
 };
-use super::field_case_kinds::{is_field_case, load_document};
+use super::field_case_kinds::{is_field_case_in, load_document_in};
 use sea_forge_core::errors::ForgeError;
 use serde_json::{json, Value};
 use std::path::Path;
@@ -47,15 +48,17 @@ fn lifecycle_name(l: Lifecycle) -> &'static str {
 fn with_case<T>(
     root: &Path,
     case_id: &str,
-    f: impl FnOnce(&AppendContext, Value, Vec<Value>) -> T,
+    f: impl FnOnce(&AppendContext, &Path, Value, Vec<Value>) -> T,
 ) -> Result<Result<T, Value>, ForgeError> {
-    if !sea_forge_core::path::valid_id_segment(case_id, 128)
-        || !root.join("cases").join(case_id).join("case.json").exists()
-    {
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(ForgeError::Input(format!("unknown case {case_id}")));
+    }
+    let dir = sea_forge_case_runner::case_ops::case_snapshot_dir(root, case_id)?;
+    if !dir.join("case.json").exists() {
         return Err(ForgeError::Input(format!("unknown case {case_id}")));
     }
     with_store_ctx(root, case_id, |ctx| {
-        match is_field_case(root, case_id) {
+        match is_field_case_in(&dir) {
             Ok(true) => {}
             Ok(false) => {
                 return Ok(Err(refuse(
@@ -66,12 +69,12 @@ fn with_case<T>(
             }
             Err(e) => return Ok(Err(store(e))),
         }
-        if let Err(e) = integrity(ctx) {
+        if let Err(e) = integrity_in(&dir) {
             return Ok(Err(store(e)));
         }
-        let all = records(ctx);
-        match load_document(ctx, &all) {
-            Ok(document) => Ok(Ok(f(ctx, document, all))),
+        let all = read_lines(&dir.join(RECORDS));
+        match load_document_in(case_id, &dir, &all) {
+            Ok(document) => Ok(Ok(f(ctx, &dir, document, all))),
             Err(e) => Ok(Err(store(e))),
         }
     })
@@ -84,7 +87,7 @@ fn store(message: String) -> Value {
 /// `case.field.get`: `{case_id, revision, document}`.
 pub fn field_get(root: &Path, case_id: &str) -> Result<Value, ForgeError> {
     Ok(
-        with_case(root, case_id, |_, document, _| {
+        with_case(root, case_id, |_, _, document, _| {
             json!({"case_id": case_id, "revision": document["revision"], "document": document})
         })?
         .unwrap_or_else(|refusal| refusal),
@@ -100,9 +103,9 @@ pub fn continuation(
     viewer: &str,
     pinned_world: Option<&str>,
 ) -> Result<Value, ForgeError> {
-    Ok(with_case(root, case_id, |ctx, document, all| {
+    Ok(with_case(root, case_id, |ctx, dir, document, all| {
         json!({"case_id": case_id,
-               "continuation": compute(ctx, &document, &all, viewer, pinned_world)})
+               "continuation": compute(ctx, dir, &document, &all, viewer, pinned_world)})
     })?
     .unwrap_or_else(|refusal| refusal))
 }
@@ -180,7 +183,7 @@ fn gate_evidence(all: &[Value]) -> Vec<Value> {
         .collect()
 }
 
-fn episodes(ctx: &AppendContext, all: &[Value], anchored: bool) -> Vec<Value> {
+fn episodes(ctx: &AppendContext, dir: &Path, all: &[Value], anchored: bool) -> Vec<Value> {
     let mut out = Vec::new();
     let mut seen: Vec<Value> = Vec::new();
     for r in all.iter().filter(|r| r["kind"] == "episode.frozen") {
@@ -200,7 +203,10 @@ fn episodes(ctx: &AppendContext, all: &[Value], anchored: bool) -> Vec<Value> {
             }));
             seen.push(key);
             continue;
-        } else if matches!(freeze_state(ctx, item, n, anchored), FreezeStatus::Complete) {
+        } else if matches!(
+            freeze_state_in(ctx, dir, item, n, anchored),
+            FreezeStatus::Complete
+        ) {
             "frozen"
         } else {
             "pending"
@@ -212,7 +218,7 @@ fn episodes(ctx: &AppendContext, all: &[Value], anchored: bool) -> Vec<Value> {
         seen.push(key);
     }
     // A freeze whose record is not written yet (a prepared intent).
-    for intent in latest_intents(ctx) {
+    for intent in latest_intents_in(dir) {
         if intent["state"] == "abandoned" || seen.contains(&intent["episode_key"]) {
             continue;
         }
@@ -225,8 +231,8 @@ fn episodes(ctx: &AppendContext, all: &[Value], anchored: bool) -> Vec<Value> {
     out
 }
 
-fn authority(ctx: &AppendContext, case_lead: Option<&str>, viewer: &str) -> Value {
-    let lines = read_lines(&ctx.root.join("cases").join(ctx.case_id).join(APPROVALS));
+fn authority(dir: &Path, case_lead: Option<&str>, viewer: &str) -> Value {
+    let lines = read_lines(&dir.join(APPROVALS));
     let now = chrono::Utc::now();
     let who = |s: &str| super::case_records::canonical_actor(s).ok();
     let viewer_c = who(viewer);
@@ -330,6 +336,7 @@ pub fn next_move(document: &Value, all: &[Value], state: Lifecycle, episodes: &[
 
 fn compute(
     ctx: &AppendContext,
+    dir: &Path,
     document: &Value,
     all: &[Value],
     viewer: &str,
@@ -339,7 +346,7 @@ fn compute(
     let anchored = fde_config(ctx.root)
         .map(|c| c["case_keeper_identity"].is_string())
         .unwrap_or(false);
-    let eps = episodes(ctx, all, anchored);
+    let eps = episodes(ctx, dir, all, anchored);
     let case_lead = text_of(field(document, "observer_and_authority", "case_lead"));
     let pinned = pinned_world.filter(|w| is_world_ref(w));
     let declared = text_of(field(
@@ -382,7 +389,7 @@ fn compute(
         },
         "gate_evidence": gate_evidence(all),
         "episodes": eps,
-        "authority": authority(ctx, case_lead.as_deref(), viewer),
+        "authority": authority(dir, case_lead.as_deref(), viewer),
         "disputed_claims": [],
         "latest_observations": {"observations": [], "unknown_evidence": [], "contradictory_evidence": []},
         "work": {
