@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 373
+**Status revision:** 374
 
 **Stage:** FDE S2 | Timestamp checkpoint replay
 
-**Summary:** Carry the compatible case and service record clocks into the current FDE integration.
+**Summary:** Carry deterministic build provenance timestamps and the historical Unix fallback into the current FDE integration.
 
 **Verified:**
 

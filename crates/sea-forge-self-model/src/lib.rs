@@ -16,7 +16,6 @@
 pub mod projections;
 pub mod store;
 
-use chrono::{DateTime, Utc};
 use sea_forge_core::errors::ForgeError;
 use sea_forge_core::ids;
 use sea_forge_domainforge::{load_validate, DomainModel, DomainModelRef, SeaSourceSet, SourceFile};
@@ -252,9 +251,29 @@ fn deterministic_generated_at() -> String {
         .ok()
         .and_then(|s| s.parse::<i64>().ok())
         .unwrap_or(RELEASE_EPOCH_SECONDS);
-    DateTime::<Utc>::from_timestamp(epoch, 0)
-        .map(|t| t.to_rfc3339())
+    format_generated_at(epoch)
+}
+
+fn format_generated_at(epoch: i64) -> String {
+    sea_forge_core::timestamp::rfc3339_from_unix_seconds(epoch)
         .unwrap_or_else(|| format!("unix:{epoch}"))
+}
+
+#[cfg(test)]
+mod generated_at_tests {
+    #[test]
+    fn preserves_realization_timestamp_and_unix_fallback() {
+        assert_eq!(super::format_generated_at(0), "1970-01-01T00:00:00+00:00");
+        assert_eq!(super::format_generated_at(-1), "1969-12-31T23:59:59+00:00");
+        assert_eq!(
+            super::format_generated_at(i64::MAX),
+            format!("unix:{}", i64::MAX)
+        );
+        assert_eq!(
+            super::format_generated_at(i64::MIN),
+            format!("unix:{}", i64::MIN)
+        );
+    }
 }
 
 /// Build the release realization from release constants.

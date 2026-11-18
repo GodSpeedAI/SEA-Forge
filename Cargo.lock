@@ -2809,7 +2809,6 @@ dependencies = [
 name = "sea-forge-self-model"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "hex",
  "sea-forge-core",
  "sea-forge-domainforge",

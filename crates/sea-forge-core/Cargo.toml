@@ -10,7 +10,7 @@ repository.workspace = true
 description = "SEA Forge governed capability-execution kernel types and lifecycle."
 
 [dependencies]
-time.workspace = true
+time = { workspace = true, features = ["large-dates"] }
 getrandom.workspace = true
 serde.workspace = true
 serde_json.workspace = true
