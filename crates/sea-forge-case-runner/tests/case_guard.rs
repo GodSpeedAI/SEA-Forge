@@ -7,7 +7,7 @@
 mod common;
 
 use sea_forge_case_runner::case_ops::case_guard::{
-    check, commit, commit_file, digest_of, Batch, CaseLock, Op,
+    check, commit, commit_file, commit_with_outcome, digest_of, Batch, CaseLock, CommitError, Op,
 };
 use sea_forge_core::types::TraceKind;
 use serde_json::{json, Value};
@@ -780,8 +780,32 @@ fn a_nested_commit_joins_the_outer_lock_and_does_not_deadlock() {
 }
 
 #[test]
+fn an_apply_failure_after_a_write_reports_uncertainty() {
+    let root = tempfile::tempdir().unwrap();
+    let case = root.path().join("cases/case-0001");
+    let runs = case.join("runs");
+    fs::create_dir_all(&runs).unwrap();
+    fs::write(runs.join("existing.txt"), b"regular file").unwrap();
+
+    let result = commit_with_outcome(
+        &case,
+        Batch::new()
+            .with(Op::RunFile {
+                rel: "record.txt".into(),
+                bytes: b"recorded".to_vec(),
+            })
+            .with(Op::RunFile {
+                rel: "existing.txt/record.txt".into(),
+                bytes: b"blocked".to_vec(),
+            }),
+    );
+    assert!(matches!(result, Err(CommitError::PublicationUncertain(_))));
+    assert_eq!(fs::read(runs.join("record.txt")).unwrap(), b"recorded");
+}
+
+#[test]
 fn commit_error_conversions_keep_uncertainty_out_of_refusals() {
-    use sea_forge_case_runner::case_ops::{case_guard::CommitError, field_guard::Refusal};
+    use sea_forge_case_runner::case_ops::field_guard::Refusal;
     use sea_forge_core::errors::ForgeError;
 
     let refusal = Refusal {

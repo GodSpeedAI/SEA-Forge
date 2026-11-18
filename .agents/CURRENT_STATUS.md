@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 345
+**Status revision:** 346
 
-**Stage:** FDE S2: repair native proof fixtures
+**Stage:** FDE S2: carry execution admission uncertainty
 
-**Summary:** Use canonical temporary paths in storage assertions and handle the framed oversize refusal when the server closes the authenticated socket early.
+**Summary:** Route write-phase admission failures through the operational response and preserve the pre-write refusal shape.
 
 **Verified:**
 
+- All 29 focused guard tests passed, including a regression proving the first write can remain after a later filesystem failure.
+- All 80 server conformance tests passed across the FDE scenarios and Field Case targets with typed admission present.
 - The case-runner library passed all 8 tests locally. The two server conformance targets passed 80 tests locally with the fixture repairs present.
 - The Linux S1 driver example compiled. Windows compilation stopped in the cross-toolchain before reaching the driver because the local ring build lacks MSVC tools.
 - Native verification at 5f67ae95 passed Ubuntu server and rest and the macOS App Sandbox job. The native macOS server and rest jobs found fixture failures, and Windows found the missing example entry point.
@@ -54,6 +56,7 @@
 
 **Limits:**
 
+- Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - Native verification for the fixture repairs is pending. RustSec RUSTSEC-2026-0543 blocks the lint gate through both direct chrono use and domainforge-core.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
 - Non-Linux model tests compare final-byte changes to the journal. Native publication durability and independent transient C7 observation need platform-specific evidence.
@@ -84,7 +87,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Publish the fixture repair checkpoint to the isolated verification branch and rerun native CI and Portability.
+**Next:** Rerun native verification on an isolated ref and group settlement decision and approval consumption with its ledger record.
 
 **Evidence:**
 

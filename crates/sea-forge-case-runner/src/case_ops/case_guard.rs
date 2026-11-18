@@ -1399,6 +1399,22 @@ fn contained(case_dir: &Path, batch: &Batch) -> Result<(), ContractError> {
 /// batch, write exactly the batch (and the projections the ledger derives),
 /// release. The legacy path retains its existing refusal contract.
 pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError> {
+    commit_inner(case_dir, batch, |error| error)
+}
+
+/// A caller that can report operational failures must preserve the distinction
+/// between refusal and an error after the legacy writer started applying the batch.
+pub fn commit_with_outcome(case_dir: &Path, batch: Batch) -> Result<Committed, CommitError> {
+    commit_inner(case_dir, batch, |error| {
+        CommitError::PublicationUncertain(std::io::Error::other(error.message))
+    })
+}
+
+fn commit_inner<E: From<ContractError>>(
+    case_dir: &Path,
+    batch: Batch,
+    apply_error: impl FnOnce(ContractError) -> E,
+) -> Result<Committed, E> {
     contained(case_dir, &batch)?;
     let _lock = CaseLock::acquire(case_dir)?;
     let creating = creating_field(case_dir, &batch);
@@ -1411,7 +1427,7 @@ pub fn commit(case_dir: &Path, batch: Batch) -> Result<Committed, ContractError>
         || batch.ops.iter().any(|op| {
             matches!(op, Op::Plan(p) if p["template_ref"] == super::field_guard::FIELD_CASE_TEMPLATE)
         });
-    apply(case_dir, &st, batch, field, derive)
+    apply(case_dir, &st, batch, field, derive).map_err(apply_error)
 }
 
 fn io(what: &str, e: std::io::Error) -> ContractError {

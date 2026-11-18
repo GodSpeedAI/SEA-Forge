@@ -4169,11 +4169,11 @@ async fn admit_episode(
         admission_pause(&state.root).await;
     }
     match result {
-        Ok(outcome) => outcome,
-        Err(error) => Err(serde_json::json!({
-            "outcome": "refused", "code": "FREEZE_INCOMPLETE", "invariant": "I-1",
-            "message": format!("execution gate task failed: {error}"), "no_side_effect": true,
-        })),
+        Ok(outcome) => outcome.map_err(sfwp::episode_gate::AdmissionError::into_response),
+        Err(error) => Err(forge_error_response(&ForgeError::io(
+            "execution gate task failed; the case may have changed",
+            std::io::Error::other(error),
+        ))),
     }
 }
 

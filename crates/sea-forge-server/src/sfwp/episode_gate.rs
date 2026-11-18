@@ -19,7 +19,8 @@
 
 use super::case_records::{self, Lifecycle};
 use super::run_records;
-use sea_forge_case_runner::case_ops::case_guard::{self, Batch, Op};
+use sea_forge_case_runner::case_ops::case_guard::{self, Batch, CommitError, Op};
+use sea_forge_core::errors::ForgeError;
 use sea_forge_core::types::{CasePlan, ItemKind, TraceEvent, TraceKind};
 use serde_json::{json, Value};
 use std::path::Path;
@@ -159,6 +160,7 @@ pub fn recheck_human_completion(root: &Path, case_id: &str, item: &str) -> Resul
         },
     )
     .map(|_| ())
+    .map_err(AdmissionError::into_response)
 }
 
 /// [`admit`] again for a transition-only advance, at the write: the lifecycle,
@@ -188,6 +190,7 @@ pub fn recheck_transitions(
         },
     )
     .map(|_| ())
+    .map_err(AdmissionError::into_response)
 }
 
 fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Value {
@@ -365,12 +368,37 @@ fn parse_assignment(id: &str) -> Option<(String, String, u64, u64)> {
     Some((case.into(), item.into(), n.parse().ok()?, k.parse().ok()?))
 }
 
-/// Check one request. `Ok` means the gate admits it (and the admission's own
-/// records are written); `Err` is the refusal to return, with no side effect.
+#[derive(Debug)]
+pub enum AdmissionError {
+    Refused(Value),
+    Operational(ForgeError),
+}
+
+impl AdmissionError {
+    pub(crate) fn into_response(self) -> Value {
+        match self {
+            Self::Refused(refusal) => refusal,
+            Self::Operational(error) => crate::forge_error_response(&error),
+        }
+    }
+
+    fn refuse(code: &str, message: &str, invariant: Option<&str>) -> Self {
+        Self::Refused(refuse(code, message, invariant))
+    }
+}
+
+impl From<Value> for AdmissionError {
+    fn from(refusal: Value) -> Self {
+        Self::Refused(refusal)
+    }
+}
+
+/// Check one request and record the effects of a successful admission.
+/// Only `AdmissionError::Refused` promises that no case effect occurred.
 /// The caller holds the case lock.
-pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
+pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError> {
     let delegate = input.verb == Verb::Delegate;
-    let unresolved = |why: &str| refuse("CASE_UNRESOLVED", why, None);
+    let unresolved = |why: &str| AdmissionError::refuse("CASE_UNRESOLVED", why, None);
     // R9: the case is resolved from the store. A `delegate` whose case does not
     // resolve fails closed (never assumed plain); the other verbs keep their
     // own unknown-case answers.
@@ -399,7 +427,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     if template.as_deref() != Some(FIELD_CASE_TEMPLATE) {
         return Ok(Admission::default());
     }
-    let schema = |why: &str| refuse("SCHEMA_INVALID", why, None);
+    let schema = |why: &str| AdmissionError::refuse("SCHEMA_INVALID", why, None);
 
     // The request's own episode_ref, validated for shape.
     let er = input.episode_ref;
@@ -439,7 +467,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         key.as_ref().map_or(0, |(_, n, _)| *n),
     )
     .map_err(|why| {
-        refuse(
+        AdmissionError::refuse(
             "FREEZE_INCOMPLETE",
             &format!("store integrity: {why}"),
             Some("I-1"),
@@ -477,7 +505,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         scope_item_scope(input, key.as_ref())
     };
     let terminal = reaches_terminal(&dir, &scope).map_err(|why| {
-        refuse(
+        AdmissionError::refuse(
             "FREEZE_INCOMPLETE",
             &format!("the plan cannot be read: {why}"),
             Some("I-1"),
@@ -486,7 +514,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
 
     // R13: a closed case runs nothing more, except the action that ends the plan.
     if facts.lifecycle == Lifecycle::Closed && !terminal {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "CASE_CLOSED",
             "the case has a close disposition; closed is final",
             None,
@@ -494,7 +522,11 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     // R6
     if facts.lifecycle == Lifecycle::Suspended {
-        return Err(refuse("CASE_SUSPENDED", "the case is suspended", None));
+        return Err(AdmissionError::refuse(
+            "CASE_SUSPENDED",
+            "the case is suspended",
+            None,
+        ));
     }
     // R11: any path to a terminal state needs a case-level close disposition.
     if terminal
@@ -503,7 +535,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             .as_deref()
             .is_some_and(|d| d.starts_with("close-"))
     {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "CLOSE_DISPOSITION_REQUIRED",
             "this action ends the case and no case-level close disposition exists",
             None,
@@ -522,7 +554,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     // transitions, and never for an item that has an execution step.
     if advance_alone {
         if transitions.is_empty() && transitions_shape_ok {
-            return Err(refuse(
+            return Err(AdmissionError::refuse(
                 "FREEZE_MISSING",
                 "no episode_ref and no transition_items",
                 Some("I-1"),
@@ -536,14 +568,14 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             }
         }
         let exec = execution_items(&dir).map_err(|why| {
-            refuse(
+            AdmissionError::refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("the plan cannot be read: {why}"),
                 Some("I-1"),
             )
         })?;
         if !transitions_shape_ok || transitions.iter().any(|(i, _)| exec.contains(i)) {
-            return Err(refuse(
+            return Err(AdmissionError::refuse(
                 "TRANSITION_ONLY_INVALID",
                 "transition_items must list non-execution items with transition_only: true",
                 None,
@@ -557,7 +589,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     // R1/R2/R3: the freeze.
     let Some((item, n, kind)) = key else {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "FREEZE_MISSING",
             "a Field Case request needs an episode_ref",
             Some("I-1"),
@@ -565,7 +597,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     };
     let exists = [facts.realitytrace, facts.case_record, facts.anchor];
     if exists.iter().all(|p| !p) {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "FREEZE_MISSING",
             "the episode has no freeze",
             Some("I-1"),
@@ -573,7 +605,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     let required = [true, true, facts.anchor_required];
     if exists.iter().zip(required).any(|(e, r)| r && !e) {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "FREEZE_INCOMPLETE",
             "the episode's freeze is incomplete",
             Some("I-1"),
@@ -581,7 +613,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     // R4
     if facts.anchor && !facts.anchor_publisher_ok {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "ANCHOR_PUBLISHER_INVALID",
             "the anchor was not published by the case keeper",
             None,
@@ -589,7 +621,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     // R5
     if facts.frozen_kind.as_deref() != Some(kind.as_str()) {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "KIND_IMMUTABLE",
             "episode_ref.kind differs from the frozen kind",
             Some("I-3"),
@@ -597,14 +629,14 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     }
     // R12
     if n < facts.latest_n {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "EPISODE_SUPERSEDED",
             "a later episode was allocated for this plan item",
             None,
         ));
     }
     if facts.settled {
-        return Err(refuse(
+        return Err(AdmissionError::refuse(
             "EPISODE_SETTLED",
             "the episode is already settled",
             None,
@@ -622,7 +654,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     // of the nine-member execution object built HERE from the ledger and the plan,
     // never from the request.
     let config = case_records::fde_config(root).map_err(|why| {
-        refuse(
+        AdmissionError::refuse(
             "FREEZE_INCOMPLETE",
             &format!("store integrity: {why}"),
             Some("I-1"),
@@ -639,7 +671,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         &workspace,
     )
     .map_err(|why| {
-        refuse(
+        AdmissionError::refuse(
             "AUTHORITY_DENIED",
             &format!("the execution cannot be bound: {why}"),
             None,
@@ -649,7 +681,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
     // R10: the assignment.
     let mut assignment: Option<(String, &str)> = None;
     if let Some(id) = input.assignment_id.filter(|_| delegate) {
-        let invalid = |why: &str| refuse("ASSIGNMENT_ID_INVALID", why, None);
+        let invalid = |why: &str| AdmissionError::refuse("ASSIGNMENT_ID_INVALID", why, None);
         let Some((c, i, an, k)) = parse_assignment(id) else {
             return Err(invalid("assignment_id is not assign:<case>:<item>:<n>:<k>"));
         };
@@ -658,7 +690,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
         }
         let path = dir.join(ASSIGNMENTS);
         let lines = case_records::read_lines_strict(&path).map_err(|why| {
-            refuse(
+            AdmissionError::refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("store integrity: {why}"),
                 Some("I-1"),
@@ -673,7 +705,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
                     .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
                     .is_none_or(|t| t <= chrono::Utc::now());
                 if expired {
-                    return Err(refuse(
+                    return Err(AdmissionError::refuse(
                         "ASSIGNMENT_LINK_EXPIRED",
                         "the link of the interrupted assignment expired; a new link and a new k are needed",
                         None,
@@ -748,7 +780,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             &mut batch,
         )
         .map_err(|why| {
-            refuse(
+            AdmissionError::refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("store integrity: {why}"),
                 Some("I-1"),
@@ -764,12 +796,15 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, Value> {
             }),
         });
         let write_dir = root.join("cases").join(input.case_id);
-        case_guard::commit(&write_dir, batch).map_err(|why| {
-            refuse(
+        case_guard::commit_with_outcome(&write_dir, batch).map_err(|error| match error {
+            CommitError::Refused(why) => AdmissionError::refuse(
                 "FREEZE_INCOMPLETE",
                 &format!("store integrity: GUARD:{}:{}", why.code, why.message),
                 Some("I-1"),
-            )
+            ),
+            uncertain @ CommitError::PublicationUncertain(_) => {
+                AdmissionError::Operational(uncertain.into())
+            }
         })?;
         // The interaction event carries `authority.decision_id` for RealityTrace.
         case_records::enqueue_run_event(root, input.case_id, &run_record);
