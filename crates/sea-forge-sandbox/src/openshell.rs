@@ -1168,7 +1168,7 @@ impl ExecutionSandbox for OpenShellSandbox {
     ) -> Result<ExecutionResult, SandboxError> {
         use sea_forge_core::types::Operation;
 
-        let started_at = chrono::Utc::now().to_rfc3339();
+        let started_at = sea_forge_core::timestamp::now_rfc3339();
         // Only the typed sandbox action reaches this backend. A host
         // `execute_command` is never run through OpenShell.
         let (argv, cwd) = match &req.operation {

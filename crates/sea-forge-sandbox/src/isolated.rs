@@ -101,7 +101,7 @@ impl ExecutionSandbox for IsolatedSandbox {
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
-        let started_at = chrono::Utc::now().to_rfc3339();
+        let started_at = sea_forge_core::timestamp::now_rfc3339();
         // C1: the run's process tree is the PID namespace established by
         // `unshare` before exec — membership is structural (inherited by
         // every descendant) and kernel teardown is unconditional. Per review

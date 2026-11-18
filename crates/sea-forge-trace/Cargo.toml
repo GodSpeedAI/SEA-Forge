@@ -11,7 +11,6 @@ description = "SEA Forge trace event recording."
 
 [dependencies]
 sea-forge-core = { path = "../sea-forge-core", version = "0.5.0" }
-chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

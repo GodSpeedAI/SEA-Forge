@@ -2591,7 +2591,6 @@ dependencies = [
 name = "sea-forge-cell"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "hex",
  "sea-forge-core",
  "sea-forge-sandbox",
@@ -2717,7 +2716,6 @@ dependencies = [
 name = "sea-forge-ledger"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "ed25519-dalek",
  "getrandom 0.4.3",
  "hex",
@@ -2728,6 +2726,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
+ "time",
  "unicode-normalization",
 ]
 
@@ -2789,7 +2788,6 @@ dependencies = [
 name = "sea-forge-sandbox"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "hex",
  "landlock",
  "libc",
@@ -2866,7 +2864,6 @@ dependencies = [
 name = "sea-forge-settlement"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "sea-forge-authority",
  "sea-forge-core",
  "sea-forge-ledger",
@@ -2913,7 +2910,6 @@ dependencies = [
 name = "sea-forge-trace"
 version = "0.5.0"
 dependencies = [
- "chrono",
  "sea-forge-core",
  "serde",
  "serde_json",

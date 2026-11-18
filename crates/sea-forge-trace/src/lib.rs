@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sea_forge_core::{
     errors::ForgeError,
     ids::seq_id,
@@ -63,7 +62,7 @@ pub fn append_internal_error(path: &Path, run_id: &str, actor_id: &str, error_cl
         plan_item_id: None,
         kind: TraceKind::InternalError,
         actor_id: actor_id.into(),
-        timestamp: Utc::now().to_rfc3339(),
+        timestamp: sea_forge_core::timestamp::now_rfc3339(),
         payload: serde_json::json!({"error_class":error_class}),
         cell_id: None,
     };
@@ -104,7 +103,7 @@ impl JsonlTraceRecorder {
             plan_item_id,
             kind,
             actor_id: self.actor_id.clone(),
-            timestamp: Utc::now().to_rfc3339(),
+            timestamp: sea_forge_core::timestamp::now_rfc3339(),
             payload,
             cell_id: None,
         };

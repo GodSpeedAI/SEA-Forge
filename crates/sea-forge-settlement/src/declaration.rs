@@ -11,7 +11,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
 use sea_forge_ledger::{types::hash_canonical, CommittedRecordRef, LedgerStream};
 
@@ -263,7 +262,7 @@ impl SettlementAuthority for LocalSettlementAuthority {
             variation_tags: req.variation_tags.clone(),
             disruption_tags: req.disruption_tags.clone(),
             orchestration_burden: req.orchestration_burden.clone(),
-            issued_at: Utc::now().to_rfc3339(),
+            issued_at: sea_forge_core::timestamp::now_rfc3339(),
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: None,
             authored_by: req.authored_by.clone(),
@@ -674,7 +673,7 @@ impl<T: SweSeedTransport> SettlementAuthority for SweSeedSettlementAuthority<T> 
             variation_tags: req.variation_tags.clone(),
             disruption_tags: req.disruption_tags.clone(),
             orchestration_burden: req.orchestration_burden.clone(),
-            issued_at: Utc::now().to_rfc3339(),
+            issued_at: sea_forge_core::timestamp::now_rfc3339(),
             source_evidence_refs: req.source_evidence_refs.clone(),
             adapter_attestation_ref: Some(swe_resp.attestation_ref),
             authored_by: req.authored_by.clone(),

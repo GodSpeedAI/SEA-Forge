@@ -1,7 +1,5 @@
 use std::{fs::File, io::Read, path::Path};
 
-use chrono::Utc;
-
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_sandbox::safe_existing;
 
@@ -201,7 +199,7 @@ fn settle_inner(
         status,
         basis,
         review_required,
-        settled_at: Utc::now().to_rfc3339(),
+        settled_at: sea_forge_core::timestamp::now_rfc3339(),
         criteria_ref: claim.criteria_ref.clone(),
     })
 }

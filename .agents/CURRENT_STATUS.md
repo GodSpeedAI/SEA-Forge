@@ -1,10 +1,10 @@
 # Current status
 
-**Status revision:** 370
+**Status revision:** 371
 
 **Stage:** FDE S2 | Timestamp checkpoint replay
 
-**Summary:** Carry the run ID calendar and leap-second compatibility checkpoint into the current FDE integration.
+**Summary:** Carry the compatible UTC record formatter into the current FDE integration.
 
 **Verified:**
 

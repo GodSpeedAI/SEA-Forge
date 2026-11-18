@@ -1,7 +1,6 @@
 //! Cell identity: load or generate `<root>/cell.json` under the state root
 //! (spec-full §7.4, F-12).
 
-use chrono::Utc;
 use sea_forge_core::{errors::ForgeError, ids};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
@@ -30,7 +29,7 @@ pub fn ensure(root: &Path) -> Result<String, ForgeError> {
     let cell_id = ids::cell_id()?;
     let record = CellRecord {
         cell_id: cell_id.clone(),
-        created_at: Utc::now().to_rfc3339(),
+        created_at: sea_forge_core::timestamp::now_rfc3339(),
     };
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| ForgeError::io("create state root", e))?;

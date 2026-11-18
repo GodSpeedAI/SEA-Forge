@@ -9,6 +9,7 @@ pub mod field_case;
 pub mod ids;
 pub mod path;
 pub mod pipe_name;
+pub mod timestamp;
 pub mod types;
 pub mod workload_image;
 pub mod yaml;

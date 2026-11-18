@@ -118,7 +118,9 @@ static ULID_STATE: OnceLock<Mutex<UlidState>> = OnceLock::new();
 /// under clock regression.
 pub fn ulid() -> Result<String, ForgeError> {
     use getrandom::fill;
-    let timestamp_ms = chrono::Utc::now().timestamp_millis() as u64;
+    let timestamp_ms = time::OffsetDateTime::now_utc()
+        .unix_timestamp_nanos()
+        .div_euclid(1_000_000) as u64;
 
     let state = ULID_STATE.get_or_init(|| {
         Mutex::new(UlidState {
@@ -1673,7 +1675,7 @@ impl LedgerStream {
             signing_algorithm: "ed25519".into(),
             signing_key_id: signing_key_id.into(),
             signature: String::new(),
-            created_at: chrono::Utc::now().to_rfc3339(),
+            created_at: sea_forge_core::timestamp::now_rfc3339(),
         };
         let canonical_bytes = checkpoint_canonical_bytes(&checkpoint)?;
         checkpoint.checkpoint_hash = sha256_domain("sea-forge/checkpoint/v1", &canonical_bytes);
@@ -1836,7 +1838,7 @@ impl LedgerStream {
             previous_entry_hash,
             entry_hash: String::new(),
             mmr_leaf_index,
-            committed_at: chrono::Utc::now().to_rfc3339(),
+            committed_at: sea_forge_core::timestamp::now_rfc3339(),
             writer_identity_ref: self.writer_identity_ref.clone(),
             authority_refs,
         };
@@ -1997,7 +1999,7 @@ impl LedgerStream {
         witness_signing_key: &SigningKey,
     ) -> Result<WitnessReceipt, ForgeError> {
         let receipt_ulid = ulid()?;
-        let signed_at = chrono::Utc::now().to_rfc3339();
+        let signed_at = sea_forge_core::timestamp::now_rfc3339();
         let mut receipt = WitnessReceipt {
             version: RECORD_VERSION.into(),
             receipt_ulid,
@@ -2553,7 +2555,7 @@ impl LedgerManager {
             signing_algorithm: "ed25519".into(),
             signing_key_id: signing_key_id.into(),
             signature: String::new(),
-            created_at: chrono::Utc::now().to_rfc3339(),
+            created_at: sea_forge_core::timestamp::now_rfc3339(),
         };
         let canonical_bytes = global_checkpoint_canonical_bytes(&cp)?;
         cp.global_checkpoint_hash =

@@ -27,7 +27,7 @@ pub(crate) fn execution_result(
         stdout_path: "artifacts/stdout.txt".into(),
         stderr_path: "artifacts/stderr.txt".into(),
         started_at,
-        finished_at: chrono::Utc::now().to_rfc3339(),
+        finished_at: sea_forge_core::timestamp::now_rfc3339(),
         lifecycle_containment,
     }
 }
@@ -165,7 +165,7 @@ impl ExecutionSandbox for LocalSandbox {
         req: &ExecutionRequest,
     ) -> Result<ExecutionResult, SandboxError> {
         use sea_forge_core::types::Operation;
-        let started_at = chrono::Utc::now().to_rfc3339();
+        let started_at = sea_forge_core::timestamp::now_rfc3339();
         fs::create_dir_all(&h.spec.artifacts_root)
             .map_err(|e| SandboxError::new("io_error", e.to_string()))?;
         let stdout =

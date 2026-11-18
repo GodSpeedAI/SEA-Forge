@@ -730,7 +730,7 @@ fn spawn_jailed(
     // posture cannot be enforced — never a silent fallback to `local`.
     apply_landlock(workspace_root, artifacts_root, network, None)?;
 
-    let started_at = chrono::Utc::now().to_rfc3339();
+    let started_at = sea_forge_core::timestamp::now_rfc3339();
     let mut command = Command::new(&argv[0]);
     command
         .args(&argv[1..])
@@ -1470,7 +1470,7 @@ mod macos {
         h: &SandboxHandle,
         req: &ExecutionRequest,
     ) -> Result<ExecutionResult, SandboxError> {
-        let started_at = chrono::Utc::now().to_rfc3339();
+        let started_at = sea_forge_core::timestamp::now_rfc3339();
         if let NetworkPosture::AllowTcpPorts(_) = &h.spec.network {
             return Err(unavailable(
                 "macOS App Sandbox cannot restrict network by port",

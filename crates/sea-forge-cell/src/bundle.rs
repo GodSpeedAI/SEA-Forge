@@ -75,7 +75,7 @@ pub fn export(
         None => crate::cell::ensure(root)?,
     };
     let bundle_id = ids::bundle_id()?;
-    let created_at = chrono::Utc::now().to_rfc3339();
+    let created_at = sea_forge_core::timestamp::now_rfc3339();
     let mut files = Vec::new();
     let mut tar_buf: Vec<u8> = Vec::new();
     {
