@@ -169,8 +169,14 @@ fn migrate_verified_legacy_files_into_a_complete_generation() {
         .chain([index_path(&legacy), old_artifact.clone()]);
     for path in paths {
         let bytes = fs::read(&path).unwrap();
-        let relative = path.strip_prefix(root).unwrap().to_str().unwrap();
-        files.insert(relative.to_owned(), hex::encode(Sha256::digest(&bytes)));
+        let relative = path
+            .strip_prefix(root)
+            .unwrap()
+            .iter()
+            .map(|part| part.to_str().unwrap())
+            .collect::<Vec<_>>()
+            .join("/");
+        files.insert(relative, hex::encode(Sha256::digest(&bytes)));
     }
 
     let incomplete = files

@@ -1,13 +1,18 @@
 # Current status
 
-**Status revision:** 358
+**Status revision:** 359
 
-**Stage:** FDE S2 | Qualify staged application restart on Linux and fixed NTFS
+**Stage:** FDE S2 | Checkpoint native NTFS restart, legacy migration, and S2 results
 
-**Summary:** Verify recovery before and after first publication and selector replacement on the same staged case-writer implementation.
+**Summary:** Use portable manifest paths in the legacy migration fixture and record the latest S2, workspace, and native Windows results.
 
 **Verified:**
 
+- The corrected legacy migration fixture passed all 9 case-runner library tests on Linux and native fixed NTFS Windows. The native Windows C1–C7 model suite also passed all 9 tests.
+- S2 at 387ce96a matched all 17 baseline rows except duration. Sixteen rows passed, AT-09 remained partial for WP-31 human A3, and all 12 contract digests matched.
+- The full WSL workspace suite at 387ce96a recorded 2058 passed, 1 failed, and 28 ignored. Only the known undelegated cgroup-v2 lifecycle diagnostic failed. The raw-writer scan, staged restart test, and selected-artifact regression all passed.
+- Hosted CI run 44365325837 was started on isolated checkpoint 387ce96a. The lint report confirmed the chrono advisory RUSTSEC-2026-0543 and the MIT-0 license rejection for borrow-or-share. Workbench, MSRV, and authority checks passed.
+- The independent SEA Forge generated-timestamp migration remains checkpointed at 5a93603f.
 - The staged case-runner interruption test passed on Linux and native Windows on a fixed NTFS volume. It covered both sides of first publication and selector replacement. The observed snapshot matched the interrupted boundary and a subsequent commit succeeded in every case.
 - DomainForge checked in its generated timestamp migration at 2f59e44. The native compatibility test, all-target all-feature Clippy, formatting, and commit lint passed. The earlier native CLI suite and WASM check passed.
 - The server selected-snapshot regression passed on Linux. Artifact retrieval returned the published bytes, digest, run ID, evidence ID, and URI.
@@ -81,6 +86,8 @@
 
 **Limits:**
 
+- The Windows model compares final filesystem differences to the journal. It does not establish transient mutation observation or machine-crash durability.
+- Hosted native Linux and macOS workspace results for run 44365325837 were still pending when this snapshot was recorded.
 - Native macOS application restart and host-crash or power-loss durability remain open. The staged writer is inactive in production.
 - Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
 - The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
@@ -120,7 +127,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Run S2 and the workspace gates on this checkpoint. Then qualify remaining crash boundaries, resolve capture memory, and integrate production activation.
+**Next:** Collect hosted native results. Resolve capture memory and historical artifact resolution, qualify host-crash durability in disposable environments, and clear the dependency gate before production activation.
 
 **Evidence:**
 
