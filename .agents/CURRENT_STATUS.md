@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 346
+**Status revision:** 347
 
-**Stage:** FDE S2: carry execution admission uncertainty
+**Stage:** FDE S2: group settlement publication effects
 
-**Summary:** Route write-phase admission failures through the operational response and preserve the pre-write refusal shape.
+**Summary:** Declare the settlement decision, case ledger record, and approval consumption together and retain the decision identity on retries.
 
 **Verified:**
 
+- Server conformance passed all 91 tests across conformance_case_episode, conformance_fde_scenarios, and conformance_field_case.
+- Checkpoint 8c0fce88 is on fde/wp21b-verify-5f67ae95. Native CI run 44306807062 and Portability run 44306811678 were dispatched for that checkpoint.
 - All 29 focused guard tests passed, including a regression proving the first write can remain after a later filesystem failure.
 - All 80 server conformance tests passed across the FDE scenarios and Field Case targets with typed admission present.
 - The case-runner library passed all 8 tests locally. The two server conformance targets passed 80 tests locally with the fixture repairs present.
@@ -56,6 +58,7 @@
 
 **Limits:**
 
+- Settlement batch grouping still uses the legacy writer. The declaration prepares it for versioned publication.
 - Execution admission uses the typed legacy outcome. Versioned publication and the case-record, outbox, and recovery outcome consumers still need integration.
 - Native verification for the fixture repairs is pending. RustSec RUSTSEC-2026-0543 blocks the lint gate through both direct chrono use and domainforge-core.
 - The staged writer runs in the test build. Runtime foreground, recovery, and background writes need typed outcome handling.
@@ -87,7 +90,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Rerun native verification on an isolated ref and group settlement decision and approval consumption with its ledger record.
+**Next:** Carry the typed outcome through case-record publication and its recovery and delivery consumers. Record the native rerun results.
 
 **Evidence:**
 

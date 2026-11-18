@@ -29,6 +29,7 @@
 //! in-process RealityTrace writer or delivery agent exists in this crate yet.
 //! The anchor is published only when an [`AnchorPublisher`] is supplied.
 
+use sea_forge_case_runner::case_ops::case_guard::{self, Batch, Op};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -464,36 +465,30 @@ pub(super) fn now_rfc3339() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
-/// Record the authority decision the I-2 check makes for a settlement attempt.
-/// SEA-Forge is the owner of these records (`dec-NNNN`); the interaction event
-/// for the decision and the settlement's `authority.decision_id` resolve here.
-/// Idempotent on `(idempotency_key, body_digest, decision)`: a crash-retry or
-/// a replayed denial reuses the first record rather than minting another.
-fn record_decision(
+/// Prepare the I-2 allow decision for the settlement batch. A decision
+/// written by a prior attempt retains its identity on the retry.
+fn settlement_decision(
     ctx: &AppendContext,
     key: &str,
     body_digest: &str,
     episode_key: &Value,
-    allowed: bool,
     executors: &BTreeSet<String>,
-) -> Result<Value, String> {
-    let decision = if allowed { "allow" } else { "deny" };
+) -> (Value, bool) {
     let existing = decisions(ctx);
     if let Some(found) = existing.iter().find(|d| {
-        d["idempotency_key"] == key && d["body_digest"] == body_digest && d["decision"] == decision
+        d["idempotency_key"] == key && d["body_digest"] == body_digest && d["decision"] == "allow"
     }) {
-        return Ok(found.clone());
+        return (found.clone(), false);
     }
     let seq = existing.len() as u64 + 1;
     let record = json!({
         "decision_id": format!("dec-{seq:04}"), "seq": seq, "policy": "no_self_settlement",
-        "invariant": "I-2", "decision": decision, "idempotency_key": key,
+        "invariant": "I-2", "decision": "allow", "idempotency_key": key,
         "body_digest": body_digest, "episode_key": episode_key, "principal": ctx.principal,
         "role": ctx.role, "chain": ctx.chain, "executors": executors,
         "recorded_at": now_rfc3339(),
     });
-    append_line(&case_dir(ctx.root, ctx.case_id).join(DECISIONS), &record)?;
-    Ok(record)
+    (record, true)
 }
 
 /// A refused verb changes no bytes except its declared refusal record: the
@@ -989,13 +984,32 @@ pub(super) fn next_record(
     next_record_with(ctx, records, record, None)
 }
 
-/// `next_record` plus one more store line (the approval's consumption) that
-/// commits in the SAME batch: the verb's stores change together or not at all.
+/// Commit the record and its optional approval consumption together.
 pub(super) fn next_record_with(
     ctx: &AppendContext,
     records: &[Value],
-    mut record: Value,
+    record: Value,
     also: Option<(&str, Value)>,
+) -> Result<Value, String> {
+    let mut batch = Batch::new();
+    if let Some((file, line)) = also {
+        batch.push(Op::Append {
+            file: file.into(),
+            line,
+        });
+    }
+    let record = commit_record(ctx, records, record, batch, None)?;
+    // WP-14: the outbox can reconstruct any delivery owed by the ledger.
+    let _ = super::interaction_events::enqueue_record(ctx, &record);
+    Ok(record)
+}
+
+fn commit_record(
+    ctx: &AppendContext,
+    records: &[Value],
+    mut record: Value,
+    mut batch: Batch,
+    after_record: Option<Op>,
 ) -> Result<Value, String> {
     let seq = records.len() as u64 + 1;
     let prev = records
@@ -1009,27 +1023,12 @@ pub(super) fn next_record_with(
     record["recorded_at"] = json!(now_rfc3339());
     let hash = digest_of(&record).ok_or("record is not canonicalisable")?;
     record["hash"] = json!(hash);
-    let dir = case_dir(ctx.root, ctx.case_id);
-    match also {
-        None => append_line(&dir.join(RECORDS), &record)?,
-        Some((file, line)) => {
-            let items = [
-                (dir.join(file), line.clone()),
-                (dir.join(RECORDS), record.clone()),
-            ];
-            let done = sea_forge_case_runner::case_ops::case_guard::commit_files(&items)
-                .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
-            if !done {
-                append_line(&dir.join(file), &line)?;
-                append_line(&dir.join(RECORDS), &record)?;
-            }
-        }
+    batch.push(Op::Record(record.clone()));
+    if let Some(op) = after_record {
+        batch.push(op);
     }
-    // The interaction event is owed from this moment. Enqueueing is best
-    // effort: the record is committed either way, and `reconcile_events`
-    // derives any event the ledger holds but the outbox lacks (WP-14: an
-    // emitter failure never blocks the case write).
-    let _ = super::interaction_events::enqueue_record(ctx, &record);
+    case_guard::commit(&case_dir(ctx.root, ctx.case_id), batch)
+        .map_err(|r| format!("GUARD:{}:{}", r.code, r.message))?;
     Ok(record)
 }
 
@@ -1596,34 +1595,31 @@ fn settle(
             );
         }
     }
-    let decision = match record_decision(ctx, key, body_digest, &episode_key, true, &executors) {
-        Ok(d) => d,
-        Err(e) => return io_refusal(e),
-    };
-    let _ = super::interaction_events::enqueue_decision(ctx, &decision);
+    let (decision, new_decision) =
+        settlement_decision(ctx, key, body_digest, &episode_key, &executors);
+    let rec_id = format!("rec-{:04}", records.len() + 1);
+    let mut batch = Batch::new();
+    let consumption = approval.map(|reference| Op::Append {
+        file: APPROVALS.into(),
+        line: json!({"approval_ref": reference, "consumed_by": rec_id}),
+    });
+    if new_decision {
+        batch.push(Op::Append {
+            file: DECISIONS.into(),
+            line: decision.clone(),
+        });
+    }
     let record = json!({
         "kind": "episode.settled", "idempotency_key": key, "body_digest": body_digest,
         "episode_key": episode_key, "principal": ctx.principal, "chain": ctx.chain, "payload": payload,
         "decision_id": decision["decision_id"],
+        "response": response("episode.settled", &rec_id, &episode_key, false),
     });
-    let rec_id = format!("rec-{:04}", records.len() + 1);
-    let mut record = record;
-    record["response"] = response("episode.settled", &rec_id, &episode_key, false);
-    match next_record(ctx, records, record) {
+    match commit_record(ctx, records, record, batch, consumption) {
         Ok(stored) => {
-            if let Some(reference) = approval {
-                // Single use: the approval is consumed by the record that used it.
-                let _ = append_line(
-                    &case_dir(ctx.root, ctx.case_id).join(APPROVALS),
-                    &json!({"approval_ref": reference, "consumed_by": stored["record_id"]}),
-                );
-            }
-            response(
-                "episode.settled",
-                stored["record_id"].as_str().unwrap_or(""),
-                &episode_key,
-                false,
-            )
+            let _ = super::interaction_events::enqueue_decision(ctx, &decision);
+            let _ = super::interaction_events::enqueue_record(ctx, &stored);
+            response("episode.settled", &rec_id, &episode_key, false)
         }
         Err(e) => io_refusal(e),
     }
