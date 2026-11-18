@@ -271,3 +271,114 @@ fn durability_errors_straddle_the_selector_publication_point() {
     assert_ne!(current, selected);
     assert!(current.starts_with(generations.join("3")));
 }
+
+// Process interruption here exercises application restart, not power-loss durability.
+#[test]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
+fn interrupted_publication_can_be_retried() {
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    const CHILD_ROOT: &str = "SEA_FDE_RECOVERY_CHILD_ROOT";
+    const CHILD_BOUNDARY: &str = "SEA_FDE_RECOVERY_CHILD_BOUNDARY";
+    const SENTINEL: i32 = 86;
+    const TEST_NAME: &str =
+        "case_ops::case_guard::staged_commit_tests::interrupted_publication_can_be_retried";
+
+    if let Some(root) = std::env::var_os(CHILD_ROOT) {
+        let root = std::path::PathBuf::from(root);
+        let boundary = std::env::var(CHILD_BOUNDARY).expect("child boundary");
+        let case = root.join(".case-storage").join(CASE);
+        let watched = match boundary.as_str() {
+            "before" => case.join("generations"),
+            "after" => case,
+            _ => panic!("unknown child boundary"),
+        };
+        let calls = Cell::new(0);
+        let sync = |path: &Path| {
+            if path == watched {
+                let count = calls.get() + 1;
+                calls.set(count);
+                // First sync seals the stage; the second is in the publisher.
+                if count == 2 {
+                    std::process::exit(SENTINEL);
+                }
+            }
+            dir_sync(path)
+        };
+        commit_staged(&root, CASE, run_file(b"child"), None, &sync)
+            .expect("child must reach the selected publication boundary");
+        panic!("child passed the selected publication boundary");
+    }
+
+    for boundary in ["before", "after"] {
+        let fixture = tempfile::tempdir().unwrap();
+        let root = fixture.path();
+        commit_staged(root, CASE, create_case(), None, &dir_sync).unwrap();
+        commit_staged(root, CASE, run_file(b"old"), None, &dir_sync).unwrap();
+        let old = versioned_store::open(root, CASE).unwrap().unwrap();
+        assert!(load_verified(&old, false).unwrap().strict);
+        let case = root.join(".case-storage").join(CASE);
+        let generations = case.join("generations");
+
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .arg("--exact")
+            .arg(TEST_NAME)
+            .env(CHILD_ROOT, root)
+            .env(CHILD_BOUNDARY, boundary)
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(60);
+        let status = loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break status,
+                Ok(None) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                result => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    panic!("child did not finish at the boundary: {result:?}");
+                }
+            }
+        };
+        assert_eq!(
+            status.code(),
+            Some(SENTINEL),
+            "child missed {boundary} boundary"
+        );
+
+        let selected = versioned_store::open(root, CASE).unwrap().unwrap();
+        let installed = generations.join("3").join("data/cases").join(CASE);
+        assert_eq!(fs::read(old.join("runs/run-1/record.txt")).unwrap(), b"old");
+        assert_eq!(
+            fs::read(installed.join("runs/run-1/record.txt")).unwrap(),
+            b"child"
+        );
+        assert!(load_verified(&installed, false).unwrap().strict);
+        if boundary == "before" {
+            assert_eq!(selected, old);
+        } else {
+            assert_eq!(selected, installed);
+        }
+        assert!(load_verified(&selected, false).unwrap().strict);
+
+        commit_staged(root, CASE, run_file(b"retry"), None, &dir_sync).unwrap();
+        let retry = versioned_store::open(root, CASE).unwrap().unwrap();
+        assert!(retry.starts_with(generations.join("4")));
+        assert!(load_verified(&retry, false).unwrap().strict);
+        assert_eq!(
+            fs::read(retry.join("runs/run-1/record.txt")).unwrap(),
+            b"retry"
+        );
+        assert_eq!(fs::read(old.join("runs/run-1/record.txt")).unwrap(), b"old");
+        assert_eq!(
+            fs::read(installed.join("runs/run-1/record.txt")).unwrap(),
+            b"child"
+        );
+    }
+}

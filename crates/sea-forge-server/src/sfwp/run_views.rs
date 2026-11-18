@@ -1161,6 +1161,8 @@ mod tests {
         let data = generation.join("data");
         let run = "cases/case-example/runs/run-example";
         let record = format!("{run}/settlement.json");
+        let evidence_path = format!("{run}/evidence.jsonl");
+        let artifact_path = format!("{run}/artifacts/stdout.txt");
         let index = ".case-index/case-example.json";
 
         let settlement = SettlementEvent {
@@ -1190,11 +1192,33 @@ mod tests {
         fs::create_dir_all(data.join(".case-index")).unwrap();
         fs::write(data.join(&record), &accepted).unwrap();
         fs::write(data.join(index), b"{}").unwrap();
+        let artifact = b"versioned artifact\n";
+        let digest = sha256_bytes(artifact);
+        let evidence = format!(
+            "{}\n",
+            serde_json::json!({
+                "version": "0.1",
+                "evidence_id": "evi_0001",
+                "run_id": run_id,
+                "kind": "artifact",
+                "uri": "artifacts/stdout.txt",
+                "sha256": digest,
+                "source_event_id": "evt_0001",
+            })
+        );
+        fs::create_dir_all(data.join(run).join("artifacts")).unwrap();
+        fs::write(data.join(&artifact_path), artifact).unwrap();
+        fs::write(data.join(&evidence_path), &evidence).unwrap();
         let manifest = serde_json::to_vec(&serde_json::json!({
             "version": 1,
             "case_id": "case-example",
             "generation": 1,
-            "files": {(&record): sha256_bytes(&accepted), (index): sha256_bytes(b"{}")},
+            "files": {
+                (&record): sha256_bytes(&accepted),
+                (index): sha256_bytes(b"{}"),
+                (&evidence_path): sha256_bytes(evidence.as_bytes()),
+                (&artifact_path): sha256_bytes(artifact),
+            },
         }))
         .unwrap();
         fs::write(generation.join("manifest.json"), &manifest).unwrap();
@@ -1214,6 +1238,12 @@ mod tests {
             SettlementStanding::Accepted
         );
         assert_eq!(list(root, None).runs.len(), 1);
+        let fetched = super::super::case_mutations::artifact_get(root, &digest).unwrap();
+        assert_eq!(fetched.digest, digest);
+        assert_eq!(fetched.run_id, run_id);
+        assert_eq!(fetched.evidence_id, "evi_0001");
+        assert_eq!(fetched.uri, "artifacts/stdout.txt");
+        assert_eq!(fetched.content.as_deref().unwrap().as_bytes(), artifact);
 
         fs::create_dir_all(&flat).unwrap();
         fs::write(flat.join("settlement.json"), &rejected).unwrap();

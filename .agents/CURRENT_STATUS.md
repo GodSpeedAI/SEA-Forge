@@ -1,14 +1,16 @@
 # Current status
 
-**Status revision:** 356
+**Status revision:** 357
 
-**Stage:** FDE S2 | Restore writer scan and verify interruption recovery
+**Stage:** FDE S2 | Verify staged restart and selected-generation artifacts
 
-**Summary:** Keep the Windows test fixture outside the production source scan while preserving its real directory flush.
+**Summary:** Verify staged selector replacement across application interruption and confirm artifact retrieval through the selected snapshot.
 
 **Verified:**
 
-- All 104 case-runner tests passed with 19 ignored, including all three raw-writer and lock scan checks.
+- The staged case-runner interruption test passed on Linux and ran natively on a fixed NTFS Windows volume. Exiting before selector replacement preserved the old generation. Exiting after replacement selected the new generation. Both paths allowed a subsequent commit.
+- The server selected-snapshot regression passed on Linux. Artifact retrieval returned the published bytes, digest, run ID, evidence ID, and URI.
+- At 89bc705a all 104 case-runner tests passed with 19 ignored. The source scan also passed with the interruption and artifact regressions applied.
 - In Portability run 44320285578 at 13b5ec10, native Windows job 134857115151 and macOS App Sandbox job 134857114371 both passed.
 - The earlier pinned-read checkpoint 1cbc292e passed native Windows in job 134850336686.
 - The full workspace run at 13b5ec10 recorded 2056 passed, 2 failed, and 28 ignored. The failures were the raw-writer source scan on the Windows test helper and the known WSL lifecycle stderr diagnostic.
@@ -79,7 +81,8 @@
 
 **Limits:**
 
-- Local fixed-volume NTFS normal-path publication has native coverage. Crash recovery and production activation still need qualification.
+- Application restart around selector replacement is verified on Linux and fixed NTFS. Interruption around first publication, native macOS restart, and host-crash or power-loss durability remain open.
+- Artifact retrieval is verified for the selected generation. Historical generation resolution across a later replacement still needs proof.
 - The dependency gate remains red on the chrono advisory and the transitive MIT-0 license rejection. DomainForge RFC3339 input compatibility still needs resolution.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
 - The exact Rust NTFS publisher still needs its hosted native execution and restart validation. Runtime versioned publication remains staged, with capture memory and remaining production writer integration open.
@@ -117,7 +120,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify process interruption around selector replacement and rerun S2 and the full workspace. Then resolve capture memory growth and wire production activation and recovery.
+**Next:** Rerun the S2 proof and full workspace against the recovery checkpoint, then qualify first publication and production activation.
 
 **Evidence:**
 
