@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 352
+**Status revision:** 353
 
-**Stage:** FDE S2: verify capture identities before data access
+**Stage:** FDE S2: verify sealed evidence package quality
 
-**Summary:** Inspect and pin regular workspace files before reading them, and give the native Windows handle the concrete synchronous read rights it requires.
+**Summary:** Use one map entry lookup when recording the captured artifact, preserving the existing one-read behavior.
 
 **Verified:**
 
+- Clippy with -D warnings passed for all targets of sandbox, case-runner, server, evidence, and settlement.
+- The corrected capture checkpoint 1cbc292e is on the isolated verification branch. Native Portability run 44317645405 is queued for that checkpoint.
 - The Field Case sealing regression passed after the Unix hardening. The macOS sandbox target and Windows os and sandbox targets cross-checked.
 - An independent Linux syscall trace observed scratch writes for the trace, evidence, and report before their canonical run files appeared.
 - S2 at bcafa556 matched the baseline across all 17 rows except duration. It recorded 15 scenario passes, AT-09 partial, and 12 contract digests verified.
@@ -71,6 +73,7 @@
 
 **Limits:**
 
+- Full workspace verification on the later capture checkpoint and native macOS and Windows acceptance remain open.
 - The guarded batch still retains all sealed bytes in memory. A trusted streaming path or an explicitly approved capture budget remains open.
 - The revised Windows Rust handler still needs the hosted native rerun. The NTFS rename fixture does not establish production versioned activation or crash recovery.
 - The staged versioned writer is still inactive in production. The NTFS fixture establishes native API behavior on one host, and remains short of publisher integration or crash-recovery qualification.
@@ -109,7 +112,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Rerun Windows Portability on the corrected checkpoint, then finish capture staging and the supported atomic publication provider.
+**Next:** Finish the hosted native verification, then integrate the local NTFS publication primitive and resolve bounded capture before activation.
 
 **Evidence:**
 

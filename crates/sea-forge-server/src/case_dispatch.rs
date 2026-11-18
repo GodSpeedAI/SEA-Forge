@@ -1127,24 +1127,25 @@ fn capture_required_artifacts(
             continue;
         }
         let relative = format!("workspace/{name}");
-        let present = if files.contains_key(&relative) {
-            true
-        } else {
-            match sea_forge_sandbox::read_workspace_file(workspace, name) {
-                Ok(bytes) => {
-                    files.insert(relative, bytes);
-                    true
+        let present = match files.entry(relative) {
+            std::collections::btree_map::Entry::Occupied(_) => true,
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                match sea_forge_sandbox::read_workspace_file(workspace, name) {
+                    Ok(bytes) => {
+                        entry.insert(bytes);
+                        true
+                    }
+                    Err(ForgeError::UnsafePath(_)) => false,
+                    Err(ForgeError::Io { source, .. })
+                        if matches!(
+                            source.kind(),
+                            std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
+                        ) =>
+                    {
+                        false
+                    }
+                    Err(error) => return Err(error),
                 }
-                Err(ForgeError::UnsafePath(_)) => false,
-                Err(ForgeError::Io { source, .. })
-                    if matches!(
-                        source.kind(),
-                        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory
-                    ) =>
-                {
-                    false
-                }
-                Err(error) => return Err(error),
             }
         };
         observations.insert(name.clone(), present);
