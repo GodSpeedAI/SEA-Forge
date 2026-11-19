@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 374
+**Status revision:** 375
 
-**Stage:** FDE S2 | Timestamp checkpoint replay
+**Stage:** FDE S2 | SEA Forge timestamp migration
 
-**Summary:** Carry deterministic build provenance timestamps and the historical Unix fallback into the current FDE integration.
+**Summary:** Replace the remaining direct Chrono dependencies in SEA Forge with a shared timestamp that preserves expiry ordering, leap seconds, and existing record formats.
 
 **Verified:**
 
+- The direct migration passed 5 focused timestamp tests, 4 PostgreSQL deadline tests, and 349 authority tests with 7 OPA-dependent tests ignored.
+- The direct migration compiled across workspace targets. The 20-crate synchronous-kernel dependency gate passed on the host and x86_64-pc-windows-msvc graphs.
+- The locked all-feature all-platform dependency graph now reaches Chrono only through the DomainForge 0.22.0 registry dependency and RealityTrace sxr-core 0.3.0 Git pin.
 - Exact fd843472 hosted CI run 44425451223 passed both Ubuntu and both macOS workspace shards, MSRV 1.92, authority, and Workbench. The only failed prerequisite job was lint at the live Chrono advisory.
 - Exact fd843472 Portability run 44423954384 passed all jobs, including native Windows and macOS staged tests and the seven Linux/ext4 guest resets. The evidence artifact and review record are linked in ADR-015.
 - Exact fd843472 local workspace tests recorded 2064 passed, 30 ignored, and the existing WSL CLI lifecycle failure. The hosted Ubuntu shards passed for the same commit.
@@ -104,10 +107,10 @@
 
 **Limits:**
 
-- The live dependency gate rejects Chrono under RUSTSEC-2026-0543. Bans, licenses, and sources passed. The locked graph reaches Chrono through the remaining SEA Forge and DomainForge callers and the pinned RealityTrace sxr-core 0.3.0, whose Rust APIs also need migration.
+- The approved DomainForge public timestamp and duration migration and the approved pinned RealityTrace migration must each pass their compatibility gates before updating SEA Forge's dependency pins.
+- SEA Forge's live RUSTSEC-2026-0543 gate remains open while the two transitive Chrono edges are present.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
-- DomainForge public TypedValue timestamp wire compatibility passed its expanded regression suite. Remaining public authority and duration migrations need scope confirmation before the dependency can be removed.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
@@ -145,7 +148,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish and verify the SEA Forge, DomainForge, and pinned RealityTrace migration. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
+**Next:** Complete upstream compatibility checks, update both dependency pins, and rerun the live dependency gate and S2. Supply disposable APFS and fixed-NTFS runner assets for the staged writer qualification.
 
 **Evidence:**
 

@@ -76,7 +76,7 @@ fn gate(
             declared_request_sha256: CONTENT,
         },
         ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
 }
 
@@ -101,7 +101,7 @@ fn resolve(
         bundle: &bundle,
         worlds: &worlds,
         root,
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: SettlementCriteria::default(),
     };
     service.resolve_approval(&settlement_approval_id(pending_id), approve, resolver)

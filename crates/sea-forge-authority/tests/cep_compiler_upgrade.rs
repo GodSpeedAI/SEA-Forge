@@ -71,7 +71,7 @@ fn with_worlds<T>(
         bundle: &bundle,
         worlds,
         root,
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: Default::default(),
     };
     f(&service)

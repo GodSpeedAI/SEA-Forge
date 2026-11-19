@@ -43,7 +43,6 @@ unsafe_code = "deny"
 all = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
-chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4", features = ["derive"] }
 ed25519-dalek = { version = "2", default-features = false, features = ["std", "serde", "rand_core"] }
 getrandom = "0.4"

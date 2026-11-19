@@ -1643,7 +1643,7 @@ fn seed_decision(root: &Path, s: &Value) {
             "authority_decision",
             vec!["cognate".into(), "op-seed".into()],
             &json!({"decision_id": "dec-seed-1", "outcome": outcome,
-                    "decided_at": chrono::Utc::now().to_rfc3339(),
+                    "decided_at": sea_forge_core::timestamp::Timestamp::now_utc().to_rfc3339(),
                     "operation": {"kind": "reserved", "resource_type": "cognate_action",
                                   "resource_id": resource, "parameters": {}}}),
             vec![],

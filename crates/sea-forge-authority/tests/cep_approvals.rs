@@ -54,7 +54,7 @@ fn bundle(yaml: &str) -> AuthorityPolicyBundle {
 fn with<T>(
     cell: &Cell,
     policy: &str,
-    ttl: chrono::Duration,
+    ttl: time::Duration,
     f: impl FnOnce(&CepAuthorityService<'_>) -> T,
 ) -> T {
     let bundle = bundle(policy);
@@ -70,8 +70,8 @@ fn with<T>(
     f(&service)
 }
 
-fn day() -> chrono::Duration {
-    chrono::Duration::hours(24)
+fn day() -> time::Duration {
+    time::Duration::hours(24)
 }
 
 fn service_actor() -> Actor {
@@ -451,13 +451,13 @@ fn when_policy_now_allows_outright_the_approval_is_not_spent() {
 fn an_unacted_escalation_expires_and_cannot_be_approved() {
     let c = cell();
     let req = request(&c.world, "op-11", "agent.echo", "actor:alice", None, &[]);
-    let d = with(&c, GATED, chrono::Duration::zero(), |s| {
+    let d = with(&c, GATED, time::Duration::ZERO, |s| {
         s.decide(&req, &service_actor())
     })
     .unwrap();
     let id = ext(&d)["approval_id"].as_str().unwrap().to_string();
     assert!(matches!(
-        with(&c, GATED, chrono::Duration::zero(), |s| s.resolve_approval(&id, true, &operator("op-alice"))),
+        with(&c, GATED, time::Duration::ZERO, |s| s.resolve_approval(&id, true, &operator("op-alice"))),
         Err(CepAuthorityError::Approval(m)) if m.contains("expired")
     ));
 }
@@ -465,7 +465,7 @@ fn an_unacted_escalation_expires_and_cannot_be_approved() {
 #[test]
 fn an_approval_lapses_with_its_window_even_after_being_granted() {
     let c = cell();
-    let ttl = chrono::Duration::seconds(2);
+    let ttl = time::Duration::seconds(2);
     let req = request(&c.world, "op-12", "agent.echo", "actor:alice", None, &[]);
     let d = with(&c, GATED, ttl, |s| s.decide(&req, &service_actor())).unwrap();
     let id = ext(&d)["approval_id"].as_str().unwrap().to_string();

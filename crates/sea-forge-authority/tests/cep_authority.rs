@@ -109,7 +109,7 @@ impl Fixture {
             bundle: &self.bundle,
             worlds: &self.worlds,
             root: self.root.path(),
-            approval_ttl: chrono::Duration::hours(24),
+            approval_ttl: time::Duration::hours(24),
             criteria: Default::default(),
         }
     }

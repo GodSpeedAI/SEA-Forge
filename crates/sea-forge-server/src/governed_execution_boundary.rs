@@ -150,9 +150,9 @@ pub(crate) fn idempotency_key(event_type: &str, payload: &Value) -> String {
 }
 
 pub(crate) fn utc_now() -> String {
-    chrono::Utc::now()
-        .format("%Y-%m-%dT%H:%M:%S+00:00")
-        .to_string()
+    sea_forge_core::timestamp::Timestamp::now_utc()
+        .truncate_to_seconds()
+        .to_rfc3339()
 }
 
 /// Fresh UUID-v4-shaped event id from OS randomness.

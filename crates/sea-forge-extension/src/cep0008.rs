@@ -169,7 +169,7 @@ pub fn project_to_cep0008_flat_v1(
     }
 
     // Validate RFC 3339 timestamp.
-    if chrono::DateTime::parse_from_rfc3339(input.settlement_timestamp).is_err() {
+    if sea_forge_core::timestamp::Timestamp::parse_rfc3339(input.settlement_timestamp).is_err() {
         return Err(schema_error(format!(
             "cep0008: settlement_timestamp is not valid RFC 3339: {}",
             input.settlement_timestamp

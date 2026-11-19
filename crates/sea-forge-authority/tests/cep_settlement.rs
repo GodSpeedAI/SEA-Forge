@@ -87,7 +87,7 @@ fn with<T>(
         bundle: &bundle,
         worlds: &c.worlds,
         root: c.root.path(),
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria,
     };
     f(&service)
@@ -946,7 +946,7 @@ fn authorize_swe_seed(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityE
             declared_request_sha256: CONTENT_A,
         },
         &ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
 }
 
@@ -972,7 +972,7 @@ fn authorize_cep(policy_yaml: &str) -> Result<SettlementGate, CepAuthorityError>
             declared_request_sha256: CONTENT_A,
         },
         &ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
 }
 
@@ -1244,7 +1244,7 @@ fn gate_swe_seed_case(
         case_id,
         policy_yaml,
         evidence_refs,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
 }
 
@@ -1253,7 +1253,7 @@ fn gate_swe_seed_ttl(
     case_id: &str,
     policy_yaml: &str,
     evidence_refs: Vec<String>,
-    ttl: chrono::Duration,
+    ttl: time::Duration,
 ) -> Result<SettlementGate, CepAuthorityError> {
     let (bundle, engine) = class_policy_engine(policy_yaml);
     let actor = svc();
@@ -1301,7 +1301,7 @@ fn resolve_in(
         bundle: &bundle,
         worlds: &worlds,
         root,
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: SettlementCriteria::default(),
     };
     service.resolve_approval(&settlement_approval_id(pending_id), approve, resolver)
@@ -1315,7 +1315,7 @@ fn resolve_uncertain_under(
     attempt: u32,
     resolution: sea_forge_authority::cep::UncertainResolution,
     resolver: &Actor,
-    now: chrono::DateTime<chrono::Utc>,
+    now: sea_forge_core::timestamp::Timestamp,
 ) -> Result<SettlementStatus, CepAuthorityError> {
     let (bundle, engine) = class_policy_engine(policy);
     sea_forge_authority::cep::resolve_uncertain_settlement_at(
@@ -1329,7 +1329,7 @@ fn resolve_uncertain_at(
     attempt: u32,
     resolution: sea_forge_authority::cep::UncertainResolution,
     resolver: &Actor,
-    now: chrono::DateTime<chrono::Utc>,
+    now: sea_forge_core::timestamp::Timestamp,
 ) -> Result<SettlementStatus, CepAuthorityError> {
     resolve_uncertain_under(
         &approval_policy(),
@@ -1387,8 +1387,8 @@ fn a_pending_settlement_is_durable_and_reads_back_after_reload() {
     assert_eq!(record.evidence_refs, vec!["evidence:a".to_string()]);
     assert!(record.pending_id.starts_with("settlement-pending-"));
     assert!(!record.decision_ref.is_empty());
-    let created = chrono::DateTime::parse_from_rfc3339(&record.created_at).unwrap();
-    let expires = chrono::DateTime::parse_from_rfc3339(&record.expires_at).unwrap();
+    let created = sea_forge_core::timestamp::Timestamp::parse_rfc3339(&record.created_at).unwrap();
+    let expires = sea_forge_core::timestamp::Timestamp::parse_rfc3339(&record.expires_at).unwrap();
     assert!(expires > created);
 }
 
@@ -1446,8 +1446,8 @@ fn a_legacy_pending_record_without_a_case_is_never_reused() {
         "evidence_refs": evidence_a(),
         "approval_requirement": "policy_escalate",
         "decision_ref": "dec_legacy",
-        "created_at": chrono::Utc::now().to_rfc3339(),
-        "expires_at": (chrono::Utc::now() + chrono::Duration::hours(24)).to_rfc3339(),
+        "created_at": sea_forge_core::timestamp::Timestamp::now_utc().to_rfc3339(),
+        "expires_at": (sea_forge_core::timestamp::Timestamp::now_utc() + time::Duration::hours(24)).to_rfc3339(),
     });
     LedgerStream::open(root.path(), LEDGER_ID, "test-writer")
         .unwrap()
@@ -1515,7 +1515,7 @@ fn gate_declared(
             declared_request_sha256: declared,
         },
         &ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
 }
 
@@ -1810,7 +1810,7 @@ fn an_expired_settlement_declares_nothing() {
         CASE,
         &approval_policy(),
         evidence_a(),
-        chrono::Duration::milliseconds(200),
+        time::Duration::milliseconds(200),
     )
     .unwrap();
     let (record, _) = pending_of(short);
@@ -2095,8 +2095,8 @@ mod lease_and_fencing {
     use super::*;
     use sea_forge_authority::cep::{reconcile_settlement_resume_at, SETTLEMENT_CLAIM_LEASE_SECS};
 
-    pub fn lease() -> chrono::Duration {
-        chrono::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS)
+    pub fn lease() -> time::Duration {
+        time::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS)
     }
 
     /// Approve a pending settlement and claim it once. Returns the pending id and the claimed attempt.
@@ -2107,7 +2107,10 @@ mod lease_and_fencing {
     }
 
     /// The instant the claim for attempt 1 was written, read from the ledger.
-    pub fn claimed_at(root: &std::path::Path, pending_id: &str) -> chrono::DateTime<chrono::Utc> {
+    pub fn claimed_at(
+        root: &std::path::Path,
+        pending_id: &str,
+    ) -> sea_forge_core::timestamp::Timestamp {
         let entries = sea_forge_ledger::LedgerStream::open(root, LEDGER_ID, "cep-lease-test")
             .unwrap()
             .read_entries()
@@ -2117,9 +2120,10 @@ mod lease_and_fencing {
             .iter()
             .find(|entry| entry.idempotency_key.as_deref() == Some(key.as_str()))
             .expect("claim record");
-        chrono::DateTime::parse_from_rfc3339(entry.payload["claimed_at"].as_str().unwrap())
-            .unwrap()
-            .with_timezone(&chrono::Utc)
+        sea_forge_core::timestamp::Timestamp::parse_rfc3339(
+            entry.payload["claimed_at"].as_str().unwrap(),
+        )
+        .unwrap()
     }
 
     fn closes_for(root: &std::path::Path, pending_id: &str, attempt: u32) -> usize {
@@ -2162,7 +2166,7 @@ mod lease_and_fencing {
             root.path(),
             &pending_id,
             None,
-            claimed + lease() - chrono::Duration::milliseconds(1),
+            claimed + lease() - time::Duration::milliseconds(1),
         )
         .unwrap();
         assert_eq!(before, SettlementStatus::Resuming { attempt: 1 });
@@ -2173,7 +2177,7 @@ mod lease_and_fencing {
             1,
             attest(),
             &operator(),
-            claimed + lease() - chrono::Duration::milliseconds(1),
+            claimed + lease() - time::Duration::milliseconds(1),
         );
         assert!(early.is_err());
         // At the boundary the claim is still held, never failed.
@@ -3148,7 +3152,7 @@ echo '{"attestation_ref":"attestation:script","attribution_confidence":"1.000000
         );
     }
 
-    fn lapsed(root: &Path, pending_id: &str) -> chrono::DateTime<chrono::Utc> {
+    fn lapsed(root: &Path, pending_id: &str) -> sea_forge_core::timestamp::Timestamp {
         lease_and_fencing::claimed_at(root, pending_id) + lease_and_fencing::lease()
     }
 

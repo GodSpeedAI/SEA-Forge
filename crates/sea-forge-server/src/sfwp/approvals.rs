@@ -229,7 +229,7 @@ fn shape(root: &Path, request: ApprovalRequest, now: &str) -> CaseTaskApproval {
 
 /// List approvals still awaiting a decision, optionally scoped to one case.
 pub fn list(root: &Path, case_id: Option<&str>) -> ApprovalListResult {
-    let now = chrono::Utc::now().to_rfc3339();
+    let now = sea_forge_core::timestamp::Timestamp::now_utc().to_rfc3339();
 
     let pending = match sea_forge_core::approvals::pending(root) {
         Ok(pending) => pending,

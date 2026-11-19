@@ -6,12 +6,12 @@
 
 use crate::agent_probe::{commit_view, resolve_policy_path, CredentialResolver};
 use crate::ServerConfig;
-use chrono::Utc;
 use sea_forge_agent::{
     deny_once, run_delegation, AcpPermissionMediator, AcpSession, AcpSpawn, AnthropicProvider,
     DelegationConfig, OpenAiCompatibleProvider, PermissionDecision, ProviderKind,
 };
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{
     errors::ForgeError,
     ids::{self, case_id, random_id, run_id},
@@ -982,7 +982,7 @@ async fn submit_swe_seed_declaration(
             declared_request_sha256: &declared,
         },
         &ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     // The claimed attempt, if the gate handed one out. Its outcome is recorded once the declaration is appended.
@@ -2342,7 +2342,7 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
                         .count(),
                     Err(_) => return deny_once(&request),
                 };
-                let requested_at = Utc::now();
+                let requested_at = Timestamp::now_utc();
                 let request_record = ApprovalRequest {
                     version: RECORD_VERSION.into(),
                     approval_id: ids::seq_id("apr", 4, count + 1),
@@ -2355,9 +2355,8 @@ impl AcpPermissionMediator for AcpAuthorityMediator {
                     criteria_record_hash: Some(self.criteria.criteria_record_hash.clone()),
                     job_contract_ref: None,
                     requested_at: requested_at.to_rfc3339(),
-                    expires_at: (requested_at
-                        + chrono::Duration::seconds(self.timeout_secs as i64))
-                    .to_rfc3339(),
+                    expires_at: (requested_at + time::Duration::seconds(self.timeout_secs as i64))
+                        .to_rfc3339(),
                     status: ApprovalStatus::Pending,
                     resolved_by: None,
                     resolved_at: None,
@@ -2688,7 +2687,7 @@ mod started_command_failure_tests {
             bundle: &bundle,
             worlds: &worlds,
             root: root.path(),
-            approval_ttl: chrono::Duration::hours(24),
+            approval_ttl: time::Duration::hours(24),
             criteria: sea_forge_authority::cep::SettlementCriteria::default(),
         }
         .resolve_approval(

@@ -103,7 +103,7 @@ pub struct DatabaseSession {
     pub role: String,
     password: String,
     pub expires_at: String,
-    expires: chrono::DateTime<chrono::Utc>,
+    expires: sea_forge_core::timestamp::Timestamp,
     pub decision_id: String,
     socket_dir: PathBuf,
     port: u16,
@@ -147,22 +147,24 @@ impl DatabaseSession {
 /// seconds, rounded down, because `VALID UNTIL` is written at second
 /// precision: access never outlives the computed deadline.
 pub fn session_deadline(
-    now: chrono::DateTime<chrono::Utc>,
+    now: sea_forge_core::timestamp::Timestamp,
     ttl_secs: u64,
-    approval_window: Option<chrono::DateTime<chrono::Utc>>,
-) -> Result<chrono::DateTime<chrono::Utc>, PostgresError> {
-    use chrono::{DurationRound, TimeDelta};
+    approval_window: Option<sea_forge_core::timestamp::Timestamp>,
+) -> Result<sea_forge_core::timestamp::Timestamp, PostgresError> {
     if ttl_secs == 0 || ttl_secs > i64::MAX as u64 / 1000 {
         return Err(err("session TTL out of range"));
     }
     if approval_window.is_some_and(|window| window <= now) {
         return Err(err("approval window has closed"));
     }
-    let ttl = now + chrono::Duration::seconds(ttl_secs as i64);
+    let ttl = now
+        .checked_add(time::Duration::seconds(ttl_secs as i64))
+        .ok_or_else(|| err("session TTL out of range"))?;
     let deadline = approval_window.map_or(ttl, |window| ttl.min(window));
-    deadline
-        .duration_trunc(TimeDelta::seconds(1))
-        .map_err(|e| err(format!("deadline: {e}")))
+    // The existing deadline calculation only accepts epoch nanoseconds that fit in i64.
+    i64::try_from(deadline.unix_timestamp_nanos())
+        .map_err(|_| err("deadline: timestamp exceeds num_nanoseconds limit"))?;
+    Ok(deadline.truncate_to_seconds())
 }
 
 pub struct PostgresBroker {
@@ -303,7 +305,11 @@ impl PostgresBroker {
         }
         let grant = engine.grant(&decision, &committed, &action, None)?;
         grant.authorize(&action, run_id, "database-session", workspace)?;
-        let expires = session_deadline(chrono::Utc::now(), self.config.session_ttl_secs, None)?;
+        let expires = session_deadline(
+            sea_forge_core::timestamp::Timestamp::now_utc(),
+            self.config.session_ttl_secs,
+            None,
+        )?;
         let session = self.mint(scope, group, workload_uid, expires, &decision.decision_id)?;
         ledger.commit_typed(
             "database_session_issued",
@@ -331,12 +337,12 @@ impl PostgresBroker {
         scope: &str,
         group: &str,
         workload_uid: u32,
-        expires: chrono::DateTime<chrono::Utc>,
+        expires: sea_forge_core::timestamp::Timestamp,
         decision_id: &str,
     ) -> Result<DatabaseSession, PostgresError> {
         let role = format!("sfw_{workload_uid}_{}", random_hex(6)?);
         let password = random_hex(32)?;
-        let expires_at = expires.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let expires_at = expires.to_rfc3339_secs_z();
         // Identifiers are validated; the password and timestamp are hex/RFC3339.
         self.admin_sql(&format!(
             "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION \
@@ -400,11 +406,10 @@ impl PostgresBroker {
             ledger,
         )?;
         grant.authorize(&action, &decision.run_id, &decision.plan_item_id, workspace)?;
-        let window = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
-            .map_err(|_| err("approval expiry is not RFC 3339"))?
-            .with_timezone(&chrono::Utc);
+        let window = sea_forge_core::timestamp::Timestamp::parse_rfc3339(&approval.expires_at)
+            .map_err(|_| err("approval expiry is not RFC 3339"))?;
         let expires = session_deadline(
-            chrono::Utc::now(),
+            sea_forge_core::timestamp::Timestamp::now_utc(),
             self.config.session_ttl_secs,
             Some(window),
         )?;
@@ -469,8 +474,12 @@ impl PostgresBroker {
         engine
             .grant(&decision, &committed, &action, None)?
             .authorize(&action, run_id, "database-session", workspace)?;
-        let expires = session_deadline(chrono::Utc::now(), self.config.session_ttl_secs, None)?;
-        let expires_at = expires.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let expires = session_deadline(
+            sea_forge_core::timestamp::Timestamp::now_utc(),
+            self.config.session_ttl_secs,
+            None,
+        )?;
+        let expires_at = expires.to_rfc3339_secs_z();
         self.admin_sql(&format!("ALTER ROLE {role} VALID UNTIL '{expires_at}'"))?;
         session.expires = expires;
         session.expires_at = expires_at.clone();
@@ -494,14 +503,17 @@ impl PostgresBroker {
         ledger_stream: String,
         run_id: String,
     ) -> ExpiryReaper {
-        let (tx, rx) = std::sync::mpsc::channel::<chrono::DateTime<chrono::Utc>>();
+        let (tx, rx) = std::sync::mpsc::channel::<sea_forge_core::timestamp::Timestamp>();
         let broker = PostgresBroker {
             config: self.config.clone(),
         };
         let role = session.role.clone();
         let mut deadline = session.expires;
         let thread = std::thread::spawn(move || loop {
-            let wait = (deadline - chrono::Utc::now()).to_std().unwrap_or_default();
+            let wait = std::time::Duration::try_from(
+                deadline - sea_forge_core::timestamp::Timestamp::now_utc(),
+            )
+            .unwrap_or_default();
             match rx.recv_timeout(wait) {
                 Ok(next) => deadline = next,
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
@@ -666,7 +678,7 @@ pub const SUPERVISE_INTERVAL: std::time::Duration = std::time::Duration::from_se
 
 /// Revokes its session at expiry unless dropped first.
 pub struct ExpiryReaper {
-    extend: Option<std::sync::mpsc::Sender<chrono::DateTime<chrono::Utc>>>,
+    extend: Option<std::sync::mpsc::Sender<sea_forge_core::timestamp::Timestamp>>,
     thread: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -698,13 +710,11 @@ impl Drop for ExpiryReaper {
 #[cfg(test)]
 mod tests {
     use super::session_deadline;
-    use chrono::{DateTime, Duration, Utc};
+    use sea_forge_core::timestamp::Timestamp;
+    use time::Duration;
 
-    fn t(secs: i64) -> DateTime<Utc> {
-        DateTime::parse_from_rfc3339("2026-10-17T12:00:00Z")
-            .unwrap()
-            .with_timezone(&Utc)
-            + Duration::seconds(secs)
+    fn t(secs: i64) -> Timestamp {
+        Timestamp::parse_rfc3339("2026-10-17T12:00:00Z").unwrap() + Duration::seconds(secs)
     }
 
     /// Injected clock: an approval window closing at T+10 bounds a 300 s
@@ -723,6 +733,26 @@ mod tests {
         let fractional = t(0) + Duration::milliseconds(900);
         assert_eq!(session_deadline(fractional, 2, None).unwrap(), t(2));
         assert!(session_deadline(t(0), 0, None).is_err());
+    }
+
+    #[test]
+    fn fractional_approval_deadline_uses_the_same_instant_and_rounds_down() {
+        let now = Timestamp::parse_rfc3339("2026-10-17T12:00:00.250Z").unwrap();
+        let approval = Timestamp::parse_rfc3339("2026-10-17T08:00:01.999-04:00").unwrap();
+        assert_eq!(session_deadline(now, 30, Some(approval)).unwrap(), t(1));
+        assert!(session_deadline(approval, 30, Some(approval)).is_err());
+    }
+
+    #[test]
+    fn deadline_rejects_unrepresentable_ttl_and_preserves_rounding_range() {
+        let edge = Timestamp::parse_rfc3339("2262-04-11T23:47:16.854775807Z").unwrap();
+        let before = edge - Duration::seconds(1);
+        assert_eq!(
+            session_deadline(before, 1, None).unwrap(),
+            edge.truncate_to_seconds()
+        );
+        assert!(session_deadline(edge, 1, None).is_err());
+        assert!(session_deadline(t(0), i64::MAX as u64 / 1000, None).is_err());
     }
 
     /// A scope admits exactly its own exposure label plus what is explicitly

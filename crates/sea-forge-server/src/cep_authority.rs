@@ -146,8 +146,8 @@ fn criteria(config: &ServerConfig) -> sea_forge_authority::cep::SettlementCriter
     }
 }
 
-fn ttl(config: &ServerConfig) -> chrono::Duration {
-    chrono::Duration::hours(config.cep_authority.approval_ttl_hours.clamp(1, 720) as i64)
+fn ttl(config: &ServerConfig) -> time::Duration {
+    time::Duration::hours(config.cep_authority.approval_ttl_hours.clamp(1, 720) as i64)
 }
 
 /// Load policy and worlds and run `f` against a fresh service (a fresh engine per request, so an

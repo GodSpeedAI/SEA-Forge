@@ -3,7 +3,7 @@ pub mod opa;
 
 pub use opa::{OpaBinding, OpaCandidate, OpaTrace, OPA_VERSION};
 
-use chrono::Utc;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{errors::ForgeError, ids::random_id, types::*, RECORD_VERSION};
 use sea_forge_ledger::{types::payload_hash, CommittedRecordRef, LedgerStream, PreActionAssurance};
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ struct ValidatedGrant {
     timeout_secs: Option<u64>,
     env_keys: BTreeSet<String>,
     sandbox_class: String,
-    expires_at: chrono::DateTime<Utc>,
+    expires_at: Timestamp,
     action_hash: String,
 }
 
@@ -91,7 +91,7 @@ pub struct ActionGrant {
     sandbox_class: String,
     boundaries: BTreeMap<String, Vec<String>>,
     compensating_controls: Vec<String>,
-    expires_at: chrono::DateTime<Utc>,
+    expires_at: Timestamp,
     memory_scope: Option<String>,
     /// F-25.h: the canonical executable identity the decision verified
     /// (`untrusted_executable`), carried so the spawn path can re-check it.
@@ -109,7 +109,7 @@ impl ActionGrant {
     }
 
     /// Expiry carried by the issued grant, for an adapter's independent lease.
-    pub fn expires_at(&self) -> chrono::DateTime<Utc> {
+    pub fn expires_at(&self) -> Timestamp {
         self.expires_at
     }
 
@@ -200,7 +200,7 @@ impl ActionGrant {
         workspace_root: &Path,
         compensating_controls: &[String],
     ) -> Result<(), ForgeError> {
-        if Utc::now() > self.expires_at {
+        if Timestamp::now_utc() > self.expires_at {
             return Err(ForgeError::Input("authority grant expired".into()));
         }
         if &self.action != action
@@ -1592,10 +1592,10 @@ impl PolicyAuthorityEngine {
             if constraint
                 .expires_at
                 .as_deref()
-                .map(chrono::DateTime::parse_from_rfc3339)
+                .map(sea_forge_core::timestamp::Timestamp::parse_rfc3339)
                 .transpose()
                 .map_err(|_| ForgeError::Input("opaque constraint expiry is invalid".into()))?
-                .is_some_and(|expiry| expiry.with_timezone(&Utc) < Utc::now())
+                .is_some_and(|expiry| expiry < Timestamp::now_utc())
             {
                 continue;
             }
@@ -1610,7 +1610,7 @@ impl PolicyAuthorityEngine {
         &self,
         input: AuthorityEvaluation<'_>,
     ) -> Result<AuthorityDecision, ForgeError> {
-        self.evaluate_at(input, random_id("act")?, Utc::now().to_rfc3339())
+        self.evaluate_at(input, random_id("act")?, Timestamp::now_utc().to_rfc3339())
     }
 
     pub fn grant(
@@ -1761,19 +1761,17 @@ impl PolicyAuthorityEngine {
                 "approval criteria hashes are invalid".into(),
             ));
         }
-        let expires_at = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
-            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
-            .with_timezone(&Utc);
+        let expires_at = sea_forge_core::timestamp::Timestamp::parse_rfc3339(&approval.expires_at)
+            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?;
         let resolved_at = approval
             .resolved_at
             .as_deref()
             .ok_or_else(|| ForgeError::Input("approved resolution has no timestamp".into()))
             .and_then(|value| {
-                chrono::DateTime::parse_from_rfc3339(value).map_err(|_| {
+                sea_forge_core::timestamp::Timestamp::parse_rfc3339(value).map_err(|_| {
                     ForgeError::Input("approval resolution timestamp is invalid".into())
                 })
-            })?
-            .with_timezone(&Utc);
+            })?;
         // An approval resolved Approved before expires_at remains valid after
         // wall clock TTL; expiry only applies to unresolved pending or to a
         // resolution recorded after the deadline.
@@ -1843,8 +1841,8 @@ impl PolicyAuthorityEngine {
         }
         // The grant window is a fresh five minutes; the approval's expiry only
         // shortens it when it still lies in the future.
-        let grant_window = Utc::now() + chrono::Duration::minutes(5);
-        let grant_expiry = if expires_at > Utc::now() {
+        let grant_window = Timestamp::now_utc() + time::Duration::minutes(5);
+        let grant_expiry = if expires_at > Timestamp::now_utc() {
             std::cmp::min(grant_window, expires_at)
         } else {
             grant_window
@@ -1868,7 +1866,7 @@ impl PolicyAuthorityEngine {
         let consumption = json!({
             "decision_id": decision.decision_id,
             "approval_id": approval.approval_id,
-            "consumed_at": Utc::now().to_rfc3339(),
+            "consumed_at": Timestamp::now_utc().to_rfc3339(),
         });
         match stream.commit_typed_new(
             "approval_grant_consumption",
@@ -1899,7 +1897,7 @@ impl PolicyAuthorityEngine {
         // Wall-clock expiry is the one check that can still fail after the
         // append (residual: only if the window closes between validation and
         // this line). It is re-checked here so no expired grant is returned.
-        if Utc::now() > validated.expires_at {
+        if Timestamp::now_utc() > validated.expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
         Ok(self.mint_grant(decision, committed_decision, action, assurance, validated))
@@ -1914,7 +1912,7 @@ impl PolicyAuthorityEngine {
         assurance: Option<&PreActionAssurance>,
         expected_verdict: Verdict,
         sandbox_class: Option<String>,
-        approval_expiry: Option<chrono::DateTime<Utc>>,
+        approval_expiry: Option<Timestamp>,
     ) -> Result<ActionGrant, ForgeError> {
         let validated = self.validate_grant(
             decision,
@@ -1939,7 +1937,7 @@ impl PolicyAuthorityEngine {
         assurance: Option<&PreActionAssurance>,
         expected_verdict: Verdict,
         sandbox_class: Option<String>,
-        approval_expiry: Option<chrono::DateTime<Utc>>,
+        approval_expiry: Option<Timestamp>,
     ) -> Result<ValidatedGrant, ForgeError> {
         // Defence in depth: a PromoteChangeset is grantable only through
         // grant_after_approval*, never by an unconditional Allow grant.
@@ -2042,12 +2040,11 @@ impl PolicyAuthorityEngine {
                     "authority decision was not issued by this mediator or was replayed".into(),
                 ));
             }
-            chrono::DateTime::parse_from_rfc3339(&decision.decided_at)
+            sea_forge_core::timestamp::Timestamp::parse_rfc3339(&decision.decided_at)
                 .map_err(|_| ForgeError::Input("authority decision timestamp is invalid".into()))?
-                .with_timezone(&Utc)
-                + chrono::Duration::minutes(5)
+                + time::Duration::minutes(5)
         };
-        if Utc::now() > expires_at {
+        if Timestamp::now_utc() > expires_at {
             return Err(ForgeError::Input("authority decision expired".into()));
         }
         let sandbox_class = sandbox_class
@@ -2308,10 +2305,10 @@ impl PolicyAuthorityEngine {
         let identity_not_expired = binding
             .expires_at
             .as_deref()
-            .map(chrono::DateTime::parse_from_rfc3339)
+            .map(sea_forge_core::timestamp::Timestamp::parse_rfc3339)
             .transpose()
             .map_err(|_| ForgeError::Input("identity expiry is invalid".into()))?
-            .is_none_or(|expiry| expiry.with_timezone(&Utc) >= Utc::now());
+            .is_none_or(|expiry| expiry >= Timestamp::now_utc());
         let identity_valid = binding == expected_binding
             && binding.principal == actor.actor_id
             && binding.actor_type == actor_type_for_role(&actor.role)
@@ -3693,7 +3690,7 @@ mod tests {
                     environment: None,
                 },
                 "act_abcdef".into(),
-                Utc::now().to_rfc3339(),
+                Timestamp::now_utc().to_rfc3339(),
             )
             .unwrap()
     }
@@ -3801,7 +3798,7 @@ mod tests {
             parameters: json!({"transition_kind":"capitalize","from_stage":"product","to_stage":"capital","mode":"promote","gate_profile_ref":"capital@1","required_settlement_strength":"strong","qualifying_value_evidence_kinds":["adoption"],"requires_approval":true,"licenses":["internal"]}),
         };
         let requester = actor();
-        let decision_time = Utc::now() - chrono::Duration::minutes(10);
+        let decision_time = Timestamp::now_utc() - time::Duration::minutes(10);
         let decision = engine
             .evaluate_at(
                 AuthorityEvaluation {
@@ -3853,7 +3850,7 @@ mod tests {
                 producer_ref: None,
                 rationale: "capitalization fixture".into(),
             },
-            declared_at: Utc::now().to_rfc3339(),
+            declared_at: Timestamp::now_utc().to_rfc3339(),
             criteria_sha256: String::new(),
             criteria_record_hash: String::new(),
         };
@@ -3875,10 +3872,10 @@ mod tests {
             criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
             job_contract_ref: None,
             requested_at: decision_time.to_rfc3339(),
-            expires_at: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+            expires_at: (Timestamp::now_utc() + time::Duration::hours(1)).to_rfc3339(),
             status: ApprovalStatus::Approved,
             resolved_by: Some("security_officer".into()),
-            resolved_at: Some(Utc::now().to_rfc3339()),
+            resolved_at: Some(Timestamp::now_utc().to_rfc3339()),
             note: None,
         };
         let root = tempfile::tempdir().unwrap();
@@ -4022,8 +4019,8 @@ mod tests {
             criteria_ref,
         ) = approval_transition_fixture();
         // Resolved Approved before expires_at, but wall clock is now past expiry.
-        let expires = Utc::now() - chrono::Duration::minutes(10);
-        let resolved = Utc::now() - chrono::Duration::minutes(20);
+        let expires = Timestamp::now_utc() - time::Duration::minutes(10);
+        let resolved = Timestamp::now_utc() - time::Duration::minutes(20);
         approval.status = ApprovalStatus::Approved;
         approval.resolved_at = Some(resolved.to_rfc3339());
         approval.expires_at = expires.to_rfc3339();
@@ -4074,8 +4071,8 @@ mod tests {
             _approval_ref,
             criteria_ref,
         ) = approval_transition_fixture();
-        let past = Utc::now() - chrono::Duration::hours(2);
-        let even_more_past = Utc::now() - chrono::Duration::days(1);
+        let past = Timestamp::now_utc() - time::Duration::hours(2);
+        let even_more_past = Timestamp::now_utc() - time::Duration::days(1);
         approval.status = ApprovalStatus::Approved;
         approval.resolved_at = Some(past.to_rfc3339());
         approval.expires_at = even_more_past.to_rfc3339();
@@ -5368,7 +5365,7 @@ rules:
                 producer_ref: None,
                 rationale: "capitalization SOD fixture".into(),
             },
-            declared_at: Utc::now().to_rfc3339(),
+            declared_at: Timestamp::now_utc().to_rfc3339(),
             criteria_sha256: String::new(),
             criteria_record_hash: String::new(),
         };
@@ -5390,11 +5387,11 @@ rules:
             criteria_sha256: Some(criteria.criteria_sha256.clone()),
             criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
             job_contract_ref: None,
-            requested_at: Utc::now().to_rfc3339(),
-            expires_at: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+            requested_at: Timestamp::now_utc().to_rfc3339(),
+            expires_at: (Timestamp::now_utc() + time::Duration::hours(1)).to_rfc3339(),
             status: ApprovalStatus::Approved,
             resolved_by: Some("security_officer".into()),
-            resolved_at: Some(Utc::now().to_rfc3339()),
+            resolved_at: Some(Timestamp::now_utc().to_rfc3339()),
             note: None,
         };
 

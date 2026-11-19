@@ -19,7 +19,6 @@ sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.5.0" }
 sea-forge-spec-pipeline = { path = "../sea-forge-spec-pipeline", version = "0.5.0" }
 sea-forge-changeset = { path = "../sea-forge-changeset", version = "0.5.0" }
 sea-forge-evidence = { path = "../sea-forge-evidence", version = "0.5.0" }
-chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

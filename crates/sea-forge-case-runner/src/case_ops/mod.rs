@@ -27,8 +27,8 @@ pub mod field_guard;
 pub mod mediation;
 mod versioned_store;
 
-use chrono::Utc;
 use sea_forge_core::timestamp::now_rfc3339;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{
     errors::ForgeError,
     ids,
@@ -827,10 +827,9 @@ pub fn resolve_approval(
         &stream, root, policy, actor, case_id, &latest, &decision, &criteria, approved,
     )?;
     // Check TTL expiry before resolving.
-    let now = Utc::now();
-    let expires_at = chrono::DateTime::parse_from_rfc3339(&latest.expires_at)
-        .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
-        .with_timezone(&Utc);
+    let now = Timestamp::now_utc();
+    let expires_at = Timestamp::parse_rfc3339(&latest.expires_at)
+        .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?;
     let now_rfc3339 = now.to_rfc3339();
     if expires_at <= now {
         let expired = ApprovalRequest {

@@ -702,8 +702,8 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
             Some(last) if last["state"] == "interrupted" => {
                 let expired = last["link_expires_at"]
                     .as_str()
-                    .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
-                    .is_none_or(|t| t <= chrono::Utc::now());
+                    .and_then(|t| sea_forge_core::timestamp::Timestamp::parse_rfc3339(t).ok())
+                    .is_none_or(|t| t <= sea_forge_core::timestamp::Timestamp::now_utc());
                 if expired {
                     return Err(AdmissionError::refuse(
                         "ASSIGNMENT_LINK_EXPIRED",
@@ -926,7 +926,7 @@ fn find_decision(
     let ttl = config["execution_decision_ttl_secs"]
         .as_i64()
         .unwrap_or(86_400);
-    let now = chrono::Utc::now();
+    let now = sea_forge_core::timestamp::Timestamp::now_utc();
     let mut seen_allow = false;
     for e in entries
         .iter()
@@ -938,8 +938,8 @@ fn find_decision(
         }
         let fresh = p["decided_at"]
             .as_str()
-            .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
-            .is_some_and(|t| (now - t.with_timezone(&chrono::Utc)).num_seconds() <= ttl);
+            .and_then(|t| sea_forge_core::timestamp::Timestamp::parse_rfc3339(t).ok())
+            .is_some_and(|t| (now - t).whole_seconds() <= ttl);
         if !fresh {
             continue;
         }

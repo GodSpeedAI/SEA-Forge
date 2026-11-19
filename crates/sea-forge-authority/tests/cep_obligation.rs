@@ -4,17 +4,18 @@
 //! head, stamped by SEA-Forge's clock; only admissible, known results decide, by the REQ-NAV-012 table.
 //! Real time with short windows: each test allows, submits execution evidence, then waits for the close.
 
-use chrono::{DateTime, Duration, Utc};
 use sea_forge_authority::cep::{
     argv_digest, CepAuthorityError, CepAuthorityService, ObligationSource, SettlementCriteria,
     SettlementOutcome, SourceRow,
 };
 use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::types::{Actor, ActorRole};
 use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::cell::RefCell;
+use time::Duration;
 
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const LEDGER: &str = "rt-ledger-1";
@@ -93,7 +94,7 @@ fn argv() -> Vec<Value> {
     ]
 }
 
-fn claims(closes_at: DateTime<Utc>, grace: i64) -> Value {
+fn claims(closes_at: Timestamp, grace: i64) -> Value {
     json!({
         "modality": "obligation",
         "expectation_digest": format!("sha256:{}", "e".repeat(64)),
@@ -170,8 +171,8 @@ fn threshold_row(ordinal: u64, id: &str) -> SourceRow {
 #[derive(Clone)]
 struct Run {
     exit: Option<i64>,
-    started: DateTime<Utc>,
-    completed: Option<DateTime<Utc>>,
+    started: Timestamp,
+    completed: Option<Timestamp>,
     crashed: bool,
     argv: Vec<Value>,
 }
@@ -199,15 +200,15 @@ fn obs_row(ordinal: u64, id: &str, run: &Run) -> SourceRow {
 struct Scenario {
     c: Cell,
     op: String,
-    closes_at: DateTime<Utc>,
-    floor: DateTime<Utc>,
+    closes_at: Timestamp,
+    floor: Timestamp,
     rt: FakeRt,
 }
 
 fn scenario(window_ms: i64, grace: i64) -> Scenario {
     let c = cell();
     let op = "op-1".to_string();
-    let closes_at = Utc::now() + Duration::milliseconds(window_ms);
+    let closes_at = Timestamp::now_utc() + Duration::milliseconds(window_ms);
     with(&c, |s| {
         s.decide(
             &auth_request(&c.world, &op, claims(closes_at, grace)),
@@ -219,7 +220,7 @@ fn scenario(window_ms: i64, grace: i64) -> Scenario {
         s.submit_evidence(&execution_packet(&c.world, &op), &svc())
             .unwrap()
     });
-    let floor = Utc::now() + Duration::milliseconds(50);
+    let floor = Timestamp::now_utc() + Duration::milliseconds(50);
     Scenario {
         c,
         op,
@@ -261,8 +262,8 @@ impl Scenario {
             "obs-d",
             &Run {
                 exit: Some(1),
-                started: Utc::now() - Duration::seconds(5),
-                completed: Some(Utc::now() - Duration::seconds(4)),
+                started: Timestamp::now_utc() - Duration::seconds(5),
+                completed: Some(Timestamp::now_utc() - Duration::seconds(4)),
                 crashed: false,
                 argv: argv(),
             },
@@ -277,9 +278,9 @@ impl Scenario {
             .collect()
     }
     fn wait_close(&self) {
-        let remaining = self.closes_at - Utc::now() + Duration::milliseconds(20);
-        if remaining > Duration::zero() {
-            std::thread::sleep(remaining.to_std().unwrap());
+        let remaining = self.closes_at - Timestamp::now_utc() + Duration::milliseconds(20);
+        if remaining > Duration::ZERO {
+            std::thread::sleep(remaining.try_into().unwrap());
         }
     }
     fn close(
@@ -315,7 +316,7 @@ const W: i64 = 1200;
 #[test]
 fn the_requests_claims_are_recorded_with_the_decision() {
     let c = cell();
-    let closes_at = Utc::now() + Duration::seconds(60);
+    let closes_at = Timestamp::now_utc() + Duration::seconds(60);
     let d = with(&c, |s| {
         s.decide(
             &auth_request(&c.world, "op-1", claims(closes_at, 30)),
@@ -623,7 +624,7 @@ fn a_discrimination_run_not_after_the_threshold_is_refused_at_closure() {
 #[test]
 fn prohibition_is_not_supported() {
     let c = cell();
-    let mut prohibition = claims(Utc::now() - Duration::seconds(1), 30);
+    let mut prohibition = claims(Timestamp::now_utc() - Duration::seconds(1), 30);
     prohibition["modality"] = json!("prohibition");
     with(&c, |s| {
         s.decide(&auth_request(&c.world, "op-1", prohibition), &svc())
@@ -641,7 +642,7 @@ fn prohibition_is_not_supported() {
 #[test]
 fn an_obligation_without_execution_evidence_is_refused() {
     let c = cell();
-    let closes_at = Utc::now() + Duration::milliseconds(300);
+    let closes_at = Timestamp::now_utc() + Duration::milliseconds(300);
     // No grace, so the missing closure is no longer "pending" when settlement is asked for.
     with(&c, |s| {
         s.decide(

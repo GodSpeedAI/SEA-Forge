@@ -20,7 +20,7 @@ hex.workspace = true
 rusqlite = { version = "0.41", features = ["bundled"] }
 
 [dev-dependencies]
-chrono.workspace = true
+time.workspace = true
 sea-forge-settlement = { path = "../sea-forge-settlement", version = "0.5.0" }
 sea-forge-domainforge = { path = "../sea-forge-domainforge", version = "0.5.0" }
 tempfile.workspace = true

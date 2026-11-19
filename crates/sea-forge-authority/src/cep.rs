@@ -32,8 +32,8 @@ pub use world_pin::{
 };
 
 use crate::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
-use chrono::{DateTime, Duration, Utc};
 use sea_forge_core::errors::ForgeError;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::types::{
     Actor, AuthorityAction, AuthorityDecision, NormalizedDisposition, SettlementDeclaration,
     SettlementDeclarationRequest, Verdict,
@@ -43,6 +43,7 @@ use sea_forge_ledger::{CommittedRecordRef, LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
 use std::fmt;
 use std::path::Path;
+use time::Duration;
 
 pub const REQUEST_PROFILE: &str = "godspeed.authority_request";
 pub const DECISION_PROFILE: &str = "godspeed.authority_decision";
@@ -734,7 +735,7 @@ pub struct ApprovalStanding {
     pub subject_actor_ref: String,
     pub original_request_envelope_id: String,
     pub escalation_entry: String,
-    pub expires_at: DateTime<Utc>,
+    pub expires_at: Timestamp,
     pub resolved_by: Option<String>,
 }
 
@@ -811,7 +812,7 @@ impl CepAuthorityService<'_> {
         &self,
         entries: &[LedgerEntry],
         approval_id: &str,
-        now: DateTime<Utc>,
+        now: Timestamp,
     ) -> Option<ApprovalStanding> {
         if approval_id.starts_with("apr-")
             && approval_id[4..].starts_with(SETTLEMENT_PENDING_PREFIX)
@@ -825,9 +826,7 @@ impl CepAuthorityService<'_> {
             return None;
         }
         let action = serde_json::to_value(&decision.action_request.action).ok()?;
-        let committed_at = DateTime::parse_from_rfc3339(&entry.committed_at)
-            .ok()?
-            .with_timezone(&Utc);
+        let committed_at = Timestamp::parse_rfc3339(&entry.committed_at).ok()?;
         let expires_at = committed_at + self.approval_ttl;
         let resolution = find_entry(entries, &resolve_key(approval_id));
         let state = if find_entry(entries, &use_key(approval_id)).is_some() {
@@ -987,7 +986,7 @@ impl CepAuthorityService<'_> {
     /// Every escalation that can be approved, with its current standing.
     pub fn list_approvals(&self) -> Result<Vec<ApprovalStanding>, CepAuthorityError> {
         let entries = self.ledger()?.read_entries()?;
-        let now = Utc::now();
+        let now = Timestamp::now_utc();
         let ids: Vec<String> = entries
             .iter()
             .filter_map(|e| {
@@ -1108,7 +1107,7 @@ impl CepAuthorityService<'_> {
         if let Some(approval_id) = &request.approval_ref {
             let entries = ledger.read_entries()?;
             let standing = self
-                .standing_in(&entries, approval_id, Utc::now())
+                .standing_in(&entries, approval_id, Timestamp::now_utc())
                 .ok_or_else(|| {
                     CepAuthorityError::Approval(format!(
                         "{approval_id} is not an approvable escalation"
@@ -1180,11 +1179,8 @@ impl CepAuthorityService<'_> {
         if approvable(&decision) {
             let approval_id = approval_id_for(&request.operation_id);
             note.approval_id = Some(approval_id);
-            note.issued_expires_at = Some(
-                (Utc::now() + self.approval_ttl)
-                    .format("%Y-%m-%dT%H:%M:%SZ")
-                    .to_string(),
-            );
+            note.issued_expires_at =
+                Some((Timestamp::now_utc() + self.approval_ttl).to_rfc3339_secs_z());
         }
         let committed = ledger.commit_typed_once(
             "authority_decision",
@@ -1212,7 +1208,7 @@ impl CepAuthorityService<'_> {
     ) -> Result<Value, CepAuthorityError> {
         let ledger = self.ledger()?;
         let entries = ledger.read_entries()?;
-        let Some(standing) = self.standing_in(&entries, approval_id, Utc::now()) else {
+        let Some(standing) = self.standing_in(&entries, approval_id, Timestamp::now_utc()) else {
             if approval_id.starts_with("apr-")
                 && approval_id[4..].starts_with(SETTLEMENT_PENDING_PREFIX)
             {
@@ -1871,7 +1867,7 @@ impl CepAuthorityService<'_> {
             "unsettled"
         };
         let final_status = status != "unsettled";
-        let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let now = Timestamp::now_utc().to_rfc3339_secs_z();
         let world_ref = text_at(&packets[0].payload, "/scope/world_ref");
         set_hash.truncate(12);
         let envelope = json!({
@@ -2342,7 +2338,7 @@ pub fn record_command_launch(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
-    let attempt = match status_in(&entries, &record, Utc::now()) {
+    let attempt = match status_in(&entries, &record, Timestamp::now_utc()) {
         SettlementStatus::Resuming { attempt } => attempt,
         other => {
             return Err(CepAuthorityError::Internal(format!(
@@ -2537,7 +2533,7 @@ fn require_pending(
 fn status_in(
     entries: &[LedgerEntry],
     record: &SettlementPendingRecord,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> SettlementStatus {
     let prefix = format!("settlement-state:{}:", record.pending_id);
     let states: Vec<(&str, &LedgerEntry)> = entries
@@ -2610,8 +2606,8 @@ fn status_in(
             "/action_request/action/parameters/resolution",
         )
     });
-    let open = DateTime::parse_from_rfc3339(&record.expires_at)
-        .map(|expires| now < expires.with_timezone(&Utc))
+    let open = Timestamp::parse_rfc3339(&record.expires_at)
+        .map(|expires| now < expires)
         .unwrap_or(false);
     match resolution.as_deref() {
         Some("rejected") => SettlementStatus::Rejected,
@@ -2629,7 +2625,7 @@ pub fn settlement_status(
 ) -> Result<SettlementStatus, CepAuthorityError> {
     let entries = settlement_ledger(root)?.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
-    Ok(status_in(&entries, &record, Utc::now()))
+    Ok(status_in(&entries, &record, Timestamp::now_utc()))
 }
 
 /// The operation a settlement gate call is for. `declared_request_sha256` is the content hash of the declaration
@@ -2875,7 +2871,7 @@ fn gate_on_status(
     outright: bool,
 ) -> Result<SettlementGate, CepAuthorityError> {
     let entries = ledger.read_entries()?;
-    match status_in(&entries, record, Utc::now()) {
+    match status_in(&entries, record, Timestamp::now_utc()) {
         SettlementStatus::Completed { declaration_ref } => Ok(SettlementGate::Completed {
             pending_id: record.pending_id.clone(),
             declaration_ref,
@@ -2954,7 +2950,7 @@ fn claim_resume(
     let payload = state_payload(
         record,
         "resuming",
-        json!({"attempt": attempt, "claimed_at": Utc::now().to_rfc3339()}),
+        json!({"attempt": attempt, "claimed_at": Timestamp::now_utc().to_rfc3339()}),
     );
     match ledger.commit_typed_new(
         SETTLEMENT_STATE_KIND,
@@ -3071,7 +3067,7 @@ pub fn complete_settlement_resume(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
-    match status_in(&entries, &record, Utc::now()) {
+    match status_in(&entries, &record, Timestamp::now_utc()) {
         SettlementStatus::Completed {
             declaration_ref: existing,
         } if existing == declaration_ref => Ok(()),
@@ -3107,7 +3103,7 @@ pub fn fail_settlement_resume(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
-    match status_in(&entries, &record, Utc::now()) {
+    match status_in(&entries, &record, Timestamp::now_utc()) {
         SettlementStatus::Resuming { attempt: open } if open == attempt => {
             match close_attempt(
                 &ledger,
@@ -3140,7 +3136,7 @@ pub fn release_settlement_resume(
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
     let record = require_pending(&entries, pending_id)?;
-    match status_in(&entries, &record, Utc::now()) {
+    match status_in(&entries, &record, Timestamp::now_utc()) {
         SettlementStatus::Resuming { attempt: open } if open == attempt => close_attempt(
             &ledger,
             &record,
@@ -3164,7 +3160,7 @@ pub fn reconcile_settlement_resume(
     pending_id: &str,
     declaration_ref: Option<&str>,
 ) -> Result<SettlementStatus, CepAuthorityError> {
-    reconcile_settlement_resume_at(root, pending_id, declaration_ref, Utc::now())
+    reconcile_settlement_resume_at(root, pending_id, declaration_ref, Timestamp::now_utc())
 }
 
 /// [`reconcile_settlement_resume`] judged at an explicit instant. Production recovery uses
@@ -3173,7 +3169,7 @@ pub fn reconcile_settlement_resume_at(
     root: &Path,
     pending_id: &str,
     declaration_ref: Option<&str>,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> Result<SettlementStatus, CepAuthorityError> {
     let ledger = settlement_ledger(root)?;
     let entries = ledger.read_entries()?;
@@ -3233,7 +3229,7 @@ pub fn resolve_uncertain_settlement(
         attempt,
         resolution,
         resolver,
-        Utc::now(),
+        Timestamp::now_utc(),
     )
 }
 
@@ -3247,7 +3243,7 @@ pub fn resolve_uncertain_settlement_at(
     attempt: u32,
     resolution: UncertainResolution,
     resolver: &Actor,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> Result<SettlementStatus, CepAuthorityError> {
     resolve_uncertain_settlement_with_hook(
         engine,
@@ -3274,7 +3270,7 @@ pub fn resolve_uncertain_settlement_with_hook(
     attempt: u32,
     resolution: UncertainResolution,
     resolver: &Actor,
-    now: DateTime<Utc>,
+    now: Timestamp,
     before_close: impl FnOnce(),
 ) -> Result<SettlementStatus, CepAuthorityError> {
     let (resolution, command_gone_attested) = match resolution {
@@ -3497,7 +3493,7 @@ fn claim_lease_lapsed(
     entries: &[LedgerEntry],
     record: &SettlementPendingRecord,
     attempt: u32,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> Result<bool, CepAuthorityError> {
     let key = state_key(&record.pending_id, &format!("resuming:{attempt}"));
     let entry = find_entry(entries, &key).ok_or_else(|| {
@@ -3506,15 +3502,14 @@ fn claim_lease_lapsed(
             record.pending_id
         ))
     })?;
-    let claimed_at = DateTime::parse_from_rfc3339(&text_at(&entry.payload, "/claimed_at"))
-        .map_err(|error| {
+    let claimed_at =
+        Timestamp::parse_rfc3339(&text_at(&entry.payload, "/claimed_at")).map_err(|error| {
             CepAuthorityError::Internal(format!(
                 "settlement {} attempt {attempt} claim has no valid claimed_at: {error}",
                 record.pending_id
             ))
-        })?
-        .with_timezone(&Utc);
-    Ok(now >= claimed_at + chrono::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS))
+        })?;
+    Ok(now >= claimed_at + time::Duration::seconds(SETTLEMENT_CLAIM_LEASE_SECS))
 }
 
 /// Reads a conflicting racer makes for the record the winner wrote before it gives up.
@@ -3552,7 +3547,7 @@ fn record_settlement_pending(
         return Ok((existing, true));
     }
     let caller = ingress.caller();
-    let now = Utc::now();
+    let now = Timestamp::now_utc();
     let record = SettlementPendingRecord {
         pending_id: identity.pending_id.clone(),
         request_sha256: request_sha256.to_string(),
@@ -3606,7 +3601,7 @@ pub fn settlement_pending_records(
 fn settlement_standing_in(
     entries: &[LedgerEntry],
     approval_id: &str,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> Option<ApprovalStanding> {
     let pending_id = approval_id.strip_prefix("apr-")?;
     if !pending_id.starts_with(SETTLEMENT_PENDING_PREFIX) {
@@ -3634,9 +3629,7 @@ fn settlement_standing_in(
         subject_actor_ref: String::new(),
         original_request_envelope_id: String::new(),
         escalation_entry: record.decision_ref.clone(),
-        expires_at: DateTime::parse_from_rfc3339(&record.expires_at)
-            .ok()?
-            .with_timezone(&Utc),
+        expires_at: Timestamp::parse_rfc3339(&record.expires_at).ok()?,
         resolved_by: resolution.map(|r| text_at(&r.payload, "/action_request/actor/actor_id")),
     })
 }
@@ -3661,7 +3654,7 @@ fn decision_envelope(
     committed: &CommittedRecordRef,
     note: &ApprovalNote,
 ) -> Result<Value, CepAuthorityError> {
-    let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let now = Timestamp::now_utc().to_rfc3339_secs_z();
     let disposition = cep_disposition(decision);
     let mut ext = serde_json::Map::new();
     ext.insert("decision".into(), json!(disposition));

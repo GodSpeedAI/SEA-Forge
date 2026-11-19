@@ -393,9 +393,9 @@ fn approval(
     criteria: &sea_forge_core::types::SettlementCriteriaRecord,
     id: &str,
     resolver: &str,
-    window: chrono::Duration,
+    window: time::Duration,
 ) -> sea_forge_core::types::ApprovalRequest {
-    let now = chrono::Utc::now();
+    let now = sea_forge_core::timestamp::Timestamp::now_utc();
     sea_forge_core::types::ApprovalRequest {
         version: "0.2".into(),
         approval_id: id.into(),
@@ -408,7 +408,7 @@ fn approval(
         criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
         job_contract_ref: None,
         requested_at: now.to_rfc3339(),
-        expires_at: (now + window).to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        expires_at: (now + window).to_rfc3339_secs_z(),
         status: sea_forge_core::types::ApprovalStatus::Approved,
         resolved_by: Some(resolver.into()),
         resolved_at: Some(now.to_rfc3339()),
@@ -498,7 +498,7 @@ fn jit_elevation_needs_independent_one_use_approval_and_ends_at_the_resource() {
             uid,
         )
     };
-    let window = chrono::Duration::seconds(4);
+    let window = time::Duration::seconds(4);
     let refused = |result: Result<_, Box<dyn std::error::Error>>| match result {
         Ok(_) => panic!("elevation unexpectedly issued"),
         Err(error) => error.to_string(),

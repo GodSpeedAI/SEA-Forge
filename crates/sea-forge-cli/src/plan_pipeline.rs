@@ -1,7 +1,7 @@
-use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 pub use sea_forge_case_runner::write_json;
 use sea_forge_case_runner::CaseRunner;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{errors::ForgeError, ids, types::*, RECORD_VERSION};
 use sea_forge_ledger::{CommittedRecordRef, LedgerStream};
 use sea_forge_planner::case_engine::{validate_proposal, CaseAction};
@@ -354,10 +354,10 @@ fn run_plan_inner(
     }
 
     // Check for escalated items and create approval requests.
-    let now = Utc::now();
+    let now = Timestamp::now_utc();
     let now_rfc = now.to_rfc3339();
     // ponytail: TTL from policy or default 24h; policy parsing added when server lands
-    let expires_at = (now + chrono::Duration::hours(24)).to_rfc3339();
+    let expires_at = (now + time::Duration::hours(24)).to_rfc3339();
     let mut escalated: Option<(String, String)> = approval_authority
         .as_ref()
         .filter(|operation| operation.decision.verdict == Verdict::Escalate)

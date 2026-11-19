@@ -205,7 +205,7 @@ fn authorised_declare(
         operation_id: &req.run_id,
         declared_request_sha256: &declared,
     };
-    let ttl = chrono::Duration::hours(24);
+    let ttl = time::Duration::hours(24);
     let pending =
         match authorize_settlement_declaration(&fresh(), &bundle, root, operation(), &ingress, ttl)
             .unwrap()

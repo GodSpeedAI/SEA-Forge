@@ -28,9 +28,10 @@ pub fn transition_command(
     let proposal: TransitionProposal = serde_json::from_slice(
         &fs::read(input_path).map_err(|error| ForgeError::io("read transition input", error))?,
     )?;
-    let mut input = proposal
-        .clone()
-        .into_transition_input(actor.into(), chrono::Utc::now().to_rfc3339());
+    let mut input = proposal.clone().into_transition_input(
+        actor.into(),
+        sea_forge_core::timestamp::Timestamp::now_utc().to_rfc3339(),
+    );
     if input.transition_kind != kind {
         return Err(ForgeError::Input(
             "artifact_transition_error: command and transition kind differ".into(),

@@ -51,8 +51,8 @@ pub struct LinkInput<'a> {
     pub ttl_secs: i64,
 }
 
-fn stamp(t: chrono::DateTime<chrono::Utc>) -> String {
-    t.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+fn stamp(t: sea_forge_core::timestamp::Timestamp) -> String {
+    t.to_rfc3339_millis_z()
 }
 
 /// Add the link and run record to the caller's admission batch in that order.
@@ -64,7 +64,7 @@ pub(super) fn add_run_records(
     let runs = read_lines_strict(&dir.join(RUNS))?;
     let links = read_lines_strict(&dir.join(LINKS))?;
     let run_id = format!("run-{:04}", runs.len() + 1);
-    let issued = chrono::Utc::now();
+    let issued = sea_forge_core::timestamp::Timestamp::now_utc();
     let mut link_id = Value::Null;
     if let Some(link) = &input.link {
         let id = format!("link-{:04}", links.len() + 1);
@@ -75,13 +75,14 @@ pub(super) fn add_run_records(
                 "assignment_id": link.assignment_id, "delegator": link.delegator,
                 "gateway_actor": link.gateway_actor, "delegate": link.delegate,
                 "issued_at": stamp(issued),
-                "expires_at": stamp(issued + chrono::Duration::seconds(link.ttl_secs)),
+                "expires_at": stamp(issued + time::Duration::seconds(link.ttl_secs)),
             }),
         });
         link_id = json!(id);
     }
     // The run starts after the link: a strictly later timestamp, never equal.
-    let started = chrono::Utc::now().max(issued + chrono::Duration::milliseconds(1));
+    let started = sea_forge_core::timestamp::Timestamp::now_utc()
+        .max(issued + time::Duration::milliseconds(1));
     let record = json!({
             "run_id": run_id, "decision_id": input.decision_id, "case_id": input.case_id, "episode_ref": input.episode_ref,
             "verb": input.verb, "role": input.role, "actor": input.actor,

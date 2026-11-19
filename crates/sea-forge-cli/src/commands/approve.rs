@@ -174,7 +174,7 @@ fn resolve_settlement(
         bundle: &bundle,
         worlds: &worlds,
         root: opts.root,
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: SettlementCriteria::default(),
     };
     let resolver = Actor {

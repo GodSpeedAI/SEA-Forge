@@ -2192,9 +2192,11 @@ async fn dispatch_admitted(
     state: Arc<ServerState>,
     raw_line: String,
     verified_actor: Option<crate::identity::ResolvedActor>,
-    authentication_expiry: Option<chrono::DateTime<chrono::Utc>>,
+    authentication_expiry: Option<sea_forge_core::timestamp::Timestamp>,
 ) -> serde_json::Value {
-    if authentication_expiry.is_some_and(|expiry| chrono::Utc::now() >= expiry) {
+    if authentication_expiry
+        .is_some_and(|expiry| sea_forge_core::timestamp::Timestamp::now_utc() >= expiry)
+    {
         return crate::identity::IdentityRefusal::AuthenticationRefused {
             reason: "private connection expired while awaiting admission".into(),
         }

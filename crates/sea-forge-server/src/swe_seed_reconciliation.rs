@@ -347,7 +347,6 @@ pub fn verify_swe_seed_completion(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Utc;
     use sea_forge_authority::cep::{
         authorize_settlement_declaration, complete_settlement_resume, reconcile_operation_claims,
         settlement_approval_id, settlement_status, CepAuthorityService, SettlementCriteria,
@@ -355,6 +354,7 @@ mod tests {
         SettlementTransport, VerifiedSettlementIngress,
     };
     use sea_forge_authority::{AuthorityPolicyBundle, PolicyAuthorityEngine};
+    use sea_forge_core::timestamp::Timestamp;
     use sea_forge_core::types::{Actor, ActorRole};
     use sea_forge_core::types::{
         DeclarationIndependence, DeclarationReliability, DeclarationStatus, Declarer,
@@ -384,7 +384,7 @@ mod tests {
             criteria_ref: "crit_x".into(),
             criteria_sha256: "sha256:crit".into(),
             criteria_record_hash: "sha256:crit-record".into(),
-            criteria_declared_at: Utc::now().to_rfc3339(),
+            criteria_declared_at: Timestamp::now_utc().to_rfc3339(),
             job_contract_ref: None,
             origin_refs: vec![],
             verifier_ref: verifier_ref.into(),
@@ -412,7 +412,7 @@ mod tests {
             variation_tags: Default::default(),
             disruption_tags: vec![],
             orchestration_burden: None,
-            issued_at: Utc::now().to_rfc3339(),
+            issued_at: Timestamp::now_utc().to_rfc3339(),
             source_evidence_refs: vec![],
             adapter_attestation_ref: None,
             authored_by: None,
@@ -482,7 +482,7 @@ mod tests {
             "status": "accepted",
             "basis": ["delegation_completed"],
             "review_required": false,
-            "settled_at": Utc::now().to_rfc3339(),
+            "settled_at": Timestamp::now_utc().to_rfc3339(),
             "criteria_ref": null,
             "case_id": case_id,
             "item_id": plan_item_id,
@@ -515,7 +515,7 @@ mod tests {
         root: &Path,
         run_id: &str,
         ingress: &VerifiedSettlementIngress<'_>,
-        ttl: chrono::Duration,
+        ttl: time::Duration,
     ) -> Result<SettlementGate, sea_forge_authority::cep::CepAuthorityError> {
         let declared = format!("sha256:content-{run_id}");
         authorize_settlement_declaration(
@@ -551,7 +551,7 @@ mod tests {
             vec![format!("operation:{run_id}")],
         )
         .unwrap();
-        let ttl = chrono::Duration::hours(24);
+        let ttl = time::Duration::hours(24);
         let pending = match gate_as(&fresh(), &bundle, root, run_id, &ingress, ttl).unwrap() {
             SettlementGate::Pending { record, .. } => *record,
             other => panic!("expected a pending settlement, got {other:?}"),
@@ -891,7 +891,7 @@ mod tests {
             root.path(),
             "run_a",
             &ingress,
-            chrono::Duration::hours(24),
+            time::Duration::hours(24),
         )
         .is_err());
     }

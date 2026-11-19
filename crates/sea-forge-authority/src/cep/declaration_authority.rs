@@ -199,7 +199,7 @@ pub fn verify_case_declarations(
     declarations: &[SettlementDeclaration],
 ) -> Result<Vec<DeclarationAuthorization>, CepAuthorityError> {
     let entries = settlement_ledger(root)?.read_entries()?;
-    let now = Utc::now();
+    let now = Timestamp::now_utc();
     let mut named: HashMap<&str, usize> = HashMap::new();
     for declaration in declarations {
         if let Some(pending_id) = declaration.authorization_ref.as_deref() {
@@ -214,7 +214,7 @@ pub fn verify_case_declarations(
 
 fn verify_one(
     entries: &[LedgerEntry],
-    now: DateTime<Utc>,
+    now: Timestamp,
     declaration: &SettlementDeclaration,
     named: &HashMap<&str, usize>,
 ) -> DeclarationAuthorization {

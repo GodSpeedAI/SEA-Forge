@@ -1,5 +1,4 @@
 use crate::{agent_probe, delegation, DispatchOutcome, ServerState, SubmitPayload};
-use chrono::Utc;
 use sea_forge_authority::{AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine};
 use sea_forge_case_runner::{
     case_ops::{
@@ -11,6 +10,7 @@ use sea_forge_case_runner::{
 use sea_forge_core::{
     errors::ForgeError,
     ids,
+    timestamp::Timestamp,
     types::{
         Actor, ActorRole, ApprovalRequest, ApprovalStatus, Case, CasePlan, CaseState,
         CriteriaDerivation, DerivationMethod, EvidenceKind, ExecutionRequest, ItemKind, Operation,
@@ -845,7 +845,7 @@ pub(crate) fn execute_sandbox(
             &root.join("authority/active-policy.json"),
             &serde_json::to_vec_pretty(&bundle)?,
         )?;
-        let requested_at = Utc::now();
+        let requested_at = Timestamp::now_utc();
         let approval = ApprovalRequest {
             version: RECORD_VERSION.into(),
             approval_id: ids::seq_id("apr", 4, sequence),
@@ -858,7 +858,7 @@ pub(crate) fn execute_sandbox(
             criteria_record_hash: Some(criteria.criteria_record_hash.clone()),
             job_contract_ref: None,
             requested_at: requested_at.to_rfc3339(),
-            expires_at: (requested_at + chrono::Duration::seconds(timeout as i64)).to_rfc3339(),
+            expires_at: (requested_at + time::Duration::seconds(timeout as i64)).to_rfc3339(),
             status: ApprovalStatus::Pending,
             resolved_by: None,
             resolved_at: None,

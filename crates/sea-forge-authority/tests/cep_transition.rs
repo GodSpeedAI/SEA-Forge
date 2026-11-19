@@ -70,7 +70,7 @@ fn with<T>(c: &Cell, policy: &str, f: impl FnOnce(&CepAuthorityService<'_>) -> T
         bundle: &bundle,
         worlds: &c.worlds,
         root: c.root.path(),
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: Default::default(),
     };
     f(&service)

@@ -37,7 +37,7 @@ pub(crate) struct WorkloadIdentity {
     principal: String,
     actor: Actor,
     request_sha256: String,
-    expires_at: chrono::DateTime<chrono::Utc>,
+    expires_at: sea_forge_core::timestamp::Timestamp,
     authentication_action_sha256: String,
     committed_decision: sea_forge_ledger::types::CommittedRecordRef,
     used: bool,
@@ -64,7 +64,7 @@ impl AuthenticatedConnection {
         let expires_at = grant.expires_at();
         let authentication_action_sha256 = grant.action_hash().to_owned();
         let committed_decision = grant.committed_decision().clone();
-        if chrono::Utc::now() >= expires_at {
+        if sea_forge_core::timestamp::Timestamp::now_utc() >= expires_at {
             return Err(ForgeError::Input(
                 "workload authentication grant expired".into(),
             ));
@@ -116,7 +116,7 @@ impl WorkloadIdentity {
                 reason: "workload delegation requires a separate bounded grant".into(),
             });
         }
-        if self.used || chrono::Utc::now() >= self.expires_at {
+        if self.used || sea_forge_core::timestamp::Timestamp::now_utc() >= self.expires_at {
             return Err(IdentityRefusal::AuthenticationRefused {
                 reason: "private connection grant consumed or expired".into(),
             });
@@ -141,7 +141,7 @@ impl WorkloadIdentity {
         Ok(actor)
     }
 
-    pub(crate) fn expires_at(&self) -> chrono::DateTime<chrono::Utc> {
+    pub(crate) fn expires_at(&self) -> sea_forge_core::timestamp::Timestamp {
         self.expires_at
     }
 }
@@ -153,7 +153,7 @@ pub(crate) struct AuthenticatedRequest {
     request_sha256: String,
     authentication_action_sha256: String,
     committed_decision: sea_forge_ledger::types::CommittedRecordRef,
-    expires_at: chrono::DateTime<chrono::Utc>,
+    expires_at: sea_forge_core::timestamp::Timestamp,
 }
 
 pub(crate) fn record_authenticated_request(

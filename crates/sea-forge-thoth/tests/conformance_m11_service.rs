@@ -103,7 +103,7 @@ fn approved_claimed_external_settlement(
         vec![format!("operation:{run_id}")],
     )
     .unwrap();
-    let ttl = chrono::Duration::hours(24);
+    let ttl = time::Duration::hours(24);
     let gate = |engine: &PolicyAuthorityEngine| {
         let declared = DECLARED_CONTENT.to_string();
         authorize_settlement_declaration(

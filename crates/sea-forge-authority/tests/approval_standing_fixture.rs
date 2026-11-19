@@ -6,8 +6,8 @@
 //!
 //! To rewrite the fixture after an intentional wire change, run with `APPROVAL_STANDING_FIXTURE_WRITE=1`.
 
-use chrono::{TimeZone, Utc};
 use sea_forge_authority::cep::{ApprovalStanding, ApprovalState};
+use sea_forge_core::timestamp::Timestamp;
 use serde_json::Value;
 use std::path::PathBuf;
 
@@ -32,7 +32,8 @@ fn standing(
         subject_actor_ref: "actor:tenant-a/alice".into(),
         original_request_envelope_id: format!("env-authority_request-op-000{n}"),
         escalation_entry: format!("entry-op-000{n}"),
-        expires_at: Utc.with_ymd_and_hms(2026, 11, 5, hour, minute, 0).unwrap(),
+        expires_at: Timestamp::parse_rfc3339(&format!("2026-11-05T{hour:02}:{minute:02}:00Z"))
+            .unwrap(),
         resolved_by: resolved_by.map(str::to_string),
     }
 }

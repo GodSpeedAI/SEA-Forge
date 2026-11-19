@@ -3,11 +3,11 @@
 //! one exact proposed changeset. It must always escalate for human approval
 //! and be grantable only through `grant_after_approval`.
 
-use chrono::Utc;
 use sea_forge_authority::{
     ActionGrant, AuthorityEvaluation, AuthorityPolicyBundle, PolicyAuthorityEngine,
 };
 use sea_forge_core::errors::ForgeError;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::types::{
     Actor, ActorRole, ApprovalRequest, ApprovalStatus, AuthorityAction, AuthorityDecision,
     CriteriaDerivation, DerivationMethod, OriginRef, OriginRefKind, OriginRole, SettlementCriteria,
@@ -146,7 +146,7 @@ fn criteria() -> SettlementCriteriaRecord {
             producer_ref: None,
             rationale: "promote_changeset fixture".into(),
         },
-        declared_at: Utc::now().to_rfc3339(),
+        declared_at: Timestamp::now_utc().to_rfc3339(),
         criteria_sha256: String::new(),
         criteria_record_hash: String::new(),
     };
@@ -203,11 +203,11 @@ fn resolve(
         criteria_sha256: Some(ledger.criteria.criteria_sha256.clone()),
         criteria_record_hash: Some(ledger.criteria.criteria_record_hash.clone()),
         job_contract_ref: None,
-        requested_at: Utc::now().to_rfc3339(),
-        expires_at: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
+        requested_at: Timestamp::now_utc().to_rfc3339(),
+        expires_at: (Timestamp::now_utc() + time::Duration::hours(1)).to_rfc3339(),
         status,
         resolved_by: resolved_by.map(str::to_owned),
-        resolved_at: resolved.then(|| Utc::now().to_rfc3339()),
+        resolved_at: resolved.then(|| Timestamp::now_utc().to_rfc3339()),
         note: None,
     };
     let committed = ledger

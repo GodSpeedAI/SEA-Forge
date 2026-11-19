@@ -107,7 +107,7 @@ fn resolve_pending_settlement(
         bundle: &bundle,
         worlds: &worlds,
         root,
-        approval_ttl: chrono::Duration::hours(24),
+        approval_ttl: time::Duration::hours(24),
         criteria: SettlementCriteria::default(),
     };
     let pending = settlement_pending_records(root).unwrap();

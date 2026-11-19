@@ -1,4 +1,4 @@
-use chrono::Utc;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{errors::ForgeError, ids, types::*};
 use sea_forge_ledger::{LedgerEntry, LedgerStream};
 use serde_json::{json, Value};
@@ -726,10 +726,9 @@ fn resume_artifact_transition(
         )?;
         let request: ApprovalRequest = serde_json::from_value(request_entry.payload.clone())?;
         approval_binds_pending(&request, &pending)?;
-        let expires_at = chrono::DateTime::parse_from_rfc3339(&request.expires_at)
-            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
-            .with_timezone(&Utc);
-        if request.status != ApprovalStatus::Pending || Utc::now() < expires_at {
+        let expires_at = Timestamp::parse_rfc3339(&request.expires_at)
+            .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?;
+        if request.status != ApprovalStatus::Pending || Timestamp::now_utc() < expires_at {
             return Ok(ResumeOutcome {
                 case_id: options.case_id,
                 state: "awaiting_approval",
@@ -739,7 +738,7 @@ fn resume_artifact_transition(
         let expired = ApprovalRequest {
             status: ApprovalStatus::Expired,
             resolved_by: None,
-            resolved_at: Some(Utc::now().to_rfc3339()),
+            resolved_at: Some(Timestamp::now_utc().to_rfc3339()),
             note: Some("ttl_expired".into()),
             ..request
         };
@@ -771,21 +770,20 @@ fn resume_artifact_transition(
     // Resume validates exact approval binding for ALL statuses before
     // terminalizing: a detached rejected/expired resolution from another
     // transition cannot affect this pending one.
-    let approval_expires = chrono::DateTime::parse_from_rfc3339(&approval.expires_at)
-        .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?
-        .with_timezone(&Utc);
+    let approval_expires = Timestamp::parse_rfc3339(&approval.expires_at)
+        .map_err(|_| ForgeError::Input("approval expiry is invalid".into()))?;
     let approval_resolved_after_expiry = approval
         .resolved_at
         .as_deref()
-        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
-        .map(|resolved| resolved.with_timezone(&Utc) > approval_expires)
+        .and_then(|value| Timestamp::parse_rfc3339(value).ok())
+        .map(|resolved| resolved > approval_expires)
         .unwrap_or(false);
     approval_binds_pending(&approval, &pending)?;
     // An approval resolved Approved before expires_at remains valid after wall
     // clock TTL; expiry only applies to unresolved pending or resolved_at
     // after expiry. Rejected/expired resolutions are terminal regardless.
     let terminal_for_expiry = approval.status == ApprovalStatus::Expired
-        || (approval.status != ApprovalStatus::Approved && Utc::now() > approval_expires)
+        || (approval.status != ApprovalStatus::Approved && Timestamp::now_utc() > approval_expires)
         || approval_resolved_after_expiry;
     if approval.status == ApprovalStatus::Rejected || terminal_for_expiry {
         let (status, reason, close_reason) = if approval.status == ApprovalStatus::Rejected {
@@ -1139,7 +1137,7 @@ fn resume_artifact_transition(
             declared_request_sha256: &declared,
         },
         &ingress,
-        chrono::Duration::hours(24),
+        time::Duration::hours(24),
     )
     .map_err(|error| ForgeError::Input(format!("settlement declaration refused: {error}")))?;
     // The claimed attempt, if the gate handed one out. Only a claimed attempt is recorded as completed or released.

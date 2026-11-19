@@ -233,7 +233,7 @@ fn episodes(ctx: &AppendContext, dir: &Path, all: &[Value], anchored: bool) -> V
 
 fn authority(dir: &Path, case_lead: Option<&str>, viewer: &str) -> Value {
     let lines = read_lines(&dir.join(APPROVALS));
-    let now = chrono::Utc::now();
+    let now = sea_forge_core::timestamp::Timestamp::now_utc();
     let who = |s: &str| super::case_records::canonical_actor(s).ok();
     let viewer_c = who(viewer);
     let is_lead = case_lead.and_then(who).is_some() && case_lead.and_then(who) == viewer_c;

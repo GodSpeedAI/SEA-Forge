@@ -30,9 +30,10 @@ use super::{
     CepAuthorityService, SettlementIngress, SettlementOutcome, SettlementTransport,
     VerifiedSettlementIngress, PROFILE_VERSION, SETTLE_SUFFIX_FINAL,
 };
-use chrono::{DateTime, Duration, Utc};
+use sea_forge_core::timestamp::Timestamp;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
+use time::Duration;
 
 /// One row of an evidence source's own ledger, read back after that ledger's chain verified.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,13 +61,13 @@ pub struct Obligation {
     pub threshold_id: String,
     pub threshold_ledger: String,
     pub threshold_position: u64,
-    pub closes_at: DateTime<Utc>,
+    pub closes_at: Timestamp,
     pub close_grace_s: i64,
     pub verifier_argv_digest: String,
 }
 
 impl Obligation {
-    fn latest_closure(&self) -> DateTime<Utc> {
+    fn latest_closure(&self) -> Timestamp {
         self.closes_at + Duration::seconds(self.close_grace_s)
     }
 }
@@ -101,9 +102,10 @@ pub fn obligation_of(
             "modality {modality} is not supported by the configured verifiers; only obligation settles"
         )));
     }
-    let closes_at = DateTime::parse_from_rfc3339(claim_text(claims, "window_closes_at")?)
-        .map_err(|e| CepAuthorityError::Evidence(format!("window_closes_at is not RFC 3339: {e}")))?
-        .with_timezone(&Utc);
+    let closes_at =
+        Timestamp::parse_rfc3339(claim_text(claims, "window_closes_at")?).map_err(|e| {
+            CepAuthorityError::Evidence(format!("window_closes_at is not RFC 3339: {e}"))
+        })?;
     let close_grace_s = match claims.get("close_grace_s") {
         None => DEFAULT_CLOSE_GRACE_S,
         Some(v) => v
@@ -132,10 +134,8 @@ pub fn argv_digest(argv: &[Value]) -> String {
     format!("sha256:{}", hex::encode(Sha256::digest(text.as_bytes())))
 }
 
-fn parse_time(text: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(text)
-        .ok()
-        .map(|t| t.with_timezone(&Utc))
+fn parse_time(text: &str) -> Option<Timestamp> {
+    Timestamp::parse_rfc3339(text).ok()
 }
 
 /// The observation row RealityTrace recorded for `observation_id`.
@@ -158,7 +158,7 @@ fn inline(row: &SourceRow) -> Option<&Value> {
 fn execution_floor(
     entries: &[sea_forge_ledger::LedgerEntry],
     operation_id: &str,
-) -> Option<DateTime<Utc>> {
+) -> Option<Timestamp> {
     entries
         .iter()
         .filter(|e| {
@@ -174,7 +174,7 @@ fn execution_floor(
 fn check_discrimination(
     row: &SourceRow,
     obligation: &Obligation,
-    execution_floor: Option<DateTime<Utc>>,
+    execution_floor: Option<Timestamp>,
 ) -> Result<(), CepAuthorityError> {
     let refuse = |why: &str| {
         Err(CepAuthorityError::Evidence(format!(
@@ -232,7 +232,7 @@ pub struct Frame<'a> {
     pub obligation: &'a Obligation,
     pub b: u64,
     pub c: u64,
-    pub execution_floor: DateTime<Utc>,
+    pub execution_floor: Timestamp,
 }
 
 /// `None` when the run is not admissible (outside (B, C], or started before execution); otherwise its result.
@@ -352,7 +352,7 @@ impl CepAuthorityService<'_> {
         }) {
             return Ok(closure_ack(done, &obligation, true));
         }
-        if Utc::now() < obligation.closes_at {
+        if Timestamp::now_utc() < obligation.closes_at {
             return Err(CepAuthorityError::Evidence(
                 "the window is still open; a closure is recorded once it closes".into(),
             ));
@@ -431,7 +431,7 @@ impl CepAuthorityService<'_> {
                 replayed: true,
             });
         }
-        let now = Utc::now();
+        let now = Timestamp::now_utc();
         if now < obligation.closes_at {
             return Err(CepAuthorityError::SettlementPending(
                 "the window is still open; settlement is pending".into(),
@@ -544,7 +544,7 @@ impl CepAuthorityService<'_> {
             ),
         };
 
-        let at = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let at = now.to_rfc3339_secs_z();
         let envelope = json!({
             "envelope_id": format!("env-settlement_packet-{operation_id}-obligation"),
             "cep_version": "1.0.0",

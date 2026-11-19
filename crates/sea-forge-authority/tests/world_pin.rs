@@ -75,7 +75,7 @@ fn cell() -> Cell {
 fn with_ttl<T>(
     c: &Cell,
     policy: &str,
-    ttl: chrono::Duration,
+    ttl: time::Duration,
     f: impl FnOnce(&CepAuthorityService<'_>) -> T,
 ) -> T {
     let bundle: AuthorityPolicyBundle = sea_forge_core::yaml::from_str(policy).unwrap();
@@ -92,7 +92,7 @@ fn with_ttl<T>(
 }
 
 fn with<T>(c: &Cell, policy: &str, f: impl FnOnce(&CepAuthorityService<'_>) -> T) -> T {
-    with_ttl(c, policy, chrono::Duration::hours(24), f)
+    with_ttl(c, policy, time::Duration::hours(24), f)
 }
 
 fn service() -> Actor {
@@ -694,7 +694,7 @@ fn nt05_denied_unavailable_expired_and_digest_mismatched_decisions_cannot_promot
     let c = cell();
     let (_, env) = escalate_and_approve(&c, &c.v1, &c.v2, CLAIM_PROPOSAL_DIGEST, &d, "c-1");
     let baseline = c.v1.clone();
-    let expired = with_ttl(&c, OPEN, chrono::Duration::seconds(-1), |s| {
+    let expired = with_ttl(&c, OPEN, time::Duration::seconds(-1), |s| {
         s.promote(
             &PromoteRequest {
                 proposal: p.clone(),

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{
     errors::ForgeError,
     ids,
@@ -257,7 +257,7 @@ fn escalate(
         .iter()
         .filter(|e| e.record_kind == "approval_request")
         .count();
-    let now = Utc::now().to_rfc3339();
+    let now = Timestamp::now_utc().to_rfc3339();
     let approval = ApprovalRequest {
         version: RECORD_VERSION.into(),
         approval_id: ids::seq_id("apr", 4, n_existing_approvals + 1),

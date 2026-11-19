@@ -497,7 +497,7 @@ pub(super) fn decisions(ctx: &AppendContext) -> Vec<Value> {
 }
 
 pub(super) fn now_rfc3339() -> String {
-    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    sea_forge_core::timestamp::Timestamp::now_utc().to_rfc3339_millis_z()
 }
 
 /// Prepare the I-2 allow decision for the settlement batch. A decision
@@ -1375,20 +1375,20 @@ pub(super) fn canonical_actor(raw: &str) -> Result<String, String> {
         .map(|t| t.to_lowercase())
 }
 
-pub(super) fn parse_time(v: &Value) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+pub(super) fn parse_time(v: &Value) -> Option<sea_forge_core::timestamp::Timestamp> {
     v.as_str()
-        .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+        .and_then(|t| sea_forge_core::timestamp::Timestamp::parse_rfc3339(t).ok())
 }
 
 /// The earliest run event of the case: any case event with a timestamp and any
 /// run record. `Err` when a line that must carry a timestamp cannot be read.
 fn first_run_event(
     ctx: &AppendContext,
-) -> Result<Option<chrono::DateTime<chrono::FixedOffset>>, String> {
+) -> Result<Option<sea_forge_core::timestamp::Timestamp>, String> {
     let dir = case_dir(ctx.root, ctx.case_id);
     let mut first = None;
-    let mut consider = |t: chrono::DateTime<chrono::FixedOffset>| {
-        first = Some(first.map_or(t, |f: chrono::DateTime<chrono::FixedOffset>| f.min(t)));
+    let mut consider = |t: sea_forge_core::timestamp::Timestamp| {
+        first = Some(first.map_or(t, |f: sea_forge_core::timestamp::Timestamp| f.min(t)));
     };
     for event in read_lines_strict(&dir.join("case-events.jsonl"))? {
         if let Some(t) = parse_time(&event["timestamp"]) {
@@ -1498,7 +1498,7 @@ pub(super) fn bound_approval_named(
         .filter_map(|l| l["consumed_by"].as_str().and(l["approval_ref"].as_str()))
         .map(String::from)
         .collect();
-    let now = chrono::Utc::now();
+    let now = sea_forge_core::timestamp::Timestamp::now_utc();
     lines.iter().find_map(|a| {
         let reference = a["approval_ref"].as_str()?;
         let live = named.is_none_or(|n| n == reference)
@@ -1896,7 +1896,7 @@ pub fn verify_freeze_anchor(
     };
     let parse = |v: &Value| {
         v.as_str()
-            .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+            .and_then(|t| sea_forge_core::timestamp::Timestamp::parse_rfc3339(t).ok())
     };
     let receipt = &anchor["receipt"];
     let (pushed, order) = if let Some(t) = parse(&receipt["server_push_time"]) {
@@ -1914,7 +1914,7 @@ pub fn verify_freeze_anchor(
         Ok(e) => e,
         Err(e) => return fail("malformed_run_event", &e),
     };
-    let mut first_run: Option<chrono::DateTime<chrono::FixedOffset>> = None;
+    let mut first_run: Option<sea_forge_core::timestamp::Timestamp> = None;
     for event in &events {
         match &event["plan_item_id"] {
             Value::Null => {}

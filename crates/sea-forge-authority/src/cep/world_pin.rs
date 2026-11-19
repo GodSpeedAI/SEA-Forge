@@ -22,7 +22,7 @@ use super::{
     approvable, escalation_key, text_at, ApprovalState, CepAuthorityError, CepAuthorityService,
     OperationKind,
 };
-use chrono::Utc;
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::types::{Actor, AuthorityDecision, Verdict};
 use sea_forge_ledger::LedgerEntry;
 use serde::{Deserialize, Serialize};
@@ -256,7 +256,7 @@ impl CepAuthorityService<'_> {
         let Ok(ledger) = self.ledger() else { return };
         let cap = |s: &str, n: usize| s.chars().take(n).collect::<String>();
         let actor = cap(&who.actor_id, 128);
-        let now = Utc::now();
+        let now = Timestamp::now_utc();
         let recent = ledger
             .read_entries()
             .map(|entries| {
@@ -265,9 +265,8 @@ impl CepAuthorityService<'_> {
                     .filter(|e| e.record_kind == PIN_ATTEMPT_KIND)
                     .filter(|e| e.payload["actor"] == json!(actor))
                     .filter(|e| {
-                        chrono::DateTime::parse_from_rfc3339(&e.committed_at).is_ok_and(|t| {
-                            now.signed_duration_since(t) < chrono::Duration::hours(1)
-                        })
+                        sea_forge_core::timestamp::Timestamp::parse_rfc3339(&e.committed_at)
+                            .is_ok_and(|t| now.signed_duration_since(t) < time::Duration::hours(1))
                     })
                     .count()
             })
@@ -709,7 +708,7 @@ impl CepAuthorityService<'_> {
         }
         let action = serde_json::to_value(&decision.action_request.action)
             .map_err(|e| unavailable(e.to_string()))?;
-        let Some(standing) = self.standing_in(&entries, &approval_id, Utc::now()) else {
+        let Some(standing) = self.standing_in(&entries, &approval_id, Timestamp::now_utc()) else {
             return refuse(
                 "AUTHORITY_UNAVAILABLE",
                 format!("{approval_id} has no standing"),

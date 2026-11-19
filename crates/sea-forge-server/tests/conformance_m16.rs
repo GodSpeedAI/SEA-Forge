@@ -1,6 +1,6 @@
 #![cfg(unix)]
-use chrono::Utc;
 use sea_forge_agent::{acp::KNOWN_TOOL_KINDS, AgentConfig, AgentEndpointConfig, ProviderKind};
+use sea_forge_core::timestamp::Timestamp;
 use sea_forge_core::{
     ids::{case_id, random_id, run_id},
     types::{
@@ -610,7 +610,7 @@ async fn t16_2_escalated_permission_suspends_and_resolves_same_session() {
             ApprovalStatus::Rejected
         };
         resolution.resolved_by = Some("security_officer".into());
-        resolution.resolved_at = Some(Utc::now().to_rfc3339());
+        resolution.resolved_at = Some(Timestamp::now_utc().to_rfc3339());
         let ledger = LedgerStream::open(root.path(), format!("case-{case}"), "m16-test").unwrap();
         ledger
             .commit_typed(
@@ -1303,7 +1303,7 @@ fn matching_swe_seed_declaration(
         criteria_ref: "crit_out_of_band".into(),
         criteria_sha256: "sha256:crit".into(),
         criteria_record_hash: "sha256:crit-record".into(),
-        criteria_declared_at: Utc::now().to_rfc3339(),
+        criteria_declared_at: Timestamp::now_utc().to_rfc3339(),
         job_contract_ref: None,
         origin_refs: vec![],
         verifier_ref: "swe_seed_harness".into(),
@@ -1331,7 +1331,7 @@ fn matching_swe_seed_declaration(
         variation_tags: Default::default(),
         disruption_tags: vec![],
         orchestration_burden: None,
-        issued_at: Utc::now().to_rfc3339(),
+        issued_at: Timestamp::now_utc().to_rfc3339(),
         source_evidence_refs: harvested_refs,
         adapter_attestation_ref: None,
         authored_by: None,
