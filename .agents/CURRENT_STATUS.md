@@ -1,19 +1,22 @@
 # Current status
 
-**Status revision:** 371
+**Status revision:** 372
 
-**Stage:** FDE S2 | Chrono-free candidate published
+**Stage:** FDE S2 | Hosted CI and Portability passed
 
-**Summary:** The isolated SEA Forge candidate pins the Chrono-free producer and evidence dependencies. Deployment still depends on the platform durability qualification.
+**Summary:** The Chrono-free candidate and supervisor test correction passed hosted CI. Field Case versioned writer activation still depends on APFS and fixed-NTFS guest reset evidence.
 
 **Verified:**
 
+- Hosted CI run 44599724625 passed all jobs at a33c8147, including both Ubuntu and macOS workspace shards, MSRV 1.92, live dependency and secret gates, OPA, and Workbench.
+- The first macOS server run saw the close event before the legacy case projection completed. The follow-up is test-only and observes both records within the existing deadlines. All seven local supervisor tests and the hosted macOS server shard passed.
+- Portability run 44597378183 passed all jobs at 48f393c4, including native Windows and macOS staged publication and application restart and seven Linux/ext4 guest resets.
+- The redacted scan across all nine Chrono migration commits and the follow-up test commit found zero leaks. All staged-secret canaries passed.
 - SEA Forge candidate 48f393c4 is published on fde/chrono-integration. The live advisory, ban, license, and source checks passed, and the locked all-feature all-platform graph contains no Chrono. The final kernel dependency gate passed on the host and Windows.
 - DomainForge 1.0.0-rc.2 at 0226b50 passed 1343 native, 23 WASM, and the Python wheel and Node addon identity checks. RealityTrace at 7be5d8c passed 213 workspace tests with 3 ignored.
 - The candidate passed 42 DomainForge adapter, 10 authority compiler-upgrade, and 13 real socket conformance tests. Both historical and linked compiler upgrades retain explicit producer provenance. The historical 0.22.0 AT-01 replay remains pinned to its own binary.
 - Clean checkpoint 48f393c4 matched all 17 baseline S2 rows except duration. Fifteen scenarios passed, AT-09 remained at the expected partial result, and all 12 frozen contract digests matched.
 - On isolated WP-22 checkpoint 9cbc3e16, each focused baseline passed. Removing each of the two locks separately exposed a lost settled evidence winner and a mismatched case pin. Reverting orphan-effect classification returned PreSaga instead of Uncertain.
-- Exact checkpoint hosted CI run 44597369464 and Portability run 44597378183 were dispatched from fde/chrono-integration.
 - SEA Forge checkpoint 44828457 passed workspace lint and typecheck, 349 authority tests, and 4 PostgreSQL deadline tests. The follow-up b71946d9 passed all 6 timestamp regressions and focused Clippy.
 - RealityTrace compatibility checkpoint 7be5d8c passed 75 core tests and 39 CLI tests. SEA Forge pin checkpoint 6bffd5c5 passed 45 RealityTrace adapter tests with 1 ignored and the 20-crate host and Windows no-async-kernel gate.
 - Exact fd843472 hosted CI run 44425451223 passed both Ubuntu and both macOS workspace shards, MSRV 1.92, authority, and Workbench. The only failed prerequisite job was lint at the live Chrono advisory.
@@ -112,6 +115,8 @@
 
 **Limits:**
 
+- The local just check reached the Git history scan after passing status, format, Clippy, typecheck and live cargo-deny. The workstation full-history scan reported 166 findings outside the clean Chrono commit range.
+- GitHub reports no registered self-hosted runners for this repository. An approved bootable Windows image and a disposable remote Apple host with guest reset control are still missing.
 - WP-23 has local assignment binding, but the public Cognate Connect transport drops assignment inputs. The SEA handoff must surface existing delegation links, and the spend record lacks provenance from a trusted usage or settlement record.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
@@ -152,7 +157,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish exact candidate CI and Portability, qualify OS reset on APFS and fixed NTFS, and settle the governed RealityTrace delivery and WP-23 assignment contracts.
+**Next:** Finish the separate WP-22 snapshot-reader verification. Keep guest resets in GitHub Actions using a provisioned Windows image and a disposable remote Mac. Resolve WP-23 delegation mapping and the ordinary RealityTrace delivery contract.
 
 **Evidence:**
 
