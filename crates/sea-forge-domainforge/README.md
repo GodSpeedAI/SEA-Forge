@@ -5,12 +5,12 @@ SEA Forge's first-party DomainForge semantic adapter (`Cargo.toml` description; 
 
 ## Interface
 - Source contract: [./src/README.md] — `load_validate`, `project`, `DomainModel`/`DomainModelRef`, `WorldRegistry`/`WorldBindingError`, pinned limits and version [src/lib.rs:load_validate], [src/lib.rs:project], [src/world.rs:WorldRegistry]
-- Workspace manifest: `Cargo.toml` (package `sea-forge-domainforge`; pinned `domainforge-core = "=0.21.1"`, `sea-forge-core` 0.3.0)
+- Workspace manifest: `Cargo.toml` (package `sea-forge-domainforge` with the exact DomainForge Git revision and version)
 
 ## Invariants
 - Public contract is synchronous and side-effect-free: `load_validate` and `project` are pure, with no filesystem, network, or CLI use [src/lib.rs:module doc]
 - Crate is `#![forbid(unsafe_code)]` [src/lib.rs:forbid attribute]
-- Adapter is pinned to DomainForge 0.21.1 (`EXPECTED_DOMAINFORGE_VERSION`) and bounded by the `MAX_*` resource limits, including parser-recursion bounding (`MAX_NESTING_DEPTH`, SUP-01) [src/lib.rs:EXPECTED_DOMAINFORGE_VERSION], [src/lib.rs:MAX_NESTING_DEPTH]
+- Adapter is pinned to DomainForge 1.0.0-rc.2 (`EXPECTED_DOMAINFORGE_VERSION`) and bounded by the `MAX_*` resource limits, including parser-recursion bounding (`MAX_NESTING_DEPTH`, SUP-01) [src/lib.rs:EXPECTED_DOMAINFORGE_VERSION], [src/lib.rs:MAX_NESTING_DEPTH]
 - World binding never trusts a sender's `world_ref` and fails closed on anything unknown, malformed, tampered, mismatched, or invalid [src/world.rs:module doc]
 - CALM projections are byte-identical for the same graph (non-deterministic `sea:timestamp` stripped) [src/lib.rs:project]
 

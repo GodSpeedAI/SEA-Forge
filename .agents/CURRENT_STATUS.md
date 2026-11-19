@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 377
+**Status revision:** 378
 
-**Stage:** FDE S2 | RealityTrace pin migrated
+**Stage:** FDE S2 | Chrono-free dependency graph
 
-**Summary:** Pin SEA Forge to the published RealityTrace 0.3 compatibility commit and retain the canonical E8 evidence timestamp bytes.
+**Summary:** Pin the Chrono-free DomainForge producer and preserve authorized compiler-upgrade lineage on the isolated candidate branch.
 
 **Verified:**
 
+- The linked DomainForge 1.0.0-rc.2 producer is pinned to 0226b504ebda3dcb64ccd8859af7de8c9f0ad7ba. At that commit 1343 native and 23 WASM tests passed, 13 native tests were ignored, and the Python wheel and Node addon passed their focused identity tests.
+- SEA Forge preserved the historical 0.21.0 to 0.22.0 compiler-upgrade tests and verified an authorized 0.22.0 to 1.0.0-rc.2 upgrade with equivalent semantic closure and separately recorded producer identities.
+- The locked all-feature all-target dependency graph contains no Chrono. Live cargo-deny passed advisories, bans, licenses, and sources. Only the official DomainForge Git repository was added to the source allow list for the full-revision pin.
+- With the final producer pin applied, all 17 S2 rows matched fd843472 except durations. Fifteen scenarios passed, AT-09 remained at the expected partial result, and the preflight verified all 12 frozen contract digests.
 - RealityTrace checkpoint 7be5d8c passed 75 core tests and 39 CLI tests, including the fixed envelope hash and historical timestamp boundaries. The sxr-core normal, build, and development dependency tree contains no Chrono.
 - SEA Forge passed 45 RealityTrace adapter tests with 1 live-environment test ignored on the updated pin. The locked all-feature all-platform inverse graph now identifies DomainForge 0.22.0 as the only Chrono caller.
 - At checkpoint 44828457, just lint and just typecheck passed across the workspace.
@@ -111,7 +115,6 @@
 
 **Limits:**
 
-- The DomainForge replacement still needs native, WASM, and producer identity verification before pinning it in SEA Forge.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -151,7 +154,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish DomainForge compatibility checks, validate the new producer identity, and rerun the live dependency and S2 gates. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
+**Next:** Verify the committed candidate through hosted CI and Portability. Obtain reset-capable APFS and fixed-NTFS guests before activating the versioned writer.
 
 **Evidence:**
 

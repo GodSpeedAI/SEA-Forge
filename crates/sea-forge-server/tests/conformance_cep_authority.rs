@@ -696,17 +696,17 @@ async fn stage10_a_world_transition_is_decided_approved_and_listed_over_the_sock
 
 // --- compiler_upgrade lineage: a prior identity is host config, a transition source, never an action site ----
 
-/// The real DomainForge 0.21.0 identity for `SRC` (the authority crate's fixture), as a prior identity.
-const PRIOR_0_21_0: &str = include_str!(
-    "../../sea-forge-authority/tests/fixtures/identities/demo-tank.domainforge-0.21.0.json"
+/// The DomainForge 0.22.0 identity for `SRC`, captured before the producer upgrade.
+const PRIOR_0_22_0: &str = include_str!(
+    "../../sea-forge-authority/tests/fixtures/identities/demo-tank.domainforge-0.22.0.json"
 );
-const PRIOR_PATH: &str = "identities/demo.domainforge-0.21.0.json";
+const PRIOR_PATH: &str = "identities/demo.domainforge-0.22.0.json";
 const OLD_REF: &str =
-    "world:demo@sha256:c2d3978a06cad4f44b8f50ef4a9e570c4800f1ba6b7e4ac76a0128337e0f3439";
-const NEW_REF: &str =
     "world:demo@sha256:469e93b20c5181b97f19e3e4ae1fa7b22a530bc33e10db7a2558f082d90c88c0";
+const NEW_REF: &str =
+    "world:demo@sha256:e4b4b267f2959677e597200f17dc8ff69aad45ee01e1bec5cd10df51f8c3a6e5";
 
-/// The cell with one current world (`SRC`, DomainForge 0.22.0) and `prior_doc` written as its prior identity.
+/// The cell with one current world compiled by the linked DomainForge and `prior_doc` written as its prior identity.
 fn upgrade_fixture(prior_doc: &str) -> (tempfile::TempDir, ServerConfig) {
     let (root, mut config) = fixture(true, TRANSITION_POLICY);
     std::fs::create_dir_all(root.path().join("identities")).unwrap();
@@ -719,7 +719,7 @@ fn upgrade_fixture(prior_doc: &str) -> (tempfile::TempDir, ServerConfig) {
 #[tokio::test]
 async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and_listed_over_the_socket(
 ) {
-    let (_root, config) = upgrade_fixture(PRIOR_0_21_0);
+    let (_root, config) = upgrade_fixture(PRIOR_0_22_0);
     let mut cell = authenticated::Cell::start(config).await;
     let socket = cell.socket.clone();
     let service = authenticated::principal("cognate-service", ActorRole::Service);
@@ -727,7 +727,7 @@ async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and
     assert_eq!(
         world_ref(),
         NEW_REF,
-        "the current world is the 0.22.0 build"
+        "the current world is the linked build"
     );
 
     // The prior ref resolves: it is the source of the transition.
@@ -748,7 +748,7 @@ async fn a_prior_identity_boots_resolves_and_its_compiler_upgrade_is_allowed_and
 
 #[tokio::test]
 async fn a_governed_action_in_a_prior_identity_is_refused_over_the_socket() {
-    let (_root, config) = upgrade_fixture(PRIOR_0_21_0);
+    let (_root, config) = upgrade_fixture(PRIOR_0_22_0);
     let mut cell = authenticated::Cell::start(config).await;
     let service = authenticated::principal("cognate-service", ActorRole::Service);
     let act = verb(request(OLD_REF, "op-act", "action", "author"), "op-act");

@@ -11,6 +11,10 @@ use sha2::{Digest, Sha256};
 
 /// The real DomainForge 0.21.0 identity for `BASE` (see the fixture's provenance).
 const FIXTURE_0_21_0: &str = include_str!("fixtures/identities/demo-tank.domainforge-0.21.0.json");
+/// Captured from SEA Forge's linked DomainForge 0.22.0 producer before the upgrade.
+const FIXTURE_0_22_0: &str = include_str!("fixtures/identities/demo-tank.domainforge-0.22.0.json");
+const CURRENT_REF: &str =
+    "world:demo@sha256:e4b4b267f2959677e597200f17dc8ff69aad45ee01e1bec5cd10df51f8c3a6e5";
 const BASE: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 const OLD_REF: &str =
     "world:demo@sha256:c2d3978a06cad4f44b8f50ef4a9e570c4800f1ba6b7e4ac76a0128337e0f3439";
@@ -47,7 +51,7 @@ fn in_process(worlds: &mut WorldRegistry, src: &str) -> String {
         .to_string()
 }
 
-/// The 0.21.0 fixture as a prior identity, and the in-process (0.22.0) world for `BASE`.
+/// The 0.21.0 fixture as a prior identity and the linked compiler world for `BASE`.
 fn upgrade_pair() -> (WorldRegistry, String, String) {
     let mut reg = WorldRegistry::new();
     let old = reg
@@ -55,6 +59,19 @@ fn upgrade_pair() -> (WorldRegistry, String, String) {
         .unwrap()
         .to_string();
     let new = in_process(&mut reg, BASE);
+    (reg, old, new)
+}
+
+fn historical_upgrade_pair() -> (WorldRegistry, String, String) {
+    let mut reg = WorldRegistry::new();
+    let old = reg
+        .register_prior_identity_json("demo", FIXTURE_0_21_0)
+        .unwrap()
+        .to_string();
+    let new = reg
+        .register_identity_json("demo", FIXTURE_0_22_0)
+        .unwrap()
+        .to_string();
     (reg, old, new)
 }
 
@@ -136,7 +153,7 @@ fn decision(d: &CepDecision) -> &str {
 
 #[test]
 fn the_recorded_0_21_0_and_the_0_22_0_refs_are_what_these_tests_assume() {
-    let (_, old, new) = upgrade_pair();
+    let (_, old, new) = historical_upgrade_pair();
     assert_eq!(old, OLD_REF);
     assert_eq!(new, NEW_REF);
 }
@@ -144,7 +161,7 @@ fn the_recorded_0_21_0_and_the_0_22_0_refs_are_what_these_tests_assume() {
 #[test]
 fn a_compiler_upgrade_from_0_21_0_to_0_22_0_is_allowed_and_recorded_with_both_producer_versions() {
     let root = tempfile::tempdir().unwrap();
-    let (reg, old, new) = upgrade_pair();
+    let (reg, old, new) = historical_upgrade_pair();
     let d = with_worlds(root.path(), &reg, OPEN, |s| {
         s.decide(
             &transition(&old, &new, "up-1", "compiler_upgrade"),
@@ -166,6 +183,38 @@ fn a_compiler_upgrade_from_0_21_0_to_0_22_0_is_allowed_and_recorded_with_both_pr
         json!([
             "domainforge.producer_version.source:0.21.0",
             "domainforge.producer_version.target:0.22.0"
+        ])
+    );
+}
+
+#[test]
+fn the_linked_chrono_free_producer_is_a_compatible_upgrade_from_0_22_0() {
+    let root = tempfile::tempdir().unwrap();
+    let mut reg = WorldRegistry::new();
+    let old = reg
+        .register_prior_identity_json("demo", FIXTURE_0_22_0)
+        .unwrap()
+        .to_string();
+    let new = in_process(&mut reg, BASE);
+    assert_eq!(old, NEW_REF);
+    assert_eq!(new, CURRENT_REF);
+
+    let result = with_worlds(root.path(), &reg, OPEN, |s| {
+        s.decide(
+            &transition(&old, &new, "chrono-up", "compiler_upgrade"),
+            &service(),
+        )
+    })
+    .unwrap();
+    assert_eq!(decision(&result), "allow");
+    let facts = with_worlds(root.path(), &reg, OPEN, |service| service.transitions()).unwrap();
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].record["semantic_closure_equal"], true);
+    assert_eq!(
+        facts[0].record["evidence_refs"],
+        json!([
+            "domainforge.producer_version.source:0.22.0",
+            "domainforge.producer_version.target:1.0.0-rc.2"
         ])
     );
 }
@@ -345,7 +394,10 @@ fn lineage_crosses_the_upgrade_only_through_the_allowed_compiler_upgrade() {
         .unwrap()
         .to_string();
     assert_eq!(old_current, OLD_REF);
-    let new_current = in_process(&mut before, BASE);
+    let new_current = before
+        .register_identity_json("demo", FIXTURE_0_22_0)
+        .unwrap()
+        .to_string();
     assert_eq!(new_current, NEW_REF);
     let earlier = with_worlds(root.path(), &before, OPEN, |s| {
         s.decide(
@@ -357,7 +409,7 @@ fn lineage_crosses_the_upgrade_only_through_the_allowed_compiler_upgrade() {
     assert_eq!(decision(&earlier), "allow");
 
     // After the upgrade, 0.21.0 is a prior identity.
-    let (after, old, new) = upgrade_pair();
+    let (after, old, new) = historical_upgrade_pair();
     let carried = |transition_ref: Option<&str>| {
         let mut req = envelope(
             &new,

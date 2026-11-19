@@ -19,7 +19,7 @@
       "export PATH=\"$HOME/.cargo/bin:$PATH\""
     ],
     "scripts": {
-      "install-domainforge": "cargo install domainforge-core --version 0.22.0 --features cli --locked --force"
+      "install-domainforge": "cargo install --git https://github.com/GodSpeedAI/DomainForge --rev 0226b504ebda3dcb64ccd8859af7de8c9f0ad7ba domainforge-core --features cli --locked --force"
     }
   }
 }
