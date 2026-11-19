@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 369
+**Status revision:** 370
 
-**Stage:** FDE S2 | Hosted staged publication and workspace evidence recorded
+**Stage:** FDE S2 | Chrono dependency migration staged for validation
 
-**Summary:** Finish the exact-checkpoint hosted verification for staged publication while the cross-platform reset and Chrono prerequisites remain open.
+**Summary:** Finish the approved direct SEA Forge and pinned RealityTrace migrations on fde/chrono-integration while DomainForge compatibility verification continues.
 
 **Verified:**
 
+- SEA Forge checkpoint 44828457 passed workspace lint and typecheck, 349 authority tests, and 4 PostgreSQL deadline tests. The follow-up b71946d9 passed all 6 timestamp regressions and focused Clippy.
+- RealityTrace compatibility checkpoint 7be5d8c passed 75 core tests and 39 CLI tests. SEA Forge pin checkpoint 6bffd5c5 passed 45 RealityTrace adapter tests with 1 ignored and the 20-crate host and Windows no-async-kernel gate.
+- The locked all-feature all-platform graph at 6bffd5c5 reaches Chrono only through DomainForge 0.22.0. The exact checkpoint is under hosted CI run 44566152829.
 - Exact fd843472 hosted CI run 44425451223 passed both Ubuntu and both macOS workspace shards, MSRV 1.92, authority, and Workbench. The only failed prerequisite job was lint at the live Chrono advisory.
 - Exact fd843472 Portability run 44423954384 passed all jobs, including native Windows and macOS staged tests and the seven Linux/ext4 guest resets. The evidence artifact and review record are linked in ADR-015.
 - Exact fd843472 local workspace tests recorded 2064 passed, 30 ignored, and the existing WSL CLI lifecycle failure. The hosted Ubuntu shards passed for the same commit.
@@ -104,10 +107,10 @@
 
 **Limits:**
 
-- The live dependency gate rejects Chrono under RUSTSEC-2026-0543. Bans, licenses, and sources passed. The locked graph reaches Chrono through the remaining SEA Forge and DomainForge callers and the pinned RealityTrace sxr-core 0.3.0, whose Rust APIs also need migration.
+- The separate Chrono branch will clear the live dependency gate once its DomainForge candidate is verified and pinned, and the live advisory check passes.
+- DomainForge timestamp and signed-duration wire compatibility, native and WASM checks, and the new compiler producer identity comparison are in progress.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
-- DomainForge public TypedValue timestamp wire compatibility passed its expanded regression suite. Remaining public authority and duration migrations need scope confirmation before the dependency can be removed.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
@@ -145,7 +148,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Obtain the APFS and fixed-NTFS guest reset prerequisites, settle the ordinary RealityTrace delivery contract, and confirm the remaining public timestamp and RealityTrace migration scope.
+**Next:** Qualify a DomainForge candidate, update the exact SEA Forge pin, and rerun applicable CI and S2 gates. Supply disposable APFS and fixed-NTFS guest reset prerequisites and settle the governed RealityTrace delivery contract.
 
 **Evidence:**
 
