@@ -1,17 +1,18 @@
 # Current status
 
-**Status revision:** 368
+**Status revision:** 369
 
-**Stage:** FDE S2 | Verified native staging and seven Linux guest resets
+**Stage:** FDE S2 | Hosted staged publication and workspace evidence recorded
 
-**Summary:** Qualify the staged Linux/ext4 publication boundaries, verify native staged execution on macOS and Windows, and close the NTFS selector review findings.
+**Summary:** Finish the exact-checkpoint hosted verification for staged publication while the cross-platform reset and Chrono prerequisites remain open.
 
 **Verified:**
 
-- Portability run 44423954384 passed the Linux/ext4 guest-reset job and the native staged publication and application restart steps on macOS and Windows. The Linux artifact contains seven verified writer and recovery boot pairs, including stage creation.
+- Exact fd843472 hosted CI run 44425451223 passed both Ubuntu and both macOS workspace shards, MSRV 1.92, authority, and Workbench. The only failed prerequisite job was lint at the live Chrono advisory.
+- Exact fd843472 Portability run 44423954384 passed all jobs, including native Windows and macOS staged tests and the seven Linux/ext4 guest resets. The evidence artifact and review record are linked in ADR-015.
+- Exact fd843472 local workspace tests recorded 2064 passed, 30 ignored, and the existing WSL CLI lifecycle failure. The hosted Ubuntu shards passed for the same commit.
 - The second independent Codex Terra review at fd843472 exited zero with zero findings at each severity. The first pass and the two resolved test findings are recorded in .agents/plans/2026-11-18-wp21b-selector-review.md.
 - Exact fd843472 S2 results match all 17 baseline rows except durations. Fifteen scenarios passed, AT-09 is the expected partial, and all 12 frozen contract digests matched. Focused Clippy and the 20-crate no-async-kernel gate passed.
-- Exact fd843472 local workspace tests recorded 2064 passed, 30 ignored, and the existing WSL CLI lifecycle failure caused by the missing delegated cgroup. Standard hosted CI run 44425451223 covers the same revision.
 - DomainForge checkpoint 6167787 had 1345 native tests pass, 13 ignored and 23 WASM tests pass. SEA Forge timestamp checkpoints 58856ed3 and 992f0a6a cover current-time records and deterministic release timestamps.
 - Portability run 44421054364 passed all three jobs. The Linux artifact shows six guest resets with a fresh recovery boot on the same ext4 raw virtio disk, QEMU 8.2.2, Linux 6.8.0-149-generic. Every valid recovery committed a retry.
 - Native Windows 10.0.26300 fixed NTFS passed the OS helper boundary test and all 14 staged case-runner library tests. The actual paused reader verified the prior generation and a fresh reader selected the new one. The error-variant test distinguished refusal from publication uncertainty.
