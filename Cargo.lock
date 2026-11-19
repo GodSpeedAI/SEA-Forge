@@ -3191,15 +3191,15 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "sxr-core"
 version = "0.3.0"
-source = "git+https://github.com/GodSpeedAI/RealityTrace?rev=42879a82115bcc3586a81a58c614ec5073656f6f#42879a82115bcc3586a81a58c614ec5073656f6f"
+source = "git+https://github.com/GodSpeedAI/RealityTrace?rev=7be5d8c72659c601a24e681ee2a70e1cd7e1c556#7be5d8c72659c601a24e681ee2a70e1cd7e1c556"
 dependencies = [
- "chrono",
  "hex",
  "jsonschema 0.18.3",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "thiserror 2.0.19",
+ "time",
  "uuid",
 ]
 

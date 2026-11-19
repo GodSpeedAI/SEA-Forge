@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 376
+**Status revision:** 377
 
-**Stage:** FDE S2 | SEA Forge timestamp compatibility review
+**Stage:** FDE S2 | RealityTrace pin migrated
 
-**Summary:** Restore legacy timestamp deserialization and the existing parse diagnostics after independent review of the direct dependency migration.
+**Summary:** Pin SEA Forge to the published RealityTrace 0.3 compatibility commit and retain the canonical E8 evidence timestamp bytes.
 
 **Verified:**
 
+- RealityTrace checkpoint 7be5d8c passed 75 core tests and 39 CLI tests, including the fixed envelope hash and historical timestamp boundaries. The sxr-core normal, build, and development dependency tree contains no Chrono.
+- SEA Forge passed 45 RealityTrace adapter tests with 1 live-environment test ignored on the updated pin. The locked all-feature all-platform inverse graph now identifies DomainForge 0.22.0 as the only Chrono caller.
 - At checkpoint 44828457, just lint and just typecheck passed across the workspace.
 - The follow-up passed all 6 focused timestamp tests and all-target sea-forge-core Clippy. It retains the separate typed RFC 3339 validation path and compatible serialized UTC spellings.
 - The direct migration passed 5 focused timestamp tests, 4 PostgreSQL deadline tests, and 349 authority tests with 7 OPA-dependent tests ignored.
@@ -109,8 +111,7 @@
 
 **Limits:**
 
-- The approved DomainForge public timestamp and duration migration and the approved pinned RealityTrace migration must each pass their compatibility gates before updating SEA Forge's dependency pins.
-- SEA Forge's live RUSTSEC-2026-0543 gate remains open while the two transitive Chrono edges are present.
+- The DomainForge replacement still needs native, WASM, and producer identity verification before pinning it in SEA Forge.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -150,7 +151,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Pin the validated RealityTrace checkpoint and verify the upstream DomainForge migration. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
+**Next:** Finish DomainForge compatibility checks, validate the new producer identity, and rerun the live dependency and S2 gates. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
 
 **Evidence:**
 

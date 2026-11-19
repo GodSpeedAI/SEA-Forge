@@ -12,7 +12,7 @@ publish = false
 # Evidence consumer only: no execution crate depends on this one.
 [dependencies]
 sea-forge-ledger = { path = "../sea-forge-ledger", version = "0.5.0" }
-sxr-core = { version = "0.3.0", git = "https://github.com/GodSpeedAI/RealityTrace", rev = "42879a82115bcc3586a81a58c614ec5073656f6f" }
+sxr-core = { version = "0.3.0", git = "https://github.com/GodSpeedAI/RealityTrace", rev = "7be5d8c72659c601a24e681ee2a70e1cd7e1c556" }
 serde_json.workspace = true
 hex.workspace = true
 sha2.workspace = true
