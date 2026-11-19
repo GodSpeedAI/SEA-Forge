@@ -1,13 +1,17 @@
 # Current status
 
-**Status revision:** 378
+**Status revision:** 379
 
-**Stage:** FDE S2 | Chrono-free dependency graph
+**Stage:** FDE S2 | Chrono-free candidate and supervisor verification
 
-**Summary:** Pin the Chrono-free DomainForge producer and preserve authorized compiler-upgrade lineage on the isolated candidate branch.
+**Summary:** Retain the verified Chrono-free dependency graph and correct the supervisor tests' observation of the legacy close projection.
 
 **Verified:**
 
+- CI run 44597369464 passed both Ubuntu shards, MSRV 1.92, the live security job, Workbench, and OPA. Its initial macOS server shard observed the legacy close event while the case projection was still active.
+- The supervisor tests now wait for both durable close indicators within the existing deadlines. All seven supervisor tests passed locally. Existing state, event ordering, attribution, and quiescence assertions remain in the suite.
+- At exact 48f393c4, all 17 S2 rows matched the baseline except duration. Native macOS Portability and all seven Linux/ext4 guest resets passed in run 44597378183.
+- The redacted range scan found zero leaks in the nine Chrono migration commits and all staged-secret canaries passed.
 - The linked DomainForge 1.0.0-rc.2 producer is pinned to 0226b504ebda3dcb64ccd8859af7de8c9f0ad7ba. At that commit 1343 native and 23 WASM tests passed, 13 native tests were ignored, and the Python wheel and Node addon passed their focused identity tests.
 - SEA Forge preserved the historical 0.21.0 to 0.22.0 compiler-upgrade tests and verified an authorized 0.22.0 to 1.0.0-rc.2 upgrade with equivalent semantic closure and separately recorded producer identities.
 - The locked all-feature all-target dependency graph contains no Chrono. Live cargo-deny passed advisories, bans, licenses, and sources. Only the official DomainForge Git repository was added to the source allow list for the full-revision pin.
@@ -115,6 +119,7 @@
 
 **Limits:**
 
+- Local just check completed status, formatting, Clippy, typecheck, and the live dependency gate, then stopped at 166 findings in the workstation's full Git history. All new Chrono migration commits scanned clean.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -154,7 +159,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the committed candidate through hosted CI and Portability. Obtain reset-capable APFS and fixed-NTFS guests before activating the versioned writer.
+**Next:** Verify the supervisor test checkpoint on hosted macOS and finish platform qualification before activating the versioned writer.
 
 **Evidence:**
 
