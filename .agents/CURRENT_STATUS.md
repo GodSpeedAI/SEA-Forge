@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 375
+**Status revision:** 376
 
-**Stage:** FDE S2 | SEA Forge timestamp migration
+**Stage:** FDE S2 | SEA Forge timestamp compatibility review
 
-**Summary:** Replace the remaining direct Chrono dependencies in SEA Forge with a shared timestamp that preserves expiry ordering, leap seconds, and existing record formats.
+**Summary:** Restore legacy timestamp deserialization and the existing parse diagnostics after independent review of the direct dependency migration.
 
 **Verified:**
 
+- At checkpoint 44828457, just lint and just typecheck passed across the workspace.
+- The follow-up passed all 6 focused timestamp tests and all-target sea-forge-core Clippy. It retains the separate typed RFC 3339 validation path and compatible serialized UTC spellings.
 - The direct migration passed 5 focused timestamp tests, 4 PostgreSQL deadline tests, and 349 authority tests with 7 OPA-dependent tests ignored.
 - The direct migration compiled across workspace targets. The 20-crate synchronous-kernel dependency gate passed on the host and x86_64-pc-windows-msvc graphs.
 - The locked all-feature all-platform dependency graph now reaches Chrono only through the DomainForge 0.22.0 registry dependency and RealityTrace sxr-core 0.3.0 Git pin.
@@ -148,7 +150,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Complete upstream compatibility checks, update both dependency pins, and rerun the live dependency gate and S2. Supply disposable APFS and fixed-NTFS runner assets for the staged writer qualification.
+**Next:** Pin the validated RealityTrace checkpoint and verify the upstream DomainForge migration. Obtain disposable APFS and fixed-NTFS guest reset prerequisites.
 
 **Evidence:**
 

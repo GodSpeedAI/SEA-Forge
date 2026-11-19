@@ -23,11 +23,26 @@ pub struct Timestamp {
 
 /// The timestamp did not match the RFC 3339 syntax accepted by stored records.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ParseTimestampError;
+pub enum ParseTimestampError {
+    /// A date, time or offset component was outside its allowed range.
+    OutOfRange,
+    /// The input ended before the timestamp was complete.
+    Incomplete,
+    /// Unexpected characters appeared in the timestamp.
+    Invalid,
+    /// Extra characters followed a complete timestamp.
+    Trailing,
+}
 
 impl fmt::Display for ParseTimestampError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid RFC 3339 timestamp")
+        let reason = match self {
+            Self::OutOfRange => "input is out of range",
+            Self::Incomplete => "premature end of input",
+            Self::Invalid => "input contains invalid characters",
+            Self::Trailing => "trailing input",
+        };
+        f.write_str(reason)
     }
 }
 
@@ -44,7 +59,7 @@ impl Timestamp {
     /// This accepts lowercase separators, a space in place of T, a Unicode
     /// minus in the offset, and leap seconds, as the previous parser did.
     pub fn parse_rfc3339(input: &str) -> Result<Self, ParseTimestampError> {
-        parse_rfc3339(input).ok_or(ParseTimestampError)
+        parse_rfc3339(input)
     }
 
     /// Format in UTC using the existing variable precision and +00:00 suffix.
@@ -177,6 +192,28 @@ impl serde::Serialize for Timestamp {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Timestamp {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct TimestampVisitor;
+
+        impl serde::de::Visitor<'_> for TimestampVisitor {
+            type Value = Timestamp;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("an RFC 3339 formatted date and time string")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, input: &str) -> Result<Timestamp, E> {
+                Timestamp::parse_rfc3339(input)
+                    .or_else(|error| parse_wire(input).ok_or(error))
+                    .map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_str(TimestampVisitor)
+    }
+}
+
 impl Add<Duration> for Timestamp {
     type Output = Self;
 
@@ -203,47 +240,98 @@ impl Sub for Timestamp {
     }
 }
 
-fn parse_rfc3339(input: &str) -> Option<Timestamp> {
-    let b = input.as_bytes();
-    if b.len() < 20
-        || b[4] != b'-'
-        || b[7] != b'-'
-        || !matches!(b[10], b'T' | b't' | b' ')
-        || b[13] != b':'
-        || b[16] != b':'
-    {
-        return None;
+fn parse_rfc3339(input: &str) -> Result<Timestamp, ParseTimestampError> {
+    use ParseTimestampError::{Incomplete, Invalid};
+
+    let bytes = input.as_bytes();
+    if bytes.len() < 19 {
+        return Err(Incomplete);
     }
-    let year = digits(&b[0..4])? as i32;
-    let month = Month::try_from(digits(&b[5..7])? as u8).ok()?;
-    let day = digits(&b[8..10])? as u8;
-    let hour = digits(&b[11..13])? as u8;
-    let minute = digits(&b[14..16])? as u8;
-    let second = digits(&b[17..19])? as u8;
+    if bytes[4] != b'-' || bytes[7] != b'-' {
+        return Err(Invalid);
+    }
+    let year = digits(&bytes[0..4]).ok_or(Invalid)? as i32;
+    let month = digits(&bytes[5..7]).ok_or(Invalid)? as u8;
+    let day = digits(&bytes[8..10]).ok_or(Invalid)? as u8;
+    let date = calendar_date(year, month, day)?;
+    if !matches!(bytes[10], b'T' | b't' | b' ') || bytes[13] != b':' || bytes[16] != b':' {
+        return Err(Invalid);
+    }
+    let hour = digits(&bytes[11..13]).ok_or(Invalid)? as u8;
+    let minute = digits(&bytes[14..16]).ok_or(Invalid)? as u8;
+    let second = digits(&bytes[17..19]).ok_or(Invalid)? as u8;
     let (fraction, zone) = fraction_and_zone(&input[19..])?;
-    let offset = parse_offset(zone)?;
-    from_local(year, month, day, [hour, minute, second], fraction, offset)
+    let (local, fraction) = local_time(date, [hour, minute, second], fraction)?;
+    let offset = parse_offset(zone, false)?;
+    from_local(local, fraction, offset)
+}
+
+fn calendar_date(year: i32, month: u8, day: u8) -> Result<Date, ParseTimestampError> {
+    use ParseTimestampError::OutOfRange;
+
+    if !(MIN_YEAR..=MAX_YEAR).contains(&year) {
+        return Err(OutOfRange);
+    }
+    let month = Month::try_from(month).map_err(|_| OutOfRange)?;
+    Date::from_calendar_date(year, month, day).map_err(|_| OutOfRange)
+}
+
+fn local_time(
+    date: Date,
+    [hour, minute, second]: [u8; 3],
+    fraction: u32,
+) -> Result<(time::PrimitiveDateTime, u32), ParseTimestampError> {
+    use ParseTimestampError::OutOfRange;
+
+    if second > 60 {
+        return Err(OutOfRange);
+    }
+    let local = date
+        .with_hms(hour, minute, second.min(59))
+        .map_err(|_| OutOfRange)?;
+    Ok((local, fraction + u32::from(second == 60) * 1_000_000_000))
 }
 
 fn from_local(
-    year: i32,
-    month: Month,
-    day: u8,
-    [hour, minute, second]: [u8; 3],
+    local: time::PrimitiveDateTime,
     fraction: u32,
     offset: UtcOffset,
-) -> Option<Timestamp> {
-    if second > 60 || !(MIN_YEAR..=MAX_YEAR).contains(&year) {
-        return None;
-    }
-    let local = Date::from_calendar_date(year, month, day)
-        .ok()?
-        .with_hms(hour, minute, second.min(59))
-        .ok()?;
-    Timestamp::from_parts(
-        local.assume_offset(offset).unix_timestamp(),
-        fraction + u32::from(second == 60) * 1_000_000_000,
-    )
+) -> Result<Timestamp, ParseTimestampError> {
+    Timestamp::from_parts(local.assume_offset(offset).unix_timestamp(), fraction)
+        .ok_or(ParseTimestampError::OutOfRange)
+}
+
+// Serialized DateTime values used a relaxed RFC 3339 grammar. Callers that
+// validate an RFC 3339 input continue to use the strict entry point above.
+fn parse_wire(input: &str) -> Option<Timestamp> {
+    let input = input.trim_start();
+    let sign = usize::from(input.starts_with(['+', '-']));
+    let width = if sign == 0 { 4 } else { usize::MAX };
+    let (year_digits, rest) = split_digits(&input[sign..], width);
+    let year = input[..sign + year_digits.len()].parse().ok()?;
+    let (month, rest) = wire_component(rest.trim_start().strip_prefix('-')?)?;
+    let (day, rest) = wire_component(rest.trim_start().strip_prefix('-')?)?;
+    let date = calendar_date(year, month, day).ok()?;
+    let (hour, rest) = wire_component(rest.strip_prefix(['T', 't', ' '])?)?;
+    let (minute, rest) = wire_component(rest.trim_start().strip_prefix(':')?)?;
+    let (second, rest) = wire_component(rest.trim_start().strip_prefix(':')?)?;
+    let (fraction, zone) = fraction_and_zone(rest).ok()?;
+    let (local, fraction) = local_time(date, [hour, minute, second], fraction).ok()?;
+    from_local(local, fraction, parse_offset(zone, true).ok()?).ok()
+}
+
+fn wire_component(input: &str) -> Option<(u8, &str)> {
+    let (value, rest) = split_digits(input.trim_start(), 2);
+    Some((value.parse().ok()?, rest))
+}
+
+fn split_digits(input: &str, width: usize) -> (&str, &str) {
+    let len = input
+        .bytes()
+        .take(width)
+        .take_while(u8::is_ascii_digit)
+        .count();
+    input.split_at(len)
 }
 
 // All callers supply slices containing at most nine digits.
@@ -255,38 +343,70 @@ fn digits(bytes: &[u8]) -> Option<u32> {
     })
 }
 
-fn fraction_and_zone(input: &str) -> Option<(u32, &str)> {
+fn fraction_and_zone(input: &str) -> Result<(u32, &str), ParseTimestampError> {
     let Some(input) = input.strip_prefix('.') else {
-        return Some((0, input));
+        return Ok((0, input));
     };
-    let len = input.bytes().take_while(u8::is_ascii_digit).count();
-    if len == 0 {
-        return None;
+    let (numeral, rest) = split_digits(input, 9);
+    if numeral.is_empty() {
+        return Err(if input.is_empty() {
+            ParseTimestampError::Incomplete
+        } else {
+            ParseTimestampError::Invalid
+        });
     }
-    let precision = len.min(9);
-    let fraction = digits(&input.as_bytes()[..precision])? * 10_u32.pow((9 - precision) as u32);
-    Some((fraction, &input[len..]))
+    let precision = numeral.len();
+    let fraction =
+        digits(numeral.as_bytes()).expect("ASCII digits") * 10_u32.pow((9 - precision) as u32);
+    Ok((
+        fraction,
+        rest.trim_start_matches(|c: char| c.is_ascii_digit()),
+    ))
 }
 
-fn parse_offset(input: &str) -> Option<UtcOffset> {
-    if matches!(input, "Z" | "z") {
-        return Some(UtcOffset::UTC);
+fn parse_offset(input: &str, relaxed: bool) -> Result<UtcOffset, ParseTimestampError> {
+    use ParseTimestampError::{Incomplete, Invalid, OutOfRange, Trailing};
+
+    let input = if relaxed { input.trim() } else { input };
+    if relaxed && input.eq_ignore_ascii_case("UTC") {
+        return Ok(UtcOffset::UTC);
     }
-    let (sign, offset) = if let Some(offset) = input.strip_prefix('+') {
-        (1, offset)
-    } else {
-        (-1, input.strip_prefix(['-', '−'])?)
+    if let Some(rest) = input.strip_prefix(['Z', 'z']) {
+        return if rest.is_empty() {
+            Ok(UtcOffset::UTC)
+        } else {
+            Err(Trailing)
+        };
+    }
+    let (sign, offset) = match input.chars().next() {
+        Some('+') => (1, &input[1..]),
+        Some('-') => (-1, &input[1..]),
+        Some('−') => (-1, &input['−'.len_utf8()..]),
+        Some(_) => return Err(Invalid),
+        None => return Err(Incomplete),
     };
-    let b = offset.as_bytes();
-    if b.len() != 5 || b[2] != b':' {
-        return None;
+    let hour = digits(offset.as_bytes().get(..2).ok_or(Incomplete)?).ok_or(Invalid)? as i8;
+    let remainder = &offset[2..];
+    let minutes = if relaxed {
+        remainder.trim_start_matches(|c: char| c == ':' || c.is_whitespace())
+    } else {
+        remainder.strip_prefix(':').ok_or(if remainder.is_empty() {
+            Incomplete
+        } else {
+            Invalid
+        })?
+    };
+    let minute = digits(minutes.as_bytes().get(..2).ok_or(Incomplete)?).ok_or(Invalid)? as i8;
+    if minute > 59 {
+        return Err(OutOfRange);
     }
-    let hour = digits(&b[..2])? as i8;
-    let minute = digits(&b[3..])? as i8;
+    if minutes.len() > 2 {
+        return Err(Trailing);
+    }
     if hour > 23 {
-        return None;
+        return Err(OutOfRange);
     }
-    UtcOffset::from_hms(sign * hour, sign * minute, 0).ok()
+    UtcOffset::from_hms(sign * hour, sign * minute, 0).map_err(|_| OutOfRange)
 }
 
 /// Return the current time in the existing RFC 3339 record format.
@@ -340,6 +460,30 @@ mod tests {
         ] {
             assert!(Timestamp::parse_rfc3339(input).is_err(), "{input}");
         }
+    }
+
+    #[test]
+    fn persisted_timestamps_round_trip_with_legacy_utc_spelling() {
+        for (input, expected) in [
+            ("2000-1-2 3:4:5 UTC", "2000-01-02T03:04:05Z"),
+            ("2017-01-01t00:59:60.25+01:00", "2016-12-31T23:59:60.250Z"),
+            ("+10000-01-01T00:00:00Z", "+10000-01-01T00:00:00Z"),
+            (
+                "1969-12-31T23:59:59.123456789Z",
+                "1969-12-31T23:59:59.123456789Z",
+            ),
+        ] {
+            let encoded = serde_json::to_string(input).unwrap();
+            let timestamp = serde_json::from_str::<Timestamp>(&encoded).unwrap();
+            assert_eq!(serde_json::to_value(timestamp).unwrap(), expected);
+        }
+        assert!(Timestamp::parse_rfc3339("2000-1-2 3:4:5 UTC").is_err());
+        assert_eq!(
+            Timestamp::parse_rfc3339("2020-02-30T00:00:00Z")
+                .unwrap_err()
+                .to_string(),
+            "input is out of range"
+        );
     }
 
     #[test]
