@@ -1,6 +1,6 @@
 # ADR-015: Atomically publish versioned Field Case state
 
-Status: approved by the operator on 2026-11-17. Implementation pending.
+Status: approved by the operator on 2026-11-17. Readers and the staged publisher are implemented. Production activation awaits the remaining OS-reset qualification.
 
 ## Context
 
@@ -46,5 +46,5 @@ Recovery verifies the selected generation and publishes a retry. Run
 verified the six initial boundaries.
 
 The native Windows and macOS Portability steps exercise staged publication
-and application restart. APFS and fixed NTFS OS-reset qualification requires
+and application restart. The follow-up [run 44423954384](https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44423954384) passed the native staged checks and added a seventh Linux reset at private stage creation. APFS and fixed NTFS OS-reset qualification requires
 disposable guests with persistent test disks and external reset control.

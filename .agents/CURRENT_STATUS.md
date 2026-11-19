@@ -1,16 +1,20 @@
 # Current status
 
-**Status revision:** 367
+**Status revision:** 368
 
-**Stage:** FDE S2 | Linux guest resets verified and NTFS review probes added
+**Stage:** FDE S2 | Verified native staging and seven Linux guest resets
 
-**Summary:** Verify OS-reset recovery on Linux/ext4 and exercise the NTFS selector reader and helper failure boundaries deterministically.
+**Summary:** Qualify the staged Linux/ext4 publication boundaries, verify native staged execution on macOS and Windows, and close the NTFS selector review findings.
 
 **Verified:**
 
+- Portability run 44423954384 passed the Linux/ext4 guest-reset job and the native staged publication and application restart steps on macOS and Windows. The Linux artifact contains seven verified writer and recovery boot pairs, including stage creation.
+- The second independent Codex Terra review at fd843472 exited zero with zero findings at each severity. The first pass and the two resolved test findings are recorded in .agents/plans/2026-11-18-wp21b-selector-review.md.
+- Exact fd843472 S2 results match all 17 baseline rows except durations. Fifteen scenarios passed, AT-09 is the expected partial, and all 12 frozen contract digests matched. Focused Clippy and the 20-crate no-async-kernel gate passed.
+- Exact fd843472 local workspace tests recorded 2064 passed, 30 ignored, and the existing WSL CLI lifecycle failure caused by the missing delegated cgroup. Standard hosted CI run 44425451223 covers the same revision.
+- DomainForge checkpoint 6167787 had 1345 native tests pass, 13 ignored and 23 WASM tests pass. SEA Forge timestamp checkpoints 58856ed3 and 992f0a6a cover current-time records and deterministic release timestamps.
 - Portability run 44421054364 passed all three jobs. The Linux artifact shows six guest resets with a fresh recovery boot on the same ext4 raw virtio disk, QEMU 8.2.2, Linux 6.8.0-149-generic. Every valid recovery committed a retry.
 - Native Windows 10.0.26300 fixed NTFS passed the OS helper boundary test and all 14 staged case-runner library tests. The actual paused reader verified the prior generation and a fresh reader selected the new one. The error-variant test distinguished refusal from publication uncertainty.
-- The independent Codex Terra review of 1e1761ee found zero critical or high issues and two medium test gaps. The new deterministic native tests address both. Focused Clippy passed at 65f1e5b3.
 - Joined NT-07 passed against RealityTrace checkpoint da47df5. The real SEA emitter, RealityTrace append, CLI ledger verify, and CLI export exercised the same E8 before promotion, after promotion, and after re-pin.
 - The new guest probe compiled with 12 passing staged library tests and one externally controlled test ignored by design. The Portability workflow passed actionlint.
 - The held-reader regression failed before the change on native Windows 10.0.26300 fixed NTFS and passed afterward. All 12 staged library tests and 9 C1–C7 model tests passed in the same native environment.
@@ -26,7 +30,6 @@
 - S2 at 387ce96a matched all 17 baseline rows except duration. Sixteen rows passed, AT-09 remained partial for WP-31 human A3, and all 12 contract digests matched.
 - The full WSL workspace suite at 387ce96a recorded 2058 passed, 1 failed, and 28 ignored. Only the known undelegated cgroup-v2 lifecycle diagnostic failed. The raw-writer scan, staged restart test, and selected-artifact regression all passed.
 - Hosted CI run 44365325837 was started on isolated checkpoint 387ce96a. The lint report confirmed the chrono advisory RUSTSEC-2026-0543 and the MIT-0 license rejection for borrow-or-share. Workbench, MSRV, and authority checks passed.
-- The independent SEA Forge generated-timestamp migration remains checkpointed at 5a93603f.
 - The staged case-runner interruption test passed on Linux and native Windows on a fixed NTFS volume. It covered both sides of first publication and selector replacement. The observed snapshot matched the interrupted boundary and a subsequent commit succeeded in every case.
 - DomainForge checked in its generated timestamp migration at 2f59e44. The native compatibility test, all-target all-feature Clippy, formatting, and commit lint passed. The earlier native CLI suite and WASM check passed.
 - The server selected-snapshot regression passed on Linux. Artifact retrieval returned the published bytes, digest, run ID, evidence ID, and URI.
@@ -100,15 +103,14 @@
 
 **Limits:**
 
-- The additional stage-creation reset and the hosted staged library checks need verification in the follow-up Actions run.
+- The live dependency gate rejects Chrono under RUSTSEC-2026-0543. Bans, licenses, and sources passed. The locked graph reaches Chrono through the remaining SEA Forge and DomainForge callers and the pinned RealityTrace sxr-core 0.3.0, whose Rust APIs also need migration.
+- Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - DomainForge public TypedValue timestamp wire compatibility passed its expanded regression suite. Remaining public authority and duration migrations need scope confirmation before the dependency can be removed.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
 - The fixed NTFS tests establish replacement visibility and application restart. They do not establish host-reset durability.
 - Production activation requires deploying the v1/v2 reader first and retaining it as a rollback target. The writer remains staged.
-- The macOS application restart gate needs a native runner. Abrupt host resets need separate disposable targets.
 - The production Field Case dispatch uses streamed capture with the legacy writer. The versioned writer exercises the same spool operation under staged tests.
-- The advisory gate remains open for the chrono migration and its input compatibility requirements.
 - The macOS server and rest jobs in CI run 44365325837 were queued when this snapshot was recorded. The native restart evidence on Linux and fixed NTFS concerns application process exits.
 - The Windows C1–C7 model compares final filesystem differences to the journal. Transient runtime observation and host-crash durability remain open on Windows.
 - The local WSL host lacks delegated cgroup-v2. Its CLI lifecycle failure leaves a native Linux verification gap on this checkpoint.
@@ -142,7 +144,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Dispatch the seven-boundary Linux/ext4 proof and native staged library checks, then rerun the frozen NTFS review. Obtain macOS/APFS and Windows/fixed-NTFS reset environments before enabling the versioned writer.
+**Next:** Obtain the APFS and fixed-NTFS guest reset prerequisites, settle the ordinary RealityTrace delivery contract, and confirm the remaining public timestamp and RealityTrace migration scope.
 
 **Evidence:**
 
