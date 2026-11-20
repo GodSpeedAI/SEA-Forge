@@ -705,12 +705,6 @@ fn promotion_reads_staged_case_pin_after_repin() {
     )
     .unwrap();
     let case = cell.join("cases").join(CASE);
-    fs::create_dir_all(case.join("runs")).unwrap();
-    fs::write(
-        case.join("runs/pin.json"),
-        br#"{"world_ref":"world-legacy"}"#,
-    )
-    .unwrap();
     repin(&store, "world-b", "test").unwrap();
     assert_eq!(case_pin(&case).as_deref(), Some("world-a"));
     assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
@@ -720,25 +714,37 @@ fn promotion_reads_staged_case_pin_after_repin() {
         br#"{"world_ref":"world-a"}"#
     );
 
-    let namespace = versioned_store::namespace(&cell, CASE).unwrap().unwrap();
-    fs::write(namespace.join("current.json"), b"invalid selector").unwrap();
+    #[cfg(unix)]
+    {
+        let alias = fixture.path().join("aliased-cases");
+        fs::create_dir_all(cell.join("cases")).unwrap();
+        std::os::unix::fs::symlink(cell.join("cases"), &alias).unwrap();
+        assert_eq!(pin_case(&store, &alias.join(CASE)).unwrap(), "world-a");
+    }
+}
+
+#[test]
+fn promotion_does_not_fall_back_from_an_unreadable_selector() {
+    use crate::promotion::{init_store, pin_case, SagaError};
+
+    let fixture = tempfile::tempdir().unwrap();
+    let root = fixture.path();
+    let store = root.join("promotion-store");
+    let case = root.join("cases").join(CASE);
+    init_store(&store, "world-legacy").unwrap();
+    assert_eq!(pin_case(&store, &case).unwrap(), "world-legacy");
+
+    // A selector must be a file. A broken namespace must never expose the
+    // otherwise valid pin in the older flat case directory.
+    fs::create_dir_all(root.join(".case-storage").join(CASE).join("current.json")).unwrap();
     assert!(matches!(
         pin_case(&store, &case),
-        Err(crate::promotion::SagaError::Uncertain(_))
+        Err(SagaError::Uncertain(_))
     ));
     assert_eq!(
         fs::read(case.join("runs/pin.json")).unwrap(),
         br#"{"world_ref":"world-legacy"}"#
     );
-    #[cfg(unix)]
-    {
-        let alias = fixture.path().join("aliased-cases");
-        std::os::unix::fs::symlink(cell.join("cases"), &alias).unwrap();
-        assert!(matches!(
-            pin_case(&store, &alias.join(CASE)),
-            Err(crate::promotion::SagaError::Uncertain(_))
-        ));
-    }
 }
 
 #[test]
@@ -749,9 +755,15 @@ fn promotion_refuses_malformed_existing_legacy_pin() {
     let store = fixture.path().join("store");
     let case = fixture.path().join("cases").join(CASE);
     init_store(&store, "world-a").unwrap();
-    fs::create_dir_all(case.join("runs")).unwrap();
+    commit(
+        &case,
+        Batch::new().with(Op::RunFile {
+            rel: "pin.json".into(),
+            bytes: b"not json".to_vec(),
+        }),
+    )
+    .unwrap();
     let pin = case.join("runs/pin.json");
-    fs::write(&pin, b"not json").unwrap();
     assert!(matches!(
         pin_case(&store, &case),
         Err(SagaError::Uncertain(_))

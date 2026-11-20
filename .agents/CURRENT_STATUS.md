@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 380
+**Status revision:** 381
 
-**Stage:** FDE S2 | Snapshot reader and supervisor checkpoint
+**Stage:** FDE S2 | Promotion fixtures through the case guard
 
-**Summary:** Join the selected promotion-pin reader with the hosted supervisor test correction.
+**Summary:** Correct test fixture setup so the unchanged production writer scan passes.
 
 **Verified:**
 
+- The complete case-runner package passed 112 tests with 20 ignored, including the unchanged writer scan, selected pin, aliased case path, unreadable selector, and malformed legacy pin tests.
+- Checkpoint 7bfe543c matched all 17 S2 rows except duration and passed the joined NT-07 proof against RealityTrace da47df5. The correction changes test fixtures only.
 - All ten hosted CI jobs passed for the supervisor correction at a33c8147 in run 44599724625. The change waits for both durable close records before asserting the projection.
 - The staged reader regression tests passed with 11 passing and one externally controlled reset case ignored. All 12 promotion saga tests and case-runner Clippy passed.
 - The reader resolves the selected pin through aliased case paths, refuses a corrupt selector even when the flat pin remains, and supports existing legacy case directory names.
@@ -118,8 +120,8 @@
 
 **Limits:**
 
+- The first hosted WP-22 run caught direct case-file writes in two test fixtures. The updated fixtures use the existing case guard, and an invalid selector directory exercises refusal without writing an unguarded case file.
 - Concurrency mutation tests detected the lock regressions in the observed runs. Their scheduling does not guarantee detection on every run.
-- The final S2 comparison and joined NT-07 proof are pending for this checkpoint.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -159,7 +161,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Run the frozen S2 comparison and the joined SEA Forge and RealityTrace NT-07 proof on this checkpoint.
+**Next:** Use hosted CI and Portability to verify the fixture-only correction. Keep the previous S2 and joined NT-07 receipts tied to 7bfe543c.
 
 **Evidence:**
 
