@@ -42,6 +42,13 @@ WP-21B on Linux, macOS, and Windows. The storage decision is recorded in
    numbers. Directories left by an interrupted publication are outside that
    history. The artifact API retains digest-only lookup.
 
+For a new Field Case delegation, the internal assignment transition records the
+exact delegation link ID. The assignment, link, and admitted run records must
+agree on case, episode, assignment, and link identity before a reader can use
+that binding as admission evidence. Existing rows remain readable. A historical
+row without an exact link ID cannot establish this binding. Legacy appends may
+expose an incomplete prefix, which is insufficient to establish admission.
+
 ## Acceptance
 
 - Concurrent readers see one complete snapshot per operation across each commit.

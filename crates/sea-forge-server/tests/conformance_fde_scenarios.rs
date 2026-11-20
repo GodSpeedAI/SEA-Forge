@@ -1314,6 +1314,35 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
         }
         return Ok(());
     }
+    if s["id"] == "delegate-complete-freeze-accepted" {
+        let read_rows = |name: &str| -> Result<Vec<Value>, String> {
+            let text =
+                fs::read_to_string(case_dir(root.path()).join(name)).map_err(|e| e.to_string())?;
+            text.lines()
+                .map(|line| serde_json::from_str(line).map_err(|e| e.to_string()))
+                .collect()
+        };
+        let assignments = read_rows("field-assignments.jsonl")?;
+        let links = read_rows("field-links.jsonl")?;
+        let runs = read_rows("field-runs.jsonl")?;
+        let assignment = assignments.last().ok_or("missing assignment")?;
+        let link = links.last().ok_or("missing link")?;
+        let run = runs.last().ok_or("missing run")?;
+        assert_eq!(assignment["assignment_id"], request["assignment_id"]);
+        assert_eq!(assignment["episode_key"]["case_id"], request["case_id"]);
+        assert_eq!(
+            assignment["episode_key"]["plan_item_id"],
+            request["episode_ref"]["plan_item_id"]
+        );
+        assert_eq!(assignment["episode_key"]["n"], request["episode_ref"]["n"]);
+        assert!(assignment["link_id"].as_str().is_some());
+        assert_eq!(assignment["link_id"], link["link_id"]);
+        assert_eq!(link["link_id"], run["link_id"]);
+        assert_eq!(link["assignment_id"], assignment["assignment_id"]);
+        assert_eq!(link["episode_ref"], run["episode_ref"]);
+        assert_eq!(link["case_id"], request["case_id"]);
+        assert_eq!(link["delegate"], run["actor"]);
+    }
     let expect = &s["expect"];
     if expect["outcome"] == "refused" {
         compare(expect, &got)?;

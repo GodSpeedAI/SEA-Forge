@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 379
+**Status revision:** 380
 
-**Stage:** FDE S2 | Chrono-free candidate and supervisor verification
+**Stage:** FDE WP-23 | Persist the admitted assignment link
 
-**Summary:** Retain the verified Chrono-free dependency graph and correct the supervisor tests' observation of the legacy close projection.
+**Summary:** Record the exact SEA link ID on each new assignment transition.
 
 **Verified:**
 
+- The existing socket scenario reproduced the missing link ID. The same conformance harness passed all 49 tests after the fix with FDE_WP21A_FINAL enabled. All 12 frozen contract digests matched.
 - CI run 44597369464 passed both Ubuntu shards, MSRV 1.92, the live security job, Workbench, and OPA. Its initial macOS server shard observed the legacy close event while the case projection was still active.
 - The supervisor tests now wait for both durable close indicators within the existing deadlines. All seven supervisor tests passed locally. Existing state, event ordering, attribution, and quiescence assertions remain in the suite.
 - At exact 48f393c4, all 17 S2 rows matched the baseline except duration. Native macOS Portability and all seven Linux/ext4 guest resets passed in run 44597378183.
@@ -119,6 +120,7 @@
 
 **Limits:**
 
+- The legacy writer may leave a partial prefix. The new field enables an exact join when all three authoritative records are present. Production assigned starts still need the authenticated cross-service handoff and authoritative Brief and Budget.
 - Local just check completed status, formatting, Clippy, typecheck, and the live dependency gate, then stopped at 166 findings in the workstation's full Git history. All new Chrono migration commits scanned clean.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
@@ -159,7 +161,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the supervisor test checkpoint on hosted macOS and finish platform qualification before activating the versioned writer.
+**Next:** Verify the published checkpoint with the frozen S2 baseline and hosted CI. Continue using the admitted SEA run as the execution authority for the Cognate bridge.
 
 **Evidence:**
 

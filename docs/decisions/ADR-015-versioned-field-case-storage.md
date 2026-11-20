@@ -34,6 +34,11 @@ for recovery to examine. The
 [storage specification](../../.agents/specs/fde-field-case-storage.spec.md)
 defines the invariants and acceptance tests.
 
+New assignment transitions carry the exact link ID from the admitted run batch.
+Readers using that association need the corresponding link and run records in
+the same snapshot. The legacy append order leaves incomplete prefixes readable
+for recovery and unsuitable as a delegation grant.
+
 ## Qualification
 
 Dispatch the Portability workflow with `field_case_guest_reset=true` to

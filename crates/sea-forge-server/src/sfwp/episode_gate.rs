@@ -720,20 +720,10 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
             }
         }
     }
+    let assignment = assignment.map(|(id, state)| (id, state, case_records::now_rfc3339()));
     let mut batch = Batch::new();
-    if let Some((id, state)) = assignment {
-        batch.push(Op::Append {
-            file: ASSIGNMENTS.into(),
-            line: json!({
-                "assignment_id": id,
-                "state": state,
-                "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
-                "at": case_records::now_rfc3339(),
-            }),
-        });
-    }
-    // Seal assignment, link, run, and decision usage in one declared effect
-    // while the same case lock still protects the admission state.
+    // Declare assignment, link, run, and decision usage under the case lock.
+    // Legacy publication may stop after any individual write.
     let episode_ref = facts.episode_ref.unwrap_or_default();
     if input.verb != Verb::HumanTaskComplete {
         let agent = input.endpoint.map(|e| format!("agent:{e}"));
@@ -786,6 +776,29 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
                 Some("I-1"),
             )
         })?;
+        if let Some((id, state, at)) = assignment {
+            let link_id = run_record["link_id"].as_str().ok_or_else(|| {
+                AdmissionError::refuse(
+                    "FREEZE_INCOMPLETE",
+                    "the delegation link could not be recorded",
+                    Some("I-1"),
+                )
+            })?;
+            // Keep the assignment first: the legacy writer can stop between appends.
+            batch.ops.insert(
+                0,
+                Op::Append {
+                    file: ASSIGNMENTS.into(),
+                    line: json!({
+                        "assignment_id": id,
+                        "state": state,
+                        "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
+                        "link_id": link_id,
+                        "at": at,
+                    }),
+                },
+            );
+        }
         batch.push(Op::Append {
             file: EXEC_RUNS.into(),
             line: json!({
