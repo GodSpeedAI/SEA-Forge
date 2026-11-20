@@ -314,6 +314,12 @@ fn case_state(root: &Path, case_id: &str) -> String {
     case["state"].as_str().unwrap().to_owned()
 }
 
+fn case_is_closed(root: &Path, case_id: &str, events: &[Value]) -> bool {
+    // The legacy writer can append the close event before saving the case projection.
+    events.iter().any(|event| event["kind"] == "case_closed")
+        && case_state(root, case_id) == "completed"
+}
+
 fn latest_run_dir(root: &Path, case_id: &str) -> Option<PathBuf> {
     let runs = root.join("cases").join(case_id).join("runs");
     let mut dirs: Vec<PathBuf> = fs::read_dir(&runs)
@@ -434,7 +440,7 @@ async fn supervisor_enabled_auto_advances_ready_sandboxed_task_without_a_client(
     let events = wait_for_case(
         root.path(),
         &case_id,
-        |events| kinds_of(events).iter().any(|kind| kind == "case_closed"),
+        |events| case_is_closed(root.path(), &case_id, events),
         Duration::from_secs(15),
     )
     .await;
@@ -594,7 +600,7 @@ async fn supervisor_and_client_advance_serialize_on_the_same_case() {
         wait_for_case(
             root.path(),
             &case_id,
-            |events| kinds_of(events).iter().any(|kind| kind == "case_closed"),
+            |events| case_is_closed(root.path(), &case_id, events),
             Duration::from_secs(10),
         )
         .await;

@@ -1,13 +1,14 @@
 # Current status
 
-**Status revision:** 379
+**Status revision:** 380
 
-**Stage:** FDE S2 | Selected snapshot for promotion pins
+**Stage:** FDE S2 | Snapshot reader and supervisor checkpoint
 
-**Summary:** Use the case selector when resolving the promotion world pin.
+**Summary:** Join the selected promotion-pin reader with the hosted supervisor test correction.
 
 **Verified:**
 
+- All ten hosted CI jobs passed for the supervisor correction at a33c8147 in run 44599724625. The change waits for both durable close records before asserting the projection.
 - The staged reader regression tests passed with 11 passing and one externally controlled reset case ignored. All 12 promotion saga tests and case-runner Clippy passed.
 - The reader resolves the selected pin through aliased case paths, refuses a corrupt selector even when the flat pin remains, and supports existing legacy case directory names.
 - The linked DomainForge 1.0.0-rc.2 producer is pinned to 0226b504ebda3dcb64ccd8859af7de8c9f0ad7ba. At that commit 1343 native and 23 WASM tests passed, 13 native tests were ignored, and the Python wheel and Node addon passed their focused identity tests.
