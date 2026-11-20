@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 374
+**Status revision:** 375
 
-**Stage:** FDE S2 | Snapshot reader and joined proof passed
+**Stage:** FDE S2 | Hosted fixture correction and safe boot
 
-**Summary:** The published promotion-pin reader matches the S2 baseline and preserves the persisted RealityTrace evidence through promotion and re-pin.
+**Summary:** Publish the fixture-only writer-gate correction and the Workbench safe-boot checkpoint.
 
 **Verified:**
 
+- WP-22 fixture-only follow-up 9879de2b passed all 112 case-runner tests, including the unchanged writer scan. The 20 ignored tests include mode-specific and externally controlled fixtures.
+- Workbench T4a checkpoint 05d50c8 is published. The restart regression failed on bbe6c73 because a bundle activation succeeded with a durable safe-mode violation. The corrected gate passed the same regression and six additional safe-mode tests. Type checking passed.
+- The existing S1 anchor digest verified locally. Its same-user, unsigned receipt and missing server push time keep independent anchoring partial.
 - Clean checkpoint 7bfe543c matched all 17 frozen S2 baseline rows except duration, including the AT-09 partial result and all 12 contract digests.
 - The joined NT-07 test passed at 7bfe543c using the RealityTrace SQLite proof at da47df5. The settled evidence retained its world reference after promotion and a new case episode froze under the new pin.
 - WP-22 is published at 7bfe543c on fde/wp22-snapshot-pin. The promotion reader passed 11 staged tests and all 12 saga tests, plus case-runner Clippy. The selected pin survives a cell repin, and a corrupt selector cannot fall back to a stale flat pin.
@@ -120,7 +123,8 @@
 
 **Limits:**
 
-- Hosted CI run 44660288365 and Portability run 44660318375 were dispatched for 7bfe543c. Linux guest resets were qualified separately in run 44597378183.
+- The initial WP-22 hosted run failed the unchanged production writer scan because two test fixtures wrote directly to case files. Hosted recheck 44662288851 and Portability recheck 44662292352 cover 9879de2b. Workbench verify run 44662429211 covers 05d50c8.
+- S3 has no registered proof slice or confirmed live phone enrollment route. The owner runbook and WP-35 independent anchoring require those implementation and provisioning prerequisites.
 - SEA assignment events do not identify their exact issued or resumed delegation link. The legacy writer appends the assignment state and link separately, so the latest rows cannot establish a current unambiguous delegation after a partial write.
 - SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
 - The local just check reached the Git history scan after passing status, format, Clippy, typecheck and live cargo-deny. The workstation full-history scan reported 166 findings outside the clean Chrono commit range.
@@ -164,7 +168,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish hosted CI and native Portability at 7bfe543c. Continue the delegate-only Connect contract and the T4a boot checkpoint. Resolve the trusted issuance source and durable link binding before enabling assigned starts.
+**Next:** Finish the exact hosted runs. Continue the delegate-only RPC contract and live Workbench presentation. Resolve the authoritative issuance, exact link binding, and verified agent identity before enabling assigned starts.
 
 **Evidence:**
 
