@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 378
+**Status revision:** 379
 
-**Stage:** FDE S2 | Chrono-free dependency graph
+**Stage:** FDE S2 | Selected snapshot for promotion pins
 
-**Summary:** Pin the Chrono-free DomainForge producer and preserve authorized compiler-upgrade lineage on the isolated candidate branch.
+**Summary:** Use the case selector when resolving the promotion world pin.
 
 **Verified:**
 
+- The staged reader regression tests passed with 11 passing and one externally controlled reset case ignored. All 12 promotion saga tests and case-runner Clippy passed.
+- The reader resolves the selected pin through aliased case paths, refuses a corrupt selector even when the flat pin remains, and supports existing legacy case directory names.
 - The linked DomainForge 1.0.0-rc.2 producer is pinned to 0226b504ebda3dcb64ccd8859af7de8c9f0ad7ba. At that commit 1343 native and 23 WASM tests passed, 13 native tests were ignored, and the Python wheel and Node addon passed their focused identity tests.
 - SEA Forge preserved the historical 0.21.0 to 0.22.0 compiler-upgrade tests and verified an authorized 0.22.0 to 1.0.0-rc.2 upgrade with equivalent semantic closure and separately recorded producer identities.
 - The locked all-feature all-target dependency graph contains no Chrono. Live cargo-deny passed advisories, bans, licenses, and sources. Only the official DomainForge Git repository was added to the source allow list for the full-revision pin.
@@ -115,6 +117,8 @@
 
 **Limits:**
 
+- Concurrency mutation tests detected the lock regressions in the observed runs. Their scheduling does not guarantee detection on every run.
+- The final S2 comparison and joined NT-07 proof are pending for this checkpoint.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -154,7 +158,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Verify the committed candidate through hosted CI and Portability. Obtain reset-capable APFS and fixed-NTFS guests before activating the versioned writer.
+**Next:** Run the frozen S2 comparison and the joined SEA Forge and RealityTrace NT-07 proof on this checkpoint.
 
 **Evidence:**
 

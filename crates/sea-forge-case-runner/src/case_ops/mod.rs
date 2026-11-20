@@ -43,7 +43,7 @@ use sea_forge_ledger::LedgerStream;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 fn paths(
     root: &Path,
@@ -60,13 +60,24 @@ fn paths(
 /// Resolve the immutable data tree for this read, or the legacy case directory
 /// when there is no versioned namespace. Keep this path for every file read in
 /// the same logical operation.
-pub fn case_snapshot_dir(root: &Path, case_id: &str) -> Result<std::path::PathBuf, ForgeError> {
-    versioned_store::open(root, case_id)
+pub fn case_snapshot_dir(root: &Path, case_id: &str) -> Result<PathBuf, ForgeError> {
+    selected_case_snapshot(root, case_id)
         .map(|selected| selected.unwrap_or_else(|| root.join("cases").join(case_id)))
-        .map_err(|error| ForgeError::Plan {
-            class: "STORE_INTEGRITY",
-            message: format!("read Field Case snapshot: {error}"),
-        })
+}
+
+pub(crate) fn case_snapshot_for_path(case_dir: &Path) -> Result<PathBuf, ForgeError> {
+    let Some((root, case_id)) = case_guard::versioned_case_location(case_dir) else {
+        return Ok(case_dir.to_path_buf());
+    };
+    selected_case_snapshot(&root, case_id)
+        .map(|selected| selected.unwrap_or_else(|| case_dir.to_path_buf()))
+}
+
+fn selected_case_snapshot(root: &Path, case_id: &str) -> Result<Option<PathBuf>, ForgeError> {
+    versioned_store::open(root, case_id).map_err(|error| ForgeError::Plan {
+        class: "STORE_INTEGRITY",
+        message: format!("read Field Case snapshot: {error}"),
+    })
 }
 
 /// A case view pinned to one selected snapshot, with lazy verified history.

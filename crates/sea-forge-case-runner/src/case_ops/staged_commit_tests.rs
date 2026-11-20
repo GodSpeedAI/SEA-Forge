@@ -679,3 +679,97 @@ fn wait_for_guest_reset() -> ! {
         std::thread::park();
     }
 }
+
+#[test]
+#[cfg_attr(
+    not(any(unix, windows)),
+    ignore = "requires a supported native publisher"
+)]
+fn promotion_reads_staged_case_pin_after_repin() {
+    use crate::promotion::{case_pin, init_store, pin_case, repin};
+
+    let fixture = tempfile::tempdir().unwrap();
+    let cell = fixture.path().join("cell");
+    let store = fixture.path().join("promotion-store");
+    fs::create_dir_all(&cell).unwrap();
+    init_store(&store, "world-a").unwrap();
+    commit_staged(
+        &cell,
+        CASE,
+        create_case().with(Op::RunFile {
+            rel: "pin.json".into(),
+            bytes: br#"{"world_ref":"world-a"}"#.to_vec(),
+        }),
+        None,
+        &dir_sync,
+    )
+    .unwrap();
+    let case = cell.join("cases").join(CASE);
+    fs::create_dir_all(case.join("runs")).unwrap();
+    fs::write(
+        case.join("runs/pin.json"),
+        br#"{"world_ref":"world-legacy"}"#,
+    )
+    .unwrap();
+    repin(&store, "world-b", "test").unwrap();
+    assert_eq!(case_pin(&case).as_deref(), Some("world-a"));
+    assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
+    let selected = versioned_store::open(&cell, CASE).unwrap().unwrap();
+    assert_eq!(
+        fs::read(selected.join("runs/pin.json")).unwrap(),
+        br#"{"world_ref":"world-a"}"#
+    );
+
+    let namespace = versioned_store::namespace(&cell, CASE).unwrap().unwrap();
+    fs::write(namespace.join("current.json"), b"invalid selector").unwrap();
+    assert!(matches!(
+        pin_case(&store, &case),
+        Err(crate::promotion::SagaError::Uncertain(_))
+    ));
+    assert_eq!(
+        fs::read(case.join("runs/pin.json")).unwrap(),
+        br#"{"world_ref":"world-legacy"}"#
+    );
+    #[cfg(unix)]
+    {
+        let alias = fixture.path().join("aliased-cases");
+        std::os::unix::fs::symlink(cell.join("cases"), &alias).unwrap();
+        assert!(matches!(
+            pin_case(&store, &alias.join(CASE)),
+            Err(crate::promotion::SagaError::Uncertain(_))
+        ));
+    }
+}
+
+#[test]
+fn promotion_refuses_malformed_existing_legacy_pin() {
+    use crate::promotion::{init_store, pin_case, SagaError};
+
+    let fixture = tempfile::tempdir().unwrap();
+    let store = fixture.path().join("store");
+    let case = fixture.path().join("cases").join(CASE);
+    init_store(&store, "world-a").unwrap();
+    fs::create_dir_all(case.join("runs")).unwrap();
+    let pin = case.join("runs/pin.json");
+    fs::write(&pin, b"not json").unwrap();
+    assert!(matches!(
+        pin_case(&store, &case),
+        Err(SagaError::Uncertain(_))
+    ));
+    assert_eq!(fs::read(pin).unwrap(), b"not json");
+}
+
+#[test]
+fn promotion_preserves_non_versioned_case_paths() {
+    use crate::promotion::{case_pin, init_store, pin_case, repin};
+
+    let fixture = tempfile::tempdir().unwrap();
+    let store = fixture.path().join("promotion-store");
+    let case = fixture.path().join("cases/customer.v1");
+    init_store(&store, "world-a").unwrap();
+    assert_eq!(case_pin(&case), None);
+    assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
+    repin(&store, "world-b", "test").unwrap();
+    assert_eq!(case_pin(&case).as_deref(), Some("world-a"));
+    assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
+}

@@ -942,7 +942,7 @@ pub fn repin(root: &Path, to: &str, reason: &str) -> Result<(), SagaError> {
 pub fn pin_case(root: &Path, case_dir: &Path) -> Result<String, SagaError> {
     // Check, read the world and write under one per-case lock.
     let _lock = lock_proposal(root, &format!("\0case\0{}", case_dir.display()))?;
-    let existing = case_pin(case_dir);
+    let existing = read_case_pin(case_dir)?;
     if let Some(p) = existing {
         return Ok(p);
     }
@@ -962,7 +962,22 @@ pub fn pin_case(root: &Path, case_dir: &Path) -> Result<String, SagaError> {
 
 /// The world a case is pinned to, if any.
 pub fn case_pin(case_dir: &Path) -> Option<String> {
-    let v: Value =
-        serde_json::from_slice(&fs::read(case_dir.join("runs").join("pin.json")).ok()?).ok()?;
-    v["world_ref"].as_str().map(str::to_owned)
+    read_case_pin(case_dir).ok().flatten()
+}
+
+fn read_case_pin(case_dir: &Path) -> Result<Option<String>, SagaError> {
+    let selected = crate::case_ops::case_snapshot_for_path(case_dir)
+        .map_err(|error| SagaError::Uncertain(format!("resolve case snapshot: {error}")))?;
+    let path = selected.join("runs").join("pin.json");
+    let bytes = match fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(io_err("read case pin", error)),
+    };
+    let value: Value = serde_json::from_slice(&bytes)
+        .map_err(|error| SagaError::Uncertain(format!("invalid case pin: {error}")))?;
+    let world = value["world_ref"]
+        .as_str()
+        .ok_or_else(|| SagaError::Uncertain("case pin has no world_ref".into()))?;
+    Ok(Some(world.to_owned()))
 }

@@ -1443,14 +1443,16 @@ fn creating_field(case_dir: &Path, batch: &Batch) -> bool {
     new_plan || first_record || creation_events
 }
 
+pub(super) fn versioned_case_location(case_dir: &Path) -> Option<(PathBuf, &str)> {
+    let case_id = case_dir.file_name()?.to_str()?;
+    sea_forge_core::path::valid_id_segment(case_id, 128).then(|| (store_root(case_dir), case_id))
+}
+
 fn require_legacy_writer(case_dir: &Path) -> Result<(), ContractError> {
-    let Some(case_id) = case_dir.file_name().and_then(|name| name.to_str()) else {
+    let Some((root, case_id)) = versioned_case_location(case_dir) else {
         return Ok(());
     };
-    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
-        return Ok(());
-    }
-    let namespace = super::versioned_store::namespace(&store_root(case_dir), case_id)
+    let namespace = super::versioned_store::namespace(&root, case_id)
         .map_err(|error| integrity(error.to_string()))?;
     if namespace.is_some() {
         return Err(integrity("case requires the versioned writer".into()));
