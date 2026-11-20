@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 375
+**Status revision:** 376
 
-**Stage:** FDE S2 | Hosted fixture correction and safe boot
+**Stage:** FDE S2 | Delegate contract and live Workbench details
 
-**Summary:** Publish the fixture-only writer-gate correction and the Workbench safe-boot checkpoint.
+**Summary:** Publish the delegate-only Connect checkpoint and prove live bundle details in Chromium.
 
 **Verified:**
 
+- Cognate 3f01dc5 passed the hosted full verify job in run 44663363590. The local focused Connect and assignment suite passed all 98 tests, and protobuf regeneration matched both checked-in files.
+- Workbench safe boot at 05d50c8 passed all seven jobs in 44662429211. The live capability detail checkpoint 8fed14e passed type checking, 11 focused tests, and a Chromium journey that registered and activated a real sample bundle. The browser showed the new activation without a page reload.
+- The WP-22 fixture correction at 9879de2b passed all ten hosted CI jobs and the macOS native restart and Linux/ext4 guest reset jobs. The platform-neutral fixture follow-up fc2da542 passed 112 case-runner tests with 20 ignored.
 - WP-22 fixture-only follow-up 9879de2b passed all 112 case-runner tests, including the unchanged writer scan. The 20 ignored tests include mode-specific and externally controlled fixtures.
 - Workbench T4a checkpoint 05d50c8 is published. The restart regression failed on bbe6c73 because a bundle activation succeeded with a durable safe-mode violation. The corrected gate passed the same regression and six additional safe-mode tests. Type checking passed.
 - The existing S1 anchor digest verified locally. Its same-user, unsigned receipt and missing server push time keep independent anchoring partial.
@@ -123,7 +126,9 @@
 
 **Limits:**
 
-- The initial WP-22 hosted run failed the unchanged production writer scan because two test fixtures wrote directly to case files. Hosted recheck 44662288851 and Portability recheck 44662292352 cover 9879de2b. Workbench verify run 44662429211 covers 05d50c8.
+- Cognate denies assigned starts until a production verifier and authoritative lookup are configured. SEA needs an exact durable link binding and a reservation through run admission. The runtime currently checks expiry before calling the store, and the production gate must enforce it at the serialized commit point.
+- Windows Portability at 9879de2b found that the legacy promotion initializer cannot open a directory for fsync. The reader fixtures now use only prepared case data. Portability recheck 44665538414 covers fc2da542. The legacy promotion write path and APFS/fixed-NTFS operating-system resets still need separate qualification.
+- Workbench run 44663728747 failed its same-tenant settings visibility assertion on the first attempt. The exact test passed locally and the failed jobs are rerunning. Live fragment descriptors, effective authority, and safe-mode controls still need trusted presentation inputs.
 - S3 has no registered proof slice or confirmed live phone enrollment route. The owner runbook and WP-35 independent anchoring require those implementation and provisioning prerequisites.
 - SEA assignment events do not identify their exact issued or resumed delegation link. The legacy writer appends the assignment state and link separately, so the latest rows cannot establish a current unambiguous delegation after a partial write.
 - SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
@@ -168,7 +173,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish the exact hosted runs. Continue the delegate-only RPC contract and live Workbench presentation. Resolve the authoritative issuance, exact link binding, and verified agent identity before enabling assigned starts.
+**Next:** Confirm the fixture-only Windows Portability recheck and Workbench hosted retry. Resolve trusted pre-start assignment issuance, verified agent identity, SEA link reservation, and the serialized expiry check before enabling assigned starts.
 
 **Evidence:**
 
