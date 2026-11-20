@@ -1,10 +1,30 @@
 # Current status
 
-**Status revision:** 380
+**Status revision:** 381
 
-**Stage:** FDE open work | WP-23 assignment binding landed; guest-reset control green
+**Stage:** FDE open work | WP-23 binding lane hosted-CI green
 
-**Summary:** The WP-23 lane (fde/wp23-delegate-verifier de8f76d1) now binds the full approved assignment to the delegated run per assignment-binding.v1, contracts-first, with a fail-closed trusted read; the Portability guest-reset control at fde/wp21b-evidence-f9eaf164 passed all three jobs; the missing fde-sxr-integration RealityTrace worktree was recreated at da47df5.
+**Summary:** WP-23 follow-up 20ce2bd8 registered the four binding oracle codes, bounded hex64 and rebased the manifest count; hosted CI 44825583372 passed every job on fde/wp23-delegate-verifier.
+
+**Verified:**
+
+- CI 44825583372 on 20ce2bd8: lint, scope, MSRV 1.92, test (ubuntu, server), test (ubuntu, rest), workbench, verify (macos, server), verify (macos, rest), authority-opa all green
+- S2 slice rerun after the fixes: 17 rows, zero diffs vs the frozen 637cbece baseline; oracle-codes check ok (48 codes, one home each)
+
+**Limits:**
+
+- APFS and fixed-NTFS guest reset qualification remains owner-blocked (no approved Windows guest image, no disposable Apple host)
+- Cognate Connect wiring and the Workbench journey for the binding are not started (handoff section 2 items 3-5)
+
+**Next:** Wire Cognate's assigned-start Connect providers against the recorded binding and the commit-order regression, then Workbench PR #40 through the operator journey.
+
+**Evidence:**
+
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44825583372
+
+---
+
+# Historical status
 
 **Verified:**
 
