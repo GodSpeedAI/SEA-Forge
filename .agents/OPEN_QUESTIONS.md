@@ -73,3 +73,21 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
   unfinished and cannot qualify until actual isolated resource execution is
   demonstrated. Stage B/C must wait for Stage A. Frozen v1 and its gap inventory
   remain untouched; passing regressions do not close those gaps.
+
+## WP-23 authoritative assigned-run admission
+
+SEA Forge records assignment state and delegation links separately. The assignment
+row lacks the exact link ID and the brief and budget. Cognate retains the full
+assignment with a run after admission. An interrupted legacy write can leave a
+link that cannot be attributed to the latest assignment transition.
+
+- Preferred approach. Issue the full assignment in a durable Cognate store.
+  SEA Forge should atomically bind its ID to the exact issued link and grant a
+  reservation to the authenticated delegate. Cognate should enforce lease expiry
+  at the serialized run commit.
+- Existing-source option. An existing trusted issuer can replace the new Cognate
+  storage if it provides the full assignment before start, with equivalent tenant
+  isolation, identity binding, and an immutable reference.
+- Impact. The cross-store reservation and expiry guard add an explicit issuance
+  and recovery contract. Until that contract has a production provider, the
+  published Cognate assigned-start RPC refuses admission by default.

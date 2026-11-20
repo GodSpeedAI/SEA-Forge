@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 376
+**Status revision:** 377
 
-**Stage:** FDE S2 | Delegate contract and live Workbench details
+**Stage:** FDE S2 | Verified snapshot readers and delegate contract
 
-**Summary:** Publish the delegate-only Connect checkpoint and prove live bundle details in Chromium.
+**Summary:** Record the native restart, frozen S2, RealityTrace, and hosted Workbench receipts for the published checkpoints.
 
 **Verified:**
 
+- Exact checkpoint fc2da542 matched all 17 frozen S2 rows except duration, including the expected AT-09 partial result. Joined NT-07 passed again against the real RealityTrace SQLite ledger, and both native Windows and macOS jobs passed in Portability run 44665538414.
+- Hosted Workbench verify run 44663728747 passed all seven jobs at 8fed14e on retry. Its initial attempt missed a same-tenant settings row, and the exact test passed locally before the retry.
+- The local proof runner returned exit 2 for slice s3 because only slices s1 and s2 are registered.
 - Cognate 3f01dc5 passed the hosted full verify job in run 44663363590. The local focused Connect and assignment suite passed all 98 tests, and protobuf regeneration matched both checked-in files.
 - Workbench safe boot at 05d50c8 passed all seven jobs in 44662429211. The live capability detail checkpoint 8fed14e passed type checking, 11 focused tests, and a Chromium journey that registered and activated a real sample bundle. The browser showed the new activation without a page reload.
 - The WP-22 fixture correction at 9879de2b passed all ten hosted CI jobs and the macOS native restart and Linux/ext4 guest reset jobs. The platform-neutral fixture follow-up fc2da542 passed 112 case-runner tests with 20 ignored.
@@ -126,9 +129,9 @@
 
 **Limits:**
 
+- The older promotion-store initializer failed Windows directory fsync in the original reader fixture setup. The final Windows reader tests use prepared case data and pass. Production promotion-store writes on Windows require separate durability support and qualification.
+- T4a live presentation still needs an authenticated safe-mode status and operator clear route, a trusted fragment descriptor producer, and effective authority data. The durable safe-mode controller and event tests already pass.
 - Cognate denies assigned starts until a production verifier and authoritative lookup are configured. SEA needs an exact durable link binding and a reservation through run admission. The runtime currently checks expiry before calling the store, and the production gate must enforce it at the serialized commit point.
-- Windows Portability at 9879de2b found that the legacy promotion initializer cannot open a directory for fsync. The reader fixtures now use only prepared case data. Portability recheck 44665538414 covers fc2da542. The legacy promotion write path and APFS/fixed-NTFS operating-system resets still need separate qualification.
-- Workbench run 44663728747 failed its same-tenant settings visibility assertion on the first attempt. The exact test passed locally and the failed jobs are rerunning. Live fragment descriptors, effective authority, and safe-mode controls still need trusted presentation inputs.
 - S3 has no registered proof slice or confirmed live phone enrollment route. The owner runbook and WP-35 independent anchoring require those implementation and provisioning prerequisites.
 - SEA assignment events do not identify their exact issued or resumed delegation link. The legacy writer appends the assignment state and link separately, so the latest rows cannot establish a current unambiguous delegation after a partial write.
 - SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
@@ -173,7 +176,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Confirm the fixture-only Windows Portability recheck and Workbench hosted retry. Resolve trusted pre-start assignment issuance, verified agent identity, SEA link reservation, and the serialized expiry check before enabling assigned starts.
+**Next:** Decide the authoritative WP-23 issuance and admission contract in OPEN_QUESTIONS.md. Qualify operating-system reset durability on disposable APFS and fixed-NTFS hosts. Complete trusted live presentation inputs before T4b.
 
 **Evidence:**
 
