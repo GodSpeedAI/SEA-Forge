@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 373
+**Status revision:** 374
 
-**Stage:** FDE S2 | Snapshot reader and delegated start
+**Stage:** FDE S2 | Snapshot reader and joined proof passed
 
-**Summary:** Publish the selected-snapshot promotion checkpoint and trace the trusted data needed for delegate-only run starts.
+**Summary:** The published promotion-pin reader matches the S2 baseline and preserves the persisted RealityTrace evidence through promotion and re-pin.
 
 **Verified:**
 
+- Clean checkpoint 7bfe543c matched all 17 frozen S2 baseline rows except duration, including the AT-09 partial result and all 12 contract digests.
+- The joined NT-07 test passed at 7bfe543c using the RealityTrace SQLite proof at da47df5. The settled evidence retained its world reference after promotion and a new case episode froze under the new pin.
 - WP-22 is published at 7bfe543c on fde/wp22-snapshot-pin. The promotion reader passed 11 staged tests and all 12 saga tests, plus case-runner Clippy. The selected pin survives a cell repin, and a corrupt selector cannot fall back to a stale flat pin.
 - At 9cbc3e16, separate deliberate lock and recovery mutations failed each of their targeted W3, W4, and W2 tests in the observed runs.
 - The WP-23 Workbench binding passed its 4 focused tests and type checking. A broader run was stopped after failures in stream cancellation, directory-picker selection, and the tool-execution journey.
@@ -118,7 +120,8 @@
 
 **Limits:**
 
-- Exact S2 and joined NT-07 are running for the published WP-22 checkpoint. The mutation checks do not guarantee a failing scheduling interleaving on every run.
+- Hosted CI run 44660288365 and Portability run 44660318375 were dispatched for 7bfe543c. Linux guest resets were qualified separately in run 44597378183.
+- SEA assignment events do not identify their exact issued or resumed delegation link. The legacy writer appends the assignment state and link separately, so the latest rows cannot establish a current unambiguous delegation after a partial write.
 - SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
 - The local just check reached the Git history scan after passing status, format, Clippy, typecheck and live cargo-deny. The workstation full-history scan reported 166 findings outside the clean Chrono commit range.
 - GitHub reports no registered self-hosted runners for this repository. An approved bootable Windows image and a disposable remote Apple host with guest reset control are still missing.
@@ -161,7 +164,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish the exact S2 and NT-07 runs at 7bfe543c. Implement the verified delegate-only handoff with an authoritative pre-start assignment source. Qualify APFS and fixed NTFS guest resets through GitHub Actions.
+**Next:** Finish hosted CI and native Portability at 7bfe543c. Continue the delegate-only Connect contract and the T4a boot checkpoint. Resolve the trusted issuance source and durable link binding before enabling assigned starts.
 
 **Evidence:**
 
