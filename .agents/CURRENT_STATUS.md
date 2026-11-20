@@ -1,10 +1,34 @@
 # Current status
 
-**Status revision:** 379
+**Status revision:** 380
 
-**Stage:** FDE WP-23 and T4a | Deadline, exact link, and safe-mode controls
+**Stage:** FDE open work | WP-23 assignment binding landed; guest-reset control green
 
-**Summary:** Publish deadline-bounded Cognate admission, SEA’s exact assignment link binding, and authenticated Workbench safe-mode controls.
+**Summary:** The WP-23 lane (fde/wp23-delegate-verifier de8f76d1) now binds the full approved assignment to the delegated run per assignment-binding.v1, contracts-first, with a fail-closed trusted read; the Portability guest-reset control at fde/wp21b-evidence-f9eaf164 passed all three jobs; the missing fde-sxr-integration RealityTrace worktree was recreated at da47df5.
+
+**Verified:**
+
+- SEA WP-23 de8f76d1: 173 conformance scenarios (159 passing, 14 pending wp-31) with FDE_WP21A_FINAL=1; server+case-runner 806 passed / 0 failed / 22 ignored; 13 contract digests match (assignment-binding.v1.json added, execution-episode-ref.v1.json deliberately re-pinned per OD-3); S2 slice matched all 17 frozen rows vs the 637cbece baseline; graft build refreshed; hosted CI 44804758916 running
+- Portability guest-reset control run 44780753549 (fde/wp21b-evidence-f9eaf164): Field Case guest reset Linux/ext4 3m9s, verify windows 18m55s, verify macos app sandbox jail 2m57s, field-case-linux-guest-reset artifact uploaded
+- _wt/fde-sxr-integration recreated as a detached worktree at da47df591cb6bd846f5537266c4ea3d8a1802504 with sxr-cli/examples/nt07_persist.rs present (joined NT-07 fixture reference)
+
+**Limits:**
+
+- APFS and fixed-NTFS guest resets remain open (no approved Windows guest image or disposable Apple host registered); only application-restart-level evidence exists
+- The WP-23 binding has no SFWP read verb or Cognate/Workbench wiring yet; the trusted read is internal
+- Hosted CI 44804758916 on de8f76d1 was still running when this entry was recorded
+
+**Next:** Wire Cognate's assigned-start Connect providers against the recorded binding and the durable idempotency regression (handoff section 2 items 3-4), then Workbench PR #40 through the operator journey; dispatch the guest-reset workflow at the next combined storage/promotion candidate.
+
+**Evidence:**
+
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44804758916
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44780753549
+- contracts/fde/assignment-binding.v1.json (de8f76d1)
+
+---
+
+# Historical status
 
 **Verified:**
 
