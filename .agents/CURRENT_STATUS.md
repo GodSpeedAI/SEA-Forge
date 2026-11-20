@@ -1,13 +1,15 @@
 # Current status
 
-**Status revision:** 381
+**Status revision:** 382
 
-**Stage:** FDE S2 | Promotion fixtures through the case guard
+**Stage:** FDE S2 | Platform-independent snapshot fixtures
 
-**Summary:** Correct test fixture setup so the unchanged production writer scan passes.
+**Summary:** Exercise the same selected-pin and refusal paths without depending on promotion-store initialization.
 
 **Verified:**
 
+- All ten hosted CI jobs passed at 9879de2b in run 44662288851. The Linux/ext4 guest reset and macOS native restart jobs passed in run 44662292352.
+- The complete case-runner package passed 112 tests with 20 ignored after the fixture follow-up. All four reader assertions, the unchanged production writer scan, and 12 real promotion saga tests passed.
 - The complete case-runner package passed 112 tests with 20 ignored, including the unchanged writer scan, selected pin, aliased case path, unreadable selector, and malformed legacy pin tests.
 - Checkpoint 7bfe543c matched all 17 S2 rows except duration and passed the joined NT-07 proof against RealityTrace da47df5. The correction changes test fixtures only.
 - All ten hosted CI jobs passed for the supervisor correction at a33c8147 in run 44599724625. The change waits for both durable close records before asserting the projection.
@@ -120,7 +122,7 @@
 
 **Limits:**
 
-- The first hosted WP-22 run caught direct case-file writes in two test fixtures. The updated fixtures use the existing case guard, and an invalid selector directory exercises refusal without writing an unguarded case file.
+- The Windows job at 9879de2b reached four added reader tests and failed while their promotion-store fixture setup opened a directory for fsync. The updated tests create case fixtures using the existing guard and still test selected, corrupt, and legacy pin reads on eligible platforms. Windows promotion-store writes are not qualified.
 - Concurrency mutation tests detected the lock regressions in the observed runs. Their scheduling does not guarantee detection on every run.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
@@ -161,7 +163,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Use hosted CI and Portability to verify the fixture-only correction. Keep the previous S2 and joined NT-07 receipts tied to 7bfe543c.
+**Next:** Verify the fixture-only follow-up on Windows and macOS. Keep full promotion-store write qualification separate from the selected reader proof.
 
 **Evidence:**
 

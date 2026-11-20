@@ -685,14 +685,13 @@ fn wait_for_guest_reset() -> ! {
     not(any(unix, windows)),
     ignore = "requires a supported native publisher"
 )]
-fn promotion_reads_staged_case_pin_after_repin() {
-    use crate::promotion::{case_pin, init_store, pin_case, repin};
+fn promotion_reads_staged_case_pin_without_cell_history() {
+    use crate::promotion::{case_pin, pin_case};
 
     let fixture = tempfile::tempdir().unwrap();
     let cell = fixture.path().join("cell");
     let store = fixture.path().join("promotion-store");
     fs::create_dir_all(&cell).unwrap();
-    init_store(&store, "world-a").unwrap();
     commit_staged(
         &cell,
         CASE,
@@ -705,7 +704,7 @@ fn promotion_reads_staged_case_pin_after_repin() {
     )
     .unwrap();
     let case = cell.join("cases").join(CASE);
-    repin(&store, "world-b", "test").unwrap();
+    assert!(!store.exists());
     assert_eq!(case_pin(&case).as_deref(), Some("world-a"));
     assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
     let selected = versioned_store::open(&cell, CASE).unwrap().unwrap();
@@ -725,14 +724,22 @@ fn promotion_reads_staged_case_pin_after_repin() {
 
 #[test]
 fn promotion_does_not_fall_back_from_an_unreadable_selector() {
-    use crate::promotion::{init_store, pin_case, SagaError};
+    use crate::promotion::{case_pin, pin_case, SagaError};
 
     let fixture = tempfile::tempdir().unwrap();
     let root = fixture.path();
     let store = root.join("promotion-store");
     let case = root.join("cases").join(CASE);
-    init_store(&store, "world-legacy").unwrap();
-    assert_eq!(pin_case(&store, &case).unwrap(), "world-legacy");
+    let legacy_pin = br#"{"world_ref":"world-legacy"}"#;
+    commit(
+        &case,
+        Batch::new().with(Op::RunFile {
+            rel: "pin.json".into(),
+            bytes: legacy_pin.to_vec(),
+        }),
+    )
+    .unwrap();
+    assert_eq!(case_pin(&case).as_deref(), Some("world-legacy"));
 
     // A selector must be a file. A broken namespace must never expose the
     // otherwise valid pin in the older flat case directory.
@@ -741,20 +748,17 @@ fn promotion_does_not_fall_back_from_an_unreadable_selector() {
         pin_case(&store, &case),
         Err(SagaError::Uncertain(_))
     ));
-    assert_eq!(
-        fs::read(case.join("runs/pin.json")).unwrap(),
-        br#"{"world_ref":"world-legacy"}"#
-    );
+    assert_eq!(case_pin(&case), None);
+    assert_eq!(fs::read(case.join("runs/pin.json")).unwrap(), legacy_pin);
 }
 
 #[test]
 fn promotion_refuses_malformed_existing_legacy_pin() {
-    use crate::promotion::{init_store, pin_case, SagaError};
+    use crate::promotion::{case_pin, pin_case, SagaError};
 
     let fixture = tempfile::tempdir().unwrap();
     let store = fixture.path().join("store");
     let case = fixture.path().join("cases").join(CASE);
-    init_store(&store, "world-a").unwrap();
     commit(
         &case,
         Batch::new().with(Op::RunFile {
@@ -768,20 +772,26 @@ fn promotion_refuses_malformed_existing_legacy_pin() {
         pin_case(&store, &case),
         Err(SagaError::Uncertain(_))
     ));
+    assert_eq!(case_pin(&case), None);
     assert_eq!(fs::read(pin).unwrap(), b"not json");
 }
 
 #[test]
 fn promotion_preserves_non_versioned_case_paths() {
-    use crate::promotion::{case_pin, init_store, pin_case, repin};
+    use crate::promotion::{case_pin, pin_case};
 
     let fixture = tempfile::tempdir().unwrap();
     let store = fixture.path().join("promotion-store");
     let case = fixture.path().join("cases/customer.v1");
-    init_store(&store, "world-a").unwrap();
     assert_eq!(case_pin(&case), None);
-    assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
-    repin(&store, "world-b", "test").unwrap();
+    commit(
+        &case,
+        Batch::new().with(Op::RunFile {
+            rel: "pin.json".into(),
+            bytes: br#"{"world_ref":"world-a"}"#.to_vec(),
+        }),
+    )
+    .unwrap();
     assert_eq!(case_pin(&case).as_deref(), Some("world-a"));
     assert_eq!(pin_case(&store, &case).unwrap(), "world-a");
 }
