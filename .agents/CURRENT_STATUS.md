@@ -1,4 +1,34 @@
-# Current status
+**Status revision:** 381
+
+**Stage:** CognitiveOS convergence #108 | implementation session 1, integration bases and #109
+
+**Summary:** Created one integration branch per affected repository, aligned Cognate Workbench and Horizon on 0.10.0, and verified the standalone Workbench and Horizon baselines for ticket #109; #110, #111 and #117 are the ready frontier.
+
+**Verified:**
+
+- Cognate Workbench integration/cognitiveos-108 merges capability-runtime t4a 9824735 and WP-23 668f686 plus the vocabulary commit; every @godspeedai/cognate-* pin and installed copy resolves to 0.10.0; bun run typecheck passes.
+- Workbench expert, team, independent-review and plugin suites passed 107 tests with 1053 assertions; basic session, tool execution and contract suites passed 76 tests; SXR was absent from PATH.
+- Horizon integration/cognitiveos-108 at 18b27d1 passed check-single-cognate (28 packages, one copy each) and bun run check.
+- cognate-runtime-api 0.10.0 exports CaseContext and caseContextIssues, which satisfies the I5 compatibility gate the convergence design requires.
+- Cognate integration/cognitiveos-108 is created from the 0.10.0 main line; SEA-Forge integration/cognitiveos-108 is created from fde/integration plus the design package.
+
+**Limits:**
+
+- No CognitiveOS ticket is implemented yet beyond the #109 alignment; #110, #111 and #117 are next.
+- Workbench consumes published @godspeedai/cognate-* packages only. The #112 rlm contract needs a published Cognate version and there is no npm credential on this host; no alias or tarball substitute is permitted.
+- The full Workbench suite, browser journeys, PostgreSQL suites and Horizon verify were not run in this session.
+- Integration branches are local-only; none are pushed and no protected-main merge is proposed.
+
+**Next:** Commit and push the #109 version gate, implement #110, #111 and #117 in isolated worktrees, then implement the Cognate half of #112 and resolve the Cognate publication gate with the owner.
+
+**Evidence:**
+
+- .agents/reports/2026-11-19-cognitiveos-convergence/IMPLEMENTATION-HANDOFF.md
+- https://github.com/GodSpeedAI/SEA-Forge/issues/108
+
+---
+
+# Historical status
 
 **Status revision:** 380
 
@@ -26,9 +56,6 @@
 - https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44780753549
 - contracts/fde/assignment-binding.v1.json (de8f76d1)
 
----
-
-# Historical status
 
 **Verified:**
 
