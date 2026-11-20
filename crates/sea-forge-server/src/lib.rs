@@ -992,6 +992,11 @@ pub enum Request {
         /// Field Case: `assign:<case_id>:<plan_item_id>:<n>:<k>`.
         #[serde(default)]
         assignment_id: Option<String>,
+        /// Field Case: the approved assignment (`assignment-binding.v1`
+        /// `AssignmentApproval`: explicit domain_meaning and the five SOP 5.1
+        /// currency ceilings; WP-23). Required on a Field Case delegate.
+        #[serde(default)]
+        assignment: Option<serde_json::Value>,
         endpoint: String,
         instruction: String,
         #[serde(default)]
@@ -3342,6 +3347,7 @@ pub async fn handle_request_as(
             case_id: field_case_id,
             episode_ref,
             assignment_id,
+            assignment,
             endpoint,
             instruction,
             run_id: requested_run_id,
@@ -3370,6 +3376,8 @@ pub async fn handle_request_as(
                         .map(|d| d.gateway_actor_id()),
                     endpoint: Some(&endpoint),
                     timeout_s: u64::from(max_turns),
+                    assignment: assignment.filter(|_| assignment_id.is_some()),
+                    instruction: Some(instruction.clone()),
                 },
             )
             .await;
@@ -3936,6 +3944,7 @@ pub async fn handle_request_as(
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
                     timeout_s: timeout,
+                    ..GateActor::default()
                 },
             )
             .await
@@ -3993,6 +4002,7 @@ pub async fn handle_request_as(
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
                     timeout_s: timeout,
+                    ..GateActor::default()
                 },
             )
             .await
@@ -4038,6 +4048,7 @@ pub async fn handle_request_as(
                         .map(|d| d.gateway_actor_id()),
                     endpoint: None,
                     timeout_s: 0,
+                    ..GateActor::default()
                 },
             )
             .await;
@@ -4108,13 +4119,19 @@ fn forge_error_response(error: &ForgeError) -> serde_json::Value {
     })
 }
 
-/// Who a gated request is from, as the identity gate established it.
-#[derive(Clone, Copy, Default)]
+/// Who a gated request is from, as the identity gate established it, plus what
+/// a delegate carries for its assignment binding (WP-23).
+#[derive(Clone, Default)]
 struct GateActor<'a> {
     actor: Option<&'a str>,
     gateway: Option<&'a str>,
     endpoint: Option<&'a str>,
     timeout_s: u64,
+    /// The approved assignment (`assignment-binding.v1`), as the delegate
+    /// request carried it; `None` on every other verb.
+    assignment: Option<serde_json::Value>,
+    /// The delegate request's instruction (the bound Brief's instruction).
+    instruction: Option<String>,
 }
 
 /// The execution gate (WP-21, README §7) for one request, under the case's
@@ -4144,6 +4161,7 @@ async fn admit_episode(
         who.gateway.map(str::to_string),
     );
     let timeout_s = who.timeout_s;
+    let (approval, instruction) = (who.assignment, who.instruction);
     let (episode_ref, transition_items) = (episode_ref.clone(), transition_items.clone());
     let result = tokio::task::spawn_blocking(move || {
         sfwp::episode_gate::admit(
@@ -4155,6 +4173,8 @@ async fn admit_episode(
                 episode_ref: &episode_ref,
                 transition_items: &transition_items,
                 assignment_id: assignment.as_deref(),
+                assignment: approval.as_ref(),
+                instruction: instruction.as_deref(),
                 endpoint: endpoint.as_deref(),
                 actor: actor.as_deref(),
                 gateway_actor: gateway.as_deref(),

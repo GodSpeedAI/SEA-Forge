@@ -1,0 +1,36 @@
+{
+  "domain_meaning": "An evidence record names an independent source.",
+  "context_refs": [
+    {
+      "ref": "doc:handoff-note-1",
+      "trust": "untrusted_reference"
+    }
+  ],
+  "budget": [
+    {
+      "currency": "time",
+      "limit": 14400,
+      "unit": "seconds"
+    },
+    {
+      "currency": "attention",
+      "limit": "unknown",
+      "unit": "operator_minutes"
+    },
+    {
+      "currency": "attention",
+      "limit": "unknown",
+      "unit": "operator_minutes"
+    },
+    {
+      "currency": "risk",
+      "limit": "unknown",
+      "unit": "class"
+    },
+    {
+      "currency": "recovery",
+      "limit": 1,
+      "unit": "revert_steps"
+    }
+  ]
+}

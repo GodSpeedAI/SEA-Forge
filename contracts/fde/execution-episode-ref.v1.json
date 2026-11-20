@@ -364,9 +364,13 @@
         },
         "assignment_id": {
           "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/assignment_id"
+        },
+        "assignment": {
+          "$ref": "urn:sea-forge:fde:assignment-binding:v1#/$defs/AssignmentApproval",
+          "description": "The approved assignment (WP-23, assignment-binding.v1): explicit domain_meaning and the five SOP 5.1 currency ceilings from the approval path. REQUIRED on a Field Case delegate, new or resume; the response of an accepted request is unchanged. adoptable_problem is never sent: the frozen case supplies it, and instruction already travels on this request."
         }
       },
-      "description": "case_id is required (the wire verb had none before this contract). On a Field Case, episode_ref and assignment_id are required; episode_ref.case_id equals case_id; the assignment id's case, step and n equal the episode's; k is new for a new delegation (ASSIGNMENT_ID_INVALID) or the id of an interrupted assignment whose link has not expired for a resume (ASSIGNMENT_LINK_EXPIRED otherwise)."
+      "description": "case_id is required (the wire verb had none before this contract). On a Field Case, episode_ref and assignment_id are required; episode_ref.case_id equals case_id; the assignment id's case, step and n equal the episode's; k is new for a new delegation (ASSIGNMENT_ID_INVALID) or the id of an interrupted assignment whose link has not expired for a resume (ASSIGNMENT_LINK_EXPIRED otherwise). Since assignment-binding.v1 (WP-23) the delegate also carries `assignment`, the approved Brief and Budget values; the admitted run records them as the assignment binding, and a resume must match the recorded binding (assignment-binding.v1 Error codes)."
     },
     "Error": {
       "type": "object",

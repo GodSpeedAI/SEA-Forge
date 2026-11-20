@@ -50,6 +50,12 @@ pub struct GateInput<'a> {
     pub transition_items: &'a Value,
     /// `delegate`.
     pub assignment_id: Option<&'a str>,
+    /// `delegate`: the approved assignment (`assignment-binding.v1`
+    /// `AssignmentApproval`), as the request carried it (WP-23).
+    pub assignment: Option<&'a Value>,
+    /// `delegate`: the request's instruction (the Brief's `instruction`; the
+    /// approval does not repeat it).
+    pub instruction: Option<&'a str>,
     /// The `delegate` endpoint (names the delegated agent).
     pub endpoint: Option<&'a str>,
     /// The authenticated principal of the request, when one was resolved.
@@ -153,6 +159,8 @@ pub fn recheck_human_completion(root: &Path, case_id: &str, item: &str) -> Resul
             episode_ref: &Value::Null,
             transition_items: &Value::Null,
             assignment_id: None,
+            assignment: None,
+            instruction: None,
             endpoint: None,
             actor: None,
             gateway_actor: None,
@@ -183,6 +191,8 @@ pub fn recheck_transitions(
             episode_ref: &Value::Null,
             transition_items: &Value::Array(items),
             assignment_id: None,
+            assignment: None,
+            instruction: None,
             endpoint: None,
             actor: None,
             gateway_actor: None,
@@ -366,6 +376,44 @@ fn parse_assignment(id: &str) -> Option<(String, String, u64, u64)> {
         return None;
     }
     Some((case.into(), item.into(), n.parse().ok()?, k.parse().ok()?))
+}
+
+/// The id parts of an assignment, for the trusted read's joins.
+pub fn parse_assignment_parts(id: &str) -> Option<(String, String, u64, u64)> {
+    parse_assignment(id)
+}
+
+/// The five SOP 5.1 currencies each appear exactly once (assignment.v1 checks
+/// the count; uniqueness is semantic, `ASSIGNMENT_BUDGET_INVALID`).
+fn currencies_unique(budget: &Value) -> bool {
+    let Some(entries) = budget.as_array() else {
+        return false;
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    entries.len() == 5
+        && entries
+            .iter()
+            .all(|e| seen.insert(e["currency"].as_str().unwrap_or("").to_string()))
+}
+
+/// What the admitted run binds (assignment-binding.v1, WP-23).
+#[derive(Clone)]
+enum BoundAssignment {
+    /// A new delegation: compose the full Assignment at the write, from the
+    /// request's instruction, the freeze's adoptable problem and the approval.
+    New {
+        id: String,
+        case: String,
+        item: String,
+        n: u64,
+        k: u64,
+        problem: String,
+        approval: Value,
+    },
+    /// A resume: the recorded binding, verbatim.
+    Reuse {
+        binding: serde_json::Map<String, Value>,
+    },
 }
 
 #[derive(Debug)]
@@ -680,6 +728,12 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
     let decision = find_decision(root, &dir, &object, &config)?;
     // R10: the assignment.
     let mut assignment: Option<(String, &str)> = None;
+    // WP-23 (assignment-binding.v1): what the admitted run binds. `New` composes
+    // the full Assignment at the write (the freeze supplies the adoptable
+    // problem); `Reuse` re-records the interrupted assignment's binding
+    // verbatim — the approval is a property of the id (AT-17), so a resume
+    // must match it, not replace it.
+    let mut bound: Option<BoundAssignment> = None;
     if let Some(id) = input.assignment_id.filter(|_| delegate) {
         let invalid = |why: &str| AdmissionError::refuse("ASSIGNMENT_ID_INVALID", why, None);
         let Some((c, i, an, k)) = parse_assignment(id) else {
@@ -697,6 +751,7 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
             )
         })?;
         let mine: Vec<&Value> = lines.iter().filter(|l| l["assignment_id"] == id).collect();
+        let last_row = mine.last().cloned();
         match mine.last() {
             None => assignment = Some((id.to_string(), "issued")),
             Some(last) if last["state"] == "interrupted" => {
@@ -718,6 +773,78 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
                     "k is already issued and that assignment is not interrupted",
                 ))
             }
+        }
+        // The approved assignment (assignment-binding.v1): explicit
+        // domain_meaning and the five SOP currency ceilings. The generic case
+        // budget and token ceiling are insufficient; the adoptable problem is
+        // never caller-supplied (the frozen case supplies it).
+        let approval = match input.assignment {
+            Some(approval) => approval,
+            None => {
+                return Err(AdmissionError::refuse(
+                    "ASSIGNMENT_APPROVAL_REQUIRED",
+                    "a Field Case delegate carries the approved assignment: domain_meaning and the five currency ceilings",
+                    None,
+                ))
+            }
+        };
+        let invalid = |why: &str| AdmissionError::refuse("ASSIGNMENT_APPROVAL_INVALID", why, None);
+        sea_forge_case_runner::case_ops::contract::assignment_approval_is_valid(approval)
+            .map_err(|why| invalid(&format!("the approved assignment is not valid: {why}")))?;
+        if !currencies_unique(&approval["budget"]) {
+            return Err(invalid(
+                "the budget must carry each of the five currencies exactly once",
+            ));
+        }
+        match (&assignment, last_row) {
+            // A new delegation composes the binding at the write.
+            (Some((id, "issued")), _) => {
+                let problem = facts.adoptable_problem.clone().ok_or_else(|| {
+                    AdmissionError::refuse(
+                        "FREEZE_INCOMPLETE",
+                        "store integrity: the frozen episode supplies no adoptable problem (criteria.intention)",
+                        Some("I-1"),
+                    )
+                })?;
+                bound = Some(BoundAssignment::New {
+                    id: id.clone(),
+                    case: c,
+                    item: i,
+                    n: an,
+                    k,
+                    problem,
+                    approval: approval.clone(),
+                });
+            }
+            // A resume re-records the interrupted assignment's binding, and the
+            // request's approval must equal the recorded one. A legacy row
+            // (pre-binding) has nothing to match: fail closed, new k.
+            (Some((_, "resumed")), Some(last)) => {
+                let recorded = last["binding"].as_object().ok_or_else(|| {
+                    AdmissionError::refuse(
+                        "ASSIGNMENT_APPROVAL_MISMATCH",
+                        "the interrupted assignment is a legacy row with no recorded binding; a new k with a fresh approval is needed",
+                        None,
+                    )
+                })?;
+                let bound_assignment = &recorded["assignment"];
+                // `budget` sits beside `brief` on the Assignment (assignment.v1).
+                let differs = bound_assignment["brief"]["domain_meaning"]
+                    != approval["domain_meaning"]
+                    || bound_assignment["brief"]["context_refs"] != approval["context_refs"]
+                    || bound_assignment["budget"] != approval["budget"];
+                if differs {
+                    return Err(AdmissionError::refuse(
+                        "ASSIGNMENT_APPROVAL_MISMATCH",
+                        "the resume's approval differs from the recorded binding",
+                        None,
+                    ));
+                }
+                bound = Some(BoundAssignment::Reuse {
+                    binding: recorded.clone(),
+                });
+            }
+            _ => {}
         }
     }
     let assignment = assignment.map(|(id, state)| (id, state, case_records::now_rfc3339()));
@@ -784,18 +911,75 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
                     Some("I-1"),
                 )
             })?;
+            // The binding joins the link and run this same batch wrote: the
+            // existing run is the reservation and correlation identity.
+            let binding = match &bound {
+                Some(BoundAssignment::Reuse { binding }) => Some(Value::Object(binding.clone())),
+                Some(BoundAssignment::New {
+                    id: bound_id,
+                    case,
+                    item: bound_item,
+                    n: bound_n,
+                    k,
+                    problem,
+                    approval,
+                }) => {
+                    let instruction = input.instruction.unwrap_or("");
+                    if instruction.is_empty() {
+                        return Err(AdmissionError::refuse(
+                            "ASSIGNMENT_APPROVAL_INVALID",
+                            "the delegate request carries no instruction for the bound brief",
+                            None,
+                        ));
+                    }
+                    let brief = json!({
+                        "instruction": instruction,
+                        "adoptable_problem": problem,
+                        "domain_meaning": approval["domain_meaning"],
+                        "context_refs": approval["context_refs"],
+                    });
+                    let assignment_doc = json!({
+                        "assignment_id": bound_id, "case_id": case, "step_id": bound_item,
+                        "n": bound_n, "k": k, "episode_ref": episode_ref,
+                        "brief": brief, "budget": approval["budget"], "issued_at": at,
+                    });
+                    let body = json!({"assignment_id": bound_id, "episode_ref": episode_ref,
+                                      "brief": brief, "budget": approval["budget"],
+                                      "link_id": link_id, "run_id": run_id});
+                    let binding = json!({"version": 1, "assignment": assignment_doc,
+                                         "link_id": link_id, "run_id": run_id,
+                                         "binding_digest": case_records::digest_of(&body),
+                                         "recorded_at": at});
+                    sea_forge_case_runner::case_ops::contract::assignment_binding_is_valid(
+                        &binding,
+                    )
+                    .map_err(|why| {
+                        AdmissionError::refuse(
+                            "ASSIGNMENT_APPROVAL_INVALID",
+                            &format!("the composed assignment binding is not valid: {why}"),
+                            None,
+                        )
+                    })?;
+                    Some(binding)
+                }
+                None => None,
+            };
             // Keep the assignment first: the legacy writer can stop between appends.
+            let mut line = json!({
+                "assignment_id": id,
+                "state": state,
+                "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
+                "link_id": link_id,
+                "at": at,
+            });
+            if let Some(binding) = binding {
+                line["binding"] = binding;
+            }
             batch.ops.insert(
                 0,
                 Op::Append {
                     file: ASSIGNMENTS.into(),
-                    line: json!({
-                        "assignment_id": id,
-                        "state": state,
-                        "episode_key": {"case_id": input.case_id, "plan_item_id": item, "n": n},
-                        "link_id": link_id,
-                        "at": at,
-                    }),
+                    line,
                 },
             );
         }

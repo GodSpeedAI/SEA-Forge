@@ -10,8 +10,10 @@ use std::sync::OnceLock;
 
 const REGISTRY: &str =
     include_str!("../../../../contracts/fde/fixtures/case-record-kinds/valid/registry.json");
-const SCHEMAS: [&str; 5] = [
+const SCHEMAS: [&str; 7] = [
     include_str!("../../../../contracts/fde/anchor.v1.json"),
+    include_str!("../../../../contracts/fde/assignment.v1.json"),
+    include_str!("../../../../contracts/fde/assignment-binding.v1.json"),
     include_str!("../../../../contracts/fde/case-record-append.v1.json"),
     include_str!("../../../../contracts/fde/case-record-append.v2.json"),
     include_str!("../../../../contracts/fde/field-case.v1.json"),
@@ -134,4 +136,28 @@ pub fn payload_is_valid(kind: &str, payload: &Value) -> Result<(), String> {
             .clone()
     };
     check(&v, payload)
+}
+
+/// Whether `approval` is a valid `assignment-binding.v1` `AssignmentApproval`
+/// (what a Field Case delegate carries as `assignment`; WP-23). The five
+/// currencies being each present exactly once is semantic and is checked by
+/// the caller, as `assignment.v1` does for its own budget.
+pub fn assignment_approval_is_valid(approval: &Value) -> Result<(), String> {
+    static V: OnceLock<jsonschema::Validator> = OnceLock::new();
+    check(
+        V.get_or_init(|| {
+            validator("urn:sea-forge:fde:assignment-binding:v1#/$defs/AssignmentApproval")
+        }),
+        approval,
+    )
+}
+
+/// Whether `binding` is a valid `assignment-binding.v1` `Binding` (the versioned
+/// record of the full approved assignment on the assignment row; WP-23).
+pub fn assignment_binding_is_valid(binding: &Value) -> Result<(), String> {
+    static V: OnceLock<jsonschema::Validator> = OnceLock::new();
+    check(
+        V.get_or_init(|| validator("urn:sea-forge:fde:assignment-binding:v1#/$defs/Binding")),
+        binding,
+    )
 }

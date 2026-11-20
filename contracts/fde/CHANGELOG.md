@@ -2,6 +2,10 @@
 
 The v1 files (`frozen-reference`, `anchor`, `case-record-append`) are closed and digest-pinned. A change is a new file and a new `DIGESTS` line. Newest first.
 
+## WP-23 delegated run admission: the versioned assignment binding (new `assignment-binding.v1.json`; `execution-episode-ref.v1.json` re-pinned in DIGESTS)
+
+A Field Case `delegate` carries the approved assignment, not the identity alone. `assignment` (`AssignmentApproval`: explicit `domain_meaning`, `context_refs`, five SOP 5.1 ceilings, per-currency `"unknown"` preserved) is required on a Field Case delegate, new or resume; `adoptable_problem` is server-supplied from the freeze (`criteria.intention`), `instruction` stays on the request. The admitted run records the composed full `Assignment` as `binding` `{version, assignment, link_id, run_id, binding_digest, recorded_at}` in the same guarded batch as link and run; a resume must match the recorded binding; the trusted read joins case, episode, assignment, link and run and fails closed on legacy rows and partial appends. New codes: `ASSIGNMENT_APPROVAL_REQUIRED`, `ASSIGNMENT_APPROVAL_INVALID`, `ASSIGNMENT_APPROVAL_MISMATCH`, `ASSIGNMENT_BINDING_INVALID`. Accepted-response semantics unchanged. Migration: the four accepted delegate scenarios of `execution-episode-ref` now carry `assignment`; refusal scenarios are unaffected (the approval is checked at R10, after the earlier refusals).
+
 ## WP-21a owner decisions D39–D44 (contracts edited in place; `delegation-link.v1.json` re-pinned in DIGESTS)
 
 | Decision | Change | Contract(s) |

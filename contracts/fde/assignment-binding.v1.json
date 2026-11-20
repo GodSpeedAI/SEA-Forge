@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sea-forge:fde:assignment-binding:v1",
+  "title": "Assignment binding v1",
+  "description": "The versioned binding of the full approved assignment to the admitted run (WP-23, E sections 2 and 10): a Field Case delegate does not carry the assignment identity alone. The request carries the approved assignment (AssignmentApproval: explicit domain_meaning and the five SOP 5.1 currency ceilings; adoptable_problem is NOT caller-suppliable — the frozen case supplies it, and instruction already travels on the delegate request). SEA-Forge composes the full Assignment (assignment.v1), binds it to the existing run and link under the existing case-lock serialization, and records it on the assignment row as `binding`. The trusted read joins case, episode, assignment, link and run; a legacy row without a recorded binding, or a partial append, fails closed.",
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "hex64": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "maxLength": 4096
+    },
+    "context_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "trust"],
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/text"
+        },
+        "trust": {
+          "const": "untrusted_reference",
+          "description": "Retrieved context is labelled untrusted reference (AT-17)."
+        }
+      }
+    },
+    "AssignmentApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain_meaning", "context_refs", "budget"],
+      "properties": {
+        "domain_meaning": {
+          "$ref": "#/$defs/text",
+          "description": "SOP 7.4: the domain meaning, explicit from the approval path. Never defaulted, never derived from the generic case budget or token ceiling."
+        },
+        "context_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/context_ref"
+          },
+          "maxItems": 256
+        },
+        "budget": {
+          "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/Budget",
+          "description": "Exactly five entries, one per SOP 5.1 currency, each ceiling a number >= 0 or \"unknown\" (SOP 5.3: an unmeasured currency is unknown, never 0). Units are fixed per currency by assignment.v1."
+        }
+      },
+      "description": "What a Field Case delegate request carries as `assignment`. The five currencies must each appear exactly once (ASSIGNMENT_BUDGET_INVALID semantics; the schema bounds the count, uniqueness is semantic)."
+    },
+    "Binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "assignment",
+        "link_id",
+        "run_id",
+        "binding_digest",
+        "recorded_at"
+      ],
+      "properties": {
+        "version": {
+          "const": 1,
+          "description": "The binding record version. A future shape change is a new version, never an in-place edit."
+        },
+        "assignment": {
+          "$ref": "urn:sea-forge:fde:assignment:v1#/$defs/Assignment",
+          "description": "The full approved assignment as SEA-Forge composed it: instruction from the delegate request, adoptable_problem from the frozen reference's criteria.intention, domain_meaning and context_refs from the approval, budget ceilings from the approval. Its id fields repeat the row's assignment_id and must agree (assignment.v1 semantics)."
+        },
+        "link_id": {
+          "$ref": "#/$defs/text",
+          "description": "The delegation link written before the run (delegation-link.v1). The binding, the link and the run join exactly."
+        },
+        "run_id": {
+          "$ref": "#/$defs/text",
+          "description": "The existing admitted run: the binding reuses it as reservation and correlation identity; no separate id is minted."
+        },
+        "binding_digest": {
+          "$ref": "#/$defs/hex64",
+          "description": "SHA-256 over RFC 8785 of {assignment_id, episode_ref, brief, budget, link_id, run_id} — the assignment.v1 Assignment members plus the two join ids."
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "code", "message"],
+      "properties": {
+        "outcome": {
+          "const": "refused"
+        },
+        "code": {
+          "enum": [
+            "ASSIGNMENT_APPROVAL_REQUIRED",
+            "ASSIGNMENT_APPROVAL_INVALID",
+            "ASSIGNMENT_APPROVAL_MISMATCH",
+            "ASSIGNMENT_BINDING_INVALID"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/AssignmentApproval"
+    },
+    {
+      "$ref": "#/$defs/Binding"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ]
+}

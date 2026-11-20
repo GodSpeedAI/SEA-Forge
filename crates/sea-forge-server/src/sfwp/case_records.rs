@@ -2166,6 +2166,10 @@ pub struct EpisodeFacts {
     pub episode_ref: Option<String>,
     /// The world the episode froze.
     pub world_ref: Option<String>,
+    /// The problem the delegated agent may adopt: the frozen reference's
+    /// `criteria.intention` (assignment-binding.v1 supplies the Brief's
+    /// `adoptable_problem` from the freeze, never from the caller).
+    pub adoptable_problem: Option<String>,
 }
 
 /// Read [`EpisodeFacts`] from the case store: `Err` when it fails its integrity
@@ -2273,6 +2277,11 @@ pub(super) fn episode_facts_in(
         episode_ref: source
             .and_then(|src| src["digest"].as_str())
             .map(|d| format!("episode:{case_id}:{plan_item_id}:{n}@sha256:{d}")),
+        adoptable_problem: source.and_then(|src| {
+            src["payload"]["reference"]["body"]["criteria"]["intention"]
+                .as_str()
+                .map(String::from)
+        }),
         latest_disposition: all
             .iter()
             .rev()

@@ -1,10 +1,37 @@
 # Current status
 
-**Status revision:** 380
+**Status revision:** 381
 
-**Stage:** FDE WP-23 | Persist the admitted assignment link
+**Stage:** FDE WP-23 | Versioned assignment binding on the delegated run
 
-**Summary:** Record the exact SEA link ID on each new assignment transition.
+**Summary:** A Field Case delegate now binds the full approved assignment (explicit domain_meaning and five SOP currency ceilings) to the admitted run, recorded as a versioned binding that joins link and run, with a fail-closed trusted read.
+
+**Verified:**
+
+- Contracts first (OD-3): new contracts/fde/assignment-binding.v1.json (AssignmentApproval, Binding, Error) with valid/invalid/semantic fixtures and an 8-scenario family; DelegateRequest gained the optional assignment member; DIGESTS re-pinned in the same change (13 entries match via scripts/check-fde-contract-digests.sh); README section 11 and CHANGELOG updated; the other 12 schemas' bytes are unchanged
+- TDD: the new assignment-binding family failed red for the expected reasons before implementation (five admissions where refusal was required; two accepted delegations with no recorded binding); after implementation all 49 conformance targets passed with FDE_WP21A_FINAL=1 (173 scenarios: 159 passing, 14 pending wp-31)
+- sea-forge-server and sea-forge-case-runner full suites: 806 passed, 0 failed, 22 ignored (FDE_WP21A_FINAL=1); cargo fmt --check and clippy clean; graft build refreshed
+- S2 slice at this tree: all 17 rows match the frozen baseline at 637cbece ignoring duration (16 PASS, AT-09 expected PARTIAL, digest preflight PASS)
+- Portability guest-reset control run 44780753549 at fde/wp21b-evidence-f9eaf164 passed all three jobs (Linux/ext4 guest reset, Windows, macOS sandbox) and uploaded field-case-linux-guest-reset
+
+**Limits:**
+
+- The binding is recorded and readable in the case store; no SFWP read verb exposes the trusted read yet (Cognate/Workbench wiring is the next WP-23 step)
+- execution-episode-ref.v1.json was re-pinned (deliberate, contracts-first, same commit); consumers vendoring by digest must pick up the new line
+- APFS and fixed-NTFS guest resets remain open: no approved Windows guest image or disposable Apple host is registered; application-restart-level evidence only
+
+**Next:** Wire Cognate's published assigned-start Connect providers against this binding (handoff section 2 items 3-4), then Workbench PR #40 through the operator journey; keep the trusted read internal until that contract lands.
+
+**Evidence:**
+
+- contracts/fde/assignment-binding.v1.json
+- contracts/fde/fixtures/assignment-binding/
+- .tmp/fde-proof/s2/results.json
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44780753549
+
+---
+
+# Historical status
 
 **Verified:**
 

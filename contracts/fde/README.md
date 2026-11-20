@@ -415,6 +415,8 @@ S1 showed SEA-Forge records no authority decision for program execution, so Real
 
 Lifecycle: `issued` -> `started` -> (`interrupted` <-> `resumed`)* -> `completed` | `failed` | `cancelled` (`interrupted` may be cancelled). One id and one `episode_ref` for the whole sequence (AT-17).
 
+**Versioned binding (`assignment-binding.v1`, WP-23).** A Field Case `delegate` does not carry the assignment identity alone: the request carries `assignment` (`AssignmentApproval`), the approved Brief and Budget values — explicit `domain_meaning` and exactly five SOP 5.1 currency ceilings from the approval path, each ceiling a number or `"unknown"` (SOP 5.3: never 0 for unmeasured). `adoptable_problem` is never caller-supplied: the frozen case supplies it (the frozen reference's `criteria.intention`), and `instruction` already travels on the delegate request. SEA-Forge composes the full `Assignment`, validates it against this contract, and records it on the assignment row as `binding` `{version, assignment, link_id, run_id, binding_digest, recorded_at}`, written in the same guarded batch as the link and run records under the case lock; `binding_digest` = SHA-256(RFC 8785(`{assignment_id, episode_ref, brief, budget, link_id, run_id}`)). The existing run is the reservation and correlation identity: no separate id is minted. A resume (M9) reuses the recorded binding: the request's approval must equal the recorded `brief.domain_meaning`, `brief.context_refs` and `budget` (`instruction` travels per request); an interrupted row with no recorded binding is a legacy row and fails closed — a new `k` with a fresh approval is then needed. The response of an accepted delegate is unchanged. A trusted read joins the exact case, episode, assignment, link and run; a legacy row without the exact link, or a partial append, fails closed (`ASSIGNMENT_BINDING_INVALID`).
+
 | Code | Raised when |
 |---|---|
 | `ASSIGNMENT_ID_INVALID` | the id does not parse, its parts disagree with the episode or with the assignment's fields, `k` is issued and not interrupted, or an event carries another id than its sequence |
@@ -423,6 +425,10 @@ Lifecycle: `issued` -> `started` -> (`interrupted` <-> `resumed`)* -> `completed
 | `ASSIGNMENT_BUDGET_INVALID` | a currency appears twice in `budget` or `spend` |
 | `ASSIGNMENT_BUDGET_EXCEEDED` | a numeric `spent` is above the numeric `limit` of its currency (an unknown limit or unknown spend never trips it) |
 | `ASSIGNMENT_LINK_EXPIRED` | a `resumed` event, or a delegate that reuses an interrupted assignment's id, comes after the delegation link's `expires_at` |
+| `ASSIGNMENT_APPROVAL_REQUIRED` (assignment-binding.v1) | a Field Case delegate carries no `assignment`: the generic case budget and token ceiling are insufficient |
+| `ASSIGNMENT_APPROVAL_INVALID` (assignment-binding.v1) | the approval is not `AssignmentApproval` (shape, a currency missing or repeated, a wrong unit), or the frozen episode supplies no adoptable problem |
+| `ASSIGNMENT_APPROVAL_MISMATCH` (assignment-binding.v1) | a resume's approval differs from the recorded binding, or the interrupted assignment is a legacy row with no recorded binding |
+| `ASSIGNMENT_BINDING_INVALID` (assignment-binding.v1) | the trusted read cannot join case, episode, assignment, link and run exactly: a legacy row without the binding's exact link, a partial append, a digest that does not recompute, or a row naming another episode |
 
 ## 12. Independent observation (normative)
 

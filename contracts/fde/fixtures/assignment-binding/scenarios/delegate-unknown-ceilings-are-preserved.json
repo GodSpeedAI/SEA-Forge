@@ -1,0 +1,81 @@
+{
+  "nt": "AT-17",
+  "verb": "delegate",
+  "request": {
+    "verb": "delegate",
+    "case_id": "case-0001",
+    "endpoint": "http://127.0.0.1:8099/agent",
+    "instruction": "Record the verifier's observation for gate G3.",
+    "max_turns": 8,
+    "criteria": {},
+    "policy": "authority/active-policy.json",
+    "request_id": "req-bind-5",
+    "actor": {
+      "actor_id": "operator_local",
+      "role": "operator"
+    },
+    "assignment_id": "assign:case-0001:item-03:1:1",
+    "episode_ref": {
+      "case_id": "case-0001",
+      "plan_item_id": "item-03",
+      "n": 1,
+      "kind": "evaluated"
+    },
+    "assignment": {
+      "domain_meaning": "An evidence record names an independent source.",
+      "context_refs": [
+        {
+          "ref": "doc:handoff-note-1",
+          "trust": "untrusted_reference"
+        }
+      ],
+      "budget": [
+        {
+          "currency": "time",
+          "limit": "unknown",
+          "unit": "seconds"
+        },
+        {
+          "currency": "attention",
+          "limit": "unknown",
+          "unit": "operator_minutes"
+        },
+        {
+          "currency": "money",
+          "limit": "unknown",
+          "unit": "USD"
+        },
+        {
+          "currency": "risk",
+          "limit": "unknown",
+          "unit": "class"
+        },
+        {
+          "currency": "recovery",
+          "limit": "unknown",
+          "unit": "revert_steps"
+        }
+      ]
+    }
+  },
+  "case": {
+    "template_ref": "fde.field_case@1",
+    "suspended": false
+  },
+  "freeze_state": {
+    "realitytrace": true,
+    "case_record": true,
+    "anchor": "verified",
+    "anchor_publisher": "svc:case-keeper"
+  },
+  "extra": {
+    "authority_decision": "allowed",
+    "max_runs": 1,
+    "runs_used": 0,
+    "inspect_binding": true
+  },
+  "expect": {
+    "outcome": "accepted"
+  },
+  "id": "delegate-unknown-ceilings-are-preserved"
+}

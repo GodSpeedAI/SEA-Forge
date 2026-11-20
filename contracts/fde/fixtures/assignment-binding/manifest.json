@@ -1,0 +1,72 @@
+{
+  "schema": "urn:sea-forge:fde:assignment-binding:v1",
+  "valid": [
+    {
+      "file": "approval-explicit-ceilings.json",
+      "def": "AssignmentApproval"
+    },
+    {
+      "file": "binding-recorded.json",
+      "def": "Binding"
+    },
+    {
+      "file": "error-approval-required.json",
+      "def": "Error"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "approval-without-domain-meaning.json",
+      "def": "AssignmentApproval",
+      "pointer": "",
+      "contains": "required property"
+    },
+    {
+      "file": "approval-carries-adoptable-problem.json",
+      "def": "AssignmentApproval",
+      "pointer": "",
+      "contains": "Additional properties"
+    },
+    {
+      "file": "approval-budget-four-currencies.json",
+      "def": "AssignmentApproval",
+      "pointer": "/budget",
+      "contains": "has less than"
+    },
+    {
+      "file": "approval-budget-unit-wrong-for-currency.json",
+      "def": "AssignmentApproval",
+      "pointer": "/budget/0/unit",
+      "contains": "is not one of"
+    },
+    {
+      "file": "binding-without-run-id.json",
+      "def": "Binding",
+      "pointer": "",
+      "contains": "required property"
+    },
+    {
+      "file": "binding-digest-not-sha256.json",
+      "def": "Binding",
+      "pointer": "/binding_digest",
+      "contains": "does not match"
+    }
+  ],
+  "semantic_invalid": [
+    {
+      "file": "approval-budget-currency-repeated.json",
+      "def": "AssignmentApproval",
+      "code": "ASSIGNMENT_BUDGET_INVALID"
+    }
+  ],
+  "scenarios": [
+    "delegate-approval-with-repeated-currency-is-refused.json",
+    "delegate-approval-without-domain-meaning-is-refused.json",
+    "delegate-resume-of-legacy-row-without-binding-fails-closed.json",
+    "delegate-resume-reuses-the-recorded-binding.json",
+    "delegate-resume-with-different-approval-is-refused.json",
+    "delegate-unknown-ceilings-are-preserved.json",
+    "delegate-with-approval-binds-the-full-assignment.json",
+    "delegate-without-approval-is-refused.json"
+  ]
+}

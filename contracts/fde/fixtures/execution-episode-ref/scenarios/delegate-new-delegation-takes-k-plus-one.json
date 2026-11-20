@@ -22,7 +22,43 @@
       "n": 1,
       "kind": "evaluated"
     },
-    "assignment_id": "assign:case-0001:item-03:1:2"
+    "assignment_id": "assign:case-0001:item-03:1:2",
+    "assignment": {
+      "domain_meaning": "An evidence record names an independent source.",
+      "context_refs": [
+        {
+          "ref": "doc:handoff-note-1",
+          "trust": "untrusted_reference"
+        }
+      ],
+      "budget": [
+        {
+          "currency": "time",
+          "limit": 14400,
+          "unit": "seconds"
+        },
+        {
+          "currency": "attention",
+          "limit": "unknown",
+          "unit": "operator_minutes"
+        },
+        {
+          "currency": "money",
+          "limit": 5,
+          "unit": "USD"
+        },
+        {
+          "currency": "risk",
+          "limit": "unknown",
+          "unit": "class"
+        },
+        {
+          "currency": "recovery",
+          "limit": 1,
+          "unit": "revert_steps"
+        }
+      ]
+    }
   },
   "case": {
     "template_ref": "fde.field_case@1",

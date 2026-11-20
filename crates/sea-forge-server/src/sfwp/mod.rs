@@ -14,6 +14,7 @@
 
 pub mod approvals;
 pub mod assets;
+pub mod assignment_binding;
 pub mod case;
 pub mod case_mutations;
 pub mod case_records;

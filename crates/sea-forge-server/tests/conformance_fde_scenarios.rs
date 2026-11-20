@@ -198,6 +198,8 @@ fn pending_reason(family: &str, id: &str, scenario: &Value) -> Option<&'static s
             } else {
                 "step3"
             })),
+        // WP-23: the binding scenarios are implemented, none is pending.
+        "assignment-binding" => None,
         "delegation-link" => STEP_PENDING
             .iter()
             .find(|(f, i, _)| *f == family && *i == id)
@@ -1208,12 +1210,77 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
                 (Some(exp), Some(now)) => now > exp,
                 _ => false,
             };
-            write_lines(
-                &case_dir(root.path()).join("field-assignments.jsonl"),
-                &[json!({"assignment_id": id,
+            // WP-23: a seeded interrupted assignment can carry the recorded
+            // binding (`seed_binding`), composed from the approval the scenario
+            // names (`binding_approval`, else the request's own), with the link
+            // and run rows it joins. Without `seed_binding` the row is a legacy
+            // row (pre-binding), which the gate and the read fail closed on.
+            let approval = if extra["seed_binding"] == true {
+                Some(if extra["binding_approval"].is_object() {
+                    extra["binding_approval"].clone()
+                } else {
+                    request["assignment"].clone()
+                })
+            } else {
+                None
+            };
+            let mut row = json!({"assignment_id": id,
                          "state": if interrupted { "interrupted" } else { "started" },
                          "link_expires_at": if expired { "2020-01-01T00:00:00Z" } else { "2099-01-01T00:00:00Z" },
-                         "episode_key": key})],
+                         "episode_key": key});
+            if let (Some(approval), true) = (approval, interrupted) {
+                let frozen_ref = format!(
+                    "episode:{CASE}:{}:{}@sha256:{digest}",
+                    ep["plan_item_id"].as_str().unwrap(),
+                    ep["n"]
+                );
+                let brief = json!({
+                    "instruction": request["instruction"],
+                    // The freeze template's criteria.intention (complete_payload).
+                    "adoptable_problem": "Record the verifier's observation before settling the episode.",
+                    "domain_meaning": approval["domain_meaning"],
+                    "context_refs": approval["context_refs"],
+                });
+                let assignment = json!({
+                    "assignment_id": id, "case_id": CASE,
+                    "step_id": ep["plan_item_id"], "n": ep["n"], "k": k,
+                    "episode_ref": frozen_ref, "brief": brief,
+                    "budget": approval["budget"], "issued_at": "2026-11-20T08:00:00Z",
+                });
+                let body = json!({"assignment_id": id, "episode_ref": frozen_ref,
+                                  "brief": brief, "budget": approval["budget"],
+                                  "link_id": "link-0001", "run_id": "run-0001"});
+                row["binding"] = json!({
+                    "version": 1, "assignment": assignment,
+                    "link_id": "link-0001", "run_id": "run-0001",
+                    "binding_digest": digest_of(&body).unwrap(),
+                    "recorded_at": "2026-11-20T08:00:01Z",
+                });
+                write_lines(
+                    &case_dir(root.path()).join("field-links.jsonl"),
+                    &[json!({"link_id": "link-0001", "case_id": CASE,
+                             "episode_ref": frozen_ref, "assignment_id": id,
+                             "delegator": "operator_local", "gateway_actor": null,
+                             "delegate": format!("agent:{}", request["endpoint"].as_str().unwrap_or("")),
+                             "issued_at": "2026-11-20T08:00:00Z",
+                             "expires_at": "2099-01-01T00:00:00Z"})],
+                );
+                write_lines(
+                    &case_dir(root.path()).join("field-runs.jsonl"),
+                    &[json!({"run_id": "run-0001", "case_id": CASE,
+                             "episode_ref": frozen_ref, "verb": "delegate",
+                             "role": "executor",
+                             "actor": format!("agent:{}", request["endpoint"].as_str().unwrap_or("")),
+                             "on_behalf_of": "operator_local", "delegated": true,
+                             "link_id": "link-0001",
+                             "workspace_ref": format!("ws:agent:{}", request["endpoint"].as_str().unwrap_or("")),
+                             "started_at": "2026-11-20T08:00:01Z",
+                             "recorded_at": "2026-11-20T08:00:01Z"})],
+                );
+            }
+            write_lines(
+                &case_dir(root.path()).join("field-assignments.jsonl"),
+                &[row],
             );
         }
         if case["suspended"] == true {
@@ -1343,6 +1410,79 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
         assert_eq!(link["case_id"], request["case_id"]);
         assert_eq!(link["delegate"], run["actor"]);
     }
+    if extra["inspect_binding"] == true {
+        // WP-23: the admitted delegate bound the full approved assignment to the
+        // run it started: the binding joins the row, link and run exactly, the
+        // frozen case supplied the adoptable problem, and the digest recomputes.
+        let read_rows = |name: &str| -> Result<Vec<Value>, String> {
+            let text =
+                fs::read_to_string(case_dir(root.path()).join(name)).map_err(|e| e.to_string())?;
+            text.lines()
+                .map(|line| serde_json::from_str(line).map_err(|e| e.to_string()))
+                .collect()
+        };
+        let assignments = read_rows("field-assignments.jsonl")?;
+        let links = read_rows("field-links.jsonl")?;
+        let runs = read_rows("field-runs.jsonl")?;
+        let row = assignments.last().ok_or("missing assignment row")?;
+        let link = links.last().ok_or("missing link")?;
+        let run = runs.last().ok_or("missing run")?;
+        let binding = row["binding"]
+            .as_object()
+            .ok_or("the row carries no binding")?;
+        let bound = &binding["assignment"];
+        assert_eq!(binding["version"], 1, "the binding is versioned");
+        assert_eq!(
+            binding["link_id"], row["link_id"],
+            "binding and row link differ"
+        );
+        assert_eq!(
+            binding["link_id"], link["link_id"],
+            "binding and link differ"
+        );
+        assert_eq!(binding["run_id"], run["run_id"], "binding and run differ");
+        assert_eq!(run["link_id"], link["link_id"], "run cites another link");
+        assert_eq!(bound["assignment_id"], row["assignment_id"]);
+        assert_eq!(bound["case_id"], request["case_id"]);
+        assert_eq!(bound["step_id"], request["episode_ref"]["plan_item_id"]);
+        assert_eq!(bound["n"], request["episode_ref"]["n"]);
+        assert_eq!(bound["k"].as_u64().unwrap_or(0), 1, "the bound k");
+        // The frozen case supplied the adoptable problem (the freeze template's
+        // criteria.intention); the approval supplied meaning, refs and ceilings.
+        assert_eq!(
+            bound["brief"]["adoptable_problem"],
+            "Record the verifier's observation before settling the episode."
+        );
+        assert_eq!(bound["brief"]["instruction"], request["instruction"]);
+        assert_eq!(
+            bound["brief"]["domain_meaning"],
+            request["assignment"]["domain_meaning"]
+        );
+        assert_eq!(
+            bound["brief"]["context_refs"],
+            request["assignment"]["context_refs"]
+        );
+        assert_eq!(bound["budget"], request["assignment"]["budget"]);
+        // The frozen episode_ref, not a caller string.
+        let frozen_ref = format!(
+            "episode:{}:{}:{}@sha256:{}",
+            request["case_id"].as_str().unwrap(),
+            request["episode_ref"]["plan_item_id"].as_str().unwrap(),
+            request["episode_ref"]["n"],
+            "cd".repeat(32)
+        );
+        assert_eq!(bound["episode_ref"], frozen_ref);
+        // binding_digest = SHA-8785 over the assignment members plus the joins.
+        let body = json!({"assignment_id": bound["assignment_id"],
+                          "episode_ref": bound["episode_ref"],
+                          "brief": bound["brief"], "budget": bound["budget"],
+                          "link_id": binding["link_id"], "run_id": binding["run_id"]});
+        assert_eq!(
+            binding["binding_digest"],
+            digest_of(&body).unwrap(),
+            "the binding digest does not recompute"
+        );
+    }
     let expect = &s["expect"];
     if expect["outcome"] == "refused" {
         compare(expect, &got)?;
@@ -1435,6 +1575,7 @@ async fn drive(family: &str, s: &Value) -> Result<(), String> {
         match family.as_str() {
             "case-record-append-v2" => run_append(&s).await,
             "execution-episode-ref" => run_gate(&s).await,
+            "assignment-binding" => run_gate(&s).await,
             "delegation-link" => run_link(&s).await,
             _ => Err("wp-31: the A3 proof check is not part of WP-21".into()),
         }
@@ -1446,6 +1587,7 @@ async fn drive(family: &str, s: &Value) -> Result<(), String> {
 const FAMILIES: &[&str] = &[
     "case-record-append-v2",
     "execution-episode-ref",
+    "assignment-binding",
     "delegation-link",
     "reserved-operation",
 ];
@@ -1501,6 +1643,7 @@ fn scenario_counts_match_the_contract_readme() {
     for (family, count) in [
         ("case-record-append-v2", 54),
         ("execution-episode-ref", 82),
+        ("assignment-binding", 8),
         ("delegation-link", 7),
         ("reserved-operation", 14),
     ] {
