@@ -1,13 +1,16 @@
 # Current status
 
-**Status revision:** 372
+**Status revision:** 373
 
-**Stage:** FDE S2 | Hosted CI and Portability passed
+**Stage:** FDE S2 | Snapshot reader and delegated start
 
-**Summary:** The Chrono-free candidate and supervisor test correction passed hosted CI. Field Case versioned writer activation still depends on APFS and fixed-NTFS guest reset evidence.
+**Summary:** Publish the selected-snapshot promotion checkpoint and trace the trusted data needed for delegate-only run starts.
 
 **Verified:**
 
+- WP-22 is published at 7bfe543c on fde/wp22-snapshot-pin. The promotion reader passed 11 staged tests and all 12 saga tests, plus case-runner Clippy. The selected pin survives a cell repin, and a corrupt selector cannot fall back to a stale flat pin.
+- At 9cbc3e16, separate deliberate lock and recovery mutations failed each of their targeted W3, W4, and W2 tests in the observed runs.
+- The WP-23 Workbench binding passed its 4 focused tests and type checking. A broader run was stopped after failures in stream cancellation, directory-picker selection, and the tool-execution journey.
 - Hosted CI run 44599724625 passed all jobs at a33c8147, including both Ubuntu and macOS workspace shards, MSRV 1.92, live dependency and secret gates, OPA, and Workbench.
 - The first macOS server run saw the close event before the legacy case projection completed. The follow-up is test-only and observes both records within the existing deadlines. All seven local supervisor tests and the hosted macOS server shard passed.
 - Portability run 44597378183 passed all jobs at 48f393c4, including native Windows and macOS staged publication and application restart and seven Linux/ext4 guest resets.
@@ -115,9 +118,10 @@
 
 **Limits:**
 
+- Exact S2 and joined NT-07 are running for the published WP-22 checkpoint. The mutation checks do not guarantee a failing scheduling interleaving on every run.
+- SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
 - The local just check reached the Git history scan after passing status, format, Clippy, typecheck and live cargo-deny. The workstation full-history scan reported 166 findings outside the clean Chrono commit range.
 - GitHub reports no registered self-hosted runners for this repository. An approved bootable Windows image and a disposable remote Apple host with guest reset control are still missing.
-- WP-23 has local assignment binding, but the public Cognate Connect transport drops assignment inputs. The SEA handoff must surface existing delegation links, and the spend record lacks provenance from a trusted usage or settlement record.
 - Hosted native staged tests establish application restart behavior. The Apple guest host and approved Windows guest image or reset-enabled runner remain missing for cross-platform OS-reset qualification.
 - The Linux proof establishes guest OS-reset recovery for the tested ext4 configuration. macOS/APFS and Windows/fixed-NTFS still need disposable persistent disks and external reset controllers. The versioned writer is still test-gated.
 - Ordinary C7 delivery to RealityTrace needs an approved producer and write entrypoint. The joined proof uses the already-admitted security acceptance producer.
@@ -157,7 +161,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Finish the separate WP-22 snapshot-reader verification. Keep guest resets in GitHub Actions using a provisioned Windows image and a disposable remote Mac. Resolve WP-23 delegation mapping and the ordinary RealityTrace delivery contract.
+**Next:** Finish the exact S2 and NT-07 runs at 7bfe543c. Implement the verified delegate-only handoff with an authoritative pre-start assignment source. Qualify APFS and fixed NTFS guest resets through GitHub Actions.
 
 **Evidence:**
 
