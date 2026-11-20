@@ -54,17 +54,48 @@ LANDED · BLOCKED · DEFERRED_BY_APPROVED_SCOPE.
 | #109 | I0 version alignment + standalone | LANDED (integration) | Workbench `test/cognate-version-gate.test.ts`; 107 + 76 tests; Horizon 28-package gate + 31 workshop/handoff tests. See [#109 comment](https://github.com/GodSpeedAI/SEA-Forge/issues/109#issuecomment-7049556408). |
 | #110 | I5 `experts.restore` | LANDED (integration `ae43820`) | Operator-only, in-run refused, verbatim create/reactivate/kept; `test/J-EXPERTS-restore.test.ts` (5 tests) + adjacent suites (13 pass). Merged as Workbench integration `b3a690b`-series. |
 | #111 | I5 `affordance.field` | LANDED (integration) | Bounded read over the existing resolver and `CASE_OPERATIONS`; evaluated-move-without-criterion refused; `test/J-COG-AFFORDANCE-field.test.ts` (36 pass with cognitive suites). |
-| #112 | I1/I2 deterministic child run | IN_PROGRESS (Cognate half) | Builds the `rlm` contract, component and test provider in `ticket/112-rlm-contract`. Workbench consumer half is BLOCKED on a published Cognate version. |
+| #112 | I1/I2 deterministic child run | COGNATE HALF LANDED (`63c3e1b` on Cognate `integration/cognitiveos-108`); Workbench half BLOCKED on publication | `packages/runtime-api/src/rlm.ts` (public contract, `RlmProvider`, `StdioSpawnPort`, refusal codes) + `packages/runtime-bun/src/rlm.ts` component + `agent.rlm` + test provider. 168 focused tests pass, typecheck clean. Deviation recorded below. Release candidate `release/cognate-rlm-0.11.0` = `082ea12` on `origin/main`, verification running. |
 | #113 | recovery/reconciliation | NOT_STARTED | Depends on #112. |
 | #114 | I3b contained streaming | NOT_STARTED | Depends on #112 contract (StdioSpawnPort in runtime-api) and the T4a spawn base. |
 | #115 | egress + cumulative payment | NOT_STARTED | Depends on #114. |
-| #116 | committed allow ↔ enforced profile | NOT_STARTED | Depends on #114; SEA authority side. |
+| #116 | committed allow ↔ enforced profile | NOT_STARTED (SEA contract note recorded) | Depends on #114. SEA investigation: `sea-forge-core::AuthorityDecision` already carries `sandbox_class_granted: Option<String>`, `boundary_constraints: BTreeMap<String, Vec<String>>` and `compensating_controls`, and `sea-forge-authority` policy rules carry `gate_profile_ref` + free-form `parameters`. The contract can therefore bind one approved execution profile without a new persisted schema; the work is (a) a SEA policy rule that authorizes the exact profile and (b) the host (Workbench) comparing the enforced launch plan/profile to the committed allow before spawn. If either cannot be established, keep admission closed and report the exact gap. |
 | #117 | provenance projection | IN_PROGRESS | `ticket/117-settlement-provenance`: `settlementScope`/`receiptRef` + governed settlement family in `OBSERVED_EVENT_TYPES`. |
 | #118 | 7B joined proof | NOT_STARTED | Depends on #112–#117. Do not claim until authority, contained execution, cumulative payment, independent evidence and the SEA-Forge receipt are demonstrated together. |
 | #119 | Horizon exploratory handoff | IN_PROGRESS | `ticket/119-case-context` (Workbench) + `ticket/119-horizon-handoff` (Horizon). |
 | #120 | Horizon evaluated WP-23 binding | NOT_STARTED | Depends on #119. |
 | #121 | optional Prime adapter | NOT_STARTED | Depends on #114. Optional. |
 | #122 | optional Gauntlet escalation | NOT_STARTED | Frontier, optional, no core dependency. |
+
+## Cognate release plan (awaiting owner approval)
+
+Focused candidate: `release/cognate-rlm-0.11.0` = `082ea12` (cherry-pick of the verified
+`63c3e1b` onto `origin/main`; no version edits). Draft PR:
+https://github.com/GodSpeedAI/Cognate/pull/89.
+
+| Item | Value |
+|---|---|
+| Release scope | `@godspeedai/cognate-runtime-api` + `@godspeedai/cognate-runtime-bun` functional change; everything else unchanged |
+| Predicted version | **0.11.0** (a `feat` since the last release; the two unreleased `fix(release)`/`ci` commits on `main` alone would be a patch) |
+| Linked versions | Release Please bumps the whole linked SDK group together — ~45 packages 0.10.0 → 0.11.0 |
+| Publication | existing `release.yml` OIDC trusted publishing; `NPM_TRUSTED_PUBLISHING_READY=true`; `release` environment restricted to `main`; no long-lived npm token |
+| Approval required | (1) merge `release/cognate-rlm-0.11.0` into the protected `main`; (2) merge the Release Please release PR, which triggers tag + publish |
+| Verification | local: `bun test packages/runtime-api packages/runtime-bun/test/{rlm,invoker,service,governed-operation}.test.ts` = 168 pass; `bun run typecheck` clean; `just check` green; `just verify` re-run with the pinned RealityTrace 0.4.0 fixture. CI: PR #89 `verify (ubuntu)` + `pack + clean-room install` + secret scan + CodeQL. |
+
+No merge and no publication has happened. Nothing is done until the owner approves and CI is green.
+
+## Recorded deviations (#112 Cognate half)
+
+- **Parent wait shape.** F-described the parent waiting on `rlm-invocation:<id>` resolved by the RLM
+  component. The implementation reuses the existing reconciliation primitive (`ambiguous-invocation`
+  on the child) and treats `rlm.invoke` as fire-and-forget addressed by `(parentRunId, invocationId)`.
+  It satisfies ticket #112's acceptance and D4, but an integrator should confirm the Workbench Expert
+  branch waits for the child before composing its handoff.
+- **`rlm.inspect`/`rlm.cancel` input** carries an optional `parentRunId` (defaults to `ctx.runId`) so
+  out-of-run callers can be checked against the parent run, per the ticket's parent-scoped standing
+  clause. D1 showed `{ invocationId }` only; the extension is additive and optional.
+- **Not raised in I1:** `rlm-context-digest-mismatch` (no context resolver yet) and the D8 port codes
+  `rlm-containment-unavailable` / `rlm-egress-uncontrolled` / `rlm-port-unavailable` (I3b). The
+  vocabulary exists; the refusal paths land with #114.
 
 ## Completed verification (exact commands)
 

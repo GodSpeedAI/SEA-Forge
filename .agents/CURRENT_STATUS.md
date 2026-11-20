@@ -1,3 +1,32 @@
+**Status revision:** 383
+
+**Stage:** CognitiveOS convergence #108 | Cognate rlm contract integrated; release candidate prepared
+
+**Summary:** Integrated the verified Cognate rlm contract (ticket #112 increment I1) and prepared a focused release candidate on origin/main with its CI running; #119 and #122 remain in flight.
+
+**Verified:**
+
+- Cognate integration/cognitiveos-108 at 63c3e1b adds packages/runtime-api/src/rlm.ts, packages/runtime-bun/src/rlm.ts and their tests; 168 focused tests pass and typecheck is clean; no vendor token in runtime-api.
+- Release candidate release/cognate-rlm-0.11.0 = 082ea12 cherry-picks only that commit onto origin/main; draft PR GodSpeedAI/Cognate#89 is open with verify, pack/clean-room, secret scan and CodeQL jobs; no merge and no publication.
+- Pinned RealityTrace 0.4.0 installed for an honest local just verify; the earlier local verify failure was the missing pinned fixture, not a regression.
+
+**Limits:**
+
+- The predicted release version 0.11.0 and the whole linked group bump are Release Please's computation, not editable here; approval is required before merging to main and before the release PR merge that triggers publication.
+- The Workbench consumer half of #112 remains blocked until the package is published.
+- #119 and #122 are still in flight; #113-#116 and #118 remain ahead.
+
+**Next:** Wait for CI and the in-flight tickets, integrate #119/#122, then present the release plan for approval before any main merge or publication.
+
+**Evidence:**
+
+- .agents/reports/2026-11-19-cognitiveos-convergence/IMPLEMENTATION-HANDOFF.md
+- https://github.com/GodSpeedAI/Cognate/pull/89
+
+---
+
+# Historical status
+
 **Status revision:** 382
 
 **Stage:** CognitiveOS convergence #108 | #110 and #111 landed; release path inspected
@@ -23,9 +52,6 @@
 
 - .agents/reports/2026-11-19-cognitiveos-convergence/IMPLEMENTATION-HANDOFF.md
 
----
-
-# Historical status
 
 **Status revision:** 381
 
