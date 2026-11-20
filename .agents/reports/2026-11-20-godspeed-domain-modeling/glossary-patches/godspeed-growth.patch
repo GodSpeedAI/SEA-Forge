@@ -1,0 +1,488 @@
+diff --git a/GLOSSARY-MAP.md b/GLOSSARY-MAP.md
+new file mode 100644
+--- /dev/null
++++ b/GLOSSARY-MAP.md
+@@ -0,0 +1,33 @@
++# GodSpeed AI glossary map
++
++Start with the vocabulary of the context that owns the concept. CognitiveOS owns the navigation ontology. DomainForge and CEP own their declared semantic and exchange contracts. A product may realize part of that ontology, carry a reference into another context, or supply evidence for a later judgment.
++
++## Contexts
++
++| Context | Language and authority |
++| --- | --- |
++| CognitiveOS and organizational doctrine | [GodSpeed and CognitiveOS glossary](new_world/glossary.md), [canonical document set](new_world/README.md), [CognitiveOS source theory](world/cognitive_os_manifesto_v17.md), [mathematical specification draft](world/cognitiveos_math_layer_v2_3.md), and [Purposeful Case Navigation and OCS](<new_world/Purposeful Case Navigation and the Observer–Case–Settlement Model.md>) |
++| DomainForge semantic modeling | [DomainForge](https://github.com/GodSpeedAI/DomainForge), root `GLOSSARY.md` and the [SEA application contract](https://github.com/GodSpeedAI/DomainForge/blob/35c4ed1/docs/reference/sea-application-contract.md). The applicable `.sea` source declares a particular domain’s meaning. |
++| CEP exchange semantics | [CEP](https://github.com/GodSpeedAI/canonical-evaluation-protocol), root `GLOSSARY.md`, ontology, evidence and settlement specs, and the [GodSpeed profiles](https://github.com/GodSpeedAI/canonical-evaluation-protocol/blob/5111ec3/spec/profiles/GODSPEED-PROFILES-v1.md) |
++| Horizon navigation | [Horizon](https://github.com/GodSpeedAI/Horizon), `docs/glossary.md`, the frozen HORIZON-001 ruler, and its `.sea` interaction model |
++| Cognate execution | [Cognate](https://github.com/GodSpeedAI/Cognate), root `GLOSSARY.md`, runtime API and execution contracts. SEA-Forge authors the Case Assignment contract that Cognate implements. |
++| Cognate Workbench expert and local candidate work | [Cognate Workbench](https://github.com/GodSpeedAI/Cognate-Workbench), `docs/glossary.md` and `.sea/interaction/interaction-model.sea` |
++| Gauntlet controlled execution | [Gauntlet](https://github.com/GodSpeedAI/Gauntlet), root `GLOSSARY.md` and `.agents/specs/Core-spec.md` |
++| SEA-Forge managed work and authority | [SEA-Forge](https://github.com/GodSpeedAI/SEA-Forge), `docs/reference/terminology.md` and its minimum, full and CEP world-binding specs |
++| RealityTrace observation | [RealityTrace](https://github.com/GodSpeedAI/RealityTrace), root `GLOSSARY.md` and observation/evidence contracts. `sxr` names the executable and local checkout. |
++| Context Kernel retrieval | [Context Kernel](https://github.com/GodSpeedAI/Context-Kernel), root `GLOSSARY.md` and the `ck-core` contracts |
++| SWE_SEED work qualification | [SWE_SEED](https://github.com/GodSpeedAI/swe_seed), `.agent-harness/memory/glossary.md`, seed specification and applicable proof contracts |
++| GodSpeed-Agent development | [GodSpeed-Agent](https://github.com/GodSpeedAI/GodSpeed-Agent), root `GLOSSARY.md` and developmental event and memory contracts |
++
++Repository links identify the owner. Glossary paths are relative to that repository, including when worktrees or branches use other names. Compass holds an earlier doctrine projection. Read its versioned material as historical where it differs from the [canonical document set](new_world/README.md).
++
++## Relationships
++
++- **CognitiveOS → Horizon.** Horizon projects a purposeful case into the current decision and its assessed choices.
++- **DomainForge → CEP → consumers.** CEP carries DomainForge semantic identity and profile-specific meaning across product boundaries. Consumers maintain their own execution, projection, and evidence identities.
++- **Horizon and SEA-Forge → Cognate Workbench and Cognate.** Handoffs can carry a case reference and, when bound by the case authority, a Case Assignment. Workbench Expert Assignments own Expert work and can reference that case-bound obligation.
++- **Workbench and Gauntlet → RealityTrace and SEA-Forge.** Execution can yield observations and evidence. Acceptance or settlement is scoped to the criteria and authority that issued it.
++- **Context Kernel → navigation and execution.** Citations supply context to a decision or run. Retrieval access and authority to act have separate owners.
++- **SWE_SEED → SEA-Forge → GodSpeed-Agent.** Proof qualification can support an operational ruling. Developmental interpretation and capability promotion require their own evidence and judgment.
++
++Read the [semantic concordance](https://github.com/GodSpeedAI/SEA-Forge/blob/main/.agents/reports/2026-11-20-godspeed-domain-modeling/semantic-concordance.md) for equivalences and mappings, the [convergence ledger](https://github.com/GodSpeedAI/SEA-Forge/blob/main/.agents/reports/2026-11-20-godspeed-domain-modeling/semantic-convergence-ledger.md) for canonical naming and drift, and the [workflow handoff](https://github.com/GodSpeedAI/SEA-Forge/blob/main/.agents/reports/2026-11-20-godspeed-domain-modeling/workflow-handoff.md) before specifying implementation.
+diff --git a/new_world/glossary.md b/new_world/glossary.md
+--- a/new_world/glossary.md
++++ b/new_world/glossary.md
+@@ -1,130 +1,316 @@
+-# Glossary
+-
+-> Canonical vocabulary for the GodSpeed world. One word, one meaning, everywhere. When documents seem to disagree, this file arbitrates.
+-
+-Part of [The GodSpeed World](README.md).
+-
+-## Table of Contents
+-
+-- [Paradigm Terms](#paradigm-terms)
+-- [Navigation Terms](#navigation-terms)
+-- [Infrastructure Terms](#infrastructure-terms)
+-- [Role and Organization Terms](#role-and-organization-terms)
+-- [Pain-Naming Terms](#pain-naming-terms)
+-
+----
+-
+-## Paradigm Terms
+-
+-| Term | Definition |
+-| --- | --- |
+-| **Cybernetic development** | Getting better by steering: act, reality answers, learn, and the next attempt starts further along — run as a deliberate, closed feedback loop. At the system level: sense → decide → act → prove → settle → remember → evaluate → adapt. See [Cybernetic Development](cybernetic-development.md) |
+-| **Projection** | A compressed model of the world that preserves some distinctions and collapses others: a theory, map, metric, plan, language, codebase, or story. Observers navigate through projections because no bounded observer possesses reality directly |
+-| **Representation** | The observable state through which an observer perceives, reasons, communicates, and acts — the notes, tokens, files, diagrams, and documents that can actually be held and manipulated. The projection is what a representation does (preserve/collapse); the representation is what the observer touches. The only thing any observer directly operates on. See [Representational Settlement](representational-settlement.md) |
+-| **Representational settlement** | The process by which a representation is transformed, through role-shaped human-agent control loops, into an artifact that produces consequences, generates evidence, and becomes available for future cognition, operation, governance, or valuation. The canon's replacement for "reification": not an abstraction becoming real, but a representation becoming progressively more consequential. See [Representational Settlement](representational-settlement.md#representational-settlement-defined) |
+-| **Artifact ladder** | The four rungs of increasing representational consequence: **cognitive artifacts** (extend the observer — notes, sketches, captures), **information artifacts** (organized for communication or decision — reports, specs, cases), **operational artifacts** (intended to produce action — software, workflows, prompts, policies), and **intellectual assets** (artifacts whose repeated settlement demonstrates durable strategic advantage). Work climbs when settlement keeps paying; climbing on one success is imaginary capability. See [The Artifact Ladder](representational-settlement.md#the-artifact-ladder) |
+-| **Resourcefulness** | The measure of a projection: whether repeated settlement demonstrates it expands the observer's capacity to act, settle, and reorganize while reducing unnecessary payment. Replaces "correctness" as the universal criterion |
+-| **Payment** | What acting costs: time, attention, money, risk, computation, review burden. Reality asks for payment and returns consequence |
+-| **Settlement** | What happens when work actually meets reality and consequence registers: the decision made, the test passed, the customer used it. Deliberately one word at two altitudes — the human judgment and the machine-recorded `SettlementRecorded` event are the same concept at different resolutions |
+-| **Residue** | What a settlement leaves behind: the lesson, trace, template, or scar. Captured residue is the raw material of development; uncaptured residue is redone work |
+-| **Developmental topology** | The structured accumulation of an observer's residue — what has actually been settled — which determines what is reachable next |
+-| **Semantic debt** | The cost accumulated when a projection ages: the compression that once helped now hides distinctions that matter |
+-| **Positive disintegration** | Dissolving obsolete projection structure while preserving developmental continuity: keep the residue, retire the compression, recompose |
+-| **Metabolization** | Absorbing what works — from another projection, or from repeated settlement — into reliable, lower-cost capability. In the runtime: the promotion of a capability after ≥3 usable settlements |
+-| **Better problem** | The terminal state of every loop — because there is no problem-free state. Solving a problem generates new problems, each competing for attention; development is measured by the quality of the problems an observer has earned the right to work on, and each settlement trades current problems for better ones. See [Better Problems](cybernetic-development.md#better-problems) |
+-| **Problem upgrade** | The deliberate act of adopting a higher-quality problem made affordable by settlement and freed attention — the last step of the [worker loop](roles/syntelligent-worker.md#the-operating-loop) ("upgrade the problem") and the founder's core act at enterprise scale. Precisely: the adoption of an [opportunity](#paradigm-terms) |
+-| **Gap** | The underlying object beneath "problem," "question," and "opportunity": a tension between the current state and a reachable better state that can absorb attention and return development. See [The Gap and Its Three Registers](cybernetic-development.md#the-gap-and-its-three-registers) |
+-| **Register** | Which projection of a gap is in use — problem (deficit → repair), question (unknown → inquiry), or opportunity (upside → investment). The register changes which affordances become visible and who can act; it never changes the underlying loop of attention, knowledge, intention, payment, settlement, residue. Reframing across registers is a projection choice, not a change of substance — and it never relaxes the affordance test |
+-| **Opportunity** | A gap in the strategic register: the same object as a problem, priced by its upside instead of its pain. The register in which strategic thinking becomes operationally executable — it makes better problems selectable in advance rather than only recognizable in retrospect, and is the compilation target from strategy down to cases |
+-| **Doctrine stance** | What the whole canon is: doctrine, not metaphysics. Not "this is how things are" but "this is the most resourceful projection currently affordable for navigating today's attention/knowledge/intention socioeconomy" — adopted deliberately, spent rather than believed, kept only while settlement keeps demonstrating it. Not relativism: reality still arbitrates, through settlement. See [The Doctrine Stance](cybernetic-development.md#the-doctrine-stance) |
+-
+-## Navigation Terms
+-
+-| Term | Definition |
+-| --- | --- |
+-| **Observer** | Any bounded actor navigating through projections: a person, a team, an organization, or an AI agent |
+-| **Horizon** | Everything the observer can currently see, decide, prove, afford, and govern. Not what is theoretically possible — what is spendable from here. See [Cognitive OS](cognitive-os.md#horizon) |
+-| **Affordance** | A path that is visible, reachable, payable, governable, and settleable — all five. Drop one and it is a wish, not an affordance |
+-| **Spendable** | Actually actionable from the current position at a payable cost. "Making a problem spendable" means making it clear, evidenced, and bounded enough to act on without pretending |
+-| **Capability** | Repeated settlement under variation with reduced orchestration burden. Not explanation, access, imitation, or imagination. One success is evidence; repeated settlement is capability. Its defining signature: **capability frees attention** — the metabolized pathway stops consuming foreground attention, releasing it for better problems (the novice driver attends to the pedals; the expert attends to the road) |
+-| **Attention efficiency** | The measured reduction in orchestration load relative to a capability's day-one baseline. The quantitative form of "capability frees attention"; a capability whose attention cost never drops is not promoted. See [math layer](cognitive-os-math-layer.md#capability-promotion) |
+-| **Settlement reliability (ρ)** | How trustworthy the feedback from a path is. Unreliable feedback is dampened; capability updates come only from usable or properly dampened settlements. See [math layer](cognitive-os-math-layer.md#settlement-reliability) |
+-| **Jump risk** | The priced danger of a large representational leap taken on thin evidence with unreliable feedback |
+-| **Twin** | The evolving model of an agent or system, updated after settlement (`TwinUpdated`) |
+-
+-## Infrastructure Terms
+-
+-| Term | Definition |
+-| --- | --- |
+-| **Syntelligence** | The skill of humans and synthetic workers steering together: people supply judgment, machines supply generation, the pair gets better over time. *Syn* means together |
+-| **Synthetic worker** | An AI agent that can actually do tasks, not just chat: drafts, researches, writes code, uses tools. A worker made of software |
+-| **Syntelligent Infrastructure** | The work environment aligning human judgment, machine generation, domain meaning, context, authority, evidence, memory, settlement, and recomposition. The software substrate for cybernetic development. See [Syntelligent Infrastructure](syntelligent-infrastructure.md) |
+-| **Harness** | The rules around an agent: what it may touch, what needs human approval, what proof it must leave. In the stack, **SWE_SEED is the harness** — the development-work harness (routing, hooks, traces, proof). No other repo owns the word |
+-| **Settlement runtime** | GodSpeed-Agent's canonical role: classify outcomes, metabolize capabilities, adapt. It does not route or prove |
+-| **Context packet** | A citation-bearing bundle of context answering `ContextRequired`. Policy requires at least one citation; uncited context is not context |
+-| **Authority check** | Policy evaluation producing a signed allow/deny decision (`AuthorityChecked`) before a consequential action runs |
+-| **Proof** | Command-execution evidence gating completion claims. "Done" without proof is theater |
+-| **Evidence** | The recorded bundle of proof results (`EvidenceRecorded`) |
+-| **Usable / partial / unusable** | The three settlement classifications. Only usable settlements (or properly dampened provisional ones) update capability |
+-| **Coherence break** | A policy-gate failure event (`CoherenceBreakDetected`): the loop refused an action that failed its gates |
+-| **Memory ledger** | The durable Postgres store behind NATS that validates every event fail-closed. A process's local JSONL buffer is a **local ledger** — a write-ahead buffer that forwards one-way to the memory ledger |
+-| **Semantic envelope** | The CEP-0008 canonical event-wrapper concept. The **v1 contract** is its wire profile — the sole cross-process contract, with mandatory provenance |
+-| **Provenance** | Who or what produced an event, with which model and inputs. Mandatory on every envelope; an audit trail that cannot answer "who did this" is decoration |
+-| **Domain model hash** | The hash-versioned identity of the domain manifest, carried in every loop payload so each event names the version of domain truth it acted under |
+-| **Benchmark protocol (CEP)** | The Canonical Evaluation Protocol: specs, schemas, conformance rules, and scorers that measure whether the loop's claims hold on live data |
+-| **Executable business meaning** | Domain meaning machines can use and humans can read — DomainForge's product |
+-| **Semantic projection** | Compiling one canonical semantic model (`.sea`) into the native formats of mature external ecosystems — CMMN, BPMN, ArchiMate, RDF/OWL, OpenTelemetry conventions, Lean, BAML, DSPy, ZenML, Protobuf — and into the model's own AST for programmatic consumption, instead of re-authoring the same meaning per discipline. The replacement for [semantic translation](#pain-naming-terms). See [Semantic Projection](semantic-projection.md) |
+-| **Projection guarantee** | The three gates every projected artifact must pass: **deterministic identity** (same model in, byte-identical artifacts out; all IDs minted deterministically), **semantic traceability** (every artifact stamped with the domain model hash and element IDs, so any downstream form names the version of truth it was compiled from), and **projection consistency** (one producer per artifact; cross-projection references, never copies). Projections never mutate the semantics |
+-| **Operator family** | A kind of organizational meaning paired with the mature ecosystem that operates on it — adaptive work → CMMN, ordered process → BPMN, enterprise architecture → ArchiMate, semantic graph → RDF/OWL, runtime observation → OTel, formal verification → Lean, AI representation/optimization/learning → BAML/DSPy/ZenML, service contracts → Protobuf/gRPC, programmatic representation → AST. The unit of projection design: a family, never a one-off exporter |
+-| **Semantic IR** | The strategic position semantic projection targets: the canonical intermediate representation of organizational meaning that every discipline's toolchain compiles from — the LLVM pattern applied to meaning instead of code, converting N×M translation into N+M projections. A **keystone platform** claim: winning by making every ecosystem more valuable, not by replacing them. Held as doctrine, earned per ecosystem. See [The Semantic IR](semantic-projection.md#the-semantic-ir) |
+-| **Degraded mode** | The edge appliance's safe state when the governance plane is unreachable: mutations blocked, events spooled. An outage response, never a steady state |
+-| **Operational semantic residue** | The structured, meaning-bearing evidence left behind when humans, agents, tools, and policies act inside governed loops — the infrastructure form of [residue](#paradigm-terms). "Semantic exhaust" is the casual hook for the same thing. See [Syntelligent Infrastructure](syntelligent-infrastructure.md#operational-semantic-residue) |
+-| **Semantic event ledger** | What the memory ledger is, understood as an asset: not a log (which records that something happened) but a record of what happened in relation to domain meaning, authority, evidence, outcome, and capability. The source asset; every dashboard, audit, and view is a projection of it |
+-| **Reverse semantic mining** | Deriving candidate domain models, rules, roles, and workflows from observed governed work instead of demanding blank-page upfront modeling. Candidates are promoted into DomainForge/SEA-Forge only under human review |
+-| **Organizational misalignment** | The divergence between declared organizational semantics and observed operational behavior, treated as a first-class computable object. Structural, not anomalous. A major SEA-Forge capability. See [Organizational Misalignment, Computable](organizational-misalignment.md) |
+-| **Declared reality / observed reality** | What the organization says is true (policies, org charts, approval matrices) versus what the event record shows actually happens. The delta between them is where risk, waste, policy theater, and opportunity all live |
+-| **Semantic drift** | Divergence between declared domain meaning and observed behavior over time. Detected as typed categories: bypass, role mismatch, emergent loop, reordering, ownership drift, authority drift, policy conflict |
+-| **Authority drift** | The specific drift where declared authority and actual action diverge — who may act versus who does act |
+-| **Machine-legible organization** | An organization whose key semantics (ownership, authority, constraints, intent) live in a structured, queryable substrate systems can reason over. Legibility does not require coherence: disagreement, ambiguity, and exception are represented explicitly rather than erased |
+-| **Inductive mode** | The governance inversion for when the declared model is performative rather than operative: under human authorization, the observed graph becomes primary and the declared graph is demoted to a hypothesis evaluated against behavior. See [Inductive Mode](organizational-misalignment.md#inductive-mode) |
+-| **Accumulated governed meaning** | The moat: the customer's growing semantic event ledger of declared reality, observed reality, authority, evidence, drift, trust, and capability. Not lock-in — customers can export projections; the history is valuable because it is their operational self-understanding |
+-
+-## Role and Organization Terms
+-
+-| Term | Definition |
+-| --- | --- |
+-| **Syntelligent Worker** | A knowledge worker who deliberately runs the loop: Problem → Prompt → Response → Judgment → Artifact → Settlement → Residue → Recomposition → Better Problem. See [SOP](roles/syntelligent-worker.md) |
+-| **Syntelligent Software Engineer** | The software specialization: Issue → Case → Spec → Prompt → Agent Action → Diff → Verification → Review → Merge → Trace → Residue → Better Codebase. See [SOP](roles/syntelligent-software-engineer.md) |
+-| **Case** | A piece of work treated as a living thing — discovered and adapted as you go, with evidence, decisions, constraints, and settlement criteria — not a fixed checklist pretending the path is known. Its full anatomy (case file, stages, discretionary tasks, sentries, milestones) is given in [Case-Managed Work](case-management.md) |
+-| **Case management** | The project-management form of the paradigm: declare the terrain (case file, sentries, milestones, discretionary items) and let the knowledge worker plan at runtime, instead of sequencing steps at design time. Process management assumes the path is known; case management assumes it is discovered. A process is a case whose discovery has already settled. See [Case-Managed Work](case-management.md) |
+-| **Case file** | The heart of a case: the accumulating, governed body of artifacts the work produces and navigates by — evidence, decisions, constraints, drafts, open questions, settlement criteria. Everything else in the case is defined relative to it: sentries read it, milestones are states of it. A case file that lives in chat scrollback is folklore |
+-| **Sentry** | A declared criterion guarding entry to or exit from work: an event part (*when* something happens) plus a condition part (*if* the case file satisfies a condition). Entry sentries are the affordance test plus authority-precedes-autonomy installed as a gate; exit sentries are settlement criteria declared before work starts. A sentry that never reads the case file is governance theater in miniature. See [Sentries Are Affordance Gates](case-management.md#sentries-are-affordance-gates) |
+-| **Discretionary work** | Tasks declared *available* in a case — modeled, priced, visible — but performed only if runtime judgment adopts them. An [opportunity](#paradigm-terms) held on the case; the case's written-down horizon. Who may adopt what is scoped by [delegation by authority](#role-and-organization-terms), never a free-for-all |
+-| **Milestone** | A named settlement declared in advance: a settlement-bearing state of the case file with no work of its own ("spec locked," "customer used it"). A milestone that marks elapsed time rather than settled consequence is decoration |
+-| **Field Case** | The FDE's living, evidence-kept write-up of customer reality. See [FDE SOP](roles/forward-deployed-engineer.md#the-field-case) |
+-| **Enterprise Case** | The founder's living case of the business itself. See [Founder SOP](roles/founder-owner-operator.md#the-enterprise-case) |
+-| **Delivery Engineering (DE)** | Engineering the project-as-system: the work substrate where work moves, settles, and compounds. See [DE SOP](roles/delivery-engineer.md) |
+-| **AI Delivery Engineering (ADE)** | Epistemic and operational infrastructure for stochastic AI work: the governed AI-native loop. See [ADE SOP](roles/ai-delivery-engineer.md) |
+-| **AI-native work** | Work designed from the start for human judgment and machine generation inside one governed loop — versus AI-assisted (AI helps a human) and AI-augmented (AI improves a workflow) |
+-| **Minimum Viable Governed Loop** | The Lean-Startup MVP, adapted: the smallest loop with a real problem, authority map, evidence standard, settlement metric, and residue capture that can run on real work. See [CoE](syntelligent-coe.md#the-minimum-viable-governed-loop) |
+-| **Staged agent workflow** | The per-feature settling loop at desk altitude: strict sequential stages (spec → design → front-end → plan → build → deploy), each with one job, one delegate, one handoff artifact, and a human gate before the next. The [14-event runtime loop](syntelligent-infrastructure.md#the-runtime-loop) run by a human and a coding agent before infrastructure automates it. See [Staged Agent Workflow](staged-agent-workflow.md) |
+-| **Delegation by authority** | Routing work by what is at stake if it is wrong — blast radius on architecture, domain model, contracts, security, user promise — and assigning the cheapest role that can safely carry that risk. Never by model name; model bindings are plumbing, roles are policy. See [Technique C](staged-agent-workflow.md#the-three-techniques) |
+-| **Draft-and-steer** | The bootstrap pattern for anything an agent originates from a blank page: brain dump → agent interviews the human → agent drafts → human steers by verifying every concrete claim against reality (grounding, not tone). Syntelligence applied to authoring; its failure modes are the [elicitation-boundary](organizational-misalignment.md#the-elicitation-boundary) failure modes |
+-| **Constraint via template** | Transmitting architecture, semantics, attention, and intention structurally by handing an agent mandatory fields instead of prose instructions. A template is a projection whose collapse is load-bearing: a model can drift from a paragraph, not from a field it must fill |
+-| **Syntelligent Center of Excellence** | The organizational form: an AI CoE judged by capability compounding, not adoption. See [CoE](syntelligent-coe.md) |
+-| **Intrapreneurial Syntelligent Worker** | A worker who identifies valuable problems inside their domain, prototypes governed loops, gathers evidence, and recommends scale/revise/kill — Level 3 on the [capability ladder](syntelligent-coe.md#worker-capability-levels) |
+-| **Work archetype** | One of five recurring representational-transformation motions in AI-era work: **Prototyper** (expands possibility), **Builder** (converts possibility into durable artifact), **Sweeper** (reduces entropy and semantic debt), **Grower** (adapts the settlement to feedback), **Maintainer** (preserves settled value under pressure). Developmental motions, not identities — one person or agent spans several across an artifact's lifecycle. See [The Five Work Archetypes](representational-settlement.md#the-five-work-archetypes) |
+-| **Control mode** | How control is distributed between human and agent during a transformation: **Directive** and **Feedback Loops** (automation), **Learning**, **Task Iteration**, and **Validation** (augmentation). A risk instrument, not a preference — choosing a mode places human judgment in the transformation chain, the interaction-level form of [delegation by authority](#role-and-organization-terms). See [The Human-Agent Control Modes](representational-settlement.md#the-human-agent-control-modes) |
+-
+-## Pain-Naming Terms
+-
+-| Term | Definition |
+-| --- | --- |
+-| **Governance theater** | The appearance of governance without enforcement: policy that cannot act before consequence |
+-| **Accidental substrate** | The operational layer a team accumulated without designing: meetings, chats, spreadsheets, heroes |
+-| **Pilot purgatory** | Stuck between AI experimentation and production: demos that impress and never scale |
+-| **Epistemic debt** | The growing gap between what a stochastic system does and what anyone can know about what it does |
+-| **Output inflation** | More work-shaped objects, not more capability |
+-| **Capability illusion** | One successful AI result mistaken for repeatable organizational capability |
+-| **Folklore** | Process that lives in memory and chat scrollback instead of infrastructure |
+-| **Semantic translation** | The manual labor of re-expressing the same organizational meaning in another discipline's format — BPMN for process, ArchiMate for architects, ontologies for data, telemetry names for observability, prompts for AI — and keeping the copies consistent by hand. A tax: paid continuously, produces no new meaning, and skipping it produces semantic drift. The pain [semantic projection](#infrastructure-terms) abolishes |
++# GodSpeed and CognitiveOS
++
++This vocabulary covers GodSpeed’s navigation theory and operating doctrine. Product and contract vocabulary is indexed in the [Glossary Map](../GLOSSARY-MAP.md).
++
++## Language
++
++### Paradigm Terms
++
++**Cybernetic development**:
++Getting better by steering: act, reality answers, learn, and the next attempt starts further along — run as a deliberate, closed feedback loop. At the system level: sense → decide → act → prove → settle → remember → evaluate → adapt.
++
++**Projection**:
++A selective rendering that preserves distinctions relevant to a purpose and collapses others.
++
++**Reality**:
++The situation whose changes and consequences can answer an observer’s action independently of the observer’s representation.
++
++**Representational Operator**:
++A transformation that changes the scope, givenness, distinctions, or encoding of a representation.
++
++**Representation**:
++The structure through which an observer distinguishes a situation, relates those distinctions, and makes transformations thinkable.
++
++**Representational settlement**:
++The maturation of a representation into a consequential artifact whose effects, evidence, and reuse have been established through human and agent work.
++
++**Artifact ladder**:
++The four rungs of increasing representational consequence: **cognitive artifacts** (extend the observer — notes, sketches, captures), **information artifacts** (organized for communication or decision — reports, specs, cases), **operational artifacts** (intended to produce action — software, workflows, prompts, policies), and **intellectual assets** (artifacts whose repeated settlement demonstrates durable strategic advantage). Work climbs when settlement keeps paying; climbing on one success is imaginary capability.
++
++**Resourcefulness**:
++The measure of a projection: whether repeated settlement demonstrates it expands the observer's capacity to act, settle, and reorganize while reducing unnecessary payment. Replaces "correctness" as the universal criterion.
++
++**Payment**:
++The cost of an attempt across separately constrained currencies, including time, attention, computation, money, risk, and recovery.
++
++**Settlement**:
++The registration of an outcome’s consequence by a source outside the observer being updated. A settlement can be assigned different epistemic statuses and warrants an update only to the extent its evidence supports one.
++_Avoid_: Completion, process exit
++
++**Outcome**:
++The concrete result of an attempted transformation.
++
++**Attempt**:
++An action undertaken to produce a transformation, whose effect is still a matter for evidence.
++
++**Transformation**:
++A change in a representation or consequential world state brought about by an intervention.
++
++**Residue**:
++What a settlement leaves behind: the lesson, trace, template, or scar. Captured residue is the raw material of development; uncaptured residue is redone work.
++
++**Developmental topology**:
++The structured accumulation of an observer's residue — what has actually been settled — which determines what is reachable next.
++
++**Semantic debt**:
++The cost accumulated when a projection ages: the compression that once helped now hides distinctions that matter.
++
++**Positive disintegration**:
++Dissolving obsolete projection structure while preserving developmental continuity: keep the residue, retire the compression, recompose.
++
++**Metabolization**:
++The process by which repeated settled action becomes reliable at lower orchestration cost while preserving settlement reliability.
++
++**Substrate**:
++Metabolized capability available at low orchestration cost.
++
++**Developmental Memory**:
++Consequence-bearing traces incorporated into later representation, judgment, action, or verification.
++
++**Better problem**:
++The terminal state of every loop — because there is no problem-free state. Solving a problem generates new problems, each competing for attention; development is measured by the quality of the problems an observer has earned the right to work on, and each settlement trades current problems for better ones.
++
++**Problem upgrade**:
++The deliberate act of adopting a higher-quality problem made affordable by settlement and freed attention — the last step of the [worker loop](roles/syntelligent-worker.md#the-operating-loop) ("upgrade the problem") and the founder's core act at enterprise scale.
++
++**Gap**:
++The underlying object beneath "problem," "question," and "opportunity": a tension between the current state and a reachable better state that can absorb attention and return development.
++
++**Register**:
++Which projection of a gap is in use — problem (deficit → repair), question (unknown → inquiry), or opportunity (upside → investment). The register changes which affordances become visible and who can act; it never changes the underlying loop of attention, knowledge, intention, payment, settlement, residue. Reframing across registers is a projection choice, not a change of substance — and it never relaxes the affordance test.
++
++**Opportunity**:
++A gap in the strategic register: the same object as a problem, priced by its upside instead of its pain. The register in which strategic thinking becomes operationally executable — it makes better problems selectable in advance rather than only recognizable in retrospect, and is the compilation target from strategy down to cases.
++
++**Doctrine stance**:
++What the whole canon is: doctrine, not metaphysics. Not "this is how things are" but "this is the most resourceful projection currently affordable for navigating today's attention/knowledge/intention socioeconomy" — adopted deliberately, spent rather than believed, kept only while settlement keeps demonstrating it. Not relativism: reality still arbitrates, through settlement.
++
++### Navigation Terms
++
++**Observer**:
++The role of a bounded system that discriminates and retains states, selects and pays for action, and updates from independently registered consequences.
++
++**Authoring Observer**:
++The observer role with standing to establish or revise the criterion under which a transformation is judged.
++
++**Horizon**:
++An observer’s present perception and action boundary under its representations, capabilities, payment capacity, governance, and settlement access.
++
++**Direction**:
++A typed pressure that makes some paths relevant to an observer, such as a goal, need, problem, or obligation.
++
++**Possibility**:
++A potential move or destination considered before establishing that a path satisfies the affordance gates.
++
++**Affordance**:
++A path that is visible, reachable, authorized, payable in each relevant currency, executable, recoverable, and settleable for the observer in the current situation.
++
++**Governance**:
++The constraints that determine what the observer is permitted to attempt.
++
++**Recovery**:
++Restoring sufficient function and future capacity after a disruption or failed attempt.
++
++**Spendable**:
++Actually actionable from the current position at a payable cost. "Making a problem spendable" means making it clear, evidenced, and bounded enough to act on without pretending.
++
++**Capability**:
++An observer’s demonstrated ability to produce settled outcomes under variation with reliability, transfer, recovery, declining orchestration burden, and discrimination of irrelevant cues.
++_Avoid_: Tool access, installed capability
++
++**Attention efficiency**:
++The reduction in the attention required to orchestrate an operation at a comparable settlement rate.
++
++**Settlement reliability (ρ)**:
++The trustworthiness of a registered consequence as an update signal, given attribution, confounding, delay, independence, and exposure to influence.
++
++**Jump risk**:
++The priced danger of a large representational leap taken on thin evidence with unreliable feedback.
++
++**Twin**:
++An evolving representation of an observer or system and its current state or demonstrated abilities.
++
++### Infrastructure Terms
++
++**Syntelligence**:
++The skill of humans and synthetic workers steering together: people supply judgment, machines supply generation, the pair gets better over time. *Syn* means together.
++
++**Synthetic worker**:
++An AI agent that can actually do tasks, not just chat: drafts, researches, writes code, uses tools. A worker made of software.
++
++**Syntelligent Infrastructure**:
++The work environment aligning human judgment, machine generation, domain meaning, context, authority, evidence, memory, settlement, and recomposition. The software substrate for cybernetic development.
++
++**Harness**:
++A work environment that binds agent activity to scoped context, permitted effects, and proof obligations.
++
++**Authority check**:
++Policy evaluation of whether an identified actor may perform a specific consequential operation under the stated conditions.
++
++**Proof**:
++The result of applying a declared verification procedure to the claim it was designed to test.
++
++**Evidence**:
++Relevant observations and representations, with provenance, that bear on a stated expectation, question, or claim.
++_Avoid_: Raw observation, proof in general
++
++**Usable / partial / unusable**:
++Developmental reliability classes for consequence signals. The class governs eligibility and weight for subsequent updates.
++
++**Approval**:
++An attributable decision by a party with standing to authorize or accept the stated action or claim within its scope.
++
++**Coherence break**:
++A detected failure to satisfy a condition required to advance the governed loop.
++
++**Memory ledger**:
++The durable record from which governance, settlement, and developmental history can be reconstructed.
++
++**Provenance**:
++The attribution and lineage that identify how a claim, representation, or observation was produced and from which inputs.
++
++**Domain model hash**:
++A digest identifying a domain model or manifest under a particular model-hash contract.
++
++**Canonical Evaluation Protocol (CEP)**:
++The specification and conformance system for exchanging and evaluating semantic claims across producers and consumers.
++
++**Executable business meaning**:
++Domain meaning machines can use and humans can read — DomainForge's product.
++
++**Projection guarantee**:
++The expectation that a semantic projection preserves declared distinctions, can be reproduced from its source, and retains traceability to that source.
++
++**Operator family**:
++A class of domain meaning paired with the kind of system that can act on its projected form.
++
++**Semantic IR**:
++The strategic position semantic projection targets: the canonical intermediate representation of organizational meaning that every discipline's toolchain compiles from — the LLVM pattern applied to meaning instead of code, converting N×M translation into N+M projections. A **keystone platform** claim: winning by making every ecosystem more valuable, not by replacing them. Held as doctrine, earned per ecosystem.
++
++**Degraded mode**:
++A restricted operating state for loss of a required governance service.
++
++**Operational semantic residue**:
++The structured, meaning-bearing evidence left behind when humans, agents, tools, and policies act inside governed loops — the infrastructure form of [residue](#paradigm-terms). "Semantic exhaust" is the casual hook for the same thing.
++
++**Semantic event ledger**:
++An attributable account of operations and their relationships to domain meaning, authority, evidence, outcomes, and capability.
++
++**Reverse semantic mining**:
++Deriving candidate domain models, rules, roles, and workflows from observed governed work instead of demanding blank-page upfront modeling. Candidates are promoted into DomainForge/SEA-Forge only under human review.
++
++**Organizational misalignment**:
++The divergence between declared organizational semantics and observed operational behavior, treated as a first-class computable object. Structural, not anomalous. A major SEA-Forge capability.
++
++**Declared reality / observed reality**:
++What the organization says is true (policies, org charts, approval matrices) versus what the event record shows actually happens. The delta between them is where risk, waste, policy theater, and opportunity all live.
++
++**Semantic drift**:
++Divergence between declared domain meaning and observed behavior over time. Detected as typed categories: bypass, role mismatch, emergent loop, reordering, ownership drift, authority drift, policy conflict.
++
++**Authority drift**:
++The specific drift where declared authority and actual action diverge — who may act versus who does act.
++
++**Machine-legible organization**:
++An organization whose key semantics (ownership, authority, constraints, intent) live in a structured, queryable substrate systems can reason over. Legibility does not require coherence: disagreement, ambiguity, and exception are represented explicitly rather than erased.
++
++**Inductive mode**:
++The governance inversion for when the declared model is performative rather than operative: under human authorization, the observed graph becomes primary and the declared graph is demoted to a hypothesis evaluated against behavior.
++
++**Accumulated governed meaning**:
++The moat: the customer's growing semantic event ledger of declared reality, observed reality, authority, evidence, drift, trust, and capability. Not lock-in — customers can export projections; the history is valuable because it is their operational self-understanding.
++
++### Role and Organization Terms
++
++**Syntelligent Worker**:
++A knowledge worker who deliberately runs the loop: Problem → Prompt → Response → Judgment → Artifact → Settlement → Residue → Recomposition → Better Problem.
++
++**Syntelligent Software Engineer**:
++The software specialization: Issue → Case → Spec → Prompt → Agent Action → Diff → Verification → Review → Merge → Trace → Residue → Better Codebase.
++
++**Purposeful Case**:
++A bounded object of purposeful judgment that connects a situation, an intention, a relevant world, and the conditions under which progress can be evaluated.
++_Avoid_: Managed Case, Local Case
++
++**Case management**:
++The project-management form of the paradigm: declare the terrain (case file, sentries, milestones, discretionary items) and let the knowledge worker plan at runtime, instead of sequencing steps at design time. Process management assumes the path is known; case management assumes it is discovered. A process is a case whose discovery has already settled.
++
++**Case file**:
++The evolving body of representations that a case uses to navigate and evaluate work, including evidence, constraints, decisions, and open questions.
++
++**Sentry**:
++A declared event and condition that together govern a case-work transition.
++
++**Discretionary work**:
++Tasks declared *available* in a case — modeled, priced, visible — but performed only if runtime judgment adopts them. An [opportunity](#paradigm-terms) held on the case; the case's written-down horizon. Who may adopt what is scoped by [delegation by authority](#role-and-organization-terms), never a free-for-all.
++
++**Milestone**:
++A predeclared consequential state of a case that can be established by evidence.
++
++**Field Case**:
++The FDE's living, evidence-kept write-up of customer reality.
++
++**Enterprise Case**:
++The founder's living case of the business itself.
++
++**Delivery Engineering (DE)**:
++Engineering the project-as-system: the work substrate where work moves, settles, and compounds.
++
++**AI Delivery Engineering (ADE)**:
++Epistemic and operational infrastructure for stochastic AI work: the governed AI-native loop.
++
++**AI-native work**:
++Work designed from the start for human judgment and machine generation inside one governed loop — versus AI-assisted (AI helps a human) and AI-augmented (AI improves a workflow).
++
++**Minimum Viable Governed Loop**:
++The Lean-Startup MVP, adapted: the smallest loop with a real problem, authority map, evidence standard, settlement metric, and residue capture that can run on real work.
++
++**Staged agent workflow**:
++The per-feature settling loop at desk altitude: strict sequential stages (spec → design → front-end → plan → build → deploy), each with one job, one delegate, one handoff artifact, and a human gate before the next. The [14-event runtime loop](syntelligent-infrastructure.md#the-runtime-loop) run by a human and a coding agent before infrastructure automates it.
++
++**Delegation by authority**:
++Routing work by what is at stake if it is wrong — blast radius on architecture, domain model, contracts, security, user promise — and assigning the cheapest role that can safely carry that risk. Never by model name; model bindings are plumbing, roles are policy.
++
++**Draft-and-steer**:
++The bootstrap pattern for anything an agent originates from a blank page: brain dump → agent interviews the human → agent drafts → human steers by verifying every concrete claim against reality (grounding, not tone). Syntelligence applied to authoring; its failure modes are the [elicitation-boundary](organizational-misalignment.md#the-elicitation-boundary) failure modes.
++
++**Constraint via template**:
++Transmitting architecture, semantics, attention, and intention structurally by handing an agent mandatory fields instead of prose instructions. A template is a projection whose collapse is load-bearing: a model can drift from a paragraph, not from a field it must fill.
++
++**Syntelligent Center of Excellence**:
++The organizational form: an AI CoE judged by capability compounding, not adoption.
++
++**Intrapreneurial Syntelligent Worker**:
++A worker who identifies valuable problems inside their domain, prototypes governed loops, gathers evidence, and recommends scale/revise/kill — Level 3 on the [capability ladder](syntelligent-coe.md#worker-capability-levels).
++
++**Work archetype**:
++One of five recurring representational-transformation motions in AI-era work: **Prototyper** (expands possibility), **Builder** (converts possibility into durable artifact), **Sweeper** (reduces entropy and semantic debt), **Grower** (adapts the settlement to feedback), **Maintainer** (preserves settled value under pressure). Developmental motions, not identities — one person or agent spans several across an artifact's lifecycle.
++
++**Control mode**:
++How control is distributed between human and agent during a transformation: **Directive** and **Feedback Loops** (automation), **Learning**, **Task Iteration**, and **Validation** (augmentation). A risk instrument, not a preference — choosing a mode places human judgment in the transformation chain, the interaction-level form of [delegation by authority](#role-and-organization-terms).
++
++### Pain-Naming Terms
++
++**Governance theater**:
++The appearance of governance without enforcement: policy that cannot act before consequence.
++
++**Accidental substrate**:
++The operational layer a team accumulated without designing: meetings, chats, spreadsheets, heroes.
++
++**Pilot purgatory**:
++Stuck between AI experimentation and production: demos that impress and never scale.
++
++**Epistemic debt**:
++The growing gap between what a stochastic system does and what anyone can know about what it does.
++
++**Output inflation**:
++More work-shaped objects, not more capability.
++
++**Capability illusion**:
++One successful AI result mistaken for repeatable organizational capability.
++
++**Folklore**:
++Process that lives in memory and chat scrollback instead of infrastructure.
++
++**Semantic translation**:
++The manual labor of re-expressing the same organizational meaning in another discipline's format — BPMN for process, ArchiMate for architects, ontologies for data, telemetry names for observability, prompts for AI — and keeping the copies consistent by hand. A tax: paid continuously, produces no new meaning, and skipping it produces semantic drift. The pain [semantic projection](#infrastructure-terms) abolishes.
