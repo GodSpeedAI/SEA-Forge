@@ -88,3 +88,7 @@ trusted providers for the assignment and current link before admitting a start.
   They lack a dedicated approved domain meaning and the five scoped currency
   ceilings. The agent token ceiling has distinct semantics. Bind explicit
   approved values to the admitted SEA run before the trusted handoff.
+- The FDE integration architecture assigns Brief and Budget to Horizon at
+  Hand off. The existing SEA delegate request binds only episode and
+  assignment identity. A versioned binding must carry the approved values
+  while preserving the frozen request and response contract.

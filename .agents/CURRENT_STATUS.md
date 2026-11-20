@@ -1,6 +1,6 @@
 # Current status
 
-**Status revision:** 378
+**Status revision:** 379
 
 **Stage:** FDE WP-23 and T4a | Deadline, exact link, and safe-mode controls
 
@@ -135,8 +135,8 @@
 
 **Limits:**
 
-- The persisted SEA run, assignment, and link now have an exact join for new admissions. Production needs trusted Brief and Budget fields and an authenticated handoff that binds to that admitted run. Existing token ceilings do not express the five SOP currencies.
-- The Workbench has authenticated safe-mode status and operator clear. Trusted extension descriptors and live effective grants still need input from their owning surfaces.
+- Horizon Hand off owns the assignment Brief and Budget. The current SEA delegate contract carries the episode and assignment ID but has no binding for those approved values. Production needs a versioned binding and an authenticated handoff tied to the existing SEA run.
+- Workbench has authenticated safe-mode status and operator clear. The bundle details route still needs authored panel descriptors and views from the immutable version directory plus host fault recording. Effective grant display depends on the T4b projection replay fix.
 - T4b restart verification must show that a rebuilt authority index retains the same grant principal, permissions, expiry, and activation sequence as the live index. The separate T4b checkout has existing uncommitted work in that area.
 - The older promotion-store initializer failed Windows directory fsync in the original reader fixture setup. The final Windows reader tests use prepared case data and pass. Production promotion-store writes on Windows require separate durability support and qualification.
 - S3 has no registered proof slice or confirmed live phone enrollment route. The owner runbook and WP-35 independent anchoring require those implementation and provisioning prerequisites.
@@ -183,7 +183,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Bind an explicit, approved Brief and five-currency Budget to the existing SEA admission and authenticate its handoff to Cognate. Complete trusted T4a presentation inputs. Qualify APFS and fixed-NTFS guest resets on disposable hosts.
+**Next:** Carry the Horizon Hand off Brief and Budget through a versioned SEA admission binding and authenticate the same admitted run to Cognate. Wire authored version-directory fragments and host fault recording into T4a. Qualify APFS and fixed-NTFS guest resets on disposable hosts.
 
 **Evidence:**
 
