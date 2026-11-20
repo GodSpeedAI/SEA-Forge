@@ -1,3 +1,32 @@
+**Status revision:** 382
+
+**Stage:** CognitiveOS convergence #108 | #110 and #111 landed; release path inspected
+
+**Summary:** Integrated #110 (experts.restore) and #111 (affordance.field) into the Workbench integration branch; recorded the owner-approved Cognate publication path (Release Please + OIDC trusted publishing) and confirmed the release environment configuration.
+
+**Verified:**
+
+- Workbench integration b3a690b carries #110 ae43820 and #111 4fe806b; typecheck clean; J-EXPERTS-restore plus adjacent suites 13 pass; affordance plus cognitive suites 36 pass.
+- Cognate release workflow: no repository secrets exist on GodSpeedAI/Cognate and no workflow references RELEASE_PLEASE_TOKEN or CREATE_PR_TOKEN; Release Please uses the default GITHUB_TOKEN and npm publication uses OIDC (id-token: write) with no token.
+- NPM_TRUSTED_PUBLISHING_READY=true is set as a Cognate repository variable and the release environment exists with custom branch policy limited to main.
+- Org-level secrets cannot be listed with the current token scopes; that limit is reported rather than assumed.
+
+**Limits:**
+
+- npmjs.com trusted-publisher configuration for each package cannot be verified from this host; it is only exercised at publish time.
+- The Cognate half of #112 is in flight; #117 and #119 are in flight.
+- No protected-main merge and no publication has occurred.
+
+**Next:** Integrate #117, the Cognate #112 half and #119 once verified, then present the focused Cognate SDK release plan for approval before any main merge or publish.
+
+**Evidence:**
+
+- .agents/reports/2026-11-19-cognitiveos-convergence/IMPLEMENTATION-HANDOFF.md
+
+---
+
+# Historical status
+
 **Status revision:** 381
 
 **Stage:** CognitiveOS convergence #108 | implementation session 1, integration bases and #109
@@ -26,9 +55,6 @@
 - .agents/reports/2026-11-19-cognitiveos-convergence/IMPLEMENTATION-HANDOFF.md
 - https://github.com/GodSpeedAI/SEA-Forge/issues/108
 
----
-
-# Historical status
 
 **Status revision:** 380
 

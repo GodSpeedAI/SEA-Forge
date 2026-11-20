@@ -9,7 +9,8 @@ issue tracker and executable verification override every claim in this file.
 
 | Recorded | Session | Last safe action | Next action |
 |---|---|---|---|
-| 2026-11-20 | first implementation session (DeepSeek V4.1 Flash / OpenCode) | Integration branches created; #109 version alignment and standalone evidence recorded; expert/team/review/plugin and coding suites pass on the combined Workbench head | Commit the #109 version gate, then implement #110, #111 and #117 in isolated worktrees |
+| 2026-11-20 | first implementation session (DeepSeek V4.1 Flash / OpenCode) | #109 landed on the integration branches; #110 (`experts.restore`) and #111 (`affordance.field`) integrated and green; #117, #112 (Cognate), #119 in flight | Integrate #117, #112 and #119; prepare the Cognate release plan and present it before any protected-branch merge or publication |
+| 2026-11-20 | owner decision on the Cognate publication gate | Owner approved using the existing Release Please + GitHub Actions OIDC trusted-publishing path (no long-lived token; `NPM_TRUSTED_PUBLISHING_READY=true` is set), forbade monorepo imports/vendored tarballs/workspace aliases/manual registry edits, and required a **focused, tested release candidate with its plan shown before any main merge or publish** | Finish and verify the Cognate half of #112, then present exact versions, release scope, approval and verification |
 
 ## Parent and specification
 
@@ -50,17 +51,17 @@ LANDED · BLOCKED · DEFERRED_BY_APPROVED_SCOPE.
 
 | Ticket | Increment | State | Evidence / blocker |
 |---|---|---|---|
-| #109 | I0 version alignment + standalone | VERIFIED_UNMERGED | Workbench typecheck; 107 expert/team/review/plugin tests; 76 coding/contract tests; Horizon single-cognate (28 packages) and `check`; all pins and installed copies at 0.10.0; `CaseContext` + `caseContextIssues` exported by `cognate-runtime-api`. Pending: commit the version gate, push. |
-| #110 | I5 `experts.restore` | NOT_STARTED | Frontier. Workbench only. |
-| #111 | I5 `affordance.field` | NOT_STARTED | Frontier. Workbench only. |
-| #112 | I1/I2 deterministic child run | BLOCKED (consumer half) | Ready to implement the Cognate `rlm` contract + test provider. Workbench consumption needs a published Cognate version carrying it; no npm credentials on this host. |
+| #109 | I0 version alignment + standalone | LANDED (integration) | Workbench `test/cognate-version-gate.test.ts`; 107 + 76 tests; Horizon 28-package gate + 31 workshop/handoff tests. See [#109 comment](https://github.com/GodSpeedAI/SEA-Forge/issues/109#issuecomment-7049556408). |
+| #110 | I5 `experts.restore` | LANDED (integration `ae43820`) | Operator-only, in-run refused, verbatim create/reactivate/kept; `test/J-EXPERTS-restore.test.ts` (5 tests) + adjacent suites (13 pass). Merged as Workbench integration `b3a690b`-series. |
+| #111 | I5 `affordance.field` | LANDED (integration) | Bounded read over the existing resolver and `CASE_OPERATIONS`; evaluated-move-without-criterion refused; `test/J-COG-AFFORDANCE-field.test.ts` (36 pass with cognitive suites). |
+| #112 | I1/I2 deterministic child run | IN_PROGRESS (Cognate half) | Builds the `rlm` contract, component and test provider in `ticket/112-rlm-contract`. Workbench consumer half is BLOCKED on a published Cognate version. |
 | #113 | recovery/reconciliation | NOT_STARTED | Depends on #112. |
-| #114 | I3b contained streaming | NOT_STARTED | Depends on #112 contract; uses T4a spawn. |
+| #114 | I3b contained streaming | NOT_STARTED | Depends on #112 contract (StdioSpawnPort in runtime-api) and the T4a spawn base. |
 | #115 | egress + cumulative payment | NOT_STARTED | Depends on #114. |
 | #116 | committed allow ↔ enforced profile | NOT_STARTED | Depends on #114; SEA authority side. |
-| #117 | provenance projection | NOT_STARTED | Frontier. Workbench only. |
-| #118 | 7B joined proof | NOT_STARTED | Depends on #112–#117. |
-| #119 | Horizon exploratory handoff | NOT_STARTED | Depends on #112 (caseContext freeze). |
+| #117 | provenance projection | IN_PROGRESS | `ticket/117-settlement-provenance`: `settlementScope`/`receiptRef` + governed settlement family in `OBSERVED_EVENT_TYPES`. |
+| #118 | 7B joined proof | NOT_STARTED | Depends on #112–#117. Do not claim until authority, contained execution, cumulative payment, independent evidence and the SEA-Forge receipt are demonstrated together. |
+| #119 | Horizon exploratory handoff | IN_PROGRESS | `ticket/119-case-context` (Workbench) + `ticket/119-horizon-handoff` (Horizon). |
 | #120 | Horizon evaluated WP-23 binding | NOT_STARTED | Depends on #119. |
 | #121 | optional Prime adapter | NOT_STARTED | Depends on #114. Optional. |
 | #122 | optional Gauntlet escalation | NOT_STARTED | Frontier, optional, no core dependency. |
@@ -88,12 +89,15 @@ Failed or not run:
 
 ## Known blockers and limitations
 
-1. **Cognate publication.** Workbench consumes published `@godspeedai/cognate-*`
-   packages and may not import monorepo source, vendored tarballs or workspace
-   aliases. The `rlm` contract (#112) therefore needs a published Cognate
-   version before the Workbench consumer half can be verified end to end. There
-   is no npm credential on this host (`npm whoami` → 401); the Cognate release
-   workflow owns publication. Do not substitute a path alias or tarball.
+1. **Cognate publication (owner-approved path, awaiting a focused release plan).**
+   Workbench consumes published `@godspeedai/cognate-*` packages and may not import
+   monorepo source, vendored tarballs or workspace aliases. The Cognate half of #112
+   is implemented and verified locally first; the work then reaches the registry
+   through the existing `release.yml` Release Please + OIDC trusted-publishing path
+   (`NPM_TRUSTED_PUBLISHING_READY=true`, `release` environment, `id-token: write`,
+   no long-lived npm token). Publication requires merging the focused release
+   candidate into `main`, which is a protected-branch merge: show the exact
+   versions, release scope, approval and passing verification to the owner first.
 2. **Host budget.** 8 GB WSL host. Serialize Cargo; use at most two jobs.
 3. **pg0.** `cwb-int/.tmp/pg0` is a symlink to the main checkout's pg0. Starts
    use the default instance name; avoid concurrent DB-heavy suites.
@@ -101,11 +105,13 @@ Failed or not run:
 
 ## Next eligible work
 
-1. Commit the #109 version gate and push the Workbench/Horizon integration
-   branches (no protected-main merge).
-2. Implement #110, #111 and #117 in isolated worktrees from
-   `cwb-int`, merging the integration tip before reporting done.
-3. Implement the Cognate half of #112 (`rlm` contract, test provider, refusal
-   semantics), then resolve the publication gate with the owner before claiming
-   the Workbench slice.
-4. Keep #122 optional and out of the central path.
+1. Integrate #117, the Cognate #112 half and #119 once their tests pass on the
+   merged candidate, recomputing the frontier each time.
+2. Verify the Cognate release candidate independently, then present the focused
+   release plan (exact versions, scope, approval, verification) before any
+   protected-branch merge or publication.
+3. After publication, update Workbench to the new coherent version, clean-install
+   and rerun the package compatibility gate and regressions; then unblock the
+   Workbench consumer half of #112.
+4. Implement #114, then #115/#116, then #118; keep #122 optional and #121/#120
+   gated on their prerequisites.
