@@ -430,6 +430,34 @@
         "AT-03"
       ],
       "v1_writers": "not an append code"
+    },
+    {
+      "code": "ASSIGNMENT_APPROVAL_REQUIRED",
+      "home": "assignment-binding.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "ASSIGNMENT_APPROVAL_INVALID",
+      "home": "assignment-binding.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "ASSIGNMENT_APPROVAL_MISMATCH",
+      "home": "assignment-binding.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
+    },
+    {
+      "code": "ASSIGNMENT_BINDING_INVALID",
+      "home": "assignment-binding.v1.json#/$defs/Error",
+      "also_raised_by": [],
+      "oracle_rows": [],
+      "v1_writers": "existing"
     }
   ],
   "conflicts": [

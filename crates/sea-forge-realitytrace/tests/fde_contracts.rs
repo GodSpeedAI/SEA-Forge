@@ -363,7 +363,7 @@ fn digests_manifest_matches_the_schemas() {
         assert_eq!(hex::encode(Sha256::digest(&bytes)), digest, "{name}");
         listed += 1;
     }
-    assert_eq!(listed, 12);
+    assert_eq!(listed, 13);
     let out = Command::new("sh").arg(script()).output().unwrap();
     assert!(
         out.status.success(),

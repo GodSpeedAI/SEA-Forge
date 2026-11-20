@@ -1,10 +1,31 @@
 # Current status
 
-**Status revision:** 381
+**Status revision:** 382
 
-**Stage:** FDE WP-23 | Versioned assignment binding on the delegated run
+**Stage:** FDE WP-23 | Binding codes registered, hex64 bounded
 
-**Summary:** A Field Case delegate now binds the full approved assignment (explicit domain_meaning and five SOP currency ceilings) to the admitted run, recorded as a versioned binding that joins link and run, with a fail-closed trusted read.
+**Summary:** Hosted CI's contract tripwires caught three gaps in de8f76d1 (oracle codes, hex64 maxLength, manifest count); all fixed and re-verified.
+
+**Verified:**
+
+- scripts/check-fde-oracle-codes.sh ok: 13 G rows, 48 error codes, each in exactly one home table
+- sea-forge-realitytrace fde_contracts: 34 passed, 0 failed; server conformance 49 targets green under FDE_WP21A_FINAL=1
+- S2 slice rerun on this tree: 17 rows, zero diffs vs the frozen 637cbece baseline; 13 contract digests match
+
+**Limits:**
+
+- Hosted CI for the follow-up commit was not yet run when this entry was recorded
+
+**Next:** Rerun hosted CI on the lane head; then continue WP-23 with Cognate Connect wiring (handoff section 2 items 3-4).
+
+**Evidence:**
+
+- .tmp/fde-proof/s2/results.json
+- https://github.com/GodSpeedAI/SEA-Forge/actions/runs/44804758916
+
+---
+
+# Historical status
 
 **Verified:**
 
