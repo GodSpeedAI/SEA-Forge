@@ -76,18 +76,15 @@ and in .agents/CURRENT_STATUS.md. Gates M13 (TranscriptEvidence). -->
 
 ## WP-23 authoritative assigned-run admission
 
-SEA Forge records assignment state and delegation links separately. The assignment
-row lacks the exact link ID and the brief and budget. Cognate retains the full
-assignment with a run after admission. An interrupted legacy write can leave a
-link that cannot be attributed to the latest assignment transition.
+SEA Forge now records the exact link on new Field Case assignment transitions.
+Cognate enforces the link deadline within store serialization. Connect requires
+trusted providers for the assignment and current link before admitting a start.
 
-- Preferred approach. Issue the full assignment in a durable Cognate store.
-  SEA Forge should atomically bind its ID to the exact issued link and grant a
-  reservation to the authenticated delegate. Cognate should enforce lease expiry
-  at the serialized run commit.
-- Existing-source option. An existing trusted issuer can replace the new Cognate
-  storage if it provides the full assignment before start, with equivalent tenant
-  isolation, identity binding, and an immutable reference.
-- Impact. The cross-store reservation and expiry guard add an explicit issuance
-  and recovery contract. Until that contract has a production provider, the
-  published Cognate assigned-start RPC refuses admission by default.
+- Reuse SEA’s existing admitted run as the reservation and correlation identity
+  for SEA-originated work. Cognate executes the same delegation under its
+  verified link and keeps a durable mapping to that SEA run. The handoff must
+  preserve cancellation, settlement, and idempotent recovery.
+- The current Case records can identify the adopted problem and frozen episode.
+  They lack a dedicated approved domain meaning and the five scoped currency
+  ceilings. The agent token ceiling has distinct semantics. Bind explicit
+  approved values to the admitted SEA run before the trusted handoff.

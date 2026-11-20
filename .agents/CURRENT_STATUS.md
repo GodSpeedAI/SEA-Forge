@@ -1,13 +1,19 @@
 # Current status
 
-**Status revision:** 377
+**Status revision:** 378
 
-**Stage:** FDE S2 | Verified snapshot readers and delegate contract
+**Stage:** FDE WP-23 and T4a | Deadline, exact link, and safe-mode controls
 
-**Summary:** Record the native restart, frozen S2, RealityTrace, and hosted Workbench receipts for the published checkpoints.
+**Summary:** Publish deadline-bounded Cognate admission, SEA’s exact assignment link binding, and authenticated Workbench safe-mode controls.
 
 **Verified:**
 
+- Cognate 3aae0d8 passed all 193 focused tests and hosted verify 44753752380. A real PostgreSQL record lock forced expiry before publication and the gated write left no event, record update, outbox, or idempotency result. The isolated mutation without the final check failed the same assertion.
+- SEA 637cbece passed all 49 FDE scenario tests, all 12 frozen digests, and the exact S2 comparison with 17 matching rows, including AT-09 partial. The regression failed before the assignment transition stored its exact delegation link.
+- Workbench ccf4462 passed 16 focused tests and a real Chromium journey with a server-issued operator session. The live-server test reproduced the missing policy-refusal audit event before the fix. The final route preserves the existing operator-only policy and records the denied direct request.
+- SEA hosted CI 44754422337 passed all ten jobs at 637cbece.
+- Workbench 9824735 passed all seven jobs in hosted verify 44757271146, 16 focused local tests, and a real Chromium journey that displayed a live activation refusal with the recorded actor before the operator cleared safe mode.
+- Workbench safe-mode properties passed at FC_RUNS=2000 with the existing cap on A5. The earlier safe-mode-only run 44755662049 failed to launch the preview browser on its hosted runner. The exact preview test passed locally.
 - Exact checkpoint fc2da542 matched all 17 frozen S2 rows except duration, including the expected AT-09 partial result. Joined NT-07 passed again against the real RealityTrace SQLite ledger, and both native Windows and macOS jobs passed in Portability run 44665538414.
 - Hosted Workbench verify run 44663728747 passed all seven jobs at 8fed14e on retry. Its initial attempt missed a same-tenant settings row, and the exact test passed locally before the retry.
 - The local proof runner returned exit 2 for slice s3 because only slices s1 and s2 are registered.
@@ -129,9 +135,10 @@
 
 **Limits:**
 
+- The persisted SEA run, assignment, and link now have an exact join for new admissions. Production needs trusted Brief and Budget fields and an authenticated handoff that binds to that admitted run. Existing token ceilings do not express the five SOP currencies.
+- The Workbench has authenticated safe-mode status and operator clear. Trusted extension descriptors and live effective grants still need input from their owning surfaces.
+- T4b restart verification must show that a rebuilt authority index retains the same grant principal, permissions, expiry, and activation sequence as the live index. The separate T4b checkout has existing uncommitted work in that area.
 - The older promotion-store initializer failed Windows directory fsync in the original reader fixture setup. The final Windows reader tests use prepared case data and pass. Production promotion-store writes on Windows require separate durability support and qualification.
-- T4a live presentation still needs an authenticated safe-mode status and operator clear route, a trusted fragment descriptor producer, and effective authority data. The durable safe-mode controller and event tests already pass.
-- Cognate denies assigned starts until a production verifier and authoritative lookup are configured. SEA needs an exact durable link binding and a reservation through run admission. The runtime currently checks expiry before calling the store, and the production gate must enforce it at the serialized commit point.
 - S3 has no registered proof slice or confirmed live phone enrollment route. The owner runbook and WP-35 independent anchoring require those implementation and provisioning prerequisites.
 - SEA assignment events do not identify their exact issued or resumed delegation link. The legacy writer appends the assignment state and link separately, so the latest rows cannot establish a current unambiguous delegation after a partial write.
 - SEA stores the delegation and assignment state but does not store the Brief and Budget. The durable Cognate assignment reader requires an existing run. Delegate-only admission needs a trusted assignment source before start and a server-authenticated agent identity bound to the SEA delegate.
@@ -176,7 +183,7 @@
 - cgroup pidfd sweep cannot reach child-cgroup members (fails closed as survivors); macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 - Stack ran on the DomainForge 3960326 build (SEA-Forge embeds 0.21.2); I-1 execution gate unwired; anchor local-only (OD-6); ep-3 NO_GAIN; AT-14/NT-03/NT-06 PARTIAL
 
-**Next:** Decide the authoritative WP-23 issuance and admission contract in OPEN_QUESTIONS.md. Qualify operating-system reset durability on disposable APFS and fixed-NTFS hosts. Complete trusted live presentation inputs before T4b.
+**Next:** Bind an explicit, approved Brief and five-currency Budget to the existing SEA admission and authenticate its handoff to Cognate. Complete trusted T4a presentation inputs. Qualify APFS and fixed-NTFS guest resets on disposable hosts.
 
 **Evidence:**
 
