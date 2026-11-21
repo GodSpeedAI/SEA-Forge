@@ -1052,9 +1052,11 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::CaseReopen { .. }
         | Request::CaseRecordAppend { .. }
         // Reads that name an actor: the continuation shows the approval id only to
-        // the case lead and the approver of record (README section 9).
+        // the case lead and the approver of record (README section 9); the
+        // binding read is served only to the link's delegate or delegator.
         | Request::CaseFieldGet { .. }
         | Request::CaseContinuation { .. }
+        | Request::AssignmentBindingGet { .. }
         | Request::CaseTerminate { .. }
         | Request::CaseAdvance { .. }
         | Request::ItemExecute { .. }

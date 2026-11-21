@@ -1259,6 +1259,15 @@ pub enum Request {
         #[serde(default)]
         request_id: Option<String>,
     },
+    /// `assignment_binding_get` (WP-23, `assignment-binding.v1`): the joined
+    /// binding of a recorded assignment, served only to the link's delegate or
+    /// delegator (anyone else gets the unknown-assignment answer).
+    AssignmentBindingGet {
+        case_id: String,
+        assignment_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     CaseReopen {
         case_id: String,
         #[serde(default = "default_policy")]
@@ -3874,6 +3883,31 @@ pub async fn handle_request_as(
         Request::CaseContinuation { case_id, .. } => {
             let viewer = actor_id.unwrap_or("").to_string();
             field_case_read(state, case_id, viewer, true).await
+        }
+        Request::AssignmentBindingGet {
+            case_id,
+            assignment_id,
+            ..
+        } => {
+            let viewer = actor_id.unwrap_or("").to_string();
+            let case_lock = state.acquire_case_lock(&case_id).await;
+            let root = state.root.clone();
+            let (case, assignment) = (case_id.clone(), assignment_id.clone());
+            let result = tokio::task::spawn_blocking(move || {
+                sfwp::assignment_binding::get(&root, &case, &assignment, &viewer)
+            })
+            .await;
+            drop(case_lock);
+            state.prune_case_lock(&case_id).await;
+            match result {
+                Ok(Ok(Ok(value))) => value,
+                // The trusted read's integrity refusal, or the §9 hidden shape.
+                Ok(Ok(Err(frame))) => frame,
+                Ok(Err(error)) => forge_error_response(&error),
+                Err(error) => forge_error_response(&ForgeError::Internal(format!(
+                    "assignment binding read task panic: {error}"
+                ))),
+            }
         }
         Request::CaseReopen {
             case_id,

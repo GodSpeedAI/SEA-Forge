@@ -1,10 +1,30 @@
 # Current status
 
-**Status revision:** 382
+**Status revision:** 383
 
-**Stage:** FDE WP-23 | Binding codes registered, hex64 bounded
+**Stage:** FDE WP-23 | assignment_binding_get read verb
 
-**Summary:** Hosted CI's contract tripwires caught three gaps in de8f76d1 (oracle codes, hex64 maxLength, manifest count); all fixed and re-verified.
+**Summary:** The joined binding is now readable over the wire: assignment_binding_get serves the delegate or delegator of the exact link, and everyone else (and every legacy row) gets one constant unknown-assignment answer, so a binding's existence is never revealed.
+
+**Verified:**
+
+- TDD: the wire test failed red on the unknown verb, then passed; it asserts the delegator reads the full join (assignment, brief, budget, link, run) and that an outsider, an unknown assignment and a legacy row all get the byte-identical hidden answer
+- sea-forge-server all-features suite with FDE_WP21A_FINAL=1: 51 targets, 699 passed, 0 failed; fmt and clippy clean; no schema changed (README section 11 documents the read verb)
+
+**Limits:**
+
+- The read verb is served on the private authenticated channel only; no hosted CI run yet for this commit
+
+**Next:** Run hosted CI; implement Cognate's production AssignmentAdmission provider over this verb (handoff section 2 item 3).
+
+**Evidence:**
+
+- crates/sea-forge-server/src/sfwp/assignment_binding.rs
+- crates/sea-forge-server/tests/conformance_fde_scenarios.rs
+
+---
+
+# Historical status
 
 **Verified:**
 

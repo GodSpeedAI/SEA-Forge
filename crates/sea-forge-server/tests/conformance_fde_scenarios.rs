@@ -3563,3 +3563,142 @@ async fn review3_corrupt_record_hash_refuses_every_write() {
         "nothing was written"
     );
 }
+
+// ---------------------------------------------------------------------------
+// WP-23: the assignment-binding read verb (`assignment_binding_get`)
+// ---------------------------------------------------------------------------
+
+/// The joined binding of a recorded assignment, read over the wire by exactly
+/// the link's delegate or delegator; anyone else — and any legacy row — gets
+/// the same answer as for an unknown assignment, so membership is not leaked
+/// (the section 9 read rule).
+#[tokio::test(flavor = "multi_thread")]
+async fn assignment_binding_get_serves_the_delegator_and_fails_closed() {
+    let root = tempfile::tempdir().unwrap();
+    let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
+    seed.field_case_document(1);
+    seed.plan(&[("item-03".into(), true)]);
+    write_fde_config(root.path(), Some(KEEPER), None);
+
+    let episode_ref = format!("episode:{CASE}:item-03:1@sha256:{}", "cd".repeat(32));
+    let assignment_id = format!("assign:{CASE}:item-03:1:1");
+    let brief = json!({
+        "instruction": "Record the verifier's observation for gate G3.",
+        "adoptable_problem": "Why the evidence record is missing after the run.",
+        "domain_meaning": "An evidence record names an independent source.",
+        "context_refs": [{"ref": "doc:handoff-note-1", "trust": "untrusted_reference"}],
+    });
+    let budget = json!([
+        {"currency": "time", "limit": 14400, "unit": "seconds"},
+        {"currency": "attention", "limit": "unknown", "unit": "operator_minutes"},
+        {"currency": "money", "limit": 5, "unit": "USD"},
+        {"currency": "risk", "limit": "unknown", "unit": "class"},
+        {"currency": "recovery", "limit": 1, "unit": "revert_steps"},
+    ]);
+    let assignment = json!({
+        "assignment_id": assignment_id, "case_id": CASE, "step_id": "item-03",
+        "n": 1, "k": 1, "episode_ref": episode_ref, "brief": brief,
+        "budget": budget, "issued_at": "2026-11-20T09:00:00Z",
+    });
+    let body = json!({"assignment_id": assignment_id, "episode_ref": episode_ref,
+                      "brief": brief, "budget": budget,
+                      "link_id": "link-0001", "run_id": "run-0001"});
+    let binding = json!({"version": 1, "assignment": assignment,
+                         "link_id": "link-0001", "run_id": "run-0001",
+                         "binding_digest": digest_of(&body).unwrap(),
+                         "recorded_at": "2026-11-20T09:00:01Z"});
+    write_lines(
+        &case_dir(root.path()).join("field-assignments.jsonl"),
+        &[json!({"assignment_id": assignment_id, "state": "issued",
+                 "episode_key": {"case_id": CASE, "plan_item_id": "item-03", "n": 1},
+                 "link_id": "link-0001", "at": "2026-11-20T09:00:01Z",
+                 "binding": binding})],
+    );
+    write_lines(
+        &case_dir(root.path()).join("field-links.jsonl"),
+        &[json!({"link_id": "link-0001", "case_id": CASE,
+                 "episode_ref": episode_ref, "assignment_id": assignment_id,
+                 "delegator": "operator_local", "gateway_actor": null,
+                 "delegate": "agent:http://127.0.0.1:8099/agent",
+                 "issued_at": "2026-11-20T09:00:00Z",
+                 "expires_at": "2099-01-01T00:00:00Z"})],
+    );
+    write_lines(
+        &case_dir(root.path()).join("field-runs.jsonl"),
+        &[json!({"run_id": "run-0001", "case_id": CASE,
+                 "episode_ref": episode_ref, "verb": "delegate", "role": "executor",
+                 "actor": "agent:http://127.0.0.1:8099/agent",
+                 "on_behalf_of": "operator_local", "delegated": true,
+                 "link_id": "link-0001", "workspace_ref": "ws:agent:x",
+                 "started_at": "2026-11-20T09:00:01Z",
+                 "recorded_at": "2026-11-20T09:00:01Z"})],
+    );
+
+    let actors = [
+        Actor {
+            id: "operator_local".into(),
+            role: ActorRole::Operator,
+        },
+        Actor {
+            id: "outsider".into(),
+            role: ActorRole::Operator,
+        },
+    ];
+    let mut cell = authenticated::Cell::start(config(root.path(), &actors)).await;
+    let ask = |actor_id: &str, case_id: &str, assignment_id: &str| {
+        json!({"verb": "assignment_binding_get", "case_id": case_id,
+               "assignment_id": assignment_id,
+               "actor": {"actor_id": actor_id, "role": "operator"}})
+    };
+    let delegator = authenticated::principal("operator_local", ActorRole::Operator);
+    let outsider = authenticated::principal("outsider", ActorRole::Operator);
+
+    // The delegator of the link reads the joined binding.
+    let got = cell
+        .call_for(&delegator, ask("operator_local", CASE, &assignment_id))
+        .await;
+    assert_eq!(got["case_id"], CASE, "{got}");
+    let binding = &got["binding"];
+    assert_eq!(binding["run_id"], "run-0001", "{got}");
+    assert_eq!(binding["link_id"], "link-0001", "{got}");
+    assert_eq!(
+        binding["assignment"]["brief"]["domain_meaning"],
+        "An evidence record names an independent source."
+    );
+    assert_eq!(binding["assignment"]["budget"][0]["limit"], 14400);
+    assert_eq!(
+        binding["link"]["delegate"],
+        "agent:http://127.0.0.1:8099/agent"
+    );
+    assert_eq!(binding["run"]["on_behalf_of"], "operator_local");
+
+    // An outsider, and an unknown assignment, get the SAME answer: the
+    // binding's existence is not revealed (the section 9 read rule).
+    let denied = cell
+        .call_for(&outsider, ask("outsider", CASE, &assignment_id))
+        .await;
+    let unknown = cell
+        .call_for(
+            &delegator,
+            ask("operator_local", CASE, "assign:case-0001:item-03:9:9"),
+        )
+        .await;
+    assert_eq!(denied, unknown, "membership leaked: {denied} vs {unknown}");
+    assert!(
+        denied.get("binding").is_none(),
+        "an unauthorized read returned a binding: {denied}"
+    );
+
+    // A legacy row without a binding fails closed for the delegator too, with
+    // the same shape.
+    let path = case_dir(root.path()).join("field-assignments.jsonl");
+    let text = fs::read_to_string(&path).unwrap();
+    let mut row: Value = serde_json::from_str(text.lines().next().unwrap()).unwrap();
+    row.as_object_mut().unwrap().remove("binding");
+    fs::write(&path, format!("{row}\n")).unwrap();
+    let legacy = cell
+        .call_for(&delegator, ask("operator_local", CASE, &assignment_id))
+        .await;
+    assert_eq!(legacy, unknown, "a legacy row leaked: {legacy}");
+    cell.shutdown().await;
+}

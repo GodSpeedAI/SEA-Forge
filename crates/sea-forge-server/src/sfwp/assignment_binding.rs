@@ -12,14 +12,76 @@
 
 use std::path::Path;
 
+use sea_forge_core::errors::ForgeError;
 use serde_json::{json, Value};
 
-use super::case_records::{self, digest_of};
+use super::case_records::{self, canonical_actor, digest_of};
 use sea_forge_case_runner::case_ops::case_snapshot_dir;
 
 fn refuse(message: &str) -> Value {
     json!({"outcome": "refused", "code": "ASSIGNMENT_BINDING_INVALID",
            "message": message})
+}
+
+/// The wire read `assignment_binding_get` (README §11, WP-23): [`read`] for
+/// exactly the link's delegate or delegator. Anyone else — and a legacy row,
+/// which has no link join to authorize against — gets the SAME answer as for an
+/// unknown assignment, so a binding's existence is never revealed (the §9 read
+/// rule). The integrity refusals of [`read`] are answered only to a caller who
+/// already proved membership.
+pub fn get(
+    root: &Path,
+    case_id: &str,
+    assignment_id: &str,
+    viewer: &str,
+) -> Result<Result<Value, Value>, ForgeError> {
+    // One constant answer for every hidden path (unknown case, unknown
+    // assignment, legacy row, unentitled caller): the response for a request
+    // never depends on whether the binding exists (the §9 read rule).
+    let hidden = || ForgeError::Input("unknown assignment binding".into());
+    if !sea_forge_core::path::valid_id_segment(case_id, 128) {
+        return Err(hidden());
+    }
+    let Ok(dir) = case_snapshot_dir(root, case_id) else {
+        return Err(hidden());
+    };
+    if !dir.join("case.json").exists() {
+        return Err(hidden());
+    }
+    let rows = case_records::read_lines_strict(&dir.join("field-assignments.jsonl"))
+        .map_err(|_| hidden())?;
+    let Some(row) = rows
+        .iter()
+        .rev()
+        .find(|r| r["assignment_id"] == assignment_id)
+    else {
+        return Err(hidden());
+    };
+    // A legacy row has no binding: nothing to authorize against, nothing to
+    // serve — the same answer as an unknown assignment, for every caller.
+    if row["binding"].as_object().is_none() {
+        return Err(hidden());
+    }
+    let Some(link_id) = row["link_id"].as_str() else {
+        return Err(hidden());
+    };
+    let links =
+        case_records::read_lines_strict(&dir.join("field-links.jsonl")).map_err(|_| hidden())?;
+    let Some(link) = links.iter().rev().find(|l| l["link_id"] == link_id) else {
+        return Err(hidden());
+    };
+    let viewer = canonical_actor(viewer).unwrap_or_default();
+    let entitled = ["delegate", "delegator"].iter().any(|role| {
+        link[*role]
+            .as_str()
+            .and_then(|p| canonical_actor(p).ok())
+            .is_some_and(|p| p == viewer)
+    });
+    if !entitled {
+        return Err(hidden());
+    }
+    Ok(read(root, case_id, assignment_id)
+        .map(|joined| json!({"case_id": case_id, "binding": joined})))
 }
 
 /// Read the joined binding of `assignment_id`: `{case_id, episode_key,
