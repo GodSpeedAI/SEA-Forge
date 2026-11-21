@@ -1730,6 +1730,14 @@ impl CepAuthorityService<'_> {
             e.idempotency_key.as_deref()
                 == Some(format!("{SETTLE_SUFFIX_FINAL}{operation_id}").as_str())
         }) {
+            let ingress = VerifiedSettlementIngress::verified(
+                SettlementIngress::CepSettlement,
+                SettlementTransport::None,
+                None,
+                caller,
+                vec![format!("operation:{operation_id}")],
+            )?;
+            self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
             let status = settlement_status_of(&done.payload);
             return Ok(SettlementOutcome {
                 status,

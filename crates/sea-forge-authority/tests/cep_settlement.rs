@@ -194,6 +194,40 @@ fn status(o: &sea_forge_authority::cep::SettlementOutcome) -> &str {
 }
 
 #[test]
+fn final_settlement_replay_requires_current_settlement_authority() {
+    let c = cell();
+    allow(&c, "op-replay-auth");
+    submit(
+        &c,
+        &packet(
+            &c.world,
+            "op-replay-auth",
+            "env-replay-auth",
+            vec![item("e-replay", "supports", "high")],
+        ),
+    )
+    .unwrap();
+    let original = settle(&c, "op-replay-auth").unwrap();
+    assert!(original.final_status);
+    let denied = with(&c, &full_policy(), SettlementCriteria::default(), |s| {
+        s.settle("op-replay-auth", &operator())
+    });
+    assert!(
+        matches!(denied, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration"))
+    );
+    let revoked = with(
+        &c,
+        &policy(&["cognate_action", "evidence_mutation"]),
+        SettlementCriteria::default(),
+        |s| s.settle("op-replay-auth", &svc()),
+    );
+    assert!(matches!(revoked, Err(CepAuthorityError::Evidence(_))));
+    let replay = settle(&c, "op-replay-auth").unwrap();
+    assert!(replay.replayed);
+    assert_eq!(replay.envelope, original.envelope);
+}
+
+#[test]
 fn supporting_evidence_settles_once_and_the_packet_names_its_basis() {
     let c = cell();
     allow(&c, "op-1");

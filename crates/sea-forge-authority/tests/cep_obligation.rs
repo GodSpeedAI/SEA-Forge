@@ -349,6 +349,23 @@ fn malformed_claims_are_refused_before_any_decision() {
 }
 
 #[test]
+fn final_obligation_replay_requires_current_settlement_authority() {
+    let s = scenario(W, 30);
+    s.verdict(&[s.run(Some(0))]);
+    let denied = Actor {
+        actor_id: "op-alice".into(),
+        role: ActorRole::Operator,
+    };
+    let result = with(&s.c, |service| {
+        service.settle_obligation(&s.op, &denied, &s.rt)
+    });
+    assert!(
+        matches!(result, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration"))
+    );
+    assert!(s.settle().unwrap().replayed);
+}
+
+#[test]
 fn known_zero_is_supported_and_settled_once() {
     let s = scenario(W, 30);
     assert_eq!(
