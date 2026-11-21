@@ -64,6 +64,8 @@
         "assignment",
         "link_id",
         "run_id",
+        "world_ref",
+        "episode_kind",
         "binding_digest",
         "recorded_at"
       ],
@@ -79,6 +81,14 @@
         "link_id": {
           "$ref": "#/$defs/text",
           "description": "The delegation link written before the run (delegation-link.v1). The binding, the link and the run join exactly."
+        },
+        "world_ref": {
+          "$ref": "#/$defs/text",
+          "description": "The world the episode froze (frozen-reference body.world_ref), carried so a consumer composes its case context without another read."
+        },
+        "episode_kind": {
+          "enum": ["evaluated", "exploratory"],
+          "description": "The frozen kind of the episode (R5 checks the request against it)."
         },
         "run_id": {
           "$ref": "#/$defs/text",

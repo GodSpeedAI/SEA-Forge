@@ -49,6 +49,8 @@
   },
   "link_id": "link-0001",
   "run_id": "run-0001",
+  "world_ref": "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "episode_kind": "evaluated",
   "binding_digest": "bd21d768133904e1b90790aac84fd637a03e1e6172348cafbc49e200c07ee566",
   "recorded_at": "2026-11-20T09:00:01Z"
 }

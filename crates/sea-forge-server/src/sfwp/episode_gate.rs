@@ -948,6 +948,8 @@ pub fn admit(root: &Path, input: &GateInput) -> Result<Admission, AdmissionError
                                       "link_id": link_id, "run_id": run_id});
                     let binding = json!({"version": 1, "assignment": assignment_doc,
                                          "link_id": link_id, "run_id": run_id,
+                                         "world_ref": facts.world_ref,
+                                         "episode_kind": kind,
                                          "binding_digest": case_records::digest_of(&body),
                                          "recorded_at": at});
                     sea_forge_case_runner::case_ops::contract::assignment_binding_is_valid(

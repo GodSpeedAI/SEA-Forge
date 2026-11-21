@@ -1,10 +1,29 @@
 # Current status
 
-**Status revision:** 383
+**Status revision:** 384
 
-**Stage:** FDE WP-23 | assignment_binding_get read verb
+**Stage:** FDE WP-23 | Binding carries the frozen world and kind
 
-**Summary:** The joined binding is now readable over the wire: assignment_binding_get serves the delegate or delegator of the exact link, and everyone else (and every legacy row) gets one constant unknown-assignment answer, so a binding's existence is never revealed.
+**Summary:** Binding gains required world_ref (the frozen reference body's world) and episode_kind (the frozen kind), so a consumer composes its case context from assignment_binding_get alone; the unconsumed v1 was amended in place and re-pinned.
+
+**Verified:**
+
+- Conformance 50 targets green (FDE_WP21A_FINAL=1), including the new world/kind assertions in the binding inspection and the wire read; server lib tests, realitytrace fde_contracts, fmt and clippy all clean; 13 contract digests match after the re-pin
+
+**Limits:**
+
+- CI 44857271287 covers 467f22ce (the read verb), not this amendment; a follow-up hosted run is needed after push
+
+**Next:** Push and rerun hosted CI; then the Cognate provider over assignment_binding_get (handoff section 2 item 3).
+
+**Evidence:**
+
+- contracts/fde/assignment-binding.v1.json
+- .tmp/fde-proof/s2/results.json
+
+---
+
+# Historical status
 
 **Verified:**
 

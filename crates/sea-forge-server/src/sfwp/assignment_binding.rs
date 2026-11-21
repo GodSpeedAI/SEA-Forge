@@ -233,6 +233,8 @@ mod tests {
                           "link_id": "link-0001", "run_id": "run-0001"});
         let binding = json!({"version": 1, "assignment": assignment,
                              "link_id": "link-0001", "run_id": "run-0001",
+                             "world_ref": "world:seed@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+                             "episode_kind": "evaluated",
                              "binding_digest": digest_of(&body).unwrap(),
                              "recorded_at": "2026-11-20T09:00:01Z"});
         let row = json!({"assignment_id": "assign:case-0001:item-03:1:1",

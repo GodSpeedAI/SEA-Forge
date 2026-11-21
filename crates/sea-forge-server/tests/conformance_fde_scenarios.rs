@@ -1253,6 +1253,8 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
                 row["binding"] = json!({
                     "version": 1, "assignment": assignment,
                     "link_id": "link-0001", "run_id": "run-0001",
+                    "world_ref": "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                    "episode_kind": ep["kind"],
                     "binding_digest": digest_of(&body).unwrap(),
                     "recorded_at": "2026-11-20T08:00:01Z",
                 });
@@ -1432,6 +1434,12 @@ async fn run_gate_with(s: &Value, suspend_after_admission: bool) -> Result<(), S
             .ok_or("the row carries no binding")?;
         let bound = &binding["assignment"];
         assert_eq!(binding["version"], 1, "the binding is versioned");
+        assert_eq!(
+            binding["world_ref"],
+            "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            "the frozen world travels with the binding"
+        );
+        assert_eq!(binding["episode_kind"], request["episode_ref"]["kind"]);
         assert_eq!(
             binding["link_id"], row["link_id"],
             "binding and row link differ"
@@ -3605,6 +3613,8 @@ async fn assignment_binding_get_serves_the_delegator_and_fails_closed() {
                       "link_id": "link-0001", "run_id": "run-0001"});
     let binding = json!({"version": 1, "assignment": assignment,
                          "link_id": "link-0001", "run_id": "run-0001",
+                         "world_ref": "world:seed@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879",
+                         "episode_kind": "evaluated",
                          "binding_digest": digest_of(&body).unwrap(),
                          "recorded_at": "2026-11-20T09:00:01Z"});
     write_lines(
