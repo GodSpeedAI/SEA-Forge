@@ -1045,6 +1045,7 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::AuthorityRepin { .. }
         | Request::AuthorityEvidence { .. }
         | Request::AuthoritySettle { .. }
+        | Request::AuthoritySettleReceipt { .. }
         | Request::AuthorityClosure { .. }
         | Request::CaseCommit { .. }
         | Request::ApprovalDecide { .. }

@@ -552,6 +552,40 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
     assert_eq!(settled["envelope"]["envelope_kind"], "settlement_packet");
     assert_eq!(c.call(settle).await, settled);
 
+    // The negotiated receipt is projected from the committed SEA record, not from its evidence.
+    let projected = c
+        .call(as_actor(
+            json!({"verb": "authority_settle_receipt", "operation_id": "op-s1",
+            "request_id": "settle-receipt-1"}),
+            "cognate-service",
+            "service",
+        ))
+        .await;
+    assert_eq!(projected["ok"], true, "{projected}");
+    assert_eq!(projected["replayed"], true);
+    assert_eq!(projected["receipt"]["operation_id"], "op-s1");
+    assert_eq!(
+        projected["receipt"]["subject_refs"],
+        json!(["cognate", "op-s1"])
+    );
+    assert_eq!(projected["receipt"]["world_ref"], world);
+    assert_eq!(
+        projected["receipt"]["authority_decision_ref"],
+        "env-authority_decision-op-s1"
+    );
+    assert_eq!(projected["receipt"]["issuer"], "sea-forge-authority");
+    assert_eq!(projected["receipt"]["status"], "settled");
+    assert_eq!(projected["receipt"]["final"], true);
+    assert_eq!(
+        projected["receipt"]["ledger_entry"],
+        settled["ledger_entry"]
+    );
+    assert!(projected.get("envelope").is_none());
+    assert!(!projected
+        .to_string()
+        .contains("Did the operation reach the declared state?"));
+    assert!(!projected.to_string().contains("evidence"));
+
     // Contradicting evidence rejects.
     c.call(verb(
         request(&world, "op-s2", "action", "run.start"),
@@ -572,6 +606,37 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
         ))
         .await;
     assert_eq!(rejected["status"], "rejected", "{rejected}");
+
+    let rejected_receipt = c.call(as_actor(
+        json!({"verb": "authority_settle_receipt", "operation_id": "op-s2", "request_id": "settle-receipt-2"}),
+        "cognate-service", "service",
+    )).await;
+    assert_eq!(rejected_receipt["receipt"]["status"], "rejected");
+    assert_eq!(rejected_receipt["receipt"]["final"], true);
+    assert_eq!(
+        rejected_receipt["receipt"]["ledger_entry"],
+        rejected["ledger_entry"]
+    );
+    assert!(rejected_receipt.get("envelope").is_none());
+
+    // Insufficient evidence is a nonfinal unsettled receipt, never success.
+    c.call(verb(
+        request(&world, "op-s3", "action", "run.start"),
+        "op-s3",
+    ))
+    .await;
+    let unknown = as_actor(
+        json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-s3", "unknown"), "request_id": "ev-3"}),
+        "cognate-service",
+        "service",
+    );
+    assert_eq!(c.call(unknown).await["ok"], true);
+    let unsettled = c.call(as_actor(
+        json!({"verb": "authority_settle_receipt", "operation_id": "op-s3", "request_id": "settle-receipt-3"}),
+        "cognate-service", "service",
+    )).await;
+    assert_eq!(unsettled["receipt"]["status"], "unsettled");
+    assert_eq!(unsettled["receipt"]["final"], false);
 }
 
 fn transition(source: &str, target: &str, op: &str, kind: &str) -> Value {

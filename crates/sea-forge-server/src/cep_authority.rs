@@ -430,8 +430,102 @@ pub fn submit_evidence(
     })
 }
 
+/// Return only fields read back from the exact committed ledger record. The hash is an
+/// opaque record reference, not an independent proof of the selected fields.
+fn project_receipt(
+    root: &Path,
+    operation_id: &str,
+    outcome: &sea_forge_authority::cep::SettlementOutcome,
+) -> Option<Value> {
+    // Replay references are currently reconstructed from an unauthenticated snapshot.
+    // A nonfinal commit can also return an indistinguishable prior winner.
+    if outcome.replayed || !outcome.final_status {
+        return None;
+    }
+    let stream = sea_forge_ledger::LedgerStream::open(
+        root,
+        outcome.committed.ledger_id(),
+        "sea-forge-cep-authority",
+    )
+    .ok()?;
+    let entry = stream
+        .read_entries()
+        .ok()?
+        .into_iter()
+        .find(|e| e.entry_ulid == outcome.committed.entry_ulid())?;
+    if outcome.committed.ledger_id() != sea_forge_authority::cep::LEDGER_ID
+        || sea_forge_ledger::types::payload_hash(&entry.payload).ok()? != entry.payload_hash
+        || sea_forge_ledger::types::entry_hash(&entry).ok()? != entry.entry_hash
+        || entry.committed_ref() != outcome.committed
+        || entry.record_kind != "settlement_packet"
+        || entry.subject_refs != ["cognate", operation_id]
+    {
+        return None;
+    }
+    let packet = &entry.payload;
+    let text = |pointer: &str| {
+        packet
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty() && s.len() <= 256 && !s.chars().any(char::is_control))
+    };
+    let op = text("/extensions/godspeed.settlement_packet/operation_id")?;
+    let world = text("/scope/world_ref")?;
+    let decision = text("/extensions/godspeed.settlement_packet/authority_decision_ref")?;
+    let issuer = text("/created_by")?;
+    let envelope_id = text("/envelope_id")?;
+    let status = text("/extensions/godspeed.settlement_packet/overall_status")?;
+    let finality = packet
+        .pointer("/extensions/godspeed.settlement_packet/final")?
+        .as_bool()?;
+    if op != operation_id
+        || issuer != "sea-forge-authority"
+        || status != outcome.status
+        || finality != outcome.final_status
+        || (status != "unsettled" && !finality)
+        || !matches!(status, "settled" | "unsettled" | "rejected")
+        || packet.get("envelope_kind").and_then(Value::as_str) != Some("settlement_packet")
+        || packet
+            .pointer("/extensions/cep.profile/profile_id")
+            .and_then(Value::as_str)
+            != Some("godspeed.settlement_packet")
+        || packet
+            .pointer("/extensions/cep.profile/profile_version")
+            .and_then(Value::as_str)
+            != Some("1.0.0")
+    {
+        return None;
+    }
+    Some(
+        json!({"representation": "verified_projection", "operation_id": op,
+        "subject_refs": entry.subject_refs, "world_ref": world, "authority_decision_ref": decision,
+        "issuer": issuer, "status": status, "final": finality, "ledger_id": entry.ledger_id,
+        "ledger_entry": entry.entry_ulid, "payload_hash": entry.payload_hash, "envelope_id": envelope_id}),
+    )
+}
+
+fn receipt_response(
+    root: &Path,
+    operation_id: &str,
+    outcome: &sea_forge_authority::cep::SettlementOutcome,
+) -> Value {
+    match project_receipt(root, operation_id, outcome) {
+        Some(receipt) => json!({"ok": true, "replayed": outcome.replayed, "receipt": receipt}),
+        None => refusal(
+            "invalid_settlement",
+            "committed settlement cannot be projected",
+        ),
+    }
+}
+
 /// Settle an operation from its committed evidence (`authority_settle` verb).
-pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &Actor) -> Value {
+pub fn settle(
+    config: &ServerConfig,
+    root: &Path,
+    operation_id: &str,
+    caller: &Actor,
+    receipt_only: bool,
+) -> Value {
     with_service(config, root, |service| {
         let required = config
             .cep_authority
@@ -456,6 +550,7 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             Err(e) => Err(e),
         };
         match outcome {
+            Ok(done) if receipt_only => receipt_response(root, operation_id, &done),
             Ok(done) => json!({
                 "ok": true,
                 "status": done.status,
@@ -513,6 +608,215 @@ pub fn closure(
 mod tests {
     use super::*;
     use sea_forge_authority::cep::CepAuthorityError;
+
+    fn fixture_packet() -> Value {
+        json!({
+            "envelope_id": "env-settlement_packet-op-1-test", "envelope_kind": "settlement_packet",
+            "created_by": "sea-forge-authority", "scope": {"world_ref": format!("world:demo@sha256:{}", "a".repeat(64))},
+            "questions": [{"question_form": "private-question-marker"}],
+            "evidence": [{"description": "private-evidence-marker"}],
+            "extensions": {
+                "cep.profile": {"profile_id": "godspeed.settlement_packet", "profile_version": "1.0.0"},
+                "godspeed.settlement_packet": {"operation_id": "op-1", "authority_decision_ref": "env-authority_decision-op-1", "overall_status": "unsettled", "final": true}
+            }
+        })
+    }
+
+    fn project_fixture(packet: Value, subjects: Vec<String>) -> Option<Value> {
+        let root = tempfile::tempdir().unwrap();
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test").unwrap();
+        let committed = ledger
+            .commit_typed_new("settlement_packet", "test", subjects, &packet, vec![])
+            .unwrap();
+        let outcome = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: true,
+            envelope: packet,
+            committed,
+            replayed: false,
+        };
+        project_receipt(root.path(), "op-1", &outcome)
+    }
+
+    #[test]
+    fn receipt_projection_preserves_final_unsettled_without_copying_evidence() {
+        let receipt =
+            project_fixture(fixture_packet(), vec!["cognate".into(), "op-1".into()]).unwrap();
+        assert_eq!(receipt["status"], "unsettled");
+        assert_eq!(receipt["final"], true);
+        assert!(!receipt.to_string().contains("private-question-marker"));
+        assert!(!receipt.to_string().contains("private-evidence-marker"));
+    }
+
+    #[test]
+    fn receipt_projection_refuses_missing_and_mismatched_source_references() {
+        let good_subjects = || vec!["cognate".into(), "op-1".into()];
+        let mut missing_decision = fixture_packet();
+        missing_decision["extensions"]["godspeed.settlement_packet"]
+            .as_object_mut()
+            .unwrap()
+            .remove("authority_decision_ref");
+        assert!(project_fixture(missing_decision, good_subjects()).is_none());
+        let mut wrong_operation = fixture_packet();
+        wrong_operation["extensions"]["godspeed.settlement_packet"]["operation_id"] =
+            json!("op-other");
+        assert!(project_fixture(wrong_operation, good_subjects()).is_none());
+        let mut wrong_issuer = fixture_packet();
+        wrong_issuer["created_by"] = json!("other");
+        assert!(project_fixture(wrong_issuer, good_subjects()).is_none());
+        assert!(
+            project_fixture(fixture_packet(), vec!["cognate".into(), "op-other".into()]).is_none()
+        );
+    }
+
+    #[test]
+    fn receipt_projection_preserves_replay_and_nonfinal_outcomes() {
+        let root = tempfile::tempdir().unwrap();
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test").unwrap();
+        let packet = fixture_packet();
+        let committed = ledger
+            .commit_typed_new(
+                "settlement_packet",
+                "test",
+                vec!["cognate".into(), "op-1".into()],
+                &packet,
+                vec![],
+            )
+            .unwrap();
+        let replay = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: true,
+            envelope: packet.clone(),
+            committed: committed.clone(),
+            replayed: true,
+        };
+        let replay_receipt = project_receipt(root.path(), "op-1", &replay).unwrap();
+        assert_eq!(replay_receipt["ledger_entry"], committed.entry_ulid());
+        assert_eq!(replay_receipt["final"], true);
+        let mut packet = packet;
+        packet["extensions"]["godspeed.settlement_packet"]["final"] = json!(false);
+        let nonfinal_committed = ledger
+            .commit_typed_new(
+                "settlement_packet",
+                "nonfinal",
+                vec!["cognate".into(), "op-1".into()],
+                &packet,
+                vec![],
+            )
+            .unwrap();
+        let nonfinal = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: false,
+            envelope: packet,
+            committed: nonfinal_committed.clone(),
+            replayed: false,
+        };
+        let nonfinal_receipt = project_receipt(root.path(), "op-1", &nonfinal).unwrap();
+        assert_eq!(
+            nonfinal_receipt["ledger_entry"],
+            nonfinal_committed.entry_ulid()
+        );
+        assert_eq!(nonfinal_receipt["final"], false);
+    }
+
+    #[test]
+    fn receipt_projection_refuses_corruption_before_the_committed_entry() {
+        let root = tempfile::tempdir().unwrap();
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test").unwrap();
+        ledger
+            .commit_typed_new(
+                "test_record",
+                "prior",
+                vec![],
+                &json!({"value": "prior-marker"}),
+                vec![],
+            )
+            .unwrap();
+        let packet = fixture_packet();
+        let committed = ledger
+            .commit_typed_new(
+                "settlement_packet",
+                "test",
+                vec!["cognate".into(), "op-1".into()],
+                &packet,
+                vec![],
+            )
+            .unwrap();
+        let outcome = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: true,
+            envelope: packet,
+            committed,
+            replayed: true,
+        };
+        let path = ledger.entries_path();
+        let original = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, original.replace("prior-marker", "alter-marker")).unwrap();
+        assert!(project_receipt(root.path(), "op-1", &outcome).is_none());
+    }
+
+    #[test]
+    fn receipt_projection_refuses_a_tampered_committed_payload() {
+        let root = tempfile::tempdir().unwrap();
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test").unwrap();
+        let packet = fixture_packet();
+        let committed = ledger
+            .commit_typed_new(
+                "settlement_packet",
+                "test",
+                vec!["cognate".into(), "op-1".into()],
+                &packet,
+                vec![],
+            )
+            .unwrap();
+        let outcome = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: true,
+            envelope: packet,
+            committed,
+            replayed: false,
+        };
+        let path = ledger.entries_path();
+        let original = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(
+            &path,
+            original.replace("env-authority_decision-op-1", "env-authority_decision-op-2"),
+        )
+        .unwrap();
+        assert!(project_receipt(root.path(), "op-1", &outcome).is_none());
+    }
+
+    #[test]
+    fn failed_projection_never_claims_no_side_effect_after_settlement_commit() {
+        let root = tempfile::tempdir().unwrap();
+        let ledger =
+            sea_forge_ledger::LedgerStream::open(root.path(), "cognate-authority", "test").unwrap();
+        let packet = fixture_packet();
+        let committed = ledger
+            .commit_typed_new(
+                "settlement_packet",
+                "test",
+                vec!["cognate".into(), "other-operation".into()],
+                &packet,
+                vec![],
+            )
+            .unwrap();
+        let outcome = sea_forge_authority::cep::SettlementOutcome {
+            status: "unsettled",
+            final_status: true,
+            envelope: packet,
+            committed,
+            replayed: false,
+        };
+        let response = receipt_response(root.path(), "op-1", &outcome);
+        assert_eq!(response["error_class"], "invalid_settlement");
+        assert_ne!(response["no_side_effect"], true);
+        assert_eq!(ledger.read_entries().unwrap().len(), 1);
+    }
 
     #[test]
     fn settlement_pending_is_a_no_side_effect_retry_class_not_an_evidence_refusal() {
