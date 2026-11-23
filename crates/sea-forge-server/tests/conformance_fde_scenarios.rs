@@ -3583,7 +3583,7 @@ async fn review3_corrupt_record_hash_refuses_every_write() {
 #[tokio::test(flavor = "multi_thread")]
 async fn assignment_binding_get_serves_the_delegator_and_fails_closed() {
     let root = tempfile::tempdir().unwrap();
-    let mut seed = Seed::new(root.path(), Some("fde.field_case@1"));
+    let seed = Seed::new(root.path(), Some("fde.field_case@1"));
     seed.field_case_document(1);
     seed.plan(&[("item-03".into(), true)]);
     write_fde_config(root.path(), Some(KEEPER), None);

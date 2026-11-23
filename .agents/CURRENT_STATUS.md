@@ -1,10 +1,29 @@
 # Current status
 
-**Status revision:** 384
+**Status revision:** 385
 
-**Stage:** FDE WP-23 | Binding carries the frozen world and kind
+**Stage:** FDE WP-23 | Lint fix for the wire test
 
-**Summary:** Binding gains required world_ref (the frozen reference body's world) and episode_kind (the frozen kind), so a consumer composes its case context from assignment_binding_get alone; the unconsumed v1 was amended in place and re-pinned.
+**Summary:** CI clippy (-D warnings, all targets) caught an unused mut in the assignment_binding_get wire test; fixed and verified locally with the same command.
+
+**Verified:**
+
+- cargo clippy -p sea-forge-server --all-targets --locked -- -D warnings exits 0
+- CI run 44860813223 was cancelled after its lint job reproduced the failure at c0f144cf; a fresh run follows this fix
+
+**Limits:**
+
+- No behavior change; the wire test's seed no longer declares mut it does not use
+
+**Next:** Push and rerun hosted CI on the lane head.
+
+**Evidence:**
+
+- crates/sea-forge-server/tests/conformance_fde_scenarios.rs
+
+---
+
+# Historical status
 
 **Verified:**
 
