@@ -1,23 +1,24 @@
 # Current status
 
-**Status revision:** 384
+**Status revision:** 385
 
-**Stage:** CognitiveOS convergence #108 settlement replay authorization
+**Stage:** CognitiveOS #108 request correlation
 
-**Summary:** Reauthorize both normal and obligation final settlement replay before returning the recorded packet.
+**Summary:** Reject aliased correlation identifiers before reading another request record.
 
 **Verified:**
 
 - Normal and obligation replay tests fail before the change for an operator without settlement authority and pass after it.
 - A service whose settlement grant is removed is refused, while existing authorized normal and obligation replay tests pass.
+- The colliding-request-ID regression failed before the exact stored-ID check and passed after it using the canonical crate test.
 
 **Limits:**
 
-- Server correlation same-id replay and request.get_status are not fixed by this service change; legacy correlation records do not identify the requesting actor.
-- No real socket cross-actor proof or full milestone, CI, or proof gates were run.
-- Cognate 0.11.0 was published in prior work; this snapshot does not imply a new release.
+- Authenticated admission ownership and exact-request auditor policy remain unimplemented.
+- Service replay and correlation changes are isolated and not independently reviewed or integrated.
+- Full CI, proofs and real-socket authorization journeys have not run.
 
-**Next:** Independently review service change and design authenticated, same-actor-or-auditor correlation recovery without exposing complete packets.
+**Next:** Implement source-owned admission binding, crash-safe orphan handling and default-deny request-scoped audit authority, then validate at the socket boundary.
 
 **Evidence:**
 

@@ -409,7 +409,15 @@ impl RequestCorrelationStore {
     pub fn get(&self, request_id: &str) -> Result<Option<RequestRecord>, ForgeError> {
         let path = self.path_for(request_id);
         match std::fs::read(&path) {
-            Ok(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
+            Ok(bytes) => {
+                let record: RequestRecord = serde_json::from_slice(&bytes)?;
+                if record.request_id != request_id {
+                    return Err(ForgeError::Internal(
+                        "request correlation identity mismatch".into(),
+                    ));
+                }
+                Ok(Some(record))
+            }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(error) => Err(ForgeError::io("read request correlation", error)),
         }
@@ -425,6 +433,15 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let store = RequestCorrelationStore::open(root.path()).unwrap();
         (root, store)
+    }
+
+    #[test]
+    fn colliding_request_ids_cannot_read_another_request_record() {
+        let (_root, store) = store();
+        store
+            .record_pending("owner:a", "authority.settle", Some("hash"))
+            .unwrap();
+        assert!(store.get("owner/a").is_err());
     }
 
     #[test]
