@@ -1,10 +1,32 @@
 # Current status
 
-**Status revision:** 381
+**Status revision:** 382
 
-**Stage:** FDE open work | WP-23 binding lane hosted-CI green
+**Stage:** FDE open work | WP-23 binding readable on the wire; Cognate provider landed
 
-**Summary:** WP-23 follow-up 20ce2bd8 registered the four binding oracle codes, bounded hex64 and rebased the manifest count; hosted CI 44825583372 passed every job on fde/wp23-delegate-verifier.
+**Summary:** SEA be81242b serves assignment_binding_get (the link's delegate/delegator only, constant hidden answer otherwise; binding now carries the frozen world and kind); Cognate e2ec279 ships seaAssignmentAdmission, the production provider resolving assigned starts from that read over the SFWP unix channel, delegate-only and fail-closed.
+
+**Verified:**
+
+- SEA: wire test TDD red then green; server suite 699 passed / 0 failed with FDE_WP21A_FINAL=1 (plus the new wire test in conformance 50 targets); fmt and clippy -D warnings (all targets) clean; 13 contract digests match after the world/kind re-pin
+- Cognate: provider tests over a real unix-socket SFWP stub (4/4, including the Connect startAssignedRun journey and deny-before-run); 153 connect/assignment, 49 store-postgres on isolated pg0, 69 sqlite/memory; typecheck clean; gate stage 70/81 unchanged (pre-existing Phase-0 fixture limit)
+
+**Limits:**
+
+- Workload-grant identity (SEA's private AuthenticatedConnection) is not wired into the Cognate provider; it authenticates SFWP reads with a configured principal (S3 identity issuance)
+- Hosted CI (SEA be81242b) and hosted verify (Cognate e2ec279) were still running when this entry was recorded
+- The joined production-producer journey (real SEA cell to real Cognate server) and the Workbench operator journey (PR #40) remain
+
+**Next:** Finish the hosted runs; drive the joined SEA-Cognate journey; then Workbench PR #40 through the operator journey (handoff section 2 items 4-5: durable idempotency protections and the browser session).
+
+**Evidence:**
+
+- https://github.com/GodSpeedAI/SEA-Forge/commit/be81242b
+- https://github.com/GodSpeedAI/Cognate/commit/e2ec279
+
+---
+
+# Historical status
 
 **Verified:**
 
