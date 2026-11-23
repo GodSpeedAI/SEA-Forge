@@ -1,10 +1,30 @@
 # Current status
 
-**Status revision:** 385
+**Status revision:** 386
 
-**Stage:** FDE WP-23 | Lint fix for the wire test
+**Stage:** FDE WP-23 | RUSTSEC-2026-0592 lock bump
 
-**Summary:** CI clippy (-D warnings, all targets) caught an unused mut in the assignment_binding_get wire test; fixed and verified locally with the same command.
+**Summary:** The live cargo-deny advisory gate began failing every branch on RUSTSEC-2026-0592 (url <= 2.5.8 stack overflow in Url::origin); the lock is byte-identical to the last green commit, so this is advisory-DB drift. url pinned to 2.5.9 (with form_urlencoded 1.2.3), the lane's established advisory response.
+
+**Verified:**
+
+- git diff 20ce2bd8..be81242b -- Cargo.lock is empty (no dependency change caused the failure)
+- cargo update -p url --precise 2.5.9; local cargo deny check passes (advisories, bans, licenses, sources ok); cargo metadata --locked consistent
+
+**Limits:**
+
+- Hosted CI must rerun to confirm the same gate on the fixed lock
+
+**Next:** Push and rerun hosted CI on the lane head.
+
+**Evidence:**
+
+- Cargo.lock
+- https://rustsec.org/advisories/RUSTSEC-2026-0592
+
+---
+
+# Historical status
 
 **Verified:**
 
