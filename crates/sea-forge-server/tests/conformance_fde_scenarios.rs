@@ -3719,3 +3719,335 @@ async fn assignment_binding_get_serves_the_delegator_and_fails_closed() {
     assert_eq!(legacy, unknown, "a legacy row leaked: {legacy}");
     cell.shutdown().await;
 }
+
+// ---------------------------------------------------------------------------
+// WP-23: the joined production journey. The REAL server binary produces the
+// binding; Cognate's production admission provider consumes it.
+// ---------------------------------------------------------------------------
+
+/// Every member the contract's `Binding` records (`assignment-binding.v1`).
+const BINDING_MEMBERS: &[&str] = &[
+    "version",
+    "assignment",
+    "link_id",
+    "run_id",
+    "world_ref",
+    "episode_kind",
+    "binding_digest",
+    "recorded_at",
+];
+
+/// The real binary, stopped when the journey ends however it ends.
+struct RealServer(std::process::Child);
+
+impl Drop for RealServer {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+/// One NDJSON request over a cell's public socket: connect, send, read one line.
+async fn public_request(socket: &Path, frame: &Value) -> Value {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    let stream = tokio::net::UnixStream::connect(socket).await.unwrap();
+    let (reader, mut writer) = stream.into_split();
+    let mut reader = BufReader::new(reader);
+    writer
+        .write_all(format!("{frame}\n").as_bytes())
+        .await
+        .unwrap();
+    let mut line = String::new();
+    let read = tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        reader.read_line(&mut line),
+    )
+    .await
+    .expect("the real server answered within its request timeout")
+    .unwrap();
+    assert!(
+        read > 0,
+        "the real server closed the connection without an answer"
+    );
+    serde_json::from_str(line.trim()).unwrap()
+}
+
+/// Bun's test summary count for `kind` (`pass`, `fail`, `skip`).
+fn bun_count(output: &str, kind: &str) -> u64 {
+    output
+        .lines()
+        .rev()
+        .find_map(|line| line.trim().strip_suffix(kind)?.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+/// The joined journey (handoff section 2.6), opt-in: `WP23_COGNATE_DIR=<Cognate checkout>`.
+///
+/// The cells above run in-process through `run_authenticated`, where the test
+/// itself is the trusted issuer of private connections. The real binary has no
+/// such channel (`main` only calls `run`): on its public socket a protected
+/// verb is an `actor` block that the identity gate resolves against the peer's
+/// uid. That is the surface a standalone cell offers a service such as
+/// Cognate's server, so it is the one this journey proves:
+///
+/// 1. the cell is seeded as `run_gate` seeds `delegate-complete-freeze-accepted`;
+/// 2. the real binary serves it, this uid bound to the delegator;
+/// 3. the real `delegate` request is admitted over the socket, so the binding
+///    row is the server's own write, and the wire read serves it;
+/// 4. Cognate's live suite (`sea-admission.live.test.ts`) serves its
+///    RuntimeService with its production provider pointed at this socket.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "joined journey: needs WP23_COGNATE_DIR, Bun and the real server binary"]
+async fn wp23_joined_cognate_journey_against_the_real_server() {
+    let cognate = PathBuf::from(std::env::var_os("WP23_COGNATE_DIR").expect(
+        "set WP23_COGNATE_DIR to a Cognate checkout with its workspace packages installed",
+    ));
+    assert!(
+        cognate
+            .join("packages/protocol-connect-bun/test/sea-admission.live.test.ts")
+            .is_file(),
+        "{} is not a Cognate checkout",
+        cognate.display()
+    );
+
+    let s = read(
+        &fixtures("execution-episode-ref").join("scenarios/delegate-complete-freeze-accepted.json"),
+    );
+    let (request, state, extra) = (s["request"].clone(), &s["freeze_state"], &s["extra"]);
+    let episode = &request["episode_ref"];
+    let (item, n) = (
+        episode["plan_item_id"].as_str().unwrap(),
+        episode["n"].as_u64().unwrap(),
+    );
+    let kind = episode["kind"].as_str().unwrap();
+    let world =
+        "world:seed@sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    // 1. The cell, seeded as the gate family seeds this scenario: the Field
+    //    Case document, a plan holding the episode's item, the committed
+    //    freeze with its RealityTrace records and published anchor, and the
+    //    program-execution decision the delegate request cites.
+    let root = tempfile::tempdir().unwrap();
+    let mut seed = Seed::new(root.path(), s["case"]["template_ref"].as_str());
+    seed.field_case_document(1);
+    seed.plan(&[(item.into(), true), ("item-99".into(), true)]);
+    let key = json!({"case_id": CASE, "plan_item_id": item, "n": n});
+    let digest = "cd".repeat(32);
+    seed.freeze(
+        &key,
+        state["kind"].as_str().unwrap_or("evaluated"),
+        world,
+        "case-keeper/rec-seed",
+        &digest,
+    );
+    let episode_ref = format!("episode:{CASE}:{item}:{n}@sha256:{digest}");
+    assert_eq!(state["anchor"], "verified");
+    seed.anchor(
+        "freeze",
+        "seed-freeze",
+        &episode_ref,
+        &digest,
+        state["anchor_publisher"].as_str().unwrap(),
+        "2026-11-14T08:00:00Z",
+    );
+    write_fde_config(root.path(), Some(KEEPER), None);
+    let fde_config = root.path().join("fde-config.json");
+    let mut fde: Value = serde_json::from_str(&fs::read_to_string(&fde_config).unwrap()).unwrap();
+    fde["execution_max_runs"] = json!(extra["max_runs"]);
+    fs::write(&fde_config, fde.to_string()).unwrap();
+    seed_decision(root.path(), &s);
+
+    // 2. The real binary on its public socket. This uid is the delegator; the
+    //    cell's gateway may present one outsider through `on_behalf_of`.
+    let socket = std::env::temp_dir().join(format!("sf-wp23-{}.sock", std::process::id()));
+    let uid = sea_forge_server::identity::current_principal()
+        .expect("the journey runs as an operating-system user");
+    fs::write(
+        root.path().join("server.yaml"),
+        json!({
+            "socket_path": socket.to_string_lossy(),
+            "root": root.path().to_string_lossy(),
+            "identity": {"bindings": [
+                {"uid": uid, "actor_id": "operator_local", "roles": ["operator"]},
+                {"actor_id": "outsider", "roles": ["operator"]},
+            ]},
+            "gateway": {"uid": uid, "actor": "operator_local", "delegable_actors": ["outsider"]},
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let mut server = RealServer(
+        std::process::Command::new(env!("CARGO_BIN_EXE_sea-forge-server"))
+            .env("SEA_FORGE_ROOT", root.path())
+            .env("SEA_FORGE_SOCKET", &socket)
+            .env("RUST_LOG", "info")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+            .expect("failed to spawn sea-forge-server"),
+    );
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !socket.exists() && std::time::Instant::now() < deadline {
+        if let Some(status) = server.0.try_wait().unwrap() {
+            panic!("the real server exited {status:?} before publishing its socket");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    assert!(
+        socket.exists(),
+        "the real server never published its socket"
+    );
+
+    // 3. The real delegate request. The journey's claim is admission: the gate
+    //    let it through and the binding row is the server's own write. What the
+    //    verb does next is its own: this cell declares no agent endpoint (nor
+    //    does the scenario harness), so the delegation itself does not run.
+    let admitted = public_request(&socket, &request).await;
+    assert_ne!(
+        admitted["outcome"], "refused",
+        "the real server refused the delegate at the gate: {admitted}"
+    );
+    assert_ne!(
+        admitted["no_side_effect"], true,
+        "the real server refused the delegate at the gate: {admitted}"
+    );
+    assert_ne!(
+        admitted["error_class"], "episode_gate_refused",
+        "the real server refused the delegate at the gate: {admitted}"
+    );
+
+    let assignment_id = request["assignment_id"].as_str().unwrap();
+    let rows = |name: &str| -> Vec<Value> {
+        fs::read_to_string(case_dir(root.path()).join(name))
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect()
+    };
+    let last = |name: &str| rows(name).into_iter().next_back().expect("a recorded row");
+    let (row, link, run) = (
+        last("field-assignments.jsonl"),
+        last("field-links.jsonl"),
+        last("field-runs.jsonl"),
+    );
+    let recorded = row["binding"].clone();
+    let bound = &recorded["assignment"];
+    assert_eq!(row["assignment_id"], assignment_id);
+    assert_eq!(row["episode_key"], key);
+    assert_eq!(recorded["version"], 1);
+    assert_eq!(recorded["world_ref"], world);
+    assert_eq!(recorded["episode_kind"], kind);
+    assert_eq!(recorded["link_id"], row["link_id"]);
+    assert_eq!(recorded["link_id"], link["link_id"]);
+    assert_eq!(recorded["run_id"], run["run_id"]);
+    assert_eq!(run["link_id"], link["link_id"]);
+    assert_eq!(
+        link["delegate"],
+        format!("agent:{}", request["endpoint"].as_str().unwrap())
+    );
+    assert_eq!(run["actor"], link["delegate"]);
+    assert_eq!(bound["brief"]["instruction"], request["instruction"]);
+    assert_eq!(
+        bound["brief"]["domain_meaning"],
+        request["assignment"]["domain_meaning"]
+    );
+    assert_eq!(
+        bound["brief"]["context_refs"],
+        request["assignment"]["context_refs"]
+    );
+    assert_eq!(bound["budget"], request["assignment"]["budget"]);
+    assert_eq!(bound["episode_ref"], episode_ref);
+
+    // Over the wire, from this uid: the delegator reads the binding. An
+    // outsider presented through the gateway and an unknown assignment get
+    // the same answer, and an actor the uid is not bound to is refused by the
+    // identity gate before the read.
+    let ask = |through: Option<&str>, assignment: &str| {
+        let mut frame = json!({"verb": "assignment_binding_get", "case_id": CASE,
+                               "assignment_id": assignment,
+                               "actor": {"actor_id": "operator_local", "role": "operator"}});
+        if let Some(outsider) = through {
+            frame["on_behalf_of"] = json!({"actor_id": outsider, "role": "operator"});
+        }
+        frame
+    };
+    let over_the_wire = public_request(&socket, &ask(None, assignment_id)).await;
+    assert_eq!(over_the_wire["case_id"], CASE, "{over_the_wire}");
+    let unknown = public_request(&socket, &ask(None, &format!("assign:{CASE}:{item}:9:9"))).await;
+    let outsider = public_request(&socket, &ask(Some("outsider"), assignment_id)).await;
+    assert_eq!(
+        outsider, unknown,
+        "membership leaked: {outsider} vs {unknown}"
+    );
+    let unbound = public_request(
+        &socket,
+        &json!({"verb": "assignment_binding_get", "case_id": CASE,
+                 "assignment_id": assignment_id,
+                 "actor": {"actor_id": "nobody", "role": "operator"}}),
+    )
+    .await;
+    assert_eq!(unbound["error_class"], "identity_not_bound", "{unbound}");
+    assert_eq!(unbound["no_side_effect"], true, "{unbound}");
+
+    // The read serves every member it recorded (the contract's `Binding`, the
+    // frozen world and kind included), trusted and over the wire alike.
+    let trusted =
+        sea_forge_server::sfwp::assignment_binding::read(root.path(), CASE, assignment_id).unwrap();
+    for served in [&trusted, &over_the_wire["binding"]] {
+        for member in BINDING_MEMBERS {
+            assert_eq!(
+                served[member], recorded[member],
+                "the read does not serve the recorded `{member}`: {served}"
+            );
+        }
+        assert_eq!(&served["link"], &link);
+        assert_eq!(&served["run"], &run);
+    }
+
+    // 4. Cognate's live suite: its Connect server resolves assigned starts
+    //    through its production provider from this cell. A skip is not a pass.
+    let live = json!({
+        "socket": socket.to_string_lossy(),
+        "root": root.path().to_string_lossy(),
+        "ref": {"caseId": CASE, "assignmentId": assignment_id,
+                "episodeRef": bound["episode_ref"], "linkId": link["link_id"]},
+        "delegate": link["delegate"],
+        "principal": {"actorId": "operator_local", "role": "operator"},
+    });
+    let stores = [
+        "field-assignments.jsonl",
+        "field-links.jsonl",
+        "field-runs.jsonl",
+    ];
+    let before = stores.map(|name| rows(name).len());
+    let out = std::process::Command::new("bun")
+        .args([
+            "test",
+            "packages/protocol-connect-bun/test/sea-admission.live.test.ts",
+        ])
+        .current_dir(&cognate)
+        .env("WP23_JOINED_LIVE", live.to_string())
+        .output()
+        .expect("bun is installed");
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(out.status.success(), "Cognate's live suite failed:\n{text}");
+    assert_eq!(bun_count(&text, "fail"), 0, "{text}");
+    assert_eq!(
+        bun_count(&text, "skip"),
+        0,
+        "a skipped live test is not a pass:\n{text}"
+    );
+    assert_eq!(bun_count(&text, "pass"), 5, "{text}");
+
+    // The Cognate half only read: the cell's stores are as the delegate left them.
+    assert_eq!(
+        stores.map(|name| rows(name).len()),
+        before,
+        "a denied Cognate start wrote to the SEA cell"
+    );
+    let _ = fs::remove_file(&socket);
+}

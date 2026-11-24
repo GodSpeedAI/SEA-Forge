@@ -1424,3 +1424,9 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - The full workspace gate reproduced the failure on `0ab02a6b`. The equivalent local fixture confirmed that the sandbox warning about an undelegated `/sys/fs/cgroup/non-systemd` precedes the JSON `internal_error` diagnostic on stderr.
 - The lifecycle test expects stderr to contain a single JSON document. It stops at parsing and leaves the run-correlated trace assertion unverified on this host.
 - Rerun with an operator-provisioned, writable cgroup-v2 delegation through `SEA_FORGE_CGROUP_ROOT` or on the existing cgroup-enabled CI lane.
+
+## Open: `IdentityRefusal::Missing` tells a protected read that it causes a side effect
+
+- **Evidence**: `crates/sea-forge-server/src/identity.rs`, `IdentityRefusal::message` for `Missing`: "this verb causes a side effect and requires an `actor` block …; inspect verbs do not". The three protected reads that name an actor (`case_field_get`, `case_continuation`, `assignment_binding_get`) answer with it when the `actor` block is absent or malformed. Observed on a real `sea-forge-server` process during the joined WP-23 journey (2026-11-24), when a client sent a malformed block to `assignment_binding_get`.
+- **Impact**: none for authority or state (the request is refused before the read and carries `no_side_effect: true`); a client integrating a protected read is told the verb mutates, which misdirects diagnosis.
+- **Next move**: word the refusal by verb class (a protected read needs an actor block because its answer is membership-scoped, not because it mutates), or give the protected reads their own refusal variant. Owner: sea-forge-server identity gate. Low severity.
