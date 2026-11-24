@@ -1055,6 +1055,7 @@ pub fn is_protected(request: &Request) -> bool {
         // the case lead and the approver of record (README section 9).
         | Request::CaseFieldGet { .. }
         | Request::CaseContinuation { .. }
+        | Request::RequestGetStatus { .. }
         | Request::CaseTerminate { .. }
         | Request::CaseAdvance { .. }
         | Request::ItemExecute { .. }
@@ -1070,7 +1071,6 @@ pub fn is_protected(request: &Request) -> bool {
         | Request::SystemHello { .. }
         | Request::SystemDescribe
         | Request::SystemGetSchema { .. }
-        | Request::RequestGetStatus { .. }
         | Request::EventsSubscribe { .. }
         | Request::EventsUnsubscribe
         | Request::EventsGetRange { .. }

@@ -50,13 +50,21 @@ async fn boot_on(
     root: &Path,
     endpoint: Option<AgentEndpointConfig>,
 ) -> (PathBuf, tokio::task::JoinHandle<()>) {
+    boot_on_as(root, endpoint, "operator_local").await
+}
+
+async fn boot_on_as(
+    root: &Path,
+    endpoint: Option<AgentEndpointConfig>,
+    actor_id: &str,
+) -> (PathBuf, tokio::task::JoinHandle<()>) {
     let socket = root.join("sfwp.sock");
     let agent = AgentConfig {
         endpoints: endpoint.into_iter().collect(),
         ..AgentConfig::default()
     };
     let config = ServerConfig {
-        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
+        identity: sea_forge_server::identity::IdentityBindings::local_operator(actor_id),
         socket_path: socket.clone(),
         root: root.to_path_buf(),
         agent,
@@ -423,6 +431,56 @@ async fn precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint() {
     );
 }
 
+#[tokio::test]
+async fn request_status_requires_owner_or_exact_audit_authority_after_restart() {
+    let (endpoint, stub) = stub_endpoint(
+        r#"{"choices":[{"message":{"content":"step complete"}}],"usage":{"total_tokens":1}}"#,
+    );
+    let root = tempfile::tempdir().unwrap();
+    let (socket, server) = boot_on(root.path(), Some(endpoint.clone())).await;
+    let mut owner = Client::connect(&socket).await;
+    let original = success_submit(root.path(), Some("audit-target"));
+    let submitted = owner.call(original.clone()).await;
+    assert!(submitted.get("error").is_none(), "{submitted}");
+    let unauthenticated = owner
+        .call(json!({"verb":"request_get_status", "request_id":"audit-target"}))
+        .await;
+    assert!(unauthenticated.get("error").is_some());
+    let own = owner.call(json!({"verb":"request_get_status", "actor":{"actor_id":"operator_local", "role":"operator"}, "request_id":"audit-target"})).await;
+    assert_eq!(own["status"], "completed");
+    let orphan = success_submit(root.path(), Some("orphan-target"));
+    assert!(owner.call(orphan.clone()).await.get("error").is_none());
+    std::fs::remove_file(root.path().join("requests/orphan-target.json")).unwrap();
+    let case_count = cases_committed(root.path());
+    assert_eq!(
+        owner.call(orphan).await["error_class"],
+        "idempotency_unverifiable"
+    );
+    assert_eq!(cases_committed(root.path()), case_count);
+    drop(owner);
+    server.abort();
+    let _ = server.await;
+
+    let (socket, server) = boot_on_as(root.path(), Some(endpoint), "auditor").await;
+    let mut auditor = Client::connect(&socket).await;
+    let mut foreign_retry = original;
+    foreign_retry["actor"]["actor_id"] = json!("auditor");
+    foreign_retry["entity"] = json!("auditor");
+    assert_eq!(
+        auditor.call(foreign_retry).await["error_class"],
+        "idempotency_unverifiable"
+    );
+    let status = || json!({"verb":"request_get_status", "actor":{"actor_id":"auditor", "role":"operator"}, "request_id":"audit-target"});
+    assert_eq!(
+        auditor.call(status()).await["error_class"],
+        "request_status_denied"
+    );
+    std::fs::write(root.path().join("sea-forge-policy.yaml"), "version: '0.1'\nrules:\n  - name: audit\n    verdict: allow\n    actor_role: operator\n    operation_kind: request_status_audit\n    resources: [audit-target]\n").unwrap();
+    assert_eq!(auditor.call(status()).await["status"], "completed");
+    server.abort();
+    stub.abort();
+}
+
 /// The single most important scenario: hello -> subscribe -> command ->
 /// kill connection mid-flight -> reconnect -> request.get_status recovers ->
 /// resubscribe from cursor -> induce a gap while disconnected ->
@@ -461,7 +519,7 @@ async fn end_to_end_correlation_reconnect_and_gap_recovery() {
     let mut status = json!(null);
     for _ in 0..200 {
         status = c2
-            .call(json!({"verb": "request_get_status", "request_id": request_id}))
+            .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
             .await;
         let s = status["status"].as_str().unwrap_or("");
         if s == "completed" || s == "failed" {
@@ -483,7 +541,7 @@ async fn end_to_end_correlation_reconnect_and_gap_recovery() {
 
     // Unknown request id recovers as "unknown", not an error.
     let unknown = c2
-        .call(json!({"verb": "request_get_status", "request_id": "never-seen"}))
+        .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": "never-seen"}))
         .await;
     assert_eq!(unknown["status"], "unknown");
 
@@ -1075,7 +1133,7 @@ async fn a_terminal_outcome_and_its_dedupe_key_survive_a_restart() {
     let mut settled = false;
     for _ in 0..200 {
         let status = watcher
-            .call(json!({"verb": "request_get_status", "request_id": request_id}))
+            .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
             .await;
         if matches!(
             status["status"].as_str(),
@@ -1101,7 +1159,7 @@ async fn a_terminal_outcome_and_its_dedupe_key_survive_a_restart() {
     let mut after = Client::connect(&socket).await;
 
     let status = after
-        .call(json!({"verb": "request_get_status", "request_id": request_id}))
+        .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
         .await;
     assert_eq!(
         status["status"], "completed",

@@ -171,6 +171,7 @@ mod mcp_protocol;
 mod pipe_edge;
 pub mod postgres;
 mod realitytrace_source;
+mod request_admission_claim;
 pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
@@ -2206,6 +2207,30 @@ async fn dispatch_admitted(
         // waits here until the first has durably bound its payload, then sees
         // `Pending` or a terminal replay instead of starting duplicate work.
         let _correlation_admission = state.correlation_admission.lock().await;
+        let Some(actor) = verified_actor.as_ref() else {
+            return serde_json::json!({"error":"request owner could not be authenticated", "error_class":"idempotency_unverifiable", "no_side_effect":true});
+        };
+        let owner = request_admission_claim::AdmissionOwner::from_actor(actor);
+        let claim = request_admission_claim::lookup(&state.root, &request_id);
+        let record = state.correlation.get(&request_id);
+        match (claim, record) {
+            (Ok(None), Ok(None)) => {
+                let claim = request_admission_claim::AdmissionClaim {
+                    request_id: request_id.clone(),
+                    payload_hash: hash.clone(),
+                    owner,
+                };
+                if request_admission_claim::record(&state.root, &claim).is_err() {
+                    return serde_json::json!({"error":"request admission could not be recorded", "error_class":"idempotency_unverifiable"});
+                }
+            }
+            (Ok(Some(claim)), Ok(Some(record)))
+                if claim.owner == owner
+                    && record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()) => {}
+            _ => {
+                return serde_json::json!({"error":"request admission cannot be verified", "error_class":"idempotency_unverifiable", "no_side_effect":true});
+            }
+        }
         match state.correlation.check(&request_id, &hash) {
             Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
                 tracing::info!(
@@ -2254,7 +2279,6 @@ async fn dispatch_admitted(
                              this request cannot be made idempotent: {error}"
                         ),
                         "error_class": "idempotency_unverifiable",
-                        "no_side_effect": true,
                     });
                 }
             }
@@ -2269,7 +2293,6 @@ async fn dispatch_admitted(
                          request cannot be shown to be a first attempt: {error}"
                     ),
                     "error_class": "idempotency_unverifiable",
-                    "no_side_effect": true,
                 });
             }
         }
@@ -2566,6 +2589,9 @@ async fn dispatch_bounded(
 /// reuses `is_protected` — the one exhaustive match — so the set of deduped
 /// verbs cannot drift from the set of governed ones.
 fn dedupe_key(request: &Request, raw_line: &str) -> Option<(String, String, String)> {
+    if matches!(request, Request::RequestGetStatus { .. }) {
+        return None;
+    }
     if !crate::identity::is_protected(request) {
         return None;
     }
@@ -3494,19 +3520,35 @@ pub async fn handle_request_as(
             serde_json::to_value(sfwp::get_schema(method.as_deref()))
                 .unwrap_or_else(|_| serde_json::json!({"error": "get_schema serialization failed"}))
         }
-        Request::RequestGetStatus { request_id } => match state.correlation.get(&request_id) {
-            Ok(Some(record)) => serde_json::json!({
-                "request_id": record.request_id,
-                "status": record.status,
-                "method": record.method,
-                "outcome": record.outcome,
-            }),
-            Ok(None) => serde_json::json!({
+        Request::RequestGetStatus { request_id } => match (
+            state.correlation.get(&request_id),
+            request_admission_claim::lookup(&state.root, &request_id),
+        ) {
+            (Ok(Some(record)), Ok(Some(claim)))
+                if record.payload_hash.as_deref() == Some(claim.payload_hash.as_str())
+                    && verified.is_some_and(|actor| {
+                        request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner
+                            || request_admission_claim::authorize_audit(
+                                &state.config(),
+                                actor,
+                                &request_id,
+                            )
+                            .unwrap_or(false)
+                    }) =>
+            {
+                serde_json::json!({
+                    "request_id": record.request_id,
+                    "status": record.status,
+                    "method": record.method,
+                    "outcome": record.outcome,
+                })
+            }
+            (Ok(None), Ok(None)) if verified.is_some() => serde_json::json!({
                 "request_id": request_id,
                 "status": "unknown",
             }),
-            Err(error) => {
-                serde_json::json!({"error": error.to_string(), "error_class": error.class()})
+            _ => {
+                serde_json::json!({"error":"request status access cannot be verified", "error_class":"request_status_denied"})
             }
         },
         Request::EventsGetRange {

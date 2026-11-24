@@ -1248,6 +1248,7 @@ impl AuthorityPolicyBundle {
                     | "world_transition"
                     | "mcp_tool_call"
                     | "database_session"
+                    | "request_status_audit"
             ) {
                 return Err(ForgeError::Config {
                     class: "unsupported_kind_error",
@@ -1381,12 +1382,12 @@ impl AuthorityPolicyBundle {
             if let Some(resources) = &rule.resources {
                 if !matches!(
                     rule.operation_kind.as_str(),
-                    "cognate_action" | "cognate_capability"
+                    "cognate_action" | "cognate_capability" | "request_status_audit"
                 ) || resources.is_empty()
                     || resources.iter().any(|r| r.is_empty())
                 {
                     return Err(schema(
-                        "resources applies only to cognate_action / cognate_capability and must be non-empty".into(),
+                        "resources applies only to cognate actions, capabilities or request status audit and must be non-empty".into(),
                     ));
                 }
             }
@@ -2989,6 +2990,13 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     "settlement_declaration" => {
                         matches_settlement_authority_class(rule, parameters)
                     }
+                    "request_status_audit" => {
+                        parameter_str(parameters, "request_id") == Some(resource_id.as_str())
+                            && rule
+                                .resources
+                                .as_ref()
+                                .is_some_and(|allowed| allowed.iter().any(|id| id == resource_id))
+                    }
                     "recall_memory" => matches_memory_scope(rule, parameters),
                     "cognate_action" | "cognate_capability" => {
                         rule.subjects.as_ref().is_none_or(|allowed| {
@@ -3444,6 +3452,7 @@ fn malformed_action(action: &AuthorityAction) -> bool {
                 "world_transition",
                 "mcp_tool_call",
                 "database_session",
+                "request_status_audit",
                 // SEC-11 (round 4): federation export is an evaluable reserved
                 // surface. A rule matches only when its permitted_exposure
                 // covers every label of the exported runs' union (carried in

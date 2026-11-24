@@ -51,7 +51,7 @@ pub struct RequestRecord {
 /// What dispatch should do with a request that carries a `request_id`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DedupeVerdict {
-    /// Unknown id or a legacy record with no hash — execute.
+    /// Unknown id — execute.
     Proceed,
     /// The same id is already lawfully admitted but has no terminal outcome.
     /// Return its locator rather than running a concurrent duplicate.
@@ -163,25 +163,10 @@ impl RequestCorrelationStore {
         let Some(record) = self.get(request_id)? else {
             return Ok(DedupeVerdict::Proceed);
         };
-        // Pre-SF-006 records normally remain usable: their old format lacks
-        // the hash needed to prove a retry is the same payload. The one safe
-        // exception is our restart settlement. Once it records an interrupted
-        // terminal outcome, a retry must replay that failure rather than turn
-        // a crash-recovery record into a duplicate governed effect.
         let Some(stored) = record.payload_hash.as_deref() else {
-            if record.status == RequestStatus::Failed
-                && record.outcome.as_ref().is_some_and(|outcome| {
-                    outcome
-                        .get("error_class")
-                        .and_then(serde_json::Value::as_str)
-                        == Some("request_interrupted")
-                })
-            {
-                return Ok(record
-                    .outcome
-                    .map_or(DedupeVerdict::Pending, DedupeVerdict::Replay));
-            }
-            return Ok(DedupeVerdict::Proceed);
+            return Err(ForgeError::Internal(
+                "request correlation payload binding unavailable".into(),
+            ));
         };
         if stored != payload_hash {
             return Ok(DedupeVerdict::Reused);
@@ -445,6 +430,13 @@ mod tests {
     }
 
     #[test]
+    fn legacy_hashless_request_cannot_execute_again() {
+        let (_root, store) = store();
+        store.record_pending("legacy-red", "submit", None).unwrap();
+        assert!(store.check("legacy-red", "new-hash").is_err());
+    }
+
+    #[test]
     fn payload_hash_is_stable_under_key_reordering() {
         // The two maps below are built by inserting the same keys in opposite
         // orders. `serde_json::Map` is a `BTreeMap` today and normalizes that
@@ -476,11 +468,11 @@ mod tests {
     }
 
     #[test]
-    fn a_record_written_before_sf_006_proceeds_rather_than_being_refused() {
+    fn a_record_written_before_sf_006_is_not_reexecuted() {
         // Written as raw JSON with no `payload_hash` key at all, because that
         // is the shape already sitting under `<root>/requests` in every cell
         // that ran an earlier build: the point is that such a file still parses
-        // and still lets its id be used, not that `None` behaves like `None`.
+        // but its id cannot be safely used again.
         let (root, store) = store();
         std::fs::write(
             root.path().join("requests").join("legacy-1.json"),
@@ -496,10 +488,7 @@ mod tests {
             .unwrap()
             .expect("legacy record parses");
         assert_eq!(record.payload_hash, None);
-        assert_eq!(
-            store.check("legacy-1", "any-hash-at-all").unwrap(),
-            DedupeVerdict::Proceed,
-        );
+        assert!(store.check("legacy-1", "any-hash-at-all").is_err());
     }
 
     #[test]
@@ -632,12 +621,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(store.settle_interrupted_requests().unwrap(), 1);
-        assert!(matches!(
-            store
-                .check("req-legacy-pending", "new-payload-hash")
-                .unwrap(),
-            DedupeVerdict::Replay(_),
-        ));
+        assert!(store
+            .check("req-legacy-pending", "new-payload-hash")
+            .is_err());
     }
 
     #[test]
