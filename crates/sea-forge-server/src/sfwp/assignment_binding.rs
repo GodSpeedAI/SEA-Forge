@@ -84,8 +84,11 @@ pub fn get(
         .map(|joined| json!({"case_id": case_id, "binding": joined})))
 }
 
-/// Read the joined binding of `assignment_id`: `{case_id, episode_key,
-/// assignment, link_id, run_id, binding_digest, link, run}`.
+/// Read the joined binding of `assignment_id`: every member the binding
+/// recorded — the contract's `Binding` `{version, assignment, link_id, run_id,
+/// world_ref, episode_kind, binding_digest, recorded_at}` — joined with
+/// `{case_id, episode_key, link, run}`. A consumer composes its case context
+/// from this read alone, so nothing recorded is left out.
 ///
 /// `Err` is the contract's refused Error value; it carries no side effect (a
 /// read has none) and must be answered, not retried against another store.
@@ -177,8 +180,9 @@ pub fn read(root: &Path, case_id: &str, assignment_id: &str) -> Result<Value, Va
         "episode_key": {"case_id": case_id, "plan_item_id": item, "n": n},
         "assignment": bound,
         "link_id": binding["link_id"], "run_id": binding["run_id"],
+        "world_ref": binding["world_ref"], "episode_kind": binding["episode_kind"],
         "binding_digest": binding["binding_digest"],
-        "version": binding["version"],
+        "version": binding["version"], "recorded_at": binding["recorded_at"],
         "link": link, "run": run,
     }))
 }
@@ -275,6 +279,35 @@ mod tests {
             joined["assignment"]["brief"]["adoptable_problem"],
             "Why the evidence record is missing after the run."
         );
+    }
+
+    #[test]
+    fn the_read_serves_every_member_it_recorded() {
+        let root = tempfile::tempdir().unwrap();
+        let (row, link, run) = joined_stores(EPISODE);
+        write(root.path(), "field-assignments.jsonl", &[row.clone()]);
+        write(root.path(), "field-links.jsonl", &[link]);
+        write(root.path(), "field-runs.jsonl", &[run]);
+        let served = read(root.path(), "case-0001", "assign:case-0001:item-03:1:1").unwrap();
+        // The contract's `Binding`: a consumer composes its case context from
+        // this read alone, so the frozen world and kind travel with it.
+        for member in [
+            "version",
+            "assignment",
+            "link_id",
+            "run_id",
+            "world_ref",
+            "episode_kind",
+            "binding_digest",
+            "recorded_at",
+        ] {
+            assert_eq!(
+                served[member], row["binding"][member],
+                "the read does not serve `{member}`"
+            );
+        }
+        assert_eq!(served["link"]["link_id"], "link-0001");
+        assert_eq!(served["run"]["run_id"], "run-0001");
     }
 
     #[test]

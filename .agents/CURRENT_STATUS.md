@@ -1,10 +1,33 @@
 # Current status
 
-**Status revision:** 386
+**Status revision:** 387
 
-**Stage:** FDE WP-23 | RUSTSEC-2026-0592 lock bump
+**Stage:** FDE WP-23 | Binding read serves the frozen world and kind
 
-**Summary:** The live cargo-deny advisory gate began failing every branch on RUSTSEC-2026-0592 (url <= 2.5.8 stack overflow in Url::origin); the lock is byte-identical to the last green commit, so this is advisory-DB drift. url pinned to 2.5.9 (with form_urlencoded 1.2.3), the lane's established advisory response.
+**Summary:** assignment_binding_get did not serve world_ref, episode_kind or recorded_at, although c0f144cf made them required on the recorded Binding so a consumer composes its case context from the read alone. The read now serves every member it recorded, joined with its link and run. The joined SEA-Cognate journey found it: against a real cell, Cognate's production admission provider denied the delegate's assigned start as a malformed answer.
+
+**Verified:**
+
+- New regression the_read_serves_every_member_it_recorded and the wire test's world/kind assertions were red at e118900b (the served world_ref was null) and are green after the change: cargo test -p sea-forge-server --lib -- assignment_binding::tests 6 passed; --test conformance_fde_scenarios -- assignment_binding_get_serves 1 passed
+- cargo fmt -p sea-forge-server -- --check clean
+- Joined journey against the real sea-forge-server binary built from e118900b: before the fix the read served {assignment, binding_digest, case_id, episode_key, link, link_id, run, run_id, version} and Cognate's assigned start for the exact delegate was denied (permission_denied, assignment admission denied); after the fix the same start completes one run bound to the served assignment, budget and link (the journey driver lands in the next commit)
+
+**Limits:**
+
+- Additive change to the assignment_binding_get answer; no schema or digest change. The served binding is the recorded Binding plus the episode_key, link and run joins (a superset), not schema-exact
+- Full conformance, the S2 slice and clippy with -D warnings have not been run on this tree yet
+
+**Next:** Land the joined journey driver; run FDE_WP21A_FINAL=1 conformance, the digest check, S2 against the 17-row baseline and clippy --all-targets -D warnings before pushing.
+
+**Evidence:**
+
+- crates/sea-forge-server/src/sfwp/assignment_binding.rs
+- crates/sea-forge-server/tests/conformance_fde_scenarios.rs
+- contracts/fde/assignment-binding.v1.json
+
+---
+
+# Historical status
 
 **Verified:**
 

@@ -3676,6 +3676,13 @@ async fn assignment_binding_get_serves_the_delegator_and_fails_closed() {
         "An evidence record names an independent source."
     );
     assert_eq!(binding["assignment"]["budget"][0]["limit"], 14400);
+    // The frozen world and kind travel with the served binding: a consumer
+    // composes its case context from this read alone.
+    assert_eq!(
+        binding["world_ref"],
+        "world:seed@sha256:1f1e2e28b65a8957374e40e7e85c67309c07a6577ad8f997b12b4ce9ce866879"
+    );
+    assert_eq!(binding["episode_kind"], "evaluated");
     assert_eq!(
         binding["link"]["delegate"],
         "agent:http://127.0.0.1:8099/agent"
