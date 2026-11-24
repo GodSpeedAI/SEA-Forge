@@ -511,10 +511,11 @@ fn receipt_response(
 ) -> Value {
     match project_receipt(root, operation_id, outcome) {
         Some(receipt) => json!({"ok": true, "replayed": outcome.replayed, "receipt": receipt}),
-        None => refusal(
-            "invalid_settlement",
-            "committed settlement cannot be projected",
-        ),
+        None => json!({
+            "error": "committed settlement cannot be projected",
+            "error_class": "invalid_settlement",
+            "no_side_effect": false,
+        }),
     }
 }
 
@@ -814,7 +815,7 @@ mod tests {
         };
         let response = receipt_response(root.path(), "op-1", &outcome);
         assert_eq!(response["error_class"], "invalid_settlement");
-        assert_ne!(response["no_side_effect"], true);
+        assert_eq!(response["no_side_effect"], false);
         assert_eq!(ledger.read_entries().unwrap().len(), 1);
     }
 
