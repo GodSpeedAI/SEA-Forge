@@ -285,7 +285,11 @@ mod tests {
     fn the_read_serves_every_member_it_recorded() {
         let root = tempfile::tempdir().unwrap();
         let (row, link, run) = joined_stores(EPISODE);
-        write(root.path(), "field-assignments.jsonl", &[row.clone()]);
+        write(
+            root.path(),
+            "field-assignments.jsonl",
+            std::slice::from_ref(&row),
+        );
         write(root.path(), "field-links.jsonl", &[link]);
         write(root.path(), "field-runs.jsonl", &[run]);
         let served = read(root.path(), "case-0001", "assign:case-0001:item-03:1:1").unwrap();

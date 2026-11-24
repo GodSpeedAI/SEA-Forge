@@ -1,10 +1,42 @@
 # Current status
 
-**Status revision:** 388
+**Status revision:** 389
 
-**Stage:** FDE WP-23 | Joined SEA-Cognate journey green against the real server
+**Stage:** FDE WP-23 | SEA gates green on the joined journey
 
-**Summary:** An opt-in journey drives the real sea-forge-server binary: a Field Case seeded by the scenario harness with a frozen episode, the real delegate request admitted over the public socket, the wire read checked for membership and identity refusals, then Cognate's live suite serving its RuntimeService with the production provider pointed at that socket. One run is admitted for the exact delegate, bound to the live binding; a wrong link, an outsider agent, the delegator itself, another tenant and a legacy row are all denied.
+**Summary:** SEA gates pass on the lane head carrying the binding read fix and the joined journey driver: FDE conformance 50 passed, server lib 206 passed, 13 contract digests match, clippy with -D warnings over all targets is clean, and the S2 slice matches the 17-row baseline ignoring duration (AT-09 PARTIAL as expected). The stricter lint caught a clone-to-slice in the new unit test; fixed.
+
+**Verified:**
+
+- FDE_WP21A_FINAL=1 cargo test -p sea-forge-server --test conformance_fde_scenarios --locked: 50 passed, 0 failed, 1 ignored (the opt-in joined journey)
+- cargo test -p sea-forge-server --lib --locked: 206 passed
+- scripts/check-fde-contract-digests.sh: 13 contract digests match
+- cargo clippy -p sea-forge-server --all-targets --locked -- -D warnings: exit 0 (its first run failed on clippy::cloned_ref_to_slice_refs in the new unit test; fixed with std::slice::from_ref)
+- scripts/fde-proof.sh --slice s2: all 17 rows identical to the baseline at 637cbece ignoring duration: 16 PASS, AT-09 PARTIAL, preflight PASS. The dispatcher exits 1 because only an all-PASS slice exits 0
+- Joined journey re-run on the final tree: 1 passed (Bun 5 pass, 0 fail, 0 skip)
+- cargo fmt -p sea-forge-server -- --check clean
+
+**Limits:**
+
+- S2 and the full conformance run were taken at a422e5a3; this change is one line in a unit test
+- The journey's claim is admission. The cell declares no agent endpoint, so the delegate verb's own delegation does not run; a production cell must declare agent.endpoints, and Cognate has no SEA-facing delegation endpoint yet
+- One operating-system uid maps to exactly one actor. Every process on this host shares one uid, so the Cognate server reads as the link's delegator and the SEA-side outsider is presented through the configured gateway; separation between same-uid processes is not proven
+- The private AuthenticatedConnection channel (single-use, request-bound grants and the workload-authentication ledger) is the S3 identity step and is not on this path. The delegate's identity is authenticated by Cognate at its Connect layer and is never seen by SEA
+- The Cognate live suite uses an in-memory store, a permissive Cognate run policy and a test principal map; durable idempotency, Cognate governance and production identity are not exercised there
+- Hosted CI, Cognate's store suites and just verify have not been run on this head yet
+
+**Next:** Push both lanes and confirm hosted CI; run Cognate's isolated-PG store suites and just verify; then the Workbench operator journey (PR #40).
+
+**Evidence:**
+
+- .tmp/fde-proof/s2/results.json
+- crates/sea-forge-server/src/sfwp/assignment_binding.rs
+- crates/sea-forge-server/tests/conformance_fde_scenarios.rs
+- Cognate packages/protocol-connect-bun/test/sea-admission.live.test.ts
+
+---
+
+# Historical status
 
 **Verified:**
 
