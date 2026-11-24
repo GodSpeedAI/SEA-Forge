@@ -161,6 +161,8 @@ pub mod delegation_audit;
 // Exposure state is a fold over a cell ledger stream; it lives with the
 // ledger so every component that exports cell data can consult it.
 pub use sea_forge_ledger::exposure;
+#[cfg(all(test, unix))]
+mod admission_crash_tests;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;
@@ -2223,6 +2225,8 @@ async fn dispatch_admitted(
                 if request_admission_claim::record(&state.root, &claim).is_err() {
                     return serde_json::json!({"error":"request admission could not be recorded", "error_class":"idempotency_unverifiable"});
                 }
+                #[cfg(all(test, unix))]
+                admission_crash_tests::pause_after_claim();
             }
             (Ok(Some(claim)), Ok(Some(record)))
                 if claim.owner == owner

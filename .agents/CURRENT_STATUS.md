@@ -1,30 +1,28 @@
 # Current status
 
-**Status revision:** 387
+**Status revision:** 388
 
 **Stage:** CognitiveOS #108 request correlation
 
-**Summary:** Checkpoint source-owned admission claims and request-scoped audit access for further qualification.
+**Summary:** Prove fail-closed orphan recovery after a real process death at the admission write boundary.
 
 **Verified:**
 
-- The legacy hashless replay regression failed before the change and passed afterward.
-- Two focused admission-claim tests passed, including an incomplete ledger refusal.
-- The exact-request audit policy test failed for an unsupported operation before the change and passed afterward for exact, different and unconstrained rules.
-- SFWP socket conformance passed 24 tests, including owner and auditor access after restart, a simulated orphan and a foreign-owner retry.
-- Case-authoring socket conformance passed 21 tests.
+- The Unix test starts a server child, verifies the committed admission claim and absent correlation record, then kills the child with SIGKILL at the test-only boundary pause.
+- After restart over the same root, the same request is refused as idempotency_unverifiable, its status is denied, and no case or run exists.
+- The focused crash test failed before the test-only pause was added and passed afterward, including the final no-run assertion.
+- The preceding checkpoint passed SFWP socket conformance 24/24, case-authoring socket conformance 21/21, correlation unit tests 15/15, two claim unit tests and the exact-request audit policy test.
 
 **Limits:**
 
-- The implementation remains isolated and requires independent hardening review; the owner declined external disclosure of the review packet.
-- The orphan test removes a projection to simulate an interrupted write; a process crash at the actual write boundary has not been proven.
+- The boundary pause is compiled only into Unix test builds; this test does not establish power-loss durability or exercise non-Unix platforms.
+- The isolated implementation requires independent hardening review; the owner declined external disclosure of the review packet.
 - Full CI, proofs, cross-platform tests and the complete server suite have not run.
-- An initial unprivileged socket test was denied loopback access; the same authorized test and socket suites passed with normal elevated access.
 
-**Next:** Review and qualify the checkpoint, including real crash-boundary recovery and all required milestone and repository gates, before integration.
+**Next:** Independently review and qualify the isolated checkpoints and run the remaining required milestone and repository gates before integration.
 
 **Evidence:**
 
-- crates/sea-forge-server/src/request_admission_claim.rs
+- crates/sea-forge-server/src/admission_crash_tests.rs
 - crates/sea-forge-server/tests/conformance_sfwp.rs
 - crates/sea-forge-authority/tests/request_status_audit.rs
