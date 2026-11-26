@@ -104,6 +104,12 @@ impl SettlementCriteria {
 
 const FIELD_MAX: usize = 256;
 
+/// The longest reference SEA generates from an operation id is the settlement envelope id,
+/// `env-settlement_packet-{operation_id}-{12 hex}`. Capping the operation id here guarantees that every
+/// accepted operation id yields references that fit [`FIELD_MAX`], so a final settlement is always projectable.
+const SETTLEMENT_ENVELOPE_AFFIX_BYTES: usize = "env-settlement_packet-".len() + 1 + 12;
+pub const MAX_OPERATION_ID_BYTES: usize = FIELD_MAX - SETTLEMENT_ENVELOPE_AFFIX_BYTES;
+
 /// Why a request was refused before any decision existed. Never an allow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CepAuthorityError {
@@ -125,6 +131,42 @@ pub enum CepAuthorityError {
     /// The request's `claims` are not a bounded, flat map of plain keys to strings or numbers.
     Claims(String),
     Internal(String),
+    /// A settlement receipt was refused. Carries only a code with a fixed public message.
+    Receipt(ReceiptRefusal),
+}
+
+/// Why a settlement receipt was not projected. The codes are stable and carry no stored text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReceiptRefusal {
+    /// The settlement was already made (or won concurrently); a receipt is the first-call response only.
+    Replay,
+    /// The settlement is not final. Refused before any settlement packet is committed.
+    NonFinal,
+    /// The governing history failed chain, MMR or record verification.
+    IntegrityFailed,
+    /// The settlement, its ALLOW decision or its evidence disagree on operation, world or references.
+    ReferenceMismatch,
+}
+
+impl ReceiptRefusal {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Replay => "receipt_replay_refused",
+            Self::NonFinal => "receipt_nonfinal_refused",
+            Self::IntegrityFailed => "receipt_integrity_failed",
+            Self::ReferenceMismatch => "receipt_reference_mismatch",
+        }
+    }
+
+    /// A fixed public sentence; never stored payload text.
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Replay => "a settlement receipt is returned only for the first final settlement of an operation",
+            Self::NonFinal => "a settlement receipt is issued only for a final settlement",
+            Self::IntegrityFailed => "the settlement history could not be verified",
+            Self::ReferenceMismatch => "the settlement and its governing records do not agree",
+        }
+    }
 }
 
 impl fmt::Display for CepAuthorityError {
@@ -147,6 +189,7 @@ impl fmt::Display for CepAuthorityError {
             Self::Transition(m) => write!(f, "world transition refused: {m}"),
             Self::Claims(m) => write!(f, "malformed authority request: claims {m}"),
             Self::Internal(m) => write!(f, "{m}"),
+            Self::Receipt(r) => f.write_str(r.message()),
         }
     }
 }
@@ -172,6 +215,7 @@ impl CepAuthorityError {
             Self::SettlementPending(_) => "cep_settlement_pending",
             Self::Transition(_) => "cep_transition_refused",
             Self::Internal(_) => "cep_authority_internal",
+            Self::Receipt(r) => r.code(),
         }
     }
 }
@@ -617,7 +661,13 @@ pub fn parse_request(
     Ok(ParsedRequest {
         envelope_id: text(envelope, "/envelope_id", "envelope_id")?.to_string(),
         world_ref: world.to_string(),
-        operation_id: text(envelope, &format!("{ns}/operation_id"), "operation_id")?.to_string(),
+        operation_id: {
+            let op = text(envelope, &format!("{ns}/operation_id"), "operation_id")?;
+            if op.len() > MAX_OPERATION_ID_BYTES {
+                return Err(CepAuthorityError::Malformed("operation_id"));
+            }
+            op.to_string()
+        },
         correlation_id: text(envelope, &format!("{ns}/correlation_id"), "correlation_id")?
             .to_string(),
         subject_actor_ref: text(
@@ -1423,6 +1473,167 @@ fn corroborate(
     Ok(every_item_checked.then(|| source.name()))
 }
 
+/// The allowlisted, non-sensitive fields of a verified final settlement. Nothing else leaves SEA.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SettlementReceipt {
+    pub operation_id: String,
+    pub subject_refs: Vec<String>,
+    /// Read from the committed ALLOW decision, and equal to the settlement's and every evidence row's.
+    pub world_ref: String,
+    /// Resolved from the committed ALLOW decision's own operation field.
+    pub authority_decision_ref: String,
+    pub issuer: String,
+    pub status: String,
+    pub final_status: bool,
+    pub ledger_id: String,
+    pub ledger_entry: String,
+    pub payload_hash: String,
+    pub envelope_id: String,
+}
+
+/// `world:<name>@sha256:<64 lowercase hex>`.
+fn is_world_ref(text: &str) -> bool {
+    let Some(rest) = text.strip_prefix("world:") else {
+        return false;
+    };
+    let Some((name, digest)) = rest.rsplit_once("@sha256:") else {
+        return false;
+    };
+    !name.is_empty()
+        && name.len() <= 128
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        && digest.len() == 64
+        && digest.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
+}
+
+/// An envelope reference: bounded, printable, no whitespace.
+fn is_envelope_ref(text: &str) -> bool {
+    !text.is_empty() && text.len() <= FIELD_MAX && text.chars().all(|c| c.is_ascii_graphic())
+}
+
+impl CepAuthorityService<'_> {
+    /// Verify the governing history against ONE pinned, locked read of the authority ledger, then project.
+    fn receipt_of(
+        &self,
+        operation_id: &str,
+        outcome: &SettlementOutcome,
+    ) -> Result<SettlementReceipt, CepAuthorityError> {
+        let refused = |r| CepAuthorityError::Receipt(r);
+        if outcome.replayed {
+            return Err(refused(ReceiptRefusal::Replay));
+        }
+        if !outcome.final_status {
+            return Err(refused(ReceiptRefusal::NonFinal));
+        }
+        // The ledger id is checked before anything is opened.
+        if outcome.committed.ledger_id() != LEDGER_ID {
+            return Err(refused(ReceiptRefusal::ReferenceMismatch));
+        }
+        let ledger = self
+            .ledger()
+            .map_err(|_| refused(ReceiptRefusal::IntegrityFailed))?;
+        let entries = ledger
+            .verified_snapshot_locked()
+            .map_err(|_| refused(ReceiptRefusal::IntegrityFailed))?;
+        let mismatch = || refused(ReceiptRefusal::ReferenceMismatch);
+        let entry = entries
+            .iter()
+            .find(|e| e.entry_ulid == outcome.committed.entry_ulid())
+            .ok_or_else(|| refused(ReceiptRefusal::IntegrityFailed))?;
+        if entry.committed_ref() != outcome.committed
+            || entry.record_kind != "settlement_packet"
+            || entry.idempotency_key.as_deref()
+                != Some(format!("{SETTLE_SUFFIX_FINAL}{operation_id}").as_str())
+            || entry.subject_refs != ["cognate", operation_id]
+        {
+            return Err(mismatch());
+        }
+        let allowed = allowed_operation(&entries, operation_id).ok_or_else(mismatch)?;
+        let packet = &entry.payload;
+        let ext = "/extensions/godspeed.settlement_packet";
+        let text = |pointer: &str| {
+            packet.pointer(pointer).and_then(Value::as_str).filter(|s| {
+                !s.is_empty() && s.len() <= FIELD_MAX && !s.chars().any(char::is_control)
+            })
+        };
+        let op = text(&format!("{ext}/operation_id")).ok_or_else(mismatch)?;
+        let world = text("/scope/world_ref").ok_or_else(mismatch)?;
+        let decision_ref = text(&format!("{ext}/authority_decision_ref")).ok_or_else(mismatch)?;
+        let issuer = text("/created_by").ok_or_else(mismatch)?;
+        let envelope_id = text("/envelope_id").ok_or_else(mismatch)?;
+        let status = text(&format!("{ext}/overall_status")).ok_or_else(mismatch)?;
+        let finality = packet
+            .pointer(&format!("{ext}/final"))
+            .and_then(Value::as_bool)
+            .ok_or_else(mismatch)?;
+        if op != operation_id
+            || op.len() > MAX_OPERATION_ID_BYTES
+            || issuer != "sea-forge-authority"
+            || status != outcome.status
+            || finality != outcome.final_status
+            || !finality
+            || !matches!(status, "settled" | "rejected")
+            || packet.get("envelope_kind").and_then(Value::as_str) != Some("settlement_packet")
+            || packet
+                .pointer("/extensions/cep.profile/profile_id")
+                .and_then(Value::as_str)
+                != Some("godspeed.settlement_packet")
+            || packet
+                .pointer("/extensions/cep.profile/profile_version")
+                .and_then(Value::as_str)
+                != Some(PROFILE_VERSION)
+            // References come from the committed ALLOW record; the packet must agree with it.
+            || world != allowed.world_ref
+            || decision_ref != allowed.decision_envelope_id
+            || !is_world_ref(world)
+            || !is_envelope_ref(decision_ref)
+            || !is_envelope_ref(envelope_id)
+            || !envelope_id.starts_with(&format!("env-settlement_packet-{operation_id}-"))
+        {
+            return Err(mismatch());
+        }
+        // Every evidence packet the settlement relies on is a committed row of this operation, for the
+        // same world as the decision.
+        let lineage: Vec<&str> = packet
+            .get("lineage_refs")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        if lineage.is_empty() {
+            return Err(mismatch());
+        }
+        for reference in lineage {
+            let backed = entries.iter().any(|e| {
+                e.record_kind == "evidence_packet"
+                    && operation_subject(e) == Some(operation_id)
+                    && e.payload.pointer("/envelope_id").and_then(Value::as_str) == Some(reference)
+                    && e.payload
+                        .pointer("/scope/world_ref")
+                        .and_then(Value::as_str)
+                        == Some(allowed.world_ref.as_str())
+            });
+            if !backed {
+                return Err(mismatch());
+            }
+        }
+        Ok(SettlementReceipt {
+            operation_id: op.to_string(),
+            subject_refs: entry.subject_refs.clone(),
+            world_ref: allowed.world_ref.clone(),
+            authority_decision_ref: allowed.decision_envelope_id.clone(),
+            issuer: issuer.to_string(),
+            status: status.to_string(),
+            final_status: finality,
+            ledger_id: entry.ledger_id.clone(),
+            ledger_entry: entry.entry_ulid.clone(),
+            payload_hash: entry.payload_hash.clone(),
+            envelope_id: envelope_id.to_string(),
+        })
+    }
+}
+
 /// A settlement, with the packet that expresses it.
 #[derive(Debug)]
 pub struct SettlementOutcome {
@@ -1500,12 +1711,22 @@ struct AllowedOperation {
     claims: Option<serde_json::Map<String, Value>>,
 }
 
+/// The operation a record is about: the second subject of a `["cognate", <operation>, ..]` record. Lookups
+/// match this field exactly. The fixed `cognate` marker, the corroboration subjects and approval ids are
+/// never operations, so an operation id equal to any of them selects nothing it does not own.
+pub(crate) fn operation_subject(entry: &LedgerEntry) -> Option<&str> {
+    match entry.subject_refs.as_slice() {
+        [marker, operation, ..] if marker == "cognate" => Some(operation.as_str()),
+        _ => None,
+    }
+}
+
 fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<AllowedOperation> {
     entries.iter().find_map(|entry| {
         let key = entry.idempotency_key.as_deref()?;
         if entry.record_kind != "authority_decision"
             || !(key.starts_with("cep:") || key.starts_with("cep-approval-use:"))
-            || !entry.subject_refs.iter().any(|s| s == operation_id)
+            || operation_subject(entry) != Some(operation_id)
         {
             return None;
         }
@@ -1514,6 +1735,14 @@ fn allowed_operation(entries: &[LedgerEntry], operation_id: &str) -> Option<Allo
             return None;
         }
         let action = serde_json::to_value(&decision.action_request.action).ok()?;
+        // The decision's own operation field must agree with the row's subject.
+        if action
+            .pointer("/parameters/operation_id")
+            .and_then(Value::as_str)
+            != Some(operation_id)
+        {
+            return None;
+        }
         Some(AllowedOperation {
             world_ref: text_at(&action, "/parameters/world_ref"),
             criteria_sha256: decision
@@ -1730,6 +1959,41 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         required_source: Option<&str>,
     ) -> Result<SettlementOutcome, CepAuthorityError> {
+        self.settle_inner(operation_id, caller, required_source, false)
+    }
+
+    /// The first-call settlement a receipt may be projected from. A nonfinal evaluation is refused AFTER the
+    /// settlement gate (so a caller without settlement authority learns nothing about finality) and BEFORE
+    /// any settlement packet is committed. A replay is refused once the gate has passed. The verified
+    /// projection is returned only if the governing history verifies.
+    pub fn settle_for_receipt(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        required_source: Option<&str>,
+    ) -> Result<SettlementReceipt, CepAuthorityError> {
+        let outcome = self.settle_inner(operation_id, caller, required_source, true)?;
+        self.receipt_of(operation_id, &outcome)
+    }
+
+    /// `settle_obligation`, projected as a receipt under the same rules as [`Self::settle_for_receipt`].
+    pub fn settle_obligation_for_receipt(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        source: &dyn obligation::ObligationSource,
+    ) -> Result<SettlementReceipt, CepAuthorityError> {
+        let outcome = self.settle_obligation(operation_id, caller, source)?;
+        self.receipt_of(operation_id, &outcome)
+    }
+
+    fn settle_inner(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        required_source: Option<&str>,
+        require_final: bool,
+    ) -> Result<SettlementOutcome, CepAuthorityError> {
         let corroborated = required_source.map(|s| format!("corroborated:{s}"));
         let ledger = self.ledger()?;
         let entries = ledger.read_entries()?;
@@ -1770,7 +2034,7 @@ impl CepAuthorityService<'_> {
             .iter()
             .filter(|e| {
                 e.record_kind == "evidence_packet"
-                    && e.subject_refs.iter().any(|s| s == operation_id)
+                    && operation_subject(e) == Some(operation_id)
                     && corroborated
                         .as_ref()
                         .is_none_or(|c| e.subject_refs.iter().any(|s| s == c))
@@ -1898,6 +2162,9 @@ impl CepAuthorityService<'_> {
             "unsettled"
         };
         let final_status = status != "unsettled";
+        if require_final && !final_status {
+            return Err(CepAuthorityError::Receipt(ReceiptRefusal::NonFinal));
+        }
         let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
         let world_ref = text_at(&packets[0].payload, "/scope/world_ref");
         set_hash.truncate(12);

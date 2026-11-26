@@ -1,24 +1,25 @@
 # Current status
 
-**Status revision:** 396
+**Status revision:** 397
 
-**Stage:** CognitiveOS #108 receipt integrity
+**Stage:** CognitiveOS #108 receipt reference binding
 
-**Summary:** Add a locked, symlink-refusing, chain-verified pinned ledger snapshot for receipt verification.
+**Summary:** Bind settlement receipts to exact operation lookups and the committed ALLOW record, verified against one pinned ledger snapshot.
 
 **Verified:**
 
-- verified_snapshot_locked reads once under a required shared lock, verifies chain, MMR and legacy files, and refuses a symlinked stream path, a missing lock file and an edited earlier row (sea-forge-ledger verified_snapshot 4/4).
+- Operation lookups match the record's designated operation field exactly; the fixed cognate marker no longer selects unrelated decisions or evidence.
+- A receipt is projected only after the settlement row, the committed ALLOW decision and every evidence packet it relies on verify in one locked snapshot; world and decision references come from the ALLOW record and are format-checked.
+- Operation ids are capped so every generated reference fits the projection limit; replay and nonfinal outcomes carry distinct typed refusal codes, nonfinal refused before a settlement packet is committed.
 
 **Limits:**
 
-- The symlink refusal is check-then-open, not an anchored no-follow open; hard links are not detected; the chain and MMR are unsigned local files.
-- The receipt verb is not yet wired to it in this commit.
+- Server wiring, error text and the effect flag follow in the next commit.
 - Full CI, proofs and cross-platform tests have not run.
 
-**Next:** Bind receipt references to the committed ALLOW record and wire verification.
+**Next:** Wire the receipt verb to the typed projection with fixed error text and a truthful effect flag.
 
 **Evidence:**
 
-- crates/sea-forge-ledger/src/types.rs
-- crates/sea-forge-ledger/tests/verified_snapshot.rs
+- crates/sea-forge-authority/src/cep.rs
+- crates/sea-forge-authority/src/cep/obligation.rs

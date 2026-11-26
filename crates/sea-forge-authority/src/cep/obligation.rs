@@ -162,7 +162,7 @@ fn execution_floor(
     entries
         .iter()
         .filter(|e| {
-            e.record_kind == "evidence_packet" && e.subject_refs.iter().any(|s| s == operation_id)
+            e.record_kind == "evidence_packet" && super::operation_subject(e) == Some(operation_id)
         })
         .filter_map(|e| parse_time(&e.committed_at))
         .min()
