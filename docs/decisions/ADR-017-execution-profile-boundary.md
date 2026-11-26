@@ -1,4 +1,4 @@
-# ADR-016: Bind a Cognate capability allow to one execution profile
+# ADR-017: Bind a Cognate capability allow to one execution profile
 
 Status: accepted, 2026-11-26 (CognitiveOS convergence, ticket #116).
 

@@ -20,7 +20,7 @@
 
 **Evidence:**
 
-- docs/decisions/ADR-016-execution-profile-boundary.md
+- docs/decisions/ADR-017-execution-profile-boundary.md
 - docs/subsystems/authority-fabric.md
 
 ---

@@ -169,3 +169,4 @@ Before execution, the CLI commits:
 * [`crates/sea-forge-core/src/types.rs`](../../crates/sea-forge-core/src/types.rs) — `AuthorityRequest`, `AuthorityDecision`, `IdentityBinding`, `Verdict`.
 * [`crates/sea-forge-authority/tests/conformance_m0_authority.rs`](../../crates/sea-forge-authority/tests/conformance_m0_authority.rs) — authority conformance.
 * [`crates/sea-forge-authority/tests/policy_yaml_strictness.rs`](../../crates/sea-forge-authority/tests/policy_yaml_strictness.rs) — strict policy parsing.
+* [`docs/decisions/ADR-017-execution-profile-boundary.md`](../decisions/ADR-017-execution-profile-boundary.md) — the `execution_profile` decision.
