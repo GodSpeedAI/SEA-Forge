@@ -717,3 +717,25 @@ fn escalation_on_a_profile_rule_exports_no_constraints() {
         sea_forge_core::types::Verdict::Escalate
     );
 }
+
+#[test]
+fn cep_validators_accept_an_execution_profile_boundary_decision_and_its_request() {
+    let Ok(repo) = std::env::var("CEP_REPO") else {
+        eprintln!("CEP_REPO not set: skipping profile conformance");
+        return;
+    };
+    let f = fixture(&profile_rule("exec", &[D1, D2], ""));
+    let req = capability_request(&f.world, "op-pv", "cap.exec", Some(D2));
+    assert_eq!(
+        cep_errors(&repo, "authority_request", &req),
+        Vec::<String>::new(),
+        "request"
+    );
+    let out = f.service().decide(&req, &caller()).unwrap();
+    assert_eq!(decision_of(&out), "boundary");
+    assert_eq!(
+        cep_errors(&repo, "authority_decision", &out.envelope),
+        Vec::<String>::new(),
+        "decision"
+    );
+}

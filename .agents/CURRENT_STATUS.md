@@ -1,3 +1,27 @@
+**Status revision:** 385
+
+**Stage:** CognitiveOS convergence #108 | #116 execution profile ADR renumbered and CEP validator run
+
+**Summary:** Renamed the execution profile ADR to ADR-017 (ADR-016 is the #117 settlement receipt) and ran the external CEP validator over an execution_profile boundary decision.
+
+**Verified:**
+
+- CEP_REPO=~/projects/gsr-heads/cep (5111ec3, equal to cep origin/main): cep_authority 25 pass including the new execution_profile validator test, cep_transition 17 pass; the CEP request and decision profiles accept constraint_type execution_profile.
+
+**Limits:**
+
+- Not pushed or merged.
+
+**Next:** Integrate the branch after review; implement the Workbench pre-spawn recompute and compare.
+
+**Evidence:**
+
+- docs/decisions/ADR-017-execution-profile-boundary.md
+
+---
+
+# Historical status
+
 **Status revision:** 384
 
 **Stage:** CognitiveOS convergence #108 | #116 SEA execution_profile binding implemented (branch ticket/116-execution-profile)
@@ -24,8 +48,6 @@
 - docs/subsystems/authority-fabric.md
 
 ---
-
-# Historical status
 
 **Status revision:** 383
 
