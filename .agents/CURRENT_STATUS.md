@@ -1,31 +1,27 @@
 # Current status
 
-**Status revision:** 398
+**Status revision:** 399
 
-**Stage:** CognitiveOS #108 receipt contract hardening
+**Stage:** CognitiveOS #108 pass-3 authority fixes
 
-**Summary:** Wire the receipt verb to the verified projection with stable codes, fixed error text, a ledger-truthful effect flag and withheld stored receipts.
+**Summary:** Make obligation receipts projectable, refuse unprojectable receipts before the settlement commits, and gate settlement before existence errors.
 
 **Verified:**
 
-- Tests now encode the contract: a first-call receipt on a final outcome succeeds for settled and rejected against the real ledger with exactly the 12 allowlisted keys and no evidence, question or prompt text; replay, nonfinal, integrity and reference failures carry distinct reason codes (red before: 5 of the new socket tests failed on the merged draft; green after, conformance_cep_authority 20/20).
-- Corruption tests reach verification with a clean control: edited and edited-and-rehashed evidence and decision rows are refused receipt_integrity_failed; decision-row damage is caught after the settlement commit and reports no_side_effect false.
-- Same-id replay is refused and request.get_status withholds the receipt outcome; refusals use fixed public text; an operation named cognate selects only its own records; the longest accepted operation id projects; a JSONL append followed by an MMR save failure reports no_side_effect false.
-- Gates: lib 206, conformance_cep_authority 20, conformance_sfwp 26, conformance_case_authoring 21, conformance_lifecycle 10, FDE scenarios 49 (FDE_WP21A_FINAL=1), sea-forge-authority and sea-forge-ledger tests, contract digests, workbench contracts gate, clippy -D warnings on server, authority and ledger, fmt.
+- Obligation receipt lineage is checked against the committed ALLOW decision of the same verified snapshot; a real-socket test with a stand-in RealityTrace binary issues an obligation receipt (red before: receipt_reference_mismatch after the commit) and a consistently rewritten malformed ALLOW world is refused with no settlement packet committed (red before: one packet committed).
+- The settlement gate is evaluated before the no-decision, no-evidence and pending errors (red before: an unauthorized caller got 'no committed allow decision'); an allow is not recorded by the first evaluation, so polling appends nothing.
+- conformance_cep_authority 22/22, sea-forge-authority tests pass.
 
 **Limits:**
 
-- authority_settle_receipt is a CEP extension verb outside the SFWP method catalog and generated schemas, like every authority_* verb; the catalog and digests are unchanged.
-- A receipt for an operation already settled through authority_settle is refused as a replay; clients must use the receipt verb for the first settlement.
-- The Workbench Tauri host that builds sfwp_request_status is not in this repository.
-- Chain and MMR are unsigned local files, the symlink check is check-then-open, and Windows native paths were not tested.
 - Full CI, proofs and cross-platform tests have not run.
+- Request ids remain cell-global; see the open debt entry.
 
-**Next:** Independent re-review of the receipt verb, then integrate.
+**Next:** Server-side pass-3 fixes: claim lookup, status uniformity, effect flag and test injection.
 
 **Evidence:**
 
-- crates/sea-forge-server/src/cep_authority.rs
-- crates/sea-forge-server/src/lib.rs
+- crates/sea-forge-authority/src/cep.rs
+- crates/sea-forge-authority/src/cep/obligation.rs
+- crates/sea-forge-authority/tests/cep_settlement.rs
 - crates/sea-forge-server/tests/conformance_cep_authority.rs
-- docs/decisions/ADR-016-minimal-settlement-receipt.md

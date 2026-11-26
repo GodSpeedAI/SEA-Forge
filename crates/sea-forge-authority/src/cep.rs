@@ -1514,6 +1514,49 @@ fn is_envelope_ref(text: &str) -> bool {
 }
 
 impl CepAuthorityService<'_> {
+    /// Everything about a receipt that can be decided before the settlement commits, so a settlement that
+    /// could never be projected is refused rather than committed and then permanently unobtainable: the
+    /// history verifies, the ALLOW decision exists with a well-formed world and decision reference, the
+    /// operation id fits, and (for evidence settlement) every evidence packet is for that same world.
+    fn receipt_preflight(&self, operation_id: &str) -> Result<(), CepAuthorityError> {
+        let refused = |r| CepAuthorityError::Receipt(r);
+        let ledger = self
+            .ledger()
+            .map_err(|_| refused(ReceiptRefusal::IntegrityFailed))?;
+        let entries = ledger
+            .verified_snapshot_locked()
+            .map_err(|_| refused(ReceiptRefusal::IntegrityFailed))?;
+        let mismatch = || refused(ReceiptRefusal::ReferenceMismatch);
+        let allowed = allowed_operation(&entries, operation_id).ok_or_else(mismatch)?;
+        if operation_id.len() > MAX_OPERATION_ID_BYTES
+            || !is_world_ref(&allowed.world_ref)
+            || !is_envelope_ref(&allowed.decision_envelope_id)
+        {
+            return Err(mismatch());
+        }
+        if allowed
+            .claims
+            .as_ref()
+            .is_none_or(|c| !c.contains_key("modality"))
+        {
+            let packets_agree = entries
+                .iter()
+                .filter(|e| {
+                    e.record_kind == "evidence_packet" && operation_subject(e) == Some(operation_id)
+                })
+                .all(|e| {
+                    e.payload
+                        .pointer("/scope/world_ref")
+                        .and_then(Value::as_str)
+                        == Some(allowed.world_ref.as_str())
+                });
+            if !packets_agree {
+                return Err(mismatch());
+            }
+        }
+        Ok(())
+    }
+
     /// Verify the governing history against ONE pinned, locked read of the authority ledger, then project.
     fn receipt_of(
         &self,
@@ -1601,21 +1644,35 @@ impl CepAuthorityService<'_> {
             .and_then(Value::as_array)
             .map(|a| a.iter().filter_map(Value::as_str).collect())
             .unwrap_or_default();
-        if lineage.is_empty() {
-            return Err(mismatch());
-        }
-        for reference in lineage {
-            let backed = entries.iter().any(|e| {
-                e.record_kind == "evidence_packet"
-                    && operation_subject(e) == Some(operation_id)
-                    && e.payload.pointer("/envelope_id").and_then(Value::as_str) == Some(reference)
-                    && e.payload
-                        .pointer("/scope/world_ref")
-                        .and_then(Value::as_str)
-                        == Some(allowed.world_ref.as_str())
-            });
-            if !backed {
+        let obligation = allowed
+            .claims
+            .as_ref()
+            .is_some_and(|c| c.contains_key("modality"));
+        if obligation {
+            // An obligation settles from RealityTrace's ledger, not from submitted evidence packets: its
+            // lineage is exactly the committed ALLOW decision it was judged under, and that decision is an
+            // `authority_decision` row of this same verified snapshot (it is where `allowed` came from).
+            if lineage != [allowed.decision_envelope_id.as_str()] {
                 return Err(mismatch());
+            }
+        } else {
+            if lineage.is_empty() {
+                return Err(mismatch());
+            }
+            for reference in lineage {
+                let backed = entries.iter().any(|e| {
+                    e.record_kind == "evidence_packet"
+                        && operation_subject(e) == Some(operation_id)
+                        && e.payload.pointer("/envelope_id").and_then(Value::as_str)
+                            == Some(reference)
+                        && e.payload
+                            .pointer("/scope/world_ref")
+                            .and_then(Value::as_str)
+                            == Some(allowed.world_ref.as_str())
+                });
+                if !backed {
+                    return Err(mismatch());
+                }
             }
         }
         Ok(SettlementReceipt {
@@ -1821,6 +1878,40 @@ impl CepAuthorityService<'_> {
         self.gate_settlement_declaration(&ledger, operation_id, &ingress)
     }
 
+    /// The settlement gate, run first so a caller without settlement authority is refused (and the refusal
+    /// recorded) before anything else about the operation is looked at: whether it was decided, has evidence,
+    /// is still pending or is already final. An ALLOW is not recorded here (the existing gate records it where
+    /// the work is done), so polling an operation that is not yet settleable appends nothing.
+    fn precheck_settlement_declaration(
+        &self,
+        ledger: &LedgerStream,
+        operation_id: &str,
+        caller: &Actor,
+    ) -> Result<(), CepAuthorityError> {
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::CepSettlement,
+            SettlementTransport::None,
+            None,
+            caller,
+            vec![format!("operation:{operation_id}")],
+        )?;
+        let class = derive_settlement_authority_class(&ingress);
+        let decision = evaluate_gate(
+            self.engine,
+            self.bundle,
+            self.root,
+            "settlement_declaration",
+            settlement_parameters(operation_id, class),
+            operation_id,
+            caller,
+        )?;
+        if decision.verdict == Verdict::Allow {
+            return Ok(());
+        }
+        // Not allowed: record and refuse exactly as the full gate does.
+        self.gate_settlement_declaration(ledger, operation_id, &ingress)
+    }
+
     /// Accept a RealityTrace-derived `evidence_packet` for an operation SEA-Forge allowed. Evidence is recorded;
     /// it settles nothing.
     pub fn submit_evidence(
@@ -1963,7 +2054,7 @@ impl CepAuthorityService<'_> {
     }
 
     /// The first-call settlement a receipt may be projected from. A nonfinal evaluation is refused AFTER the
-    /// settlement gate (so a caller without settlement authority learns nothing about finality) and BEFORE
+    /// settlement gate (so a caller without settlement authority is refused before anything about the operation is read) and BEFORE
     /// any settlement packet is committed. A replay is refused once the gate has passed. The verified
     /// projection is returned only if the governing history verifies.
     pub fn settle_for_receipt(
@@ -1983,7 +2074,7 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         source: &dyn obligation::ObligationSource,
     ) -> Result<SettlementReceipt, CepAuthorityError> {
-        let outcome = self.settle_obligation(operation_id, caller, source)?;
+        let outcome = self.settle_obligation_inner(operation_id, caller, source, true)?;
         self.receipt_of(operation_id, &outcome)
     }
 
@@ -1996,6 +2087,7 @@ impl CepAuthorityService<'_> {
     ) -> Result<SettlementOutcome, CepAuthorityError> {
         let corroborated = required_source.map(|s| format!("corroborated:{s}"));
         let ledger = self.ledger()?;
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)?;
         let entries = ledger.read_entries()?;
         let allowed = allowed_operation(&entries, operation_id).ok_or_else(|| {
             CepAuthorityError::Evidence(format!("{operation_id} has no committed allow decision"))
@@ -2060,6 +2152,9 @@ impl CepAuthorityService<'_> {
             vec![format!("operation:{operation_id}")],
         )?;
         self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
+        if require_final {
+            self.receipt_preflight(operation_id)?;
+        }
 
         let mut items: Vec<EvidenceItem> = Vec::new();
         let mut questions: Vec<Value> = Vec::new();
@@ -2452,23 +2547,23 @@ fn settlement_parameters(operation_id: &str, class: SettlementAuthorityClass) ->
 /// caller must not proceed. Shared by the CEP settlement callers and every SWE_SEED declaration path, so
 /// no path reaches `declare()` without this decision.
 #[allow(clippy::too_many_arguments)]
-fn commit_gate_evaluation(
+/// Evaluate a gate without recording anything.
+fn evaluate_gate(
     engine: &PolicyAuthorityEngine,
     bundle: &AuthorityPolicyBundle,
     root: &Path,
-    ledger: &LedgerStream,
     surface: &str,
     parameters: Value,
     operation_id: &str,
     caller: &Actor,
-) -> Result<(AuthorityDecision, CommittedRecordRef), CepAuthorityError> {
+) -> Result<AuthorityDecision, CepAuthorityError> {
     let action = AuthorityAction::Reserved {
         resource_type: surface.to_string(),
         resource_id: operation_id.to_string(),
         parameters,
     };
     let binding = bundle.resolve_identity(&caller.actor_id, caller.role.clone());
-    let decision = engine.evaluate(AuthorityEvaluation {
+    Ok(engine.evaluate(AuthorityEvaluation {
         actor: caller,
         binding,
         run_id: operation_id,
@@ -2483,7 +2578,29 @@ fn commit_gate_evaluation(
         env_keys: Default::default(),
         opa_candidate: None,
         environment: None,
-    })?;
+    })?)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn commit_gate_evaluation(
+    engine: &PolicyAuthorityEngine,
+    bundle: &AuthorityPolicyBundle,
+    root: &Path,
+    ledger: &LedgerStream,
+    surface: &str,
+    parameters: Value,
+    operation_id: &str,
+    caller: &Actor,
+) -> Result<(AuthorityDecision, CommittedRecordRef), CepAuthorityError> {
+    let decision = evaluate_gate(
+        engine,
+        bundle,
+        root,
+        surface,
+        parameters,
+        operation_id,
+        caller,
+    )?;
     // Every attempt is its own governance event: a re-evaluated decision is never byte-identical, so it
     // is committed plainly rather than under an idempotency key.
     let committed = ledger.commit_typed(

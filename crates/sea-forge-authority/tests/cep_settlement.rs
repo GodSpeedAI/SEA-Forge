@@ -248,6 +248,33 @@ fn final_settlement_replay_requires_current_settlement_authority() {
 }
 
 #[test]
+fn a_caller_without_settlement_authority_learns_nothing_about_existence_or_evidence() {
+    let c = cell();
+    let no_settle = policy(&["cognate_action", "evidence_mutation"]);
+    // An operation nobody decided, and an allowed one with no evidence yet: both are the gate's refusal,
+    // so the caller cannot tell them apart from each other or from a decided, evidenced operation.
+    allow(&c, "op-no-evidence");
+    for op in ["op-never-decided", "op-no-evidence"] {
+        let refused = with(&c, &no_settle, SettlementCriteria::default(), |s| {
+            s.settle(op, &svc())
+        });
+        assert!(
+            matches!(&refused, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration")),
+            "{op}: {refused:?}"
+        );
+    }
+    // The authorized caller still gets the specific answers.
+    let ghost = settle(&c, "op-never-decided");
+    assert!(
+        matches!(ghost, Err(CepAuthorityError::Evidence(m)) if m.contains("no committed allow decision"))
+    );
+    let none = settle(&c, "op-no-evidence");
+    assert!(
+        matches!(none, Err(CepAuthorityError::Evidence(m)) if m.contains("no evidence has been submitted"))
+    );
+}
+
+#[test]
 fn supporting_evidence_settles_once_and_the_packet_names_its_basis() {
     let c = cell();
     allow(&c, "op-1");

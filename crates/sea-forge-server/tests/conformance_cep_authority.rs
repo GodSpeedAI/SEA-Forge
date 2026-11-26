@@ -1171,3 +1171,201 @@ async fn a_durable_append_followed_by_an_mmr_failure_is_not_reported_as_no_effec
     assert!(after > before, "a row was appended");
     assert_eq!(got["no_side_effect"], false, "{got}");
 }
+
+// ---------------------------------------------------------------------------
+// obligation receipts over the socket, with a stand-in RealityTrace binary
+// ---------------------------------------------------------------------------
+
+const RT_LEDGER: &str = "rt-ledger-1";
+
+fn rt_argv() -> Vec<Value> {
+    vec![
+        json!("/pinned/verifier"),
+        json!("--intent"),
+        json!("11111111-1111-4111-8111-111111111111"),
+    ]
+}
+
+/// A stand-in `realitytrace` that answers `repo list`, `ledger export` and `ledger verify` from files.
+fn fake_realitytrace(dir: &Path) -> sea_forge_server::config::CepRealityTraceConfig {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::write(
+        dir.join("repos.json"),
+        json!({"repos": [{"repo_id": "r1"}]}).to_string(),
+    )
+    .unwrap();
+    std::fs::write(dir.join("export.json"), "[]").unwrap();
+    std::fs::write(dir.join("verify.json"), json!({"ok": true}).to_string()).unwrap();
+    let bin = dir.join("realitytrace");
+    let d = dir.display();
+    std::fs::write(
+        &bin,
+        format!(
+            "#!/bin/sh\n[ -n \"$XDG_DATA_HOME\" ] || exit 9\ncase \"$1 $2\" in\n  \"repo list\") cat {d}/repos.json;;\n  \"ledger export\") cat {d}/export.json;;\n  \"ledger verify\") cat {d}/verify.json;;\n  *) exit 2;;\nesac\n"
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+    sea_forge_server::config::CepRealityTraceConfig {
+        bin: bin.display().to_string(),
+        data_home: dir.display().to_string(),
+        state_home: dir.display().to_string(),
+        require_corroboration: false,
+    }
+}
+
+fn rt_row(ordinal: u64, kind: &str, payload: Value) -> Value {
+    json!({"ledger_id": RT_LEDGER, "append_ordinal": ordinal, "record_kind": kind, "payload": payload})
+}
+
+fn rt_observation(
+    ordinal: u64,
+    id: &str,
+    started: chrono::DateTime<chrono::Utc>,
+    exit: i64,
+) -> Value {
+    let content = json!({
+        "verifier_id": "command@1",
+        "invocation": {"argv": rt_argv(), "launcher": [], "timeout_s": 30},
+        "started_at": started.to_rfc3339(),
+        "completed_at": (started + chrono::Duration::milliseconds(10)).to_rfc3339(),
+        "exit_code": exit,
+        "crashed": false,
+    });
+    rt_row(
+        ordinal,
+        "observation.recorded",
+        json!({"observations": [{"observation_id": id}], "representations": [{"inline_content": content}]}),
+    )
+}
+
+/// An obligation that is allowed, has execution evidence, and whose window has closed with a recorded
+/// closure: the next step is settlement.
+async fn obligation_ready(op: &str) -> (tempfile::TempDir, tempfile::TempDir, PathBuf) {
+    let (root, mut config) = fixture(true, EVIDENCE_POLICY);
+    let rt_dir = tempfile::tempdir().unwrap();
+    config.cep_authority.realitytrace = Some(fake_realitytrace(rt_dir.path()));
+    let socket = config.socket_path.clone();
+    tokio::spawn(async move {
+        let _ = run(config).await;
+    });
+    for _ in 0..500 {
+        if socket.exists() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    let closes_at = chrono::Utc::now() + chrono::Duration::milliseconds(2500);
+    let mut envelope = request(&world, op, "action", "run.start");
+    envelope["extensions"]["godspeed.authority_request"]["claims"] = json!({
+        "modality": "obligation",
+        "expectation_digest": format!("sha256:{}", "e".repeat(64)),
+        "threshold_id": "thr-1",
+        "threshold_ledger": RT_LEDGER,
+        "threshold_position": 3,
+        "window_closes_at": closes_at.to_rfc3339(),
+        "close_grace_s": 30,
+        "verifier_argv_digest": sea_forge_authority::cep::argv_digest(&rt_argv()),
+    });
+    let allowed = c.call(verb(envelope, op)).await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    let acked = c
+        .call(service_call(json!({"verb": "authority_evidence",
+            "envelope": evidence_packet(&world, op, "supports"), "request_id": format!("ev-{op}")})))
+        .await;
+    assert_eq!(acked["ok"], true, "{acked}");
+    let floor = chrono::Utc::now() + chrono::Duration::milliseconds(50);
+    let rows = json!([
+        rt_row(
+            3,
+            "threshold.declared",
+            json!({"states": [{"state_id": "thr-1", "state_type": "settlement_threshold"}]})
+        ),
+        rt_observation(
+            5,
+            "obs-d",
+            chrono::Utc::now() - chrono::Duration::seconds(5),
+            1
+        ),
+        rt_observation(7, "obs-v0", floor + chrono::Duration::milliseconds(10), 0),
+    ]);
+    std::fs::write(rt_dir.path().join("export.json"), rows.to_string()).unwrap();
+    let wait = (closes_at - chrono::Utc::now()).num_milliseconds().max(0) as u64 + 60;
+    tokio::time::sleep(Duration::from_millis(wait)).await;
+    let closed = c
+        .call(service_call(
+            json!({"verb": "authority_closure", "operation_id": op,
+            "discrimination_observation_id": "obs-d", "verification_observation_ids": ["obs-v0"],
+            "request_id": format!("close-{op}")}),
+        ))
+        .await;
+    assert_eq!(closed["ok"], true, "{closed}");
+    (root, rt_dir, socket)
+}
+
+#[tokio::test]
+async fn an_obligation_receipt_is_issued_over_the_socket() {
+    let (_root, _rt, socket) = obligation_ready("op-obl").await;
+    let mut c = Client::connect(&socket).await;
+    let got = receipt(&mut c, "op-obl", "rc-obl").await;
+    assert_eq!(got["ok"], true, "{got}");
+    let r = got["receipt"].as_object().unwrap();
+    let mut keys: Vec<&str> = r.keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, RECEIPT_KEYS, "{got}");
+    assert_eq!(r["operation_id"], "op-obl");
+    assert_eq!(r["status"], "settled");
+    assert_eq!(r["final"], true);
+    assert_eq!(r["authority_decision_ref"], "env-authority_decision-op-obl");
+}
+
+#[tokio::test]
+async fn an_unprojectable_obligation_receipt_is_refused_before_the_settlement_commits() {
+    let (root, _rt, socket) = obligation_ready("op-obl-bad").await;
+    // The committed ALLOW decision now names a malformed world, with the chain consistently rewritten.
+    rewrite_consistently(root.path(), "authority_decision", |p| {
+        if p.pointer("/action_request/action/parameters/operation_id") == Some(&json!("op-obl-bad"))
+        {
+            p["action_request"]["action"]["parameters"]["world_ref"] = json!("not-a-world");
+        }
+    });
+    let packets = count_kind(root.path(), "settlement_packet");
+    let mut c = Client::connect(&socket).await;
+    let got = receipt(&mut c, "op-obl-bad", "rc-obl-bad").await;
+    assert_eq!(got["error_class"], "receipt_reference_mismatch", "{got}");
+    assert_eq!(
+        count_kind(root.path(), "settlement_packet"),
+        packets,
+        "the refusal came before the settlement committed"
+    );
+}
+
+/// Rewrite every row of `kind` with `edit`, then recompute each row's hashes, the predecessor chain and the
+/// MMR, so the stream stays internally consistent. (Without signatures that is undetectable by design.)
+fn rewrite_consistently(root: &Path, kind: &str, edit: impl Fn(&mut Value)) {
+    let path = entries_file(root);
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut out = Vec::new();
+    let mut previous: Option<String> = None;
+    let mut mmr = sea_forge_ledger::types::MmrState::empty();
+    for line in text.lines() {
+        let mut entry: sea_forge_ledger::LedgerEntry = serde_json::from_str(line).unwrap();
+        if entry.record_kind == kind {
+            edit(&mut entry.payload);
+            entry.payload_hash = sea_forge_ledger::types::payload_hash(&entry.payload).unwrap();
+        }
+        entry.previous_entry_hash = previous.clone();
+        entry.entry_hash = sea_forge_ledger::types::entry_hash(&entry).unwrap();
+        previous = Some(entry.entry_hash.clone());
+        mmr = mmr.append(&entry.entry_hash).unwrap();
+        out.push(serde_json::to_string(&entry).unwrap());
+    }
+    std::fs::write(&path, out.join("\n") + "\n").unwrap();
+    std::fs::write(
+        path.with_file_name("mmr.json"),
+        serde_json::to_vec(&mmr).unwrap(),
+    )
+    .unwrap();
+}

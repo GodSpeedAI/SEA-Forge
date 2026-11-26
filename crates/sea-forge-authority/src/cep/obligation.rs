@@ -417,7 +417,18 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         source: &dyn ObligationSource,
     ) -> Result<SettlementOutcome, CepAuthorityError> {
+        self.settle_obligation_inner(operation_id, caller, source, false)
+    }
+
+    pub(super) fn settle_obligation_inner(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        source: &dyn ObligationSource,
+        for_receipt: bool,
+    ) -> Result<SettlementOutcome, CepAuthorityError> {
         let ledger = self.ledger()?;
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)?;
         let entries = ledger.read_entries()?;
         let (allowed, obligation) = self.obligation_for(&entries, operation_id)?;
         let final_key = format!("{SETTLE_SUFFIX_FINAL}{operation_id}");
@@ -467,6 +478,9 @@ impl CepAuthorityService<'_> {
             vec![format!("operation:{operation_id}")],
         )?;
         self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
+        if for_receipt {
+            self.receipt_preflight(operation_id)?;
+        }
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {
