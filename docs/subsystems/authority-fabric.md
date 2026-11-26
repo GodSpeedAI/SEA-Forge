@@ -107,6 +107,39 @@ There is no stored SHA-256 of the executable in the grant and no hash comparison
 
 ---
 
+## 5a. Execution Profile Binding (`execution_profile`)
+
+A `cognate_capability` allow can be bound to one launch plan. The policy author lists the permitted
+launch-plan digests; the requester claims the one it intends to spawn; the decision records which one
+matched.
+
+* **Rule.** A `cognate_capability` rule may carry the boundary dimension `execution_profile`: 1 to 8
+  distinct values, each `sha256:` plus 64 lowercase hex digits. The bundle loader refuses the dimension on
+  any other operation kind, on a rule that is not `verdict: allow` with `disposition: boundary`, and any
+  empty, malformed or duplicated value.
+* **Request.** The CEP request carries `claims.launch_plan_digest`. SEA-Forge does not know how the host
+  computes it; the host defines the launch plan (executable and launcher paths and hashes, argv, workspace
+  bind, restrictions, ceilings, environment allowlist, egress) and hashes it.
+* **Matching.** A rule with `execution_profile` matches only when the claimed digest is well formed and
+  equal to one of its values. A request is *governed* when some profile rule would match it but for the
+  digest (same role, subject, resource, exposure). A governed request can be allowed only by a profile rule
+  whose digests include the claim: allow rules without a profile are skipped for it, whatever their order,
+  while an earlier deny or escalate rule still applies. If nothing matches, the decision is `deny` with
+  reason code `execution_profile_mismatch` (a missing or malformed claim included). Resources that no
+  profile rule governs are decided as before.
+* **Decision.** The allow is a `boundary` decision whose `boundary_constraints.execution_profile` holds only
+  the matched digest, not the rule's list. The envelope exports it as a constraint of type
+  `execution_profile` whose description is that digest. The claims are echoed into the committed
+  `authority_decision` record, so the ledger shows what was asked. Approval floors, escalation, and
+  world-transition rules are unchanged; an escalation exports no constraints.
+
+What this proves: the committed decision says that, under this policy bundle, SEA-Forge allowed a request
+that claimed exactly this digest. What it does not prove: SEA-Forge never sees the launch plan, so the host
+must recompute the digest from the plan it is about to spawn, compare it with the digest in the decision
+envelope, and refuse on any difference. There is no read-back verb for a decision by id, so the host
+compares against the envelope it received; one-shot use and the five-minute expiry apply to grants minted
+from `ActionGrant`, not to this CEP envelope.
+
 ## 6. Ledger Commitments
 
 Before execution, the CLI commits:
