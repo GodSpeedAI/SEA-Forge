@@ -1901,6 +1901,59 @@ impl LedgerStream {
         Ok(())
     }
 
+    /// One verified, pinned read of the whole stream, for callers that export a projection of what it
+    /// says. Unlike [`Self::verify`] followed by [`Self::read_entries`] it is a single read under the
+    /// stream lock, so the entries returned are exactly the entries whose chain and MMR were checked.
+    ///
+    /// The lock is REQUIRED: a missing or unopenable lock file is an error, never an unlocked read.
+    /// A symbolic link at the stream directory, entries, lock or MMR path is refused. That is a
+    /// check-then-open, not an anchored no-follow open (the standard library offers none without
+    /// platform code), so a link swapped in between the check and the read is residual risk.
+    pub fn verified_snapshot_locked(&self) -> Result<Vec<LedgerEntry>, ForgeError> {
+        let dir = self.root.join("ledgers").join(&self.ledger_id);
+        for path in [
+            dir.clone(),
+            self.entries_path(),
+            self.lock_path(),
+            self.mmr_path(),
+        ] {
+            match fs::symlink_metadata(&path) {
+                Ok(meta) if meta.file_type().is_symlink() => {
+                    return Err(ForgeError::Internal(
+                        "ledger_integrity_error: unexpected symbolic link".into(),
+                    ))
+                }
+                Ok(_) => {}
+                Err(error) => return Err(ForgeError::io("inspect ledger stream path", error)),
+            }
+        }
+        let lock_file = OpenOptions::new()
+            .read(true)
+            .open(self.lock_path())
+            .map_err(|error| ForgeError::io("open ledger stream lock", error))?;
+        lock_file
+            .lock_shared()
+            .map_err(|error| ForgeError::io("lock ledger stream (shared)", error))?;
+        let result = (|| {
+            let entries = self.read_entries_unlocked()?;
+            let mmr = check_entry_chain(&entries)?;
+            if self.load_mmr()? != mmr {
+                return Err(ForgeError::Internal(
+                    "ledger_integrity_error: mmr root mismatch".into(),
+                ));
+            }
+            self.verify_legacy_files()?;
+            Ok(entries)
+        })();
+        let unlock_result = lock_file
+            .unlock()
+            .map_err(|error| ForgeError::io("unlock ledger stream", error));
+        match result {
+            Ok(value) => unlock_result.map(|()| value),
+            Err(error) => Err(error),
+        }
+    }
+
     fn verify_legacy_files(&self) -> Result<(), ForgeError> {
         let entries = self.read_entries_unlocked()?;
         for entry in entries {

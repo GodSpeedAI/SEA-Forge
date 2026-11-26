@@ -1,23 +1,24 @@
 # Current status
 
-**Status revision:** 395
+**Status revision:** 396
 
-**Stage:** CognitiveOS #108 receipt merge
+**Stage:** CognitiveOS #108 receipt integrity
 
-**Summary:** Merged the unqualified settlement receipt checkpoint into the replay-ownership branch, keeping owner binding and the receipt verb.
+**Summary:** Add a locked, symlink-refusing, chain-verified pinned ledger snapshot for receipt verification.
 
 **Verified:**
 
-- Merge conflicts were limited to the status files; code merged automatically and still needs the receipt hardening checkpoints that follow.
+- verified_snapshot_locked reads once under a required shared lock, verifies chain, MMR and legacy files, and refuses a symlinked stream path, a missing lock file and an edited earlier row (sea-forge-ledger verified_snapshot 4/4).
 
 **Limits:**
 
-- The receipt verb is unqualified until integrity, reference binding, error codes and tests land in following commits.
+- The symlink refusal is check-then-open, not an anchored no-follow open; hard links are not detected; the chain and MMR are unsigned local files.
+- The receipt verb is not yet wired to it in this commit.
 - Full CI, proofs and cross-platform tests have not run.
 
-**Next:** Harden the receipt verb per the two independent reviews.
+**Next:** Bind receipt references to the committed ALLOW record and wire verification.
 
 **Evidence:**
 
-- crates/sea-forge-server/src/cep_authority.rs
-- crates/sea-forge-server/src/lib.rs
+- crates/sea-forge-ledger/src/types.rs
+- crates/sea-forge-ledger/tests/verified_snapshot.rs
