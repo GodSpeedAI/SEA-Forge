@@ -91,7 +91,7 @@ func TestLiveVerbRoundTrip(t *testing.T) {
 	t.Logf("committed case %s (state %s)", caseID, receipt.State)
 
 	// request.get_status returns the recorded terminal outcome.
-	outcome, err := authority.RequestStatus(ctx, commitReqID)
+	outcome, err := authority.RequestStatus(ctx, commitReqID, governedOpts(commitReqID).Governance)
 	if err != nil {
 		t.Fatalf("request.get_status: %v", err)
 	}

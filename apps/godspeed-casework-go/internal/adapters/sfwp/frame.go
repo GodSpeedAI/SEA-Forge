@@ -150,11 +150,31 @@ func NewSystemHello(client string) *Request {
 // NewSystemDescribe asks for the method catalog with interaction classes.
 func NewSystemDescribe() *Request { return newRequest("system_describe") }
 
-// NewRequestGetStatus recovers the outcome of a prior correlated request.
-func NewRequestGetStatus(requestID string) *Request {
+// NewRequestGetStatus recovers the outcome of a prior correlated request. It is a protected verb:
+// only the identity that submitted the request (the same actor, and the same on_behalf_of when it
+// was delegated) can read its record, so the governance of the original request must be repeated.
+func NewRequestGetStatus(requestID string, g Governance) *Request {
 	r := newRequest("request_get_status")
 	r.body["request_id"] = requestID
+	g.apply(r.body)
 	return r
+}
+
+// governanceOfRequest recovers the governance block a built request carries.
+func governanceOfRequest(r *Request) Governance {
+	var g Governance
+	if actor, ok := r.body["actor"].(map[string]any); ok {
+		g.Actor = Actor{ActorID: stringField(actor, "actor_id"), Role: stringField(actor, "role")}
+	}
+	if behalf, ok := r.body["on_behalf_of"].(map[string]any); ok {
+		g.OnBehalfOf = &Actor{ActorID: stringField(behalf, "actor_id"), Role: stringField(behalf, "role")}
+	}
+	return g
+}
+
+func stringField(m map[string]any, key string) string {
+	s, _ := m[key].(string)
+	return s
 }
 
 // NewReadinessGet asks for the authority's readiness projection.

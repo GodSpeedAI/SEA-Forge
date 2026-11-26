@@ -478,7 +478,7 @@ type CaseAuthorityPort interface {
 	GetArtifact(ctx context.Context, digest string) (ArtifactContent, error)
 	ResolveIdentity(ctx context.Context, g Governance) (IdentityReport, error)
 	Readiness(ctx context.Context) (ReadinessReport, error)
-	RequestStatus(ctx context.Context, requestID string) (RequestOutcome, error)
+	RequestStatus(ctx context.Context, requestID string, g Governance) (RequestOutcome, error)
 	// Governed (side-effecting) surface. Every method is correlated: the adapter must ensure a
 	// non-empty RequestID so an interrupted outcome stays recoverable.
 	CommitCase(ctx context.Context, draft CaseDraft, pin PreconditionDigest, opts GovernedOptions) (CommitReceipt, error)

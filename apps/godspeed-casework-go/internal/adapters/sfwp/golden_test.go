@@ -86,7 +86,9 @@ func TestGoldenRequestEncoding(t *testing.T) {
 		{"system.hello", func() ([]byte, error) { return EncodeRequest(NewSystemHello("golden-capture")) }},
 		{"readiness.get", func() ([]byte, error) { return EncodeRequest(NewReadinessGet()) }},
 		{"identity.get", func() ([]byte, error) { return EncodeRequest(NewIdentityGet(nil)) }},
-		{"request.get_status.unknown", func() ([]byte, error) { return EncodeRequest(NewRequestGetStatus("req-never-issued")) }},
+		{"request.get_status.unknown", func() ([]byte, error) {
+			return EncodeRequest(NewRequestGetStatus("req-never-issued", operatorGolden()))
+		}},
 		{"case.entry_options", func() ([]byte, error) { return EncodeRequest(NewCaseEntryOptions()) }},
 		{"case.preflight", func() ([]byte, error) { return EncodeRequest(NewCasePreflight(sentryChainRef, sentryChainParams())) }},
 		{"case.list", func() ([]byte, error) { return EncodeRequest(NewCaseList()) }},

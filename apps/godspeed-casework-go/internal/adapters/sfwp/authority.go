@@ -853,8 +853,8 @@ func conditionsOf(items []ReadinessItemView) []ports.ReadinessCondition {
 
 // RequestStatus implements ports.CaseAuthorityPort: the explicit correlated-outcome recovery
 // entry point.
-func (a *Authority) RequestStatus(ctx context.Context, requestID string) (ports.RequestOutcome, error) {
-	view, err := a.client.RequestStatus(ctx, requestID)
+func (a *Authority) RequestStatus(ctx context.Context, requestID string, g ports.Governance) (ports.RequestOutcome, error) {
+	view, err := a.client.RequestStatus(ctx, requestID, governance(g))
 	if err != nil {
 		return ports.RequestOutcome{}, err
 	}

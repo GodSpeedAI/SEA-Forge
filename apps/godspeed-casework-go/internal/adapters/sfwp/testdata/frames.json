@@ -16,7 +16,7 @@
   },
   {
     "name": "request.get_status.unknown",
-    "request": "{\"request_id\":\"req-never-issued\",\"verb\":\"request_get_status\"}",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"request_id\":\"req-never-issued\",\"verb\":\"request_get_status\"}",
     "response": "{\"request_id\":\"req-never-issued\",\"status\":\"unknown\"}\n"
   },
   {
@@ -36,7 +36,7 @@
   },
   {
     "name": "request.get_status.completed",
-    "request": "{\"request_id\":\"req-golden-commit-1\",\"verb\":\"request_get_status\"}",
+    "request": "{\"actor\":{\"actor_id\":\"operator_local\",\"role\":\"operator\"},\"request_id\":\"req-golden-commit-1\",\"verb\":\"request_get_status\"}",
     "response": "{\"method\":\"case.commit\",\"outcome\":{\"case_id\":\"case_20260925T201622Z_6f8ca8\",\"exit_code\":5,\"state\":\"active\"},\"request_id\":\"req-golden-commit-1\",\"status\":\"completed\"}\n"
   },
   {
