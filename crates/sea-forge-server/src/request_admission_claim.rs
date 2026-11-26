@@ -31,7 +31,7 @@ pub(crate) struct AdmissionClaim {
     pub owner: AdmissionOwner,
 }
 
-fn ledger_id(request_id: &str) -> String {
+pub(crate) fn ledger_id(request_id: &str) -> String {
     format!(
         "request-admission-{}",
         hex::encode(Sha256::digest(request_id.as_bytes()))
@@ -87,6 +87,22 @@ pub(crate) fn record(root: &Path, claim: &AdmissionClaim) -> Result<(), ForgeErr
     Ok(())
 }
 
+/// (cell root, actor, request) triples already recorded as denied by this
+/// process. The ledger remains the source of truth; this only stops repeated
+/// identical polls from appending without bound. Cleared at the cap, and empty
+/// after a restart (one more record then is acceptable).
+fn denied_audit_polls(
+) -> &'static std::sync::Mutex<std::collections::HashSet<(String, String, String)>> {
+    static SET: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashSet<(String, String, String)>>,
+    > = std::sync::OnceLock::new();
+    SET.get_or_init(Default::default)
+}
+
+const DENIED_AUDIT_POLL_CAP: usize = 4096;
+
+/// Blocking: loads policy and may append to the audit ledger. Call from a
+/// blocking thread.
 pub(crate) fn authorize_audit(
     config: &crate::ServerConfig,
     actor: &crate::identity::ResolvedActor,
@@ -126,6 +142,18 @@ pub(crate) fn authorize_audit(
         opa_candidate: None,
         environment: None,
     })?;
+    let poll_key = (
+        config.root.to_string_lossy().into_owned(),
+        actor.actor_id.clone(),
+        request_id.to_owned(),
+    );
+    if decision.verdict != Verdict::Allow
+        && denied_audit_polls()
+            .lock()
+            .is_ok_and(|seen| seen.contains(&poll_key))
+    {
+        return Ok(false);
+    }
     let ledger = sea_forge_ledger::LedgerStream::open(
         &config.root,
         "request-status-audit",
@@ -138,6 +166,12 @@ pub(crate) fn authorize_audit(
         vec![],
     )?;
     if decision.verdict != Verdict::Allow {
+        if let Ok(mut seen) = denied_audit_polls().lock() {
+            if seen.len() >= DENIED_AUDIT_POLL_CAP {
+                seen.clear();
+            }
+            seen.insert(poll_key);
+        }
         return Ok(false);
     }
     engine

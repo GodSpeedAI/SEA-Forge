@@ -1,25 +1,30 @@
 # Current status
 
-**Status revision:** 391
+**Status revision:** 392
 
 **Stage:** CognitiveOS #108 hardening review fixes
 
-**Summary:** First-party Go casework client authenticates request.get_status with the original actor claim.
+**Summary:** Harden request admission and status: no existence oracle, blocking I/O off the executor, bounded audit appends, distinct reason codes.
 
 **Verified:**
 
-- NewRequestGetStatus now takes Governance; recovery repeats the original request's actor and on_behalf_of; ports.RequestStatus carries governance; golden frames carry the actor.
-- go vet (default and live tags) and go test ./... pass in apps/godspeed-casework-go, including a new test that an unauthenticated status is refused identity_required and an authenticated recovery succeeds.
+- A non-owner without the audit grant receives the never-seen reply, including for orphan and existing ids; owners and audit-granted actors keep their replies (conformance_sfwp 26/26).
+- Claim lookup/record and audit authorization run in spawn_blocking; repeated denied polls append one audit decision (test red before, green after).
+- Legacy hashed records without a claim fail closed with reason_code legacy_unclaimed, orphan claims with orphan_claim; an unwritable correlation record after the claim replies no_side_effect, reason_code request_id_spent and new_request_id_required.
+- The crash test now uses a committable case_commit, asserts case, run and claim-ledger counts (claim exactly 1) and proves committability with a control id; lib 205/205 earlier plus admission_crash 3/3 after the final edit; conformance_case_authoring 21/21, conformance_lifecycle 10/10, FDE scenarios 49/49 with FDE_WP21A_FINAL=1, contract digests match, clippy -D warnings and fmt clean.
 
 **Limits:**
 
-- The Workbench renderer reaches status only through the Tauri host command sfwp_request_status, whose host code is not in this tree; its actor claim is not verified here.
-- Full CI, proofs, cross-platform tests and the complete server suite have not run.
+- The audit policy is still parsed per non-owner poll because policy edits must take effect without a restart; only denied audit appends are deduplicated, granted polls still append because the grant proves against its committed decision.
+- request_get_status still consumes the admission pool and legacy records still reply denied to everyone.
+- Power-loss durability, non-Unix behaviour, full CI and proofs have not run.
 
 **Next:** Finish the remaining hardening-review fixes, then run the full gates.
 
 **Evidence:**
 
-- apps/godspeed-casework-go/internal/adapters/sfwp/frame.go
-- apps/godspeed-casework-go/internal/adapters/sfwp/client_test.go
-- apps/godspeed-casework-go/internal/adapters/sfwp/testdata/frames.json
+- crates/sea-forge-server/src/lib.rs
+- crates/sea-forge-server/src/request_admission_claim.rs
+- crates/sea-forge-server/src/admission_crash_tests.rs
+- crates/sea-forge-server/tests/conformance_sfwp.rs
+- docs/subsystems/server-sfwp.md

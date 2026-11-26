@@ -2238,42 +2238,71 @@ async fn request_status(
     request_id: String,
 ) -> serde_json::Value {
     let denied = || serde_json::json!({"error":"request status access cannot be verified", "error_class":"request_status_denied"});
-    match (
-        state.correlation.get(&request_id),
-        request_admission_claim::lookup(&state.root, &request_id),
-    ) {
-        (Ok(Some(record)), Ok(Some(claim)))
-            if record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()) =>
-        {
-            let Some(actor) = verified else {
-                return denied();
-            };
-            if request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner {
-                if let Some(outcome) = &record.outcome {
-                    if let Err(refused) =
-                        gate_stored_outcome(state, &record.method, outcome, None, actor).await
-                    {
-                        return refused;
-                    }
-                }
-            } else if !request_admission_claim::authorize_audit(&state.config(), actor, &request_id)
-                .unwrap_or(false)
-            {
-                return denied();
-            }
-            serde_json::json!({
-                "request_id": record.request_id,
-                "status": record.status,
-                "method": record.method,
-                "outcome": record.outcome,
-            })
-        }
-        (Ok(None), Ok(None)) if verified.is_some() => serde_json::json!({
+    // Byte-for-byte what a never-seen id gets (apart from the id supplied).
+    let unknown = |request_id: &str| {
+        serde_json::json!({
             "request_id": request_id,
             "status": "unknown",
-        }),
-        _ => denied(),
+        })
+    };
+    let Some(actor) = verified else {
+        return denied();
+    };
+    let lookup = {
+        let root = state.root.clone();
+        let id = request_id.clone();
+        tokio::task::spawn_blocking(move || request_admission_claim::lookup(&root, &id))
+            .await
+            .unwrap_or_else(|_| {
+                Err(sea_forge_core::errors::ForgeError::Internal(
+                    "request status lookup task failed".into(),
+                ))
+            })
+    };
+    let record = state.correlation.get(&request_id);
+    let (record, claim) = match (record, lookup) {
+        (Ok(None), Ok(None)) => return unknown(&request_id),
+        // A record with no claim predates claims: nobody can prove ownership.
+        (Ok(Some(_)), Ok(None)) => return denied(),
+        (Ok(record), Ok(Some(claim))) => (record, claim),
+        _ => return denied(),
+    };
+    let is_owner = request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner;
+    if !is_owner {
+        let config = state.config();
+        let id = request_id.clone();
+        let granted = {
+            let actor = actor.clone();
+            tokio::task::spawn_blocking(move || {
+                request_admission_claim::authorize_audit(&config, &actor, &id)
+            })
+            .await
+        };
+        if !matches!(granted, Ok(Ok(true))) {
+            // No grant: indistinguishable from an id that never existed.
+            return unknown(&request_id);
+        }
     }
+    let Some(record) =
+        record.filter(|record| record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()))
+    else {
+        return denied();
+    };
+    if is_owner {
+        if let Some(outcome) = &record.outcome {
+            if let Err(refused) =
+                gate_stored_outcome(state, &record.method, outcome, None, actor).await
+            {
+                return refused;
+            }
+        }
+    }
+    serde_json::json!({
+        "request_id": record.request_id,
+        "status": record.status,
+        "method": record.method,
+        "outcome": record.outcome,
+    })
 }
 
 /// Run the portions of a protected request that are lawful only after request
@@ -2301,7 +2330,20 @@ async fn dispatch_admitted(
             return serde_json::json!({"error":"request owner could not be authenticated", "error_class":"idempotency_unverifiable", "no_side_effect":true});
         };
         let owner = request_admission_claim::AdmissionOwner::from_actor(actor);
-        let claim = request_admission_claim::lookup(&state.root, &request_id);
+        // F-24: the claim ledger is opened, verified and fsynced, so it runs on
+        // a blocking thread. The correlation lock stays held across the await,
+        // so claim-before-effect ordering is unchanged.
+        let claim = {
+            let root = state.root.clone();
+            let id = request_id.clone();
+            tokio::task::spawn_blocking(move || request_admission_claim::lookup(&root, &id))
+                .await
+                .unwrap_or_else(|_| {
+                    Err(sea_forge_core::errors::ForgeError::Internal(
+                        "request admission lookup task failed".into(),
+                    ))
+                })
+        };
         let record = state.correlation.get(&request_id);
         match (claim, record) {
             (Ok(None), Ok(None)) => {
@@ -2310,7 +2352,17 @@ async fn dispatch_admitted(
                     payload_hash: hash.clone(),
                     owner,
                 };
-                if request_admission_claim::record(&state.root, &claim).is_err() {
+                let root = state.root.clone();
+                let recorded = tokio::task::spawn_blocking(move || {
+                    request_admission_claim::record(&root, &claim)
+                })
+                .await
+                .unwrap_or_else(|_| {
+                    Err(sea_forge_core::errors::ForgeError::Internal(
+                        "request admission record task failed".into(),
+                    ))
+                });
+                if recorded.is_err() {
                     return serde_json::json!({"error":"request admission could not be recorded", "error_class":"idempotency_unverifiable"});
                 }
                 #[cfg(all(test, unix))]
@@ -2319,8 +2371,16 @@ async fn dispatch_admitted(
             (Ok(Some(claim)), Ok(Some(record)))
                 if claim.owner == owner
                     && record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()) => {}
-            _ => {
-                return serde_json::json!({"error":"request admission cannot be verified", "error_class":"idempotency_unverifiable", "no_side_effect":true});
+            (claim, record) => {
+                // Distinct, machine-readable reasons; all fail closed.
+                let reason_code = match (&claim, &record) {
+                    (Ok(Some(_)), Ok(None)) => "orphan_claim",
+                    (Ok(None), Ok(Some(record))) if record.payload_hash.is_some() => {
+                        "legacy_unclaimed"
+                    }
+                    _ => "admission_unverifiable",
+                };
+                return serde_json::json!({"error":"request admission cannot be verified", "error_class":"idempotency_unverifiable", "reason_code": reason_code, "no_side_effect":true});
             }
         }
         match state.correlation.check(&request_id, &hash) {
@@ -2381,12 +2441,17 @@ async fn dispatch_admitted(
                         request_id,
                         "request refused: correlation unwritable: {error}"
                     );
+                    // The claim is durable but no handler ran: nothing happened,
+                    // and this id can never be admitted again.
                     return serde_json::json!({
                         "error": format!(
                             "the correlation record for `{request_id}` could not be written, so \
                              this request cannot be made idempotent: {error}"
                         ),
                         "error_class": "idempotency_unverifiable",
+                        "no_side_effect": true,
+                        "reason_code": "request_id_spent",
+                        "new_request_id_required": true,
                     });
                 }
             }
