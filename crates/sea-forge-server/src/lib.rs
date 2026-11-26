@@ -959,6 +959,12 @@ pub enum Request {
         #[serde(default)]
         request_id: Option<String>,
     },
+    /// Settle through the same authority and return only a committed receipt projection.
+    AuthoritySettleReceipt {
+        operation_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
     /// Record the closure of an obligation's window: SEA-Forge reads RealityTrace's ledger head (C) itself
     /// and stamps the closure with its own clock (Horizon HORIZON-001 1.1.0, REQ-NAV-012).
     AuthorityClosure {
@@ -2123,6 +2129,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::AuthorityRepin { request_id, .. }
         | Request::AuthorityEvidence { request_id, .. }
         | Request::AuthoritySettle { request_id, .. }
+        | Request::AuthoritySettleReceipt { request_id, .. }
         | Request::AuthorityClosure { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
@@ -2165,6 +2172,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::AuthorityRepin { .. }
             | Request::AuthorityEvidence { .. }
             | Request::AuthoritySettle { .. }
+            | Request::AuthoritySettleReceipt { .. }
             | Request::AuthorityClosure { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
@@ -3316,7 +3324,7 @@ pub async fn handle_request_as(
                     let config = state.config();
                     let root = state.root.clone();
                     tokio::task::spawn_blocking(move || {
-                        cep_authority::settle(&config, &root, &operation_id, &caller)
+                        cep_authority::settle(&config, &root, &operation_id, &caller, false)
                     })
                     .await
                     .unwrap_or_else(|_| {
@@ -3332,6 +3340,43 @@ pub async fn handle_request_as(
                 }),
             };
             record_outcome(state, request_id.as_deref(), "authority.settle", &response);
+            response
+        }
+        Request::AuthoritySettleReceipt {
+            operation_id,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.settle_receipt");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::settle(&config, &root, &operation_id, &caller, true)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        serde_json::json!({
+                            "error": "settlement task failed",
+                            "error_class": "cep_authority_internal",
+                        })
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_settle_receipt requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.settle_receipt",
+                &response,
+            );
             response
         }
         Request::AuthorityClosure {
