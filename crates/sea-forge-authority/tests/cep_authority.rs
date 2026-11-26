@@ -517,3 +517,203 @@ fn cep_validators_accept_every_emitted_decision_and_the_request() {
         );
     }
 }
+
+// ---- execution_profile: bind an allow to one exact launch plan (#116) ----
+
+const D1: &str = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+const D2: &str = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+const D3: &str = "sha256:3333333333333333333333333333333333333333333333333333333333333333";
+
+fn profile_rule(name: &str, digests: &[&str], extra: &str) -> String {
+    let values = digests
+        .iter()
+        .map(|d| format!("\"{d}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    rule(
+        name,
+        "cognate_capability",
+        &format!("    disposition: boundary\n    boundary_constraints:\n      execution_profile: [{values}]\n{extra}"),
+    )
+}
+
+fn capability_request(world: &str, op: &str, resource: &str, digest: Option<&str>) -> Value {
+    let mut req = request(world, op, "capability", "invoke", resource);
+    if let Some(d) = digest {
+        req["extensions"]["godspeed.authority_request"]["claims"] =
+            json!({ "launch_plan_digest": d });
+    }
+    req
+}
+
+fn load_error(rules: &str) -> bool {
+    let bundle: AuthorityPolicyBundle =
+        sea_forge_core::yaml::from_str(&format!("version: \"0.1\"\nrules:\n{rules}")).unwrap();
+    PolicyAuthorityEngine::new(bundle).is_err()
+}
+
+#[test]
+fn execution_profile_loads_only_well_formed_on_a_boundary_capability_rule() {
+    let lower = "sha256:".to_string() + &"a".repeat(64);
+    assert!(!load_error(&profile_rule("ok", &[D1, &lower], "")));
+    let nine: Vec<String> = (0..9).map(|i| format!("sha256:{:064x}", i)).collect();
+    let nine_refs: Vec<&str> = nine.iter().map(String::as_str).collect();
+    assert!(!load_error(&profile_rule("eight", &nine_refs[..8], "")));
+    let upper = format!("sha256:{}", "A".repeat(64));
+    for (label, digests) in [
+        ("empty", vec![]),
+        ("malformed", vec!["sha256:abc"]),
+        ("no prefix", vec![&D1[7..]]),
+        ("uppercase", vec![upper.as_str()]),
+        ("duplicate", vec![D1, D1]),
+        ("too many", nine_refs.clone()),
+    ] {
+        assert!(load_error(&profile_rule("bad", &digests, "")), "{label}");
+    }
+    // Wrong operation kind: only cognate_capability may carry it.
+    for kind in [
+        "cognate_action",
+        "write_file",
+        "world_transition",
+        "execute_command",
+    ] {
+        let r = rule(
+            "wrong",
+            kind,
+            &format!("    disposition: boundary\n    boundary_constraints:\n      execution_profile: [\"{D1}\"]\n"),
+        );
+        assert!(load_error(&r), "{kind}");
+    }
+    // Not a boundary disposition, or not an allow: refused.
+    let plain = rule(
+        "plain",
+        "cognate_capability",
+        &format!("    boundary_constraints:\n      execution_profile: [\"{D1}\"]\n"),
+    );
+    assert!(load_error(&plain), "non-boundary");
+    let denying = profile_rule("deny", &[D1], "").replace("verdict: allow", "verdict: deny");
+    assert!(load_error(&denying), "non-allow");
+}
+
+#[test]
+fn a_matching_digest_is_a_boundary_allow_carrying_exactly_that_digest() {
+    let f = fixture(&profile_rule("exec", &[D1, D2], ""));
+    let req = capability_request(&f.world, "op-p1", "cap.exec", Some(D2));
+    let out = f.service().decide(&req, &caller()).unwrap();
+    assert_eq!(decision_of(&out), "boundary");
+    assert_eq!(out.decision.verdict, sea_forge_core::types::Verdict::Allow);
+    assert_eq!(
+        out.decision.boundary_constraints["execution_profile"],
+        vec![D2.to_string()]
+    );
+    // The envelope exports it as a typed constraint whose description is the digest alone.
+    let constraints = out.envelope["constraints"].as_array().unwrap();
+    assert_eq!(constraints.len(), 1);
+    assert_eq!(constraints[0]["constraint_type"], "execution_profile");
+    assert_eq!(constraints[0]["description"], D2);
+    // The committed decision records the claim the requester asserted.
+    let recorded = out.decision.action_request.action.to_string();
+    assert!(recorded.contains(D2), "claim digest recorded: {recorded}");
+}
+
+#[test]
+fn a_different_or_missing_or_malformed_digest_is_denied_with_a_typed_reason() {
+    let f = fixture(&profile_rule("exec", &[D1], ""));
+    for (op, digest) in [
+        ("op-p2", Some(D3)),
+        ("op-p3", None),
+        ("op-p4", Some("sha256:nope")),
+    ] {
+        let req = capability_request(&f.world, op, "cap.exec", digest);
+        let out = f.service().decide(&req, &caller()).unwrap();
+        assert_eq!(decision_of(&out), "deny", "{op}");
+        assert!(out
+            .decision
+            .reason_codes
+            .iter()
+            .any(|c| c == "execution_profile_mismatch"));
+        assert!(out.decision.boundary_constraints.is_empty());
+    }
+}
+
+#[test]
+fn a_less_specific_allow_cannot_stand_in_for_a_profile_rule() {
+    // The broad allow comes first and would win by first-match; it must not grant a governed resource.
+    let rules = format!(
+        "{}{}",
+        rule("broad", "cognate_capability", ""),
+        profile_rule("exec", &[D1], "    resources: [\"cap.exec\"]\n")
+    );
+    let f = fixture(&rules);
+    for (op, digest) in [("op-p5", Some(D3)), ("op-p6", None)] {
+        let out = f
+            .service()
+            .decide(
+                &capability_request(&f.world, op, "cap.exec", digest),
+                &caller(),
+            )
+            .unwrap();
+        assert_eq!(decision_of(&out), "deny", "{op}");
+    }
+    let right = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-p7", "cap.exec", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&right), "boundary");
+    // A resource no profile rule governs is unaffected by the profile rule.
+    let other = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-p8", "cap.other", None),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&other), "allow");
+}
+
+#[test]
+fn an_earlier_deny_still_denies_a_governed_resource() {
+    let rules = format!(
+        "{}{}",
+        rule("deny-all", "cognate_capability", "").replace("verdict: allow", "verdict: deny"),
+        profile_rule("exec", &[D1], "")
+    );
+    let f = fixture(&rules);
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-p9", "cap.exec", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "deny");
+    assert_eq!(out.decision.matched_rule.as_deref(), Some("deny-all"));
+}
+
+#[test]
+fn escalation_on_a_profile_rule_exports_no_constraints() {
+    let f = fixture(&profile_rule(
+        "exec",
+        &[D1],
+        "    requires_approval: true\n",
+    ));
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-p10", "cap.exec", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "escalate");
+    // As for any escalation, the envelope exports no constraints; nothing is spendable until approved.
+    assert!(out.envelope["constraints"]
+        .as_array()
+        .is_none_or(|constraints| constraints.is_empty()));
+    assert_eq!(
+        out.decision.verdict,
+        sea_forge_core::types::Verdict::Escalate
+    );
+}
