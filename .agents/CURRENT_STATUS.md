@@ -1,15 +1,15 @@
 # Current status
 
-**Status revision:** 389
+**Status revision:** 390
 
 **Stage:** CognitiveOS #108 hardening review fixes
 
-**Summary:** Re-check current settlement authority before returning a stored settlement outcome by correlation replay or owner status.
+**Summary:** Gate stored closure replay in the authority crate on current settlement authority, with a refusal test.
 
 **Verified:**
 
-- A revoked owner is refused with cep_evidence_refused on replay of the same request id and on request_get_status, with no new non-decision ledger entries and an unchanged correlation record; an authorized owner still gets the replay (conformance_cep_authority, red before the fix, 14/14 after).
-- The settle outcome now carries operation_id so a stored outcome can be re-gated; legacy outcomes without it are refused fail closed.
+- Closure replay by a caller without settlement authority is refused (cep_obligation closure_replay test, red before the fix); settle and obligation final replays were already gated on this branch and a refused final replay appends no settlement state (cep_settlement 83/83, cep_obligation 23/23).
+- Revoked-owner replay and status over the socket are refused (conformance_cep_authority 14/14).
 
 **Limits:**
 
@@ -22,6 +22,6 @@
 
 **Evidence:**
 
-- crates/sea-forge-server/tests/conformance_cep_authority.rs
-- crates/sea-forge-server/src/cep_authority.rs
-- crates/sea-forge-authority/src/cep.rs
+- crates/sea-forge-authority/src/cep/obligation.rs
+- crates/sea-forge-authority/tests/cep_obligation.rs
+- crates/sea-forge-authority/tests/cep_settlement.rs

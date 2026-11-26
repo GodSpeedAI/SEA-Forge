@@ -366,6 +366,27 @@ fn final_obligation_replay_requires_current_settlement_authority() {
 }
 
 #[test]
+fn closure_replay_requires_current_settlement_authority() {
+    let s = scenario(W, 30);
+    let ids = s.standard(&[s.run(Some(0))]);
+    s.wait_close();
+    let first = s.close(&ids).unwrap();
+    assert!(!first.replayed);
+    let denied = Actor {
+        actor_id: "op-alice".into(),
+        role: ActorRole::Operator,
+    };
+    let result = with(&s.c, |service| {
+        service.record_closure(&s.op, "obs-d", &ids, &denied, &s.rt)
+    });
+    assert!(
+        matches!(result, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration")),
+        "a caller without settlement authority must not read a stored closure"
+    );
+    assert!(s.close(&ids).unwrap().replayed);
+}
+
+#[test]
 fn known_zero_is_supported_and_settled_once() {
     let s = scenario(W, 30);
     assert_eq!(

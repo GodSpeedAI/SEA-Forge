@@ -209,6 +209,21 @@ fn final_settlement_replay_requires_current_settlement_authority() {
     .unwrap();
     let original = settle(&c, "op-replay-auth").unwrap();
     assert!(original.final_status);
+    let stored = |c: &Cell| {
+        let ledger = sea_forge_ledger::LedgerStream::open(
+            c.root.path(),
+            sea_forge_authority::cep::LEDGER_ID,
+            "test",
+        )
+        .unwrap();
+        ledger
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|e| e.record_kind != "authority_decision")
+            .count()
+    };
+    let before = stored(&c);
     let denied = with(&c, &full_policy(), SettlementCriteria::default(), |s| {
         s.settle("op-replay-auth", &operator())
     });
@@ -222,6 +237,11 @@ fn final_settlement_replay_requires_current_settlement_authority() {
         |s| s.settle("op-replay-auth", &svc()),
     );
     assert!(matches!(revoked, Err(CepAuthorityError::Evidence(_))));
+    assert_eq!(
+        stored(&c),
+        before,
+        "a refused replay must append no settlement state"
+    );
     let replay = settle(&c, "op-replay-auth").unwrap();
     assert!(replay.replayed);
     assert_eq!(replay.envelope, original.envelope);

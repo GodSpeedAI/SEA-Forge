@@ -350,6 +350,8 @@ impl CepAuthorityService<'_> {
         if let Some(done) = entries.iter().find(|e| {
             e.record_kind == CLOSURE_KIND && e.idempotency_key.as_deref() == Some(key.as_str())
         }) {
+            // A stored closure is released only to a caller still authorized to settle.
+            self.authorize_settlement_replay(operation_id, caller)?;
             return Ok(closure_ack(done, &obligation, true));
         }
         if Utc::now() < obligation.closes_at {
