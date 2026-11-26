@@ -574,6 +574,81 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
     assert_eq!(rejected["status"], "rejected", "{rejected}");
 }
 
+/// Every ledger's entry count, ignoring the gate's own decision audit (a gate
+/// call records its decision by design; it must not record anything else).
+fn non_decision_entries(root: &Path) -> std::collections::BTreeMap<String, usize> {
+    let mut counts = std::collections::BTreeMap::new();
+    for dir in std::fs::read_dir(root.join("ledgers")).unwrap() {
+        let id = dir.unwrap().file_name().to_string_lossy().into_owned();
+        let ledger = sea_forge_ledger::LedgerStream::open(root, id.clone(), "test").unwrap();
+        let n = ledger
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|e| e.record_kind != "authority_decision")
+            .count();
+        counts.insert(id, n);
+    }
+    counts
+}
+
+#[tokio::test]
+async fn a_revoked_owner_gets_no_stored_settlement_by_replay_or_status() {
+    let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    let allowed = c
+        .call(verb(
+            request(&world, "op-rv", "action", "run.start"),
+            "op-rv",
+        ))
+        .await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    let ev = as_actor(
+        json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-rv", "supports"), "request_id": "ev-rv"}),
+        "cognate-service",
+        "service",
+    );
+    assert_eq!(c.call(ev).await["ok"], true);
+    let settle = as_actor(
+        json!({"verb": "authority_settle", "operation_id": "op-rv", "request_id": "settle-rv"}),
+        "cognate-service",
+        "service",
+    );
+    let settled = c.call(settle.clone()).await;
+    assert_eq!(settled["status"], "settled", "{settled}");
+    let status = || {
+        as_actor(
+            json!({"verb": "request_get_status", "request_id": "settle-rv"}),
+            "cognate-service",
+            "service",
+        )
+    };
+    // Still authorized: replay and status both return the stored packet.
+    assert_eq!(c.call(settle.clone()).await, settled);
+    assert_eq!(c.call(status()).await["outcome"], settled);
+
+    // Revoke settlement_declaration from the owner.
+    std::fs::write(
+        root.path().join("sea-forge-policy.yaml"),
+        EVIDENCE_POLICY.replace("settlement_declaration", "cognate_capability"),
+    )
+    .unwrap();
+    let before = non_decision_entries(root.path());
+    let correlation = std::fs::read(root.path().join("requests/settle-rv.json")).unwrap();
+    let replay = c.call(settle).await;
+    assert_eq!(replay["error_class"], "cep_evidence_refused", "{replay}");
+    assert!(replay.get("envelope").is_none(), "{replay}");
+    let polled = c.call(status()).await;
+    assert_eq!(polled["error_class"], "cep_evidence_refused", "{polled}");
+    assert!(polled.get("outcome").is_none(), "{polled}");
+    assert_eq!(non_decision_entries(root.path()), before);
+    assert_eq!(
+        std::fs::read(root.path().join("requests/settle-rv.json")).unwrap(),
+        correlation
+    );
+}
+
 fn transition(source: &str, target: &str, op: &str, kind: &str) -> Value {
     let mut r = request(source, op, "world_transition", "transition");
     r["extensions"]["godspeed.authority_request"]["resource_id"] = json!(target);

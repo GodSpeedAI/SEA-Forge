@@ -458,6 +458,7 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
         match outcome {
             Ok(done) => json!({
                 "ok": true,
+                "operation_id": operation_id,
                 "status": done.status,
                 "final": done.final_status,
                 "replayed": done.replayed,
@@ -467,6 +468,42 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             Err(e) => refusal(e.class(), e),
         }
     })
+}
+
+/// Whether `caller` may still be handed a stored outcome of `method`. Only a successful settlement or
+/// closure outcome carries a settlement packet; anything else is not gated. Executes nothing: a refusal here
+/// leaves the stored outcome and every ledger untouched. `operation_id` comes from the stored outcome (or the
+/// replayed request); its absence on a gated outcome is refused, never assumed.
+pub fn authorize_stored_outcome(
+    config: &ServerConfig,
+    root: &Path,
+    method: &str,
+    outcome: &Value,
+    operation_id: Option<&str>,
+    caller: &Actor,
+) -> Result<(), Value> {
+    if !matches!(method, "authority.settle" | "authority.closure")
+        || outcome.get("ok") != Some(&Value::Bool(true))
+    {
+        return Ok(());
+    }
+    let Some(operation_id) = operation_id.or_else(|| outcome["operation_id"].as_str()) else {
+        return Err(refusal(
+            "cep_evidence_refused",
+            "the stored settlement outcome does not name its operation, so settlement authority cannot be re-checked",
+        ));
+    };
+    let verdict = with_service(config, root, |service| {
+        match service.authorize_settlement_replay(operation_id, caller) {
+            Ok(()) => json!({"ok": true}),
+            Err(e) => refusal(e.class(), e),
+        }
+    });
+    if verdict.get("error").is_some() {
+        Err(verdict)
+    } else {
+        Ok(())
+    }
 }
 
 /// Record the closure of an obligation's window (`authority_closure` verb). SEA-Forge reads RealityTrace's

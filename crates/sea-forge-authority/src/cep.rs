@@ -1573,6 +1573,25 @@ impl CepAuthorityService<'_> {
         )
     }
 
+    /// Re-run the settlement gate a live `settle` / `closure` uses, for a caller about to be handed a STORED
+    /// settlement outcome. It executes nothing and reads nothing back: it only answers whether `caller` is
+    /// authorized now. The gate records its own decision, as every gate call does.
+    pub fn authorize_settlement_replay(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+    ) -> Result<(), CepAuthorityError> {
+        let ledger = self.ledger()?;
+        let ingress = VerifiedSettlementIngress::verified(
+            SettlementIngress::CepSettlement,
+            SettlementTransport::None,
+            None,
+            caller,
+            vec![format!("operation:{operation_id}")],
+        )?;
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)
+    }
+
     /// Accept a RealityTrace-derived `evidence_packet` for an operation SEA-Forge allowed. Evidence is recorded;
     /// it settles nothing.
     pub fn submit_evidence(

@@ -2188,6 +2188,94 @@ fn durable_locator_refusal() -> serde_json::Value {
     })
 }
 
+/// Re-run current settlement authorization before a STORED settlement outcome
+/// is handed back (correlation replay, or the owner arm of status). Blocking
+/// ledger and policy work, so it runs off the async executor. A denial carries
+/// the gate's own class and nothing is re-executed.
+async fn gate_stored_outcome(
+    state: &Arc<ServerState>,
+    method: &str,
+    outcome: &serde_json::Value,
+    operation_id: Option<String>,
+    actor: &crate::identity::ResolvedActor,
+) -> Result<(), serde_json::Value> {
+    if !matches!(method, "authority.settle" | "authority.closure") {
+        return Ok(());
+    }
+    let config = state.config();
+    let root = state.root.clone();
+    let method = method.to_owned();
+    let outcome = outcome.clone();
+    let caller = sea_forge_core::types::Actor {
+        actor_id: actor.actor_id().to_owned(),
+        role: actor.role().clone(),
+    };
+    tokio::task::spawn_blocking(move || {
+        cep_authority::authorize_stored_outcome(
+            &config,
+            &root,
+            &method,
+            &outcome,
+            operation_id.as_deref(),
+            &caller,
+        )
+    })
+    .await
+    .unwrap_or_else(|_| {
+        Err(serde_json::json!({
+            "error": "settlement authorization check failed",
+            "error_class": "cep_authority_internal",
+            "no_side_effect": true,
+        }))
+    })
+}
+
+/// `request.get_status`: the bound owner (still authorized, for settlement
+/// outcomes) or an audit-granted actor learns the stored status.
+async fn request_status(
+    state: &Arc<ServerState>,
+    verified: Option<&crate::identity::ResolvedActor>,
+    request_id: String,
+) -> serde_json::Value {
+    let denied = || serde_json::json!({"error":"request status access cannot be verified", "error_class":"request_status_denied"});
+    match (
+        state.correlation.get(&request_id),
+        request_admission_claim::lookup(&state.root, &request_id),
+    ) {
+        (Ok(Some(record)), Ok(Some(claim)))
+            if record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()) =>
+        {
+            let Some(actor) = verified else {
+                return denied();
+            };
+            if request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner {
+                if let Some(outcome) = &record.outcome {
+                    if let Err(refused) =
+                        gate_stored_outcome(state, &record.method, outcome, None, actor).await
+                    {
+                        return refused;
+                    }
+                }
+            } else if !request_admission_claim::authorize_audit(&state.config(), actor, &request_id)
+                .unwrap_or(false)
+            {
+                return denied();
+            }
+            serde_json::json!({
+                "request_id": record.request_id,
+                "status": record.status,
+                "method": record.method,
+                "outcome": record.outcome,
+            })
+        }
+        (Ok(None), Ok(None)) if verified.is_some() => serde_json::json!({
+            "request_id": request_id,
+            "status": "unknown",
+        }),
+        _ => denied(),
+    }
+}
+
 /// Run the portions of a protected request that are lawful only after request
 /// admission. In particular, the first correlation write is here rather than
 /// in the connection loop, because that write is itself durable state.
@@ -2237,6 +2325,22 @@ async fn dispatch_admitted(
         }
         match state.correlation.check(&request_id, &hash) {
             Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
+                // A stored settlement packet is returned only to a caller who
+                // is still authorized to settle. Nothing is re-executed.
+                let (method, operation_id) = match &request {
+                    Request::AuthoritySettle { operation_id, .. } => {
+                        ("authority.settle", Some(operation_id.clone()))
+                    }
+                    Request::AuthorityClosure { operation_id, .. } => {
+                        ("authority.closure", Some(operation_id.clone()))
+                    }
+                    _ => ("", None),
+                };
+                if let Err(denied) =
+                    gate_stored_outcome(&state, method, &outcome, operation_id, actor).await
+                {
+                    return denied;
+                }
                 tracing::info!(
                     request_id,
                     "duplicate request replayed from correlation store"
@@ -3524,37 +3628,9 @@ pub async fn handle_request_as(
             serde_json::to_value(sfwp::get_schema(method.as_deref()))
                 .unwrap_or_else(|_| serde_json::json!({"error": "get_schema serialization failed"}))
         }
-        Request::RequestGetStatus { request_id } => match (
-            state.correlation.get(&request_id),
-            request_admission_claim::lookup(&state.root, &request_id),
-        ) {
-            (Ok(Some(record)), Ok(Some(claim)))
-                if record.payload_hash.as_deref() == Some(claim.payload_hash.as_str())
-                    && verified.is_some_and(|actor| {
-                        request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner
-                            || request_admission_claim::authorize_audit(
-                                &state.config(),
-                                actor,
-                                &request_id,
-                            )
-                            .unwrap_or(false)
-                    }) =>
-            {
-                serde_json::json!({
-                    "request_id": record.request_id,
-                    "status": record.status,
-                    "method": record.method,
-                    "outcome": record.outcome,
-                })
-            }
-            (Ok(None), Ok(None)) if verified.is_some() => serde_json::json!({
-                "request_id": request_id,
-                "status": "unknown",
-            }),
-            _ => {
-                serde_json::json!({"error":"request status access cannot be verified", "error_class":"request_status_denied"})
-            }
-        },
+        Request::RequestGetStatus { request_id } => {
+            request_status(state, verified, request_id).await
+        }
         Request::EventsGetRange {
             from_cursor,
             to_cursor,
