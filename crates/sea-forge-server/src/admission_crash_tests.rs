@@ -134,12 +134,12 @@ async fn call(socket: &Path, value: &serde_json::Value) -> serde_json::Value {
     serde_json::from_str(&line).unwrap()
 }
 
-/// The parent invokes only this exact test in the child process.
+/// The parent invokes only this exact test in the child process. Run any other way it fails, rather than
+/// passing without having started a server.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "spawned by killed_after_claim_before_projection_refuses_retry_after_restart"]
 async fn server_child() {
-    let Some(root) = std::env::var_os(ROOT_ENV) else {
-        return;
-    };
+    let root = std::env::var_os(ROOT_ENV).expect("server_child must be spawned by its parent test");
     run(config(Path::new(&root))).await.unwrap();
 }
 
@@ -151,6 +151,7 @@ async fn killed_after_claim_before_projection_refuses_retry_after_restart() {
     let marker = root.path().join("claim-committed.marker");
     let child = Command::new(std::env::current_exe().unwrap())
         .args([
+            "--ignored",
             "--exact",
             "admission_crash_tests::server_child",
             "--nocapture",
@@ -246,7 +247,6 @@ async fn killed_after_claim_before_projection_refuses_retry_after_restart() {
 /// committed and before any handler ran, must tell the client the id is spent.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn unwritable_correlation_after_claim_says_request_id_is_spent() {
-    use std::os::unix::fs::PermissionsExt;
     let root = tempfile::tempdir().unwrap();
     prepare(root.path());
     let cfg = config(root.path());
@@ -255,25 +255,40 @@ async fn unwritable_correlation_after_claim_says_request_id_is_spent() {
         let _ = run(cfg).await;
     });
     drop(connect(&socket).await);
-    let requests = root.path().join("requests");
-    std::fs::create_dir_all(&requests).unwrap();
-    std::fs::set_permissions(&requests, std::fs::Permissions::from_mode(0o555)).unwrap();
-    if std::fs::write(requests.join("probe"), b"x").is_ok() {
-        // Running with privileges that ignore directory modes: cannot inject.
-        std::fs::set_permissions(&requests, std::fs::Permissions::from_mode(0o755)).unwrap();
-        server.abort();
-        return;
-    }
+    // Deterministic injection that does not depend on the user's privileges: the correlation record is
+    // written through `<id>.json.tmp`, and a directory sitting there makes that write fail for everyone.
+    let blocker = root.path().join("requests").join("spent-request.json.tmp");
+    std::fs::create_dir_all(&blocker).unwrap();
+    assert!(
+        std::fs::write(&blocker, b"x").is_err(),
+        "the injected failure must be real"
+    );
     let response = call(&socket, &request_with_id("spent-request")).await;
-    std::fs::set_permissions(&requests, std::fs::Permissions::from_mode(0o755)).unwrap();
     assert_eq!(
         response["error_class"], "idempotency_unverifiable",
         "{response}"
     );
-    assert_eq!(response["no_side_effect"], true, "{response}");
     assert_eq!(response["reason_code"], "request_id_spent", "{response}");
     assert_eq!(response["new_request_id_required"], true, "{response}");
+    // The claim row is durable, so the response must not claim that nothing was recorded.
+    assert_eq!(response["no_side_effect"], false, "{response}");
     assert_eq!(entries_in(root.path().join("cases")), 0);
     assert_eq!(claim_ledger_len(root.path(), "spent-request"), 1);
     server.abort();
+}
+
+/// Admission is serialized in-process by `correlation_admission`; across processes it is the cell-root
+/// lock (`<root>/.server.lock`, taken by `run` before it binds) that keeps a second server off the same
+/// root, so two servers cannot both see "no claim" and both execute.
+#[test]
+fn a_second_server_cannot_own_the_same_cell_root() {
+    let root = tempfile::tempdir().unwrap();
+    let first = lock_cell_root(root.path()).unwrap();
+    let second = lock_cell_root(root.path()).expect_err("the root is already owned");
+    assert!(second.to_string().contains("already owns"), "{second}");
+    drop(first);
+    assert!(
+        lock_cell_root(root.path()).is_ok(),
+        "released with its owner"
+    );
 }

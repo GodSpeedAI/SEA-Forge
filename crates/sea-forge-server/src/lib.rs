@@ -2268,12 +2268,15 @@ async fn request_status(
             })
     };
     let record = state.correlation.get(&request_id);
-    let (record, claim) = match (record, lookup) {
-        (Ok(None), Ok(None)) => return unknown(&request_id),
-        // A record with no claim predates claims: nobody can prove ownership.
-        (Ok(Some(_)), Ok(None)) => return denied(),
-        (Ok(record), Ok(Some(claim))) => (record, claim),
-        _ => return denied(),
+    // Without a readable claim nobody can prove ownership: a never-seen id, a record that predates claims,
+    // and an unreadable claim ledger all get the never-seen reply, so none of them is an existence oracle.
+    let claim = match lookup {
+        Ok(Some(claim)) => claim,
+        Ok(None) => return unknown(&request_id),
+        Err(error) => {
+            tracing::warn!(request_id, "request status: claim unreadable: {error}");
+            return unknown(&request_id);
+        }
     };
     let is_owner = request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner;
     if !is_owner {
@@ -2291,8 +2294,10 @@ async fn request_status(
             return unknown(&request_id);
         }
     }
-    let Some(record) =
-        record.filter(|record| record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()))
+    let Some(record) = record
+        .ok()
+        .flatten()
+        .filter(|record| record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()))
     else {
         return denied();
     };
@@ -2475,7 +2480,8 @@ async fn dispatch_admitted(
                              this request cannot be made idempotent: {error}"
                         ),
                         "error_class": "idempotency_unverifiable",
-                        "no_side_effect": true,
+                        // The claim row is durable: it is the one thing that happened.
+                        "no_side_effect": false,
                         "reason_code": "request_id_spent",
                         "new_request_id_required": true,
                     });

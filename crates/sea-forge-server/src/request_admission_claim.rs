@@ -53,9 +53,9 @@ pub(crate) fn lookup(root: &Path, request_id: &str) -> Result<Option<AdmissionCl
         }
         Ok(_) => {}
     }
+    // The same locked, chain-verified, symlink-refusing single read a receipt uses.
     let ledger = sea_forge_ledger::LedgerStream::open(root, id, "sea-forge-server")?;
-    ledger.verify()?;
-    let entries = ledger.read_entries()?;
+    let entries = ledger.verified_snapshot_locked()?;
     if entries.len() != 1 || entries[0].record_kind != "request_admitted" {
         return Err(ForgeError::Internal(
             "ambiguous request admission ledger".into(),
@@ -203,6 +203,37 @@ mod tests {
         assert_eq!(lookup(root.path(), &claim.request_id).unwrap(), None);
         record(root.path(), &claim).unwrap();
         assert_eq!(lookup(root.path(), &claim.request_id).unwrap(), Some(claim));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_claim_ledger_file_is_refused() {
+        let root = tempfile::tempdir().unwrap();
+        let claim = claim();
+        record(root.path(), &claim).unwrap();
+        let dir = root
+            .path()
+            .join("ledgers")
+            .join(ledger_id(&claim.request_id));
+        let entries = dir.join("entries.jsonl");
+        let copy = root.path().join("elsewhere.jsonl");
+        std::fs::copy(&entries, &copy).unwrap();
+        std::fs::remove_file(&entries).unwrap();
+        std::os::unix::fs::symlink(&copy, &entries).unwrap();
+        assert!(lookup(root.path(), &claim.request_id).is_err());
+    }
+
+    #[test]
+    fn a_claim_ledger_without_its_lock_file_is_refused() {
+        let root = tempfile::tempdir().unwrap();
+        let claim = claim();
+        record(root.path(), &claim).unwrap();
+        let dir = root
+            .path()
+            .join("ledgers")
+            .join(ledger_id(&claim.request_id));
+        std::fs::remove_file(dir.join("stream.lock")).unwrap();
+        assert!(lookup(root.path(), &claim.request_id).is_err());
     }
 
     #[test]

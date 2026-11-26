@@ -573,6 +573,25 @@ async fn a_legacy_record_without_a_claim_is_refused_with_a_distinct_reason() {
     assert_eq!(refused["no_side_effect"], true, "{refused}");
     assert_eq!(cases_committed(root.path()), case_count);
     assert!(claim_ledger_lengths(root.path()).is_empty());
+    // Status for that record is the never-seen reply: nobody can prove ownership, so nobody learns it exists.
+    let status = |id: &str| json!({"verb":"request_get_status", "actor":{"actor_id":"operator_local", "role":"operator"}, "request_id": id});
+    let legacy = client.call(status("legacy-target")).await;
+    assert_eq!(legacy["status"], "unknown", "{legacy}");
+    let never = client.call(status("legacy-never")).await;
+    assert_eq!(never["status"], "unknown", "{never}");
+    assert_eq!(legacy["outcome"], never["outcome"]);
+    assert_eq!(
+        legacy.as_object().unwrap().len(),
+        never.as_object().unwrap().len()
+    );
+    // An unreadable claim ledger is not an oracle either.
+    let ambiguous = format!(
+        "request-admission-{}",
+        hex::encode(<sha2::Sha256 as sha2::Digest>::digest(b"ambiguous-id"))
+    );
+    std::fs::create_dir_all(root.path().join("ledgers").join(ambiguous)).unwrap();
+    let broken = client.call(status("ambiguous-id")).await;
+    assert_eq!(broken["status"], "unknown", "{broken}");
     server.abort();
     stub.abort();
 }

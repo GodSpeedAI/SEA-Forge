@@ -61,6 +61,32 @@ operation, world and independently retained authority decision reference, and
 must preserve finality without interpreting it as success.
 See the [migration specification](../../.agents/specs/cep-world-ref-migration.spec.md).
 
+- **Obligation settlements.** An obligation settles from RealityTrace's ledger, so its lineage is the
+  committed ALLOW decision's envelope id rather than evidence packets. The receipt checks that lineage
+  against the `authority_decision` row of the same verified snapshot; evidence settlements keep the
+  evidence-row check. Everything that decides whether a receipt can be projected (verified history, a
+  well-formed world and decision reference, operation id length, world agreement across evidence) is
+  checked after the settlement gate and before the settlement commits, so a settlement that could
+  never be projected is refused instead of committed and then permanently unobtainable.
+- **Gate first.** The settlement declaration gate is evaluated before the existence and evidence
+  errors, so a caller without settlement authority cannot probe whether an operation, its decision or
+  its evidence exists. An allow is not recorded by that first evaluation (the existing gate records it
+  where the work is done), so polling a not-yet-settleable operation appends nothing.
+
+## Known limits
+
+- **Repeated denied status polls are audited once.** After the first denied
+  `request.get_status` audit decision per (cell, actor, request) in a process, further identical denials
+  append nothing, so the ledger records that the actor was refused but not how often. The set is capped
+  at 4096 entries (cleared at the cap) and empty after a restart, so the count is a floor, not a tally.
+  This bounds ledger growth from any authenticated actor; granted polls are always recorded.
+- **Admission is serialized per process.** `correlation_admission` serializes check-and-claim inside a
+  server. Across processes it is the cell-root lock (`<root>/.server.lock`, taken exclusively by `run`
+  before it binds and held for the server's lifetime), which refuses a second server on the same root
+  (`a_second_server_cannot_own_the_same_cell_root`). Two servers sharing a root, and so both seeing
+  "no claim", cannot exist.
+- **Request ids are cell-global.** See the open debt entry in `.agents/OBSERVED_DEBT.md`.
+
 ## Residual risk
 
 The chain and MMR are unsigned local files: an attacker who can rewrite the

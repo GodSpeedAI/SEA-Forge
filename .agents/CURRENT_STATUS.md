@@ -1,27 +1,30 @@
 # Current status
 
-**Status revision:** 399
+**Status revision:** 400
 
-**Stage:** CognitiveOS #108 pass-3 authority fixes
+**Stage:** CognitiveOS #108 pass-3 server fixes
 
-**Summary:** Make obligation receipts projectable, refuse unprojectable receipts before the settlement commits, and gate settlement before existence errors.
+**Summary:** Uniform status for non-owners, claim lookup on the verified snapshot, truthful spent-id flag and deterministic test injection.
 
 **Verified:**
 
-- Obligation receipt lineage is checked against the committed ALLOW decision of the same verified snapshot; a real-socket test with a stand-in RealityTrace binary issues an obligation receipt (red before: receipt_reference_mismatch after the commit) and a consistently rewritten malformed ALLOW world is refused with no settlement packet committed (red before: one packet committed).
-- The settlement gate is evaluated before the no-decision, no-evidence and pending errors (red before: an unauthorized caller got 'no committed allow decision'); an allow is not recorded by the first evaluation, so polling appends nothing.
-- conformance_cep_authority 22/22, sea-forge-authority tests pass.
+- request.get_status returns the never-seen reply to every non-owner without the audit grant, including legacy records and unreadable claim ledgers (conformance_sfwp 26/26; red before: request_status_denied).
+- Claim lookup uses verified_snapshot_locked and refuses a symlinked entries file and a missing lock file (unit tests); request_id_spent now reports no_side_effect false; the failure is injected by a directory at the correlation tmp path, server_child is ignored and fails without its environment, and a second server on the same cell root is refused.
+- lib 208 passed 1 ignored; case_authoring 21, lifecycle 10, FDE scenarios 49 (FDE_WP21A_FINAL=1), ledger tests, contract digests, workbench contracts gate, clippy -D warnings and fmt clean.
 
 **Limits:**
 
+- Request ids remain cell-global: per-owner scoping of claims and correlation needs a status contract change and an owner-qualified audit grant, recorded as debt with measured per-request cost (one directory, three files, one rename, two fsyncs).
+- Repeated denied status polls are audited once per process and actor.
 - Full CI, proofs and cross-platform tests have not run.
-- Request ids remain cell-global; see the open debt entry.
 
-**Next:** Server-side pass-3 fixes: claim lookup, status uniformity, effect flag and test injection.
+**Next:** Independent re-review, then integrate.
 
 **Evidence:**
 
-- crates/sea-forge-authority/src/cep.rs
-- crates/sea-forge-authority/src/cep/obligation.rs
-- crates/sea-forge-authority/tests/cep_settlement.rs
-- crates/sea-forge-server/tests/conformance_cep_authority.rs
+- crates/sea-forge-server/src/lib.rs
+- crates/sea-forge-server/src/request_admission_claim.rs
+- crates/sea-forge-server/src/admission_crash_tests.rs
+- crates/sea-forge-server/tests/conformance_sfwp.rs
+- docs/decisions/ADR-016-minimal-settlement-receipt.md
+- .agents/OBSERVED_DEBT.md

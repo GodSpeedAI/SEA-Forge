@@ -1424,3 +1424,25 @@ runs `agent_probe::probe` writes, with the *most recent* probe deciding.
 - The full workspace gate reproduced the failure on `0ab02a6b`. The equivalent local fixture confirmed that the sandbox warning about an undelegated `/sys/fs/cgroup/non-systemd` precedes the JSON `internal_error` diagnostic on stderr.
 - The lifecycle test expects stderr to contain a single JSON document. It stops at parsing and leaves the run-correlated trace assertion unverified on this host.
 - Rerun with an operator-provisioned, writable cgroup-v2 delegation through `SEA_FORGE_CGROUP_ROOT` or on the existing cgroup-enabled CI lane.
+
+## Open: Request ids are cell-global, so one identity-bound actor can squat another's id
+
+- Observed: 2026-11-26 (pass-3 review M3 of the replay-ownership branch).
+- Evidence: per-verb policy authorization runs inside each handler, after
+  `dispatch_admitted`; only the identity gate precedes admission. Any identity-bound actor therefore
+  creates the admission claim and the correlation record for a caller-chosen `request_id`, and a
+  later request with that id from another actor is refused `idempotency_unverifiable`
+  (`reason_code` `orphan_claim` or `legacy_unclaimed`). Measured with strace on the claim unit test:
+  each first-seen protected request adds one directory under `ledgers/` with three files
+  (`entries.jsonl`, `mmr.json`, `stream.lock`), one rename and two fsyncs, plus one
+  `requests/<id>.json` correlation record; neither has a retention bound.
+- Impact: a trusted-but-misbehaving principal can make another principal's chosen ids unusable, and
+  ledger directory count grows with distinct request ids. Namespacing only the claim by owner does
+  not close it, because the correlation record is also keyed by the bare id and the id is persisted
+  unscoped in case-level records and read back by the Go client and the Workbench.
+- Next move: scope the request id by the verified owner at the dispatch boundary (claims,
+  correlation and `request.get_status` together), give `request_status_audit` grants an owner
+  qualifier, move claims into one indexed stream per owner, and add retention. This is a
+  contract change to the status request and its schema, so it needs its own work packet.
+- Scope: deliberately not done in the receipt hardening branch; the existing owner binding still
+  refuses any cross-actor reuse, which is fail-closed.
