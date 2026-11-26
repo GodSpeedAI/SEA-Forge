@@ -1,5 +1,44 @@
 # Current status
 
+**Status revision:** 383
+
+**Stage:** FDE open work | WP-23 joined journey hosted-green on both lanes; Workbench operator hand-off merged
+
+**Summary:** SEA lane ac506217 (binding read fix 431e1fc7, joined journey driver a422e5a3, clippy fix ac506217) passed hosted CI 45538331379; Cognate lane 88a6399 (live SEA admission suite 03fe68c) passed hosted verify 45538335916. The joined journey drives the real sea-forge-server binary over its public socket and Cognate's production provider against it, and exposed a real producer defect: SEA's assignment_binding read served its joined shape without world_ref, episode_kind and recorded_at, so Cognate denied every assigned start against a real cell; fixed additively in SEA (no schema or digest change). The Workbench operator hand-off (J-CASE-ASSIGNMENT-handoff) merged to Cognate Workbench main as d02efd60 (PR #40) after hosted verify 45833643135.
+
+**Verified:**
+
+- SEA hosted CI 45538331379 on ac506217: success, all ten jobs including gate
+- Cognate hosted verify 45538335916 on 88a6399: success
+- SEA local on ac506217: FDE_WP21A_FINAL conformance 50 passed 1 ignored; server lib 206; 13 contract digests match; clippy -D warnings clean; S2 slice 17 rows identical to the 637cbece baseline ignoring duration (AT-09 PARTIAL expected)
+- Joined journey wp23_joined_cognate_journey_against_the_real_server: 1 passed (Bun 5 pass, 0 fail, 0 skip)
+- Workbench PR #40 merged d02efd60; hosted verify 45833643135 on 1a105bf success; operator-only controls with in-run and foreign-tenant refusal tests
+- SEA lane status rev 390 (d68c0598) and Cognate lane status rev 85 (695c9f3) record the hosted results
+
+**Limits:**
+
+- The joined journey's claim is ADMISSION. The cell declares no agent endpoint, so the delegate verb's own delegation does not run (missing_config_error after the gate admitted); Cognate has no SEA-facing delegation endpoint yet
+- Socket surface: the public SFWP socket is used; one OS uid maps to exactly one actor and every process on this host shares one uid, so the Cognate server reads as the link's delegator and the SEA-side outsider is presented through the configured gateway; same-uid separation is not proven
+- SEA's private AuthenticatedConnection channel (single-use request-bound grants, S3) is not on this path; the delegate's identity is authenticated by Cognate at its Connect layer and never seen by SEA
+- The Cognate live suite uses an in-memory store, a permissive run policy and a test principal map
+- The Workbench hand-off uses the in-process trusted path with a host hand-off source; no production source until Horizon wiring; operator controls can be refused while a bound run streams until Cognate's control-stream fix (PR #93) is released and bumped
+- Handoff section 2 item 4 (durable idempotency) was neither authored nor audited in this work; existing tests covering its scenarios passed in gate runs
+
+**Next:** Horizon production hand-off source; SEA delegation endpoint for Cognate; S3 AuthenticatedConnection on the delegate path; Cognate release with the control-stream fix and Workbench bump.
+
+**Evidence:**
+
+- https://github.com/GodSpeedAI/SEA-Forge/commit/be81242b
+- https://github.com/GodSpeedAI/Cognate/commit/e2ec279
+
+**Spec:** .agents/plans/2026-11-20-fde-open-work-handoff.md
+
+**Ledger:** .agents/OBSERVED_DEBT.md
+
+---
+
+# Historical status
+
 **Status revision:** 382
 
 **Stage:** FDE open work | WP-23 binding readable on the wire; Cognate provider landed
