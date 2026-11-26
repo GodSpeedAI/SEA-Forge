@@ -552,40 +552,6 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
     assert_eq!(settled["envelope"]["envelope_kind"], "settlement_packet");
     assert_eq!(c.call(settle).await, settled);
 
-    // The negotiated receipt is projected from the committed SEA record, not from its evidence.
-    let projected = c
-        .call(as_actor(
-            json!({"verb": "authority_settle_receipt", "operation_id": "op-s1",
-            "request_id": "settle-receipt-1"}),
-            "cognate-service",
-            "service",
-        ))
-        .await;
-    assert_eq!(projected["ok"], true, "{projected}");
-    assert_eq!(projected["replayed"], true);
-    assert_eq!(projected["receipt"]["operation_id"], "op-s1");
-    assert_eq!(
-        projected["receipt"]["subject_refs"],
-        json!(["cognate", "op-s1"])
-    );
-    assert_eq!(projected["receipt"]["world_ref"], world);
-    assert_eq!(
-        projected["receipt"]["authority_decision_ref"],
-        "env-authority_decision-op-s1"
-    );
-    assert_eq!(projected["receipt"]["issuer"], "sea-forge-authority");
-    assert_eq!(projected["receipt"]["status"], "settled");
-    assert_eq!(projected["receipt"]["final"], true);
-    assert_eq!(
-        projected["receipt"]["ledger_entry"],
-        settled["ledger_entry"]
-    );
-    assert!(projected.get("envelope").is_none());
-    assert!(!projected
-        .to_string()
-        .contains("Did the operation reach the declared state?"));
-    assert!(!projected.to_string().contains("evidence"));
-
     // Contradicting evidence rejects.
     c.call(verb(
         request(&world, "op-s2", "action", "run.start"),
@@ -606,37 +572,6 @@ async fn evidence_then_settlement_over_the_socket_and_completion_alone_settles_n
         ))
         .await;
     assert_eq!(rejected["status"], "rejected", "{rejected}");
-
-    let rejected_receipt = c.call(as_actor(
-        json!({"verb": "authority_settle_receipt", "operation_id": "op-s2", "request_id": "settle-receipt-2"}),
-        "cognate-service", "service",
-    )).await;
-    assert_eq!(rejected_receipt["receipt"]["status"], "rejected");
-    assert_eq!(rejected_receipt["receipt"]["final"], true);
-    assert_eq!(
-        rejected_receipt["receipt"]["ledger_entry"],
-        rejected["ledger_entry"]
-    );
-    assert!(rejected_receipt.get("envelope").is_none());
-
-    // Insufficient evidence is a nonfinal unsettled receipt, never success.
-    c.call(verb(
-        request(&world, "op-s3", "action", "run.start"),
-        "op-s3",
-    ))
-    .await;
-    let unknown = as_actor(
-        json!({"verb": "authority_evidence", "envelope": evidence_packet(&world, "op-s3", "unknown"), "request_id": "ev-3"}),
-        "cognate-service",
-        "service",
-    );
-    assert_eq!(c.call(unknown).await["ok"], true);
-    let unsettled = c.call(as_actor(
-        json!({"verb": "authority_settle_receipt", "operation_id": "op-s3", "request_id": "settle-receipt-3"}),
-        "cognate-service", "service",
-    )).await;
-    assert_eq!(unsettled["receipt"]["status"], "unsettled");
-    assert_eq!(unsettled["receipt"]["final"], false);
 }
 
 /// Every ledger's entry count, ignoring the gate's own decision audit (a gate
@@ -915,4 +850,324 @@ async fn a_malformed_prior_identity_fails_closed_with_a_clear_error() {
     assert!(message.contains("prior identity"), "{refused}");
     assert!(message.contains(PRIOR_PATH), "{refused}");
     drop(cell);
+}
+
+// ---------------------------------------------------------------------------
+// authority_settle_receipt: the first-call minimal receipt
+// ---------------------------------------------------------------------------
+
+const RECEIPT_KEYS: [&str; 12] = [
+    "authority_decision_ref",
+    "envelope_id",
+    "final",
+    "issuer",
+    "ledger_entry",
+    "ledger_id",
+    "operation_id",
+    "payload_hash",
+    "representation",
+    "status",
+    "subject_refs",
+    "world_ref",
+];
+
+fn service_call(verb: Value) -> Value {
+    as_actor(verb, "cognate-service", "service")
+}
+
+/// An allowed operation with one evidence packet in the given direction.
+async fn ready(c: &mut Client, world: &str, op: &str, direction: &str) {
+    let allowed = c
+        .call(verb(request(world, op, "action", "run.start"), op))
+        .await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    let acked = c
+        .call(service_call(json!({"verb": "authority_evidence",
+            "envelope": evidence_packet(world, op, direction), "request_id": format!("ev-{op}")})))
+        .await;
+    assert_eq!(acked["ok"], true, "{acked}");
+}
+
+async fn receipt(c: &mut Client, op: &str, request_id: &str) -> Value {
+    c.call(service_call(json!({"verb": "authority_settle_receipt",
+        "operation_id": op, "request_id": request_id})))
+        .await
+}
+
+fn authority_entries(root: &Path) -> Vec<sea_forge_ledger::LedgerEntry> {
+    sea_forge_ledger::LedgerStream::open(root, sea_forge_authority::cep::LEDGER_ID, "test")
+        .unwrap()
+        .read_entries()
+        .unwrap()
+}
+
+fn count_kind(root: &Path, kind: &str) -> usize {
+    authority_entries(root)
+        .iter()
+        .filter(|e| e.record_kind == kind)
+        .count()
+}
+
+fn entries_file(root: &Path) -> PathBuf {
+    root.join("ledgers")
+        .join(sea_forge_authority::cep::LEDGER_ID)
+        .join("entries.jsonl")
+}
+
+/// Rewrite one ledger row's payload. With `rehash` the row's own payload and entry hashes are
+/// recomputed so that the row is self-consistent; the chain after it is not touched.
+fn tamper(root: &Path, kind: &str, edit: impl Fn(&mut Value), rehash: bool) {
+    let path = entries_file(root);
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut out = Vec::new();
+    let mut done = false;
+    for line in text.lines() {
+        let mut entry: sea_forge_ledger::LedgerEntry = serde_json::from_str(line).unwrap();
+        if !done && entry.record_kind == kind {
+            edit(&mut entry.payload);
+            if rehash {
+                entry.payload_hash = sea_forge_ledger::types::payload_hash(&entry.payload).unwrap();
+                entry.entry_hash = sea_forge_ledger::types::entry_hash(&entry).unwrap();
+            }
+            done = true;
+        }
+        out.push(serde_json::to_string(&entry).unwrap());
+    }
+    assert!(done, "no {kind} row to tamper with");
+    std::fs::write(&path, out.join("\n") + "\n").unwrap();
+}
+
+#[tokio::test]
+async fn a_first_call_receipt_is_exactly_the_allowlist_for_settled_and_rejected() {
+    let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    for (op, direction, status) in [
+        ("op-r-settled", "supports", "settled"),
+        ("op-r-rejected", "contradicts", "rejected"),
+    ] {
+        ready(&mut c, &world, op, direction).await;
+        let got = receipt(&mut c, op, &format!("rc-{op}")).await;
+        assert_eq!(got["ok"], true, "{got}");
+        let r = got["receipt"].as_object().unwrap();
+        let mut keys: Vec<&str> = r.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, RECEIPT_KEYS, "{got}");
+        assert_eq!(r["operation_id"], op);
+        assert_eq!(r["subject_refs"], json!(["cognate", op]));
+        assert_eq!(r["world_ref"], world);
+        assert_eq!(
+            r["authority_decision_ref"],
+            format!("env-authority_decision-{op}")
+        );
+        assert_eq!(r["issuer"], "sea-forge-authority");
+        assert_eq!(r["status"], status);
+        assert_eq!(r["final"], true);
+        assert_eq!(r["representation"], "verified_projection");
+        // Read back from the real committed row.
+        let row = authority_entries(root.path())
+            .into_iter()
+            .find(|e| e.entry_ulid == r["ledger_entry"].as_str().unwrap())
+            .expect("the receipt names a committed row");
+        assert_eq!(row.record_kind, "settlement_packet");
+        assert_eq!(r["payload_hash"], row.payload_hash);
+        assert_eq!(r["ledger_id"], row.ledger_id);
+        let text = got.to_string();
+        assert!(got.get("envelope").is_none());
+        assert!(!text.contains("Did the operation reach the declared state?"));
+        assert!(!text.contains("\"evidence\""));
+        assert!(!text.contains("prompt"));
+        assert!(!text.contains("ev-op"));
+    }
+}
+
+#[tokio::test]
+async fn receipt_refusals_carry_distinct_codes_and_truthful_effect_flags() {
+    let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+
+    // A receipt after the legacy verb is a replay: refused, nothing but the gate's decision appended.
+    ready(&mut c, &world, "op-legacy", "supports").await;
+    let settled = c
+        .call(service_call(json!({"verb": "authority_settle", "operation_id": "op-legacy", "request_id": "s-legacy"})))
+        .await;
+    assert_eq!(settled["status"], "settled", "{settled}");
+    let packets = count_kind(root.path(), "settlement_packet");
+    let replay = receipt(&mut c, "op-legacy", "rc-legacy").await;
+    assert_eq!(replay["error_class"], "receipt_replay_refused", "{replay}");
+    assert_eq!(replay["reason_code"], "receipt_replay_refused");
+    assert_eq!(
+        replay["no_side_effect"], false,
+        "the gate recorded its decision: {replay}"
+    );
+    assert_eq!(count_kind(root.path(), "settlement_packet"), packets);
+
+    // A nonfinal evaluation is refused before any settlement packet is committed.
+    ready(&mut c, &world, "op-nonfinal", "unknown").await;
+    let packets = count_kind(root.path(), "settlement_packet");
+    let nonfinal = receipt(&mut c, "op-nonfinal", "rc-nonfinal").await;
+    assert_eq!(
+        nonfinal["error_class"], "receipt_nonfinal_refused",
+        "{nonfinal}"
+    );
+    assert!(nonfinal.get("receipt").is_none());
+    assert_eq!(count_kind(root.path(), "settlement_packet"), packets);
+
+    // A same-request-id retry never returns the stored receipt, and status withholds it.
+    ready(&mut c, &world, "op-once", "supports").await;
+    let first = receipt(&mut c, "op-once", "rc-once").await;
+    assert_eq!(first["ok"], true, "{first}");
+    let retried = receipt(&mut c, "op-once", "rc-once").await;
+    assert_eq!(
+        retried["error_class"], "receipt_replay_refused",
+        "{retried}"
+    );
+    assert!(retried.get("receipt").is_none());
+    let status = c
+        .call(service_call(
+            json!({"verb": "request_get_status", "request_id": "rc-once"}),
+        ))
+        .await;
+    assert_eq!(status["status"], "completed", "{status}");
+    assert_eq!(status["outcome"], Value::Null, "{status}");
+    assert_eq!(status["outcome_withheld"], true);
+    assert!(!status.to_string().contains("payload_hash"));
+
+    // A fixed public message: no caller-chosen id or stored text is echoed.
+    let ghost = receipt(&mut c, "marker-op-never-decided", "rc-ghost").await;
+    assert_eq!(ghost["error_class"], "cep_evidence_refused", "{ghost}");
+    assert!(
+        !ghost.to_string().contains("marker-op-never-decided"),
+        "{ghost}"
+    );
+
+    // Settlement authority is revoked: no receipt for a fresh final outcome.
+    ready(&mut c, &world, "op-revoked", "supports").await;
+    std::fs::write(
+        root.path().join("sea-forge-policy.yaml"),
+        EVIDENCE_POLICY.replace("settlement_declaration", "cognate_capability"),
+    )
+    .unwrap();
+    let denied = receipt(&mut c, "op-revoked", "rc-revoked").await;
+    assert_eq!(denied["error_class"], "cep_evidence_refused", "{denied}");
+    assert!(denied.get("receipt").is_none());
+}
+
+#[tokio::test]
+async fn receipt_refuses_corrupt_history_and_a_clean_control_succeeds() {
+    // (case, kind of the row to damage, rehash that row, does the damage precede the settlement commit?)
+    for case in [
+        "control",
+        "evidence_edited",
+        "evidence_edited_and_rehashed",
+        "decision_edited",
+        "decision_edited_and_rehashed",
+    ] {
+        let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+        let mut c = Client::connect(&socket).await;
+        let world = world_ref();
+        ready(&mut c, &world, "op-t", "supports").await;
+        let edit_reason = |p: &mut Value| p["reason"] = json!("edited after the fact");
+        let edit_direction = |p: &mut Value| p["evidence"][0]["direction"] = json!("contradicts");
+        match case {
+            "evidence_edited" => tamper(root.path(), "evidence_packet", edit_direction, false),
+            "evidence_edited_and_rehashed" => {
+                tamper(root.path(), "evidence_packet", edit_direction, true)
+            }
+            "decision_edited" => tamper(root.path(), "authority_decision", edit_reason, false),
+            "decision_edited_and_rehashed" => {
+                tamper(root.path(), "authority_decision", edit_reason, true)
+            }
+            _ => {}
+        }
+        let before = std::fs::metadata(entries_file(root.path())).unwrap().len();
+        let got = receipt(&mut c, "op-t", "rc-t").await;
+        let appended = std::fs::metadata(entries_file(root.path())).unwrap().len() != before;
+        if case == "control" {
+            assert_eq!(got["ok"], true, "{case}: {got}");
+            continue;
+        }
+        assert_eq!(
+            got["error_class"], "receipt_integrity_failed",
+            "{case}: {got}"
+        );
+        assert!(got.get("receipt").is_none(), "{case}");
+        // Truthful whatever the stage: the flag follows the ledger.
+        assert_eq!(got["no_side_effect"], !appended, "{case}: {got}");
+        if case.starts_with("decision") {
+            // The damage is older than the tail, so the settlement itself was committed before the
+            // verification caught it, and the response must say so.
+            assert!(appended, "{case}");
+            assert_eq!(got["no_side_effect"], false, "{case}: {got}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn an_operation_named_like_a_marker_selects_only_its_own_records() {
+    let (_root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    // Another operation is fully decided and has evidence.
+    ready(&mut c, &world, "op-other", "supports").await;
+    // `cognate` is the fixed marker on every record; it must not select op-other's.
+    let probe = receipt(&mut c, "cognate", "rc-marker-1").await;
+    assert_eq!(probe["error_class"], "cep_evidence_refused", "{probe}");
+    // An operation that really is called `cognate` settles from its own records only.
+    ready(&mut c, &world, "cognate", "contradicts").await;
+    let own = receipt(&mut c, "cognate", "rc-marker-2").await;
+    assert_eq!(own["ok"], true, "{own}");
+    assert_eq!(own["receipt"]["operation_id"], "cognate");
+    assert_eq!(own["receipt"]["status"], "rejected");
+    assert_eq!(
+        own["receipt"]["authority_decision_ref"],
+        "env-authority_decision-cognate"
+    );
+    // The other operation was not consumed by it.
+    let other = receipt(&mut c, "op-other", "rc-marker-3").await;
+    assert_eq!(other["receipt"]["status"], "settled", "{other}");
+}
+
+#[tokio::test]
+async fn every_accepted_operation_id_yields_a_projectable_receipt() {
+    let (_root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    let longest = "o".repeat(sea_forge_authority::cep::MAX_OPERATION_ID_BYTES);
+    ready(&mut c, &world, &longest, "supports").await;
+    let got = receipt(&mut c, &longest, "rc-long").await;
+    assert_eq!(got["ok"], true, "{got}");
+    assert!(got["receipt"]["envelope_id"].as_str().unwrap().len() <= 256);
+    // One byte more is refused at ingress, before anything is committed.
+    let too_long = "o".repeat(sea_forge_authority::cep::MAX_OPERATION_ID_BYTES + 1);
+    let refused = c
+        .call(verb(
+            request(&world, &too_long, "action", "run.start"),
+            "rq-too-long",
+        ))
+        .await;
+    assert_eq!(refused["error_class"], "cep_request_invalid", "{refused}");
+}
+
+#[tokio::test]
+async fn a_durable_append_followed_by_an_mmr_failure_is_not_reported_as_no_effect() {
+    let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    ready(&mut c, &world, "op-mmr", "supports").await;
+    // The next append writes its JSONL row, then fails saving the MMR.
+    std::fs::create_dir(
+        root.path()
+            .join("ledgers")
+            .join(sea_forge_authority::cep::LEDGER_ID)
+            .join("mmr.tmp"),
+    )
+    .unwrap();
+    let before = std::fs::metadata(entries_file(root.path())).unwrap().len();
+    let got = receipt(&mut c, "op-mmr", "rc-mmr").await;
+    assert!(got.get("error").is_some(), "{got}");
+    let after = std::fs::metadata(entries_file(root.path())).unwrap().len();
+    assert!(after > before, "a row was appended");
+    assert_eq!(got["no_side_effect"], false, "{got}");
 }

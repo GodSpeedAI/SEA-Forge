@@ -2305,12 +2305,20 @@ async fn request_status(
             }
         }
     }
-    serde_json::json!({
+    // A stored settlement receipt is never returned by status: it is the
+    // first-call response, and releasing it later would need the integrity
+    // verification and current authorization to be re-run.
+    let withheld = record.method == "authority.settle_receipt";
+    let mut view = serde_json::json!({
         "request_id": record.request_id,
         "status": record.status,
         "method": record.method,
-        "outcome": record.outcome,
-    })
+        "outcome": if withheld { None } else { record.outcome },
+    });
+    if withheld {
+        view["outcome_withheld"] = serde_json::json!(true);
+    }
+    view
 }
 
 /// Run the portions of a protected request that are lawful only after request
@@ -2393,6 +2401,16 @@ async fn dispatch_admitted(
         }
         match state.correlation.check(&request_id, &hash) {
             Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
+                // A settlement receipt is the first-call response only. A same-id
+                // replay never returns the stored receipt: nothing is re-executed
+                // and nothing is appended.
+                if matches!(request, Request::AuthoritySettleReceipt { .. }) {
+                    return cep_authority::receipt_refusal(
+                        sea_forge_authority::cep::ReceiptRefusal::Replay.code(),
+                        sea_forge_authority::cep::ReceiptRefusal::Replay.message(),
+                        false,
+                    );
+                }
                 // A stored settlement packet is returned only to a caller who
                 // is still authorized to settle. Nothing is re-executed.
                 let (method, operation_id) = match &request {
@@ -3324,13 +3342,14 @@ pub async fn handle_request_as(
                     let config = state.config();
                     let root = state.root.clone();
                     tokio::task::spawn_blocking(move || {
-                        cep_authority::settle(&config, &root, &operation_id, &caller, false)
+                        cep_authority::settle(&config, &root, &operation_id, &caller)
                     })
                     .await
                     .unwrap_or_else(|_| {
                         serde_json::json!({
                             "error": "settlement task failed",
                             "error_class": "cep_authority_internal",
+                            "no_side_effect": false,
                         })
                     })
                 }
@@ -3356,14 +3375,16 @@ pub async fn handle_request_as(
                     let config = state.config();
                     let root = state.root.clone();
                     tokio::task::spawn_blocking(move || {
-                        cep_authority::settle(&config, &root, &operation_id, &caller, true)
+                        cep_authority::settle_receipt(&config, &root, &operation_id, &caller)
                     })
                     .await
                     .unwrap_or_else(|_| {
-                        serde_json::json!({
-                            "error": "settlement task failed",
-                            "error_class": "cep_authority_internal",
-                        })
+                        // The task may have committed before it failed: never claim no effect.
+                        cep_authority::receipt_refusal(
+                            "cep_authority_internal",
+                            "the settlement receipt could not be issued",
+                            true,
+                        )
                     })
                 }
                 None => serde_json::json!({
