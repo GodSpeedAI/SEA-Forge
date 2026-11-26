@@ -1,3 +1,32 @@
+**Status revision:** 384
+
+**Stage:** CognitiveOS convergence #108 | #116 SEA execution_profile binding implemented (branch ticket/116-execution-profile)
+
+**Summary:** A cognate_capability allow can now be bound to one launch-plan digest: policy lists up to 8 digests in the new execution_profile boundary dimension, the request claims launch_plan_digest, only an equal digest is allowed, and the decision and envelope carry exactly the matched digest.
+
+**Verified:**
+
+- Red tests failed first (6 in cep_authority), then passed; sea-forge-authority full suite green; server conformance_cep_authority 14 pass including the new socket test.
+- Governed requests can be allowed only by a profile rule with the claimed digest; a miss, missing or malformed claim is denied with reason code execution_profile_mismatch; earlier deny rules still apply; ungoverned resources are unchanged.
+- No contract schema enumerates constraint_type; no SFWP DTO changed, so no generated contracts or digests changed.
+
+**Limits:**
+
+- SEA binds the digest the host claims and cannot verify it; the host must recompute the launch plan digest and compare it with the envelope before spawn (Workbench's job, not done here).
+- There is no decision read-back verb; the host compares against the envelope it received.
+- Not pushed or merged; Workbench/Cognate side of #116 is separate.
+
+**Next:** Integrate the branch into integration/cognitiveos-108 after review; implement the Workbench pre-spawn recompute and compare.
+
+**Evidence:**
+
+- docs/decisions/ADR-016-execution-profile-boundary.md
+- docs/subsystems/authority-fabric.md
+
+---
+
+# Historical status
+
 **Status revision:** 383
 
 **Stage:** CognitiveOS convergence #108 | Cognate rlm contract integrated; release candidate prepared
@@ -24,8 +53,6 @@
 - https://github.com/GodSpeedAI/Cognate/pull/89
 
 ---
-
-# Historical status
 
 **Status revision:** 382
 
