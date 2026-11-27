@@ -9,6 +9,22 @@ use sea_forge_ledger::LedgerStream;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+/// The CEP checkout for the validator tests. Unset, they skip, unless `REQUIRE_CEP=1`, which makes a missing
+/// checkout a failure so a gate cannot pass by silently skipping the external validator.
+fn cep_repo() -> Option<String> {
+    match std::env::var("CEP_REPO") {
+        Ok(path) if !path.is_empty() => Some(path),
+        _ => {
+            assert!(
+                std::env::var("REQUIRE_CEP").as_deref() != Ok("1"),
+                "REQUIRE_CEP=1 but CEP_REPO is not set"
+            );
+            eprintln!("CEP_REPO not set: skipping profile conformance");
+            None
+        }
+    }
+}
+
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 
 const GATED: &str = "version: \"0.1\"\nrules:\n  \
@@ -528,8 +544,7 @@ fn cep_errors(repo: &str, profile: &str, envelope: &Value) -> Vec<String> {
 
 #[test]
 fn cep_validators_accept_the_escalation_and_the_approved_allow() {
-    let Ok(repo) = std::env::var("CEP_REPO") else {
-        eprintln!("CEP_REPO not set: skipping profile conformance");
+    let Some(repo) = cep_repo() else {
         return;
     };
     let c = cell();

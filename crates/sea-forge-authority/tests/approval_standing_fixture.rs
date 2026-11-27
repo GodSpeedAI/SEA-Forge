@@ -30,6 +30,7 @@ fn standing(
         operation_name: "run.start".into(),
         resource_id: "agent.echo".into(),
         subject_actor_ref: "actor:tenant-a/alice".into(),
+        launch_plan_digest: None,
         original_request_envelope_id: format!("env-authority_request-op-000{n}"),
         escalation_entry: format!("entry-op-000{n}"),
         expires_at: Utc.with_ymd_and_hms(2026, 11, 5, hour, minute, 0).unwrap(),

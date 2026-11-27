@@ -732,6 +732,8 @@ pub struct ApprovalStanding {
     pub operation_name: String,
     pub resource_id: String,
     pub subject_actor_ref: String,
+    /// The `launch_plan_digest` claim the escalated request carried, if any: an approval is spent only on it.
+    pub launch_plan_digest: Option<String>,
     pub original_request_envelope_id: String,
     pub escalation_entry: String,
     pub expires_at: DateTime<Utc>,
@@ -861,6 +863,10 @@ impl CepAuthorityService<'_> {
             operation_name: text_at(&action, "/parameters/operation_name"),
             resource_id: text_at(&action, "/resource_id"),
             subject_actor_ref: text_at(&action, "/parameters/subject_actor_ref"),
+            launch_plan_digest: action
+                .pointer("/parameters/claims/launch_plan_digest")
+                .and_then(Value::as_str)
+                .map(str::to_string),
             original_request_envelope_id: decision
                 .audit_record
                 .evidence_refs
@@ -1125,6 +1131,12 @@ impl CepAuthorityService<'_> {
                 && standing.operation_name == request.operation_name
                 && standing.resource_id == request.resource_id
                 && standing.subject_actor_ref == request.subject_actor_ref
+                && standing.launch_plan_digest.as_deref()
+                    == request
+                        .claims
+                        .as_ref()
+                        .and_then(|claims| claims.get("launch_plan_digest"))
+                        .and_then(Value::as_str)
                 && standing.requester == caller.actor_id;
             if !same {
                 return Err(CepAuthorityError::Approval(format!(
@@ -1153,6 +1165,14 @@ impl CepAuthorityService<'_> {
                 decision.reason = "approved_escalation".into();
                 decision.required_next_steps.clear();
                 decision.approval_request_id = None;
+                // An approved allow on an execution-profile rule is still bound to that one digest, so it is
+                // a boundary decision and the envelope exports the constraint.
+                if decision
+                    .boundary_constraints
+                    .contains_key("execution_profile")
+                {
+                    decision.normalized_disposition = NormalizedDisposition::Boundary;
+                }
                 decision.policy_refs.push(format!("approval:{approval_id}"));
                 self.bind_criteria(&mut decision);
                 let committed = ledger
@@ -3632,6 +3652,7 @@ fn settlement_standing_in(
         operation_name: String::new(),
         resource_id: record.operation_id.clone(),
         subject_actor_ref: String::new(),
+        launch_plan_digest: None,
         original_request_envelope_id: String::new(),
         escalation_entry: record.decision_ref.clone(),
         expires_at: DateTime::parse_from_rfc3339(&record.expires_at)

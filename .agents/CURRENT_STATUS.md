@@ -1,3 +1,29 @@
+**Status revision:** 386
+
+**Stage:** CognitiveOS convergence #108 | #116 review findings fixed (approval binding, CEP gating, tests)
+
+**Summary:** An approval on an execution_profile rule is now bound to the escalated digest and the approved allow exports it; CEP validator tests can be made mandatory with REQUIRE_CEP=1; scope, hash-order and reason-code behaviour are documented and tested.
+
+**Verified:**
+
+- authority tests, cep_authority 31, cep_execution_profile_approvals 3, with CEP_REPO=~/projects/gsr-heads/cep and REQUIRE_CEP=1 all CEP validator tests ran and passed; REQUIRE_CEP=1 without CEP_REPO fails.
+
+**Limits:**
+
+- No CI job sets CEP_REPO or REQUIRE_CEP, so CI skips the external validator tests; wiring a CEP checkout into a CI job is open.
+- Not pushed or merged.
+
+**Next:** Integrate after review; Workbench pre-spawn recompute and compare.
+
+**Evidence:**
+
+- docs/decisions/ADR-017-execution-profile-boundary.md
+- docs/subsystems/authority-fabric.md
+
+---
+
+# Historical status
+
 **Status revision:** 385
 
 **Stage:** CognitiveOS convergence #108 | #116 execution profile ADR renumbered and CEP validator run
@@ -19,8 +45,6 @@
 - docs/decisions/ADR-017-execution-profile-boundary.md
 
 ---
-
-# Historical status
 
 **Status revision:** 384
 

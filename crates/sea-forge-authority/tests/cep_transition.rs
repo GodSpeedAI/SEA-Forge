@@ -9,6 +9,22 @@ use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+/// The CEP checkout for the validator tests. Unset, they skip, unless `REQUIRE_CEP=1`, which makes a missing
+/// checkout a failure so a gate cannot pass by silently skipping the external validator.
+fn cep_repo() -> Option<String> {
+    match std::env::var("CEP_REPO") {
+        Ok(path) if !path.is_empty() => Some(path),
+        _ => {
+            assert!(
+                std::env::var("REQUIRE_CEP").as_deref() != Ok("1"),
+                "REQUIRE_CEP=1 but CEP_REPO is not set"
+            );
+            eprintln!("CEP_REPO not set: skipping profile conformance");
+            None
+        }
+    }
+}
+
 const BASE: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 /// Same meaning, different bytes: a comment-only edit changes the world digest and not the semantic closure.
 const EDITED: &str = "// reviewed\n@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
@@ -435,8 +451,7 @@ fn a_replayed_allow_is_one_transition() {
 
 #[test]
 fn the_record_validates_against_cep_when_the_checkout_is_present() {
-    let Ok(cep) = std::env::var("CEP_REPO") else {
-        eprintln!("SKIP: set CEP_REPO to validate the record against world-transition.v1");
+    let Some(cep) = cep_repo() else {
         return;
     };
     let c = cell();

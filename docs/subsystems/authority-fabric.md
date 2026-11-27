@@ -133,6 +133,19 @@ matched.
   `authority_decision` record, so the ledger shows what was asked. Approval floors, escalation, and
   world-transition rules are unchanged; an escalation exports no constraints.
 
+* **Approvals.** An approval on a profile rule is bound to the digest of the request that was escalated.
+  Revalidation succeeds only when its `claims.launch_plan_digest` equals the escalated one (both absent also
+  counts as equal); otherwise it is refused and the approval is not consumed. The approved allow is a
+  `boundary` decision carrying that one digest, and the envelope exports it.
+* **Scope.** Governance is per rule scope. A profile rule limited by `subjects`, `resources` or exposure does
+  not govern requests outside that scope, so such a request can fall through to a broader allow whose
+  decision carries no `execution_profile` constraint. The Workbench host must therefore refuse any spawn
+  whose decision lacks an exact `execution_profile` constraint; a broad allow can never authorize a contained
+  spawn. Reason code `execution_profile_mismatch` is emitted only when a profile rule applied to the request
+  and the digest missed; unrelated denies keep `default_deny`.
+* **Hashing.** The digest list is hashed with the bundle in the order the policy author wrote it; it is not
+  re-sorted, so reordering a list changes the bundle hash.
+
 What this proves: the committed decision says that, under this policy bundle, SEA-Forge allowed a request
 that claimed exactly this digest. What it does not prove: SEA-Forge never sees the launch plan, so the host
 must recompute the digest from the plan it is about to spawn, compare it with the digest in the decision

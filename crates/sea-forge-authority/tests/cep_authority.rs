@@ -8,6 +8,22 @@ use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+/// The CEP checkout for the validator tests. Unset, they skip, unless `REQUIRE_CEP=1`, which makes a missing
+/// checkout a failure so a gate cannot pass by silently skipping the external validator.
+fn cep_repo() -> Option<String> {
+    match std::env::var("CEP_REPO") {
+        Ok(path) if !path.is_empty() => Some(path),
+        _ => {
+            assert!(
+                std::env::var("REQUIRE_CEP").as_deref() != Ok("1"),
+                "REQUIRE_CEP=1 but CEP_REPO is not set"
+            );
+            eprintln!("CEP_REPO not set: skipping profile conformance");
+            None
+        }
+    }
+}
+
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 
 fn world_registry() -> (WorldRegistry, String) {
@@ -483,8 +499,7 @@ fn cep_errors(repo: &str, profile: &str, envelope: &Value) -> Vec<String> {
 
 #[test]
 fn cep_validators_accept_every_emitted_decision_and_the_request() {
-    let Ok(repo) = std::env::var("CEP_REPO") else {
-        eprintln!("CEP_REPO not set: skipping profile conformance");
+    let Some(repo) = cep_repo() else {
         return;
     };
     let cases = [
@@ -720,8 +735,7 @@ fn escalation_on_a_profile_rule_exports_no_constraints() {
 
 #[test]
 fn cep_validators_accept_an_execution_profile_boundary_decision_and_its_request() {
-    let Ok(repo) = std::env::var("CEP_REPO") else {
-        eprintln!("CEP_REPO not set: skipping profile conformance");
+    let Some(repo) = cep_repo() else {
         return;
     };
     let f = fixture(&profile_rule("exec", &[D1, D2], ""));
@@ -738,4 +752,181 @@ fn cep_validators_accept_an_execution_profile_boundary_decision_and_its_request(
         Vec::<String>::new(),
         "decision"
     );
+}
+
+// ---- review follow-ups for #116 ----
+
+fn policy_with(rules: &str) -> AuthorityPolicyBundle {
+    sea_forge_core::yaml::from_str(&format!("version: \"0.1\"\nrules:\n{rules}")).unwrap()
+}
+
+#[test]
+fn a_bundle_without_execution_profile_keeps_its_hash() {
+    // Pinned value: the dimension adds no rule field, so existing bundles hash exactly as before.
+    let mut bundle = policy_with(&format!(
+        "{}{}",
+        rule("allow-actions", "cognate_action", ""),
+        rule(
+            "gate",
+            "cognate_capability",
+            "    requires_approval: true\n"
+        )
+    ));
+    bundle.refresh_policy_bundle_hash().unwrap();
+    assert_eq!(
+        bundle.policy_bundle_hash.as_deref(),
+        Some("sha256:127b21fe85fa26685c615c360ced40cd81fb78f2dac61b033afca01d1261bd9c"),
+        "update only if PolicyRule's serialized form changed on purpose"
+    );
+}
+
+#[test]
+fn an_approval_gated_rule_without_a_profile_is_skipped_for_a_governed_resource() {
+    let rules = format!(
+        "{}{}",
+        rule(
+            "gate",
+            "cognate_capability",
+            "    requires_approval: true\n"
+        ),
+        profile_rule("exec", &[D1], "    resources: [\"cap.exec\"]\n")
+    );
+    let f = fixture(&rules);
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-m1", "cap.exec", Some(D3)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "deny");
+    assert!(out
+        .decision
+        .reason_codes
+        .iter()
+        .any(|c| c == "execution_profile_mismatch"));
+}
+
+#[test]
+fn two_profile_rules_each_match_only_their_own_digest() {
+    let rules = format!(
+        "{}{}",
+        profile_rule("rule-a", &[D1], ""),
+        profile_rule("rule-b", &[D2], "")
+    );
+    let f = fixture(&rules);
+    for (op, digest, rule_name) in [("op-t1", D1, "rule-a"), ("op-t2", D2, "rule-b")] {
+        let out = f
+            .service()
+            .decide(
+                &capability_request(&f.world, op, "cap.exec", Some(digest)),
+                &caller(),
+            )
+            .unwrap();
+        assert_eq!(decision_of(&out), "boundary", "{op}");
+        assert_eq!(out.decision.matched_rule.as_deref(), Some(rule_name));
+        assert_eq!(
+            out.decision.boundary_constraints["execution_profile"],
+            vec![digest.to_string()]
+        );
+    }
+    let other = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-t3", "cap.exec", Some(D3)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&other), "deny");
+}
+
+#[test]
+fn the_committed_ledger_entry_records_the_claimed_digest() {
+    use sea_forge_authority::cep::LEDGER_ID;
+    use sea_forge_ledger::LedgerStream;
+    let f = fixture(&profile_rule("exec", &[D1], ""));
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-l1", "cap.exec", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    let entries = LedgerStream::open(f.root.path(), LEDGER_ID, "audit-reader")
+        .unwrap()
+        .read_entries()
+        .unwrap();
+    let entry = entries
+        .iter()
+        .find(|e| e.entry_ulid == out.committed.entry_ulid())
+        .expect("the decision's ledger entry");
+    assert_eq!(entry.record_kind, "authority_decision");
+    assert_eq!(
+        entry.payload["action_request"]["action"]["parameters"]["claims"]["launch_plan_digest"],
+        D1
+    );
+    assert_eq!(
+        entry.payload["boundary_constraints"]["execution_profile"],
+        json!([D1])
+    );
+}
+
+#[test]
+fn a_subject_scoped_profile_rule_does_not_govern_other_subjects() {
+    // Governance is per rule scope: another subject falls through to the broad allow, which carries no
+    // execution_profile constraint. The host refuses any spawn whose decision lacks one.
+    let rules = format!(
+        "{}{}",
+        profile_rule("exec", &[D1], "    subjects: [\"actor:bob\"]\n"),
+        rule("broad", "cognate_capability", "")
+    );
+    let f = fixture(&rules);
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-s1", "cap.exec", None),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "allow");
+    assert!(!out
+        .decision
+        .boundary_constraints
+        .contains_key("execution_profile"));
+    assert!(out.envelope["constraints"]
+        .as_array()
+        .is_none_or(|c| c.is_empty()));
+}
+
+#[test]
+fn the_mismatch_reason_is_only_for_requests_a_profile_rule_applies_to() {
+    // Unknown subject: no profile rule applies, so the original default_deny stays.
+    let f = fixture(&profile_rule(
+        "exec",
+        &[D1],
+        "    subjects: [\"actor:bob\"]\n",
+    ));
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-r1", "cap.exec", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "deny");
+    assert_eq!(out.decision.reason_codes, vec!["default_deny".to_string()]);
+    // A resource no profile rule names: not governed either.
+    let f = fixture(&profile_rule(
+        "exec",
+        &[D1],
+        "    resources: [\"cap.exec\"]\n",
+    ));
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-r3", "cap.other", Some(D1)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(out.decision.reason_codes, vec!["default_deny".to_string()]);
 }

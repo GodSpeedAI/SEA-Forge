@@ -21,6 +21,13 @@ Extend the existing contract; add no field, schema or verb.
 * The decision narrows the constraint to the matched digest; the envelope exports it as constraint type
   `execution_profile`. The claim is already recorded in the committed decision.
 
+* An approval of a profile rule is bound to the escalated request's digest; the approved allow is a boundary
+  decision carrying it.
+* Governance is per rule scope. A subject-, resource- or exposure-scoped profile rule does not govern requests
+  outside its scope, and those can reach a broader allow with no `execution_profile` constraint. The host
+  refuses any contained spawn whose decision lacks the exact constraint. Matching semantics are unchanged.
+* The digest list order is part of the bundle hash and is not re-sorted.
+
 ## Consequences
 
 Policy bundles that do not use the dimension keep their bytes and hashes. SEA-Forge binds the digest the host
