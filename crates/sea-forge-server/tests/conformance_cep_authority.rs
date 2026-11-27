@@ -1095,12 +1095,11 @@ async fn receipt_refuses_corrupt_history_and_a_clean_control_succeeds() {
         assert!(got.get("receipt").is_none(), "{case}");
         // Truthful whatever the stage: the flag follows the ledger.
         assert_eq!(got["no_side_effect"], !appended, "{case}: {got}");
-        if case.starts_with("decision") {
-            // The damage is older than the tail, so the settlement itself was committed before the
-            // verification caught it, and the response must say so.
-            assert!(appended, "{case}");
-            assert_eq!(got["no_side_effect"], false, "{case}: {got}");
-        }
+        // Contract change: the receipt preflight verifies the whole history BEFORE the settlement
+        // commits, so damage older than the tail is now refused with nothing appended (previously the
+        // settlement committed first and the verification caught it afterwards).
+        assert!(!appended, "{case}: nothing is appended for damaged history");
+        assert_eq!(got["no_side_effect"], true, "{case}: {got}");
     }
 }
 
@@ -1346,9 +1345,12 @@ async fn an_unprojectable_obligation_receipt_is_refused_before_the_settlement_co
         }
     });
     let packets = count_kind(root.path(), "settlement_packet");
+    let decisions = count_kind(root.path(), "authority_decision");
     let mut c = Client::connect(&socket).await;
     let got = receipt(&mut c, "op-obl-bad", "rc-obl-bad").await;
     assert_eq!(got["error_class"], "receipt_reference_mismatch", "{got}");
+    assert_eq!(got["no_side_effect"], true, "{got}");
+    assert_eq!(count_kind(root.path(), "authority_decision"), decisions);
     assert_eq!(
         count_kind(root.path(), "settlement_packet"),
         packets,
@@ -1401,7 +1403,14 @@ async fn an_obligation_receipt_covers_rejection_replay_and_an_inconsistent_run_s
     let (root, _rt, socket) = obligation_ready("op-obl-inc", &[0, 1]).await;
     let mut c = Client::connect(&socket).await;
     let packets = count_kind(root.path(), "settlement_packet");
+    let decisions = count_kind(root.path(), "authority_decision");
     let inconsistent = receipt(&mut c, "op-obl-inc", "rc-inc-1").await;
+    assert_eq!(inconsistent["no_side_effect"], true, "{inconsistent}");
+    assert_eq!(
+        count_kind(root.path(), "authority_decision"),
+        decisions,
+        "a refused receipt appends no decision row either"
+    );
     assert_eq!(
         inconsistent["error_class"], "receipt_nonfinal_refused",
         "{inconsistent}"
@@ -1487,6 +1496,21 @@ async fn a_denied_caller_gets_the_gate_refusal_before_obligation_configuration_a
     );
     assert!(!text.contains("RealityTrace"), "{denied}");
 
+    // Closure answers the same way: the gate, not "needs RealityTrace configured".
+    let closure = c
+        .call(service_call(
+            json!({"verb": "authority_closure", "operation_id": "op-needs-rt",
+            "discrimination_observation_id": "obs-d", "verification_observation_ids": ["obs-v0"],
+            "request_id": "cl-nrt"}),
+        ))
+        .await;
+    let text = closure["error"].as_str().unwrap();
+    assert!(
+        text.contains("may not use settlement_declaration"),
+        "{closure}"
+    );
+    assert!(!text.contains("RealityTrace"), "{closure}");
+
     // A denial for a well-formed id is recorded; a malformed id writes nothing.
     let before = count_kind(root.path(), "authority_decision");
     let long = "o".repeat(sea_forge_authority::cep::MAX_OPERATION_ID_BYTES + 1);
@@ -1509,4 +1533,27 @@ async fn a_denied_caller_gets_the_gate_refusal_before_obligation_configuration_a
         before + 1,
         "the denial is audited"
     );
+}
+
+#[tokio::test]
+async fn the_same_edit_without_the_consistent_rewrite_is_caught_as_an_integrity_failure() {
+    // Negative control for `rewrite_consistently`: identical edit, payload only, hashes and chain left alone.
+    let (root, _rt, socket) = obligation_ready("op-obl-raw", &[0]).await;
+    tamper(
+        root.path(),
+        "authority_decision",
+        |p| {
+            if p.pointer("/action_request/action/parameters/operation_id")
+                == Some(&json!("op-obl-raw"))
+            {
+                p["action_request"]["action"]["parameters"]["world_ref"] = json!("not-a-world");
+            }
+        },
+        false,
+    );
+    let packets = count_kind(root.path(), "settlement_packet");
+    let mut c = Client::connect(&socket).await;
+    let got = receipt(&mut c, "op-obl-raw", "rc-obl-raw").await;
+    assert_eq!(got["error_class"], "receipt_integrity_failed", "{got}");
+    assert_eq!(count_kind(root.path(), "settlement_packet"), packets);
 }

@@ -480,7 +480,6 @@ impl CepAuthorityService<'_> {
             caller,
             vec![format!("operation:{operation_id}")],
         )?;
-        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
         if for_receipt {
             self.receipt_preflight(operation_id)?;
         }
@@ -628,6 +627,10 @@ impl CepAuthorityService<'_> {
             super::packet_receipt_fields(&envelope, operation_id, &allowed)
                 .map_err(CepAuthorityError::Receipt)?;
         }
+        // The allow is recorded here, immediately before the settlement it authorizes, so a request
+        // refused earlier (not settleable yet, unprojectable receipt) appends nothing. A denial was
+        // already recorded by the first gate evaluation.
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
         let subjects = vec!["cognate".to_string(), operation_id.to_string()];
         let committed = match ledger.commit_typed_new(
             "settlement_packet",

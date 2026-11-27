@@ -641,6 +641,10 @@ pub fn closure(
     caller: &Actor,
 ) -> Value {
     with_service(config, root, |service| {
+        // Settlement authority before anything about this cell's configuration is revealed.
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            return refusal(e.class(), e);
+        }
         let Some(rt) = config.cep_authority.realitytrace.clone() else {
             return json!({
                 "error": "obligation closure needs RealityTrace configured (cep_authority.realitytrace)",

@@ -1,25 +1,25 @@
 # Current status
 
-**Status revision:** 401
+**Status revision:** 402
 
-**Stage:** CognitiveOS #108 delta-check authority fixes
+**Stage:** CognitiveOS #108 final delta fixes
 
-**Summary:** One projectability predicate checked before and after commit, settlement authority ahead of every pre-gate error, and bounded operation ids before the gate.
+**Summary:** Closure checks settlement authority before cell configuration, and the settlement allow is recorded only immediately before the settlement commits.
 
 **Verified:**
 
-- An inconsistent obligation run set is refused receipt_nonfinal_refused before it commits and stays obtainable through authority_settle; a contradicted obligation yields a rejected receipt; a second receipt is a replay refusal.
-- Unauthorized callers get the same gate refusal on receipt, settle (RealityTrace not configured), and closure paths for real and never-decided operations; malformed operation ids record nothing, well-formed denials are audited.
-- Three of the new socket tests failed on the previous sources and pass now; conformance_cep_authority 25/25, sea-forge-authority 60+ tests, lib 208 passed 1 ignored, sfwp 26, case_authoring 21, lifecycle 10, FDE scenarios 49, ledger tests, digests, contracts gate, clippy -D warnings, fmt.
+- authority_closure with RealityTrace unset gives the uniform gate refusal to a denied caller (red before).
+- A refused receipt (inconsistent obligation, malformed ALLOW world) appends no authority_decision row and reports no_side_effect true (red before); damaged history is now refused before the settlement commits, so the corruption test asserts nothing is appended (contract change from the earlier 'committed then caught').
+- Negative control: the same ALLOW edit without the consistent rewrite is refused receipt_integrity_failed.
+- conformance_cep_authority 26, sfwp 26, case_authoring 21, lifecycle 10, FDE scenarios 49, lib 208 plus 1 ignored, authority 60 in the main suite, ledger tests, digests 12, contracts gate, clippy -D warnings, fmt.
 
 **Limits:**
 
-- The decision envelope id is deterministic from the ALLOW row's operation id, not stored in the row; documented in ADR-016.
 - Preflight and commit are not atomic (documented).
 - Request ids remain cell-global (open debt).
 - Full CI, proofs and cross-platform tests have not run.
 
-**Next:** Independent re-review, then integrate.
+**Next:** Integrate the branch.
 
 **Evidence:**
 

@@ -75,12 +75,15 @@ See the [migration specification](../../.agents/specs/cep-world-ref-migration.sp
   committed and then permanently unobtainable, and again on the committed packet.
 - **Gate first.** The settlement declaration gate is evaluated before the existence and evidence
   errors, so a caller without settlement authority cannot probe whether an operation, its decision or
-  its evidence exists. An allow is not recorded by that first evaluation (the existing gate records it
-  where the work is done), so polling a not-yet-settleable operation appends nothing. A denial is
+  its evidence exists. An allow is not recorded by that first evaluation; the gate records it immediately before the
+  settlement it authorizes, after the packet (and, for a receipt, its projectability) has been checked.
+  So a request refused before that point (operation not settleable yet, no evidence, a refused receipt)
+  appends nothing, and the response says `no_side_effect: true`. What does append: a denial (audit), the
+  allow plus the settlement packet when a settlement commits, and the allow row of a replay re-check. A denial is
   recorded for any well-formed operation id (it is audit); an empty, over-long or control-character id is
   refused as malformed input before anything is written. The same gate-first order applies to
   `authority_settle`, `authority_settle_receipt` (including the RealityTrace-configured check) and
-  `authority_closure`.
+  `authority_closure` (whose RealityTrace-configured check also follows the gate).
 
 ## Known limits
 
