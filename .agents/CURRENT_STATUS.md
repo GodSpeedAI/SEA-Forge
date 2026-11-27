@@ -1,17 +1,21 @@
 # Current status
 
-**Status revision:** 287
+**Status revision:** 288
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
+**Stage:** Dependency security: url RUSTSEC-2026-0592
 
-**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
+**Summary:** Bump url to 2.5.9 (and form_urlencoded to 1.2.3) in the lockfile to clear the Url::origin() stack-overflow advisory.
 
 **Verified:**
 
-- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
+- Lockfile-only change (url 2.5.8 to 2.5.9, form_urlencoded 1.2.2 to 1.2.3); no manifest changed.
+- just deny now reports only RUSTSEC-2026-0543 (chrono unmaintained); advisories still fail until that policy decision, bans, licenses and sources are ok.
+- cargo check --workspace --all-targets --locked passes; sea-forge-agent tests 43+3 pass and sea-forge-realitytrace tests 1+4+6 pass.
 
 **Limits:**
 
+- The chrono unmaintained advisory (RUSTSEC-2026-0543) remains and no deny.toml waiver was added; cargo-deny advisories and the Security workflow stay red until that policy decision.
+- Full CI has not run on this branch.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -37,13 +41,8 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
+**Next:** Merge this fix, then merge it into the integration branch; decide the chrono advisory policy separately.
 
 **Evidence:**
 
-- .agents/reports/fde-convergence-2026-11-12/STATUS.md
-- .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
-- .agents/reports/fde-convergence-2026-11-12/F-implementation-plan.md
-- .agents/plans/2026-10-28-consolidated-final-report.md
-- .agents/plans/2026-10-27-arm64-jetson-packaging.md
-- .agents/plans/2026-10-26-capability-harvest.md
+- Cargo.lock
