@@ -1424,9 +1424,13 @@ impl AuthorityPolicyBundle {
                         | "db_scope"
                         | "permitted_exposure"
                         | "settlement_authority_class"
+                        | EXECUTION_PROFILE
                 )
             }) {
                 return Err(schema("unsupported boundary dimension".into()));
+            }
+            if let Some(digests) = rule.boundary_constraints.get(EXECUTION_PROFILE) {
+                validate_execution_profile_rule(rule, digests)?;
             }
             if let Some(classes) = rule.boundary_constraints.get("settlement_authority_class") {
                 // Only a settlement_declaration rule can name a class, and only the two known classes.
@@ -2326,6 +2330,21 @@ impl PolicyAuthorityEngine {
             .map_err(|_| ForgeError::Internal("opaque constraint state poisoned".into()))?
             .get(&format!("{resource_type}:{resource_id}"))
             .cloned();
+        // A request is governed by an execution profile when some profile rule would match it but for the
+        // digest. Only a profile rule whose digests include the claimed one may then allow it.
+        let profile_governed = matches!(
+            action,
+            AuthorityAction::Reserved { resource_type, .. } if resource_type == "cognate_capability"
+        ) && self.bundle.rules.iter().any(|rule| {
+            rule.boundary_constraints.contains_key(EXECUTION_PROFILE)
+                && matches_rule_inner(rule, actor, action, false)
+        });
+        let claimed_profile = match action {
+            AuthorityAction::Reserved { parameters, .. } if profile_governed => {
+                claimed_execution_profile_digest(parameters).map(str::to_owned)
+            }
+            _ => None,
+        };
         let (mut verdict, matched, mut reasons, refs, mut next) = if let Some(constraint) =
             &existing_constraint
         {
@@ -2445,6 +2464,14 @@ impl PolicyAuthorityEngine {
                 vec!["extend-authority-policy".into()],
             )
         } else if let Some(rule) = self.bundle.rules.iter().find(|r| {
+            // Only a deny may stand in for a profile rule: an allow or an escalation (which an approval
+            // would turn into an allow) carries no digest.
+            if profile_governed
+                && r.verdict != Verdict::Deny
+                && !r.boundary_constraints.contains_key(EXECUTION_PROFILE)
+            {
+                return false;
+            }
             if let AuthorityAction::AgentProbe { host, .. } = action {
                 if !self
                     .bundle
@@ -2530,7 +2557,12 @@ impl PolicyAuthorityEngine {
             (
                 Verdict::Deny,
                 None,
-                vec!["default_deny".into()],
+                vec![if profile_governed {
+                    EXECUTION_PROFILE_MISMATCH
+                } else {
+                    "default_deny"
+                }
+                .into()],
                 vec!["file-access-policy:deny".into()],
                 vec![],
             )
@@ -2563,7 +2595,13 @@ impl PolicyAuthorityEngine {
                 .map(|rule| {
                     rule.boundary_constraints
                         .iter()
-                        .map(|(key, values)| (key.clone(), values.iter().cloned().collect()))
+                        .map(|(key, values)| match (key.as_str(), &claimed_profile) {
+                            // Narrow to the one profile this request was matched on, not the rule's list.
+                            (EXECUTION_PROFILE, Some(claimed)) => {
+                                (key.clone(), BTreeSet::from([claimed.clone()]))
+                            }
+                            _ => (key.clone(), values.iter().cloned().collect()),
+                        })
                         .collect()
                 })
                 .unwrap_or_default(),
@@ -2870,6 +2908,17 @@ fn matching_sod_rules<'a>(
 }
 
 fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> bool {
+    matches_rule_inner(rule, actor, action, true)
+}
+
+/// `check_profile` false asks whether the rule would match were its execution profile ignored: how an
+/// engine learns that a request is governed by a profile rule at all.
+fn matches_rule_inner(
+    rule: &PolicyRule,
+    actor: &Actor,
+    action: &AuthorityAction,
+    check_profile: bool,
+) -> bool {
     if rule.actor_role != actor.role {
         return false;
     }
@@ -2991,13 +3040,15 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
                     }
                     "recall_memory" => matches_memory_scope(rule, parameters),
                     "cognate_action" | "cognate_capability" => {
-                        rule.subjects.as_ref().is_none_or(|allowed| {
-                            parameter_str(parameters, "subject_actor_ref")
-                                .is_some_and(|subject| allowed.iter().any(|a| a == subject))
-                        }) && rule
-                            .resources
-                            .as_ref()
-                            .is_none_or(|allowed| allowed.iter().any(|r| r == resource_id))
+                        (!check_profile || execution_profile_permits(rule, parameters))
+                            && rule.subjects.as_ref().is_none_or(|allowed| {
+                                parameter_str(parameters, "subject_actor_ref")
+                                    .is_some_and(|subject| allowed.iter().any(|a| a == subject))
+                            })
+                            && rule
+                                .resources
+                                .as_ref()
+                                .is_none_or(|allowed| allowed.iter().any(|r| r == resource_id))
                     }
                     _ => true,
                 }
@@ -3006,6 +3057,75 @@ fn matches_rule(rule: &PolicyRule, actor: &Actor, action: &AuthorityAction) -> b
         AuthorityAction::AgentTask { .. } => rule.operation_kind == "agent_task",
         _ => false,
     }
+}
+
+/// Boundary dimension naming the launch-plan digests a `cognate_capability` allow may be spent on (#116).
+const EXECUTION_PROFILE: &str = "execution_profile";
+/// Most digests one profile rule may name.
+const MAX_EXECUTION_PROFILES: usize = 8;
+/// Claim a request carries to say which launch plan it will spawn.
+const EXECUTION_PROFILE_DIGEST_CLAIM: &str = "execution_profile_digest";
+/// Reason code of a request refused because its launch-plan digest names no permitted profile.
+const EXECUTION_PROFILE_MISMATCH: &str = "execution_profile_mismatch";
+
+/// `sha256:` followed by 64 lowercase hex digits.
+fn is_execution_profile_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    })
+}
+
+fn validate_execution_profile_rule(
+    rule: &PolicyRule,
+    digests: &[String],
+) -> Result<(), ForgeError> {
+    let refuse = |message: &str| {
+        Err(ForgeError::Config {
+            class: "schema_error",
+            path: PathBuf::new(),
+            message: message.into(),
+        })
+    };
+    if rule.operation_kind != "cognate_capability" {
+        return refuse("execution_profile applies only to cognate_capability");
+    }
+    if rule.verdict != Verdict::Allow || rule.disposition != Some(NormalizedDisposition::Boundary) {
+        return refuse("execution_profile requires an allow rule with boundary disposition");
+    }
+    let mut seen = BTreeSet::new();
+    if digests.is_empty()
+        || digests.len() > MAX_EXECUTION_PROFILES
+        || !digests
+            .iter()
+            .all(|d| is_execution_profile_digest(d) && seen.insert(d.as_str()))
+    {
+        return refuse(
+            "execution_profile names 1 to 8 distinct sha256:<64 lowercase hex> launch-plan digests",
+        );
+    }
+    Ok(())
+}
+
+/// The request's well-formed launch-plan digest claim, if any. A malformed claim is no claim.
+fn claimed_execution_profile_digest(parameters: &Value) -> Option<&str> {
+    parameters
+        .pointer(&format!("/claims/{EXECUTION_PROFILE_DIGEST_CLAIM}"))
+        .and_then(Value::as_str)
+        .filter(|digest| is_execution_profile_digest(digest))
+}
+
+/// A rule without an execution profile permits any request; one with a profile permits only a request
+/// claiming one of its digests.
+fn execution_profile_permits(rule: &PolicyRule, parameters: &Value) -> bool {
+    rule.boundary_constraints
+        .get(EXECUTION_PROFILE)
+        .is_none_or(|digests| {
+            claimed_execution_profile_digest(parameters)
+                .is_some_and(|claimed| digests.iter().any(|d| d == claimed))
+        })
 }
 
 /// True when the rule's boundary `dimension` is exactly the single `value`.

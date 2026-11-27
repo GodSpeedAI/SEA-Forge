@@ -9,6 +9,9 @@ use sea_forge_ledger::LedgerStream;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+mod common;
+use common::cep_repo;
+
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 
 const GATED: &str = "version: \"0.1\"\nrules:\n  \
@@ -528,8 +531,7 @@ fn cep_errors(repo: &str, profile: &str, envelope: &Value) -> Vec<String> {
 
 #[test]
 fn cep_validators_accept_the_escalation_and_the_approved_allow() {
-    let Ok(repo) = std::env::var("CEP_REPO") else {
-        eprintln!("CEP_REPO not set: skipping profile conformance");
+    let Some(repo) = cep_repo() else {
         return;
     };
     let c = cell();

@@ -152,6 +152,21 @@ jobs:
           # a PR can never poison what the next run trusts.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Fetch the pinned CEP validator (public, no credentials)
+        # The CEP profile validators run against this exact commit, outside the
+        # workspace; REQUIRE_CEP makes a missing validator fail, never skip.
+        env:
+          CEP_SHA: 5111ec388ebf908475fbf593468e299fe80e2bd8
+        run: |
+          git init -q "$RUNNER_TEMP/cep"
+          git -C "$RUNNER_TEMP/cep" fetch -q --depth=1 https://github.com/GodSpeedAI/canonical-evaluation-protocol.git "$CEP_SHA"
+          git -C "$RUNNER_TEMP/cep" checkout -q --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/cep" rev-parse HEAD)" = "$CEP_SHA"
+          pipx install uv==0.12.1
+          uv --version
+          echo "CEP_REPO=$RUNNER_TEMP/cep" >> "$GITHUB_ENV"
+          echo "REQUIRE_CEP=1" >> "$GITHUB_ENV"
+
       - name: cgroup-v2 delegation preflight (F08 lane)
         # The lifecycle-containment scenarios (review F08) need a cgroup-v2
         # subtree the runner user can create leaves in. Probe as the runner

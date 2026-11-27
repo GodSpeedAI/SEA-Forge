@@ -107,6 +107,54 @@ There is no stored SHA-256 of the executable in the grant and no hash comparison
 
 ---
 
+## 5a. Execution Profile Binding (`execution_profile`)
+
+A `cognate_capability` allow can be bound to one execution profile: the stable part of how a contained
+process will be launched. The policy author lists the permitted execution-profile digests; the requester
+claims the one it intends to use; the decision records which one matched.
+
+* **Rule.** A `cognate_capability` rule may carry the boundary dimension `execution_profile`: 1 to 8
+  distinct values, each `sha256:` plus 64 lowercase hex digits. The bundle loader refuses the dimension on
+  any other operation kind, on a rule that is not `verdict: allow` with `disposition: boundary`, and any
+  empty, malformed or duplicated value.
+* **Request.** The CEP request carries `claims.execution_profile_digest`. SEA-Forge does not know how the host
+  computes it. The host defines the execution profile (launcher and executable digests, restriction spec,
+  flag template, mount roles, environment names) and hashes it. This digest is stable across launches, so it
+  can be a policy value. The per-launch plan digest (run ids, workspace inode, per-port environment HMACs)
+  can never be one and is not what SEA binds.
+* **Matching.** A rule with `execution_profile` matches only when the claimed digest is well formed and
+  equal to one of its values. A request is *governed* when some profile rule would match it but for the
+  digest (same role, subject, resource, exposure). A governed request can be allowed only by a profile rule
+  whose digests include the claim: allow rules without a profile are skipped for it, whatever their order,
+  while an earlier deny or escalate rule still applies. If nothing matches, the decision is `deny` with
+  reason code `execution_profile_mismatch` (a missing or malformed claim included). Resources that no
+  profile rule governs are decided as before.
+* **Decision.** The allow is a `boundary` decision whose `boundary_constraints.execution_profile` holds only
+  the matched digest, not the rule's list. The envelope exports it as a constraint of type
+  `execution_profile` whose description is that digest. The claims are echoed into the committed
+  `authority_decision` record, so the ledger shows what was asked. Approval floors, escalation, and
+  world-transition rules are unchanged; an escalation exports no constraints.
+
+* **Approvals.** An approval on a profile rule is bound to the digest of the request that was escalated.
+  Revalidation succeeds only when its `claims.execution_profile_digest` equals the escalated one (both absent also
+  counts as equal); otherwise it is refused and the approval is not consumed. The approved allow is a
+  `boundary` decision carrying that one digest, and the envelope exports it.
+* **Scope.** Governance is per rule scope. A profile rule limited by `subjects`, `resources` or exposure does
+  not govern requests outside that scope, so such a request can fall through to a broader allow whose
+  decision carries no `execution_profile` constraint. The Workbench host must therefore refuse any spawn
+  whose decision lacks an exact `execution_profile` constraint; a broad allow can never authorize a contained
+  spawn. Reason code `execution_profile_mismatch` is emitted only when a profile rule applied to the request
+  and the digest missed; unrelated denies keep `default_deny`.
+* **Hashing.** The digest list is hashed with the bundle in the order the policy author wrote it; it is not
+  re-sorted, so reordering a list changes the bundle hash.
+
+What this proves: the committed decision says that, under this policy bundle, SEA-Forge allowed a request
+that claimed exactly this digest. What it does not prove: SEA-Forge never sees the launch plan, so the host
+must recompute the execution-profile digest, compare it with the digest in the decision envelope, check that
+the per-launch plan embeds it, and refuse on any difference before it spawns. There is no read-back verb for a decision by id, so the host
+compares against the envelope it received; one-shot use and the five-minute expiry apply to grants minted
+from `ActionGrant`, not to this CEP envelope.
+
 ## 6. Ledger Commitments
 
 Before execution, the CLI commits:
@@ -136,3 +184,4 @@ Before execution, the CLI commits:
 * [`crates/sea-forge-core/src/types.rs`](../../crates/sea-forge-core/src/types.rs) — `AuthorityRequest`, `AuthorityDecision`, `IdentityBinding`, `Verdict`.
 * [`crates/sea-forge-authority/tests/conformance_m0_authority.rs`](../../crates/sea-forge-authority/tests/conformance_m0_authority.rs) — authority conformance.
 * [`crates/sea-forge-authority/tests/policy_yaml_strictness.rs`](../../crates/sea-forge-authority/tests/policy_yaml_strictness.rs) — strict policy parsing.
+* [`docs/decisions/ADR-017-execution-profile-boundary.md`](../decisions/ADR-017-execution-profile-boundary.md) — the `execution_profile` decision.

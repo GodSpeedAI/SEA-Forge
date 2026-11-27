@@ -776,3 +776,49 @@ async fn a_malformed_prior_identity_fails_closed_with_a_clear_error() {
     assert!(message.contains(PRIOR_PATH), "{refused}");
     drop(cell);
 }
+
+const PROFILE_D1: &str = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+const PROFILE_D2: &str = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+
+fn profile_request(world: &str, op: &str, digest: Option<&str>) -> Value {
+    let mut req = request(world, op, "capability", "invoke");
+    req["extensions"]["godspeed.authority_request"]["resource_id"] = json!("cap.exec");
+    if let Some(d) = digest {
+        req["extensions"]["godspeed.authority_request"]["claims"] =
+            json!({ "execution_profile_digest": d });
+    }
+    req
+}
+
+#[tokio::test]
+async fn an_execution_profile_allow_is_spent_only_on_its_digest_over_the_socket() {
+    let policy = format!(
+        "version: \"0.1\"\nrules:\n  - name: broad\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n  - name: exec\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    resources: [\"cap.exec\"]\n    disposition: boundary\n    boundary_constraints:\n      execution_profile: [\"{PROFILE_D1}\", \"{PROFILE_D2}\"]\n"
+    );
+    let (_root, socket) = boot_with(true, &policy).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+
+    let allowed = c
+        .call(verb(
+            profile_request(&world, "op-x1", Some(PROFILE_D2)),
+            "op-x1",
+        ))
+        .await;
+    assert_eq!(decision(&allowed), "boundary", "{allowed}");
+    let constraints = allowed["envelope"]["constraints"].as_array().unwrap();
+    assert_eq!(constraints.len(), 1, "{allowed}");
+    assert_eq!(constraints[0]["constraint_type"], "execution_profile");
+    assert_eq!(constraints[0]["description"], PROFILE_D2);
+
+    for (op, digest) in [
+        (
+            "op-x2",
+            Some("sha256:3333333333333333333333333333333333333333333333333333333333333333"),
+        ),
+        ("op-x3", None),
+    ] {
+        let denied = c.call(verb(profile_request(&world, op, digest), op)).await;
+        assert_eq!(decision(&denied), "deny", "{denied}");
+    }
+}
