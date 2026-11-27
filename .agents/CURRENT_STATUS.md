@@ -1,3 +1,28 @@
+**Status revision:** 387
+
+**Stage:** CognitiveOS convergence #108 | #116 delta review lows fixed
+
+**Summary:** A governed request now skips non-profile escalate rules as well as allow rules; any approved allow carrying boundary constraints stays a boundary decision and exports them; REQUIRE_CEP is one shared helper accepting any value but empty, 0 or false; an approval granted with no digest is refused for a follow-up claiming one.
+
+**Verified:**
+
+- Authority suite with CEP_REPO=~/projects/gsr-heads/cep and REQUIRE_CEP=true: 0 failed across all binaries (cep_authority 33, cep_execution_profile_approvals 6).
+
+**Limits:**
+
+- No CI job sets CEP_REPO or REQUIRE_CEP, so CI skips the external validator tests.
+
+**Next:** Integrate the branch after review; Workbench pre-spawn recompute and compare.
+
+**Evidence:**
+
+- docs/decisions/ADR-017-execution-profile-boundary.md
+- docs/subsystems/authority-fabric.md
+
+---
+
+# Historical status
+
 **Status revision:** 386
 
 **Stage:** CognitiveOS convergence #108 | #116 review findings fixed (approval binding, CEP gating, tests)
@@ -21,8 +46,6 @@
 - docs/subsystems/authority-fabric.md
 
 ---
-
-# Historical status
 
 **Status revision:** 385
 

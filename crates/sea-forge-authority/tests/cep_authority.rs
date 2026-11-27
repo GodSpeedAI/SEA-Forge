@@ -8,21 +8,8 @@ use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-/// The CEP checkout for the validator tests. Unset, they skip, unless `REQUIRE_CEP=1`, which makes a missing
-/// checkout a failure so a gate cannot pass by silently skipping the external validator.
-fn cep_repo() -> Option<String> {
-    match std::env::var("CEP_REPO") {
-        Ok(path) if !path.is_empty() => Some(path),
-        _ => {
-            assert!(
-                std::env::var("REQUIRE_CEP").as_deref() != Ok("1"),
-                "REQUIRE_CEP=1 but CEP_REPO is not set"
-            );
-            eprintln!("CEP_REPO not set: skipping profile conformance");
-            None
-        }
-    }
-}
+mod common;
+use common::cep_repo;
 
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 
@@ -929,4 +916,48 @@ fn the_mismatch_reason_is_only_for_requests_a_profile_rule_applies_to() {
         )
         .unwrap();
     assert_eq!(out.decision.reason_codes, vec!["default_deny".to_string()]);
+}
+
+#[test]
+fn a_non_profile_escalation_cannot_stand_in_for_a_profile_rule() {
+    // Approving that escalation would otherwise yield an allow with no execution_profile constraint.
+    let rules = format!(
+        "{}{}",
+        rule(
+            "gate",
+            "cognate_capability",
+            "    requires_approval: true\n"
+        ),
+        profile_rule("exec", &[D1], "    resources: [\"cap.exec\"]\n")
+    );
+    let f = fixture(&rules);
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-e1", "cap.exec", Some(D3)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "deny");
+    assert!(out
+        .decision
+        .reason_codes
+        .iter()
+        .any(|c| c == "execution_profile_mismatch"));
+    assert!(out.decision.approval_request_id.is_none());
+    // A verdict-escalate rule is skipped the same way.
+    let rules = format!(
+        "{}{}",
+        rule("review", "cognate_capability", "").replace("verdict: allow", "verdict: escalate"),
+        profile_rule("exec", &[D1], "")
+    );
+    let f = fixture(&rules);
+    let out = f
+        .service()
+        .decide(
+            &capability_request(&f.world, "op-e2", "cap.exec", Some(D3)),
+            &caller(),
+        )
+        .unwrap();
+    assert_eq!(decision_of(&out), "deny");
 }

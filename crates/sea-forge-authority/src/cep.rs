@@ -1165,12 +1165,9 @@ impl CepAuthorityService<'_> {
                 decision.reason = "approved_escalation".into();
                 decision.required_next_steps.clear();
                 decision.approval_request_id = None;
-                // An approved allow on an execution-profile rule is still bound to that one digest, so it is
-                // a boundary decision and the envelope exports the constraint.
-                if decision
-                    .boundary_constraints
-                    .contains_key("execution_profile")
-                {
+                // An approved allow on a boundary rule is still bound by its constraints (an execution-profile
+                // rule by its one digest), so it stays a boundary decision and the envelope exports them.
+                if !decision.boundary_constraints.is_empty() {
                     decision.normalized_disposition = NormalizedDisposition::Boundary;
                 }
                 decision.policy_refs.push(format!("approval:{approval_id}"));

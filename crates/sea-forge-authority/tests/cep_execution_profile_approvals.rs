@@ -7,6 +7,9 @@ use sea_forge_domainforge::{SeaSourceSet, SourceFile, WorldRegistry};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+mod common;
+use common::cep_repo;
+
 const SRC: &str = "@namespace \"t\"\nentity \"Tank\" { key id: uuid }\n";
 
 const D1: &str = "sha256:1111111111111111111111111111111111111111111111111111111111111111";
@@ -198,21 +201,6 @@ fn a_different_or_missing_digest_cannot_spend_the_approval() {
     }
 }
 
-/// The CEP checkout for the validator test (see `cep_approvals.rs`): `REQUIRE_CEP=1` makes a missing one a failure.
-fn cep_repo() -> Option<String> {
-    match std::env::var("CEP_REPO") {
-        Ok(path) if !path.is_empty() => Some(path),
-        _ => {
-            assert!(
-                std::env::var("REQUIRE_CEP").as_deref() != Ok("1"),
-                "REQUIRE_CEP=1 but CEP_REPO is not set"
-            );
-            eprintln!("CEP_REPO not set: skipping profile conformance");
-            None
-        }
-    }
-}
-
 fn cep_errors(repo: &str, profile: &str, envelope: &Value) -> Vec<String> {
     use std::io::Write;
     let script = "import json,sys; from cep.godspeed import validate_profile, verify_semantics; \
@@ -247,4 +235,100 @@ fn cep_validators_accept_the_approved_execution_profile_allow() {
         cep_errors(&repo, "authority_decision", &allowed.envelope),
         Vec::<String>::new()
     );
+}
+
+const PLAIN_POLICY: &str = "version: \"0.1\"\nrules:\n  \
+  - name: gated\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    requires_approval: true\n    resources: [\"cap.plain\"]\n  \
+  - name: approvers\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
+#[test]
+fn an_approval_granted_without_a_digest_is_refused_for_a_follow_up_that_claims_one() {
+    let c = cell();
+    let with_plain =
+        |f: &dyn Fn(&CepAuthorityService<'_>) -> Result<CepDecision, CepAuthorityError>| {
+            with(&c, PLAIN_POLICY, day(), |s| f(s))
+        };
+    let req = request(
+        &c.world,
+        "op-n1",
+        "cap.plain",
+        "actor:alice",
+        None,
+        &[],
+        None,
+    );
+    let d = with_plain(&|s| s.decide(&req, &service_actor())).unwrap();
+    assert_eq!(ext(&d)["decision"], "escalate");
+    let id = ext(&d)["approval_id"].as_str().unwrap().to_string();
+    with(&c, PLAIN_POLICY, day(), |s| {
+        s.resolve_approval(&id, true, &operator("op-alice"))
+    })
+    .unwrap();
+
+    let lineage = "env-authority_request-op-n1";
+    let claiming = request(
+        &c.world,
+        "op-n1b",
+        "cap.plain",
+        "actor:alice",
+        Some(&id),
+        &[lineage],
+        Some(D1),
+    );
+    let refused = with_plain(&|s| s.decide(&claiming, &service_actor()));
+    assert!(matches!(refused, Err(CepAuthorityError::Approval(_))));
+    // Not consumed: the same approval still serves a follow-up with no claim.
+    let plain = request(
+        &c.world,
+        "op-n1c",
+        "cap.plain",
+        "actor:alice",
+        Some(&id),
+        &[lineage],
+        None,
+    );
+    let ok = with_plain(&|s| s.decide(&plain, &service_actor())).unwrap();
+    assert_eq!(ext(&ok)["decision"], "allow");
+    assert_eq!(ext(&ok)["approval_used"], true);
+}
+
+const REPO_POLICY: &str = "version: \"0.1\"\nrules:\n  \
+  - name: repo\n    verdict: allow\n    actor_role: service\n    operation_kind: cognate_capability\n    requires_approval: true\n    disposition: boundary\n    boundary_constraints:\n      repository: [\"org/repo\"]\n  \
+  - name: approvers\n    verdict: allow\n    actor_role: operator\n    operation_kind: approval_resolution\n";
+
+#[test]
+fn an_approved_allow_on_any_boundary_rule_exports_its_constraints() {
+    let c = cell();
+    let req = request(
+        &c.world,
+        "op-r1",
+        "cap.repo",
+        "actor:alice",
+        None,
+        &[],
+        None,
+    );
+    let d = with(&c, REPO_POLICY, day(), |s| s.decide(&req, &service_actor())).unwrap();
+    let id = ext(&d)["approval_id"].as_str().unwrap().to_string();
+    with(&c, REPO_POLICY, day(), |s| {
+        s.resolve_approval(&id, true, &operator("op-alice"))
+    })
+    .unwrap();
+    let follow = request(
+        &c.world,
+        "op-r1b",
+        "cap.repo",
+        "actor:alice",
+        Some(&id),
+        &["env-authority_request-op-r1"],
+        None,
+    );
+    let ok = with(&c, REPO_POLICY, day(), |s| {
+        s.decide(&follow, &service_actor())
+    })
+    .unwrap();
+    assert_eq!(ext(&ok)["decision"], "boundary");
+    let constraints = ok.envelope["constraints"].as_array().unwrap();
+    assert_eq!(constraints[0]["constraint_type"], "repository");
+    assert_eq!(constraints[0]["description"], "org/repo");
 }

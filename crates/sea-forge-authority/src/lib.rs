@@ -2464,8 +2464,10 @@ impl PolicyAuthorityEngine {
                 vec!["extend-authority-policy".into()],
             )
         } else if let Some(rule) = self.bundle.rules.iter().find(|r| {
+            // Only a deny may stand in for a profile rule: an allow or an escalation (which an approval
+            // would turn into an allow) carries no digest.
             if profile_governed
-                && r.verdict == Verdict::Allow
+                && r.verdict != Verdict::Deny
                 && !r.boundary_constraints.contains_key(EXECUTION_PROFILE)
             {
                 return false;
