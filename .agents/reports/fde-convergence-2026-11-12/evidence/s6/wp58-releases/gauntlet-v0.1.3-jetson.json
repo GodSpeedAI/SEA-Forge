@@ -1,0 +1,75 @@
+{
+  "artifacts": [
+    {
+      "name": "gauntlet_0.1.3_arm64.deb",
+      "sha256": "0ffb95a6eb7896a92edd9aa922234e81298e42b650f9ff867faf832fcd2d6ebe"
+    },
+    {
+      "name": "gauntlet-0.1.3-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "fb238524b635e7dd905255f8873bd1261ed4483432faa1f55bd95f6468ba6453"
+    }
+  ],
+  "commit": "6a7fe6a322cd0f824755710d590b526c2b4704ef",
+  "evidence": "real-hardware",
+  "host": {
+    "arch": "arm64",
+    "detail": "NVIDIA Jetson AGX Orin Developer Kit; # R36 (release), REVISION: 5.0, GCID: 43688277, BOARD: generic, EABI: aarch64, DATE: Fri Jan 16 03:50:45 UTC 2026",
+    "os": "linux"
+  },
+  "mode": "package",
+  "platform": "linux-arm64-jetson",
+  "required_steps": [
+    "checksums",
+    "install",
+    "tarball_install",
+    "smoke",
+    "governed_run",
+    "uninstall"
+  ],
+  "runner_image": "jetson-local",
+  "schema": "gauntlet.qualification/1",
+  "status": "QUALIFIED",
+  "steps": [
+    {
+      "name": "checksums",
+      "reason": "",
+      "status": "PASS"
+    },
+    {
+      "name": "provenance",
+      "reason": "no --attest-repo given (offline or operator run); verify with gh attestation verify manually",
+      "status": "NOT_RUN"
+    },
+    {
+      "name": "tarball_install",
+      "reason": "payload runs: gauntlet 0.1.3",
+      "status": "PASS"
+    },
+    {
+      "name": "install",
+      "reason": "installed gauntlet 0.1.3",
+      "status": "PASS"
+    },
+    {
+      "name": "upgrade",
+      "reason": "upgraded gauntlet 0.1.0 -> gauntlet 0.1.3",
+      "status": "PASS"
+    },
+    {
+      "name": "smoke",
+      "reason": "--version, doctor (in fixture project), agent doctor, packaging smoke",
+      "status": "PASS"
+    },
+    {
+      "name": "governed_run",
+      "reason": "mock adapter run 57XEVW78R9T3F3SN54CMPQHM52 settled",
+      "status": "PASS"
+    },
+    {
+      "name": "uninstall",
+      "reason": "binaries removed; project, run state and evidence kept as documented",
+      "status": "PASS"
+    }
+  ],
+  "version": "0.1.3"
+}

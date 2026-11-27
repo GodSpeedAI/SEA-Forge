@@ -1,0 +1,46 @@
+[PASS] checksum 40926fc35c4c70608370226d616382f2020b96a122b61244050dfe11a53d7004
+[INFO] installed before: sea-forge 0.3.0
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following packages were automatically installed and are no longer required:
+  libjavascriptcoregtk-4.1-0 libsoup-3.0-0 libsoup-3.0-common
+  libwebkit2gtk-4.1-0
+Use 'sudo apt autoremove' to remove them.
+The following packages will be upgraded:
+  sea-forge
+1 upgraded, 0 newly installed, 0 to remove and 322 not upgraded.
+Need to get 0 B/12.4 MB of archives.
+After this operation, 1,442 kB of additional disk space will be used.
+Get:1 /home/sprime01/q013/sf/sea-forge_0.5.0_arm64.deb sea-forge arm64 0.5.0 [12.4 MB]
+debconf: delaying package configuration, since apt-utils is not installed
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 214651 files and directories currently installed.)
+Preparing to unpack .../sf/sea-forge_0.5.0_arm64.deb ...
+Unpacking sea-forge (0.5.0) over (0.3.0) ...
+Setting up sea-forge (0.5.0) ...
+[PASS] deb_upgrade 0.3.0 -> 0.5.0
+sea-forge 0.5.0
+smoke: CLI read the fresh cell (exit 0)
+smoke: sea-forge-server running, socket: /tmp/sfsmoke.CBfuW4/cell/server.sock
+smoke: PASS
+[PASS] deb_installed_smoke (cell + daemon socket)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following packages were automatically installed and are no longer required:
+  libjavascriptcoregtk-4.1-0 libsoup-3.0-0 libsoup-3.0-common
+  libwebkit2gtk-4.1-0
+Use 'sudo apt autoremove' to remove them.
+The following packages will be DOWNGRADED:
+  sea-forge
+0 upgraded, 0 newly installed, 1 downgraded, 0 to remove and 322 not upgraded.
+Need to get 0 B/12.0 MB of archives.
+After this operation, 1,442 kB disk space will be freed.
+Get:1 /home/sprime01/projects/edgeai/arm64-pkg/sea-forge_0.3.0_arm64.deb sea-forge arm64 0.3.0 [12.0 MB]
+debconf: delaying package configuration, since apt-utils is not installed
+dpkg: warning: downgrading sea-forge from 0.5.0 to 0.3.0
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 214651 files and directories currently installed.)
+Preparing to unpack .../sea-forge_0.3.0_arm64.deb ...
+Unpacking sea-forge (0.3.0) over (0.5.0) ...
+Setting up sea-forge (0.3.0) ...
+[PASS] restore 0.3.0

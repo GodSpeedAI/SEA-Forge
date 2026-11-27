@@ -57,3 +57,6 @@
 # Python bytecode
 __pycache__/
 *.pyc
+
+# deja machine-local rule cache (the shareable memory is .deja/memory.jsonl)
+.deja/live_rules.jsonl

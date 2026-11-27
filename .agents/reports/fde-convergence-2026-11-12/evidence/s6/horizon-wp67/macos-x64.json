@@ -1,0 +1,106 @@
+{
+  "schema": "horizon.qualification/1",
+  "platform": "macos-x64",
+  "status": "QUALIFIED",
+  "required_steps": [
+    "checksums",
+    "dmg_install",
+    "app_installed_smoke",
+    "app_uninstall"
+  ],
+  "commit": "0478912b927af3241e2a3b89262772fdeb78c842",
+  "generated_at": "2026-11-16T04:57:33+00:00",
+  "host": {
+    "system": "Darwin",
+    "release": "24.6.0",
+    "machine": "x86_64",
+    "runner_image": "macos-15-intel",
+    "real_hardware": false
+  },
+  "artifacts": [
+    {
+      "name": "horizon-desktop-unqualified_Horizon.app.tar.gz",
+      "sha256": "58559102ee64b9220cdae49fde685ba6cca055795bc8c6b9a6aa60948d7a8a7c",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64.dmg",
+      "sha256": "2d5c38ed1c0d079e07562430900e8561e421fd8a17e6764ceccc5f2d67a4f44d",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-headless-unqualified-x86_64-apple-darwin.tar.gz",
+      "sha256": "bc548ae32c09701b1ceaa3f124cb3fa6fc08b150a8b3c20d061d43533aed67d8",
+      "matches_sha256sums": true
+    }
+  ],
+  "steps": [
+    {
+      "name": "checksums",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "artifacts": [
+          {
+            "name": "horizon-desktop-unqualified_Horizon.app.tar.gz",
+            "sha256": "58559102ee64b9220cdae49fde685ba6cca055795bc8c6b9a6aa60948d7a8a7c",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64.dmg",
+            "sha256": "2d5c38ed1c0d079e07562430900e8561e421fd8a17e6764ceccc5f2d67a4f44d",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-headless-unqualified-x86_64-apple-darwin.tar.gz",
+            "sha256": "bc548ae32c09701b1ceaa3f124cb3fa6fc08b150a8b3c20d061d43533aed67d8",
+            "matches_sha256sums": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "dmg_install",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "installed_app": "/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/horizon-qual-fqxnrmlx/Applications/Horizon.app",
+        "install_root": "/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/horizon-qual-fqxnrmlx/Applications",
+        "codesign_verify_exit": 0,
+        "codesign_note": ""
+      }
+    },
+    {
+      "name": "app_installed_smoke",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server": "/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/horizon-qual-fqxnrmlx/Applications/Horizon.app/Contents/MacOS/horizon-server",
+        "resources": "/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/horizon-qual-fqxnrmlx/Applications/Horizon.app/Contents/Resources/horizon-resources",
+        "output_tail": "ok  ready on http://127.0.0.1:49185\nok  health 200\nok  unpaired read refused\nok  one-time code opened a session\nok  workspace, desk bundle, diagnostics and frame read\nok  write path answered 200 (no server fault)\nok  stopped on stdin close (exit 0)\nok  port closed\nSMOKE PASS\n"
+      }
+    },
+    {
+      "name": "app_uninstall",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "left_under_install_path": [],
+        "user_data_remaining": []
+      }
+    },
+    {
+      "name": "app_installed_gui",
+      "status": "NOT_RUN",
+      "reason": "launching the GUI headlessly on a hosted macOS runner is not attempted; the sidecar smoke covers the server",
+      "evidence": {}
+    },
+    {
+      "name": "upgrade",
+      "status": "NOT_RUN",
+      "reason": "no previous release exists to upgrade from",
+      "evidence": {}
+    }
+  ],
+  "commands_needing_root": []
+}

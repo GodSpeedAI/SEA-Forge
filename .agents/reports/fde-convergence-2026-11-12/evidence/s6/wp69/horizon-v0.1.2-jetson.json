@@ -1,0 +1,141 @@
+{
+  "schema": "horizon.qualification/1",
+  "platform": "linux-arm64-jetson",
+  "status": "QUALIFIED",
+  "required_steps": [
+    "checksums",
+    "deb_install",
+    "deb_installed_smoke",
+    "deb_installed_gui",
+    "deb_uninstall",
+    "appimage_extract",
+    "appimage_extracted_smoke"
+  ],
+  "commit": "3e05877d069d44a43dac56ae4ea8e972a84fb01f",
+  "generated_at": "2026-11-16T14:38:58+00:00",
+  "host": {
+    "system": "Linux",
+    "release": "5.15.185-tegra",
+    "machine": "aarch64",
+    "runner_image": "jetson-local",
+    "real_hardware": true
+  },
+  "artifacts": [
+    {
+      "name": "horizon-desktop_Horizon_0.1.2_aarch64.AppImage",
+      "sha256": "639c607374b3454aa3be7313f04f6067b78620163f1e1479e1dccc635570d526",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-desktop_Horizon_0.1.2_arm64.deb",
+      "sha256": "30e2319a66eb2e3523409a2f2aa9310068ab121de044f3ad738f74cc2de6c7a1",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-headless-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "aef3a73a4f99de5e2057f51743b179a94b7cbb5befa894ad88b0b76a95e815b0",
+      "matches_sha256sums": true
+    }
+  ],
+  "steps": [
+    {
+      "name": "checksums",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "artifacts": [
+          {
+            "name": "horizon-desktop_Horizon_0.1.2_aarch64.AppImage",
+            "sha256": "639c607374b3454aa3be7313f04f6067b78620163f1e1479e1dccc635570d526",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-desktop_Horizon_0.1.2_arm64.deb",
+            "sha256": "30e2319a66eb2e3523409a2f2aa9310068ab121de044f3ad738f74cc2de6c7a1",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-headless-aarch64-unknown-linux-gnu.tar.gz",
+            "sha256": "aef3a73a4f99de5e2057f51743b179a94b7cbb5befa894ad88b0b76a95e815b0",
+            "matches_sha256sums": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "deb_install",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "package": "horizon",
+        "executable": "/usr/bin/horizon-desktop",
+        "packed_server": "/usr/lib/Horizon/server/horizon-server.gz",
+        "resources": "/usr/lib/Horizon/horizon-resources",
+        "file_count": 63
+      }
+    },
+    {
+      "name": "deb_installed_smoke",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server_origin": "gunzip of installed /usr/lib/Horizon/server/horizon-server.gz",
+        "server": "/tmp/horizon-qual-server-05bts1u9/horizon-server",
+        "resources": "/usr/lib/Horizon/horizon-resources",
+        "output_tail": "ok  ready on http://127.0.0.1:37601\nok  health 200\nok  unpaired read refused\nok  one-time code opened a session\nok  workspace, desk bundle, diagnostics and frame read\nok  write path answered 200 (no server fault)\nok  stopped on stdin close (exit 0)\nok  port closed\nSMOKE PASS\n"
+      }
+    },
+    {
+      "name": "deb_installed_gui",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "ports": [
+          "45769"
+        ],
+        "health_status": 200,
+        "app_exited_before_health": false,
+        "log_tail": "[horizon-server] horizon: local_operator listening on http://127.0.0.1:45769/\n[horizon-server] horizon: workspace http://127.0.0.1:45769/workspace\n[horizon-server] horizon: world world:horizon@sha256:0a10c20d22ee11a184165005a553390e7a45ce0b858773e2220e442eb0cf9d2b\n[horizon-server] horizon: cognate world:horizon@sha256:d89a5ff38a2ae436df5645a3f8ce57fbd1a924522aeee0755da85386a3c1b0f6\n[horizon-server] horizon: semantics 150 objects / 77 relations\n",
+        "server_still_listening_after_stop": []
+      }
+    },
+    {
+      "name": "deb_uninstall",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "left_under_install_path": [],
+        "user_data_remaining": []
+      }
+    },
+    {
+      "name": "appimage_extract",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "packed_server": "/tmp/horizon-qual-appimage-kxgzvhxp/squashfs-root/usr/lib/Horizon/server/horizon-server.gz",
+        "resources": "/tmp/horizon-qual-appimage-kxgzvhxp/squashfs-root/usr/lib/Horizon/horizon-resources",
+        "executable": null,
+        "output_tail": ""
+      }
+    },
+    {
+      "name": "appimage_extracted_smoke",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server_origin": "gunzip of the extracted AppImage's server archive",
+        "server": "/tmp/horizon-qual-appimage-kxgzvhxp/horizon-server",
+        "resources": "/tmp/horizon-qual-appimage-kxgzvhxp/squashfs-root/usr/lib/Horizon/horizon-resources",
+        "output_tail": "ok  ready on http://127.0.0.1:42481\nok  health 200\nok  unpaired read refused\nok  one-time code opened a session\nok  workspace, desk bundle, diagnostics and frame read\nok  write path answered 200 (no server fault)\nok  stopped on stdin close (exit 0)\nok  port closed\nSMOKE PASS\n"
+      }
+    },
+    {
+      "name": "upgrade",
+      "status": "NOT_RUN",
+      "reason": "no previous release exists to upgrade from",
+      "evidence": {}
+    }
+  ],
+  "commands_needing_root": []
+}

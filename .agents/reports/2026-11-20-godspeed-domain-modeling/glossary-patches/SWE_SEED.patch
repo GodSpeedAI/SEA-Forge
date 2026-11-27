@@ -1,0 +1,22 @@
+diff --git a/.agent-harness/memory/glossary.md b/.agent-harness/memory/glossary.md
+--- a/.agent-harness/memory/glossary.md
++++ b/.agent-harness/memory/glossary.md
+@@ -28,3 +28,18 @@
+ 
+ `Memory artifact`
+ : Small durable note that improves future agent attention. It is not a transcript or a dumping ground.
++
++## Assembly and qualification
++
++**Project Seed**:
++A declared starting composition of layers and capabilities for a generated project.
++
++**Layer Capability**:
++A declared contribution a project layer provides to an assembled project.
++
++**Boundary Report**:
++The findings of checking a proposed artifact or dependency against declared layer ownership and allowed dependency direction.
++
++**Proof Qualification**:
++The finding that live proof met the declared work or capability criteria for the stated scope.
++_Avoid_: Operational Settlement, action authority, capability in the CognitiveOS sense
