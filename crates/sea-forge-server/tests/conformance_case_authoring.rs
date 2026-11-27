@@ -329,7 +329,7 @@ async fn commit_outcome_is_recoverable_via_request_get_status() {
         .to_string();
 
     let recovered = client
-        .call(json!({"verb": "request_get_status", "request_id": "req-case-commit-1"}))
+        .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": "req-case-commit-1"}))
         .await;
     assert_eq!(recovered["status"], "completed");
     assert_eq!(recovered["method"], "case.commit");

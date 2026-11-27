@@ -197,6 +197,87 @@ fn status(o: &sea_forge_authority::cep::SettlementOutcome) -> &str {
 }
 
 #[test]
+fn final_settlement_replay_requires_current_settlement_authority() {
+    let c = cell();
+    allow(&c, "op-replay-auth");
+    submit(
+        &c,
+        &packet(
+            &c.world,
+            "op-replay-auth",
+            "env-replay-auth",
+            vec![item("e-replay", "supports", "high")],
+        ),
+    )
+    .unwrap();
+    let original = settle(&c, "op-replay-auth").unwrap();
+    assert!(original.final_status);
+    let stored = |c: &Cell| {
+        let ledger = sea_forge_ledger::LedgerStream::open(
+            c.root.path(),
+            sea_forge_authority::cep::LEDGER_ID,
+            "test",
+        )
+        .unwrap();
+        ledger
+            .read_entries()
+            .unwrap()
+            .iter()
+            .filter(|e| e.record_kind != "authority_decision")
+            .count()
+    };
+    let before = stored(&c);
+    let denied = with(&c, &full_policy(), SettlementCriteria::default(), |s| {
+        s.settle("op-replay-auth", &operator())
+    });
+    assert!(
+        matches!(denied, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration"))
+    );
+    let revoked = with(
+        &c,
+        &policy(&["cognate_action", "evidence_mutation"]),
+        SettlementCriteria::default(),
+        |s| s.settle("op-replay-auth", &svc()),
+    );
+    assert!(matches!(revoked, Err(CepAuthorityError::Evidence(_))));
+    assert_eq!(
+        stored(&c),
+        before,
+        "a refused replay must append no settlement state"
+    );
+    let replay = settle(&c, "op-replay-auth").unwrap();
+    assert!(replay.replayed);
+    assert_eq!(replay.envelope, original.envelope);
+}
+
+#[test]
+fn a_caller_without_settlement_authority_learns_nothing_about_existence_or_evidence() {
+    let c = cell();
+    let no_settle = policy(&["cognate_action", "evidence_mutation"]);
+    // An operation nobody decided, and an allowed one with no evidence yet: both are the gate's refusal,
+    // so the caller cannot tell them apart from each other or from a decided, evidenced operation.
+    allow(&c, "op-no-evidence");
+    for op in ["op-never-decided", "op-no-evidence"] {
+        let refused = with(&c, &no_settle, SettlementCriteria::default(), |s| {
+            s.settle(op, &svc())
+        });
+        assert!(
+            matches!(&refused, Err(CepAuthorityError::Evidence(m)) if m.contains("may not use settlement_declaration")),
+            "{op}: {refused:?}"
+        );
+    }
+    // The authorized caller still gets the specific answers.
+    let ghost = settle(&c, "op-never-decided");
+    assert!(
+        matches!(ghost, Err(CepAuthorityError::Evidence(m)) if m.contains("no committed allow decision"))
+    );
+    let none = settle(&c, "op-no-evidence");
+    assert!(
+        matches!(none, Err(CepAuthorityError::Evidence(m)) if m.contains("no evidence has been submitted"))
+    );
+}
+
+#[test]
 fn supporting_evidence_settles_once_and_the_packet_names_its_basis() {
     let c = cell();
     allow(&c, "op-1");

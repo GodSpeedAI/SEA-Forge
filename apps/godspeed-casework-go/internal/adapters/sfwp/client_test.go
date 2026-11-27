@@ -280,6 +280,65 @@ func TestSeveredMutationReturnsRecordedOutcome(t *testing.T) {
 	}
 }
 
+// request.get_status is a protected verb: recovery must present the original request's identity
+// (actor and on_behalf_of), and a status call without an actor claim is refused.
+func TestRecoveryAuthenticatesStatusAsTheOriginalActor(t *testing.T) {
+	fs := newFakeServer(t, func(line string) (string, bool) {
+		var probe struct {
+			Verb       string         `json:"verb"`
+			Actor      map[string]any `json:"actor"`
+			OnBehalfOf map[string]any `json:"on_behalf_of"`
+		}
+		if err := json.Unmarshal([]byte(line), &probe); err != nil {
+			return `{"error":"bad json"}`, false
+		}
+		switch probe.Verb {
+		case "case_commit":
+			return "", true
+		case "request_get_status":
+			if probe.Actor["actor_id"] != "gateway" || probe.OnBehalfOf["actor_id"] != "end_user" {
+				return `{"error":"a protected request must carry an actor claim","error_class":"identity_required","no_side_effect":true}`, false
+			}
+			return `{"request_id":"req-auth-1","status":"completed","method":"case.commit","outcome":{"case_id":"case_0042","state":"active","exit_code":0}}`, false
+		}
+		return `{"error":"unhandled"}`, false
+	})
+	client, err := New(testConfig(fs.socket))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Unauthenticated status is refused.
+	_, err = client.Do(context.Background(), NewRequestGetStatus("req-auth-1", Governance{}))
+	var refusal *Refusal
+	if err == nil || !errors.As(err, &refusal) || refusal.Class != "identity_required" {
+		t.Fatalf("a status call without an actor claim must be refused as identity_required, got %v", err)
+	}
+
+	// Recovery of a severed delegated commit repeats the original governance and succeeds.
+	req, err := NewCaseCommit("e2e-sentry-chain@0.1.0", nil, "", "", 0, "req-auth-1", nil,
+		Governance{Actor: Actor{ActorID: "gateway", Role: "operator"}, OnBehalfOf: &Actor{ActorID: "end_user", Role: "operator"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.Do(context.Background(), req)
+	if err != nil {
+		t.Fatalf("authenticated recovery must return the recorded outcome, got %v", err)
+	}
+	var commit CommitView
+	if err := resp.Into(&commit); err != nil || commit.CaseID != "case_0042" {
+		t.Fatalf("recorded outcome not surfaced: %+v (%v)", commit, err)
+	}
+
+	// The explicit entry point authenticates the same way.
+	view, err := client.RequestStatus(context.Background(), "req-auth-1",
+		Governance{Actor: Actor{ActorID: "gateway", Role: "operator"}, OnBehalfOf: &Actor{ActorID: "end_user", Role: "operator"}})
+	if err != nil || view.Status != "completed" {
+		t.Fatalf("authenticated status: %+v (%v)", view, err)
+	}
+}
+
 // Inspect verbs may safely retry once on a transport failure; a second failure surfaces.
 func TestInspectRetriesOnceOnTransportFailure(t *testing.T) {
 	var caseList atomic.Int32

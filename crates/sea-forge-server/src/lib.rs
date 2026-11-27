@@ -161,6 +161,8 @@ pub mod delegation_audit;
 // Exposure state is a fold over a cell ledger stream; it lives with the
 // ledger so every component that exports cell data can consult it.
 pub use sea_forge_ledger::exposure;
+#[cfg(all(test, unix))]
+mod admission_crash_tests;
 pub mod governed_execution_boundary;
 pub mod governed_settlement_return;
 pub mod governed_work_ingress;
@@ -171,6 +173,7 @@ mod mcp_protocol;
 mod pipe_edge;
 pub mod postgres;
 mod realitytrace_source;
+mod request_admission_claim;
 pub mod sfwp;
 mod supervisor;
 pub mod swe_seed_reconciliation;
@@ -952,6 +955,12 @@ pub enum Request {
     },
     /// Settle an operation from the evidence committed for it, against the criteria bound at decision time.
     AuthoritySettle {
+        operation_id: String,
+        #[serde(default)]
+        request_id: Option<String>,
+    },
+    /// Settle through the same authority and return only a committed receipt projection.
+    AuthoritySettleReceipt {
         operation_id: String,
         #[serde(default)]
         request_id: Option<String>,
@@ -2120,6 +2129,7 @@ fn request_id(request: &Request) -> Option<&str> {
         | Request::AuthorityRepin { request_id, .. }
         | Request::AuthorityEvidence { request_id, .. }
         | Request::AuthoritySettle { request_id, .. }
+        | Request::AuthoritySettleReceipt { request_id, .. }
         | Request::AuthorityClosure { request_id, .. }
         | Request::Delegate { request_id, .. }
         | Request::CancelDelegation { request_id, .. }
@@ -2162,6 +2172,7 @@ fn requires_durable_locator(request: &Request) -> bool {
             | Request::AuthorityRepin { .. }
             | Request::AuthorityEvidence { .. }
             | Request::AuthoritySettle { .. }
+            | Request::AuthoritySettleReceipt { .. }
             | Request::AuthorityClosure { .. }
             | Request::Delegate { .. }
             | Request::CancelDelegation { .. }
@@ -2185,6 +2196,136 @@ fn durable_locator_refusal() -> serde_json::Value {
     })
 }
 
+/// Re-run current settlement authorization before a STORED settlement outcome
+/// is handed back (correlation replay, or the owner arm of status). Blocking
+/// ledger and policy work, so it runs off the async executor. A denial carries
+/// the gate's own class and nothing is re-executed.
+async fn gate_stored_outcome(
+    state: &Arc<ServerState>,
+    method: &str,
+    outcome: &serde_json::Value,
+    operation_id: Option<String>,
+    actor: &crate::identity::ResolvedActor,
+) -> Result<(), serde_json::Value> {
+    if !matches!(method, "authority.settle" | "authority.closure") {
+        return Ok(());
+    }
+    let config = state.config();
+    let root = state.root.clone();
+    let method = method.to_owned();
+    let outcome = outcome.clone();
+    let caller = sea_forge_core::types::Actor {
+        actor_id: actor.actor_id().to_owned(),
+        role: actor.role().clone(),
+    };
+    tokio::task::spawn_blocking(move || {
+        cep_authority::authorize_stored_outcome(
+            &config,
+            &root,
+            &method,
+            &outcome,
+            operation_id.as_deref(),
+            &caller,
+        )
+    })
+    .await
+    .unwrap_or_else(|_| {
+        Err(serde_json::json!({
+            "error": "settlement authorization check failed",
+            "error_class": "cep_authority_internal",
+            "no_side_effect": true,
+        }))
+    })
+}
+
+/// `request.get_status`: the bound owner (still authorized, for settlement
+/// outcomes) or an audit-granted actor learns the stored status.
+async fn request_status(
+    state: &Arc<ServerState>,
+    verified: Option<&crate::identity::ResolvedActor>,
+    request_id: String,
+) -> serde_json::Value {
+    let denied = || serde_json::json!({"error":"request status access cannot be verified", "error_class":"request_status_denied"});
+    // Byte-for-byte what a never-seen id gets (apart from the id supplied).
+    let unknown = |request_id: &str| {
+        serde_json::json!({
+            "request_id": request_id,
+            "status": "unknown",
+        })
+    };
+    let Some(actor) = verified else {
+        return denied();
+    };
+    let lookup = {
+        let root = state.root.clone();
+        let id = request_id.clone();
+        tokio::task::spawn_blocking(move || request_admission_claim::lookup(&root, &id))
+            .await
+            .unwrap_or_else(|_| {
+                Err(sea_forge_core::errors::ForgeError::Internal(
+                    "request status lookup task failed".into(),
+                ))
+            })
+    };
+    let record = state.correlation.get(&request_id);
+    // Without a readable claim nobody can prove ownership: a never-seen id, a record that predates claims,
+    // and an unreadable claim ledger all get the never-seen reply, so none of them is an existence oracle.
+    let claim = match lookup {
+        Ok(Some(claim)) => claim,
+        Ok(None) => return unknown(&request_id),
+        Err(error) => {
+            tracing::warn!("request status: claim unreadable: {error}");
+            return unknown(&request_id);
+        }
+    };
+    let is_owner = request_admission_claim::AdmissionOwner::from_actor(actor) == claim.owner;
+    if !is_owner {
+        let config = state.config();
+        let id = request_id.clone();
+        let granted = {
+            let actor = actor.clone();
+            tokio::task::spawn_blocking(move || {
+                request_admission_claim::authorize_audit(&config, &actor, &id)
+            })
+            .await
+        };
+        if !matches!(granted, Ok(Ok(true))) {
+            // No grant: indistinguishable from an id that never existed.
+            return unknown(&request_id);
+        }
+    }
+    let Some(record) = record
+        .ok()
+        .flatten()
+        .filter(|record| record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()))
+    else {
+        return denied();
+    };
+    if is_owner {
+        if let Some(outcome) = &record.outcome {
+            if let Err(refused) =
+                gate_stored_outcome(state, &record.method, outcome, None, actor).await
+            {
+                return refused;
+            }
+        }
+    }
+    // A stored settlement receipt is never returned by status: it is the
+    // first-call response, and releasing it later would need the integrity
+    // verification and current authorization to be re-run.
+    let withheld = record.method == "authority.settle_receipt";
+    let mut view = serde_json::json!({
+        "request_id": record.request_id,
+        "status": record.status,
+        "method": record.method,
+        "outcome": if withheld { None } else { record.outcome },
+    });
+    if withheld {
+        view["outcome_withheld"] = serde_json::json!(true);
+    }
+    view
+}
+
 /// Run the portions of a protected request that are lawful only after request
 /// admission. In particular, the first correlation write is here rather than
 /// in the connection loop, because that write is itself durable state.
@@ -2206,8 +2347,91 @@ async fn dispatch_admitted(
         // waits here until the first has durably bound its payload, then sees
         // `Pending` or a terminal replay instead of starting duplicate work.
         let _correlation_admission = state.correlation_admission.lock().await;
+        let Some(actor) = verified_actor.as_ref() else {
+            return serde_json::json!({"error":"request owner could not be authenticated", "error_class":"idempotency_unverifiable", "no_side_effect":true});
+        };
+        let owner = request_admission_claim::AdmissionOwner::from_actor(actor);
+        // F-24: the claim ledger is opened, verified and fsynced, so it runs on
+        // a blocking thread. The correlation lock stays held across the await,
+        // so claim-before-effect ordering is unchanged.
+        let claim = {
+            let root = state.root.clone();
+            let id = request_id.clone();
+            tokio::task::spawn_blocking(move || request_admission_claim::lookup(&root, &id))
+                .await
+                .unwrap_or_else(|_| {
+                    Err(sea_forge_core::errors::ForgeError::Internal(
+                        "request admission lookup task failed".into(),
+                    ))
+                })
+        };
+        let record = state.correlation.get(&request_id);
+        match (claim, record) {
+            (Ok(None), Ok(None)) => {
+                let claim = request_admission_claim::AdmissionClaim {
+                    request_id: request_id.clone(),
+                    payload_hash: hash.clone(),
+                    owner,
+                };
+                let root = state.root.clone();
+                let recorded = tokio::task::spawn_blocking(move || {
+                    request_admission_claim::record(&root, &claim)
+                })
+                .await
+                .unwrap_or_else(|_| {
+                    Err(sea_forge_core::errors::ForgeError::Internal(
+                        "request admission record task failed".into(),
+                    ))
+                });
+                if recorded.is_err() {
+                    return serde_json::json!({"error":"request admission could not be recorded", "error_class":"idempotency_unverifiable"});
+                }
+                #[cfg(all(test, unix))]
+                admission_crash_tests::pause_after_claim();
+            }
+            (Ok(Some(claim)), Ok(Some(record)))
+                if claim.owner == owner
+                    && record.payload_hash.as_deref() == Some(claim.payload_hash.as_str()) => {}
+            (claim, record) => {
+                // Distinct, machine-readable reasons; all fail closed.
+                let reason_code = match (&claim, &record) {
+                    (Ok(Some(_)), Ok(None)) => "orphan_claim",
+                    (Ok(None), Ok(Some(record))) if record.payload_hash.is_some() => {
+                        "legacy_unclaimed"
+                    }
+                    _ => "admission_unverifiable",
+                };
+                return serde_json::json!({"error":"request admission cannot be verified", "error_class":"idempotency_unverifiable", "reason_code": reason_code, "no_side_effect":true});
+            }
+        }
         match state.correlation.check(&request_id, &hash) {
             Ok(crate::sfwp::correlation::DedupeVerdict::Replay(outcome)) => {
+                // A settlement receipt is the first-call response only. A same-id
+                // replay never returns the stored receipt: nothing is re-executed
+                // and nothing is appended.
+                if matches!(request, Request::AuthoritySettleReceipt { .. }) {
+                    return cep_authority::receipt_refusal(
+                        sea_forge_authority::cep::ReceiptRefusal::Replay.code(),
+                        sea_forge_authority::cep::ReceiptRefusal::Replay.message(),
+                        false,
+                    );
+                }
+                // A stored settlement packet is returned only to a caller who
+                // is still authorized to settle. Nothing is re-executed.
+                let (method, operation_id) = match &request {
+                    Request::AuthoritySettle { operation_id, .. } => {
+                        ("authority.settle", Some(operation_id.clone()))
+                    }
+                    Request::AuthorityClosure { operation_id, .. } => {
+                        ("authority.closure", Some(operation_id.clone()))
+                    }
+                    _ => ("", None),
+                };
+                if let Err(denied) =
+                    gate_stored_outcome(&state, method, &outcome, operation_id, actor).await
+                {
+                    return denied;
+                }
                 tracing::info!(
                     request_id,
                     "duplicate request replayed from correlation store"
@@ -2248,13 +2472,19 @@ async fn dispatch_admitted(
                         request_id,
                         "request refused: correlation unwritable: {error}"
                     );
+                    // The claim row is durable but no handler ran: no effect of the
+                    // request happened, yet the id is spent and can never be admitted
+                    // again, so the flag below reports the recorded claim.
                     return serde_json::json!({
                         "error": format!(
                             "the correlation record for `{request_id}` could not be written, so \
                              this request cannot be made idempotent: {error}"
                         ),
                         "error_class": "idempotency_unverifiable",
-                        "no_side_effect": true,
+                        // The claim row is durable: it is the one thing that happened.
+                        "no_side_effect": false,
+                        "reason_code": "request_id_spent",
+                        "new_request_id_required": true,
                     });
                 }
             }
@@ -2269,7 +2499,6 @@ async fn dispatch_admitted(
                          request cannot be shown to be a first attempt: {error}"
                     ),
                     "error_class": "idempotency_unverifiable",
-                    "no_side_effect": true,
                 });
             }
         }
@@ -2566,6 +2795,9 @@ async fn dispatch_bounded(
 /// reuses `is_protected` — the one exhaustive match — so the set of deduped
 /// verbs cannot drift from the set of governed ones.
 fn dedupe_key(request: &Request, raw_line: &str) -> Option<(String, String, String)> {
+    if matches!(request, Request::RequestGetStatus { .. }) {
+        return None;
+    }
     if !crate::identity::is_protected(request) {
         return None;
     }
@@ -3124,6 +3356,7 @@ pub async fn handle_request_as(
                         serde_json::json!({
                             "error": "settlement task failed",
                             "error_class": "cep_authority_internal",
+                            "no_side_effect": false,
                         })
                     })
                 }
@@ -3133,6 +3366,45 @@ pub async fn handle_request_as(
                 }),
             };
             record_outcome(state, request_id.as_deref(), "authority.settle", &response);
+            response
+        }
+        Request::AuthoritySettleReceipt {
+            operation_id,
+            request_id,
+        } => {
+            record_pending(state, request_id.as_deref(), "authority.settle_receipt");
+            let response = match verified {
+                Some(actor) => {
+                    let caller = sea_forge_core::types::Actor {
+                        actor_id: actor.actor_id().to_string(),
+                        role: verified_role.clone(),
+                    };
+                    let config = state.config();
+                    let root = state.root.clone();
+                    tokio::task::spawn_blocking(move || {
+                        cep_authority::settle_receipt(&config, &root, &operation_id, &caller)
+                    })
+                    .await
+                    .unwrap_or_else(|_| {
+                        // The task may have committed before it failed: never claim no effect.
+                        cep_authority::receipt_refusal(
+                            "cep_authority_internal",
+                            "the settlement receipt could not be issued",
+                            true,
+                        )
+                    })
+                }
+                None => serde_json::json!({
+                    "error": "authority_settle_receipt requires a verified socket identity",
+                    "error_class": "identity_required",
+                }),
+            };
+            record_outcome(
+                state,
+                request_id.as_deref(),
+                "authority.settle_receipt",
+                &response,
+            );
             response
         }
         Request::AuthorityClosure {
@@ -3494,21 +3766,9 @@ pub async fn handle_request_as(
             serde_json::to_value(sfwp::get_schema(method.as_deref()))
                 .unwrap_or_else(|_| serde_json::json!({"error": "get_schema serialization failed"}))
         }
-        Request::RequestGetStatus { request_id } => match state.correlation.get(&request_id) {
-            Ok(Some(record)) => serde_json::json!({
-                "request_id": record.request_id,
-                "status": record.status,
-                "method": record.method,
-                "outcome": record.outcome,
-            }),
-            Ok(None) => serde_json::json!({
-                "request_id": request_id,
-                "status": "unknown",
-            }),
-            Err(error) => {
-                serde_json::json!({"error": error.to_string(), "error_class": error.class()})
-            }
-        },
+        Request::RequestGetStatus { request_id } => {
+            request_status(state, verified, request_id).await
+        }
         Request::EventsGetRange {
             from_cursor,
             to_cursor,

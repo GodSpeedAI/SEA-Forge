@@ -45,7 +45,7 @@ func TestGoldenCapture(t *testing.T) {
 	call("system.hello", map[string]any{"verb": "system_hello", "protocol_version": "1", "client": "golden-capture"})
 	call("readiness.get", map[string]any{"verb": "readiness_get"})
 	call("identity.get", map[string]any{"verb": "identity_get"})
-	call("request.get_status.unknown", map[string]any{"verb": "request_get_status", "request_id": "req-never-issued"})
+	call("request.get_status.unknown", map[string]any{"verb": "request_get_status", "request_id": "req-never-issued", "actor": map[string]any{"actor_id": "operator_local", "role": "operator"}})
 	call("case.entry_options", map[string]any{"verb": "case_entry_options"})
 
 	actor := map[string]any{"actor_id": "operator_local", "role": "operator"}
@@ -83,7 +83,7 @@ func TestGoldenCapture(t *testing.T) {
 		t.Fatalf("commit response: %v", err)
 	}
 	caseID := commit.CaseID
-	call("request.get_status.completed", map[string]any{"verb": "request_get_status", "request_id": "req-golden-commit-1"})
+	call("request.get_status.completed", map[string]any{"verb": "request_get_status", "request_id": "req-golden-commit-1", "actor": map[string]any{"actor_id": "operator_local", "role": "operator"}})
 
 	// Navigation views.
 	call("case.list", map[string]any{"verb": "case_list"})

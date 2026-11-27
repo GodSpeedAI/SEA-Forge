@@ -430,6 +430,125 @@ pub fn submit_evidence(
     })
 }
 
+/// Byte length of the authority ledger's entries file. The ledger is append-only, so a longer file
+/// means a durable row was appended, whatever the call then returned.
+fn ledger_bytes(root: &Path) -> Option<u64> {
+    let stream = sea_forge_ledger::LedgerStream::open(
+        root,
+        sea_forge_authority::cep::LEDGER_ID,
+        "sea-forge-cep-authority",
+    )
+    .ok()?;
+    match std::fs::metadata(stream.entries_path()) {
+        Ok(meta) => Some(meta.len()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Some(0),
+        Err(_) => None,
+    }
+}
+
+/// A receipt refusal: a stable code and a fixed public sentence. Stored payload text, caller-chosen ids
+/// and upstream diagnostics never appear in it. `no_side_effect` is true only when no row was appended.
+pub(crate) fn receipt_refusal(error_class: &str, message: &str, appended: bool) -> Value {
+    json!({
+        "error": message,
+        "error_class": error_class,
+        "reason_code": error_class,
+        "no_side_effect": !appended,
+    })
+}
+
+/// The wire form of a verified receipt: exactly the allowlisted keys.
+fn receipt_json(r: &sea_forge_authority::cep::SettlementReceipt) -> Value {
+    json!({
+        "representation": "verified_projection",
+        "operation_id": r.operation_id,
+        "subject_refs": r.subject_refs,
+        "world_ref": r.world_ref,
+        "authority_decision_ref": r.authority_decision_ref,
+        "issuer": r.issuer,
+        "status": r.status,
+        "final": r.final_status,
+        "ledger_id": r.ledger_id,
+        "ledger_entry": r.ledger_entry,
+        "payload_hash": r.payload_hash,
+        "envelope_id": r.envelope_id,
+    })
+}
+
+/// The first-call minimal settlement receipt (`authority_settle_receipt` verb).
+pub fn settle_receipt(
+    config: &ServerConfig,
+    root: &Path,
+    operation_id: &str,
+    caller: &Actor,
+) -> Value {
+    let before = ledger_bytes(root);
+    let response = with_service(config, root, |service| {
+        let required = config
+            .cep_authority
+            .realitytrace
+            .as_ref()
+            .filter(|rt| rt.require_corroboration)
+            .map(|_| "realitytrace");
+        let source = config
+            .cep_authority
+            .realitytrace
+            .clone()
+            .map(crate::realitytrace_source::RealityTraceSource::new);
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            let (class, message) = receipt_error(&e);
+            return receipt_refusal(class, message, false);
+        }
+        let outcome = match service.asserts_obligation(operation_id) {
+            Ok(true) => match &source {
+                Some(source) => service.settle_obligation_for_receipt(operation_id, caller, source),
+                None => Err(sea_forge_authority::cep::CepAuthorityError::Evidence(
+                    String::new(),
+                )),
+            },
+            Ok(false) => service.settle_for_receipt(operation_id, caller, required),
+            Err(e) => Err(e),
+        };
+        match outcome {
+            Ok(receipt) => json!({"ok": true, "receipt": receipt_json(&receipt)}),
+            Err(e) => {
+                let (class, message) = receipt_error(&e);
+                receipt_refusal(class, message, false)
+            }
+        }
+    });
+    if response.get("error").is_some() {
+        // Truthful by construction: the flag follows the ledger, not the call's own bookkeeping.
+        let appended = match (before, ledger_bytes(root)) {
+            (Some(b), Some(a)) => a != b,
+            _ => true,
+        };
+        let mut response = response;
+        response["no_side_effect"] = json!(!appended);
+        return response;
+    }
+    response
+}
+
+/// Stable class and fixed public sentence for a receipt refusal. Never the error's own Display text:
+/// that can carry stored payload text, caller-chosen ids or upstream diagnostics.
+fn receipt_error(e: &sea_forge_authority::cep::CepAuthorityError) -> (&'static str, &'static str) {
+    use sea_forge_authority::cep::{CepAuthorityError as E, ReceiptRefusal};
+    match e {
+        E::Receipt(r) => (r.code(), r.message()),
+        // The ledger itself refused to append to, or read from, a damaged history.
+        E::Internal(m) if m.contains("ledger_integrity_error") => (
+            ReceiptRefusal::IntegrityFailed.code(),
+            ReceiptRefusal::IntegrityFailed.message(),
+        ),
+        E::SettlementPending(_) => (e.class(), "settlement is not yet decidable"),
+        E::Evidence(_) | E::Approval(_) => {
+            (e.class(), "the settlement receipt request was refused")
+        }
+        _ => (e.class(), "the settlement receipt could not be issued"),
+    }
+}
+
 /// Settle an operation from its committed evidence (`authority_settle` verb).
 pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &Actor) -> Value {
     with_service(config, root, |service| {
@@ -444,6 +563,11 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             .realitytrace
             .clone()
             .map(crate::realitytrace_source::RealityTraceSource::new);
+        // Settlement authority first, so an unauthorized caller gets the uniform refusal whatever the
+        // operation or the RealityTrace configuration looks like.
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            return refusal(e.class(), e);
+        }
         // An operation whose allow decision asserted a modality is settled from RealityTrace's ledger.
         let outcome = match service.asserts_obligation(operation_id) {
             Ok(true) => match &source {
@@ -458,6 +582,7 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
         match outcome {
             Ok(done) => json!({
                 "ok": true,
+                "operation_id": operation_id,
                 "status": done.status,
                 "final": done.final_status,
                 "replayed": done.replayed,
@@ -467,6 +592,42 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             Err(e) => refusal(e.class(), e),
         }
     })
+}
+
+/// Whether `caller` may still be handed a stored outcome of `method`. Only a successful settlement or
+/// closure outcome carries a settlement packet; anything else is not gated. Executes nothing: a refusal here
+/// leaves the stored outcome and every ledger untouched. `operation_id` comes from the stored outcome (or the
+/// replayed request); its absence on a gated outcome is refused, never assumed.
+pub fn authorize_stored_outcome(
+    config: &ServerConfig,
+    root: &Path,
+    method: &str,
+    outcome: &Value,
+    operation_id: Option<&str>,
+    caller: &Actor,
+) -> Result<(), Value> {
+    if !matches!(method, "authority.settle" | "authority.closure")
+        || outcome.get("ok") != Some(&Value::Bool(true))
+    {
+        return Ok(());
+    }
+    let Some(operation_id) = operation_id.or_else(|| outcome["operation_id"].as_str()) else {
+        return Err(refusal(
+            "cep_evidence_refused",
+            "the stored settlement outcome does not name its operation, so settlement authority cannot be re-checked",
+        ));
+    };
+    let verdict = with_service(config, root, |service| {
+        match service.authorize_settlement_replay(operation_id, caller) {
+            Ok(()) => json!({"ok": true}),
+            Err(e) => refusal(e.class(), e),
+        }
+    });
+    if verdict.get("error").is_some() {
+        Err(verdict)
+    } else {
+        Ok(())
+    }
 }
 
 /// Record the closure of an obligation's window (`authority_closure` verb). SEA-Forge reads RealityTrace's
@@ -480,6 +641,10 @@ pub fn closure(
     caller: &Actor,
 ) -> Value {
     with_service(config, root, |service| {
+        // Settlement authority before anything about this cell's configuration is revealed.
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            return refusal(e.class(), e);
+        }
         let Some(rt) = config.cep_authority.realitytrace.clone() else {
             return json!({
                 "error": "obligation closure needs RealityTrace configured (cep_authority.realitytrace)",
@@ -513,6 +678,35 @@ pub fn closure(
 mod tests {
     use super::*;
     use sea_forge_authority::cep::CepAuthorityError;
+
+    // Receipt behaviour is tested against the real ledger in `receipt_tests` below.
+
+    #[test]
+    fn receipt_errors_never_echo_stored_or_upstream_text() {
+        use sea_forge_authority::cep::{CepAuthorityError as E, ReceiptRefusal};
+        for error in [
+            E::Evidence("stored-modality-marker upstream-divergence-marker".into()),
+            E::Approval("stored-modality-marker".into()),
+            E::Internal("stored-modality-marker".into()),
+            E::Malformed("stored-modality-marker"),
+            E::World("stored-modality-marker".into()),
+        ] {
+            let (class, message) = receipt_error(&error);
+            let wire = receipt_refusal(class, message, false).to_string();
+            assert!(!wire.contains("marker"), "{wire}");
+        }
+        let (class, _) = receipt_error(&E::Internal("ledger_integrity_error: chain".into()));
+        assert_eq!(class, ReceiptRefusal::IntegrityFailed.code());
+        for r in [
+            ReceiptRefusal::Replay,
+            ReceiptRefusal::NonFinal,
+            ReceiptRefusal::IntegrityFailed,
+            ReceiptRefusal::ReferenceMismatch,
+        ] {
+            assert!(r.code().starts_with("receipt_"));
+            assert!(!r.message().is_empty());
+        }
+    }
 
     #[test]
     fn settlement_pending_is_a_no_side_effect_retry_class_not_an_evidence_refusal() {

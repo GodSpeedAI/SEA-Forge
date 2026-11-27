@@ -561,7 +561,7 @@ func (c *Client) recoverOutcome(ctx context.Context, req *Request) (*Response, e
 			return nil, apperr.Wrap(apperr.KindUnavailable, "", "recover", "recovery budget exhausted before the outcome of request "+
 				req.RequestID()+" could be resolved (do not re-send it; query request.get_status with its id)", err)
 		}
-		resp, err := c.Do(ctx, NewRequestGetStatus(req.RequestID()))
+		resp, err := c.Do(ctx, NewRequestGetStatus(req.RequestID(), governanceOfRequest(req)))
 		if err != nil {
 			// Still unreachable (or busy): back off and keep the budget.
 			if apperr.KindOf(err) == apperr.KindUnavailable {
@@ -623,8 +623,8 @@ func (c *Client) recoverOutcome(ctx context.Context, req *Request) (*Response, e
 
 // RequestStatus resolves a correlated request's outcome on demand (the explicit recovery entry
 // point, mirroring sfwp_request_status in the reference bridge).
-func (c *Client) RequestStatus(ctx context.Context, requestID string) (RequestStatusView, error) {
-	resp, err := c.Do(ctx, NewRequestGetStatus(requestID))
+func (c *Client) RequestStatus(ctx context.Context, requestID string, g Governance) (RequestStatusView, error) {
+	resp, err := c.Do(ctx, NewRequestGetStatus(requestID, g))
 	if err != nil {
 		return RequestStatusView{}, err
 	}

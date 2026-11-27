@@ -50,13 +50,21 @@ async fn boot_on(
     root: &Path,
     endpoint: Option<AgentEndpointConfig>,
 ) -> (PathBuf, tokio::task::JoinHandle<()>) {
+    boot_on_as(root, endpoint, "operator_local").await
+}
+
+async fn boot_on_as(
+    root: &Path,
+    endpoint: Option<AgentEndpointConfig>,
+    actor_id: &str,
+) -> (PathBuf, tokio::task::JoinHandle<()>) {
     let socket = root.join("sfwp.sock");
     let agent = AgentConfig {
         endpoints: endpoint.into_iter().collect(),
         ..AgentConfig::default()
     };
     let config = ServerConfig {
-        identity: sea_forge_server::identity::IdentityBindings::local_operator("operator_local"),
+        identity: sea_forge_server::identity::IdentityBindings::local_operator(actor_id),
         socket_path: socket.clone(),
         root: root.to_path_buf(),
         agent,
@@ -86,6 +94,29 @@ async fn boot_on(
 fn cases_committed(root: &Path) -> usize {
     std::fs::read_dir(root.join("cases"))
         .map(|dir| dir.count())
+        .unwrap_or(0)
+}
+
+/// Entry counts of every request-admission claim ledger, by ledger id.
+fn claim_ledger_lengths(root: &Path) -> std::collections::BTreeMap<String, usize> {
+    let mut lengths = std::collections::BTreeMap::new();
+    let Ok(dir) = std::fs::read_dir(root.join("ledgers")) else {
+        return lengths;
+    };
+    for entry in dir {
+        let id = entry.unwrap().file_name().to_string_lossy().into_owned();
+        if id.starts_with("request-admission-") {
+            let ledger = sea_forge_ledger::LedgerStream::open(root, id.clone(), "test").unwrap();
+            lengths.insert(id, ledger.read_entries().unwrap().len());
+        }
+    }
+    lengths
+}
+
+fn audit_decisions(root: &Path) -> usize {
+    sea_forge_ledger::LedgerStream::open(root, "request-status-audit", "test")
+        .and_then(|ledger| ledger.read_entries())
+        .map(|entries| entries.len())
         .unwrap_or(0)
 }
 
@@ -423,6 +454,148 @@ async fn precondition_case_ref_mismatch_does_not_leak_other_case_fingerprint() {
     );
 }
 
+#[tokio::test]
+async fn request_status_requires_owner_or_exact_audit_authority_after_restart() {
+    let (endpoint, stub) = stub_endpoint(
+        r#"{"choices":[{"message":{"content":"step complete"}}],"usage":{"total_tokens":1}}"#,
+    );
+    let root = tempfile::tempdir().unwrap();
+    let (socket, server) = boot_on(root.path(), Some(endpoint.clone())).await;
+    let mut owner = Client::connect(&socket).await;
+    let original = success_submit(root.path(), Some("audit-target"));
+    let submitted = owner.call(original.clone()).await;
+    assert!(submitted.get("error").is_none(), "{submitted}");
+    let unauthenticated = owner
+        .call(json!({"verb":"request_get_status", "request_id":"audit-target"}))
+        .await;
+    assert!(unauthenticated.get("error").is_some());
+    let own = owner.call(json!({"verb":"request_get_status", "actor":{"actor_id":"operator_local", "role":"operator"}, "request_id":"audit-target"})).await;
+    assert_eq!(own["status"], "completed");
+    let orphan = success_submit(root.path(), Some("orphan-target"));
+    assert!(owner.call(orphan.clone()).await.get("error").is_none());
+    std::fs::remove_file(root.path().join("requests/orphan-target.json")).unwrap();
+    let case_count = cases_committed(root.path());
+    let claims = claim_ledger_lengths(root.path());
+    assert_eq!(claims.len(), 2);
+    assert!(claims.values().all(|len| *len == 1), "{claims:?}");
+    let refused = owner.call(orphan).await;
+    assert_eq!(refused["error_class"], "idempotency_unverifiable");
+    assert_eq!(refused["reason_code"], "orphan_claim", "{refused}");
+    assert_eq!(cases_committed(root.path()), case_count);
+    assert_eq!(claim_ledger_lengths(root.path()), claims);
+    drop(owner);
+    server.abort();
+    let _ = server.await;
+
+    let (socket, server) = boot_on_as(root.path(), Some(endpoint), "auditor").await;
+    let mut auditor = Client::connect(&socket).await;
+    let mut foreign_retry = original;
+    foreign_retry["actor"]["actor_id"] = json!("auditor");
+    foreign_retry["entity"] = json!("auditor");
+    assert_eq!(
+        auditor.call(foreign_retry).await["error_class"],
+        "idempotency_unverifiable"
+    );
+    let status = || json!({"verb":"request_get_status", "actor":{"actor_id":"auditor", "role":"operator"}, "request_id":"audit-target"});
+    // A non-owner without the grant learns nothing: the reply for an id that
+    // exists is the reply for an id that never did.
+    let existing = auditor.call(status()).await;
+    assert_eq!(existing["status"], "unknown", "{existing}");
+    let never = auditor
+        .call(json!({"verb":"request_get_status", "actor":{"actor_id":"auditor", "role":"operator"}, "request_id":"never-seen-id"}))
+        .await;
+    let mut normalized = never.clone();
+    normalized["request_id"] = json!("audit-target");
+    assert_eq!(existing.to_string(), normalized.to_string());
+    let orphan_probe = auditor
+        .call(json!({"verb":"request_get_status", "actor":{"actor_id":"auditor", "role":"operator"}, "request_id":"orphan-target"}))
+        .await;
+    let mut orphan_normalized = orphan_probe.clone();
+    orphan_normalized["request_id"] = json!("audit-target");
+    assert_eq!(existing.to_string(), orphan_normalized.to_string());
+    std::fs::write(root.path().join("sea-forge-policy.yaml"), "version: '0.1'\nrules:\n  - name: audit\n    verdict: allow\n    actor_role: operator\n    operation_kind: request_status_audit\n    resources: [audit-target]\n").unwrap();
+    assert_eq!(auditor.call(status()).await["status"], "completed");
+    server.abort();
+    stub.abort();
+}
+
+#[tokio::test]
+async fn non_owner_status_polls_do_not_append_audit_decisions_unboundedly() {
+    let (endpoint, stub) = stub_endpoint(
+        r#"{"choices":[{"message":{"content":"step complete"}}],"usage":{"total_tokens":1}}"#,
+    );
+    let root = tempfile::tempdir().unwrap();
+    let (socket, server) = boot_on(root.path(), Some(endpoint.clone())).await;
+    let mut owner = Client::connect(&socket).await;
+    let submitted = owner
+        .call(success_submit(root.path(), Some("poll-target")))
+        .await;
+    assert!(submitted.get("error").is_none(), "{submitted}");
+    drop(owner);
+    server.abort();
+    let _ = server.await;
+
+    let (socket, server) = boot_on_as(root.path(), Some(endpoint), "auditor").await;
+    std::fs::write(root.path().join("sea-forge-policy.yaml"), "version: '0.1'\nrules:\n  - name: audit\n    verdict: allow\n    actor_role: operator\n    operation_kind: request_status_audit\n    resources: [some-other-id]\n").unwrap();
+    let mut auditor = Client::connect(&socket).await;
+    for _ in 0..6 {
+        let reply = auditor
+            .call(json!({"verb":"request_get_status", "actor":{"actor_id":"auditor", "role":"operator"}, "request_id":"poll-target"}))
+            .await;
+        assert_eq!(reply["status"], "unknown", "{reply}");
+    }
+    assert_eq!(audit_decisions(root.path()), 1);
+    server.abort();
+    stub.abort();
+}
+
+#[tokio::test]
+async fn a_legacy_record_without_a_claim_is_refused_with_a_distinct_reason() {
+    let (endpoint, stub) = stub_endpoint(
+        r#"{"choices":[{"message":{"content":"step complete"}}],"usage":{"total_tokens":1}}"#,
+    );
+    let root = tempfile::tempdir().unwrap();
+    let (socket, server) = boot_on(root.path(), Some(endpoint)).await;
+    let mut client = Client::connect(&socket).await;
+    let original = success_submit(root.path(), Some("legacy-target"));
+    assert!(client.call(original.clone()).await.get("error").is_none());
+    // The pre-upgrade shape: a hashed correlation record and no claim ledger.
+    for id in claim_ledger_lengths(root.path()).into_keys() {
+        std::fs::remove_dir_all(root.path().join("ledgers").join(id)).unwrap();
+    }
+    let case_count = cases_committed(root.path());
+    let refused = client.call(original).await;
+    assert_eq!(
+        refused["error_class"], "idempotency_unverifiable",
+        "{refused}"
+    );
+    assert_eq!(refused["reason_code"], "legacy_unclaimed", "{refused}");
+    assert_eq!(refused["no_side_effect"], true, "{refused}");
+    assert_eq!(cases_committed(root.path()), case_count);
+    assert!(claim_ledger_lengths(root.path()).is_empty());
+    // Status for that record is the never-seen reply: nobody can prove ownership, so nobody learns it exists.
+    let status = |id: &str| json!({"verb":"request_get_status", "actor":{"actor_id":"operator_local", "role":"operator"}, "request_id": id});
+    let legacy = client.call(status("legacy-target")).await;
+    assert_eq!(legacy["status"], "unknown", "{legacy}");
+    let never = client.call(status("legacy-never")).await;
+    assert_eq!(never["status"], "unknown", "{never}");
+    assert_eq!(legacy["outcome"], never["outcome"]);
+    assert_eq!(
+        legacy.as_object().unwrap().len(),
+        never.as_object().unwrap().len()
+    );
+    // An unreadable claim ledger is not an oracle either.
+    let ambiguous = format!(
+        "request-admission-{}",
+        hex::encode(<sha2::Sha256 as sha2::Digest>::digest(b"ambiguous-id"))
+    );
+    std::fs::create_dir_all(root.path().join("ledgers").join(ambiguous)).unwrap();
+    let broken = client.call(status("ambiguous-id")).await;
+    assert_eq!(broken["status"], "unknown", "{broken}");
+    server.abort();
+    stub.abort();
+}
+
 /// The single most important scenario: hello -> subscribe -> command ->
 /// kill connection mid-flight -> reconnect -> request.get_status recovers ->
 /// resubscribe from cursor -> induce a gap while disconnected ->
@@ -461,7 +634,7 @@ async fn end_to_end_correlation_reconnect_and_gap_recovery() {
     let mut status = json!(null);
     for _ in 0..200 {
         status = c2
-            .call(json!({"verb": "request_get_status", "request_id": request_id}))
+            .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
             .await;
         let s = status["status"].as_str().unwrap_or("");
         if s == "completed" || s == "failed" {
@@ -483,7 +656,7 @@ async fn end_to_end_correlation_reconnect_and_gap_recovery() {
 
     // Unknown request id recovers as "unknown", not an error.
     let unknown = c2
-        .call(json!({"verb": "request_get_status", "request_id": "never-seen"}))
+        .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": "never-seen"}))
         .await;
     assert_eq!(unknown["status"], "unknown");
 
@@ -1075,7 +1248,7 @@ async fn a_terminal_outcome_and_its_dedupe_key_survive_a_restart() {
     let mut settled = false;
     for _ in 0..200 {
         let status = watcher
-            .call(json!({"verb": "request_get_status", "request_id": request_id}))
+            .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
             .await;
         if matches!(
             status["status"].as_str(),
@@ -1101,7 +1274,7 @@ async fn a_terminal_outcome_and_its_dedupe_key_survive_a_restart() {
     let mut after = Client::connect(&socket).await;
 
     let status = after
-        .call(json!({"verb": "request_get_status", "request_id": request_id}))
+        .call(json!({"verb": "request_get_status", "actor": {"actor_id": "operator_local", "role": "operator"}, "request_id": request_id}))
         .await;
     assert_eq!(
         status["status"], "completed",

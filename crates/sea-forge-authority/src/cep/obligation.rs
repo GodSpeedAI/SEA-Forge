@@ -162,7 +162,7 @@ fn execution_floor(
     entries
         .iter()
         .filter(|e| {
-            e.record_kind == "evidence_packet" && e.subject_refs.iter().any(|s| s == operation_id)
+            e.record_kind == "evidence_packet" && super::operation_subject(e) == Some(operation_id)
         })
         .filter_map(|e| parse_time(&e.committed_at))
         .min()
@@ -344,12 +344,17 @@ impl CepAuthorityService<'_> {
             ));
         }
         let ledger = self.ledger()?;
+        // Settlement authority first: an unauthorized caller must not learn whether the operation was
+        // decided, asserted an obligation, or still has its window open.
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)?;
         let entries = ledger.read_entries()?;
         let (_, obligation) = self.obligation_for(&entries, operation_id)?;
         let key = format!("{CLOSURE_KEY}{operation_id}");
         if let Some(done) = entries.iter().find(|e| {
             e.record_kind == CLOSURE_KIND && e.idempotency_key.as_deref() == Some(key.as_str())
         }) {
+            // A stored closure is released only to a caller still authorized to settle.
+            self.authorize_settlement_replay(operation_id, caller)?;
             return Ok(closure_ack(done, &obligation, true));
         }
         if Utc::now() < obligation.closes_at {
@@ -415,7 +420,18 @@ impl CepAuthorityService<'_> {
         caller: &Actor,
         source: &dyn ObligationSource,
     ) -> Result<SettlementOutcome, CepAuthorityError> {
+        self.settle_obligation_inner(operation_id, caller, source, false)
+    }
+
+    pub(super) fn settle_obligation_inner(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+        source: &dyn ObligationSource,
+        for_receipt: bool,
+    ) -> Result<SettlementOutcome, CepAuthorityError> {
         let ledger = self.ledger()?;
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)?;
         let entries = ledger.read_entries()?;
         let (allowed, obligation) = self.obligation_for(&entries, operation_id)?;
         let final_key = format!("{SETTLE_SUFFIX_FINAL}{operation_id}");
@@ -423,6 +439,14 @@ impl CepAuthorityService<'_> {
             .iter()
             .find(|e| e.idempotency_key.as_deref() == Some(final_key.as_str()))
         {
+            let ingress = VerifiedSettlementIngress::verified(
+                SettlementIngress::ObligationClosure,
+                SettlementTransport::None,
+                None,
+                caller,
+                vec![format!("operation:{operation_id}")],
+            )?;
+            self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
             return Ok(SettlementOutcome {
                 status: settlement_status_of(&done.payload),
                 final_status: true,
@@ -456,7 +480,9 @@ impl CepAuthorityService<'_> {
             caller,
             vec![format!("operation:{operation_id}")],
         )?;
-        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
+        if for_receipt {
+            self.receipt_preflight(operation_id)?;
+        }
         let rows = source
             .ledger_rows(&obligation.threshold_ledger)
             .map_err(|why| {
@@ -595,6 +621,16 @@ impl CepAuthorityService<'_> {
                 },
             },
         });
+        if for_receipt {
+            // Refuse, before anything commits, a settlement that could never be projected (an
+            // inconsistent run set judges "unsettled"; a malformed reference or lineage).
+            super::packet_receipt_fields(&envelope, operation_id, &allowed)
+                .map_err(CepAuthorityError::Receipt)?;
+        }
+        // The allow is recorded here, immediately before the settlement it authorizes, so a request
+        // refused earlier (not settleable yet, unprojectable receipt) appends nothing. A denial was
+        // already recorded by the first gate evaluation.
+        self.gate_settlement_declaration(&ledger, operation_id, &ingress)?;
         let subjects = vec!["cognate".to_string(), operation_id.to_string()];
         let committed = match ledger.commit_typed_new(
             "settlement_packet",

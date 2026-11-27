@@ -58,6 +58,7 @@ Shared server state across all active client connections:
 * `request_admission: Arc<Semaphore>`: Concurrency permit pool equal to `max_concurrent_runs`.
 * `request_admission_waiters: Arc<Semaphore>`: 8-slot waiting room for pending permits.
 * `correlation: RequestCorrelationStore`: Durable store answering `request.get_status` and preventing duplicate execution.
+  * `request.get_status` is an identity-protected read: callers send the same `actor` (and `on_behalf_of`) claim as the original request. Only the admitting owner, or an actor holding an exact `request_status_audit` grant, sees a record; any other caller receives the reply for an id that was never seen. A stored settlement outcome is returned to its owner only while that owner is still authorized to settle.
 * `correlation_admission: Mutex<()>`: Mutex serializing check-and-bind operations per request ID.
 * `events_ledger: Arc<LedgerStream>`: Single durable events ledger providing the monotonic ULID event cursor.
 
