@@ -1,0 +1,39 @@
+{
+  "schema": "sea-forge.qualification/1",
+  "version": "0.5.0",
+  "platform": "linux-arm64-jetson",
+  "evidence": "real-hardware",
+  "host": "NVIDIA Jetson AGX Orin Developer Kit, L4T R36.5, Ubuntu 22.04",
+  "runner_image": "jetson-local",
+  "artifacts": [
+    {
+      "name": "sea-forge_0.5.0_arm64.deb",
+      "sha256": "40926fc35c4c70608370226d616382f2020b96a122b61244050dfe11a53d7004"
+    }
+  ],
+  "tarball_smoke": "PASS (operator-free scratch run: sea-forge-0.5.0-aarch64-unknown-linux-gnu.tar.gz, checksums OK, smoke-cell.sh PASS)",
+  "provenance": "PASS (gh attestation verify --repo GodSpeedAI/SEA-Forge on the deb and the aarch64 tarball)",
+  "steps": [
+    {
+      "status": "PASS",
+      "detail": "checksum 40926fc35c4c70608370226d616382f2020b96a122b61244050dfe11a53d7004"
+    },
+    {
+      "status": "INFO",
+      "detail": "installed before: sea-forge 0.3.0"
+    },
+    {
+      "status": "PASS",
+      "detail": "deb_upgrade 0.3.0 -> 0.5.0"
+    },
+    {
+      "status": "PASS",
+      "detail": "deb_installed_smoke (cell + daemon socket)"
+    },
+    {
+      "status": "PASS",
+      "detail": "restore 0.3.0"
+    }
+  ],
+  "status": "QUALIFIED"
+}

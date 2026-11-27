@@ -1,0 +1,134 @@
+diff --git a/docs/reference/terminology.md b/docs/reference/terminology.md
+--- a/docs/reference/terminology.md
++++ b/docs/reference/terminology.md
+@@ -1,68 +1,79 @@
+-# Reference: Domain Terminology & Glossary
++# SEA-Forge Governance and Settlement
+ 
+-> **The canonical vocabulary of SEA Forge: precise definitions, domain relationships, and overloaded word disambiguation.**
++SEA-Forge governs consequential operations and records their authority, execution, evidence, and settlement. Its case model organizes governed work around an intent and a case plan.
+ 
+----
++## Language
+ 
+-## Master Glossary
++### Case management
+ 
+-### ActionGrant
+-* **What it is:** A non-cloneable, non-serializable move-only Rust struct (`crates/sea-forge-authority/src/lib.rs`) minted by `PolicyAuthorityEngine` upon an `Allow` decision. It acts as an unforgeable token proving that a specific action was pre-authorized, binding the canonical executable path, workspace boundaries, sandbox class, timeout, environment keys, and a boundary map. The current `0.1` policy schema does not accept a `network` boundary dimension, so grants start with a denied network posture.
+-* **What it is not:** It is not a serializable capability string, an OAuth token, or an ambient permission flag. It cannot be duplicated or reused across runs.
++**Managed Case**:
++A governed unit of work founded on an intent and carried out through a case plan. It can contain multiple execution episodes.
++_Avoid_: Case (in cross-product discussion)
+ 
+-### Cell (`SeaCell`)
+-* **What it is:** The fundamental unit of local deployment and governance. Defined by a single root directory (`SEA_FORGE_ROOT`) containing one Unix domain socket (`server.sock`), one lockfile (`server.sock.lock`), and all case, run, ledger, and capability records.
+-* **What it is not:** It is not a Docker container, Kubernetes pod, or virtual machine.
++**Case Plan**:
++The authority-checkable structure of a managed case, including its plan items and the conditions under which their work proceeds.
+ 
+-### Episode
+-* **What it is:** A single, isolated execution lifecycle instance (`run_<timestamp>_<hex>`) of one plan item or task. Every episode produces the complete suite of six governance records (`plan.json`, `authority.json`, `trace.jsonl`, `evidence.jsonl`, `settlement.json`, `semantic-envelope.json`).
+-* **What it is not:** It is not an informal log session or an unrecorded command invocation.
++**Plan Item**:
++A unit of planned work within a managed case that can become eligible for execution and has its own outcome conditions.
+ 
+-### Case & CasePlan
+-* **What it is:** A CMMN-subset (Case Management Model and Notation) workflow instance (`case_<timestamp>_<hex>`) orchestrating multiple plan items across stages and milestones using event-driven sentry triggers.
+-* **What it is not:** It is not a BPMN process flow or a static DAG script.
++**Sentry**:
++An event and optional condition that together govern a plan item's eligibility for a transition.
+ 
+-### Intent
+-* **What it is:** Structured, unverified data expressing an operator's desired transformation (`intent_id`, `summary`, `actor_id`).
+-* **What it is not:** It is not an executable shell command or script string.
++**Intent**:
++An attributed statement of the transformation an operator seeks.
+ 
+-### Pre-Mint Identity
+-* **What it is:** A content-derived cryptographic identifier formatted as `ifl:hash:<sha256>` assigned to every generated work product at evidence capture time before external attestation or capitalization.
+-* **What it is not:** It is not a public blockchain transaction ID or an external UUID.
++**Execution Episode**:
++One execution of a plan item or task within SEA-Forge's governance lifecycle.
+ 
+-### Sentry
+-* **What it is:** A reactive transition trigger (`on: {source, event}, if: predicate`) that determines when a case plan item transitions from `Enabled` to `Activated` or `Terminated`.
+-* **What it is not:** It is not a monitoring alert or error tracking tool (like Sentry.io).
++**Cell**:
++A local unit of SEA-Forge deployment and governance with its own operational state.
+ 
+-### Settlement
+-* **What it is:** The independent evaluation of run evidence against pre-committed `SettlementCriteria`, producing a `SettlementEvent` with an explicit `basis` array.
+-* **Disambiguation (The Two Senses of "Settlement"):**
+-  * **In SEA Forge:** Settlement means evaluating whether a specific run's *declared acceptance criteria* were satisfied by the evidence it produced (equivalent to SWE_SEED work-contract qualification).
+-  * **In GodSpeed-Agent:** Settlement refers to "developmental settlement" (classifying long-term autonomous learning progress over repeated cycles).
+-  * *Note:* SEA Forge does not perform developmental settlement; it performs operational settlement.
++### Authority
+ 
+-### Settlement Basis
+-* **What it is:** An array of explicit, machine-readable string tokens (e.g. `["authority_allow", "exit_zero", "required_artifact_present:model.sea", "stdout_match"]`) recording the exact factual proof supporting acceptance or rejection.
+-* **What it is not:** It is not a natural language narration or a subjective log message.
++**Actor**:
++The human, agent, service, or system represented as requesting or performing an operation.
+ 
+-### SFWP (SEA Forge Wire Protocol)
+-* **What it is:** The versioned (v1) NDJSON protocol operating over local Unix domain sockets between `sea-forge-server` and clients (such as client adapters).
+-* **What it is not:** It is not a remote REST, gRPC, or WebSocket API.
++**Principal**:
++The identity resolved by the authority boundary for evaluating an actor's standing.
+ 
+-### `jcs-nfc-v1`
+-* **What it is:** SEA Forge's canonical JSON profile: object keys sorted lexicographically by raw UTF-8 bytes and string values deeply normalized to Unicode Normalization Form C (NFC). Object keys are intentionally not NFC-normalized.
+-* **What it is not:** It is not RFC 8785 JCS (which uses UTF-16 key sorting and ECMAScript float canonicalization).
++**Authority Decision**:
++A ruling on whether a particular actor may perform a specified operation under the applicable policy and constraints.
+ 
+----
++**Action Grant**:
++A single-use authorization for a specific action within its approved limits.
+ 
+-## Cross-Cutting Concepts Summary
++### Evidence and settlement
+ 
+-| Term | Category | Defined In | Primary Role |
+-|---|---|---|---|
+-| `ActionGrant` | Authority | `sea-forge-authority` | Single-use token enabling sandboxed execution |
+-| `SettlementClaim` | Settlement | `sea-forge-core` | Complete bundle of criteria, evidence, and exit status |
+-| `LedgerStream` | Integrity | `sea-forge-ledger` | Append-only ULID-ordered stream with MMR |
+-| `NetworkPosture` | Sandboxing | `sea-forge-sandbox` | Fail-closed network permission boundary |
+-| `DomainModelRef` | Semantics | `sea-forge-domainforge` | Hash-pinned certificate of a `.sea` model |
+-| `ManagerIteration` | Orchestration | `sea-forge-thoth` | Auditable decision cycle of the ADLC manager loop |
+-| `EventFrame` | Transport | `sea-forge-server` | Live event broadcast envelope over SFWP |
++**Evidence Record**:
++An attributable account of an artifact, authority decision, or execution result that can be considered in evaluating a claim.
++
++**Pre-Mint Identity**:
++The provisional identity of an evidenced work product and its attribution before external attestation or capitalization.
++
++**Settlement Criteria**:
++Conditions declared before execution against which the claimed outcome will be judged.
++
++**Settlement Claim**:
++The proposed outcome and supporting facts submitted for judgment under declared settlement criteria.
++
++**Settlement Evaluation**:
++The kernel's finding on whether a claim meets predeclared criteria, with the basis for the finding.
++
++**Settlement Basis**:
++The contributing facts and checks that explain a settlement evaluation or ruling.
++
++**Settlement Declaration**:
++A settlement authority's attributable ruling on a specific claim and its evidentiary basis, with stated standing and strength.
++
++**Operational Settlement**:
++A ruling by the responsible authority about the outcome of a particular governed operation under its declared criteria and admissible evidence. The ruling records its disposition and whether it is final.
++_Avoid_: Completion, developmental settlement
++
++**Settlement Receipt**:
++An attributable record of a settlement ruling, bound to the issuing authority, the subject judged, and the ruling’s status and finality.
++
++### Delegated case work
++
++**Case Assignment**:
++One issued attempt to carry out a specific case step under a pinned episode, delegated authority, and a budget tracked across distinct currencies.
++_Avoid_: Assignment (unqualified), Expert Assignment

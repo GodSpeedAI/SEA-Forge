@@ -1,0 +1,23 @@
+diff --git a/GLOSSARY.md b/GLOSSARY.md
+new file mode 100644
+--- /dev/null
++++ b/GLOSSARY.md
+@@ -0,0 +1,18 @@
++# GodSpeed-Agent developmental assessment
++
++GodSpeed-Agent evaluates evidence from attempted work and uses warranted consequences to improve future navigation.
++
++## Language
++
++**Provisional Evidence**:
++Received evidence held pending corroboration or assessment before it can support a developmental update.
++
++**Developmental Assessment**:
++A judgment about what registered consequences warrant learning or changing about the observer after an attempted transformation.
++_Avoid_: Developmental settlement (for the runtime classification), Operational Settlement
++
++**Capability Promotion**:
++An authorized change in the standing of a claimed developmental capability supported by qualifying settlements and variation.
++
++**Capability History**:
++The ordered, attributable body of attempts, outcomes, and assessments used to judge sustained capability.

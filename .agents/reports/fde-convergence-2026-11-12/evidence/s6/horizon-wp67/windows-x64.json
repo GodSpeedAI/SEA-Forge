@@ -1,0 +1,133 @@
+{
+  "schema": "horizon.qualification/1",
+  "platform": "windows-x64",
+  "status": "QUALIFIED",
+  "required_steps": [
+    "checksums",
+    "msi_install",
+    "msi_installed_smoke",
+    "msi_uninstall",
+    "nsis_install",
+    "nsis_installed_smoke",
+    "nsis_uninstall"
+  ],
+  "commit": "0478912b927af3241e2a3b89262772fdeb78c842",
+  "generated_at": "2026-11-16T04:58:01+00:00",
+  "host": {
+    "system": "Windows",
+    "release": "2025Server",
+    "machine": "AMD64",
+    "runner_image": "windows-latest",
+    "real_hardware": false
+  },
+  "artifacts": [
+    {
+      "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64-setup.exe",
+      "sha256": "39ac8c5c0d22476feb816ff5a51ad7c2f46831e5059c28da90ab295f9af52a79",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64_en-US.msi",
+      "sha256": "a0daca491cfe29d487d15fe30c993f1fa8e7329c0c41e01160e4939b6815945f",
+      "matches_sha256sums": true
+    },
+    {
+      "name": "horizon-headless-unqualified-x86_64-pc-windows-msvc.tar.gz",
+      "sha256": "df6b0dcb15d51b1329dac9c3dd537a5ae08a12de9bdae67caec367b7b8df3466",
+      "matches_sha256sums": true
+    }
+  ],
+  "steps": [
+    {
+      "name": "checksums",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "artifacts": [
+          {
+            "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64-setup.exe",
+            "sha256": "39ac8c5c0d22476feb816ff5a51ad7c2f46831e5059c28da90ab295f9af52a79",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-desktop-unqualified_Horizon_0.1.0_x64_en-US.msi",
+            "sha256": "a0daca491cfe29d487d15fe30c993f1fa8e7329c0c41e01160e4939b6815945f",
+            "matches_sha256sums": true
+          },
+          {
+            "name": "horizon-headless-unqualified-x86_64-pc-windows-msvc.tar.gz",
+            "sha256": "df6b0dcb15d51b1329dac9c3dd537a5ae08a12de9bdae67caec367b7b8df3466",
+            "matches_sha256sums": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "msi_install",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server": "C:\\Program Files\\Horizon\\horizon-server.exe",
+        "resources": "C:\\Program Files\\Horizon\\horizon-resources",
+        "msiexec_exit": 0,
+        "log_tail": "5\u0000:\u00006\u00004\u00003\u0000]\u0000:\u0000 \u0000N\u0000o\u0000t\u0000e\u0000:\u0000 \u00001\u0000:\u0000 \u00002\u00002\u00006\u00005\u0000 \u00002\u0000:\u0000 \u0000 \u00003\u0000:\u0000 \u0000-\u00002\u00001\u00004\u00007\u00002\u00008\u00007\u00000\u00003\u00005\u0000 \u0000\n\u0000\n\u0000M\u0000S\u0000I\u0000 \u0000(\u0000s\u0000)\u0000 \u0000(\u00002\u00004\u0000:\u0000E\u0000C\u0000)\u0000 \u0000[\u00000\u00004\u0000:\u00005\u00007\u0000:\u00003\u00005\u0000:\u00006\u00004\u00005\u0000]\u0000:\u0000 \u0000N\u0000o\u0000t\u0000e\u0000:\u0000 \u00001\u0000:\u0000 \u00001\u00004\u00000\u00002\u0000 \u00002\u0000:\u0000 \u0000H\u0000K\u0000E\u0000Y\u0000_\u0000L\u0000O\u0000C\u0000A\u0000L\u0000_\u0000M\u0000A\u0000C\u0000H\u0000I\u0000N\u0000E\u0000\\\u0000S\u0000o\u0000f\u0000t\u0000w\u0000a\u0000r\u0000e\u0000\\\u0000M\u0000i\u0000c\u0000r\u0000o\u0000s\u0000o\u0000f\u0000t\u0000\\\u0000W\u0000i\u0000n\u0000d\u0000o\u0000w\u0000s\u0000\\\u0000C\u0000u\u0000r\u0000r\u0000e\u0000n\u0000t\u0000V\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000\\\u0000I\u0000n\u0000s\u0000t\u0000a\u0000l\u0000l\u0000e\u0000r\u0000\\\u0000R\u0000o\u0000l\u0000l\u0000b\u0000a\u0000c\u0000k\u0000\\\u0000S\u0000c\u0000r\u0000i\u0000p\u0000t\u0000s\u0000 \u00003\u0000:\u0000 \u00002\u0000 \u0000\n\u0000\n\u0000M\u0000S\u0000I\u0000 \u0000(\u0000s\u0000)\u0000 \u0000(\u00002\u00004\u0000:\u0000E\u0000C\u0000)\u0000 \u0000[\u00000\u00004\u0000:\u00005\u00007\u0000:\u00003\u00005\u0000:\u00006\u00004\u00005\u0000]\u0000:\u0000 \u0000D\u0000e\u0000c\u0000r\u0000e\u0000m\u0000e\u0000n\u0000t\u0000i\u0000n\u0000g\u0000 \u0000c\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000t\u0000o\u0000 \u0000d\u0000i\u0000s\u0000a\u0000b\u0000l\u0000e\u0000 \u0000s\u0000h\u0000u\u0000t\u0000d\u0000o\u0000w\u0000n\u0000.\u0000 \u0000I\u0000f\u0000 \u0000c\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000>\u0000=\u0000 \u00000\u0000,\u0000 \u0000s\u0000h\u0000u\u0000t\u0000d\u0000o\u0000w\u0000n\u0000 \u0000w\u0000i\u0000l\u0000l\u0000 \u0000b\u0000e\u0000 \u0000d\u0000e\u0000n\u0000i\u0000e\u0000d\u0000.\u0000 \u0000 \u0000C\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000a\u0000f\u0000t\u0000e\u0000r\u0000 \u0000d\u0000e\u0000c\u0000r\u0000e\u0000m\u0000e\u0000n\u0000t\u0000:\u0000 \u0000-\u00001\u0000\n\u0000\n\u0000M\u0000S\u0000I\u0000 \u0000(\u0000c\u0000)\u0000 \u0000(\u00004\u0000C\u0000:\u00004\u00008\u0000)\u0000 \u0000[\u00000\u00004\u0000:\u00005\u00007\u0000:\u00003\u00005\u0000:\u00006\u00004\u00005\u0000]\u0000:\u0000 \u0000D\u0000e\u0000c\u0000r\u0000e\u0000m\u0000e\u0000n\u0000t\u0000i\u0000n\u0000g\u0000 \u0000c\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000t\u0000o\u0000 \u0000d\u0000i\u0000s\u0000a\u0000b\u0000l\u0000e\u0000 \u0000s\u0000h\u0000u\u0000t\u0000d\u0000o\u0000w\u0000n\u0000.\u0000 \u0000I\u0000f\u0000 \u0000c\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000>\u0000=\u0000 \u00000\u0000,\u0000 \u0000s\u0000h\u0000u\u0000t\u0000d\u0000o\u0000w\u0000n\u0000 \u0000w\u0000i\u0000l\u0000l\u0000 \u0000b\u0000e\u0000 \u0000d\u0000e\u0000n\u0000i\u0000e\u0000d\u0000.\u0000 \u0000 \u0000C\u0000o\u0000u\u0000n\u0000t\u0000e\u0000r\u0000 \u0000a\u0000f\u0000t\u0000e\u0000r\u0000 \u0000d\u0000e\u0000c\u0000r\u0000e\u0000m\u0000e\u0000n\u0000t\u0000:\u0000 \u0000-\u00001\u0000\n\u0000\n\u0000M\u0000S\u0000I\u0000 \u0000(\u0000c\u0000)\u0000 \u0000(\u00004\u0000C\u0000:\u00004\u00008\u0000)\u0000 \u0000[\u00000\u00004\u0000:\u00005\u00007\u0000:\u00003\u00005\u0000:\u00006\u00004\u00007\u0000]\u0000:\u0000 \u0000M\u0000a\u0000i\u0000n\u0000E\u0000n\u0000g\u0000i\u0000n\u0000e\u0000T\u0000h\u0000r\u0000e\u0000a\u0000d\u0000 \u0000i\u0000s\u0000 \u0000r\u0000e\u0000t\u0000u\u0000r\u0000n\u0000i\u0000n\u0000g\u0000 \u00000\u0000\n\u0000\n\u0000=\u0000=\u0000=\u0000 \u0000V\u0000e\u0000r\u0000b\u0000o\u0000s\u0000e\u0000 \u0000l\u0000o\u0000g\u0000g\u0000i\u0000n\u0000g\u0000 \u0000s\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000:\u0000 \u00001\u00001\u0000/\u00001\u00006\u0000/\u00002\u00000\u00002\u00006\u0000 \u0000 \u00004\u0000:\u00005\u00007\u0000:\u00003\u00005\u0000 \u0000=\u0000=\u0000=\u0000\n\u0000\n\u0000\n\u0000\n\u0000"
+      }
+    },
+    {
+      "name": "msi_installed_smoke",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server": "C:\\Program Files\\Horizon\\horizon-server.exe",
+        "resources": "C:\\Program Files\\Horizon\\horizon-resources",
+        "output_tail": "ok  ready on http://127.0.0.1:49976\nok  health 200\nok  unpaired read refused\nok  one-time code opened a session\nok  workspace, desk bundle, diagnostics and frame read\nok  write path answered 200 (no server fault)\nok  stopped on stdin close (exit 0)\nok  port closed\nSMOKE PASS\n"
+      }
+    },
+    {
+      "name": "msi_uninstall",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "left_under_install_path": [],
+        "user_data_remaining": []
+      }
+    },
+    {
+      "name": "nsis_install",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server": "C:\\Users\\runneradmin\\AppData\\Local\\Horizon\\horizon-server.exe",
+        "resources": "C:\\Users\\runneradmin\\AppData\\Local\\Horizon\\horizon-resources",
+        "setup_exit": 0,
+        "output_tail": ""
+      }
+    },
+    {
+      "name": "nsis_installed_smoke",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "server": "C:\\Users\\runneradmin\\AppData\\Local\\Horizon\\horizon-server.exe",
+        "resources": "C:\\Users\\runneradmin\\AppData\\Local\\Horizon\\horizon-resources",
+        "output_tail": "ok  ready on http://127.0.0.1:49984\nok  health 200\nok  unpaired read refused\nok  one-time code opened a session\nok  workspace, desk bundle, diagnostics and frame read\nok  write path answered 200 (no server fault)\nok  stopped on stdin close (exit 0)\nok  port closed\nSMOKE PASS\n"
+      }
+    },
+    {
+      "name": "nsis_uninstall",
+      "status": "PASS",
+      "reason": "",
+      "evidence": {
+        "left_under_install_path": [],
+        "user_data_remaining": []
+      }
+    },
+    {
+      "name": "upgrade",
+      "status": "NOT_RUN",
+      "reason": "no previous release exists to upgrade from",
+      "evidence": {}
+    }
+  ],
+  "commands_needing_root": []
+}

@@ -409,3 +409,7 @@ missing". Each critical row's Change column lists the package that owns its nega
 
 A third Goldfish pass is not run: the remaining edits are mechanical applications of RD-20…RD-27, checked by
 script and by the lead. The baseline for implementation is draft 3 of A–G, SOP v0.4.1 and this record.
+
+## 9. Owner rulings (2026-11-16)
+
+OD-1 to OD-6 were all approved by the owner, OD-6 with verification conditions. The rulings and their binding conditions are in `decisions/2026-11-16-owner-rulings-OD-1-to-OD-6.md`, and the SOP ratification is in `decisions/SOP-v0.4.1-ratification.md`. The rows in §5 and §8 above are kept as the questions were asked. No evidence classification changed as a result.

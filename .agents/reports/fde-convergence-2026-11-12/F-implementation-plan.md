@@ -284,6 +284,99 @@ existing backup/restore and upgrade gates.
 **WP-57 Release.** FDE gates added to `local_operator` (which must stay GO); releases per repo; install from
 release artifacts on a clean cell; AT-20, NT-14; GO report with exact versions.
 
+### S6 Native distribution and release readiness (added 2026-11-15, owner request)
+
+Scope: CI/CD, native packaging and release readiness for Gauntlet and Horizon. It runs in parallel with S2–S5 and feeds WP-57.
+
+Rules for this slice:
+
+- **Pipeline stages:** CI validation, release qualification and publication are separate workflows.
+- **Platform claims:** a platform is called "supported" only with passing qualification evidence for its exact artifact.
+  - Hosted ARM64 runners qualify generic Linux ARM64 only.
+  - Jetson (Ubuntu 22.04, L4T) needs a real-hardware run: a self-hosted runner on the device, or a recorded manual run against the release candidate's checksums. Until then Jetson is reported NOT QUALIFIED.
+- **Release contents:**
+  - versioned artifacts, `SHA256SUMS` and `attest-build-provenance`;
+  - dependency and security checks (cargo-deny, dependency-review, gitleaks, CodeQL);
+  - signing only when credentials exist. Otherwise packages are labelled unsigned in the notes, as Gauntlet PR #7 already does.
+- **Pinning and protection:** actions are pinned to full SHAs. Branch protection or required checks are set where the plan permits; Horizon is private on a free plan, so rulesets return 403 and that is recorded as a blocker.
+- **Deployment form:** native binaries; no Docker or Kubernetes.
+- **Reuse:**
+  - SEA-Forge `package.yml` + `release-please.yml` (SHA256SUMS, attest v4.2.2) and `security.yml`;
+  - the RealityTrace package matrix (incl. `ubuntu-22.04-arm`) and clean-install workflow;
+  - Gauntlet PR #7 (`package.yml`, `release-native.yml`, `packaging/`).
+
+**WP-60 Gauntlet native distribution (PR #7).**
+- Qualify and merge PR #7.
+  - It already builds `.deb`/tarball for Linux amd64/arm64 (`ubuntu-22.04`, glibc 2.35 for Jetson parity), macOS pkg/dmg with a universal CLI and arm64 workbench, and a Windows zip + Inno setup.
+  - It produces per-platform and combined SHA256SUMS, with provenance gated on the run building the tag commit.
+- Blockers found:
+  - The "Protect Main" ruleset requires CodeQL, which was unconfigured; default setup was enabled 2026-11-15.
+  - Seven review threads were fixed in 7b866c8 (SHA pins, tag-keyed concurrency, notes refresh, Inno stale workbench, macOS label, Windows smoke).
+- Gate: all PR checks green and threads resolved.
+
+**WP-61 Gauntlet CI completion.** Extend `ci.yml` (`just ci` = check, test, lint, deny, boundaries, ruler) with:
+- SHA pins for the remaining tag-pinned actions;
+- an explicit Bun/OpenTUI workbench job (typecheck + tests);
+- a security workflow (cargo-deny advisories, dependency-review, gitleaks), reused from SEA-Forge `security.yml`;
+- CodeQL default setup (done);
+- dependabot for actions and cargo;
+- a regression suite job.
+
+Required checks go into the existing ruleset.
+
+**WP-62 Gauntlet release qualification.** A `release-qualify` workflow on tag or RC that installs and uninstalls each artifact on native runners (`ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-14`, an Intel macOS runner if available, `windows-latest`):
+- version check;
+- `doctor`;
+- a regression smoke;
+- an upgrade from the previous release.
+
+Publication (`release-native.yml`) requires the qualification run's success for the same commit. The Jetson leg is a self-hosted-runner job labelled `jetson`; while that runner is absent, the release notes mark Jetson NOT QUALIFIED.
+
+**WP-63 Prime Agent as an optional managed dependency.**
+- Recon: Prime Agent is already runtime-optional (binary `prime-agent`, env `PRIME_AGENT_CODING_AGENT_DIR`; adapters `agent-{mock,prime,cli,tty}` behind `AgentRunner`/`AgentRunnerFactory`), and it is not bundled.
+- Add:
+  - `gauntlet agent detect` (locate, version, compatibility range check against a declared supported range);
+  - `gauntlet agent setup prime` (opt-in, prints source and checksum, installs only on confirmation, never during package install);
+  - `doctor` reporting the adapter in use and the Prime Agent status.
+- Packaging must never fetch or install Prime Agent; a test asserts this.
+- Alternative adapters stay selectable.
+
+**WP-64 Horizon CI.**
+- A GitHub Actions `ci.yml` running `just verify`. That covers check-single-cognate, check, test, boundaries, the inv2 mutation teeth, pytest, and the ledger/wayfinder validators.
+- It runs against pinned `domainforge` 0.22.0, `realitytrace` 0.5.0 and SEA-Forge binaries, fetched from GitHub Releases by checksum and never built from source in CI.
+- Plus `security.yml` (dependency-review, gitleaks) and a CodeQL workflow (a workflow is needed, because default setup is unavailable on a private free-plan repo).
+- Required checks cannot be enforced (403); this is a recorded blocker until the owner changes plan or visibility.
+
+**WP-65 Horizon desktop (Tauri v2) with a sidecar backend.**
+- Add `src-tauri/` (Tauri v2). The desk UI (`build:desk` → `dist/desk`, React) is the webview frontend.
+- The Bun/Cognate backend (`src/main.ts`) is compiled with `bun build --compile` per target and shipped as a Tauri sidecar. It also stays independently runnable: `horizon serve` is the headless mode, unchanged.
+- The desktop shell only spawns and supervises the sidecar on loopback with a per-launch token. No business logic lives in Rust.
+- Integration boundaries are unchanged: SEA-Forge socket, `DOMAINFORGE_BIN`, `REALITYTRACE_BIN`, `HORIZON_*` env, and Gauntlet via CLI only.
+
+**WP-66 Horizon native installers.**
+- Tauri bundles: Windows x64 (NSIS/MSI), Linux x64 and ARM64 (`.deb` + AppImage), macOS universal (`.dmg`/`.app`, ad-hoc signed unless a Developer ID exists).
+- Plus a headless tarball per target: the sidecar binary only.
+- SHA256SUMS, provenance, release-please tags `horizon-v*`.
+
+**WP-67 Horizon install qualification.** On native runners, for each installer:
+- install, then start (sidecar health endpoint + webview smoke via a headless check);
+- core functionality: open desk, load a fixture case, read episode evidence;
+- upgrade from the previous release, then uninstall leaving no residue (an app-data policy is documented).
+
+Jetson works as in WP-62. The headless tarball is qualified separately (start, health, stop).
+
+**WP-68 Cross-project release governance.**
+- Every release carries a qualification summary per platform (QUALIFIED / NOT QUALIFIED with reason).
+- An unqualified artifact can be published only as a pre-release, never as latest.
+- Separate workflows for CI, qualification and publication, with a publication job that `needs` the qualification result for the same SHA.
+- Results are recorded in the readiness harness (`godspeed-readiness`) as new gates.
+
+**WP-69 Real-hardware Jetson qualification.**
+- Owner-provided: register a self-hosted runner on the Jetson (labels `self-hosted, linux, arm64, jetson`) or run `packaging/qualify.sh` there and commit the evidence.
+- This is the only way the Jetson row becomes QUALIFIED. OD-7 asks the owner for the device and runner registration.
+
+Order: 60 → 61 → 62 → 63; 64 → 65 → 66 → 67; 68 spans both; 69 needs the owner. WP-57 (Release) depends on 62, 67 and 68.
+
 ## 3. Critical path and first batch
 
 Critical path: 00a → 00b → 00c → 11 → 13 → 14 → 16 → 17 → 18 → 19 (S1 gate) → 20 → 21 → 22 → 41 → 50 → 51 →
@@ -308,3 +401,28 @@ RealityTrace integration branches exist, WP-10.
 | A behaviour kind does not occur | WP-09, WP-50 predictions | row NOT TESTED; the claim is not made |
 | Anchor independence on a single-operator host | WP-09 states the limit; OD-6 asks for a dedicated credential and protected tag namespace | anchoring rows PARTIAL (RD-26) |
 | The integrated gate never goes green | each slice has its own gate and claim level | the last green slice is the delivered verified state, reported with the precise blocker |
+
+## 4. Owner rulings applied to the work packages (2026-11-16)
+
+Source: `decisions/2026-11-16-owner-rulings-OD-1-to-OD-6.md`. No evidence classification changes because of these rulings.
+
+- **WP-30, WP-31 and WP-32 (OD-1, OD-5).** Build the production A3-UV flow:
+  - Phone enrollment, and a phone-side display of the canonical operation that does not depend on the agent browser.
+  - An assertion bound to the operation digest, with freshness and one-time use, and SEA-Forge as the authorization decision.
+  - A route-scope table proving no alternative API route reaches a human-reserved operation without confirmation.
+  - Regression uses virtual authenticators. The live row needs the owner's phone and stays PARTIAL until then.
+  - Deliverable: a precise operator runbook for the enrollment and the live proof.
+  - Also close the Horizon A/B/C authority record as superseded.
+- **WP-35 Independent anchoring baseline (new; OD-6; SEA-Forge, godspeed-readiness).**
+  - A case-keeper GitHub App: only it creates `fde-anchor/*`, and a ruleset blocks update and delete for everyone.
+  - Signed annotated tags, with the signing key and the App key unreachable from executors.
+  - Independent before-execution evidence, for example the GitHub server-side ref creation event or the push or ruleset audit, plus an external timestamp. The git tagger time is not this evidence.
+  - Verifier receipts stored outside the executor's reach.
+  - A fail-closed verifier.
+  - Create the App, install its key as a secret and set the tag ruleset. The owner may need to do these in the GitHub UI; they get exact steps.
+  - The S1 anchor stays historical. Affected S1 qualification steps are rerun against the new baseline.
+- **WP-58 Branch consolidation (new; every repository; the addendum and OD-4).**
+  - Order: back up unpushed owner branches after a secret scan; audit every local and remote branch and worktree; integrate or reject each; delete the rest; record everything in `branch-ledger.md`.
+  - Finish Cognate Workbench's capability/plugin integration (skills, MCP servers) if it is still relevant.
+  - It runs before S2 resumes, so each repository has one clean integration lane.
+- **Backward compatibility.** Shims, deprecated paths and dead code found while doing S2–S4 are removed in the same change. Protected interfaces change contracts-first, with an explicit version.

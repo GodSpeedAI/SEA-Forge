@@ -219,3 +219,127 @@ observation would overturn it). "Falsifier" is the honest exit condition, not a 
 * **Chosen**: (a), gated on an import inventory for each deletion.
 * **Falsifier**: if the inventory finds a live consumer, the item moves from DELETE to EXTEND and
   the consolidation is re-scoped — not abandoned.
+
+## Design interview decisions after revision 5
+
+These owner-approved decisions refine revision 5 of the [closure register](I-closure-register.md).
+The entries above preserve the design history. Acceptance evidence remains pending.
+
+### 16. Prove one SEA-Forge-governed RLM operation end to end
+
+Require one bounded RLM operation with a committed SEA-Forge decision before spawn, attributable
+evidence bound to the same operation, and a SEA-Forge settlement disposition. J9 exercises
+existing coding-run settlement and J13 exercises contained execution. Their separate results
+cannot establish authority and settlement for the same recursive operation. Reuse the existing
+authority and settlement contracts and allow the smallest adapter change needed for the joint
+proof. This refines the verification-only repository scope in the
+[transformation brief](H-transformation-brief.md).
+
+### 17. Admit an opaque provider only within its effective reach
+
+The grant must cover all effects the port permits. Refuse before spawn if any required restriction
+or resource ceiling cannot be enforced. A read-only mount proves a filesystem restriction.
+Subprocess, network, credential and other applicable restrictions need separate enforcement
+evidence. Keep per-effect mediation for opaque providers outside this increment. ACP events
+provide observations and support cancellation. Pre-spawn authority remains with the governing
+boundary. This tightens the filesystem-mode shorthand in
+[the closure register](I-closure-register.md#i2-the-port-governance-gaps-each-closed).
+
+### 18. Gate exploratory and evaluated Horizon handoffs separately
+
+Use Horizon's existing Workbench call for exploratory handoff. Carry the DomainForge World
+Reference and identify the provenance of the context. For evaluated work, require the trusted
+WP-23 binding to the issued Execution Episode and Case Assignment. Refuse evaluated work while
+that binding is unavailable. Keep the Horizon Closure Pin, Case-Step Correlation and Workbench
+Expert Assignment distinct and retain the existing Horizon fields and boot pins. This gives
+exploration an independent path while preserving the existing assignment issuer for evaluated
+work.
+
+### 19. Scope RLM inspection and cancellation to the parent Run
+
+Address an invocation with `parentRunId` and `invocationId`. Check caller standing on the parent
+and resolve the binding using Cognate's durable Run state and correlation. This gives the caller
+a stable lookup after restart without a parallel index. It resolves the lookup gap in
+[`rlm.inspect` and `rlm.cancel`](D-minimal-contracts.md#rlminspect-read-terminal-stable).
+
+### 20. Use the existing SEA-Forge decision and settlement path for one fixed profile
+
+Keep execution in Cognate and Workbench. For the first governed operation, use an
+operator-configured execution profile explicitly authorized by SEA-Forge policy and enforced by
+the trusted host. Pin the profile and launch plan before admission, reject drift before spawn,
+and carry the committed decision reference through execution, evidence and settlement. Current
+CEP request claims support attribution. They do not bind the reach of an opaque provider.
+Prove that the configured policy and host enforce the same approved profile. If the current
+contracts cannot bind it, keep governed admission closed and bring the exact gap to the owner.
+This avoids adding a second case-plan execution path for the first operation.
+
+### 21. Qualify the governed journey with a deterministic recursive provider
+
+Run a bounded, read-only investigation that decomposes its input and produces an independently
+verifiable result. Use a real SEA-Forge decision, contained port, corroborated evidence and final
+SEA-Forge Settlement Receipt. The deterministic provider makes the joined path and its failure
+cases repeatable. Qualify the optional Prime adapter separately with a live ACP invocation before
+claiming Prime support. The [existing probes](I-closure-register.md#i1-what-was-tested-and-what-it-settles)
+established transport and session feasibility.
+
+### 22. Resolve uncertain effects before admitting another attempt
+
+Reuse Cognate's durable ambiguity continuation and Workbench's operator reconciliation. Recover
+completion only from a verifiable result tied to the original invocation, with its effects
+accounted for. If the effects are known and the result is unrecoverable, close the attempt as
+failed. A retry requires a new attempt, grant and reservation. Preserve `unknown` if effects are
+unresolved, including after Run cancellation. This keeps a signal, process exit, or generic
+success marker from becoming an execution result or triggering repeated effects.
+
+### 23. Enforce governed RLM payment at model egress
+
+Reuse the caller's existing reservation and enforce its cumulative ceiling at the trusted model
+egress boundary, including requests from provider-internal children. Refuse governed admission
+when usage or price cannot be bounded. If interruption obscures actual spend, retain that
+uncertainty and account for it conservatively against the reservation. A reservation provides
+the spending allocation. The egress boundary enforces it across calls.
+
+## Specification handoff after the design interview
+
+The owner confirmed this transformation boundary on 2026-11-20. The interview is complete.
+
+### Transformation boundary
+
+An existing Workbench Expert Assignment can use one provider-independent Cognate Child Run.
+Reuse Run state, continuations, authority checks and the caller's reservation. Keep Workbench's
+standalone Expert and Team workflow, local acceptance and operator restore. Reuse Horizon's
+existing call with explicit context provenance. Keep Gauntlet escalation optional and apply
+I5's drop condition if the frozen-reference projection exceeds the agreed scope. Gauntlet's
+existing Prime host stays in place.
+
+Decisions 16–23 refine the [closure register](I-closure-register.md) and
+[transformation brief](H-transformation-brief.md). The main change is the joined proof for one
+SEA-Forge-governed RLM operation. Its evidence has to follow the same authorized operation
+through the contained port and into Operational Settlement. Assignment Acceptance, Candidate
+Promotion, Controlled Run Settlement and Capability evidence retain their own scopes.
+
+The problem compiler, semantic investigator and new semantic grammar are future work. The
+existing affordance resolver and its bounded operation catalogue remain in scope. Retain the
+existing CEP profiles, frozen Horizon fields and boot pins, formal role and event identifiers,
+and immutable evidence. See the
+[vocabulary handoff](../2026-11-20-godspeed-domain-modeling/workflow-handoff.md) for the owning
+definitions.
+
+### Test seams and remaining qualification
+
+| Boundary | Required evidence and failure condition |
+| --- | --- |
+| Cognate package alignment and Workbench standalone | Verify the versions actually resolved by Workbench and Horizon, then run the existing standalone suites. A broken version alignment blocks dependent integration. Workbench's ordinary workflow remains available without optional products. An explicitly selected but unavailable provider returns a typed refusal. |
+| Cognate recursive lifecycle | With a deterministic provider, exercise one Child Run per invocation, parent-scoped inspection and cancellation after restart, a lost response, and replay without a duplicate spawn. Inject interruption and cancellation after dispatch. Unresolved effects remain parked and a recovered result stays attached to the original invocation. |
+| Governed host port and egress | Exercise the actual Linux port with controlled fixtures. Verify the effective reach and applicable ceilings on the launched scope, the single approved egress destination, and cumulative spending across recursive requests. Denial, unknown authority, changed launch plan, insufficient grant or unprovable ceiling prevents spawn. |
+| Joined authority, evidence and settlement | Use one deterministic read-only recursive investigation. Show the committed SEA-Forge allow before spawn, same-operation lineage and an independently corroborated result. Require the final SEA-Forge receipt on the positive path. Reject mismatched lineage and ensure absent or inadequate evidence cannot become a successful settlement. Replaying the same receipt preserves its identity. |
+| Optional Prime adapter and Gauntlet | Use the ACP contract fixture and a live Prime invocation to qualify adapter support. Keep a provider unavailable or unqualified when its live gate fails. Exercise operator-only escalation with a frozen reference and rejection of a changed reference. Keep Gauntlet's disposition scoped to its controlled run. |
+| Horizon and CEP handoffs | Exercise exploratory provenance through the existing call and refuse an evaluated handoff without the exact WP-23 episode and Case Assignment binding. Run the DomainForge-to-SEA-Forge exchange against the supported profiles and world registry. Refuse missing required data, invalid provenance, or a mismatched World Reference. |
+| Observation and historical records | Exercise Workbench's existing observation outbox with local Candidate Promotion, governed attempts, and actual receipts. Preserve producer, operation, issuer and finality on replay. A governed attempt without a receipt remains an attempt, and a missing field never reclassifies historical records by itself. |
+
+The fixed-profile binding, effective limits, enforceable pricing and usage, live Prime behavior,
+cross-repo CEP exchange, and production WP-23 handoff still need executable evidence. Retain the
+failure conditions in [I5](I-closure-register.md#i5-the-five-needs-running-items-converted-to-decision-trees)
+as refined above. Report a failed guard with its exact evidence before proposing changes to
+authority, persistence or a published contract. The next stage is `/to-spec`. Implementation
+and qualification remain pending.

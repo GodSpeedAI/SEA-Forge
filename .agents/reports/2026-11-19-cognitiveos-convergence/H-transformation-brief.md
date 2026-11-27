@@ -4,6 +4,10 @@ For the implementation workflow (the owner intends Matt Pocock's unmodified skil
 spec → tickets → TDD → review → retro). This brief does not replace that workflow's own
 verification; it tells it what transformation is justified and what must not be reopened.
 
+The [design interview decisions and specification handoff](DECISION-LOG.md#design-interview-decisions-after-revision-5)
+refine this brief. Use them for governed RLM acceptance, port reach, recovery, payment and the
+separate exploratory and evaluated Horizon gates.
+
 ## Problem to be solved
 
 Cognate has no recursive-execution capability, and the ecosystem has no way for a Workbench Expert

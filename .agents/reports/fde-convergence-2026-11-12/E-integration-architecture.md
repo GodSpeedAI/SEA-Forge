@@ -88,9 +88,12 @@ a close disposition (NT-23). Episode-level outcomes never close a case.
   `sea-rs/.sea/interaction/fde-sop/` per the IDM method (model, `source-translation-map.md`,
   `assumptions-and-unknowns.md`, `validation/`); world `godspeed-fde-sop`.
 - Today's grammar, no change: `role_binding` for `SOP §3.1`; entities and resources; one `operation` per navigation
-  step and activity (`intent`, `access policy_governed by … at precondition|postcondition`, `evidence
+  step and activity (`intent`, `access policy_governed by … at precondition`, `evidence
   operation_trace`); Obligation/Prohibition `policy` for invariants; `flow`; `metric`. Operation-bound policies are
   evaluated only by DomainForge `evaluate` (WP-12, §6); `validate` skips them.
+- Correction (WP-10, WP-13): DomainForge 0.21.2 rejects `at postcondition` and `at invariant` on an operation.
+  Only `at precondition` is available. A postcondition in the SOP is modelled as a structural expectation
+  decided by `sxr-observed` (§6), or, where that cannot decide it, reported `insufficient` (`not_evaluable`).
 - Each translation-map row carries `SOP §` and status `declared | inferred | unknown`.
 - Validation: real `domainforge validate` and `envelope --emit cep`, recording source hash, `world_ref`, compiler
   version. `domainforge test` is not used as evidence.
@@ -175,6 +178,13 @@ binding `true | false | unknown` and the bound instances, including operation-bo
 serve: it emits violations only, separates unknown from false only by message text, and skips operation-bound
 policies. Spike WP-10 first, on a ten-element model against the DomainForge library, covering an empty fact set, one
 occurrence, an obligation that evaluates to unknown, and an operation-bound policy.
+
+Correction (WP-12, DomainForge PR #171). `evaluate` reports bindings for the outermost root quantifier of a
+policy only. A quantifier nested inside it contributes to that binding's result and is not listed separately. A
+policy with no root quantifier yields one result with no bound instances. An expectation that needs a
+per-instance result must therefore put the instance variable in the outermost quantifier. An unknown binding
+never lets the policy report a definite result (`exists_unique` at the root included; `exists_unique` nested
+below the root is not verified, see `docs/reference/evaluate.md` in DomainForge).
 
 | Expectation kind | Decided by | Mapping |
 |---|---|---|
