@@ -2341,7 +2341,7 @@ impl PolicyAuthorityEngine {
         });
         let claimed_profile = match action {
             AuthorityAction::Reserved { parameters, .. } if profile_governed => {
-                claimed_launch_plan_digest(parameters).map(str::to_owned)
+                claimed_execution_profile_digest(parameters).map(str::to_owned)
             }
             _ => None,
         };
@@ -3064,12 +3064,12 @@ const EXECUTION_PROFILE: &str = "execution_profile";
 /// Most digests one profile rule may name.
 const MAX_EXECUTION_PROFILES: usize = 8;
 /// Claim a request carries to say which launch plan it will spawn.
-const LAUNCH_PLAN_DIGEST_CLAIM: &str = "launch_plan_digest";
+const EXECUTION_PROFILE_DIGEST_CLAIM: &str = "execution_profile_digest";
 /// Reason code of a request refused because its launch-plan digest names no permitted profile.
 const EXECUTION_PROFILE_MISMATCH: &str = "execution_profile_mismatch";
 
 /// `sha256:` followed by 64 lowercase hex digits.
-fn is_launch_plan_digest(value: &str) -> bool {
+fn is_execution_profile_digest(value: &str) -> bool {
     value.strip_prefix("sha256:").is_some_and(|hex| {
         hex.len() == 64
             && hex
@@ -3100,7 +3100,7 @@ fn validate_execution_profile_rule(
         || digests.len() > MAX_EXECUTION_PROFILES
         || !digests
             .iter()
-            .all(|d| is_launch_plan_digest(d) && seen.insert(d.as_str()))
+            .all(|d| is_execution_profile_digest(d) && seen.insert(d.as_str()))
     {
         return refuse(
             "execution_profile names 1 to 8 distinct sha256:<64 lowercase hex> launch-plan digests",
@@ -3110,11 +3110,11 @@ fn validate_execution_profile_rule(
 }
 
 /// The request's well-formed launch-plan digest claim, if any. A malformed claim is no claim.
-fn claimed_launch_plan_digest(parameters: &Value) -> Option<&str> {
+fn claimed_execution_profile_digest(parameters: &Value) -> Option<&str> {
     parameters
-        .pointer(&format!("/claims/{LAUNCH_PLAN_DIGEST_CLAIM}"))
+        .pointer(&format!("/claims/{EXECUTION_PROFILE_DIGEST_CLAIM}"))
         .and_then(Value::as_str)
-        .filter(|digest| is_launch_plan_digest(digest))
+        .filter(|digest| is_execution_profile_digest(digest))
 }
 
 /// A rule without an execution profile permits any request; one with a profile permits only a request
@@ -3123,7 +3123,7 @@ fn execution_profile_permits(rule: &PolicyRule, parameters: &Value) -> bool {
     rule.boundary_constraints
         .get(EXECUTION_PROFILE)
         .is_none_or(|digests| {
-            claimed_launch_plan_digest(parameters)
+            claimed_execution_profile_digest(parameters)
                 .is_some_and(|claimed| digests.iter().any(|d| d == claimed))
         })
 }

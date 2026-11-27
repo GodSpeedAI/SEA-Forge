@@ -543,7 +543,7 @@ fn capability_request(world: &str, op: &str, resource: &str, digest: Option<&str
     let mut req = request(world, op, "capability", "invoke", resource);
     if let Some(d) = digest {
         req["extensions"]["godspeed.authority_request"]["claims"] =
-            json!({ "launch_plan_digest": d });
+            json!({ "execution_profile_digest": d });
     }
     req
 }
@@ -849,7 +849,8 @@ fn the_committed_ledger_entry_records_the_claimed_digest() {
         .expect("the decision's ledger entry");
     assert_eq!(entry.record_kind, "authority_decision");
     assert_eq!(
-        entry.payload["action_request"]["action"]["parameters"]["claims"]["launch_plan_digest"],
+        entry.payload["action_request"]["action"]["parameters"]["claims"]
+            ["execution_profile_digest"],
         D1
     );
     assert_eq!(

@@ -785,7 +785,7 @@ fn profile_request(world: &str, op: &str, digest: Option<&str>) -> Value {
     req["extensions"]["godspeed.authority_request"]["resource_id"] = json!("cap.exec");
     if let Some(d) = digest {
         req["extensions"]["godspeed.authority_request"]["claims"] =
-            json!({ "launch_plan_digest": d });
+            json!({ "execution_profile_digest": d });
     }
     req
 }

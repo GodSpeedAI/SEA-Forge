@@ -102,7 +102,7 @@ fn request(
         ext["approval_id"] = json!(a);
     }
     if let Some(d) = digest {
-        ext["claims"] = json!({ "launch_plan_digest": d });
+        ext["claims"] = json!({ "execution_profile_digest": d });
     }
     json!({
         "envelope_id": format!("env-authority_request-{op}"),

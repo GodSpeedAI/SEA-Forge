@@ -1,3 +1,29 @@
+**Status revision:** 388
+
+**Stage:** CognitiveOS convergence #108 | #116 claim key renamed to execution_profile_digest
+
+**Summary:** SEA binds the stable execution profile digest, not the per-launch plan digest: the request claim is now execution_profile_digest everywhere (engine, approvals, ledger pointer, tests, docs). No alias.
+
+**Verified:**
+
+- No old launch-plan claim key remains in crates, docs or the status file; authority suite with CEP_REPO=~/projects/gsr-heads/cep and REQUIRE_CEP=1 passes.
+
+**Limits:**
+
+- The Workbench host must recompute the profile digest and check that the per-launch plan embeds it before spawn; not done here.
+- No CI job sets CEP_REPO or REQUIRE_CEP.
+
+**Next:** Integrate after review; Workbench pre-spawn recompute and embed check.
+
+**Evidence:**
+
+- docs/decisions/ADR-017-execution-profile-boundary.md
+- docs/subsystems/authority-fabric.md
+
+---
+
+# Historical status
+
 **Status revision:** 387
 
 **Stage:** CognitiveOS convergence #108 | #116 delta review lows fixed
@@ -20,8 +46,6 @@
 - docs/subsystems/authority-fabric.md
 
 ---
-
-# Historical status
 
 **Status revision:** 386
 
@@ -73,7 +97,7 @@
 
 **Stage:** CognitiveOS convergence #108 | #116 SEA execution_profile binding implemented (branch ticket/116-execution-profile)
 
-**Summary:** A cognate_capability allow can now be bound to one launch-plan digest: policy lists up to 8 digests in the new execution_profile boundary dimension, the request claims launch_plan_digest, only an equal digest is allowed, and the decision and envelope carry exactly the matched digest.
+**Summary:** A cognate_capability allow can now be bound to one launch-plan digest: policy lists up to 8 digests in the new execution_profile boundary dimension, the request claims execution_profile_digest, only an equal digest is allowed, and the decision and envelope carry exactly the matched digest.
 
 **Verified:**
 

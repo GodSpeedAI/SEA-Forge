@@ -12,11 +12,11 @@ its content, and the CEP decision envelope exports boundary constraints as `{con
 
 Extend the existing contract; add no field, schema or verb.
 
-* A new boundary dimension `execution_profile` on `cognate_capability` rules lists up to 8 permitted launch-plan
+* A new boundary dimension `execution_profile` on `cognate_capability` rules lists up to 8 permitted execution-profile
   digests (`sha256:<64 lowercase hex>`). Rules carrying it must be allow rules with boundary disposition.
   `cognate_capability` is chosen because Cognate sends capability invocations with `claims`; the `action`
   kind carries none.
-* The request claims `launch_plan_digest`. A profile rule matches only an equal digest. If a profile rule
+* The request claims `execution_profile_digest`. A profile rule matches only an equal digest. If a profile rule
   governs the request, only a profile rule may allow it; a miss is denied with `execution_profile_mismatch`.
 * The decision narrows the constraint to the matched digest; the envelope exports it as constraint type
   `execution_profile`. The claim is already recorded in the committed decision.
@@ -27,6 +27,15 @@ Extend the existing contract; add no field, schema or verb.
   outside its scope, and those can reach a broader allow with no `execution_profile` constraint. The host
   refuses any contained spawn whose decision lacks the exact constraint. Matching semantics are unchanged.
 * The digest list order is part of the bundle hash and is not re-sorted.
+
+## Two digests
+
+The host produces two digests. `executionProfileDigest` is stable: launcher and executable digests, restriction
+spec, flag template, mount roles and environment names. `launchPlanDigest` is per launch: it binds run ids, the
+workspace inode and per-port environment HMACs, and embeds the profile digest. A per-launch value can never be a
+fixed policy value, so SEA binds only the profile digest, in the claim `execution_profile_digest`. The Workbench
+host recomputes the profile digest, checks that the per-launch plan embeds it, and only then spawns. The branch
+is unreleased, so there is no alias for the earlier claim key.
 
 ## Consequences
 
