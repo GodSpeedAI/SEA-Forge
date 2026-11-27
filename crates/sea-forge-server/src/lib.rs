@@ -2274,7 +2274,7 @@ async fn request_status(
         Ok(Some(claim)) => claim,
         Ok(None) => return unknown(&request_id),
         Err(error) => {
-            tracing::warn!(request_id, "request status: claim unreadable: {error}");
+            tracing::warn!("request status: claim unreadable: {error}");
             return unknown(&request_id);
         }
     };
@@ -2472,8 +2472,9 @@ async fn dispatch_admitted(
                         request_id,
                         "request refused: correlation unwritable: {error}"
                     );
-                    // The claim is durable but no handler ran: nothing happened,
-                    // and this id can never be admitted again.
+                    // The claim row is durable but no handler ran: no effect of the
+                    // request happened, yet the id is spent and can never be admitted
+                    // again, so the flag below reports the recorded claim.
                     return serde_json::json!({
                         "error": format!(
                             "the correlation record for `{request_id}` could not be written, so \

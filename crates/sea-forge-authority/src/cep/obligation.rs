@@ -344,6 +344,9 @@ impl CepAuthorityService<'_> {
             ));
         }
         let ledger = self.ledger()?;
+        // Settlement authority first: an unauthorized caller must not learn whether the operation was
+        // decided, asserted an obligation, or still has its window open.
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)?;
         let entries = ledger.read_entries()?;
         let (_, obligation) = self.obligation_for(&entries, operation_id)?;
         let key = format!("{CLOSURE_KEY}{operation_id}");
@@ -619,6 +622,12 @@ impl CepAuthorityService<'_> {
                 },
             },
         });
+        if for_receipt {
+            // Refuse, before anything commits, a settlement that could never be projected (an
+            // inconsistent run set judges "unsettled"; a malformed reference or lineage).
+            super::packet_receipt_fields(&envelope, operation_id, &allowed)
+                .map_err(CepAuthorityError::Receipt)?;
+        }
         let subjects = vec!["cognate".to_string(), operation_id.to_string()];
         let committed = match ledger.commit_typed_new(
             "settlement_packet",

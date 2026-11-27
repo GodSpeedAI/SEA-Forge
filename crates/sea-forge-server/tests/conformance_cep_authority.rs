@@ -1241,7 +1241,10 @@ fn rt_observation(
 
 /// An obligation that is allowed, has execution evidence, and whose window has closed with a recorded
 /// closure: the next step is settlement.
-async fn obligation_ready(op: &str) -> (tempfile::TempDir, tempfile::TempDir, PathBuf) {
+async fn obligation_ready(
+    op: &str,
+    verification_exits: &[i64],
+) -> (tempfile::TempDir, tempfile::TempDir, PathBuf) {
     let (root, mut config) = fixture(true, EVIDENCE_POLICY);
     let rt_dir = tempfile::tempdir().unwrap();
     config.cep_authority.realitytrace = Some(fake_realitytrace(rt_dir.path()));
@@ -1277,27 +1280,38 @@ async fn obligation_ready(op: &str) -> (tempfile::TempDir, tempfile::TempDir, Pa
         .await;
     assert_eq!(acked["ok"], true, "{acked}");
     let floor = chrono::Utc::now() + chrono::Duration::milliseconds(50);
-    let rows = json!([
+    let mut rows = vec![
         rt_row(
             3,
             "threshold.declared",
-            json!({"states": [{"state_id": "thr-1", "state_type": "settlement_threshold"}]})
+            json!({"states": [{"state_id": "thr-1", "state_type": "settlement_threshold"}]}),
         ),
         rt_observation(
             5,
             "obs-d",
             chrono::Utc::now() - chrono::Duration::seconds(5),
-            1
+            1,
         ),
-        rt_observation(7, "obs-v0", floor + chrono::Duration::milliseconds(10), 0),
-    ]);
+    ];
+    let ids: Vec<String> = (0..verification_exits.len())
+        .map(|i| format!("obs-v{i}"))
+        .collect();
+    for (i, exit) in verification_exits.iter().enumerate() {
+        rows.push(rt_observation(
+            7 + i as u64,
+            &ids[i],
+            floor + chrono::Duration::milliseconds(10),
+            *exit,
+        ));
+    }
+    let rows = json!(rows);
     std::fs::write(rt_dir.path().join("export.json"), rows.to_string()).unwrap();
     let wait = (closes_at - chrono::Utc::now()).num_milliseconds().max(0) as u64 + 60;
     tokio::time::sleep(Duration::from_millis(wait)).await;
     let closed = c
         .call(service_call(
             json!({"verb": "authority_closure", "operation_id": op,
-            "discrimination_observation_id": "obs-d", "verification_observation_ids": ["obs-v0"],
+            "discrimination_observation_id": "obs-d", "verification_observation_ids": ids,
             "request_id": format!("close-{op}")}),
         ))
         .await;
@@ -1307,7 +1321,7 @@ async fn obligation_ready(op: &str) -> (tempfile::TempDir, tempfile::TempDir, Pa
 
 #[tokio::test]
 async fn an_obligation_receipt_is_issued_over_the_socket() {
-    let (_root, _rt, socket) = obligation_ready("op-obl").await;
+    let (_root, _rt, socket) = obligation_ready("op-obl", &[0]).await;
     let mut c = Client::connect(&socket).await;
     let got = receipt(&mut c, "op-obl", "rc-obl").await;
     assert_eq!(got["ok"], true, "{got}");
@@ -1323,7 +1337,7 @@ async fn an_obligation_receipt_is_issued_over_the_socket() {
 
 #[tokio::test]
 async fn an_unprojectable_obligation_receipt_is_refused_before_the_settlement_commits() {
-    let (root, _rt, socket) = obligation_ready("op-obl-bad").await;
+    let (root, _rt, socket) = obligation_ready("op-obl-bad", &[0]).await;
     // The committed ALLOW decision now names a malformed world, with the chain consistently rewritten.
     rewrite_consistently(root.path(), "authority_decision", |p| {
         if p.pointer("/action_request/action/parameters/operation_id") == Some(&json!("op-obl-bad"))
@@ -1368,4 +1382,131 @@ fn rewrite_consistently(root: &Path, kind: &str, edit: impl Fn(&mut Value)) {
         serde_json::to_vec(&mmr).unwrap(),
     )
     .unwrap();
+}
+
+#[tokio::test]
+async fn an_obligation_receipt_covers_rejection_replay_and_an_inconsistent_run_set() {
+    // Contradicted (every known run failed): a final rejected receipt.
+    let (_root, _rt, socket) = obligation_ready("op-obl-rej", &[1]).await;
+    let mut c = Client::connect(&socket).await;
+    let rejected = receipt(&mut c, "op-obl-rej", "rc-rej-1").await;
+    assert_eq!(rejected["ok"], true, "{rejected}");
+    assert_eq!(rejected["receipt"]["status"], "rejected");
+    assert_eq!(rejected["receipt"]["final"], true);
+    // A second receipt for the same operation is a replay, refused.
+    let again = receipt(&mut c, "op-obl-rej", "rc-rej-2").await;
+    assert_eq!(again["error_class"], "receipt_replay_refused", "{again}");
+
+    // Inconsistent (one pass and one fail judge "unsettled"): refused before the settlement commits.
+    let (root, _rt, socket) = obligation_ready("op-obl-inc", &[0, 1]).await;
+    let mut c = Client::connect(&socket).await;
+    let packets = count_kind(root.path(), "settlement_packet");
+    let inconsistent = receipt(&mut c, "op-obl-inc", "rc-inc-1").await;
+    assert_eq!(
+        inconsistent["error_class"], "receipt_nonfinal_refused",
+        "{inconsistent}"
+    );
+    assert_eq!(
+        count_kind(root.path(), "settlement_packet"),
+        packets,
+        "nothing was committed for a settlement that could not be projected"
+    );
+    // Not burned: the same settlement is still available through the legacy verb.
+    let legacy = c
+        .call(service_call(json!({"verb": "authority_settle", "operation_id": "op-obl-inc", "request_id": "s-inc"})))
+        .await;
+    assert_eq!(legacy["final"], true, "{legacy}");
+    assert_eq!(legacy["status"], "unsettled", "{legacy}");
+}
+
+#[tokio::test]
+async fn an_unauthorized_caller_gets_the_same_refusal_on_every_obligation_path() {
+    let (root, _rt, socket) = obligation_ready("op-obl-auth", &[0]).await;
+    let mut c = Client::connect(&socket).await;
+    std::fs::write(
+        root.path().join("sea-forge-policy.yaml"),
+        EVIDENCE_POLICY.replace("settlement_declaration", "cognate_capability"),
+    )
+    .unwrap();
+    let real = receipt(&mut c, "op-obl-auth", "rc-auth-1").await;
+    let ghost = receipt(&mut c, "op-never-decided-obl", "rc-auth-2").await;
+    assert_eq!(real, ghost, "the refusal does not depend on the operation");
+    assert_eq!(real["error_class"], "cep_evidence_refused", "{real}");
+    for (op, rid) in [
+        ("op-obl-auth", "cl-auth-1"),
+        ("op-never-decided-obl", "cl-auth-2"),
+    ] {
+        let closure = c
+            .call(service_call(json!({"verb": "authority_closure", "operation_id": op,
+                "discrimination_observation_id": "obs-d", "verification_observation_ids": ["obs-v0"],
+                "request_id": rid})))
+            .await;
+        assert_eq!(closure["error_class"], "cep_evidence_refused", "{closure}");
+        assert!(
+            closure["error"]
+                .as_str()
+                .unwrap()
+                .contains("may not use settlement_declaration"),
+            "{closure}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_denied_caller_gets_the_gate_refusal_before_obligation_configuration_and_malformed_ids_record_nothing(
+) {
+    // No RealityTrace is configured on this cell.
+    let (root, socket) = boot_with(true, EVIDENCE_POLICY).await;
+    let mut c = Client::connect(&socket).await;
+    let world = world_ref();
+    let mut envelope = request(&world, "op-needs-rt", "action", "run.start");
+    envelope["extensions"]["godspeed.authority_request"]["claims"] = json!({
+        "modality": "obligation",
+        "expectation_digest": format!("sha256:{}", "e".repeat(64)),
+        "threshold_id": "thr-1",
+        "threshold_ledger": RT_LEDGER,
+        "threshold_position": 3,
+        "window_closes_at": (chrono::Utc::now() + chrono::Duration::seconds(60)).to_rfc3339(),
+        "close_grace_s": 30,
+        "verifier_argv_digest": sea_forge_authority::cep::argv_digest(&rt_argv()),
+    });
+    let allowed = c.call(verb(envelope, "op-needs-rt")).await;
+    assert_eq!(decision(&allowed), "allow", "{allowed}");
+    std::fs::write(
+        root.path().join("sea-forge-policy.yaml"),
+        EVIDENCE_POLICY.replace("settlement_declaration", "cognate_capability"),
+    )
+    .unwrap();
+    let denied = c
+        .call(service_call(json!({"verb": "authority_settle", "operation_id": "op-needs-rt", "request_id": "s-nrt"})))
+        .await;
+    let text = denied["error"].as_str().unwrap();
+    assert!(
+        text.contains("may not use settlement_declaration"),
+        "{denied}"
+    );
+    assert!(!text.contains("RealityTrace"), "{denied}");
+
+    // A denial for a well-formed id is recorded; a malformed id writes nothing.
+    let before = count_kind(root.path(), "authority_decision");
+    let long = "o".repeat(sea_forge_authority::cep::MAX_OPERATION_ID_BYTES + 1);
+    let malformed = c
+        .call(service_call(
+            json!({"verb": "authority_settle", "operation_id": long, "request_id": "s-long"}),
+        ))
+        .await;
+    assert_eq!(
+        malformed["error_class"], "cep_request_invalid",
+        "{malformed}"
+    );
+    assert_eq!(count_kind(root.path(), "authority_decision"), before);
+    let ghost = c
+        .call(service_call(json!({"verb": "authority_settle", "operation_id": "op-ghost-denied", "request_id": "s-ghost"})))
+        .await;
+    assert_eq!(ghost["error_class"], "cep_evidence_refused", "{ghost}");
+    assert_eq!(
+        count_kind(root.path(), "authority_decision"),
+        before + 1,
+        "the denial is audited"
+    );
 }

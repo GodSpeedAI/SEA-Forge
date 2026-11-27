@@ -62,16 +62,25 @@ must preserve finality without interpreting it as success.
 See the [migration specification](../../.agents/specs/cep-world-ref-migration.spec.md).
 
 - **Obligation settlements.** An obligation settles from RealityTrace's ledger, so its lineage is the
-  committed ALLOW decision's envelope id rather than evidence packets. The receipt checks that lineage
-  against the `authority_decision` row of the same verified snapshot; evidence settlements keep the
-  evidence-row check. Everything that decides whether a receipt can be projected (verified history, a
-  well-formed world and decision reference, operation id length, world agreement across evidence) is
-  checked after the settlement gate and before the settlement commits, so a settlement that could
-  never be projected is refused instead of committed and then permanently unobtainable.
+  decision's envelope id rather than evidence packets; evidence settlements keep the evidence-row check.
+  The decision envelope id is the deterministic `env-authority_decision-{operation}`; the committed
+  `authority_decision` row does not store it, so what the receipt binds is the operation that ALLOW row
+  names in its own `parameters.operation_id` (checked against the row's subject), not a stored string.
+  An obligation whose run set judges inconsistent ("unsettled") is final but is neither settled nor
+  rejected, so it is refused with `receipt_nonfinal_refused` before it commits; it remains obtainable
+  through `authority_settle`.
+- **One projectability predicate.** Whether a settlement packet can be projected (lineage bounds and
+  shape, envelope id shape, status set, issuer, profile, agreement with the ALLOW record) is a single
+  function. It runs on the packet about to commit, so an unprojectable settlement is refused instead of
+  committed and then permanently unobtainable, and again on the committed packet.
 - **Gate first.** The settlement declaration gate is evaluated before the existence and evidence
   errors, so a caller without settlement authority cannot probe whether an operation, its decision or
   its evidence exists. An allow is not recorded by that first evaluation (the existing gate records it
-  where the work is done), so polling a not-yet-settleable operation appends nothing.
+  where the work is done), so polling a not-yet-settleable operation appends nothing. A denial is
+  recorded for any well-formed operation id (it is audit); an empty, over-long or control-character id is
+  refused as malformed input before anything is written. The same gate-first order applies to
+  `authority_settle`, `authority_settle_receipt` (including the RealityTrace-configured check) and
+  `authority_closure`.
 
 ## Known limits
 
@@ -85,6 +94,15 @@ See the [migration specification](../../.agents/specs/cep-world-ref-migration.sp
   before it binds and held for the server's lifetime), which refuses a second server on the same root
   (`a_second_server_cannot_own_the_same_cell_root`). Two servers sharing a root, and so both seeing
   "no claim", cannot exist.
+- **Preflight and commit are not atomic.** The history is verified and the packet checked before the
+  settlement commits, and the committed packet is verified again; a write to the ledger between the two
+  can still produce a post-commit `receipt_integrity_failed` or `receipt_reference_mismatch`. The response
+  then reports `no_side_effect: false` and the settlement stays obtainable through `authority_settle`.
+- **`request.get_status` answers `unknown` when ownership cannot be proven.** That includes the true owner
+  of a request whose claim ledger is unreadable or that predates claims, although the request executed;
+  the owner learns the truth from the original response or an operator, not from status. A non-owner
+  without the grant takes longer than for a never-seen id (policy load, possible audit append), so
+  timing can still distinguish a claimed id. The log line for an unreadable claim carries no request id.
 - **Request ids are cell-global.** See the open debt entry in `.agents/OBSERVED_DEBT.md`.
 
 ## Residual risk

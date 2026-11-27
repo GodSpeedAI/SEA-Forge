@@ -1513,6 +1513,106 @@ fn is_envelope_ref(text: &str) -> bool {
     !text.is_empty() && text.len() <= FIELD_MAX && text.chars().all(|c| c.is_ascii_graphic())
 }
 
+fn allowed_asserts_obligation(allowed: &AllowedOperation) -> bool {
+    allowed
+        .claims
+        .as_ref()
+        .is_some_and(|c| c.contains_key("modality"))
+}
+
+fn lineage_of(packet: &Value) -> Vec<&str> {
+    packet
+        .get("lineage_refs")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default()
+}
+
+/// The fields a receipt is projected from, taken from a settlement packet that passed
+/// [`packet_receipt_fields`].
+struct PacketFields {
+    issuer: String,
+    envelope_id: String,
+    status: String,
+    finality: bool,
+}
+
+/// The ONE predicate for "this settlement packet can be projected as a receipt": lineage bounds and shape,
+/// envelope id shape, the status set, issuer, profile, and agreement with the committed ALLOW decision.
+/// It runs on the packet about to be committed (so an unprojectable settlement is refused instead of
+/// committed and then permanently unobtainable) and again on the packet that was committed. A final
+/// settlement whose disposition is neither settled nor rejected (an inconsistent obligation) is `NonFinal`.
+///
+/// The decision reference is the deterministic `env-authority_decision-{operation}` of the operation id
+/// that the committed ALLOW row names in its own `parameters.operation_id`; the row does not store the
+/// envelope id itself, so what is bound here is that operation, not a stored string.
+fn packet_receipt_fields(
+    packet: &Value,
+    operation_id: &str,
+    allowed: &AllowedOperation,
+) -> Result<PacketFields, ReceiptRefusal> {
+    let mismatch = ReceiptRefusal::ReferenceMismatch;
+    let ext = "/extensions/godspeed.settlement_packet";
+    let text = |pointer: &str| {
+        packet
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty() && s.len() <= FIELD_MAX && !s.chars().any(char::is_control))
+    };
+    let op = text(&format!("{ext}/operation_id")).ok_or(mismatch)?;
+    let world = text("/scope/world_ref").ok_or(mismatch)?;
+    let decision_ref = text(&format!("{ext}/authority_decision_ref")).ok_or(mismatch)?;
+    let issuer = text("/created_by").ok_or(mismatch)?;
+    let envelope_id = text("/envelope_id").ok_or(mismatch)?;
+    let status = text(&format!("{ext}/overall_status")).ok_or(mismatch)?;
+    let finality = packet
+        .pointer(&format!("{ext}/final"))
+        .and_then(Value::as_bool)
+        .ok_or(mismatch)?;
+    if !finality {
+        return Err(ReceiptRefusal::NonFinal);
+    }
+    if status == "unsettled" {
+        return Err(ReceiptRefusal::NonFinal);
+    }
+    let lineage = lineage_of(packet);
+    let lineage_ok = if allowed_asserts_obligation(allowed) {
+        // An obligation settles from RealityTrace's ledger: its lineage is exactly its ALLOW decision.
+        lineage == [allowed.decision_envelope_id.as_str()]
+    } else {
+        !lineage.is_empty() && lineage.iter().all(|r| is_envelope_ref(r))
+    };
+    if op != operation_id
+        || op.len() > MAX_OPERATION_ID_BYTES
+        || issuer != "sea-forge-authority"
+        || !matches!(status, "settled" | "rejected")
+        || packet.get("envelope_kind").and_then(Value::as_str) != Some("settlement_packet")
+        || packet
+            .pointer("/extensions/cep.profile/profile_id")
+            .and_then(Value::as_str)
+            != Some("godspeed.settlement_packet")
+        || packet
+            .pointer("/extensions/cep.profile/profile_version")
+            .and_then(Value::as_str)
+            != Some(PROFILE_VERSION)
+        || world != allowed.world_ref
+        || decision_ref != allowed.decision_envelope_id
+        || !is_world_ref(world)
+        || !is_envelope_ref(decision_ref)
+        || !is_envelope_ref(envelope_id)
+        || !envelope_id.starts_with(&format!("env-settlement_packet-{operation_id}-"))
+        || !lineage_ok
+    {
+        return Err(mismatch);
+    }
+    Ok(PacketFields {
+        issuer: issuer.to_string(),
+        envelope_id: envelope_id.to_string(),
+        status: status.to_string(),
+        finality,
+    })
+}
+
 impl CepAuthorityService<'_> {
     /// Everything about a receipt that can be decided before the settlement commits, so a settlement that
     /// could never be projected is refused rather than committed and then permanently unobtainable: the
@@ -1595,71 +1695,15 @@ impl CepAuthorityService<'_> {
         }
         let allowed = allowed_operation(&entries, operation_id).ok_or_else(mismatch)?;
         let packet = &entry.payload;
-        let ext = "/extensions/godspeed.settlement_packet";
-        let text = |pointer: &str| {
-            packet.pointer(pointer).and_then(Value::as_str).filter(|s| {
-                !s.is_empty() && s.len() <= FIELD_MAX && !s.chars().any(char::is_control)
-            })
-        };
-        let op = text(&format!("{ext}/operation_id")).ok_or_else(mismatch)?;
-        let world = text("/scope/world_ref").ok_or_else(mismatch)?;
-        let decision_ref = text(&format!("{ext}/authority_decision_ref")).ok_or_else(mismatch)?;
-        let issuer = text("/created_by").ok_or_else(mismatch)?;
-        let envelope_id = text("/envelope_id").ok_or_else(mismatch)?;
-        let status = text(&format!("{ext}/overall_status")).ok_or_else(mismatch)?;
-        let finality = packet
-            .pointer(&format!("{ext}/final"))
-            .and_then(Value::as_bool)
-            .ok_or_else(mismatch)?;
-        if op != operation_id
-            || op.len() > MAX_OPERATION_ID_BYTES
-            || issuer != "sea-forge-authority"
-            || status != outcome.status
-            || finality != outcome.final_status
-            || !finality
-            || !matches!(status, "settled" | "rejected")
-            || packet.get("envelope_kind").and_then(Value::as_str) != Some("settlement_packet")
-            || packet
-                .pointer("/extensions/cep.profile/profile_id")
-                .and_then(Value::as_str)
-                != Some("godspeed.settlement_packet")
-            || packet
-                .pointer("/extensions/cep.profile/profile_version")
-                .and_then(Value::as_str)
-                != Some(PROFILE_VERSION)
-            // References come from the committed ALLOW record; the packet must agree with it.
-            || world != allowed.world_ref
-            || decision_ref != allowed.decision_envelope_id
-            || !is_world_ref(world)
-            || !is_envelope_ref(decision_ref)
-            || !is_envelope_ref(envelope_id)
-            || !envelope_id.starts_with(&format!("env-settlement_packet-{operation_id}-"))
-        {
+        let fields = packet_receipt_fields(packet, operation_id, &allowed).map_err(refused)?;
+        if fields.status != outcome.status || fields.finality != outcome.final_status {
             return Err(mismatch());
         }
-        // Every evidence packet the settlement relies on is a committed row of this operation, for the
-        // same world as the decision.
-        let lineage: Vec<&str> = packet
-            .get("lineage_refs")
-            .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(Value::as_str).collect())
-            .unwrap_or_default();
-        let obligation = allowed
-            .claims
-            .as_ref()
-            .is_some_and(|c| c.contains_key("modality"));
-        if obligation {
-            // An obligation settles from RealityTrace's ledger, not from submitted evidence packets: its
-            // lineage is exactly the committed ALLOW decision it was judged under, and that decision is an
-            // `authority_decision` row of this same verified snapshot (it is where `allowed` came from).
-            if lineage != [allowed.decision_envelope_id.as_str()] {
-                return Err(mismatch());
-            }
-        } else {
-            if lineage.is_empty() {
-                return Err(mismatch());
-            }
-            for reference in lineage {
+        // An evidence settlement's lineage names evidence packets: each is a committed row of this
+        // operation, for the same world as the decision. (An obligation's lineage is its decision;
+        // `packet_receipt_fields` checked that.)
+        if !allowed_asserts_obligation(&allowed) {
+            for reference in lineage_of(packet) {
                 let backed = entries.iter().any(|e| {
                     e.record_kind == "evidence_packet"
                         && operation_subject(e) == Some(operation_id)
@@ -1676,17 +1720,17 @@ impl CepAuthorityService<'_> {
             }
         }
         Ok(SettlementReceipt {
-            operation_id: op.to_string(),
+            operation_id: operation_id.to_string(),
             subject_refs: entry.subject_refs.clone(),
             world_ref: allowed.world_ref.clone(),
             authority_decision_ref: allowed.decision_envelope_id.clone(),
-            issuer: issuer.to_string(),
-            status: status.to_string(),
-            final_status: finality,
+            issuer: fields.issuer,
+            status: fields.status,
+            final_status: fields.finality,
             ledger_id: entry.ledger_id.clone(),
             ledger_entry: entry.entry_ulid.clone(),
             payload_hash: entry.payload_hash.clone(),
-            envelope_id: envelope_id.to_string(),
+            envelope_id: fields.envelope_id,
         })
     }
 }
@@ -1878,6 +1922,17 @@ impl CepAuthorityService<'_> {
         self.gate_settlement_declaration(&ledger, operation_id, &ingress)
     }
 
+    /// Refuse a caller without settlement authority (recording the denial) before anything about the
+    /// operation is read. Callers that look at an operation before settling it call this first.
+    pub fn require_settlement_authority(
+        &self,
+        operation_id: &str,
+        caller: &Actor,
+    ) -> Result<(), CepAuthorityError> {
+        let ledger = self.ledger()?;
+        self.precheck_settlement_declaration(&ledger, operation_id, caller)
+    }
+
     /// The settlement gate, run first so a caller without settlement authority is refused (and the refusal
     /// recorded) before anything else about the operation is looked at: whether it was decided, has evidence,
     /// is still pending or is already final. An ALLOW is not recorded here (the existing gate records it where
@@ -1888,6 +1943,14 @@ impl CepAuthorityService<'_> {
         operation_id: &str,
         caller: &Actor,
     ) -> Result<(), CepAuthorityError> {
+        // A denial is recorded as audit, but only for an operation id that could name an operation: an
+        // empty, over-long or control-character id is malformed input, refused before anything is written.
+        if operation_id.is_empty()
+            || operation_id.len() > MAX_OPERATION_ID_BYTES
+            || operation_id.chars().any(char::is_control)
+        {
+            return Err(CepAuthorityError::Malformed("operation_id"));
+        }
         let ingress = VerifiedSettlementIngress::verified(
             SettlementIngress::CepSettlement,
             SettlementTransport::None,
@@ -2310,6 +2373,10 @@ impl CepAuthorityService<'_> {
                 },
             },
         });
+        if require_final {
+            packet_receipt_fields(&envelope, operation_id, &allowed)
+                .map_err(CepAuthorityError::Receipt)?;
+        }
         let subjects = vec!["cognate".to_string(), operation_id.to_string()];
         let committed = if final_status {
             match ledger.commit_typed_new(
@@ -2543,10 +2610,6 @@ fn settlement_parameters(operation_id: &str, class: SettlementAuthorityClass) ->
     })
 }
 
-/// Evaluate a governed surface against the policy and commit the decision. A refusal is an error and the
-/// caller must not proceed. Shared by the CEP settlement callers and every SWE_SEED declaration path, so
-/// no path reaches `declare()` without this decision.
-#[allow(clippy::too_many_arguments)]
 /// Evaluate a gate without recording anything.
 fn evaluate_gate(
     engine: &PolicyAuthorityEngine,
@@ -2581,6 +2644,9 @@ fn evaluate_gate(
     })?)
 }
 
+/// Evaluate a governed surface against the policy and commit the decision. A refusal is an error and the
+/// caller must not proceed. Shared by the CEP settlement callers and every SWE_SEED declaration path, so
+/// no path reaches `declare()` without this decision.
 #[allow(clippy::too_many_arguments)]
 fn commit_gate_evaluation(
     engine: &PolicyAuthorityEngine,

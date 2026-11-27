@@ -495,6 +495,10 @@ pub fn settle_receipt(
             .realitytrace
             .clone()
             .map(crate::realitytrace_source::RealityTraceSource::new);
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            let (class, message) = receipt_error(&e);
+            return receipt_refusal(class, message, false);
+        }
         let outcome = match service.asserts_obligation(operation_id) {
             Ok(true) => match &source {
                 Some(source) => service.settle_obligation_for_receipt(operation_id, caller, source),
@@ -559,6 +563,11 @@ pub fn settle(config: &ServerConfig, root: &Path, operation_id: &str, caller: &A
             .realitytrace
             .clone()
             .map(crate::realitytrace_source::RealityTraceSource::new);
+        // Settlement authority first, so an unauthorized caller gets the uniform refusal whatever the
+        // operation or the RealityTrace configuration looks like.
+        if let Err(e) = service.require_settlement_authority(operation_id, caller) {
+            return refusal(e.class(), e);
+        }
         // An operation whose allow decision asserted a modality is settled from RealityTrace's ledger.
         let outcome = match service.asserts_obligation(operation_id) {
             Ok(true) => match &source {
