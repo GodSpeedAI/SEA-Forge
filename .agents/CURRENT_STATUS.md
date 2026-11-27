@@ -1,3 +1,30 @@
+**Status revision:** 389
+
+**Stage:** CognitiveOS convergence #108 | CI runs the CEP profile validators
+
+**Summary:** The test job fetches the public CEP repository at a pinned commit outside the workspace, installs uv 0.12.1 and sets CEP_REPO and REQUIRE_CEP=1, so the external CEP profile validator tests run in CI and fail rather than skip when the validator is unavailable. No credential is needed: the repository is public.
+
+**Verified:**
+
+- actionlint reports no new finding for the change (one pre-existing SC2153 info on the OPA step).
+- The fetch step asserts the checked-out commit equals the pinned SHA.
+
+**Limits:**
+
+- The CEP pin (5111ec388ebf) is updated by hand when the protocol changes.
+- Hosted CI result is pending on push.
+
+**Next:** Integrate with #117 into integration/cognitiveos-108 and watch hosted CI.
+
+**Evidence:**
+
+- .github/workflows/ci.yml
+- docs/decisions/ADR-017-execution-profile-boundary.md
+
+---
+
+# Historical status
+
 **Status revision:** 388
 
 **Stage:** CognitiveOS convergence #108 | #116 claim key renamed to execution_profile_digest
@@ -21,8 +48,6 @@
 - docs/subsystems/authority-fabric.md
 
 ---
-
-# Historical status
 
 **Status revision:** 387
 
