@@ -127,7 +127,8 @@ pub fn pending_for_case(root: &Path, case_id: &str) -> Result<Vec<ApprovalReques
         .collect())
 }
 
-/// Whether a pending approval's window has closed as of `now` (RFC3339).
+/// Whether a pending approval's window has closed as of `now` (RFC3339), compared as instants. An
+/// `expires_at` or `now` that does not parse counts as closed.
 /// `None` means the approval is not pending, so expiry does not apply.
 pub fn check_expiry(
     root: &Path,
@@ -137,7 +138,8 @@ pub fn check_expiry(
 ) -> Result<Option<bool>, ForgeError> {
     match latest_status(root, case_id, approval_id)? {
         Some(request) if request.status == ApprovalStatus::Pending => {
-            Ok(Some(request.expires_at.as_str() <= now))
+            // Instants, not text; an unparsable stamp is expired.
+            Ok(Some(crate::instant::is_expired(&request.expires_at, now)))
         }
         _ => Ok(None),
     }

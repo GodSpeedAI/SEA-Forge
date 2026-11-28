@@ -212,7 +212,7 @@ fn governance_context(root: &Path, request: &ApprovalRequest) -> Option<Approval
 fn shape(root: &Path, request: ApprovalRequest, now: &str) -> CaseTaskApproval {
     let governance = governance_context(root, &request);
     CaseTaskApproval {
-        expired: request.expires_at.as_str() <= now,
+        expired: sea_forge_core::instant::is_expired(&request.expires_at, now),
         approval_id: request.approval_id,
         case_id: request.case_id,
         run_id: request.run_id,

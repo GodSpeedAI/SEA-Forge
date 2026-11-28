@@ -2918,10 +2918,9 @@ fn validate_ledger_references(
                 != Some(criteria_record.criteria_record_hash.as_str())
             || approval.resolved_by.as_deref() != token.approver_id.as_deref()
             || approval.resolved_by.as_deref() == Some(token.actor_id.as_str())
-            || approval
-                .resolved_at
-                .as_ref()
-                .is_none_or(|resolved_at| resolved_at > &approval.expires_at)
+            || approval.resolved_at.as_ref().is_none_or(|resolved_at| {
+                sea_forge_core::instant::is_after(resolved_at, &approval.expires_at).unwrap_or(true)
+            })
         {
             return Err(m8_error(
                 "artifact_reference_error",
@@ -3153,10 +3152,10 @@ fn validate_ledger_references(
                 format!("capitalization approval is invalid: {error}"),
             )
         })?;
-        let resolved_before_expiry = approval
-            .resolved_at
-            .as_ref()
-            .is_some_and(|resolved_at| resolved_at <= &approval.expires_at);
+        let resolved_before_expiry = approval.resolved_at.as_ref().is_some_and(|resolved_at| {
+            sea_forge_core::instant::is_at_or_before(resolved_at, &approval.expires_at)
+                .unwrap_or(false)
+        });
         if approval.status != ApprovalStatus::Approved
             || approval.case_id != token.case_id
             || approval.run_id != token.run_id
