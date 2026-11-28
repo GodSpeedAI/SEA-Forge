@@ -446,8 +446,10 @@ fn obligation_window_parse_acceptance_is_pinned() {
         ("2020-01-01T00:00:00z", Some("2020-01-01T00:00:00+00:00")),
         ("2020-01-01t00:00:00Z", Some("2020-01-01T00:00:00+00:00")),
         ("2020-01-01 00:00:00Z", Some("2020-01-01T00:00:00+00:00")),
-        // A leap second is accepted and rendered as second 60, not folded into the previous second.
-        ("2016-12-31T23:59:60Z", Some("2016-12-31T23:59:60+00:00")),
+        // Leap seconds: chrono accepts `:60` here and renders it back as second 60. This value is STORED
+        // (the closure record carries it), so the migration rule is to REJECT `:60` for stored or
+        // serialized values rather than change their bytes silently. It is therefore deliberately not
+        // pinned; the comparison-only `:60` behaviour is pinned in the discrimination test below.
         (
             "2020-01-01T00:00:00.1234567890Z",
             Some("2020-01-01T00:00:00.123456789+00:00"),
@@ -486,6 +488,9 @@ fn discrimination_completion_parse_acceptance_is_pinned() {
         ("2019-12-31T23:00:01.999999999Z", true),
         ("2020-01-01T00:30:01+01:00", true),
         ("2019-12-31T23:00:01z", true),
+        // Comparison-only: `completed_at` is compared with the execution floor and never stored, so a leap
+        // second is accepted (folded into the following second, still long before the floor).
+        ("2016-12-31T23:59:60Z", true),
         ("2019-12-31 23:00:01Z", true),
         ("2019-12-31T23:00:01", false),
         ("2019-12-31T23:00:01+0000", false),

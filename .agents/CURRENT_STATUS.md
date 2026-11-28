@@ -1,22 +1,23 @@
 # Current status
 
-**Status revision:** 288
+**Status revision:** 289
 
-**Stage:** Chrono migration step 1: golden timestamp tests
+**Stage:** Chrono migration step 1: golden timestamp tests extended
 
-**Summary:** Pin today's exact chrono timestamp bytes and parse acceptance with golden tests on main, before SEA moves to the time crate (RUSTSEC-2026-0543).
+**Summary:** Extend the timestamp golden tests to the PostgreSQL session expiry and the ACP approval stamps, pin stamp formats rather than comparison semantics, and record the leap-second rule the swap will implement.
 
 **Verified:**
 
-- Eighteen golden tests pass on chrono and change no production code: authority 8, ledger 4, server 4, core 1, trace 1; fmt and clippy -D warnings on those five crates are clean.
-- Pinned through public seams: obligation window_closes_at normalization (fractions 0, 1 ms, 1 us, 1 ns, 999999999 ns, other fractions, six offsets, leap second rendered as :60) and the accept/refuse set for 20 spellings; discrimination and verification-run time parsing; execution floor and closure stamps; approval expiry equal to the escalation commit instant plus the ttl to the nanosecond and the Z-seconds issued expiry; decision decided_at; ledger committed_at, checkpoint created_at, global checkpoint and witness signed_at shapes with signatures verifying from the bytes on disk, and the ULID millisecond prefix; correlation stamps stored verbatim and never parsed; case created_at; the approval inbox expired flag as a string comparison against a +00:00 now; generated id timestamps and trace timestamps.
-- The recon's Millis+Z site (sfwp/case_records.rs:500) does not exist on main, so nothing there is pinned.
+- PostgreSQL session expiry: a new golden test against a real pg0 cluster (SEA_FORGE_SECURITY_PG_INSTALL=~/.pg0/installation/18.1.0, SEA_FORGE_REQUIRE_POSTGRES=1) passes: the session expires_at is whole seconds with a literal Z, PostgreSQL's rolvaliduntil renders back to the identical text, and renewal moves it in the same shape; it fails rather than skips when SEA_FORGE_REQUIRE_POSTGRES is set.
+- ACP permission approvals (delegation.rs): conformance_m16 now pins requested_at and expires_at as +00:00 automatic-fraction stamps whose difference is exactly the endpoint timeout (3 s), and the escalated-permission test passes.
+- The approval inbox golden no longer pins the text comparison (a bug, fixed in a separate PR): it pins that stored requested_at and expires_at are returned verbatim.
+- Leap-second rule for the swap: comparison-only sites accept :60 and fold it into the next second (pinned: the discrimination baseline completed_at); values that are stored or serialized reject :60 explicitly so their bytes never change silently (so the stored window_closes_at :60 rendering is deliberately no longer pinned).
+- authority 8, server 4 plus the postgres test and conformance_m16 (18 passed; its t16_8 case needs a built sea-forge CLI binary in the target dir and was not run here), ledger 4, core 1, trace 1; clippy -D warnings and fmt clean.
 
 **Limits:**
 
-- Not pinned through a public seam: postgres.rs Secs+Z session expiry (needs PostgreSQL; session_deadline is private), case_dispatch.rs and delegation.rs approval requested_at/expires_at and the other now-stamped wire sites (need full delegation flows), authority lib.rs approval grant expiry parsing, and the case-runner, CLI, thoth, settlement, sandbox and cell stamps.
+- Still not pinned through a public seam: case_dispatch.rs sandbox-episode approval requested_at/expires_at (no existing test drives the flow over the wire; the delegation.rs ACP path is pinned instead), the approval-window parse at postgres.rs:403 (covered only by the existing broker suite, which needs workload isolation that this host cannot provide), authority lib.rs approval-grant expiry parsing, and the case-runner, CLI, thoth, settlement, sandbox and cell stamps.
 - Now-derived stamps can only be pinned by shape and arithmetic, not by fixed instants; fixed instants are pinned only where the instant is an input (obligation claims and runs).
-- The chrono leap-second rendering (:60) cannot be represented by the time crate and needs an explicit decision in the migration.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -42,12 +43,11 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Migrate to the time crate with these tests unedited (DomainForge, then RealityTrace, then SEA).
+**Next:** Merge the instant-comparison fix, then migrate to the time crate with these tests unedited.
 
 **Evidence:**
 
-- crates/sea-forge-authority/tests/timestamp_golden.rs
-- crates/sea-forge-ledger/tests/timestamp_golden.rs
+- crates/sea-forge-server/tests/timestamp_golden_postgres.rs
+- crates/sea-forge-server/tests/conformance_m16.rs
 - crates/sea-forge-server/tests/timestamp_golden.rs
-- crates/sea-forge-core/tests/timestamp_golden.rs
-- crates/sea-forge-trace/tests/timestamp_golden.rs
+- crates/sea-forge-authority/tests/timestamp_golden.rs

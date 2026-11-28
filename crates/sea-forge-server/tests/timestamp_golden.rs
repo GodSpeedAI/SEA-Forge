@@ -3,9 +3,8 @@
 //! move to the `time` crate. Only public functions and the wire are used, and no test names a date-time type,
 //! so the swap leaves them unedited.
 //!
-//! Pinned: the correlation record stamps, the case `created_at`, the approval inbox's string comparison of
-//! `expires_at` against "now" (which makes the bytes of "now" load-bearing), and the persisted shape of
-//! every correlation timestamp (`+00:00` with an automatic fraction).
+//! Pinned: the correlation record stamps, the case `created_at`, the approval inbox returning stored stamps
+//! verbatim, and the persisted shape of every correlation timestamp (`+00:00` with an automatic fraction).
 
 use sea_forge_agent::{AgentConfig, AgentEndpointConfig, ProviderKind};
 use sea_forge_core::types::{ApprovalRequest, ApprovalStatus};
@@ -285,43 +284,34 @@ fn approval(id: &str, expires_at: &str) -> ApprovalRequest {
 }
 
 #[tokio::test]
-async fn approval_inbox_expiry_is_a_string_comparison_against_a_plus_zero_now() {
-    // `expired` is `expires_at <= now` as TEXT, where `now` is a `+00:00` stamp. So the bytes of the stamp
-    // decide the answer, including for spellings that are not RFC 3339 at all. Pin every one of them.
+async fn approval_inbox_returns_stored_stamps_verbatim_in_whatever_spelling_was_stored() {
+    // The inbox never re-renders `requested_at` / `expires_at`: it returns the stored bytes. That is the
+    // format contract pinned here. (How an `expires_at` is COMPARED with now is not pinned: that belongs to
+    // the instant-comparison fix, not to this byte-format baseline.)
     let (root, socket) = boot().await;
-    let cases: [(&str, bool); 9] = [
-        ("2000-01-01T00:00:00Z", true),
-        ("2000-01-01T00:00:00+00:00", true),
-        ("2000-01-01T00:00:00.123456789Z", true),
-        ("2099-01-01T00:00:00Z", false),
-        ("2099-01-01T00:00:00+00:00", false),
-        ("2099-01-01T05:30:00+05:30", false),
-        ("zzz", false),
-        ("ABC", false),
-        ("", true),
+    let spellings = [
+        "2000-01-01T00:00:00Z",
+        "2000-01-01T00:00:00+00:00",
+        "2000-01-01T00:00:00.123456789Z",
+        "2099-01-01T05:30:00+05:30",
+        "2099-01-01T00:00:00.5+00:00",
+        "zzz",
+        "",
     ];
-    for (i, (expires, _)) in cases.iter().enumerate() {
+    for (i, expires) in spellings.iter().enumerate() {
         sea_forge_core::approvals::append(root.path(), &approval(&format!("ap-{i}"), expires))
             .unwrap();
     }
     let mut c = Client::connect(&socket).await;
     let listed = c.call(json!({"verb": "approval_list"})).await;
     let approvals = listed["approvals"].as_array().unwrap();
-    assert_eq!(approvals.len(), cases.len(), "{listed}");
-    for (i, (expires, expired)) in cases.iter().enumerate() {
+    assert_eq!(approvals.len(), spellings.len(), "{listed}");
+    for (i, expires) in spellings.iter().enumerate() {
         let row = approvals
             .iter()
             .find(|a| a["approval_id"] == format!("ap-{i}"))
             .unwrap();
-        assert_eq!(
-            row["expired"],
-            json!(expired),
-            "expires_at {expires:?}: {row}"
-        );
-        assert_eq!(
-            row["expires_at"],
-            json!(expires),
-            "the stored text is returned verbatim"
-        );
+        assert_eq!(row["expires_at"], json!(expires), "{row}");
+        assert_eq!(row["requested_at"], json!("2026-07-26T00:00:00Z"), "{row}");
     }
 }
