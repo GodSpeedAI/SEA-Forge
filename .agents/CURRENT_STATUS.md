@@ -1,17 +1,22 @@
 # Current status
 
-**Status revision:** 287
+**Status revision:** 288
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
+**Stage:** Chrono migration step 1: golden timestamp tests
 
-**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
+**Summary:** Pin today's exact chrono timestamp bytes and parse acceptance with golden tests on main, before SEA moves to the time crate (RUSTSEC-2026-0543).
 
 **Verified:**
 
-- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
+- Eighteen golden tests pass on chrono and change no production code: authority 8, ledger 4, server 4, core 1, trace 1; fmt and clippy -D warnings on those five crates are clean.
+- Pinned through public seams: obligation window_closes_at normalization (fractions 0, 1 ms, 1 us, 1 ns, 999999999 ns, other fractions, six offsets, leap second rendered as :60) and the accept/refuse set for 20 spellings; discrimination and verification-run time parsing; execution floor and closure stamps; approval expiry equal to the escalation commit instant plus the ttl to the nanosecond and the Z-seconds issued expiry; decision decided_at; ledger committed_at, checkpoint created_at, global checkpoint and witness signed_at shapes with signatures verifying from the bytes on disk, and the ULID millisecond prefix; correlation stamps stored verbatim and never parsed; case created_at; the approval inbox expired flag as a string comparison against a +00:00 now; generated id timestamps and trace timestamps.
+- The recon's Millis+Z site (sfwp/case_records.rs:500) does not exist on main, so nothing there is pinned.
 
 **Limits:**
 
+- Not pinned through a public seam: postgres.rs Secs+Z session expiry (needs PostgreSQL; session_deadline is private), case_dispatch.rs and delegation.rs approval requested_at/expires_at and the other now-stamped wire sites (need full delegation flows), authority lib.rs approval grant expiry parsing, and the case-runner, CLI, thoth, settlement, sandbox and cell stamps.
+- Now-derived stamps can only be pinned by shape and arithmetic, not by fixed instants; fixed instants are pinned only where the instant is an input (obligation claims and runs).
+- The chrono leap-second rendering (:60) cannot be represented by the time crate and needs an explicit decision in the migration.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -37,13 +42,12 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
+**Next:** Migrate to the time crate with these tests unedited (DomainForge, then RealityTrace, then SEA).
 
 **Evidence:**
 
-- .agents/reports/fde-convergence-2026-11-12/STATUS.md
-- .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
-- .agents/reports/fde-convergence-2026-11-12/F-implementation-plan.md
-- .agents/plans/2026-10-28-consolidated-final-report.md
-- .agents/plans/2026-10-27-arm64-jetson-packaging.md
-- .agents/plans/2026-10-26-capability-harvest.md
+- crates/sea-forge-authority/tests/timestamp_golden.rs
+- crates/sea-forge-ledger/tests/timestamp_golden.rs
+- crates/sea-forge-server/tests/timestamp_golden.rs
+- crates/sea-forge-core/tests/timestamp_golden.rs
+- crates/sea-forge-trace/tests/timestamp_golden.rs
