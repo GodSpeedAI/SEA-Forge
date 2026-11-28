@@ -22,6 +22,8 @@ use std::io::{BufRead, Write};
 use std::path::Path;
 
 const ENDPOINT: &str = "acp-fixture";
+/// The fixture endpoint's `timeout_secs`, which is the approval window of an escalated ACP permission.
+const APPROVAL_TIMEOUT_SECS: u64 = 3;
 
 fn write_rpc(value: Value) {
     let mut stdout = std::io::stdout().lock();
@@ -603,6 +605,34 @@ async fn t16_2_escalated_permission_suspends_and_resolves_same_session() {
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         };
         assert_eq!(approval.status, ApprovalStatus::Pending);
+        // Golden pin (delegation.rs ACP permission approval): `requested_at` and `expires_at` are
+        // `to_rfc3339()` of one UTC instant and that instant plus the request timeout, so both are `+00:00`
+        // with an automatic 0/3/6/9-digit fraction and differ by exactly the timeout, to the nanosecond.
+        {
+            fn ns(stamp: &str) -> i128 {
+                let body = stamp
+                    .strip_suffix("+00:00")
+                    .unwrap_or_else(|| panic!("{stamp}"));
+                let (whole, frac) = body.split_once('.').map_or((body, ""), |(w, f)| (w, f));
+                assert!(matches!(frac.len(), 0 | 3 | 6 | 9), "{stamp}");
+                let n = |r: std::ops::Range<usize>| whole[r].parse::<i64>().unwrap();
+                let (y, m, d) = (n(0..4), n(5..7), n(8..10));
+                let y = if m <= 2 { y - 1 } else { y };
+                let era = if y >= 0 { y } else { y - 399 } / 400;
+                let yoe = y - era * 400;
+                let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+                let days = era * 146_097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719_468;
+                let secs = days * 86_400 + n(11..13) * 3600 + n(14..16) * 60 + n(17..19);
+                secs as i128 * 1_000_000_000 + format!("{frac:0<9}").parse::<i128>().unwrap()
+            }
+            let window = ns(&approval.expires_at) - ns(&approval.requested_at);
+            assert!(window > 0 && window % 1_000_000_000 == 0, "{window}");
+            assert_eq!(
+                window,
+                APPROVAL_TIMEOUT_SECS as i128 * 1_000_000_000,
+                "expires_at - requested_at"
+            );
+        }
         let mut resolution = approval.clone();
         resolution.status = if granted {
             ApprovalStatus::Approved

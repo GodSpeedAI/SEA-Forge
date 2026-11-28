@@ -1,17 +1,23 @@
 # Current status
 
-**Status revision:** 287
+**Status revision:** 289
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
+**Stage:** Chrono migration step 1: golden timestamp tests extended
 
-**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
+**Summary:** Extend the timestamp golden tests to the PostgreSQL session expiry and the ACP approval stamps, pin stamp formats rather than comparison semantics, and record the leap-second rule the swap will implement.
 
 **Verified:**
 
-- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
+- PostgreSQL session expiry: a new golden test against a real pg0 cluster (SEA_FORGE_SECURITY_PG_INSTALL=~/.pg0/installation/18.1.0, SEA_FORGE_REQUIRE_POSTGRES=1) passes: the session expires_at is whole seconds with a literal Z, PostgreSQL's rolvaliduntil renders back to the identical text, and renewal moves it in the same shape; it fails rather than skips when SEA_FORGE_REQUIRE_POSTGRES is set.
+- ACP permission approvals (delegation.rs): conformance_m16 now pins requested_at and expires_at as +00:00 automatic-fraction stamps whose difference is exactly the endpoint timeout (3 s), and the escalated-permission test passes.
+- The approval inbox golden no longer pins the text comparison (a bug, fixed in a separate PR): it pins that stored requested_at and expires_at are returned verbatim.
+- Leap-second rule for the swap: comparison-only sites accept :60 and fold it into the next second (pinned: the discrimination baseline completed_at); values that are stored or serialized reject :60 explicitly so their bytes never change silently (so the stored window_closes_at :60 rendering is deliberately no longer pinned).
+- authority 8, server 4 plus the postgres test and conformance_m16 (18 passed; its t16_8 case needs a built sea-forge CLI binary in the target dir and was not run here), ledger 4, core 1, trace 1; clippy -D warnings and fmt clean.
 
 **Limits:**
 
+- Still not pinned through a public seam: case_dispatch.rs sandbox-episode approval requested_at/expires_at (no existing test drives the flow over the wire; the delegation.rs ACP path is pinned instead), the approval-window parse at postgres.rs:403 (covered only by the existing broker suite, which needs workload isolation that this host cannot provide), authority lib.rs approval-grant expiry parsing, and the case-runner, CLI, thoth, settlement, sandbox and cell stamps.
+- Now-derived stamps can only be pinned by shape and arithmetic, not by fixed instants; fixed instants are pinned only where the instant is an input (obligation claims and runs).
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -37,13 +43,11 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
+**Next:** Merge the instant-comparison fix, then migrate to the time crate with these tests unedited.
 
 **Evidence:**
 
-- .agents/reports/fde-convergence-2026-11-12/STATUS.md
-- .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
-- .agents/reports/fde-convergence-2026-11-12/F-implementation-plan.md
-- .agents/plans/2026-10-28-consolidated-final-report.md
-- .agents/plans/2026-10-27-arm64-jetson-packaging.md
-- .agents/plans/2026-10-26-capability-harvest.md
+- crates/sea-forge-server/tests/timestamp_golden_postgres.rs
+- crates/sea-forge-server/tests/conformance_m16.rs
+- crates/sea-forge-server/tests/timestamp_golden.rs
+- crates/sea-forge-authority/tests/timestamp_golden.rs
