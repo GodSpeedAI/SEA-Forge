@@ -696,7 +696,10 @@ fn check_integrity(req: &SettlementDeclarationRequest) -> Result<(), ForgeError>
         req.authored_by.as_deref(),
         &req.declarer.actor_id,
     )?;
-    if req.criteria_declared_at > req.execution_started_at {
+    // Instants, not text. Criteria whose declaration time cannot be shown to precede execution are refused.
+    if sea_forge_core::instant::is_after(&req.criteria_declared_at, &req.execution_started_at)
+        .unwrap_or(true)
+    {
         return Err(ForgeError::Plan {
             class: "settlement_integrity_error",
             message: "criteria_declared_at follows execution_started_at (post-hoc criteria)".into(),

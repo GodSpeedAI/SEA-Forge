@@ -1,17 +1,22 @@
 # Current status
 
-**Status revision:** 287
+**Status revision:** 288
 
-**Stage:** WP-58 SEA-Forge consolidation: EGM README links to the generated directory
+**Stage:** Approval expiry compares instants
 
-**Summary:** The EGM README bootstrap no longer adds workbench/packages/contracts/generated/README.md: the contracts gate regenerates that directory from the schemas and fails on any difference, so a hand-written file there is deleted by the generator and trips the drift check. The contracts and scripts READMEs describe the directory instead of linking to a README inside it. Documentation only otherwise.
+**Summary:** Compare approval and criteria stamps as instants and fail closed on a stamp that does not parse, instead of comparing RFC 3339 text.
 
 **Verified:**
 
-- workbench-contracts-gate failed in CI with the README present (generated TS/AJV contracts drifted); the file is removed and its links repaired
+- Red on main then green: the same instant in different spellings, fractions of different lengths straddling now, and unparsable stamps were mishandled by text comparison (core check_expiry 3 of 4 tests red, settlement declaration 3 of 3 red, inbox red) and now pass: core 4/4, settlement 3/3, server inbox 1/1.
+- Sites changed to instants with fail-closed handling: sea-forge-core approvals::check_expiry, sea-forge-server sfwp/approvals.rs expired flag, sea-forge-settlement declaration post-hoc criteria check, sea-forge-artifact-ip approval resolved_at versus expires_at (two sites), all through the new sea_forge_core::instant helpers.
+- Suites around them still pass: core 29+, settlement 20+11+3, artifact-ip 44, server approvals 7, case mutations 13, lib 187; clippy -D warnings and fmt clean.
 
 **Limits:**
 
+- Ordering of kernel-written stamps by text remains in capability memory merge, case-runner authority views, server view sorts and the assets latest-probe key: those stamps all come from one writer in one spelling (to_rfc3339 UTC), for which text order equals time order; they are not authorization decisions.
+- The artifact-ip approval sites have no dedicated red test because its transition harness cannot vary the stamps without a rewrite.
+- Comparison-only sites accept a leap second (:60) as chrono does today.
 - cargo test --workspace and just ci not run (host memory)
 - Cognate/Horizon live suites not re-run
 - 0.21.0 prior-identity fixtures kept deliberately: they model the older producer
@@ -37,13 +42,11 @@
 - Open: 24.04 fixture defect (non-gating); admission control; F17 allow-control (upstream); Milestone C on-device
 - macOS ProcessGroup claim rests on a best-effort census; live egress allow-control policy shape: owner decisions pending on PR #71
 
-**Next:** Merge after CI, then release 0.5.0 once the arm64 packages are confirmed.
+**Next:** Merge this fix; the timestamp golden tests (#129) then pin stamp formats, not comparison semantics.
 
 **Evidence:**
 
-- .agents/reports/fde-convergence-2026-11-12/STATUS.md
-- .agents/reports/fde-convergence-2026-11-12/H-egm-review-record.md
-- .agents/reports/fde-convergence-2026-11-12/F-implementation-plan.md
-- .agents/plans/2026-10-28-consolidated-final-report.md
-- .agents/plans/2026-10-27-arm64-jetson-packaging.md
-- .agents/plans/2026-10-26-capability-harvest.md
+- crates/sea-forge-core/src/instant.rs
+- crates/sea-forge-core/tests/approval_expiry_instants.rs
+- crates/sea-forge-settlement/tests/declaration_instants.rs
+- crates/sea-forge-server/tests/approval_expiry_instants.rs

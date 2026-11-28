@@ -6,6 +6,7 @@ pub mod approvals;
 pub mod canonical;
 pub mod errors;
 pub mod ids;
+pub mod instant;
 pub mod path;
 pub mod pipe_name;
 pub mod types;
